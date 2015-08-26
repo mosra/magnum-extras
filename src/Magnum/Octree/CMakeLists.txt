@@ -25,10 +25,38 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
-if(WITH_OCTREE)
-    add_subdirectory(Octree)
+cmake_minimum_required(VERSION 2.8.12)
+
+find_package(Magnum REQUIRED OPTIONAL_COMPONENTS SceneGraph)
+
+set(MagnumOctree_SOURCES
+    instantiation.cpp)
+
+set(MagnumOctree_HEADERS
+    Octree.h
+    Octree.hpp
+
+    visibility.h)
+
+# Build with Octree based view culling for SceneGraph if found
+if(Magnum_SceneGraph_FOUND)
+    list(APPEND MagnumOctree_HEADERS
+         OctreeDrawableGroup.h
+         OctreeDrawableGroup.hpp)
 endif()
 
-if(WITH_UI)
-    add_subdirectory(Ui)
+add_library(MagnumOctree STATIC ${MagnumOctree_SOURCES} ${MagnumOctree_HEADERS})
+target_include_directories(MagnumOctree PUBLIC
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_BINARY_DIR}/src)
+target_link_libraries(MagnumOctree Magnum::Magnum)
+
+install(TARGETS MagnumOctree
+    RUNTIME DESTINATION ${MAGNUM_BINARY_INSTALL_DIR}
+    LIBRARY DESTINATION ${MAGNUM_LIBRARY_INSTALL_DIR}
+    ARCHIVE DESTINATION ${MAGNUM_LIBRARY_INSTALL_DIR})
+install(FILES ${MagnumOctree_HEADERS} DESTINATION ${MAGNUM_INCLUDE_INSTALL_DIR}/Octree)
+
+if(BUILD_TESTS)
+    add_subdirectory(Test)
 endif()

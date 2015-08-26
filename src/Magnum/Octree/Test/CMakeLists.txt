@@ -25,10 +25,8 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
-if(WITH_OCTREE)
-    add_subdirectory(Octree)
-endif()
-
-if(WITH_UI)
-    add_subdirectory(Ui)
+corrade_add_test(OctreeTest OctreeTest.cpp LIBRARIES MagnumOctree ${MAGNUM_LIBRARY})
+corrade_add_test(OctreeBenchmark OctreeBenchmark.cpp LIBRARIES MagnumOctree ${MAGNUM_LIBRARY})
+if(Magnum_SceneGraph_FOUND)
+    corrade_add_test(OctreeDrawableGroupTest OctreeDrawableGroupTest.cpp LIBRARIES MagnumOctree Magnum::SceneGraph)
 endif()

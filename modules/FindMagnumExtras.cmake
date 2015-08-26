@@ -12,6 +12,7 @@
 #
 # This command alone is useless without specifying the components:
 #
+#  Octree                   - Octree library
 #  Ui                       - Ui library
 #  ui-gallery               - magnum-ui-gallery executable
 #
