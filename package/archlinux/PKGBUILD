@@ -1,0 +1,37 @@
+# Author: mosra <mosra@centrum.cz>
+pkgname=magnum-extras
+pkgver=dev
+pkgrel=1
+pkgdesc="Extras for Magnum OpenGL graphics engine"
+arch=('i686' 'x86_64')
+url="http://mosra.cz/blog/magnum.php"
+license=('MIT')
+depends=('magnum')
+makedepends=('cmake' 'ninja')
+options=(!strip)
+provides=('magnum-extras-git')
+
+_rootdir=$startdir/../../
+
+build() {
+    mkdir -p "$_rootdir/build"
+    cd "$_rootdir/build"
+
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DBUILD_TESTS=ON \
+        -DBUILD_GL_TESTS=ON \
+        -G Ninja
+    ninja
+}
+
+check() {
+    cd "$_rootdir/build"
+    ctest --output-on-failure
+}
+
+package() {
+  cd "$_rootdir/build"
+  DESTDIR="$pkgdir/" ninja install
+}

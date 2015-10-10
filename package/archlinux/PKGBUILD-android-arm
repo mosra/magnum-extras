@@ -1,0 +1,37 @@
+# Author: mosra <mosra@centrum.cz>
+pkgname=android-arm-magnum-extras
+pkgver=dev
+pkgrel=1
+pkgdesc="Extras for Magnum OpenGL graphics engine (Android ARM)"
+arch=('any')
+url="http://mosra.cz/blog/magnum.php"
+license=('MIT')
+depends=('android-arm-magnum')
+makedepends=('cmake' 'ninja' 'android-ndk' 'corrade')
+options=('!strip' '!buildflags')
+
+_rootdir=$startdir/../../
+
+build() {
+    if [ ! -d "$_rootdir/build-android-arm" ] ; then
+        mkdir "$_rootdir/build-android-arm"
+        cd "$_rootdir/build-android-arm"
+
+        cmake .. \
+            -DCMAKE_MODULE_PATH="$_rootdir/toolchains/modules" \
+            -DCMAKE_TOOLCHAIN_FILE="$_rootdir/toolchains/generic/Android-ARM.cmake" \
+            -G Ninja
+    fi
+
+    cd "$_rootdir/build-android-arm"
+
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/opt/android-ndk/platforms/android-19/arch-arm/usr
+    ninja
+}
+
+package() {
+    cd "$_rootdir/build-android-arm"
+    DESTDIR="$pkgdir/" ninja install/strip
+}
