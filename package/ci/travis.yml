@@ -52,6 +52,6 @@ install:
 
 script:
 - mkdir build && cd build
-- cmake .. -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+- cmake .. -DCMAKE_PREFIX_PATH=$HOME/deps -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
 - cmake --build .
 - ctest --output-on-failure
