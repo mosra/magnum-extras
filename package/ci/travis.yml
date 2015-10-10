@@ -1,0 +1,57 @@
+# kate: indent-width 2;
+
+branches:
+  only:
+  - master
+
+os:
+- linux
+- osx
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    - kalakris-cmake
+    packages:
+    - g++-4.7
+    - cmake
+
+notifications:
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/00ec7a9066bb0fec98f3
+    on_success: change
+    on_failure: always
+    on_start: never
+
+install:
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then export CXX=g++-4.7; fi
+
+# Corrade
+- git clone --depth 1 git://github.com/mosra/corrade.git
+- cd corrade
+- mkdir build
+- cd build
+- cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/deps -DCMAKE_INSTALL_RPATH=$HOME/deps/lib -DCMAKE_MACOSX_RPATH=ON -DCMAKE_BUILD_TYPE=Release
+- cmake --build .
+- cmake --build . --target install
+- cd ..
+- cd ..
+
+# Magnum
+- git clone --depth 1 git://github.com/mosra/magnum.git
+- cd magnum
+- mkdir build
+- cd build
+- cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/deps -DCMAKE_INSTALL_RPATH=$HOME/deps/lib -DCMAKE_MACOSX_RPATH=ON -DWITH_AUDIO=OFF -DWITH_DEBUGTOOLS=OFF -DWITH_PRIMITIVES=OFF -DWITH_SCENEGRAPH=OFF -DWITH_SHADERS=OFF -DWITH_SHAPES=OFF -DWITH_TEXT=OFF -DWITH_TEXTURETOOLS=OFF -DCMAKE_BUILD_TYPE=Release
+- cmake --build .
+- cmake --build . --target install
+- cd ..
+- cd ..
+
+script:
+- mkdir build && cd build
+- cmake .. -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+- cmake --build .
+- ctest --output-on-failure
