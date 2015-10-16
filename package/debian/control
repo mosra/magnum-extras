@@ -1,0 +1,25 @@
+Source: magnum-extras
+Priority: optional
+Maintainer: Vladimír Vondruš <mosra@centrum.cz>
+Build-Depends: debhelper (>= 9), cmake (>= 2.8.9)
+Standards-Version: 3.9.2
+Section: libs
+Homepage: http://mosra.cz/blog/magnum.php
+Vcs-Git: git://github.com/mosra/magnum-extras.git
+Vcs-Browser: https://github.com/mosra/magnum-extras
+
+Package: magnum-extras-dev
+Section: libdevel
+Architecture: any
+Depends: magnum-extras (= ${binary:Version}), magnum-dev
+Description: Magnum Extras development files
+ Headers and tools needed for developing with Magnum Plugins.
+
+Package: magnum-extras
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, magnum
+Description: Extras for Magnum OpenGL graphics engine
+ Magnum is 2D/3D graphics engine written in C++11 and modern OpenGL. Its goal
+ is to simplify low-level graphics development and interaction with OpenGL
+ using recent C++11 features and to abstract away platform-specific issues.
