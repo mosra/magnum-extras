@@ -1,0 +1,78 @@
+/*
+    This file is part of Magnum.
+
+    Copyright © 2010, 2011, 2012, 2013, 2014, 2015
+              Vladimír Vondruš <mosra@centrum.cz>
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included
+    in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+*/
+
+namespace Magnum {
+/** @page cmake-extras Extras library usage with CMake
+@brief Guide how to find and use Magnum Extras with CMake build system
+
+The logic is in module `FindMagnumExtras.cmake` distributed in extras
+repository in `modules/` directory, you are encouraged to copy it into your
+project and add path to the files to `CMAKE_MODULE_PATH`. Otherwise, if CMake
+won't be able to find this file in predefined locations, it will error out even
+if Magnum Extras libraries might be installed on the system.
+
+Note that the module file is updated as the library evolves, you are encouraged
+to update your copy from time to time to avoid strange building issues.
+
+If you installed the library or its dependencies to non-standard location
+(other than `/usr`, e.g. `/home/xyz/projects`), set `CMAKE_PREFIX_PATH` to that
+directory to help CMake find it. You can enter more different dirs if you
+separate them with semicolons.
+
+Basic usage is:
+
+    find_package(MagnumExtras [REQUIRED])
+
+This command tries to find Magnum Extras library and then defines:
+
+-   `MAGNUMEXTRAS_FOUND` -- Whether the library was found
+
+This command alone is useless without specifying the components:
+
+-   *(none yet)*
+
+Note that [each namespace](namespaces.html) contains more detailed information
+about dependencies, availability on particular platform and also guide how to
+enable given library in build and use it with CMake.
+
+Example usage with specifying additional components is:
+
+    find_package(MagnumExtras REQUIRED SomeLibraryThatDoesntExistYet)
+
+For each component is then defined:
+
+-   `MAGNUM_*_FOUND` -- Whether the component was found
+-   `MAGNUM_*_LIBRARIES` -- Component library and dependent libraries
+-   `MAGNUM_*_INCLUDE_DIRS` -- Include dirs of dependencies
+
+The package is found if either debug or release version of each requested
+library is found. If both debug and release libraries are found, proper version
+is chosen based on actual build configuration of the project (i.e. `Debug`
+build is linked to debug libraries, `Release` build to release libraries).
+
+See also @ref cmake "Magnum usage with CMake" for more information.
+
+*/
+}
