@@ -4,6 +4,8 @@
 #  find_package(MagnumExtras [REQUIRED])
 # This command tries to find Magnum extras and then defines:
 #  MAGNUMEXTRAS_FOUND          - Whether Magnum extras were found
+#  MAGNUMEXTRAS_INCLUDE_DIRS   - Magnum extras include dir and include dirs of
+#   global dependencies
 # This command alone is useless without specifying the components:
 #  (none yet)
 # Example usage with specifying the components is:
@@ -21,6 +23,7 @@
 # libraries).
 #
 # Additionally these variables are defined for internal usage:
+#  MAGNUMEXTRAS_INCLUDE_DIR - Magnum extras include dir (w/o dependencies)
 #  MAGNUM_*_LIBRARY         - Component library (w/o dependencies)
 #  MAGNUM_*_LIBRARY_DEBUG   - Debug version of given library, if found
 #  MAGNUM_*_LIBRARY_RELEASE - Release version of given library, if found
@@ -81,6 +84,12 @@ foreach(component ${MagnumExtras_FIND_COMPONENTS})
 endforeach()
 find_package(Magnum REQUIRED ${_MAGNUMEXTRAS_DEPENDENCIES})
 
+find_path(MAGNUMEXTRAS_INCLUDE_DIR Magnum
+    HINTS ${MAGNUM_INCLUDE_DIR})
+
+# Global extras include dir
+set(MAGNUMEXTRAS_INCLUDE_DIRS ${MAGNUMEXTRAS_INCLUDE_DIR})
+
 # Additional components
 foreach(component ${MagnumExtras_FIND_COMPONENTS})
     string(TOUPPER ${component} _COMPONENT)
@@ -108,7 +117,7 @@ foreach(component ${MagnumExtras_FIND_COMPONENTS})
     if(_MAGNUM_${_COMPONENT}_INCLUDE_PATH_NAMES)
         find_path(_MAGNUM_${_COMPONENT}_INCLUDE_DIR
             NAMES ${_MAGNUM_${_COMPONENT}_INCLUDE_PATH_NAMES}
-            PATHS ${MAGNUM_INCLUDE_DIR}/Magnum/${_MAGNUM_${_COMPONENT}_INCLUDE_PATH_SUFFIX})
+            HINTS ${MAGNUMEXTRAS_INCLUDE_DIR}/Magnum/${_MAGNUM_${_COMPONENT}_INCLUDE_PATH_SUFFIX})
     endif()
 
     # Add Magnum library dependency, if there is any
@@ -141,5 +150,7 @@ endforeach()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MagnumExtras
-    REQUIRED_VARS MAGNUM_LIBRARY MAGNUM_INCLUDE_DIR
+    REQUIRED_VARS MAGNUMEXTRAS_INCLUDE_DIR
     HANDLE_COMPONENTS)
+
+mark_as_advanced(MAGNUMEXTRAS_INCLUDE_DIR)

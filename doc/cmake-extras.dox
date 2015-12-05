@@ -48,6 +48,8 @@ Basic usage is:
 This command tries to find Magnum Extras library and then defines:
 
 -   `MAGNUMEXTRAS_FOUND` -- Whether the library was found
+-   `MAGNUMEXTRAS_INCLUDE_DIRS` -- Magnum extras include dir and include dirs
+    of global dependencies
 
 This command alone is useless without specifying the components:
 
