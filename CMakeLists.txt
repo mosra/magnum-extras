@@ -32,11 +32,11 @@ find_package(Magnum REQUIRED)
 
 include(CMakeDependentOption)
 
-option(BUILD_TESTS "Build unit tests." OFF)
-cmake_dependent_option(BUILD_GL_TESTS "Build unit tests for OpenGL code." OFF "BUILD_TESTS" OFF)
+option(BUILD_TESTS "Build unit tests" OFF)
+cmake_dependent_option(BUILD_GL_TESTS "Build unit tests for OpenGL code" OFF "BUILD_TESTS" OFF)
 
 option(BUILD_STATIC "Build static libraries (default are dynamic)" OFF)
-cmake_dependent_option(BUILD_STATIC_PIC "Build static libraries with position-independent code" OFF "BUILD_STATIC" OFF)
+cmake_dependent_option(BUILD_STATIC_PIC "Build static libraries with position-independent code" ON "BUILD_STATIC" OFF)
 
 # Check compiler compatibility
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.7.0")
