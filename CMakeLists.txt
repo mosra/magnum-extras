@@ -73,6 +73,12 @@ if(BUILD_GL_TESTS)
     endif()
 endif()
 
+if(NOT BUILD_STATIC)
+    set(SHARED_OR_STATIC SHARED)
+else()
+    set(SHARED_OR_STATIC STATIC)
+endif()
+
 set(MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/share/cmake/MagnumExtras)
 
 add_subdirectory(modules)
