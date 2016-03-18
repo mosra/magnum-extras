@@ -1,20 +1,27 @@
-# - Find Magnum extras
+#.rst:
+# Find Magnum extras
+# ------------------
 #
-# Basic usage:
-#  find_package(MagnumExtras [REQUIRED])
-# This command tries to find Magnum extras and then defines:
-#  MAGNUMEXTRAS_FOUND          - Whether Magnum extras were found
-#  MAGNUMEXTRAS_INCLUDE_DIRS   - Magnum extras include dir and include dirs of
-#   global dependencies
+# Finds Magnum extras. Basic usage::
+#
+#  find_package(MagnumExtras REQUIRED)
+#
+# This command tries to find Magnum extras and then defines the following:
+#
+#  MagnumExtras_FOUND      - Whether Magnum extras were found
+#
 # This command alone is useless without specifying the components:
+#
 #  (none yet)
-# Example usage with specifying the components is:
-#  find_package(MagnumExtras [REQUIRED|COMPONENTS]
-#               SomeLibraryThatDoesntExistYet)
+#
+# Example usage with specifying additional components is:
+#
+#  find_package(MagnumExtras REQUIRED SomeLibraryThatDoesntExistYet)
+#
 # For each component is then defined:
-#  MAGNUM_*_FOUND           - Whether the component was found
-#  MAGNUM_*_LIBRARIES       - Component library and dependent libraries
-#  MAGNUM_*_INCLUDE_DIRS    - Include dirs of dependencies
+#
+#  MagnumExtras_*_FOUND    - Whether the component was found
+#  MagnumExtras::*         - Component imported target
 #
 # The package is found if either debug or release version of each requested
 # library is found. If both debug and release libraries are found, proper
@@ -23,10 +30,12 @@
 # libraries).
 #
 # Additionally these variables are defined for internal usage:
-#  MAGNUMEXTRAS_INCLUDE_DIR - Magnum extras include dir (w/o dependencies)
-#  MAGNUM_*_LIBRARY         - Component library (w/o dependencies)
-#  MAGNUM_*_LIBRARY_DEBUG   - Debug version of given library, if found
-#  MAGNUM_*_LIBRARY_RELEASE - Release version of given library, if found
+#
+#  MAGNUMEXTRAS_INCLUDE_DIR - Magnum extras include dir (w/o
+#   dependencies)
+#  MAGNUMEXTRAS_*_LIBRARY_DEBUG - Debug version of given library, if found
+#  MAGNUMEXTRAS_*_LIBRARY_RELEASE - Release version of given library, if
+#   found
 #
 
 #
@@ -54,12 +63,27 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
+# Magnum library dependencies
+set(_MAGNUMEXTRAS_DEPENDENCIES )
+foreach(_component ${MagnumExtras_FIND_COMPONENTS})
+    string(TOUPPER ${_component} _COMPONENT)
+
+    # (none yet)
+
+    list(APPEND _MAGNUMEXTRAS_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES})
+endforeach()
+find_package(Magnum REQUIRED ${_MAGNUMEXTRAS_DEPENDENCIES})
+
+# Global integration include dir
+find_path(MAGNUMEXTRAS_INCLUDE_DIR Magnum
+    HINTS ${MAGNUM_INCLUDE_DIR})
+mark_as_advanced(MAGNUMEXTRAS_INCLUDE_DIR)
+
 # Ensure that all inter-component dependencies are specified as well
 set(_MAGNUMEXTRAS_ADDITIONAL_COMPONENTS )
-foreach(component ${MagnumExtras_FIND_COMPONENTS})
-    string(TOUPPER ${component} _COMPONENT)
+foreach(_component ${MagnumExtras_FIND_COMPONENTS})
+    string(TOUPPER ${_component} _COMPONENT)
 
-    # The dependencies need to be sorted by their dependency order as well
     # (no inter-component dependencies yet)
 
     list(APPEND _MAGNUMEXTRAS_ADDITIONAL_COMPONENTS ${_MAGNUMEXTRAS_${_COMPONENT}_DEPENDENCIES})
@@ -73,78 +97,76 @@ if(MagnumExtras_FIND_COMPONENTS)
     list(REMOVE_DUPLICATES MagnumExtras_FIND_COMPONENTS)
 endif()
 
-# Magnum library dependencies
-set(_MAGNUMEXTRAS_DEPENDENCIES )
-foreach(component ${MagnumExtras_FIND_COMPONENTS})
-    string(TOUPPER ${component} _COMPONENT)
-
-    # (none yet)
-
-    list(APPEND _MAGNUMEXTRAS_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCY})
-endforeach()
-find_package(Magnum REQUIRED ${_MAGNUMEXTRAS_DEPENDENCIES})
-
-find_path(MAGNUMEXTRAS_INCLUDE_DIR Magnum
-    HINTS ${MAGNUM_INCLUDE_DIR})
-
-# Global extras include dir
-set(MAGNUMEXTRAS_INCLUDE_DIRS ${MAGNUMEXTRAS_INCLUDE_DIR})
+# Component distinction (listing them explicitly to avoid mistakes with finding
+# components from other repositories)
+set(_MAGNUMEXTRAS_LIBRARY_COMPONENTS "^$")
 
 # Additional components
-foreach(component ${MagnumExtras_FIND_COMPONENTS})
-    string(TOUPPER ${component} _COMPONENT)
+foreach(_component ${MagnumExtras_FIND_COMPONENTS})
+    string(TOUPPER ${_component} _COMPONENT)
 
-    # Try to find both debug and release version of the library
-    find_library(MAGNUM_${_COMPONENT}_LIBRARY_DEBUG Magnum${component}-d)
-    find_library(MAGNUM_${_COMPONENT}_LIBRARY_RELEASE Magnum${component})
-
-    # Set the _LIBRARY variable based on what was found
-    if(MAGNUM_${_COMPONENT}_LIBRARY_DEBUG AND MAGNUM_${_COMPONENT}_LIBRARY_RELEASE)
-        set(MAGNUM_${_COMPONENT}_LIBRARY
-            debug ${MAGNUM_${_COMPONENT}_LIBRARY_DEBUG}
-            optimized ${MAGNUM_${_COMPONENT}_LIBRARY_RELEASE})
-    elseif(MAGNUM_${_COMPONENT}_LIBRARY_DEBUG)
-        set(MAGNUM_${_COMPONENT}_LIBRARY ${MAGNUM_${_COMPONENT}_LIBRARY_DEBUG})
-    elseif(MAGNUM_${_COMPONENT}_LIBRARY_RELEASE)
-        set(MAGNUM_${_COMPONENT}_LIBRARY ${MAGNUM_${_COMPONENT}_LIBRARY_RELEASE})
-    endif()
-
-    set(_MAGNUM_${_COMPONENT}_INCLUDE_PATH_SUFFIX ${component})
-
-    # (none yet)
-
-    # Try to find the includes
-    if(_MAGNUM_${_COMPONENT}_INCLUDE_PATH_NAMES)
-        find_path(_MAGNUM_${_COMPONENT}_INCLUDE_DIR
-            NAMES ${_MAGNUM_${_COMPONENT}_INCLUDE_PATH_NAMES}
-            HINTS ${MAGNUMEXTRAS_INCLUDE_DIR}/Magnum/${_MAGNUM_${_COMPONENT}_INCLUDE_PATH_SUFFIX})
-    endif()
-
-    # Add Magnum library dependency, if there is any
-    if(_MAGNUM_${_COMPONENT}_MAGNUM_DEPENDENCY)
-        string(TOUPPER ${_MAGNUM_${_COMPONENT}_MAGNUM_DEPENDENCY} _DEPENDENCY)
-        set(_MAGNUM_${_COMPONENT}_LIBRARIES ${_MAGNUM_${_COMPONENT}_LIBRARIES} ${MAGNUM_${_DEPENDENCY}_LIBRARIES})
-        set(_MAGNUM_${_COMPONENT}_INCLUDE_DIRS ${_MAGNUM_${_COMPONENT}_INCLUDE_DIRS} ${MAGNUM_${_DEPENDENCY}_INCLUDE_DIRS})
-    endif()
-
-    # Decide if the library was found
-    if(MAGNUM_${_COMPONENT}_LIBRARY AND _MAGNUM_${_COMPONENT}_INCLUDE_DIR)
-        set(MAGNUM_${_COMPONENT}_LIBRARIES
-            ${MAGNUM_${_COMPONENT}_LIBRARY}
-            ${_MAGNUM_${_COMPONENT}_LIBRARIES})
-        set(MAGNUM_${_COMPONENT}_INCLUDE_DIRS
-            ${_MAGNUM_${_COMPONENT}_INCLUDE_DIRS})
-
-        set(MagnumExtras_${component}_FOUND TRUE)
-
-        # Don't expose variables w/o dependencies to end users
-        mark_as_advanced(FORCE
-            MAGNUM_${_COMPONENT}_LIBRARY_DEBUG
-            MAGNUM_${_COMPONENT}_LIBRARY_RELEASE
-            MAGNUM_${_COMPONENT}_LIBRARY
-            _MAGNUM_${_COMPONENT}_INCLUDE_DIR)
+    # Create imported target in case the library is found. If the project is
+    # added as subproject to CMake, the target already exists and all the
+    # required setup is already done from the build tree.
+    if(TARGET MagnumExtras::${_component})
+        set(MagnumExtras_${_component}_FOUND TRUE)
     else()
-        set(MagnumExtras_${component}_FOUND FALSE)
+        # Library components
+        if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS})
+            add_library(MagnumExtras::${_component} UNKNOWN IMPORTED)
+
+            # Try to find both debug and release version
+            find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG Magnum${_component}Extras-d)
+            find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE Magnum${_component}Extras)
+            mark_as_advanced(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG
+                MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)
+
+            if(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)
+                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
+                    IMPORTED_CONFIGURATIONS RELEASE)
+                set_property(TARGET MagnumExtras::${_component} PROPERTY
+                    IMPORTED_LOCATION_RELEASE ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE})
+            endif()
+
+            if(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG)
+                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
+                    IMPORTED_CONFIGURATIONS DEBUG)
+                set_property(TARGET MagnumExtras::${_component} PROPERTY
+                    IMPORTED_LOCATION_DEBUG ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG})
+            endif()
+        endif()
+
+        # (none yet)
+
+        # Find library includes
+        if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS})
+            find_path(_MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR
+                NAMES ${_MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_PATH_NAMES}
+                HINTS ${MAGNUMEXTRAS_INCLUDE_DIR}/Magnum/${_component}Extras)
+        endif()
+
+        if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS})
+            # Link to core Magnum library, add other Magnum dependencies
+            set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES Magnum::Magnum)
+            foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES})
+                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
+                    INTERFACE_LINK_LIBRARIES Magnum::${_dependency})
+            endforeach()
+
+            # Add inter-project dependencies
+            foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_DEPENDENCIES})
+                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
+                    INTERFACE_LINK_LIBRARIES MagnumExtras::${_dependency})
+            endforeach()
+        endif()
+
+        # Decide if the plugin was found
+        if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS} AND _MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR AND (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG OR MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE))
+            set(MagnumExtras_${_component}_FOUND TRUE)
+        else()
+            set(MagnumExtras_${_component}_FOUND FALSE)
+        endif()
     endif()
 endforeach()
 
@@ -152,5 +174,3 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MagnumExtras
     REQUIRED_VARS MAGNUMEXTRAS_INCLUDE_DIR
     HANDLE_COMPONENTS)
-
-mark_as_advanced(MAGNUMEXTRAS_INCLUDE_DIR)
