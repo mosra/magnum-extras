@@ -86,6 +86,13 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
 
     # (no inter-component dependencies yet)
 
+    # Mark the dependencies as required if the component is also required
+    if(MagnumExtras_FIND_REQUIRED_${_component})
+        foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_DEPENDENCIES})
+            set(MagnumExtras_FIND_REQUIRED_${_dependency} TRUE)
+        endforeach()
+    endif()
+
     list(APPEND _MAGNUMEXTRAS_ADDITIONAL_COMPONENTS ${_MAGNUMEXTRAS_${_COMPONENT}_DEPENDENCIES})
 endforeach()
 
