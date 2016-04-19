@@ -8,7 +8,7 @@
 #
 # This command tries to find Magnum extras and then defines the following:
 #
-#  MagnumExtras_FOUND      - Whether Magnum extras were found
+#  MagnumExtras_FOUND       - Whether Magnum extras were found
 #
 # This command alone is useless without specifying the components:
 #
@@ -20,8 +20,8 @@
 #
 # For each component is then defined:
 #
-#  MagnumExtras_*_FOUND    - Whether the component was found
-#  MagnumExtras::*         - Component imported target
+#  MagnumExtras_*_FOUND     - Whether the component was found
+#  MagnumExtras::*          - Component imported target
 #
 # The package is found if either debug or release version of each requested
 # library is found. If both debug and release libraries are found, proper
