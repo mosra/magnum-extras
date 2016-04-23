@@ -36,6 +36,8 @@ set(MagnumUi_HEADERS
     BasicInstancedGLLayer.hpp
     BasicInstancedLayer.h
     BasicInstancedLayer.hpp
+    BasicGLLayer.h
+    BasicGLLayer.hpp
     BasicLayer.h
     BasicLayer.hpp
     BasicPlane.h

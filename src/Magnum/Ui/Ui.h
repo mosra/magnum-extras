@@ -41,6 +41,7 @@ class Anchor;
 template<class> class BasicInstancedLayer;
 template<class> class BasicInstancedGLLayer;
 template<class> class BasicLayer;
+template<class> class BasicGLLayer;
 template<class...> class BasicPlane;
 template<class...> class BasicUserInterface;
 class Widget;
