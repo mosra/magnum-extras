@@ -12,11 +12,11 @@
 #
 # This command alone is useless without specifying the components:
 #
-#  (none yet)
+#  Ui                       - Ui library
 #
 # Example usage with specifying additional components is:
 #
-#  find_package(MagnumExtras REQUIRED SomeLibraryThatDoesntExistYet)
+#  find_package(MagnumExtras REQUIRED Ui)
 #
 # For each component is then defined:
 #
@@ -117,7 +117,7 @@ endif()
 
 # Component distinction (listing them explicitly to avoid mistakes with finding
 # components from other repositories)
-set(_MAGNUMEXTRAS_LIBRARY_COMPONENTS "^$")
+set(_MAGNUMEXTRAS_LIBRARY_COMPONENTS "^(Ui)$")
 
 # Additional components
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
@@ -154,7 +154,7 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
             endif()
         endif()
 
-        # (none yet)
+        # No special setup required for Ui library
 
         # Find library includes
         if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS})

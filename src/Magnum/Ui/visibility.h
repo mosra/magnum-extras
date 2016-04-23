@@ -1,3 +1,5 @@
+#ifndef Magnum_Ui_visibility_h
+#define Magnum_Ui_visibility_h
 /*
     This file is part of Magnum.
 
@@ -23,21 +25,19 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @dir magnum-extras/src/Magnum
- * @brief Root namespace (part of @ref building-extras "Magnum Extras library")
- */
+#include <Corrade/Utility/VisibilityMacros.h>
 
-/** @dir Magnum/Ui
- * @brief Namespace @ref Magnum::Ui
- */
-/** @namespace Magnum::Ui
-@brief UI library
+#include "Magnum/configure.h"
 
-Widgets for efficient and simple user interfacces.
+#ifndef MAGNUM_BUILD_STATIC
+    #ifdef MagnumUi_EXPORTS
+        #define MAGNUM_UI_EXPORT CORRADE_VISIBILITY_EXPORT
+    #else
+        #define MAGNUM_UI_EXPORT CORRADE_VISIBILITY_IMPORT
+    #endif
+#else
+    #define MAGNUM_UI_EXPORT CORRADE_VISIBILITY_STATIC
+#endif
+#define MAGNUM_UI_LOCAL CORRADE_VISIBILITY_LOCAL
 
-This library is built if `WITH_UI` is enabled when building Magnum Extras. To
-use this library, you need to request `Ui` component of `MagnumExtras` package
-in CMake, add `${MAGNUMEXTRAS_UI_INCLUDE_DIRS}` to include path and link to
-`${MAGNUMEXTRAS_UI_LIBRARIES}`. See @ref building-extras and @ref cmake-extras
-for more information.
-*/
+#endif

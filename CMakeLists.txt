@@ -46,6 +46,8 @@ cmake_dependent_option(BUILD_GL_TESTS "Build unit tests for OpenGL code" OFF "BU
 option(BUILD_STATIC "Build static libraries (default are dynamic)" OFF)
 cmake_dependent_option(BUILD_STATIC_PIC "Build static libraries with position-independent code" ON "BUILD_STATIC" OFF)
 
+option(WITH_UI "Build Ui library" OFF)
+
 # Newlib toolchain supports only static linking
 if(CORRADE_TARGET_NACL_NEWLIB OR CORRADE_TARGET_EMSCRIPTEN)
     set(BUILD_STATIC ON)

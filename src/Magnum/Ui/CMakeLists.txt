@@ -23,6 +23,46 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
-if(WITH_UI)
-    add_subdirectory(Ui)
+set(MagnumUi_SRCS
+    Anchor.cpp
+    BasicPlane.cpp
+    BasicUserInterface.cpp
+    Widget.cpp)
+
+set(MagnumUi_HEADERS
+    AbstractUiShader.h
+    Anchor.h
+    BasicPlane.h
+    BasicPlane.hpp
+    BasicUserInterface.h
+    BasicUserInterface.hpp
+    Ui.h
+    Widget.h
+
+    visibility.h)
+
+# Ui library
+add_library(MagnumUi ${SHARED_OR_STATIC}
+    ${MagnumUi_SRCS}
+    ${MagnumUi_HEADERS}
+    ${MagnumUi_RESOURCES})
+target_include_directories(MagnumUi PUBLIC ${PROJECT_SOURCE_DIR}/src)
+set_target_properties(MagnumUi PROPERTIES DEBUG_POSTFIX "-d")
+if(BUILD_STATIC_PIC)
+    set_target_properties(MagnumUi PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
+target_link_libraries(MagnumUi
+    Magnum::Magnum)
+
+install(TARGETS MagnumUi
+    RUNTIME DESTINATION ${MAGNUM_BINARY_INSTALL_DIR}
+    LIBRARY DESTINATION ${MAGNUM_LIBRARY_INSTALL_DIR}
+    ARCHIVE DESTINATION ${MAGNUM_LIBRARY_INSTALL_DIR})
+install(FILES ${MagnumUi_HEADERS} DESTINATION ${MAGNUM_INCLUDE_INSTALL_DIR}/Ui)
+
+# Magnum Ui target alias for superprojects
+add_library(MagnumExtras::Ui ALIAS MagnumUi)
+
+if(BUILD_TESTS)
+    add_subdirectory(Test)
 endif()

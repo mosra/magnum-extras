@@ -1,3 +1,5 @@
+#ifndef Magnum_Ui_Ui_h
+#define Magnum_Ui_Ui_h
 /*
     This file is part of Magnum.
 
@@ -23,21 +25,27 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @dir magnum-extras/src/Magnum
- * @brief Root namespace (part of @ref building-extras "Magnum Extras library")
+/** @file
+ * @brief Forward declarations for @ref Magnum::Ui namespace
  */
 
-/** @dir Magnum/Ui
- * @brief Namespace @ref Magnum::Ui
- */
-/** @namespace Magnum::Ui
-@brief UI library
+#include <Corrade/Containers/Containers.h>
+#include <Magnum/Magnum.h>
 
-Widgets for efficient and simple user interfacces.
+namespace Magnum { namespace Ui {
 
-This library is built if `WITH_UI` is enabled when building Magnum Extras. To
-use this library, you need to request `Ui` component of `MagnumExtras` package
-in CMake, add `${MAGNUMEXTRAS_UI_INCLUDE_DIRS}` to include path and link to
-`${MAGNUMEXTRAS_UI_LIBRARIES}`. See @ref building-extras and @ref cmake-extras
-for more information.
-*/
+class AbstractUiShader;
+class AbstractPlane;
+class AbstractUserInterface;
+class Anchor;
+template<class...> class BasicPlane;
+template<class...> class BasicUserInterface;
+class Widget;
+
+enum class StateFlag: UnsignedInt;
+typedef Containers::EnumSet<StateFlag> StateFlags;
+enum class State: UnsignedInt;
+
+}}
+
+#endif

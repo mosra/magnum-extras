@@ -51,7 +51,7 @@ to `Debug`) have `-d` suffix, similarly to what is done when
 
 By default no libraries are built and you need to select them manually:
 
--   *(none yet)*
+-   `WITH_UI` -- @ref Ui library
 
 Note that [each namespace](namespaces.html) contains more detailed information
 about dependencies, availability on particular platform and also guide how to

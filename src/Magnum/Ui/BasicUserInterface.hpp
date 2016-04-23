@@ -1,3 +1,5 @@
+#ifndef Magnum_Ui_BasicUserInterface_hpp
+#define Magnum_Ui_BasicUserInterface_hpp
 /*
     This file is part of Magnum.
 
@@ -23,21 +25,37 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @dir magnum-extras/src/Magnum
- * @brief Root namespace (part of @ref building-extras "Magnum Extras library")
- */
+#include "BasicUserInterface.h"
 
-/** @dir Magnum/Ui
- * @brief Namespace @ref Magnum::Ui
- */
-/** @namespace Magnum::Ui
-@brief UI library
+#include <Magnum/Math/Matrix3.h>
 
-Widgets for efficient and simple user interfacces.
+#include "Magnum/Ui/BasicPlane.h"
 
-This library is built if `WITH_UI` is enabled when building Magnum Extras. To
-use this library, you need to request `Ui` component of `MagnumExtras` package
-in CMake, add `${MAGNUMEXTRAS_UI_INCLUDE_DIRS}` to include path and link to
-`${MAGNUMEXTRAS_UI_LIBRARIES}`. See @ref building-extras and @ref cmake-extras
-for more information.
-*/
+namespace Magnum { namespace Ui {
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+struct AbstractUserInterface::PlaneReference {
+    explicit PlaneReference(const Range2D& rect, AbstractPlane& plane): rect{rect}, plane(plane) {}
+
+    Range2D rect;
+    AbstractPlane& plane;
+};
+#endif
+
+template<class ...Layers> BasicUserInterface<Layers...>::~BasicUserInterface() {}
+
+template<class ...Layers> void BasicUserInterface<Layers...>::update() {
+    for(auto& planeReference: _planes) static_cast<BasicPlane<Layers...>&>(planeReference.plane).update();
+}
+
+template<class ...Layers> void BasicUserInterface<Layers...>::draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
+    const Matrix3 projectionMatrix = Matrix3::scaling(2.0f/_size)*Matrix3::translation(-_size/2);
+    for(const auto& planeReference: _planes) {
+        if(planeReference.plane.flags() & AbstractPlane::Flag::Hidden) continue;
+        static_cast<BasicPlane<Layers...>&>(planeReference.plane).draw(projectionMatrix, shaders);
+    }
+}
+
+}}
+
+#endif

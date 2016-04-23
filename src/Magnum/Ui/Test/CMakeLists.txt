@@ -23,6 +23,4 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
-if(WITH_UI)
-    add_subdirectory(Ui)
-endif()
+corrade_add_test(UiAnchorTest AnchorTest.cpp LIBRARIES MagnumUi)
