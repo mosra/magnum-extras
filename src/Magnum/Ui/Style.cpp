@@ -76,6 +76,35 @@ UnsignedByte foregroundColorIndex(const Type type, const Style style, const Stat
     enum: UnsignedByte {
         Hidden = 0,
 
+        ButtonDefaultDefault,
+        ButtonDefaultHover,
+        ButtonDefaultPressed,
+        ButtonDefaultDisabled,
+        ButtonPrimaryDefault,
+        ButtonPrimaryHover,
+        ButtonPrimaryPressed,
+        ButtonPrimaryDisabled,
+        ButtonSuccessDefault,
+        ButtonSuccessHover,
+        ButtonSuccessPressed,
+        ButtonSuccessDisabled,
+        ButtonInfoDefault,
+        ButtonInfoHover,
+        ButtonInfoPressed,
+        ButtonInfoDisabled,
+        ButtonWarningDefault,
+        ButtonWarningHover,
+        ButtonWarningPressed,
+        ButtonWarningDisabled,
+        ButtonDangerDefault,
+        ButtonDangerHover,
+        ButtonDangerPressed,
+        ButtonDangerDisabled,
+        ButtonDimDefault,
+        ButtonDimHover,
+        ButtonDimPressed,
+        ButtonDimDisabled,
+
         ForegroundColorCount
     };
 
@@ -94,6 +123,34 @@ UnsignedByte foregroundColorIndex(const Type type, const Style style, const Stat
                  (UnsignedInt(Style::style) << 8) |                         \
                   UnsignedInt(State::state):                                \
                 return type ## style ## state;
+        _c(Button, Default, Default)
+        _c(Button, Default, Hover)
+        _c(Button, Default, Pressed)
+        _c(Button, Default, Disabled)
+        _c(Button, Primary, Default)
+        _c(Button, Primary, Hover)
+        _c(Button, Primary, Pressed)
+        _c(Button, Primary, Disabled)
+        _c(Button, Success, Default)
+        _c(Button, Success, Hover)
+        _c(Button, Success, Pressed)
+        _c(Button, Success, Disabled)
+        _c(Button, Info, Default)
+        _c(Button, Info, Hover)
+        _c(Button, Info, Pressed)
+        _c(Button, Info, Disabled)
+        _c(Button, Warning, Default)
+        _c(Button, Warning, Hover)
+        _c(Button, Warning, Pressed)
+        _c(Button, Warning, Disabled)
+        _c(Button, Danger, Default)
+        _c(Button, Danger, Hover)
+        _c(Button, Danger, Pressed)
+        _c(Button, Danger, Disabled)
+        _c(Button, Dim, Default)
+        _c(Button, Dim, Hover)
+        _c(Button, Dim, Pressed)
+        _c(Button, Dim, Disabled)
         #undef _c
     }
 
@@ -104,6 +161,39 @@ UnsignedByte foregroundColorIndex(const Type type, const Style style, const Stat
 UnsignedByte textColorIndex(const Type type, const Style style, const State state) {
     enum: UnsignedByte {
         Hidden = 0,
+
+        ButtonDefaultDefault,
+        ButtonDefaultHover,
+        ButtonDefaultPressed,
+        ButtonDefaultDisabled,
+        ButtonPrimaryDefault,
+        ButtonPrimaryHover,
+        ButtonPrimaryPressed,
+        ButtonPrimaryDisabled,
+        ButtonSuccessDefault,
+        ButtonSuccessHover,
+        ButtonSuccessPressed,
+        ButtonSuccessDisabled,
+        ButtonInfoDefault,
+        ButtonInfoHover,
+        ButtonInfoPressed,
+        ButtonInfoDisabled,
+        ButtonWarningDefault,
+        ButtonWarningHover,
+        ButtonWarningPressed,
+        ButtonWarningDisabled,
+        ButtonDangerDefault,
+        ButtonDangerHover,
+        ButtonDangerPressed,
+        ButtonDangerDisabled,
+        ButtonDimDefault,
+        ButtonDimHover,
+        ButtonDimPressed,
+        ButtonDimDisabled,
+        ButtonFlatDefault,
+        ButtonFlatHover,
+        ButtonFlatPressed,
+        ButtonFlatDisabled,
 
         TextColorCount
     };
@@ -123,6 +213,38 @@ UnsignedByte textColorIndex(const Type type, const Style style, const State stat
                  (UnsignedInt(Style::style) << 8) |                         \
                   UnsignedInt(State::state):                                \
                 return type ## style ## state;
+        _c(Button, Default, Default)
+        _c(Button, Default, Hover)
+        _c(Button, Default, Pressed)
+        _c(Button, Default, Disabled)
+        _c(Button, Primary, Default)
+        _c(Button, Primary, Hover)
+        _c(Button, Primary, Pressed)
+        _c(Button, Primary, Disabled)
+        _c(Button, Success, Default)
+        _c(Button, Success, Hover)
+        _c(Button, Success, Pressed)
+        _c(Button, Success, Disabled)
+        _c(Button, Info, Default)
+        _c(Button, Info, Hover)
+        _c(Button, Info, Pressed)
+        _c(Button, Info, Disabled)
+        _c(Button, Warning, Default)
+        _c(Button, Warning, Hover)
+        _c(Button, Warning, Pressed)
+        _c(Button, Warning, Disabled)
+        _c(Button, Danger, Default)
+        _c(Button, Danger, Hover)
+        _c(Button, Danger, Pressed)
+        _c(Button, Danger, Disabled)
+        _c(Button, Dim, Default)
+        _c(Button, Dim, Hover)
+        _c(Button, Dim, Pressed)
+        _c(Button, Dim, Disabled)
+        _c(Button, Flat, Default)
+        _c(Button, Flat, Hover)
+        _c(Button, Flat, Pressed)
+        _c(Button, Flat, Disabled)
         #undef _c
     }
 
@@ -160,6 +282,7 @@ UnsignedByte textColorIndex(const Type type, const Style style, const StateFlags
 Debug& operator<<(Debug& debug, const Type value) {
     switch(value) {
         #define _c(value) case Type::value: return debug << "Type::" #value;
+        _c(Button)
         #undef _c
     }
 

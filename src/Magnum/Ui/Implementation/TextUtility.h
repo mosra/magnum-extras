@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_Ui_h
-#define Magnum_Ui_Ui_h
+#ifndef Magnum_Ui_Implementation_TextUtility_h
+#define Magnum_Ui_Implementation_TextUtility_h
 /*
     This file is part of Magnum.
 
@@ -25,38 +25,17 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for @ref Magnum::Ui namespace
- */
+#include <Magnum/Text/AbstractFont.h>
 
-#include <Corrade/Containers/Containers.h>
-#include <Magnum/Magnum.h>
+#include "Magnum/Ui/UserInterface.h"
 
-namespace Magnum { namespace Ui {
+namespace Magnum { namespace Ui { namespace Implementation {
 
-class AbstractUiShader;
-class AbstractPlane;
-class AbstractUserInterface;
-class Anchor;
-template<class> class BasicInstancedLayer;
-template<class> class BasicInstancedGLLayer;
-template<class> class BasicLayer;
-template<class> class BasicGLLayer;
-template<class...> class BasicPlane;
-template<class...> class BasicUserInterface;
-class Widget;
+inline Float lineAlignmentAdjustment(const UserInterface& ui) {
+    /** @todo this is horrible */
+    return -(ui.font().ascent() + ui.font().descent())*ui.styleConfiguration().fontSize()/(2.0f*ui.font().size());
+}
 
-class Button;
-class Plane;
-class StyleConfiguration;
-class UserInterface;
-
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
-enum class State: UnsignedInt;
-enum class Style: UnsignedInt;
-enum class Type: UnsignedInt;
-
-}}
+}}}
 
 #endif

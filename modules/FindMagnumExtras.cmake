@@ -68,7 +68,9 @@ set(_MAGNUMEXTRAS_CORRADE_DEPENDENCIES )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
     string(TOUPPER ${_component} _COMPONENT)
 
-    # (none yet)
+    if(_component STREQUAL Ui)
+        set(_MAGNUMEXTRAS_${_COMPONENT}_CORRADE_DEPENDENCIES Interconnect)
+    endif()
 
     list(APPEND _MAGNUMEXTRAS_CORRADE_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_CORRADE_DEPENDENCIES})
 endforeach()

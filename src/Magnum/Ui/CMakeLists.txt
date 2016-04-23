@@ -23,6 +23,7 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
+find_package(Corrade REQUIRED Interconnect)
 find_package(Magnum REQUIRED Text)
 
 set(MagnumUi_SRCS
@@ -31,6 +32,7 @@ set(MagnumUi_SRCS
     BasicUserInterface.cpp
     Widget.cpp
 
+    Button.cpp
     Plane.cpp
     Style.cpp
     UserInterface.cpp
@@ -55,6 +57,7 @@ set(MagnumUi_HEADERS
     Widget.h
     visibility.h
 
+    Button.h
     Plane.h
     Style.h
     UserInterface.h)
@@ -72,6 +75,7 @@ if(BUILD_STATIC_PIC)
     set_target_properties(MagnumUi PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 target_link_libraries(MagnumUi
+    Corrade::Interconnect
     Magnum::Magnum
     Magnum::Text)
 
