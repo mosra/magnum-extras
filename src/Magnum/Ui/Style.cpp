@@ -195,6 +195,21 @@ UnsignedByte textColorIndex(const Type type, const Style style, const State stat
         ButtonFlatPressed,
         ButtonFlatDisabled,
 
+        LabelDefaultDefault,
+        LabelDefaultDisabled,
+        LabelPrimaryDefault,
+        LabelPrimaryDisabled,
+        LabelSuccessDefault,
+        LabelSuccessDisabled,
+        LabelInfoDefault,
+        LabelInfoDisabled,
+        LabelWarningDefault,
+        LabelWarningDisabled,
+        LabelDangerDefault,
+        LabelDangerDisabled,
+        LabelDimDefault,
+        LabelDimDisabled,
+
         TextColorCount
     };
 
@@ -245,6 +260,21 @@ UnsignedByte textColorIndex(const Type type, const Style style, const State stat
         _c(Button, Flat, Hover)
         _c(Button, Flat, Pressed)
         _c(Button, Flat, Disabled)
+
+        _c(Label, Default, Default)
+        _c(Label, Default, Disabled)
+        _c(Label, Primary, Default)
+        _c(Label, Primary, Disabled)
+        _c(Label, Success, Default)
+        _c(Label, Success, Disabled)
+        _c(Label, Info, Default)
+        _c(Label, Info, Disabled)
+        _c(Label, Warning, Default)
+        _c(Label, Warning, Disabled)
+        _c(Label, Danger, Default)
+        _c(Label, Danger, Disabled)
+        _c(Label, Dim, Default)
+        _c(Label, Dim, Disabled)
         #undef _c
     }
 
@@ -283,6 +313,7 @@ Debug& operator<<(Debug& debug, const Type value) {
     switch(value) {
         #define _c(value) case Type::value: return debug << "Type::" #value;
         _c(Button)
+        _c(Label)
         #undef _c
     }
 

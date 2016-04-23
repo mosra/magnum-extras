@@ -33,6 +33,7 @@ set(MagnumUi_SRCS
     Widget.cpp
 
     Button.cpp
+    Label.cpp
     Plane.cpp
     Style.cpp
     UserInterface.cpp
@@ -58,6 +59,7 @@ set(MagnumUi_HEADERS
     visibility.h
 
     Button.h
+    Label.h
     Plane.h
     Style.h
     UserInterface.h)
