@@ -38,6 +38,7 @@ class AbstractUiShader;
 class AbstractPlane;
 class AbstractUserInterface;
 class Anchor;
+template<class> class BasicInstancedLayer;
 template<class...> class BasicPlane;
 template<class...> class BasicUserInterface;
 class Widget;
