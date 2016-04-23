@@ -23,11 +23,18 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
+find_package(Magnum REQUIRED Text)
+
 set(MagnumUi_SRCS
     Anchor.cpp
     BasicPlane.cpp
     BasicUserInterface.cpp
-    Widget.cpp)
+    Widget.cpp
+
+    Plane.cpp
+    Style.cpp
+    UserInterface.cpp
+    instantiation.cpp)
 
 set(MagnumUi_HEADERS
     AbstractUiShader.h
@@ -46,8 +53,13 @@ set(MagnumUi_HEADERS
     BasicUserInterface.hpp
     Ui.h
     Widget.h
+    visibility.h
 
-    visibility.h)
+    Plane.h
+    Style.h
+    UserInterface.h)
+
+corrade_add_resource(MagnumUi_RESOURCES resources.conf)
 
 # Ui library
 add_library(MagnumUi ${SHARED_OR_STATIC}
@@ -60,7 +72,8 @@ if(BUILD_STATIC_PIC)
     set_target_properties(MagnumUi PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 target_link_libraries(MagnumUi
-    Magnum::Magnum)
+    Magnum::Magnum
+    Magnum::Text)
 
 install(TARGETS MagnumUi
     RUNTIME DESTINATION ${MAGNUM_BINARY_INSTALL_DIR}

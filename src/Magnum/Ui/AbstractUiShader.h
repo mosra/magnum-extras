@@ -42,9 +42,16 @@ class AbstractUiShader: public AbstractShaderProgram {
          * @return Reference to self (for method chaining)
          */
         AbstractUiShader& setTransformationProjectionMatrix(const Matrix3& matrix) {
-            setUniform(0, matrix);
+            setUniform(_transformationProjectionMatrixUniform, matrix);
             return *this;
         }
+
+    #ifndef DOXYGEN_GENERATING_OUTPUT
+    protected:
+    #else
+    private:
+    #endif
+        Int _transformationProjectionMatrixUniform;
 };
 
 }}

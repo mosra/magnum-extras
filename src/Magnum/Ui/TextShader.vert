@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_Ui_h
-#define Magnum_Ui_Ui_h
 /*
     This file is part of Magnum.
 
@@ -25,37 +23,18 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for @ref Magnum::Ui namespace
- */
+uniform mediump mat3 transformationProjectionMatrix;
 
-#include <Corrade/Containers/Containers.h>
-#include <Magnum/Magnum.h>
+layout(location = 0) in mediump vec4 position;
+layout(location = 1) in mediump vec2 textureCoordinates;
+layout(location = 2) in mediump int colorIndex;
 
-namespace Magnum { namespace Ui {
+flat out mediump int fragmentColorIndex;
+out mediump vec2 fragmentTextureCoordinates;
 
-class AbstractUiShader;
-class AbstractPlane;
-class AbstractUserInterface;
-class Anchor;
-template<class> class BasicInstancedLayer;
-template<class> class BasicInstancedGLLayer;
-template<class> class BasicLayer;
-template<class> class BasicGLLayer;
-template<class...> class BasicPlane;
-template<class...> class BasicUserInterface;
-class Widget;
+void main() {
+    fragmentColorIndex = colorIndex;
+    fragmentTextureCoordinates = textureCoordinates;
 
-class Plane;
-class StyleConfiguration;
-class UserInterface;
-
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
-enum class State: UnsignedInt;
-enum class Style: UnsignedInt;
-enum class Type: UnsignedInt;
-
-}}
-
-#endif
+    gl_Position = vec4(transformationProjectionMatrix*position.xyw, 0.0).xywz;
+}

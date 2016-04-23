@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_Ui_h
-#define Magnum_Ui_Ui_h
 /*
     This file is part of Magnum.
 
@@ -25,37 +23,31 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for @ref Magnum::Ui namespace
- */
-
-#include <Corrade/Containers/Containers.h>
-#include <Magnum/Magnum.h>
+#include "Magnum/Ui/BasicLayer.hpp"
+#include "Magnum/Ui/BasicGLLayer.hpp"
+#include "Magnum/Ui/BasicInstancedLayer.hpp"
+#include "Magnum/Ui/BasicInstancedGLLayer.hpp"
+#include "Magnum/Ui/Style.h"
 
 namespace Magnum { namespace Ui {
 
-class AbstractUiShader;
-class AbstractPlane;
-class AbstractUserInterface;
-class Anchor;
-template<class> class BasicInstancedLayer;
-template<class> class BasicInstancedGLLayer;
-template<class> class BasicLayer;
-template<class> class BasicGLLayer;
-template<class...> class BasicPlane;
-template<class...> class BasicUserInterface;
-class Widget;
-
-class Plane;
-class StyleConfiguration;
-class UserInterface;
-
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
-enum class State: UnsignedInt;
-enum class Style: UnsignedInt;
-enum class Type: UnsignedInt;
+#ifndef DOXYGEN_GENERATING_OUTPUT
+template class MAGNUM_UI_EXPORT BasicLayer<Implementation::TextVertex>;
+template class MAGNUM_UI_EXPORT BasicGLLayer<Implementation::TextVertex>;
+template class MAGNUM_UI_EXPORT BasicInstancedLayer<Implementation::QuadInstance>;
+template class MAGNUM_UI_EXPORT BasicInstancedGLLayer<Implementation::QuadInstance>;
+#endif
 
 }}
 
+#include "Magnum/Ui/BasicPlane.hpp"
+#include "Magnum/Ui/BasicUserInterface.hpp"
+
+namespace Magnum { namespace Ui {
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+template class MAGNUM_UI_EXPORT BasicPlane<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer>;
+template class MAGNUM_UI_EXPORT BasicUserInterface<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer>;
 #endif
+
+}}

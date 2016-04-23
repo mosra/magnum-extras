@@ -79,7 +79,9 @@ set(_MAGNUMEXTRAS_MAGNUM_DEPENDENCIES )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
     string(TOUPPER ${_component} _COMPONENT)
 
-    # (none yet)
+    if(_component STREQUAL Ui)
+        set(_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES Text)
+    endif()
 
     list(APPEND _MAGNUMEXTRAS_MAGNUM_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES})
 endforeach()

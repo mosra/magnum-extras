@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_Ui_h
-#define Magnum_Ui_Ui_h
 /*
     This file is part of Magnum.
 
@@ -25,37 +23,34 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for @ref Magnum::Ui namespace
- */
+layout(std140) uniform Style {
+    lowp vec4 noneCornerRadiusNoneSmoothnessOut;
+    lowp vec4 colors[BACKGROUND_COLOR_COUNT];
+};
 
-#include <Corrade/Containers/Containers.h>
-#include <Magnum/Magnum.h>
+#define cornerRadius noneCornerRadiusNoneSmoothnessOut.y
 
-namespace Magnum { namespace Ui {
+uniform mediump mat3 transformationProjectionMatrix;
 
-class AbstractUiShader;
-class AbstractPlane;
-class AbstractUserInterface;
-class Anchor;
-template<class> class BasicInstancedLayer;
-template<class> class BasicInstancedGLLayer;
-template<class> class BasicLayer;
-template<class> class BasicGLLayer;
-template<class...> class BasicPlane;
-template<class...> class BasicUserInterface;
-class Widget;
+layout(location = 0) in mediump vec2 vertexPosition;
+layout(location = 1) in mediump vec4 edgeDistance;
+layout(location = 2) in mediump vec4 rect;
+layout(location = 3) in mediump int colorIndex;
 
-class Plane;
-class StyleConfiguration;
-class UserInterface;
+flat out mediump int fragmentColorIndex;
+out mediump vec4 fragmentCornerCoordinates;
 
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
-enum class State: UnsignedInt;
-enum class Style: UnsignedInt;
-enum class Type: UnsignedInt;
+void main() {
+    fragmentColorIndex = colorIndex;
 
-}}
+    mediump vec2 rectSize = rect.zw - rect.xy;
 
-#endif
+    fragmentCornerCoordinates.xy = mix(vec2(-(rectSize.x - cornerRadius)/(2.0*cornerRadius)),
+        vec2(0.5), edgeDistance.xy);
+    fragmentCornerCoordinates.wz = mix(vec2(-(rectSize.y - cornerRadius)/(2.0*cornerRadius)),
+        vec2(0.5), edgeDistance.wz);
+
+    mediump vec2 position = rect.xy + vertexPosition*rectSize;
+
+    gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
+}

@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_Ui_h
-#define Magnum_Ui_Ui_h
 /*
     This file is part of Magnum.
 
@@ -25,37 +23,19 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for @ref Magnum::Ui namespace
- */
+layout(std140) uniform Style {
+    lowp vec4 colors[TEXT_COLOR_COUNT];
+};
 
-#include <Corrade/Containers/Containers.h>
-#include <Magnum/Magnum.h>
+uniform lowp sampler2D textureData;
 
-namespace Magnum { namespace Ui {
+in mediump vec2 fragmentTextureCoordinates;
 
-class AbstractUiShader;
-class AbstractPlane;
-class AbstractUserInterface;
-class Anchor;
-template<class> class BasicInstancedLayer;
-template<class> class BasicInstancedGLLayer;
-template<class> class BasicLayer;
-template<class> class BasicGLLayer;
-template<class...> class BasicPlane;
-template<class...> class BasicUserInterface;
-class Widget;
+flat in mediump int fragmentColorIndex;
 
-class Plane;
-class StyleConfiguration;
-class UserInterface;
+out lowp vec4 fragmentColor;
 
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
-enum class State: UnsignedInt;
-enum class Style: UnsignedInt;
-enum class Type: UnsignedInt;
-
-}}
-
-#endif
+void main() {
+    lowp vec4 color = colors[fragmentColorIndex];
+    fragmentColor = texture(textureData, fragmentTextureCoordinates).r*color;
+}

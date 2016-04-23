@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_Ui_h
-#define Magnum_Ui_Ui_h
 /*
     This file is part of Magnum.
 
@@ -25,37 +23,21 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for @ref Magnum::Ui namespace
- */
+layout(std140) uniform Style {
+    lowp vec4 noneCornerRadiusNoneSmoothnessOut;
+    lowp vec4 colors[BACKGROUND_COLOR_COUNT];
+};
 
-#include <Corrade/Containers/Containers.h>
-#include <Magnum/Magnum.h>
+#define smoothnessOut noneCornerRadiusNoneSmoothnessOut.w
 
-namespace Magnum { namespace Ui {
+uniform lowp sampler2D cornerTextureData;
 
-class AbstractUiShader;
-class AbstractPlane;
-class AbstractUserInterface;
-class Anchor;
-template<class> class BasicInstancedLayer;
-template<class> class BasicInstancedGLLayer;
-template<class> class BasicLayer;
-template<class> class BasicGLLayer;
-template<class...> class BasicPlane;
-template<class...> class BasicUserInterface;
-class Widget;
+flat in mediump int fragmentColorIndex;
+in mediump vec4 fragmentCornerCoordinates;
 
-class Plane;
-class StyleConfiguration;
-class UserInterface;
+out lowp vec4 fragmentColor;
 
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
-enum class State: UnsignedInt;
-enum class Style: UnsignedInt;
-enum class Type: UnsignedInt;
-
-}}
-
-#endif
+void main() {
+    mediump vec2 cornerCoordinates = max(fragmentCornerCoordinates.xz, fragmentCornerCoordinates.yw);
+    fragmentColor = smoothstep(0.5 - smoothnessOut, 0.5 + smoothnessOut, texture(cornerTextureData, cornerCoordinates).r)*colors[fragmentColorIndex];
+}
