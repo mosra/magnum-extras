@@ -32,6 +32,8 @@ set(MagnumUi_SRCS
 set(MagnumUi_HEADERS
     AbstractUiShader.h
     Anchor.h
+    BasicInstancedGLLayer.h
+    BasicInstancedGLLayer.hpp
     BasicInstancedLayer.h
     BasicInstancedLayer.hpp
     BasicPlane.h

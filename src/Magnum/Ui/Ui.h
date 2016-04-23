@@ -39,6 +39,7 @@ class AbstractPlane;
 class AbstractUserInterface;
 class Anchor;
 template<class> class BasicInstancedLayer;
+template<class> class BasicInstancedGLLayer;
 template<class...> class BasicPlane;
 template<class...> class BasicUserInterface;
 class Widget;
