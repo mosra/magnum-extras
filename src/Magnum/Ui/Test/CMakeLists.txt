@@ -25,3 +25,4 @@
 
 corrade_add_test(UiAnchorTest AnchorTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiBasicInstancedLayerTest BasicInstancedLayerTest.cpp LIBRARIES MagnumUi)
+corrade_add_test(UiBasicLayerTest BasicLayerTest.cpp LIBRARIES MagnumUi)
