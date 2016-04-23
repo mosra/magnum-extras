@@ -30,6 +30,8 @@ install:
 - cinst ninja
 - set PATH=C:/Sys/bin;C:/tools/ninja;%PATH%
 - IF "%TARGET%" == "desktop" IF "%COMPILER%" == "mingw" cinst mingw /f >nul
+- IF "%TARGET_GLES2%" == "ON" set TARGET_GLES3=OFF
+- IF "%TARGET_GLES2%" == "OFF" set TARGET_GLES3=ON
 
 build_script:
 - IF "%TARGET%" == "desktop" IF "%COMPILER%" == "msvc" call package\ci\appveyor-desktop.bat

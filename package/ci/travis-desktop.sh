@@ -9,7 +9,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Debug \
-    -DWITH_INTERCONNECT=OFF
+    -DWITH_INTERCONNECT=ON
 make -j install
 cd ../..
 
@@ -27,8 +27,8 @@ cmake .. \
     -DWITH_SCENEGRAPH=OFF \
     -DWITH_SHADERS=OFF \
     -DWITH_SHAPES=OFF \
-    -DWITH_TEXT=OFF \
-    -DWITH_TEXTURETOOLS=OFF \
+    -DWITH_TEXT=ON \
+    -DWITH_TEXTURETOOLS=ON \
     -DWITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON
 make -j install
 cd ../..
@@ -40,6 +40,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Debug \
+    -DWITH_UI=ON \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON
 make -j${JOBS_LIMIT}

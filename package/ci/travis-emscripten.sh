@@ -53,11 +53,13 @@ cmake .. \
     -DWITH_SHAPES=OFF \
     -DWITH_TEXT=OFF \
     -DWITH_TEXTURETOOLS=OFF \
+    -DWITH_SDL2APPLICATION=OFF \
     -DTARGET_GLES2=$TARGET_GLES2
 make -j install
 cd ../..
 
-# Crosscompile
+# Crosscompile. Not building the Ui library because I don't want to port the
+# buffer mapping to glBufferSubData() yet.
 mkdir build-emscripten && cd build-emscripten
 cmake .. \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
@@ -68,6 +70,7 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
+    -DWITH_UI=OFF \
     -DBUILD_TESTS=ON
 make -j4
 

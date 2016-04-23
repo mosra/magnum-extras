@@ -22,6 +22,7 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DBUILD_TESTS=ON \
         -DBUILD_GL_TESTS=ON \
+        -DWITH_UI=ON \
         -G Ninja
     ninja
 }

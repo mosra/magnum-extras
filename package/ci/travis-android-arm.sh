@@ -25,7 +25,7 @@ ANDROID_NDK=$TRAVIS_BUILD_DIR/android-ndk-r10e cmake .. \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DWITH_INTERCONNECT=OFF
+    -DWITH_INTERCONNECT=$TARGET_GLES3
 make -j install
 cd ../..
 
@@ -45,8 +45,8 @@ ANDROID_NDK=$TRAVIS_BUILD_DIR/android-ndk-r10e cmake .. \
     -DWITH_SCENEGRAPH=OFF \
     -DWITH_SHADERS=OFF \
     -DWITH_SHAPES=OFF \
-    -DWITH_TEXT=OFF \
-    -DWITH_TEXTURETOOLS=OFF \
+    -DWITH_TEXT=$TARGET_GLES3 \
+    -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
     -DTARGET_GLES2=$TARGET_GLES2
 make -j install
 cd ../..
@@ -59,6 +59,7 @@ ANDROID_NDK=$TRAVIS_BUILD_DIR/android-ndk-r10e cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
+    -DWITH_UI=$TARGET_GLES3 \
     -DBUILD_TESTS=ON
 make -j4
 

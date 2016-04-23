@@ -9,7 +9,7 @@ mkdir build && cd build || exit /b
 cmake .. ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
-    -DWITH_INTERCONNECT=OFF ^
+    -DWITH_INTERCONNECT=ON ^
     -G "MinGW Makefiles" || exit /b
 cmake --build . -- -j || exit /b
 cmake --build . --target install -- -j || exit /b
@@ -29,8 +29,8 @@ cmake .. ^
     -DWITH_SCENEGRAPH=OFF ^
     -DWITH_SHADERS=OFF ^
     -DWITH_SHAPES=OFF ^
-    -DWITH_TEXT=OFF ^
-    -DWITH_TEXTURETOOLS=OFF ^
+    -DWITH_TEXT=ON ^
+    -DWITH_TEXTURETOOLS=ON ^
     -DWITH_WINDOWLESSWGLAPPLICATION=ON ^
     -G "MinGW Makefiles" || exit /b
 cmake --build . -- -j || exit /b
@@ -42,6 +42,7 @@ mkdir build && cd build || exit /b
 cmake .. ^
     -DCMAKE_BUILD_TYPE=Release ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
+    -DWITH_UI=ON ^
     -DBUILD_TESTS=ON ^
     -DBUILD_GL_TESTS=ON ^
     -G "MinGW Makefiles" || exit /b

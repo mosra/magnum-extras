@@ -29,7 +29,7 @@ cmake .. ^
     -DCMAKE_SYSTEM_VERSION=10.0 ^
     -DCORRADE_RC_EXECUTABLE=%APPVEYOR_BUILD_FOLDER%/deps-native/bin/corrade-rc.exe ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
-    -DWITH_INTERCONNECT=OFF ^
+    -DWITH_INTERCONNECT=%TARGET_GLES3% ^
     -DBUILD_STATIC=ON ^
     -G "Visual Studio 14 2015" -A x64 || exit /b
 cmake --build . --config Release --target install -- /m /v:m || exit /b
@@ -56,8 +56,8 @@ cmake .. ^
     -DWITH_SCENEGRAPH=OFF ^
     -DWITH_SHADERS=OFF ^
     -DWITH_SHAPES=OFF ^
-    -DWITH_TEXT=OFF ^
-    -DWITH_TEXTURETOOLS=OFF ^
+    -DWITH_TEXT=%TARGET_GLES3% ^
+    -DWITH_TEXTURETOOLS=%TARGET_GLES3% ^
     -DTARGET_GLES2=%TARGET_GLES2% ^
     -DBUILD_STATIC=ON ^
     -G "Visual Studio 14 2015" -A x64 || exit /b
@@ -74,5 +74,6 @@ cmake .. ^
     -DOPENGLES3_LIBRARY=%APPVEYOR_BUILD_FOLDER%/angle/winrt/10/src/Release_x64/lib/libGLESv2.lib ^
     -DOPENGLES3_INCLUDE_DIR=%APPVEYOR_BUILD_FOLDER%/angle/include ^
     -DBUILD_STATIC=ON ^
+    -DWITH_UI=%TARGET_GLES3% ^
     -G "Visual Studio 14 2015" -A x64 || exit /b
 cmake --build . --config Release -- /m /v:m || exit /b

@@ -84,6 +84,7 @@ cmake .. \
     -DCMAKE_PREFIX_PATH=${JENKINS_HOME}/filesystem/android-${toolchain}-${compatibility} \
     -DCMAKE_INSTALL_PREFIX=${JENKINS_HOME}/filesystem/android-${gl}-${toolchain}-${compatibility} \
     -DBUILD_DEPRECATED=${deprecated_build_flag} \
+    -DWITH_UI=ON \
     -G Ninja
 
 ninja

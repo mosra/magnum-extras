@@ -29,8 +29,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DBUILD_STATIC=ON \
     -DTESTSUITE_TARGET_XCTEST=ON \
-    -DWITH_INTERCONNECT=OFF \
-    -DBUILD_STATIC=ON \
+    -DWITH_INTERCONNECT=$TARGET_GLES3 \
     -G Xcode
 cmake --build . --config Release --target install | xcpretty
 cd ../..
@@ -51,8 +50,8 @@ cmake .. \
     -DWITH_SCENEGRAPH=OFF \
     -DWITH_SHADERS=OFF \
     -DWITH_SHAPES=OFF \
-    -DWITH_TEXT=OFF \
-    -DWITH_TEXTURETOOLS=OFF \
+    -DWITH_TEXT=$TARGET_GLES3 \
+    -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
     -DWITH_WINDOWLESSIOSAPPLICATION=ON \
     -DTARGET_GLES2=$TARGET_GLES2 \
     -DBUILD_STATIC=ON \
@@ -69,6 +68,7 @@ cmake .. \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DBUILD_STATIC=ON \
+    -DWITH_UI=$TARGET_GLES3 \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON \
     -G Xcode

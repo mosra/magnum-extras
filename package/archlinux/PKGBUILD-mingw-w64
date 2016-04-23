@@ -22,6 +22,7 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr/i686-w64-mingw32 \
         -DBUILD_TESTS=ON \
         -DBUILD_GL_TESTS=ON \
+        -DWITH_UI=ON \
         -G Ninja
     ninja
 
@@ -34,6 +35,7 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr/x86_64-w64-mingw32 \
         -DBUILD_TESTS=ON \
         -DBUILD_GL_TESTS=ON \
+        -DWITH_UI=ON \
         -G Ninja
     ninja
 }
