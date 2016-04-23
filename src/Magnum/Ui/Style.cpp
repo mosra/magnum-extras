@@ -105,6 +105,42 @@ UnsignedByte foregroundColorIndex(const Type type, const Style style, const Stat
         ButtonDimPressed,
         ButtonDimDisabled,
 
+        InputDefaultDefault,
+        InputDefaultHover,
+        InputDefaultPressed,
+        InputDefaultActive,
+        InputDefaultDisabled,
+        InputPrimaryDefault,
+        InputPrimaryHover,
+        InputPrimaryPressed,
+        InputPrimaryActive,
+        InputPrimaryDisabled,
+        InputSuccessDefault,
+        InputSuccessHover,
+        InputSuccessPressed,
+        InputSuccessActive,
+        InputSuccessDisabled,
+        InputInfoDefault,
+        InputInfoHover,
+        InputInfoPressed,
+        InputInfoActive,
+        InputInfoDisabled,
+        InputWarningDefault,
+        InputWarningHover,
+        InputWarningPressed,
+        InputWarningActive,
+        InputWarningDisabled,
+        InputDangerDefault,
+        InputDangerHover,
+        InputDangerPressed,
+        InputDangerActive,
+        InputDangerDisabled,
+        InputDimDefault,
+        InputDimHover,
+        InputDimPressed,
+        InputDimActive,
+        InputDimDisabled,
+
         ForegroundColorCount
     };
 
@@ -151,6 +187,42 @@ UnsignedByte foregroundColorIndex(const Type type, const Style style, const Stat
         _c(Button, Dim, Hover)
         _c(Button, Dim, Pressed)
         _c(Button, Dim, Disabled)
+
+        _c(Input, Default, Default)
+        _c(Input, Default, Hover)
+        _c(Input, Default, Pressed)
+        _c(Input, Default, Active)
+        _c(Input, Default, Disabled)
+        _c(Input, Primary, Default)
+        _c(Input, Primary, Hover)
+        _c(Input, Primary, Pressed)
+        _c(Input, Primary, Active)
+        _c(Input, Primary, Disabled)
+        _c(Input, Success, Default)
+        _c(Input, Success, Hover)
+        _c(Input, Success, Pressed)
+        _c(Input, Success, Active)
+        _c(Input, Success, Disabled)
+        _c(Input, Info, Default)
+        _c(Input, Info, Hover)
+        _c(Input, Info, Pressed)
+        _c(Input, Info, Active)
+        _c(Input, Info, Disabled)
+        _c(Input, Warning, Default)
+        _c(Input, Warning, Hover)
+        _c(Input, Warning, Pressed)
+        _c(Input, Warning, Active)
+        _c(Input, Warning, Disabled)
+        _c(Input, Danger, Default)
+        _c(Input, Danger, Hover)
+        _c(Input, Danger, Pressed)
+        _c(Input, Danger, Active)
+        _c(Input, Danger, Disabled)
+        _c(Input, Dim, Default)
+        _c(Input, Dim, Hover)
+        _c(Input, Dim, Pressed)
+        _c(Input, Dim, Active)
+        _c(Input, Dim, Disabled)
         #undef _c
     }
 
@@ -209,6 +281,47 @@ UnsignedByte textColorIndex(const Type type, const Style style, const State stat
         LabelDangerDisabled,
         LabelDimDefault,
         LabelDimDisabled,
+
+        InputDefaultDefault,
+        InputDefaultHover,
+        InputDefaultPressed,
+        InputDefaultActive,
+        InputDefaultDisabled,
+        InputPrimaryDefault,
+        InputPrimaryHover,
+        InputPrimaryPressed,
+        InputPrimaryActive,
+        InputPrimaryDisabled,
+        InputSuccessDefault,
+        InputSuccessHover,
+        InputSuccessPressed,
+        InputSuccessActive,
+        InputSuccessDisabled,
+        InputInfoDefault,
+        InputInfoHover,
+        InputInfoPressed,
+        InputInfoActive,
+        InputInfoDisabled,
+        InputWarningDefault,
+        InputWarningHover,
+        InputWarningPressed,
+        InputWarningActive,
+        InputWarningDisabled,
+        InputDangerDefault,
+        InputDangerHover,
+        InputDangerPressed,
+        InputDangerActive,
+        InputDangerDisabled,
+        InputDimDefault,
+        InputDimHover,
+        InputDimPressed,
+        InputDimActive,
+        InputDimDisabled,
+        InputFlatDefault,
+        InputFlatHover,
+        InputFlatPressed,
+        InputFlatActive,
+        InputFlatDisabled,
 
         TextColorCount
     };
@@ -275,6 +388,47 @@ UnsignedByte textColorIndex(const Type type, const Style style, const State stat
         _c(Label, Danger, Disabled)
         _c(Label, Dim, Default)
         _c(Label, Dim, Disabled)
+
+        _c(Input, Default, Default)
+        _c(Input, Default, Hover)
+        _c(Input, Default, Pressed)
+        _c(Input, Default, Active)
+        _c(Input, Default, Disabled)
+        _c(Input, Primary, Default)
+        _c(Input, Primary, Hover)
+        _c(Input, Primary, Pressed)
+        _c(Input, Primary, Active)
+        _c(Input, Primary, Disabled)
+        _c(Input, Success, Default)
+        _c(Input, Success, Hover)
+        _c(Input, Success, Pressed)
+        _c(Input, Success, Active)
+        _c(Input, Success, Disabled)
+        _c(Input, Info, Default)
+        _c(Input, Info, Hover)
+        _c(Input, Info, Pressed)
+        _c(Input, Info, Active)
+        _c(Input, Info, Disabled)
+        _c(Input, Warning, Default)
+        _c(Input, Warning, Hover)
+        _c(Input, Warning, Pressed)
+        _c(Input, Warning, Active)
+        _c(Input, Warning, Disabled)
+        _c(Input, Danger, Default)
+        _c(Input, Danger, Hover)
+        _c(Input, Danger, Pressed)
+        _c(Input, Danger, Active)
+        _c(Input, Danger, Disabled)
+        _c(Input, Dim, Default)
+        _c(Input, Dim, Hover)
+        _c(Input, Dim, Pressed)
+        _c(Input, Dim, Active)
+        _c(Input, Dim, Disabled)
+        _c(Input, Flat, Default)
+        _c(Input, Flat, Hover)
+        _c(Input, Flat, Pressed)
+        _c(Input, Flat, Active)
+        _c(Input, Flat, Disabled)
         #undef _c
     }
 
@@ -313,6 +467,7 @@ Debug& operator<<(Debug& debug, const Type value) {
     switch(value) {
         #define _c(value) case Type::value: return debug << "Type::" #value;
         _c(Button)
+        _c(Input)
         _c(Label)
         #undef _c
     }

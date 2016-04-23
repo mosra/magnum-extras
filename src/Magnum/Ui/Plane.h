@@ -41,6 +41,7 @@ namespace Magnum { namespace Ui {
 /** @brief Default UI plane */
 class MAGNUM_UI_EXPORT Plane: public BasicPlane<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer> {
     friend Button;
+    friend Input;
     friend Label;
 
     public:

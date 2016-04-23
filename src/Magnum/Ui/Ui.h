@@ -47,6 +47,7 @@ template<class...> class BasicUserInterface;
 class Widget;
 
 class Button;
+class Input;
 class Label;
 class Plane;
 class StyleConfiguration;

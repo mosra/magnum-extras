@@ -41,8 +41,8 @@ namespace Magnum { namespace Ui {
 namespace Implementation {
     enum: std::size_t {
         BackgroundColorCount = 1,
-        ForegroundColorCount = 29,
-        TextColorCount = 47
+        ForegroundColorCount = 64,
+        TextColorCount = 87
     };
 
     UnsignedByte MAGNUM_UI_EXPORT backgroundColorIndex(Type type, Style style, State state);
@@ -57,6 +57,7 @@ namespace Implementation {
 enum class Type: UnsignedInt {
     Button = 0,     /**< @ref Button */
     Label = 1,      /**< @ref Label */
+    Input = 2,      /**< @ref Input */
 };
 
 /** @debugoperatorenum{Magnum::Ui::Type} */

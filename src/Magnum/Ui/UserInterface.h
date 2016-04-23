@@ -29,6 +29,7 @@
  * @brief Class @ref Magnum::Ui::UserInterface
  */
 
+#include <Corrade/Interconnect/Emitter.h>
 #include <Magnum/Buffer.h>
 #include <Magnum/Text/Text.h>
 #include <Magnum/Text/GlyphCache.h>
@@ -41,7 +42,8 @@
 namespace Magnum { namespace Ui {
 
 /** @brief Default user interface */
-class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer> {
+class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer>, public Interconnect::Emitter {
+    friend Input;
     friend Plane;
 
     public:
@@ -78,8 +80,44 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         /** @brief Font used for the interface */
         const Text::AbstractFont& font() const { return _font; }
 
+        /**
+         * @brief Currently focused input widget
+         *
+         * Input widget that should receive text input from the application.
+         * Returns `nullptr` if there is no active text input widget.
+         * @see @ref inputWidgetFocused(), @ref inputWidgetBlurred(),
+         *      @ref Input::handleKeyPress(), @ref Input::handleTextInput()
+         */
+        Input* focusedInputWidget() { return _focusedInputWidget; }
+
         /** @brief Draw the user interface */
         void draw();
+
+        /**
+         * @brief Input widget was focused
+         *
+         * Text input from the application should be started upon signaling
+         * this. Currently active input widget is available in
+         * @ref focusedInputWidget().
+         * @see @ref Input::focused(),
+         *      @ref Platform::Sdl2Application::startTextInput() "Platform::*Application::startTextInput()"
+         */
+        Signal inputWidgetFocused() {
+            return emit(&UserInterface::inputWidgetFocused);
+        }
+
+        /**
+         * @brief Input widget was blurred
+         *
+         * Text input from the application should be started upon signaling
+         * this. Currently active input widget is available in
+         * @ref focusedInputWidget().
+         * @see @ref Input::focused(),
+         *      @ref Platform::Sdl2Application::stopTextInput() "Platform::*Application::stopTextInput()"
+         */
+        Signal inputWidgetBlurred() {
+            return emit(&UserInterface::inputWidgetBlurred);
+        }
 
     private:
         Buffer _backgroundUniforms,
@@ -97,6 +135,8 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         Text::AbstractFont& _font;
         Text::GlyphCache _glyphCache;
         Texture2D _corner;
+
+        Input* _focusedInputWidget = nullptr;
 };
 
 }}
