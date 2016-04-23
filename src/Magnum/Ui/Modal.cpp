@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_Ui_h
-#define Magnum_Ui_Ui_h
 /*
     This file is part of Magnum.
 
@@ -25,41 +23,21 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for @ref Magnum::Ui namespace
- */
+#include "Modal.h"
 
-#include <Corrade/Containers/Containers.h>
-#include <Magnum/Magnum.h>
+#include "Magnum/Ui/Plane.h"
+#include "Magnum/Ui/UserInterface.h"
 
 namespace Magnum { namespace Ui {
 
-class AbstractUiShader;
-class AbstractPlane;
-class AbstractUserInterface;
-class Anchor;
-template<class> class BasicInstancedLayer;
-template<class> class BasicInstancedGLLayer;
-template<class> class BasicLayer;
-template<class> class BasicGLLayer;
-template<class...> class BasicPlane;
-template<class...> class BasicUserInterface;
-class Widget;
+Modal::Modal(Plane& plane, const Anchor& anchor, const Style style): Widget{plane, anchor, {plane.ui().styleConfiguration().padding(), plane.ui().styleConfiguration().padding()}} {
+    _dimElementId = plane._backgroundLayer.addElement({{-plane.rect().min(), plane.ui().size()},
+        Implementation::backgroundColorIndex(Type::Modal, Style::Dim, State::Default)});
 
-class Button;
-class Input;
-class Label;
-class Modal;
-class Plane;
-class StyleConfiguration;
-class UserInterface;
+    _backgroundElementId = plane._backgroundLayer.addElement({rect(),
+        Implementation::backgroundColorIndex(Type::Modal, style, flags())});
+}
 
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
-enum class State: UnsignedInt;
-enum class Style: UnsignedInt;
-enum class Type: UnsignedInt;
+Modal::~Modal() = default;
 
 }}
-
-#endif

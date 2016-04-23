@@ -40,7 +40,7 @@ namespace Magnum { namespace Ui {
 
 namespace Implementation {
     enum: std::size_t {
-        BackgroundColorCount = 1,
+        BackgroundColorCount = 14,
         ForegroundColorCount = 64,
         TextColorCount = 87
     };
@@ -58,6 +58,7 @@ enum class Type: UnsignedInt {
     Button = 0,     /**< @ref Button */
     Label = 1,      /**< @ref Label */
     Input = 2,      /**< @ref Input */
+    Modal = 3       /**< @ref Modal */
 };
 
 /** @debugoperatorenum{Magnum::Ui::Type} */

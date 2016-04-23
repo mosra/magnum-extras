@@ -43,6 +43,7 @@ class MAGNUM_UI_EXPORT Plane: public BasicPlane<Implementation::QuadLayer, Imple
     friend Button;
     friend Input;
     friend Label;
+    friend Modal;
 
     public:
         /**

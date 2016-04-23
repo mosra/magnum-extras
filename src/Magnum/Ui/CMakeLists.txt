@@ -35,6 +35,7 @@ set(MagnumUi_SRCS
     Button.cpp
     Input.cpp
     Label.cpp
+    Modal.cpp
     Plane.cpp
     Style.cpp
     UserInterface.cpp
@@ -62,6 +63,7 @@ set(MagnumUi_HEADERS
     Button.h
     Input.h
     Label.h
+    Modal.h
     Plane.h
     Style.h
     UserInterface.h)

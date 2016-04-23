@@ -1,5 +1,5 @@
-#ifndef Magnum_Ui_Ui_h
-#define Magnum_Ui_Ui_h
+#ifndef Magnum_Ui_Modal_h
+#define Magnum_Ui_Modal_h
 /*
     This file is part of Magnum.
 
@@ -26,39 +26,42 @@
 */
 
 /** @file
- * @brief Forward declarations for @ref Magnum::Ui namespace
+ * @brief Class @ref Magnum::Ui::Modal
  */
 
-#include <Corrade/Containers/Containers.h>
-#include <Magnum/Magnum.h>
+#include <Magnum/Text/Text.h>
+
+#include "Magnum/Ui/Widget.h"
+#include "Magnum/Ui/Style.h"
 
 namespace Magnum { namespace Ui {
 
-class AbstractUiShader;
-class AbstractPlane;
-class AbstractUserInterface;
-class Anchor;
-template<class> class BasicInstancedLayer;
-template<class> class BasicInstancedGLLayer;
-template<class> class BasicLayer;
-template<class> class BasicGLLayer;
-template<class...> class BasicPlane;
-template<class...> class BasicUserInterface;
-class Widget;
+/**
+@brief Modal widget
 
-class Button;
-class Input;
-class Label;
-class Modal;
-class Plane;
-class StyleConfiguration;
-class UserInterface;
+Should be snapped to whole area of a plane. Gives the plane a background and
+fills the rest with semi-transparent dim color to suggest modality.
 
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
-enum class State: UnsignedInt;
-enum class Style: UnsignedInt;
-enum class Type: UnsignedInt;
+### Styling
+
+Ignores @ref StateFlag::Hovered, @ref StateFlag::Pressed and
+@ref StateFlag::Active, @ref Style::Flat.
+*/
+class MAGNUM_UI_EXPORT Modal: public Widget {
+    public:
+        /**
+         * @brief Label
+         * @param plane         Plane this widget is a part of
+         * @param anchor        Positioning anchor
+         * @param style         Widget style
+         */
+        explicit Modal(Plane& plane, const Anchor& anchor, Style style = Style::Default);
+
+        ~Modal();
+
+    private:
+        std::size_t _dimElementId, _backgroundElementId;
+};
 
 }}
 

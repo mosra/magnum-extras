@@ -47,6 +47,20 @@ UnsignedByte backgroundColorIndex(const Type type, const Style style, const Stat
     enum: UnsignedByte {
         Hidden = 0,
 
+        ModalDefaultDefault,
+        ModalDefaultDisabled,
+        ModalPrimaryDefault,
+        ModalPrimaryDisabled,
+        ModalSuccessDefault,
+        ModalSuccessDisabled,
+        ModalInfoDefault,
+        ModalInfoDisabled,
+        ModalWarningDefault,
+        ModalWarningDisabled,
+        ModalDangerDefault,
+        ModalDangerDisabled,
+        ModalDimDefault,
+
         BackgroundColorCount
     };
 
@@ -65,6 +79,19 @@ UnsignedByte backgroundColorIndex(const Type type, const Style style, const Stat
                  (UnsignedInt(Style::style) << 8) |                         \
                   UnsignedInt(State::state):                                \
                 return type ## style ## state;
+        _c(Modal, Default, Default)
+        _c(Modal, Default, Disabled)
+        _c(Modal, Primary, Default)
+        _c(Modal, Primary, Disabled)
+        _c(Modal, Success, Default)
+        _c(Modal, Success, Disabled)
+        _c(Modal, Info, Default)
+        _c(Modal, Info, Disabled)
+        _c(Modal, Warning, Default)
+        _c(Modal, Warning, Disabled)
+        _c(Modal, Danger, Default)
+        _c(Modal, Danger, Disabled)
+        _c(Modal, Dim, Default)
         #undef _c
     }
 
@@ -469,6 +496,7 @@ Debug& operator<<(Debug& debug, const Type value) {
         _c(Button)
         _c(Input)
         _c(Label)
+        _c(Modal)
         #undef _c
     }
 
