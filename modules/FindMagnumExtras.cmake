@@ -63,16 +63,27 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
-# Magnum library dependencies
-set(_MAGNUMEXTRAS_DEPENDENCIES )
+# Corrade library dependencies
+set(_MAGNUMEXTRAS_CORRADE_DEPENDENCIES )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
     string(TOUPPER ${_component} _COMPONENT)
 
     # (none yet)
 
-    list(APPEND _MAGNUMEXTRAS_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES})
+    list(APPEND _MAGNUMEXTRAS_CORRADE_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_CORRADE_DEPENDENCIES})
 endforeach()
-find_package(Magnum REQUIRED ${_MAGNUMEXTRAS_DEPENDENCIES})
+find_package(Corrade REQUIRED ${_MAGNUMEXTRAS_CORRADE_DEPENDENCIES})
+
+# Magnum library dependencies
+set(_MAGNUMEXTRAS_MAGNUM_DEPENDENCIES )
+foreach(_component ${MagnumExtras_FIND_COMPONENTS})
+    string(TOUPPER ${_component} _COMPONENT)
+
+    # (none yet)
+
+    list(APPEND _MAGNUMEXTRAS_MAGNUM_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES})
+endforeach()
+find_package(Magnum REQUIRED ${_MAGNUMEXTRAS_MAGNUM_DEPENDENCIES})
 
 # Global integration include dir
 find_path(MAGNUMEXTRAS_INCLUDE_DIR Magnum
@@ -123,8 +134,8 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
             add_library(MagnumExtras::${_component} UNKNOWN IMPORTED)
 
             # Try to find both debug and release version
-            find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG Magnum${_component}Extras-d)
-            find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE Magnum${_component}Extras)
+            find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG Magnum${_component}-d)
+            find_library(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE Magnum${_component})
             mark_as_advanced(MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG
                 MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)
 
@@ -148,12 +159,17 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
         # Find library includes
         if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS})
             find_path(_MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR
-                NAMES ${_MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_PATH_NAMES}
-                HINTS ${MAGNUMEXTRAS_INCLUDE_DIR}/Magnum/${_component}Extras)
+                NAMES ${_component}.h
+                HINTS ${MAGNUMEXTRAS_INCLUDE_DIR}/Magnum/${_component})
         endif()
 
         if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS})
-            # Link to core Magnum library, add other Magnum dependencies
+            # Link to Corrade dependencies, link to core Magnum library and
+            # other Magnum dependencies
+            foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_CORRADE_DEPENDENCIES})
+                set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
+                    INTERFACE_LINK_LIBRARIES Corrade::${_dependency})
+            endforeach()
             set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
                 INTERFACE_LINK_LIBRARIES Magnum::Magnum)
             foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES})
