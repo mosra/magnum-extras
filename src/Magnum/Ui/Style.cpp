@@ -537,9 +537,204 @@ Debug& operator<<(Debug& debug, const Style value) {
 
 StyleConfiguration::StyleConfiguration() = default;
 
+namespace {
+
+inline Color4 premult(const Color4& color) {
+    return {color.rgb()*color.a(), color.a()};
+}
+
+}
+
 StyleConfiguration defaultStyleConfiguration() {
-    /** @todo */
-    return StyleConfiguration{};
+    using namespace Math::Literals;
+
+    return Ui::StyleConfiguration{}
+        .setFontSize(18.0f)
+        .setMargin({10.0f, 7.0f})
+        .setPadding({13.0f, 10.0f})
+        .setCornerRadius(4.0f)
+        .setCornerSmoothnessOut(0.125f)
+
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Primary, Ui::State::Hover,    0x7891e6_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Primary, Ui::State::Hover,    0x4165dc_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Primary, Ui::State::Hover,    0xf0f3fc_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Primary, Ui::State::Default,  0x284fd6_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Primary, Ui::State::Default,  0x2040ac_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Primary, Ui::State::Default,  0xd7dff8_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Primary, Ui::State::Pressed,  0x132566_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Primary, Ui::State::Pressed,  0x1a3085_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Primary, Ui::State::Pressed,  0x4f72e0_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Primary, Ui::State::Disabled, premult(0x7171714d_rgbaf))
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Primary, Ui::State::Disabled, premult(0x7171714d_rgbaf))
+        .setTextColor(      Ui::Type::Button, Ui::Style::Primary, Ui::State::Disabled, premult(0xf6f6f64d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Danger, Ui::State::Hover,    0xe5685f_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Danger, Ui::State::Hover,    0xdc3427_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Danger, Ui::State::Hover,    0xfae3e1_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Danger, Ui::State::Default,  0xbd2a1f_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Danger, Ui::State::Default,  0x9a2219_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Danger, Ui::State::Default,  0xf5c7c4_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Danger, Ui::State::Pressed,  0x57130e_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Danger, Ui::State::Pressed,  0x7e1d15_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Danger, Ui::State::Pressed,  0xd93124_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Danger, Ui::State::Disabled, premult(0x7171714d_rgbaf))
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Danger, Ui::State::Disabled, premult(0x7171714d_rgbaf))
+        .setTextColor(      Ui::Type::Button, Ui::Style::Danger, Ui::State::Disabled, premult(0xf6f6f64d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Success, Ui::State::Hover,    0x36d134_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Success, Ui::State::Hover,    0x27a425_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Success, Ui::State::Hover,    0xd5f4d5_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Success, Ui::State::Default,  0x1d791b_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Success, Ui::State::Default,  0x186014_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Success, Ui::State::Default,  0xc1eebf_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Success, Ui::State::Pressed,  0x0f390b_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Success, Ui::State::Pressed,  0x165914_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Success, Ui::State::Pressed,  0x2a9327_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Success, Ui::State::Disabled, premult(0x7171714d_rgbaf))
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Success, Ui::State::Disabled, premult(0x7171714d_rgbaf))
+        .setTextColor(      Ui::Type::Button, Ui::Style::Success, Ui::State::Disabled, premult(0xf6f6f64d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Warning, Ui::State::Hover,    0xf3f098_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Warning, Ui::State::Hover,    0xe7e243_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Warning, Ui::State::Hover,    0xa1a117_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Warning, Ui::State::Default,  0xdbd61b_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Warning, Ui::State::Default,  0xb7b217_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Warning, Ui::State::Default,  0x363608_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Warning, Ui::State::Pressed,  0x56540b_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Warning, Ui::State::Pressed,  0x7f7d0f_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Warning, Ui::State::Pressed,  0x313107_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Warning, Ui::State::Disabled, premult(0x7171714d_rgbaf))
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Warning, Ui::State::Disabled, premult(0x7171714d_rgbaf))
+        .setTextColor(      Ui::Type::Button, Ui::Style::Warning, Ui::State::Disabled, premult(0xf6f6f64d_rgbaf))
+
+        .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Hover,    0xd0d9f7_rgbf)
+        .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Default,  0x8fa5ec_rgbf)
+        .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Pressed,  0x224ccd_rgbf)
+        .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Disabled, premult(0xa6a6a64d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0xf9f9f9_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0xd9d9d9_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0x9e9e9e_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0xe9e9e9_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0xbfbfbf_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0x1c1c1c_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0x717171_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0x8e8e8e_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0x313131_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0xafafaf4d_rgbaf))
+
+        .setTextColor(Ui::Type::Label, Ui::Style::Primary, Ui::State::Default,  0x284fd6_rgbf)
+        .setTextColor(Ui::Type::Label, Ui::Style::Primary, Ui::State::Disabled, premult(0xb0b0b04d_rgbaf))
+
+        .setTextColor(Ui::Type::Label, Ui::Style::Danger,  Ui::State::Default,  0xbd2a1f_rgbf)
+        .setTextColor(Ui::Type::Label, Ui::Style::Danger,  Ui::State::Disabled, premult(0xb0b0b04d_rgbaf))
+
+        .setTextColor(Ui::Type::Label, Ui::Style::Success, Ui::State::Default,  0x1d791b_rgbf)
+        .setTextColor(Ui::Type::Label, Ui::Style::Success, Ui::State::Disabled, premult(0xb0b0b04d_rgbaf))
+
+        .setTextColor(Ui::Type::Label, Ui::Style::Warning, Ui::State::Default,  0xdbd61b_rgbf)
+        .setTextColor(Ui::Type::Label, Ui::Style::Warning, Ui::State::Disabled, premult(0xb0b0b04d_rgbaf))
+
+        .setTextColor(Ui::Type::Label, Ui::Style::Info,    Ui::State::Default,  0x7c94e7_rgbf)
+        .setTextColor(Ui::Type::Label, Ui::Style::Info,    Ui::State::Disabled, premult(0xb0b0b04d_rgbaf))
+
+        .setTextColor(Ui::Type::Label, Ui::Style::Default, Ui::State::Default,  0xe7e7e7_rgbf)
+        .setTextColor(Ui::Type::Label, Ui::Style::Default, Ui::State::Disabled, premult(0x6363634d_rgbaf))
+
+        .setTextColor(Ui::Type::Label, Ui::Style::Dim,     Ui::State::Default,  0x939393_rgbf)
+        .setTextColor(Ui::Type::Label, Ui::Style::Dim,     Ui::State::Disabled, premult(0x4242424d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0xf9f9f9_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0xd9d9d9_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0x9e9e9e_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0xe9e9e9_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0xbfbfbf_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0x1c1c1c_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0x717171_rgbf)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0x8e8e8e_rgbf)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0x313131_rgbf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0xafafaf4d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Default, Ui::State::Hover,    0xd9d9d9_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Default, Ui::State::Hover,    0xf9f9f9_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Default, Ui::State::Hover,    0x777777_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Default, Ui::State::Default,  0xbfbfbf_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Default, Ui::State::Default,  0xe9e9e9_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Default, Ui::State::Default,  0x1c1c1c_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Default, Ui::State::Pressed,  0x717171_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Default, Ui::State::Pressed,  0x8e8e8e_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Default, Ui::State::Pressed,  0x313131_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Default, Ui::State::Active,   0x909090_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Default, Ui::State::Active,   0xbdbdbd_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Default, Ui::State::Active,   0x242424_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Default, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Default, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setTextColor(      Ui::Type::Input, Ui::Style::Default, Ui::State::Disabled, premult(0xafafaf4d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Danger, Ui::State::Hover,    0xd9d9d9_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Danger, Ui::State::Hover,    0xf9f9f9_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Danger, Ui::State::Hover,    0xe87f75_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Danger, Ui::State::Default,  0xbfbfbf_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Danger, Ui::State::Default,  0xe9e9e9_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Danger, Ui::State::Default,  0xa4261b_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Danger, Ui::State::Pressed,  0x717171_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Danger, Ui::State::Pressed,  0x8e8e8e_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Danger, Ui::State::Pressed,  0xf4c2be_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Danger, Ui::State::Active,   0xea8884_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Danger, Ui::State::Active,   0xf2bab6_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Danger, Ui::State::Active,   0x7e1d15_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Danger, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Danger, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setTextColor(      Ui::Type::Input, Ui::Style::Danger, Ui::State::Disabled, premult(0xafafaf4d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Success, Ui::State::Hover,    0xd9d9d9_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Success, Ui::State::Hover,    0xf9f9f9_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Success, Ui::State::Hover,    0x61db5d_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Success, Ui::State::Default,  0xbfbfbf_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Success, Ui::State::Default,  0xe9e9e9_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Success, Ui::State::Default,  0x21871e_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Success, Ui::State::Pressed,  0x717171_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Success, Ui::State::Pressed,  0x8e8e8e_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Success, Ui::State::Pressed,  0x77e074_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Success, Ui::State::Active,   0x8ae781_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Success, Ui::State::Active,   0xc7f2c6_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Success, Ui::State::Active,   0x165914_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Success, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Success, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setTextColor(      Ui::Type::Input, Ui::Style::Success, Ui::State::Disabled, premult(0xafafaf4d_rgbaf))
+
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Warning, Ui::State::Hover,    0xd9d9d9_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Warning, Ui::State::Hover,    0xf9f9f9_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Warning, Ui::State::Hover,    0xcec818_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Warning, Ui::State::Default,  0xbfbfbf_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Warning, Ui::State::Default,  0xe9e9e9_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Warning, Ui::State::Default,  0x827e0f_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Warning, Ui::State::Pressed,  0x717171_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Warning, Ui::State::Pressed,  0x8e8e8e_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Warning, Ui::State::Pressed,  0xd1cd19_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Warning, Ui::State::Active,   0xf0ec88_rgbf)
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Warning, Ui::State::Active,   0xfaf9d2_rgbf)
+        .setTextColor(      Ui::Type::Input, Ui::Style::Warning, Ui::State::Active,   0x7f7d0f_rgbf)
+        .setTopFillColor(   Ui::Type::Input, Ui::Style::Warning, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setBottomFillColor(Ui::Type::Input, Ui::Style::Warning, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
+        .setTextColor(      Ui::Type::Input, Ui::Style::Warning, Ui::State::Disabled, premult(0xafafaf4d_rgbaf))
+
+        .setTextColor(Ui::Type::Input, Ui::Style::Flat, Ui::State::Hover,    0xd0d9f7_rgbf)
+        .setTextColor(Ui::Type::Input, Ui::Style::Flat, Ui::State::Default,  0x8fa5ec_rgbf)
+        .setTextColor(Ui::Type::Input, Ui::Style::Flat, Ui::State::Pressed,  0x224ccd_rgbf)
+        .setTextColor(Ui::Type::Input, Ui::Style::Flat, Ui::State::Active,   0x456ce0_rgbf)
+        .setTextColor(Ui::Type::Input, Ui::Style::Flat, Ui::State::Disabled, premult(0xa6a6a64d_rgbaf))
+
+        .setBackgroundColor(Ui::Type::Modal, Ui::Style::Dim, Ui::State::Default, premult(0x00000099_rgbaf))
+        .setBackgroundColor(Ui::Type::Modal, Ui::Style::Default, Ui::State::Default, premult(0x1f1f1fe5_rgbaf))
+        .setBackgroundColor(Ui::Type::Modal, Ui::Style::Danger, Ui::State::Default, premult(0x411713e5_rgbaf))
+        .setBackgroundColor(Ui::Type::Modal, Ui::Style::Success, Ui::State::Default, premult(0x102c10e5_rgbaf))
+        .setBackgroundColor(Ui::Type::Modal, Ui::Style::Warning, Ui::State::Default, premult(0x323112e5_rgbaf))
+        .setBackgroundColor(Ui::Type::Modal, Ui::Style::Info, Ui::State::Default, premult(0x10172fe5_rgbaf));
 }
 
 void StyleConfiguration::pack(Buffer& backgroundUniforms, Buffer& foregroundUniforms, Buffer& textUniforms) const {
