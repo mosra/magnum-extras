@@ -23,6 +23,7 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr/nacl \
         -DLIB_SUFFIX=/32 \
         -DWITH_UI=ON \
+        -DWITH_UI_GALLERY=OFF \
         -G Ninja
     ninja
 
@@ -35,6 +36,7 @@ build() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/nacl \
         -DWITH_UI=ON \
+        -DWITH_UI_GALLERY=OFF \
         -G Ninja
     ninja
 }

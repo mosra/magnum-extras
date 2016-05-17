@@ -71,6 +71,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
     -DWITH_UI=OFF \
+    -DWITH_UI_GALLERY=OFF \
     -DBUILD_TESTS=ON
 make -j4
 

@@ -27,6 +27,7 @@ src_configure() {
 		-DCMAKE_INSTALL_PREFIX="${EPREFIX}/usr"
 		-DCMAKE_BUILD_TYPE=Release
 		-DWITH_UI=ON
+		-DWITH_UI_GALLERY=ON
 	)
 	cmake-utils_src_configure
 }

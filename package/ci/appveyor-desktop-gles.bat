@@ -21,6 +21,7 @@ mkdir build && cd build || exit /b
 cmake .. ^
     -DCMAKE_BUILD_TYPE=Debug ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
+    -DCMAKE_PREFIX_PATH=%APPVEYOR_BUILD_FOLDER%/SDL ^
     -DTARGET_GLES=ON ^
     -DTARGET_GLES2=%TARGET_GLES2% ^
     -DTARGET_DESKTOP_GLES=ON ^
@@ -34,6 +35,7 @@ cmake .. ^
     -DWITH_TEXT=%TARGET_GLES3% ^
     -DWITH_TEXTURETOOLS=%TARGET_GLES3% ^
     -DWITH_WINDOWLESSWGLAPPLICATION=ON ^
+    -DWITH_SDL2APPLICATION=%TARGET_GLES3% ^
     -G Ninja || exit /b
 cmake --build . || exit /b
 cmake --build . --target install || exit /b
@@ -44,7 +46,9 @@ mkdir build && cd build || exit /b
 cmake .. ^
     -DCMAKE_BUILD_TYPE=Debug ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
+    -DCMAKE_PREFIX_PATH=%APPVEYOR_BUILD_FOLDER%/SDL ^
     -DWITH_UI=%TARGET_GLES3% ^
+    -DWITH_UI_GALLERY=%TARGET_GLES3% ^
     -DBUILD_TESTS=ON ^
     -DBUILD_GL_TESTS=ON ^
     -G Ninja || exit /b

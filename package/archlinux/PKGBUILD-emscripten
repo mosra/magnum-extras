@@ -27,7 +27,8 @@ build() {
     cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/lib/emscripten/system \
-        -DWITH_UI=ON
+        -DWITH_UI=ON \
+        -DWITH_UI_GALLERY=OFF
     ninja
 }
 

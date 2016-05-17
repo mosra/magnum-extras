@@ -53,13 +53,15 @@ cmake .. \
     -DWITH_TEXT=$TARGET_GLES3 \
     -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
     -DWITH_WINDOWLESSIOSAPPLICATION=ON \
+    -DWITH_SDL2APPLICATION=OFF \
     -DTARGET_GLES2=$TARGET_GLES2 \
     -DBUILD_STATIC=ON \
     -G Xcode
 cmake --build . --config Release --target install | xcpretty
 cd ../..
 
-# Crosscompile
+# Crosscompile. Not building the Ui gallery because I don't want to mess with the
+# iOS signing and bundle stuff ATM.
 mkdir build-ios && cd build-ios
 cmake .. \
     -DCMAKE_TOOLCHAIN_FILE=../toolchains/generic/iOS.cmake \
@@ -69,6 +71,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DBUILD_STATIC=ON \
     -DWITH_UI=$TARGET_GLES3 \
+    -DWITH_UI_GALLERY=OFF \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON \
     -G Xcode

@@ -11,8 +11,10 @@ environment:
   - TARGET: desktop
     COMPILER: mingw
   - TARGET: desktop-gles
+    COMPILER: msvc
     TARGET_GLES2: ON
   - TARGET: desktop-gles
+    COMPILER: msvc
     TARGET_GLES2: OFF
   - TARGET: rt
     TARGET_GLES2: ON
@@ -33,8 +35,17 @@ install:
 - IF "%TARGET_GLES2%" == "ON" set TARGET_GLES3=OFF
 - IF "%TARGET_GLES2%" == "OFF" set TARGET_GLES3=ON
 
+# SDL2
+- IF NOT "%TARGET%" == "rt" IF "%COMPILER%" == "msvc" IF NOT EXIST %APPVEYOR_BUILD_FOLDER%\SDL2-devel-2.0.4-VC.zip appveyor DownloadFile http://www.libsdl.org/release/SDL2-devel-2.0.4-VC.zip
+- IF NOT "%TARGET%" == "rt" IF "%COMPILER%" == "msvc" 7z x SDL2-devel-2.0.4-VC.zip && ren SDL2-2.0.4 SDL
+- IF NOT "%TARGET%" == "rt" IF "%COMPILER%" == "mingw" IF NOT EXIST %APPVEYOR_BUILD_FOLDER%\SDL2-devel-2.0.4-mingw.tar.gz appveyor DownloadFile http://libsdl.org/release/SDL2-devel-2.0.4-mingw.tar.gz
+- IF NOT "%TARGET%" == "rt" IF "%COMPILER%" == "mingw" 7z x SDL2-devel-2.0.4-mingw.tar.gz & 7z x SDL2-devel-2.0.4-mingw.tar & ren SDL2-2.0.4 SDL
+
 build_script:
 - IF "%TARGET%" == "desktop" IF "%COMPILER%" == "msvc" call package\ci\appveyor-desktop.bat
 - IF "%TARGET%" == "desktop" IF "%COMPILER%" == "mingw" call package\ci\appveyor-desktop-mingw.bat
 - IF "%TARGET%" == "desktop-gles" call package\ci\appveyor-desktop-gles.bat
 - IF "%TARGET%" == "rt" call package\ci\appveyor-rt.bat
+
+cache:
+- SDL2-devel-2.0.4-VC.zip

@@ -94,6 +94,25 @@ install(FILES ${MagnumUi_HEADERS} DESTINATION ${MAGNUM_INCLUDE_INSTALL_DIR}/Ui)
 # Magnum Ui target alias for superprojects
 add_library(MagnumExtras::Ui ALIAS MagnumUi)
 
+if(WITH_UI_GALLERY)
+    find_package(Magnum REQUIRED Sdl2Application)
+
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure-gallery.h.cmake
+                   ${CMAKE_CURRENT_BINARY_DIR}/configure-gallery.h)
+
+    corrade_add_resource(MagnumUiGallery_RESOURCES resources-gallery.conf)
+
+    add_executable(magnum-ui-gallery
+        gallery.cpp
+        ${MagnumUiGallery_RESOURCES})
+    target_include_directories(magnum-ui-gallery PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    target_link_libraries(magnum-ui-gallery PRIVATE
+        MagnumUi
+        Magnum::Application)
+
+    install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
+endif()
+
 if(BUILD_TESTS)
     add_subdirectory(Test)
 endif()

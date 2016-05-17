@@ -19,6 +19,7 @@ cd magnum
 mkdir build && cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
+    -DCMAKE_PREFIX_PATH=$HOME/sdl2 \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Debug \
     -DWITH_AUDIO=OFF \
@@ -29,18 +30,20 @@ cmake .. \
     -DWITH_SHAPES=OFF \
     -DWITH_TEXT=ON \
     -DWITH_TEXTURETOOLS=ON \
-    -DWITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON
+    -DWITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON \
+    -DWITH_SDL2APPLICATION=ON
 make -j install
 cd ../..
 
 mkdir build && cd build
 cmake .. \
     -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" \
-    -DCMAKE_PREFIX_PATH="$HOME/deps" \
+    -DCMAKE_PREFIX_PATH="$HOME/deps;$HOME/sdl2" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Debug \
     -DWITH_UI=ON \
+    -DWITH_UI_GALLERY=ON \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON
 make -j${JOBS_LIMIT}

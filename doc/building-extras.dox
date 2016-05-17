@@ -49,9 +49,11 @@ Libraries built in `Debug` configuration (e.g. with `CMAKE_BUILD_TYPE` set
 to `Debug`) have `-d` suffix, similarly to what is done when
 @ref building "building Magnum itself".
 
-By default no libraries are built and you need to select them manually:
+By default no components are built and you need to select them manually:
 
 -   `WITH_UI` -- @ref Ui library
+-   `WITH_UI_GALLERY` -- `magnum-ui-gallery` executable, showcases the default
+    @ref Ui library widget style
 
 Note that [each namespace](namespaces.html) contains more detailed information
 about dependencies, availability on particular platform and also guide how to

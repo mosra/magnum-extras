@@ -58,13 +58,15 @@ cmake .. ^
     -DWITH_SHAPES=OFF ^
     -DWITH_TEXT=%TARGET_GLES3% ^
     -DWITH_TEXTURETOOLS=%TARGET_GLES3% ^
+    -DWITH_SDL2APPLICATION=OFF ^
     -DTARGET_GLES2=%TARGET_GLES2% ^
     -DBUILD_STATIC=ON ^
     -G "Visual Studio 14 2015" -A x64 || exit /b
 cmake --build . --config Release --target install -- /m /v:m || exit /b
 cd .. && cd ..
 
-rem Crosscompile
+rem Crosscompile. Not building the Ui gallery because I don't want to mess with
+rem the app signing just yet.
 mkdir build-rt && cd build-rt || exit /b
 cmake .. ^
     -DCMAKE_BUILD_TYPE=Release ^
@@ -75,5 +77,6 @@ cmake .. ^
     -DOPENGLES3_INCLUDE_DIR=%APPVEYOR_BUILD_FOLDER%/angle/include ^
     -DBUILD_STATIC=ON ^
     -DWITH_UI=%TARGET_GLES3% ^
+    -DWITH_UI_GALLERY=OFF ^
     -G "Visual Studio 14 2015" -A x64 || exit /b
 cmake --build . --config Release -- /m /v:m || exit /b

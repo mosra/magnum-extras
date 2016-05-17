@@ -19,6 +19,7 @@ cd magnum
 mkdir build && cd build
 cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
+    -DCMAKE_PREFIX_PATH=$HOME/sdl2 \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Release \
     -DTARGET_GLES=ON \
@@ -32,17 +33,19 @@ cmake .. \
     -DWITH_SHAPES=OFF \
     -DWITH_TEXT=$TARGET_GLES3 \
     -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
-    -DWITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON
+    -DWITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON \
+    -DWITH_SDL2APPLICATION=$TARGET_GLES3
 make -j install
 cd ../..
 
 mkdir build && cd build
 cmake .. \
-    -DCMAKE_PREFIX_PATH="$HOME/deps" \
+    -DCMAKE_PREFIX_PATH="$HOME/deps;$HOME/sdl2" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Release \
     -DWITH_UI=$TARGET_GLES3 \
+    -DWITH_UI_GALLERY=$TARGET_GLES3 \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON
 make -j${JOBS_LIMIT}

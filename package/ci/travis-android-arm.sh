@@ -47,11 +47,13 @@ ANDROID_NDK=$TRAVIS_BUILD_DIR/android-ndk-r10e cmake .. \
     -DWITH_SHAPES=OFF \
     -DWITH_TEXT=$TARGET_GLES3 \
     -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
+    -DWITH_SDL2APPLICATION=OFF \
     -DTARGET_GLES2=$TARGET_GLES2
 make -j install
 cd ../..
 
-# Crosscompile
+# Crosscompile. Not compiling the Ui gallery because I don't want to mess with
+# Android packaging just yet.
 mkdir build-android-arm && cd build-android-arm
 ANDROID_NDK=$TRAVIS_BUILD_DIR/android-ndk-r10e cmake .. \
     -DCMAKE_TOOLCHAIN_FILE=../toolchains/generic/Android-ARM.cmake \
@@ -60,6 +62,7 @@ ANDROID_NDK=$TRAVIS_BUILD_DIR/android-ndk-r10e cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
     -DWITH_UI=$TARGET_GLES3 \
+    -DWITH_UI_GALLERY=OFF \
     -DBUILD_TESTS=ON
 make -j4
 
