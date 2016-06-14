@@ -184,7 +184,7 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
             endforeach()
         endif()
 
-        # Decide if the plugin was found
+        # Decide if the library was found
         if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS} AND _MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR AND (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG OR MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE))
             set(MagnumExtras_${_component}_FOUND TRUE)
         else()
