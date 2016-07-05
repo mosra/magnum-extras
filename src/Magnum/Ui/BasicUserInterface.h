@@ -33,7 +33,7 @@
 #include <functional>
 #include <vector>
 #include <Magnum/Magnum.h>
-#include <Magnum/Math/Vector2.h>
+#include <Magnum/Math/Range.h>
 
 #include "Magnum/Ui/Ui.h"
 #include "Magnum/Ui/visibility.h"
@@ -71,7 +71,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         bool handleReleaseEvent(const Vector2i& screenPosition);
 
     private:
-        struct PlaneReference;
+        /* MSVC 2015 doesn't like std::vector of undefined type so I have to
+           put it here. It also doesn't like having non-assignable types in it,
+           so I have to use std::reference_wrapper. */
+        struct PlaneReference {
+            explicit PlaneReference(const Range2D& rect, AbstractPlane& plane): rect{rect}, plane(plane) {}
+
+            Range2D rect;
+            std::reference_wrapper<AbstractPlane> plane;
+        };
 
         ~AbstractUserInterface();
 

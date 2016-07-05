@@ -125,7 +125,14 @@ class MAGNUM_UI_EXPORT AbstractPlane {
         ~AbstractPlane();
 
     private:
-        struct WidgetReference;
+        /* MSVC 2015 doesn't like std::vector of undefined type so I have to
+           put it here */
+        struct MAGNUM_UI_LOCAL WidgetReference {
+            explicit WidgetReference(const Range2D& rect, Widget* widget): rect{rect}, widget{widget} {}
+
+            Range2D rect;
+            Widget* widget;
+        };
 
         std::size_t addWidget(Widget& widget);
         void removeWidget(std::size_t index);

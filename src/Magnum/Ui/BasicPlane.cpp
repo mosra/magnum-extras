@@ -31,13 +31,6 @@
 
 namespace Magnum { namespace Ui {
 
-struct AbstractPlane::WidgetReference {
-    explicit WidgetReference(const Range2D& rect, Widget* widget): rect{rect}, widget{widget} {}
-
-    Range2D rect;
-    Widget* widget;
-};
-
 AbstractPlane::AbstractPlane(AbstractUserInterface& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin): _ui(ui), _rect{anchor.rect(ui)}, _padding{padding}, _margin{margin} {
     if((_lastActivePlane = ui.addPlane(*this)))
         _flags |= Flag::Hidden;

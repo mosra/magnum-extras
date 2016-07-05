@@ -33,26 +33,17 @@
 
 namespace Magnum { namespace Ui {
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-struct AbstractUserInterface::PlaneReference {
-    explicit PlaneReference(const Range2D& rect, AbstractPlane& plane): rect{rect}, plane(plane) {}
-
-    Range2D rect;
-    AbstractPlane& plane;
-};
-#endif
-
 template<class ...Layers> BasicUserInterface<Layers...>::~BasicUserInterface() {}
 
 template<class ...Layers> void BasicUserInterface<Layers...>::update() {
-    for(auto& planeReference: _planes) static_cast<BasicPlane<Layers...>&>(planeReference.plane).update();
+    for(auto& planeReference: _planes) static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).update();
 }
 
 template<class ...Layers> void BasicUserInterface<Layers...>::draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
     const Matrix3 projectionMatrix = Matrix3::scaling(2.0f/_size)*Matrix3::translation(-_size/2);
     for(const auto& planeReference: _planes) {
-        if(planeReference.plane.flags() & AbstractPlane::Flag::Hidden) continue;
-        static_cast<BasicPlane<Layers...>&>(planeReference.plane).draw(projectionMatrix, shaders);
+        if(planeReference.plane.get().flags() & AbstractPlane::Flag::Hidden) continue;
+        static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).draw(projectionMatrix, shaders);
     }
 }
 
