@@ -387,14 +387,14 @@ struct QuadVertex {
 struct QuadInstance {
     Range2D rect;
     UnsignedShort colorIndex;
-    Int:16;
+    UnsignedShort:16;
 };
 
 struct TextVertex {
     Vector2 position;
     Vector2 textureCoordinates;
     UnsignedShort colorIndex;
-    Int:16;
+    UnsignedShort:16;
 };
 
 using QuadLayer = BasicInstancedGLLayer<QuadInstance>;
