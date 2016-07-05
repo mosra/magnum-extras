@@ -535,7 +535,15 @@ Debug& operator<<(Debug& debug, const Style value) {
     return debug << "Style::(invalid)";
 }
 
-StyleConfiguration::StyleConfiguration() = default;
+StyleConfiguration::StyleConfiguration() {
+    /* Don't forget to update the shader code also */
+    static_assert(sizeof(Background) == 4*4 + 4*4*Implementation::BackgroundColorCount, "Improper size of Background uniform structure");
+    static_assert(sizeof(Foreground) == 4*4 + 4*4*Implementation::ForegroundColorCount*3, "Improper size of Foreground uniform structure");
+    static_assert(sizeof(Text) == 4*4*Implementation::TextColorCount, "Improper size of Text uniform structure");
+    static_assert(sizeof(Implementation::QuadVertex) == 6*4, "Improper size of QuadVertex vertex structure");
+    static_assert(sizeof(Implementation::QuadInstance) == 4*4 + 4, "Improper size of QuadInstance vertex structure");
+    static_assert(sizeof(Implementation::TextVertex) == 4*4 + 4, "Improper size of TextVertex vertex structure");
+}
 
 namespace {
 
