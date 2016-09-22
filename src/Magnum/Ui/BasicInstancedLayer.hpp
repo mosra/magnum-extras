@@ -55,7 +55,7 @@ template<class InstanceData> std::size_t BasicInstancedLayer<InstanceData>::addE
     CORRADE_ASSERT(_size < _data.size(), "Ui::BasicInstancedLayer::addElement(): not enough capacity, got" << _size << "but wanted" << _size + 1, _size);
 
     /* Copy data to uninitalized memory */
-    new(&_data[_size]) InstanceData{instanceData};
+    new(&_data[_size]) InstanceData(instanceData);
 
     /* Update state */
     _modified = Math::join(_modified, {_size, _size+1});

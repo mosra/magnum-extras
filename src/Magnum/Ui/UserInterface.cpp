@@ -93,7 +93,7 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Te
         .setMagnificationFilter(Sampler::Filter::Linear)
         .setWrapping(Sampler::Wrapping::ClampToEdge)
         .setStorage(1, TextureFormat::R8, {32, 32})
-        .setSubImage(0, {}, ImageView2D{PixelFormat::Red, PixelType::UnsignedByte, {32, 32}, Containers::ArrayView<const void>{corner}});
+        .setSubImage(0, {}, ImageView2D{PixelFormat::Red, PixelType::UnsignedByte, {32, 32}, Containers::ArrayView<const void>(corner)});
 
     /* Set default style */
     setStyleConfiguration(styleConfiguration);
