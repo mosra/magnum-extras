@@ -27,7 +27,6 @@ cmake .. \
     -DCMAKE_OSX_ARCHITECTURES="x86_64" \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_STATIC=ON \
     -DTESTSUITE_TARGET_XCTEST=ON \
     -DWITH_INTERCONNECT=OFF \
@@ -46,7 +45,6 @@ cmake .. \
     -DCMAKE_OSX_ARCHITECTURES="x86_64" \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DCMAKE_BUILD_TYPE=Release \
     -DWITH_AUDIO=OFF \
     -DWITH_DEBUGTOOLS=OFF \
     -DWITH_PRIMITIVES=OFF \
@@ -70,7 +68,6 @@ cmake .. \
     -DCMAKE_OSX_ARCHITECTURES="x86_64" \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_STATIC=ON \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON \
