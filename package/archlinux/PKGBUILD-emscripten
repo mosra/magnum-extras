@@ -7,7 +7,7 @@ arch=('any')
 url="http://mosra.cz/blog/magnum.php"
 license=('MIT')
 depends=('emscripten-magnum')
-makedepends=('cmake' 'emscripten')
+makedepends=('cmake' 'emscripten' 'corrade' 'ninja')
 options=(!strip !buildflags)
 
 _rootdir=$startdir/../../
@@ -18,7 +18,8 @@ build() {
         cd "$_rootdir/build-emscripten"
 
         cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE="$_rootdir/toolchains/generic/Emscripten.cmake"
+            -DCMAKE_TOOLCHAIN_FILE="$_rootdir/toolchains/generic/Emscripten.cmake" \
+            -G Ninja
     fi
 
     cd "$_rootdir/build-emscripten"
@@ -26,10 +27,15 @@ build() {
     cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/lib/emscripten/system
-    make
+    ninja
+}
+
+check() {
+    cd "$_rootdir/build-emscripten"
+    CORRADE_TEST_COLOR=ON ctest --output-on-failure
 }
 
 package() {
     cd "$_rootdir/build-emscripten"
-    DESTDIR="$pkgdir/" make install
+    DESTDIR="$pkgdir/" ninja install
 }
