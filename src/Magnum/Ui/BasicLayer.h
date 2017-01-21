@@ -48,6 +48,7 @@ hidden somehow.
 To use this type in a @ref BasicPlane, you have to provide a
 `void draw(AbstractUiShader&)` function in a subclass that draws the contents
 using given shader.
+@experimental
 */
 template<class VertexData> class BasicLayer {
     public:

@@ -45,6 +45,7 @@ Just a text with no interactivity.
 
 Ignores @ref StateFlag::Hovered, @ref StateFlag::Pressed and
 @ref StateFlag::Active, @ref Style::Flat.
+@experimental
 */
 class MAGNUM_UI_EXPORT Label: public Widget {
     public:

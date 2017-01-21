@@ -44,6 +44,7 @@ namespace Magnum { namespace Ui {
 @brief Non-templated base for user interfaces
 
 See @ref BasicUserInterface for more information.
+@experimental
 */
 class MAGNUM_UI_EXPORT AbstractUserInterface {
     friend AbstractPlane;
@@ -98,6 +99,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
 
 User interface fills up whole screen and consists of planes with specific
 layers.
+@experimental
 */
 template<class ...Layers> class BasicUserInterface: public AbstractUserInterface {
     public:

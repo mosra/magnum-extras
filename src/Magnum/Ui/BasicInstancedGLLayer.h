@@ -37,6 +37,7 @@ namespace Magnum { namespace Ui {
 @brief Base for instanced layers with OpenGL backend
 
 Adds OpenGL mesh and buffer management on top of @ref BasicInstancedLayer.
+@experimental
 */
 template<class InstanceData> class BasicInstancedGLLayer: public BasicInstancedLayer<InstanceData> {
     public:

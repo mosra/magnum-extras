@@ -34,7 +34,11 @@
 
 namespace Magnum { namespace Ui {
 
-/** @brief Base for UI shaders */
+/**
+@brief Base for UI shaders
+
+@experimental
+*/
 class AbstractUiShader: public AbstractShaderProgram {
     public:
         /**

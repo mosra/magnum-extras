@@ -53,7 +53,11 @@ namespace Implementation {
     UnsignedByte MAGNUM_UI_EXPORT textColorIndex(Type type, Style style, StateFlags flags);
 }
 
-/** @brief Widget type */
+/**
+@brief Widget type
+
+@experimental
+*/
 enum class Type: UnsignedInt {
     Button = 0,     /**< @ref Button */
     Label = 1,      /**< @ref Label */
@@ -61,7 +65,9 @@ enum class Type: UnsignedInt {
     Modal = 3       /**< @ref Modal */
 };
 
-/** @debugoperatorenum{Magnum::Ui::Type} */
+/** @debugoperatorenum{Magnum::Ui::Type}
+ * @experimental
+ */
 Debug& operator<<(Debug& debug, Type value);
 
 /**
@@ -69,6 +75,7 @@ Debug& operator<<(Debug& debug, Type value);
 
 Extracted from @ref StateFlags, see particular values for details.
 @see @ref Widget::flags()
+@experimental
 */
 enum class State: UnsignedInt {
     /** Default state */
@@ -103,10 +110,16 @@ enum class State: UnsignedInt {
     Hidden = 5
 };
 
-/** @debugoperatorenum{Magnum::Ui::State} */
+/** @debugoperatorenum{Magnum::Ui::State}
+ * @experimental
+ */
 Debug& operator<<(Debug& debug, State value);
 
-/** @brief Widget style */
+/**
+@brief Widget style
+
+@experimental
+*/
 enum class Style: UnsignedInt {
     /** Default. Used for common widgets that don't stand out. */
     Default = 0,
@@ -136,10 +149,16 @@ enum class Style: UnsignedInt {
     Flat = 7
 };
 
-/** @debugoperatorenum{Magnum::Ui::Style} */
+/** @debugoperatorenum{Magnum::Ui::Style}
+ * @experimental
+ */
 Debug& operator<<(Debug& debug, Style value);
 
-/** @brief Style configuration */
+/**
+@brief Style configuration
+
+@experimental
+*/
 class MAGNUM_UI_EXPORT StyleConfiguration {
     public:
         /**
@@ -364,7 +383,11 @@ class MAGNUM_UI_EXPORT StyleConfiguration {
         Vector2 _margin;
 };
 
-/** @brief Default style configuration */
+/**
+@brief Default style configuration
+
+@experimental
+*/
 StyleConfiguration defaultStyleConfiguration();
 
 namespace Implementation {

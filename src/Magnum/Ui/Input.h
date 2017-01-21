@@ -42,6 +42,7 @@ namespace Magnum { namespace Ui {
 @brief Input widget
 
 Can attach to application-specific keyboard and text input.
+@experimental
 */
 class MAGNUM_UI_EXPORT Input: public Widget, public Interconnect::Emitter {
     public:

@@ -61,6 +61,7 @@ Specifying @ref Snap::NoSpaceX and/or @ref Snap::NoSpaceY will ignore
 horizontal and/or vertical @ref BasicPlane::padding(), @ref Widget::padding()
 and @ref BasicPlane::margin().
 @see @ref Snaps, @ref Anchor
+@experimental
 */
 enum class Snap: UnsignedByte {
     /* 8 bits: nospaceX nospaceY insideX insideY bottom top left right */
@@ -144,6 +145,7 @@ enum class Snap: UnsignedByte {
 @brief Set of snaps
 
 @see @ref Anchor
+@experimental
 */
 typedef Containers::EnumSet<Snap> Snaps;
 
@@ -157,6 +159,7 @@ namespace Implementation {
 @brief Anchor
 
 Specifies widget position relative to the plane or another widget.
+@experimental
 */
 class MAGNUM_UI_EXPORT Anchor {
     public:

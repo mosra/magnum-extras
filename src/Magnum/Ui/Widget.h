@@ -42,6 +42,7 @@ namespace Magnum { namespace Ui {
 @brief Widget state flag
 
 @see @ref StateFlags, @ref Widget::flags()
+@experimental
 */
 enum class StateFlag: UnsignedInt {
     /**
@@ -82,12 +83,17 @@ enum class StateFlag: UnsignedInt {
 @brief Widget state flags
 
 @see @ref Widget::flags()
+@experimental
 */
 typedef Containers::EnumSet<StateFlag> StateFlags;
 
 CORRADE_ENUMSET_OPERATORS(StateFlags)
 
-/** @brief Base for widgets */
+/**
+@brief Base for widgets
+
+@experimental
+*/
 class MAGNUM_UI_EXPORT Widget {
     friend class AbstractPlane;
 

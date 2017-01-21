@@ -37,6 +37,7 @@ namespace Magnum { namespace Ui {
 @brief Layer with OpenGL backend
 
 Adds OpenGL mesh and buffer management on top of @ref BasicLayer.
+@experimental
 */
 template<class VertexData> class BasicGLLayer: public BasicLayer<VertexData> {
     public:

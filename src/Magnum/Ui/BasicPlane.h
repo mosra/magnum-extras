@@ -43,6 +43,7 @@ namespace Magnum { namespace Ui {
 @brief Non-templated base for planes
 
 See @ref BasicPlane for more information.
+@experimental
 */
 class MAGNUM_UI_EXPORT AbstractPlane {
     friend AbstractUserInterface;
@@ -162,6 +163,7 @@ Each plane instance contains widgets on the same Z index and consists of layers
 from which the widgets are made of. The order of layers denotes the drawing
 order, first layer is drawn first.
 @see @ref Widget, @ref BasicLayer
+@experimental
 */
 template<class ...Layers> class BasicPlane: public AbstractPlane {
     friend BasicUserInterface<Layers...>;

@@ -46,6 +46,7 @@ fills the rest with semi-transparent dim color to suggest modality.
 
 Ignores @ref StateFlag::Hovered, @ref StateFlag::Pressed and
 @ref StateFlag::Active, @ref Style::Flat.
+@experimental
 */
 class MAGNUM_UI_EXPORT Modal: public Widget {
     public:

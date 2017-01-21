@@ -41,7 +41,11 @@
 
 namespace Magnum { namespace Ui {
 
-/** @brief Default user interface */
+/**
+@brief Default user interface
+
+@experimental
+*/
 class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer>, public Interconnect::Emitter {
     friend Input;
     friend Plane;

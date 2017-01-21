@@ -46,6 +46,7 @@ All elements in this layer have the same size and structure described by
 To use this type in a @ref BasicPlane, you have to provide a
 `void draw(AbstractUiShader&)` function in a subclass that draws the contents
 using given shader.
+@experimental
 */
 template<class InstanceData> class BasicInstancedLayer {
     public:
