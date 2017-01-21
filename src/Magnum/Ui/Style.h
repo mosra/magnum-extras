@@ -410,14 +410,30 @@ struct QuadVertex {
 struct QuadInstance {
     Range2D rect;
     UnsignedShort colorIndex;
+
+    /* GCC 4.7 fails with "error: non-trivial conversion at assignment" on
+       unnamed bitfields: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54808
+       It's now emitting missing initializer warnings, but IDGAF. */
+    #ifndef CORRADE_GCC47_COMPATIBILITY
     UnsignedShort:16;
+    #else
+    UnsignedShort _dummy:16;
+    #endif
 };
 
 struct TextVertex {
     Vector2 position;
     Vector2 textureCoordinates;
     UnsignedShort colorIndex;
+
+    /* GCC 4.7 fails with "error: non-trivial conversion at assignment" on
+       unnamed bitfields: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54808
+       It's now emitting missing initializer warnings, but IDGAF. */
+    #ifndef CORRADE_GCC47_COMPATIBILITY
     UnsignedShort:16;
+    #else
+    UnsignedShort _dummy:16;
+    #endif
 };
 
 using QuadLayer = BasicInstancedGLLayer<QuadInstance>;
