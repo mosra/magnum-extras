@@ -54,7 +54,11 @@ BasicInstancedLayerTest::BasicInstancedLayerTest() {
 
 namespace {
     struct InstancedLayer: BasicInstancedLayer<Int> {
+        #ifndef CORRADE_GCC47_COMPATIBILITY
         using BasicInstancedLayer<Int>::BasicInstancedLayer;
+        #else
+        explicit InstancedLayer() {}
+        #endif
     };
 }
 

@@ -56,7 +56,11 @@ BasicLayerTest::BasicLayerTest() {
 
 namespace {
     struct Layer: BasicLayer<Int> {
+        #ifndef CORRADE_GCC47_COMPATIBILITY
         using BasicLayer<Int>::BasicLayer;
+        #else
+        explicit Layer() {}
+        #endif
     };
 }
 
