@@ -126,7 +126,7 @@ void UserInterface::draw() {
         .bindGlyphCacheTexture(_glyphCache.texture())
         .bindStyleBuffer(_textUniforms);
 
-    BasicUserInterface::draw({_backgroundShader, _foregroundShader, _textShader});
+    BasicUserInterface::draw({{_backgroundShader, _foregroundShader, _textShader}});
 }
 
 }}
