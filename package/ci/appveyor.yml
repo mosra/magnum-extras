@@ -34,4 +34,5 @@ install:
 build_script:
 - IF "%TARGET%" == "desktop" IF "%COMPILER%" == "msvc" call package\ci\appveyor-desktop.bat
 - IF "%TARGET%" == "desktop" IF "%COMPILER%" == "mingw" call package\ci\appveyor-desktop-mingw.bat
+- IF "%TARGET%" == "desktop-gles" call package\ci\appveyor-desktop-gles.bat
 - IF "%TARGET%" == "rt" call package\ci\appveyor-rt.bat
