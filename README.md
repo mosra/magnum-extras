@@ -4,8 +4,6 @@ need to be a part of main Magnum repository or mutually exclusive
 functionality. If you don't know what Magnum is, see
 https://github.com/mosra/magnum.
 
-*This repository is currently empty.*
-
 [![Join the chat at https://gitter.im/mosra/magnum](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/mosra/magnum?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 SUPPORTED PLATFORMS
