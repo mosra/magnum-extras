@@ -60,7 +60,7 @@ Button& Button::setText(const Containers::ArrayView<const char> text) {
     auto& plane = static_cast<Plane&>(this->plane());
 
     plane.setText(_textElementId,
-        Implementation::textColorIndex(Type::Label, _style, flags() & ~(StateFlag::Active|StateFlag::Hovered|StateFlag::Pressed)),
+        Implementation::textColorIndex(Type::Button, _style, flags() & ~(StateFlag::Active|StateFlag::Hovered|StateFlag::Pressed)),
         plane.ui().styleConfiguration().fontSize(),
         text,
         rect().center() + Vector2::yAxis(Int(Implementation::lineAlignmentAdjustment(plane.ui()))),
