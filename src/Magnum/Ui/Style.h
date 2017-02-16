@@ -388,7 +388,7 @@ class MAGNUM_UI_EXPORT StyleConfiguration {
 
 @experimental
 */
-StyleConfiguration defaultStyleConfiguration();
+MAGNUM_UI_EXPORT StyleConfiguration defaultStyleConfiguration();
 
 namespace Implementation {
 
