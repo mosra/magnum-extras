@@ -1,6 +1,6 @@
 # Author: mosra <mosra@centrum.cz>
 pkgname=magnum-extras-git
-pkgver=1
+pkgver=snapshot.2015.05.r104.g02d87f6
 pkgrel=1
 pkgdesc="Extras for Magnum graphics engine (Git version)"
 arch=('i686' 'x86_64')
