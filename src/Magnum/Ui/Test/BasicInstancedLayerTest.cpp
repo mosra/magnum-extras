@@ -82,7 +82,7 @@ void BasicInstancedLayerTest::addElement() {
     CORRADE_COMPARE(layer.capacity(), 42);
     CORRADE_COMPARE(layer.size(), 3);
     CORRADE_COMPARE_AS(layer.data(),
-        Containers::Array<Int>::from(13, -7, 2),
+        (Containers::Array<Int>{Containers::InPlaceInit, {13, -7, 2}}),
         TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.elementData(0), 13);
     CORRADE_COMPARE(layer.elementData(1), -7);
@@ -107,7 +107,7 @@ void BasicInstancedLayerTest::reset() {
     CORRADE_COMPARE(layer.capacity(), 10);
     CORRADE_COMPARE(layer.size(), 1);
     CORRADE_COMPARE_AS(layer.data(),
-        Containers::Array<Int>::from(-7),
+        (Containers::Array<Int>{Containers::InPlaceInit, {-7}}),
         TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{0, 1}));
 
@@ -156,7 +156,7 @@ void BasicInstancedLayerTest::modifyElement() {
     layer.modifyElement(1) = 1337;
 
     CORRADE_COMPARE_AS(layer.data(),
-        Containers::Array<Int>::from(13, 1337, 17),
+        (Containers::Array<Int>{Containers::InPlaceInit, {13, 1337, 17}}),
         TestSuite::Compare::Container);
     /* The modified range should be just the two changed elements */
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{1, 3}));

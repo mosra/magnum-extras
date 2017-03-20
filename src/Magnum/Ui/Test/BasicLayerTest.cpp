@@ -80,9 +80,12 @@ void BasicLayerTest::addElement() {
     Layer layer;
     layer.reset(7, 42);
 
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(13, -5, 27), 3), 0);
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(23, 17, 57, 0), 6), 1);
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(1), 1), 2);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {13, -5, 27}}, 3), 0);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {23, 17, 57, 0}}, 6), 1);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {1}}, 1), 2);
 
     CORRADE_COMPARE(layer.capacity(), 42);
     CORRADE_COMPARE(layer.elementCapacity(), 7);
@@ -90,19 +93,19 @@ void BasicLayerTest::addElement() {
     CORRADE_COMPARE(layer.elementCount(), 3);
     CORRADE_COMPARE(layer.indexCount(), 10);
     CORRADE_COMPARE_AS(layer.data(),
-        Containers::Array<Int>::from(13, -5, 27, 23, 17, 57, 0, 1),
+        (Containers::Array<Int>{Containers::InPlaceInit, {13, -5, 27, 23, 17, 57, 0, 1}}),
         TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.elementSize(0), 3);
     CORRADE_COMPARE_AS(layer.elementData(0),
-        Containers::Array<Int>::from(13, -5, 27),
+        (Containers::Array<Int>{Containers::InPlaceInit, {13, -5, 27}}),
         TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.elementSize(1), 4);
     CORRADE_COMPARE_AS(layer.elementData(1),
-        Containers::Array<Int>::from(23, 17, 57, 0),
+        (Containers::Array<Int>{Containers::InPlaceInit, {23, 17, 57, 0}}),
         TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.elementSize(2), 1);
     CORRADE_COMPARE_AS(layer.elementData(2),
-        Containers::Array<Int>::from(1),
+        (Containers::Array<Int>{Containers::InPlaceInit, {1}}),
         TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{0, 8}));
 }
@@ -111,7 +114,8 @@ void BasicLayerTest::addElementLast() {
     Layer layer;
     layer.reset(1, 4);
 
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(23, 17, 57, 0), 6), 0);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {23, 17, 57, 0}}, 6), 0);
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.elementCapacity(), 1);
     CORRADE_COMPARE(layer.size(), 4);
@@ -123,14 +127,15 @@ void BasicLayerTest::reset() {
     Layer layer;
     layer.reset(3, 10);
 
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(-7), 11), 0);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {-7}}, 11), 0);
     CORRADE_COMPARE(layer.capacity(), 10);
     CORRADE_COMPARE(layer.elementCapacity(), 3);
     CORRADE_COMPARE(layer.size(), 1);
     CORRADE_COMPARE(layer.elementCount(), 1);
     CORRADE_COMPARE(layer.indexCount(), 11);
     CORRADE_COMPARE_AS(layer.data(),
-        Containers::Array<Int>::from(-7),
+        (Containers::Array<Int>{Containers::InPlaceInit, {-7}}),
         TestSuite::Compare::Container);
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{0, 1}));
 
@@ -146,14 +151,16 @@ void BasicLayerTest::reset() {
     CORRADE_VERIFY(layer.modified().size().isZero());
 
     /* First element after reset should be zero again */
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(-7), 11), 0);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {-7}}, 11), 0);
 }
 
 void BasicLayerTest::resetNoReallocData() {
     Layer layer;
     layer.reset(3, 42);
 
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(-7), 11), 0);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {-7}}, 11), 0);
     CORRADE_COMPARE(layer.capacity(), 42);
     CORRADE_COMPARE(layer.elementCapacity(), 3);
     CORRADE_COMPARE(layer.size(), 1);
@@ -175,7 +182,8 @@ void BasicLayerTest::resetNoReallocElementData() {
     Layer layer;
     layer.reset(3, 10);
 
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(-7), 11), 0);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {-7}}, 11), 0);
     CORRADE_COMPARE(layer.capacity(), 10);
     CORRADE_COMPARE(layer.elementCapacity(), 3);
     CORRADE_COMPARE(layer.size(), 1);
@@ -197,9 +205,12 @@ void BasicLayerTest::modifyElement() {
     Layer layer;
     layer.reset(17, 42);
 
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(13, -5, 27), 3), 0);
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(23, 17, 57, 0), 6), 1);
-    CORRADE_COMPARE(layer.addElement(Containers::Array<Int>::from(1), 1), 2);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {13, -5, 27}}, 3), 0);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {23, 17, 57, 0}}, 6), 1);
+    CORRADE_COMPARE(layer.addElement(
+        Containers::Array<Int>{Containers::InPlaceInit, {1}}, 1), 2);
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{0, 8}));
 
     layer.resetModified();
@@ -209,7 +220,8 @@ void BasicLayerTest::modifyElement() {
     layer.modifyElement(1)[2] = 5704;
 
     CORRADE_COMPARE_AS(layer.data(),
-        Containers::Array<Int>::from(13, -5, 27, 23, 17, 5704, 0, 2555),
+        (Containers::Array<Int>{Containers::InPlaceInit, {
+            13, -5, 27, 23, 17, 5704, 0, 2555}}),
         TestSuite::Compare::Container);
     /* The modified range should be just the two changed elements */
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{3, 8}));
