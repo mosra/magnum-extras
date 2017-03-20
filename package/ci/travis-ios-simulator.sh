@@ -31,7 +31,7 @@ cmake .. \
     -DTESTSUITE_TARGET_XCTEST=ON \
     -DWITH_INTERCONNECT=$TARGET_GLES3 \
     -G Xcode
-cmake --build . --config Release --target install | xcpretty
+cmake --build . --config Release --target install | xcpretty && exit ${PIPESTATUS[0]}
 cd ../..
 
 # Crosscompile Magnum
@@ -57,7 +57,7 @@ cmake .. \
     -DTARGET_GLES2=$TARGET_GLES2 \
     -DBUILD_STATIC=ON \
     -G Xcode
-cmake --build . --config Release --target install | xcpretty
+cmake --build . --config Release --target install | xcpretty && exit ${PIPESTATUS[0]}
 cd ../..
 
 # Crosscompile. Not building the Ui gallery because I don't want to mess with the
@@ -75,7 +75,7 @@ cmake .. \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON \
     -G Xcode
-cmake --build . --config Release | xcpretty
+cmake --build . --config Release | xcpretty && exit ${PIPESTATUS[0]}
 
 # TODO: find a better way to avoid
 # Library not loaded: /System/Library/Frameworks/OpenGLES.framework/OpenGLES
