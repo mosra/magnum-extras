@@ -46,5 +46,6 @@ cmake .. \
     -DWITH_UI_GALLERY=ON \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON
-make -j${JOBS_LIMIT}
+# Otherwise the job gets killed (probably because using too much memory)
+make -j4
 ASAN_OPTIONS="color=always" LSAN_OPTIONS="color=always" CORRADE_TEST_COLOR=ON ctest -V -E GLTest

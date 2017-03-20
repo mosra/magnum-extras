@@ -73,6 +73,7 @@ cmake .. \
     -DWITH_UI=OFF \
     -DWITH_UI_GALLERY=OFF \
     -DBUILD_TESTS=ON
+# Otherwise the job gets killed (probably because using too much memory)
 make -j4
 
 # Test

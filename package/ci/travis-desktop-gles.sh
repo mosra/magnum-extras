@@ -48,5 +48,6 @@ cmake .. \
     -DWITH_UI_GALLERY=$TARGET_GLES3 \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON
-make -j${JOBS_LIMIT}
+# Otherwise the job gets killed (probably because using too much memory)
+make -j4
 CORRADE_TEST_COLOR=ON ctest -V -E GLTest
