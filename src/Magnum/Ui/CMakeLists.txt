@@ -96,6 +96,9 @@ add_library(MagnumExtras::Ui ALIAS MagnumUi)
 
 if(WITH_UI_GALLERY)
     find_package(Magnum REQUIRED Sdl2Application)
+    if(CORRADE_TARGET_IOS)
+        find_package(MagnumPlugins REQUIRED StbTrueTypeFont)
+    endif()
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure-gallery.h.cmake
                    ${CMAKE_CURRENT_BINARY_DIR}/configure-gallery.h)
@@ -109,6 +112,13 @@ if(WITH_UI_GALLERY)
     target_link_libraries(magnum-ui-gallery PRIVATE
         MagnumUi
         Magnum::Application)
+    if(CORRADE_TARGET_IOS)
+        target_link_libraries(magnum-ui-gallery PRIVATE MagnumPlugins::StbTrueTypeFont)
+        set_target_properties(magnum-ui-gallery PROPERTIES
+            MACOSX_BUNDLE ON
+            MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in
+            XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES")
+    endif()
 
     install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
 endif()
