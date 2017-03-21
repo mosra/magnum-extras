@@ -44,6 +44,7 @@ cmake .. \
     -DCMAKE_OSX_ARCHITECTURES="x86_64" \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
+    -DCMAKE_PREFIX_PATH=$TRAVIS_BUILD_DIR/sdl2 \
     -DWITH_AUDIO=OFF \
     -DWITH_DEBUGTOOLS=OFF \
     -DWITH_PRIMITIVES=OFF \
@@ -53,25 +54,41 @@ cmake .. \
     -DWITH_TEXT=$TARGET_GLES3 \
     -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
     -DWITH_WINDOWLESSIOSAPPLICATION=ON \
-    -DWITH_SDL2APPLICATION=OFF \
+    -DWITH_SDL2APPLICATION=ON \
     -DTARGET_GLES2=$TARGET_GLES2 \
     -DBUILD_STATIC=ON \
     -G Xcode
 set -o pipefail && cmake --build . --config Release --target install | xcpretty
 cd ../..
 
-# Crosscompile. Not building the Ui gallery because I don't want to mess with the
-# iOS signing and bundle stuff ATM.
+# Crosscompile Magnum Plugins
+git clone --depth 1 git://github.com/mosra/magnum-plugins.git
+cd magnum-plugins
+mkdir build-ios && cd build-ios
+cmake .. \
+    -DCMAKE_TOOLCHAIN_FILE=../../toolchains/generic/iOS.cmake \
+    -DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk \
+    -DCMAKE_OSX_ARCHITECTURES="x86_64" \
+    -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
+    -DCMAKE_INSTALL_PREFIX=$HOME/deps \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DWITH_STBTRUETYPEFONT=$TARGET_GLES3 \
+    -DBUILD_STATIC=ON \
+    -G Xcode
+set -o pipefail && cmake --build . --config Release --target install | xcpretty
+cd ../..
+
+# Crosscompile
 mkdir build-ios && cd build-ios
 cmake .. \
     -DCMAKE_TOOLCHAIN_FILE=../toolchains/generic/iOS.cmake \
     -DCMAKE_OSX_SYSROOT=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk \
     -DCMAKE_OSX_ARCHITECTURES="x86_64" \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
-    -DCMAKE_INSTALL_PREFIX=$HOME/deps \
+    -DCMAKE_PREFIX_PATH="$HOME/deps;$TRAVIS_BUILD_DIR/sdl2" \
     -DBUILD_STATIC=ON \
     -DWITH_UI=$TARGET_GLES3 \
-    -DWITH_UI_GALLERY=OFF \
+    -DWITH_UI_GALLERY=$TARGET_GLES3 \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON \
     -G Xcode
