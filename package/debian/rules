@@ -5,6 +5,7 @@
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
+		-DCMAKE_BUILD_TYPE=Release \
 		-DWITH_UI=ON \
 		-DWITH_UI_GALLERY=ON
 
