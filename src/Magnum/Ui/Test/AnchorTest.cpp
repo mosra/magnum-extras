@@ -52,45 +52,56 @@ namespace {
         Snaps snaps;
         Range2D expectedRect;
     } AnchorRectData[AnchorRectDataCount] = {
-        #define _c(v) #v, v
-        {_c(Snap::Top|Snap::Left|Snap::InsideX), Range2D::fromSize({105.0f, 505.0f}, Size)},
-        {_c(Snap::Top|Snap::Left|Snap::InsideY), Range2D::fromSize({78.0f, 472.0f}, Size)},
-        {_c(Snap::Top|Snap::Left|Snap::InsideX|Snap::InsideY), Range2D::fromSize({115.0f, 467.0f}, Size)},
-        {_c(Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::InsideX), Range2D::fromSize({105.0f, 505.0f}, Size)},
-        {_c(Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::InsideY), Range2D::fromSize({85.0f, 472.0f}, Size)},
-        {_c(Snap::Top|Snap::Left|Snap::NoSpaceY|Snap::InsideX), Range2D::fromSize({105.0f, 502.0f}, Size)},
-        {_c(Snap::Top|Snap::Left|Snap::NoSpaceY|Snap::InsideY), Range2D::fromSize({78.0f, 472.0f}, Size)},
-        {_c(Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::NoSpaceY|Snap::InsideX|Snap::InsideY),
+        /*       100   500
+
+                   A M
+                   E
+            500   +-----+     +-----+     +-----+
+                BD|F    |     |     |     |   f | d
+                  | CN  |     |     |     |   e | d
+                O | P   |     |     |     |   e | d
+                  |   I |     |cbbbc|     |   e | d
+                  |    L|JH   |     |     |   f | d
+            200   +-----+     +-----+     +-----+
+                       K
+                       G       aaaaa */
+        {"A1", Snap::Top|Snap::Left|Snap::InsideX, Range2D::fromSize({105.0f, 505.0f}, Size)},
+        {"B1", Snap::Top|Snap::Left|Snap::InsideY, Range2D::fromSize({78.0f, 472.0f}, Size)},
+        {"C",  Snap::Top|Snap::Left|Snap::InsideX|Snap::InsideY, Range2D::fromSize({115.0f, 467.0f}, Size)},
+        {"A2", Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::InsideX, Range2D::fromSize({105.0f, 505.0f}, Size)},
+        {"D",  Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::InsideY, Range2D::fromSize({85.0f, 472.0f}, Size)},
+        {"E",  Snap::Top|Snap::Left|Snap::NoSpaceY|Snap::InsideX, Range2D::fromSize({105.0f, 502.0f}, Size)},
+        {"B2", Snap::Top|Snap::Left|Snap::NoSpaceY|Snap::InsideY, Range2D::fromSize({78.0f, 472.0f}, Size)},
+        {"F",  Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::NoSpaceY|Snap::InsideX|Snap::InsideY,
             Range2D::fromSize({105.0f, 472.0f}, Size)},
 
-        {_c(Snap::Bottom|Snap::Right|Snap::InsideX), Range2D::fromSize({485.0f, 169.0f}, Size)},
-        {_c(Snap::Bottom|Snap::Right|Snap::InsideY), Range2D::fromSize({512.0f, 202.0f}, Size)},
-        {_c(Snap::Bottom|Snap::Right|Snap::InsideX|Snap::InsideY), Range2D::fromSize({470.0f, 227.0f}, Size)},
-        {_c(Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::InsideX), Range2D::fromSize({485.0f, 169.0f}, Size)},
-        {_c(Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::InsideY), Range2D::fromSize({505.0f, 202.0f}, Size)},
-        {_c(Snap::Bottom|Snap::Right|Snap::NoSpaceY|Snap::InsideX), Range2D::fromSize({485.0f, 172.0f}, Size)},
-        {_c(Snap::Bottom|Snap::Right|Snap::NoSpaceY|Snap::InsideY), Range2D::fromSize({512.0f, 202.0f}, Size)},
-        {_c(Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::NoSpaceY|Snap::InsideX|Snap::InsideY),
+        {"G1", Snap::Bottom|Snap::Right|Snap::InsideX, Range2D::fromSize({485.0f, 169.0f}, Size)},
+        {"H2", Snap::Bottom|Snap::Right|Snap::InsideY, Range2D::fromSize({512.0f, 202.0f}, Size)},
+        {"I",  Snap::Bottom|Snap::Right|Snap::InsideX|Snap::InsideY, Range2D::fromSize({470.0f, 227.0f}, Size)},
+        {"G2", Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::InsideX, Range2D::fromSize({485.0f, 169.0f}, Size)},
+        {"J",  Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::InsideY, Range2D::fromSize({505.0f, 202.0f}, Size)},
+        {"K",  Snap::Bottom|Snap::Right|Snap::NoSpaceY|Snap::InsideX, Range2D::fromSize({485.0f, 172.0f}, Size)},
+        {"H2", Snap::Bottom|Snap::Right|Snap::NoSpaceY|Snap::InsideY, Range2D::fromSize({512.0f, 202.0f}, Size)},
+        {"L",  Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::NoSpaceY|Snap::InsideX|Snap::InsideY,
             Range2D::fromSize({485.0f, 202.0f}, Size)},
 
-        {_c(Snap::Top), Range2D::fromSize({295.0f, 505.0f}, Size)},
-        {_c(Snap::Top|Snap::InsideY), Range2D::fromSize({292.5f, 467.0f}, Size)},
-        {_c(Snap::Top|Snap::InsideY|Snap::NoSpaceX), Range2D::fromSize({295.0f, 467.0f}, Size)},
+        {"M", Snap::Top, Range2D::fromSize({295.0f, 505.0f}, Size)},
+        {"N", Snap::Top|Snap::InsideY, Range2D::fromSize({292.5f, 467.0f}, Size)},
+        {"N no spacing X", Snap::Top|Snap::InsideY|Snap::NoSpaceX, Range2D::fromSize({295.0f, 467.0f}, Size)},
 
-        {_c(Snap::Bottom|Snap::Left|Snap::Right), Range2D::fromSize({105.0f, 169.0f}, {400.0f, Size.y()})},
-        {_c(Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY), Range2D::fromSize({115.0f, 227.0f}, {375.0f, Size.y()})},
-        {_c(Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY|Snap::NoSpaceX),
+        {"O", Snap::Left, Range2D::fromSize({78.0f, 337.0f}, Size)},
+        {"P", Snap::Left|Snap::InsideX, Range2D::fromSize({115.0f, 347.0f}, Size)},
+        {"P no spacing Y", Snap::Left|Snap::InsideX|Snap::NoSpaceY, Range2D::fromSize({115.0f, 337.0f}, Size)},
+
+        {"aaa", Snap::Bottom|Snap::Left|Snap::Right, Range2D::fromSize({105.0f, 169.0f}, {400.0f, Size.y()})},
+        {"bbb", Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY, Range2D::fromSize({115.0f, 227.0f}, {375.0f, Size.y()})},
+        {"cbc", Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY|Snap::NoSpaceX,
             Range2D::fromSize({105.0f, 227.0f}, {400.0f, Size.y()})},
 
-        {_c(Snap::Left), Range2D::fromSize({78.0f, 337.0f}, Size)},
-        {_c(Snap::Left|Snap::InsideX), Range2D::fromSize({115.0f, 347.0f}, Size)},
-        {_c(Snap::Left|Snap::InsideX|Snap::NoSpaceY), Range2D::fromSize({115.0f, 337.0f}, Size)},
-
-        {_c(Snap::Top|Snap::Bottom|Snap::Right), Range2D::fromSize({512.0f, 202.0f}, {Size.x(), 300.0f})},
-        {_c(Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX), Range2D::fromSize({470.0f, 227.0f}, {Size.x(), 270.0f})},
-        {_c(Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX|Snap::NoSpaceY),
+        {"ddd", Snap::Top|Snap::Bottom|Snap::Right, Range2D::fromSize({512.0f, 202.0f}, {Size.x(), 300.0f})},
+        {"eee", Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX, Range2D::fromSize({470.0f, 227.0f}, {Size.x(), 270.0f})},
+        {"fef", Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX|Snap::NoSpaceY,
             Range2D::fromSize({470.0f, 202.0f}, {Size.x(), 300.0f})}
-        #undef _c
     };
 
     struct UserInterface: BasicUserInterface<> {
