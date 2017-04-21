@@ -34,7 +34,9 @@ namespace Magnum { namespace Ui {
 namespace {
 
 static_assert(UnsignedByte(Snap::InsideX) == 1 << 4, "");
+static_assert(UnsignedByte(Snap::InsideY) == 1 << 5, "");
 static_assert(UnsignedByte(Snap::NoSpaceX) == 1 << 6, "");
+static_assert(UnsignedByte(Snap::NoSpaceY) == 1 << 7, "");
 
 inline Math::BoolVector<2> snapInside(Snaps snaps) {
     return (UnsignedByte(snaps) & UnsignedByte(Snap::InsideX|Snap::InsideY)) >> 4;
