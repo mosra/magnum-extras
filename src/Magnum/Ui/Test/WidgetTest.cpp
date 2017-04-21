@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_BasicUserInterface_hpp
-#define Magnum_Ui_BasicUserInterface_hpp
 /*
     This file is part of Magnum.
 
@@ -25,28 +23,39 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "BasicUserInterface.h"
+#include <sstream>
+#include <Corrade/TestSuite/Tester.h>
 
-#include <Magnum/Math/Matrix3.h>
+#include "Magnum/Ui/Widget.h"
 
-#include "Magnum/Ui/BasicPlane.h"
+namespace Magnum { namespace Ui { namespace Test {
 
-namespace Magnum { namespace Ui {
+struct WidgetTest: TestSuite::Tester {
+    explicit WidgetTest();
 
-template<class ...Layers> BasicUserInterface<Layers...>::~BasicUserInterface() {}
+    void debugWidgetFlag();
+    void debugWidgetFlags();
+};
 
-template<class ...Layers> void BasicUserInterface<Layers...>::update() {
-    for(auto& planeReference: _planes) static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).update();
+WidgetTest::WidgetTest() {
+    addTests({&WidgetTest::debugWidgetFlag,
+              &WidgetTest::debugWidgetFlags});
 }
 
-template<class ...Layers> void BasicUserInterface<Layers...>::draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
-    const Matrix3 projectionMatrix = Matrix3::scaling(2.0f/_size)*Matrix3::translation(-_size/2);
-    for(const auto& planeReference: _planes) {
-        if(planeReference.plane.get().flags() & PlaneFlag::Hidden) continue;
-        static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).draw(projectionMatrix, shaders);
-    }
+void WidgetTest::debugWidgetFlag() {
+    std::ostringstream out;
+
+    Debug{&out} << WidgetFlag::Hidden << WidgetFlag(0xdeadbabe);
+    CORRADE_COMPARE(out.str(), "Ui::WidgetFlag::Hidden Ui::WidgetFlag(0xdeadbabe)\n");
 }
 
-}}
+void WidgetTest::debugWidgetFlags() {
+    std::ostringstream out;
 
-#endif
+    Debug{&out} << WidgetFlags{} << (WidgetFlag::Disabled|WidgetFlag::Active) << (WidgetFlag(0xdead0000)|WidgetFlag::Hovered);
+    CORRADE_COMPARE(out.str(), "Ui::WidgetFlags{} Ui::WidgetFlag::Active|Ui::WidgetFlag::Disabled Ui::WidgetFlag::Hovered|Ui::WidgetFlag(0xdead0000)\n");
+}
+
+}}}
+
+CORRADE_TEST_MAIN(Magnum::Ui::Test::WidgetTest)

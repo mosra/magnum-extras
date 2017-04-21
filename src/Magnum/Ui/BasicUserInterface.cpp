@@ -50,7 +50,7 @@ std::pair<Vector2, AbstractPlane*> AbstractUserInterface::handleEvent(const Vect
     Vector2 position = Vector2(screenPosition)*_coordinateScaling;
     position.y() = _size.y() - position.y();
 
-    if(_activePlane && _activePlane->rect().contains(position) && !(_activePlane->flags() & AbstractPlane::Flag::Hidden))
+    if(_activePlane && _activePlane->rect().contains(position) && !(_activePlane->flags() & PlaneFlag::Hidden))
         return {position, _activePlane};
 
     return {position, nullptr};

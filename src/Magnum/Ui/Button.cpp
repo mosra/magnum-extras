@@ -38,10 +38,10 @@ namespace Magnum { namespace Ui {
 Button::Button(Plane& plane, const Anchor& anchor, const Containers::ArrayView<const char> text, const std::size_t capacity, const Style style): Widget{plane, anchor}, _style{style} {
     _foregroundElementId = plane._foregroundLayer.addElement({rect(),
         Implementation::foregroundColorIndex(Type::Button, style,
-        style == Style::Flat ? StateFlag::Hidden : flags() & ~StateFlag::Active)});
+        style == Style::Flat ? WidgetFlag::Hidden : flags() & ~WidgetFlag::Active)});
 
     _textElementId = plane.addText(
-        Implementation::textColorIndex(Type::Button, style, flags() & ~StateFlag::Active),
+        Implementation::textColorIndex(Type::Button, style, flags() & ~WidgetFlag::Active),
         plane.ui().styleConfiguration().fontSize(),
         text,
         rect().center() + Vector2::yAxis(Int(Implementation::lineAlignmentAdjustment(plane.ui()))),
@@ -60,7 +60,7 @@ Button& Button::setText(const Containers::ArrayView<const char> text) {
     auto& plane = static_cast<Plane&>(this->plane());
 
     plane.setText(_textElementId,
-        Implementation::textColorIndex(Type::Button, _style, flags() & ~(StateFlag::Active|StateFlag::Hovered|StateFlag::Pressed)),
+        Implementation::textColorIndex(Type::Button, _style, flags() & ~(WidgetFlag::Active|WidgetFlag::Hovered|WidgetFlag::Pressed)),
         plane.ui().styleConfiguration().fontSize(),
         text,
         rect().center() + Vector2::yAxis(Int(Implementation::lineAlignmentAdjustment(plane.ui()))),
@@ -73,10 +73,10 @@ void Button::update() {
 
     plane._foregroundLayer.modifyElement(_foregroundElementId).colorIndex =
         Implementation::foregroundColorIndex(Type::Button, _style,
-        _style == Style::Flat ? StateFlag::Hidden : flags() & ~StateFlag::Active);
+        _style == Style::Flat ? WidgetFlag::Hidden : flags() & ~WidgetFlag::Active);
 
     for(Implementation::TextVertex& v: plane._textLayer.modifyElement(_textElementId))
-        v.colorIndex = Implementation::textColorIndex(Type::Button, _style, flags() & ~StateFlag::Active);
+        v.colorIndex = Implementation::textColorIndex(Type::Button, _style, flags() & ~WidgetFlag::Active);
 }
 
 bool Button::hoverEvent() {

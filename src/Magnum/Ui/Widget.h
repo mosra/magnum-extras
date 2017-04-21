@@ -39,12 +39,12 @@
 namespace Magnum { namespace Ui {
 
 /**
-@brief Widget state flag
+@brief Widget flag
 
-@see @ref StateFlags, @ref Widget::flags()
+@see @ref WidgetFlags, @ref Widget::flags()
 @experimental
 */
-enum class StateFlag: UnsignedInt {
+enum class WidgetFlag: UnsignedInt {
     /**
      * The widget is currently under mouse cursor.
      * @see @ref Widget::hoverEvent()
@@ -79,15 +79,25 @@ enum class StateFlag: UnsignedInt {
     Hidden = 1 << 4
 };
 
+/** @debugoperatorenum{WidgetFlag}
+ * @experimental
+ */
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, WidgetFlag value);
+
 /**
-@brief Widget state flags
+@brief Widget flags
 
 @see @ref Widget::flags()
 @experimental
 */
-typedef Containers::EnumSet<StateFlag> StateFlags;
+typedef Containers::EnumSet<WidgetFlag> WidgetFlags;
 
-CORRADE_ENUMSET_OPERATORS(StateFlags)
+/** @debugoperatorenum{WidgetFlags}
+ * @experimental
+ */
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, WidgetFlags value);
+
+CORRADE_ENUMSET_OPERATORS(WidgetFlags)
 
 /**
 @brief Base for widgets
@@ -154,8 +164,8 @@ class MAGNUM_UI_EXPORT Widget {
         /** @brief Padding for widgets inside */
         Range2D padding() const { return _padding; }
 
-        /** @brief State flags */
-        StateFlags flags() const { return _flags; }
+        /** @brief Flags */
+        WidgetFlags flags() const { return _flags; }
 
         /**
          * @brief Disable widget
@@ -289,7 +299,7 @@ class MAGNUM_UI_EXPORT Widget {
     private:
         AbstractPlane& _plane;
         Range2D _rect, _padding;
-        StateFlags _flags;
+        WidgetFlags _flags;
         std::size_t _planeIndex;
 };
 

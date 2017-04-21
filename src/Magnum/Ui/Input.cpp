@@ -38,7 +38,7 @@ namespace Magnum { namespace Ui {
 Input::Input(Plane& plane, const Anchor& anchor, std::string value, const std::size_t maxValueSize, const Style style): Widget{plane, anchor}, _value{std::move(value)}, _maxValueSize{maxValueSize}, _cursor{_value.size()}, _style{style} {
     _foregroundElementId = plane._foregroundLayer.addElement({rect(),
         Implementation::foregroundColorIndex(Type::Input, style,
-        style == Style::Flat ? StateFlag::Hidden : flags())});
+        style == Style::Flat ? WidgetFlag::Hidden : flags())});
 
     _textElementId = plane.addText(
         Implementation::textColorIndex(Type::Input, style, flags()),
@@ -85,7 +85,7 @@ void Input::update() {
 
     plane._foregroundLayer.modifyElement(_foregroundElementId).colorIndex =
         Implementation::foregroundColorIndex(Type::Input, _style,
-        _style == Style::Flat ? StateFlag::Hidden : flags());
+        _style == Style::Flat ? WidgetFlag::Hidden : flags());
 
     for(Implementation::TextVertex& v: plane._textLayer.modifyElement(_textElementId))
         v.colorIndex = Implementation::textColorIndex(Type::Input, _style, flags());

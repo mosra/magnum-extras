@@ -54,8 +54,12 @@ class Plane;
 class StyleConfiguration;
 class UserInterface;
 
-enum class StateFlag: UnsignedInt;
-typedef Containers::EnumSet<StateFlag> StateFlags;
+enum class PlaneFlag: UnsignedInt;
+typedef Containers::EnumSet<PlaneFlag> PlaneFlags;
+
+enum class WidgetFlag: UnsignedInt;
+typedef Containers::EnumSet<WidgetFlag> WidgetFlags;
+
 enum class State: UnsignedInt;
 enum class Style: UnsignedInt;
 enum class Type: UnsignedInt;

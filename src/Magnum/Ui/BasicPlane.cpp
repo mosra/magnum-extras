@@ -25,15 +25,34 @@
 
 #include "BasicPlane.h"
 
+#include <Corrade/Containers/EnumSet.hpp>
+
 #include "Magnum/Ui/Widget.h"
 #include "Magnum/Ui/BasicUserInterface.h"
 #include "Anchor.h"
 
 namespace Magnum { namespace Ui {
 
+Debug& operator<<(Debug& debug, const PlaneFlag value) {
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case PlaneFlag::value: return debug << "Ui::PlaneFlag::" #value;
+        _c(Hidden)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "Ui::PlaneFlag(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const PlaneFlags value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::PlaneFlags{}", {
+        PlaneFlag::Hidden});
+}
+
 AbstractPlane::AbstractPlane(AbstractUserInterface& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin): _ui(ui), _rect{anchor.rect(ui)}, _padding{padding}, _margin{margin} {
     if((_previousActivePlane = ui.addPlane(*this)))
-        _flags |= Flag::Hidden;
+        _flags |= PlaneFlag::Hidden;
 }
 
 AbstractPlane::~AbstractPlane() = default;
@@ -41,16 +60,16 @@ AbstractPlane::~AbstractPlane() = default;
 void AbstractPlane::activate() {
     _previousActivePlane = _ui._activePlane;
     _ui._activePlane = this;
-    _flags &= ~Flag::Hidden;
+    _flags &= ~PlaneFlag::Hidden;
 }
 
 void AbstractPlane::hide() {
-    if(_flags & Flag::Hidden) return;
+    if(_flags & PlaneFlag::Hidden) return;
 
     CORRADE_ASSERT(_ui._activePlane == this, "Ui::AbstractPlane::hide(): can't hide plane that is not currently active", );
 
     _ui._activePlane = _previousActivePlane;
-    _flags |= Flag::Hidden;
+    _flags |= PlaneFlag::Hidden;
 }
 
 std::size_t AbstractPlane::addWidget(Widget& widget) {
@@ -67,13 +86,13 @@ Widget* AbstractPlane::handleEvent(const Vector2& position) {
     Widget* currentHoveredWidget = nullptr;
 
     /* Cursor stayed on the same widget */
-    if(_lastHoveredWidget && _lastHoveredWidget->_rect.contains(position) && !(_lastHoveredWidget->_flags & StateFlag::Hidden))
+    if(_lastHoveredWidget && _lastHoveredWidget->_rect.contains(position) && !(_lastHoveredWidget->_flags & WidgetFlag::Hidden))
         currentHoveredWidget = _lastHoveredWidget;
 
     /* Find new active widget if the cursor moved away */
     else for(auto it = _widgets.rbegin(); it != _widgets.rend(); ++it) {
         WidgetReference& widgetReference = *it;
-        if(!widgetReference.widget || !widgetReference.rect.contains(position) || widgetReference.widget->_flags & StateFlag::Hidden)
+        if(!widgetReference.widget || !widgetReference.rect.contains(position) || widgetReference.widget->_flags & WidgetFlag::Hidden)
             continue;
 
         currentHoveredWidget = widgetReference.widget;
@@ -84,7 +103,7 @@ Widget* AbstractPlane::handleEvent(const Vector2& position) {
     _lastCursorPosition = position;
 
     /* Return no widget in case the current one is disabled */
-    return currentHoveredWidget && currentHoveredWidget->_flags & StateFlag::Disabled ?
+    return currentHoveredWidget && currentHoveredWidget->_flags & WidgetFlag::Disabled ?
         nullptr : currentHoveredWidget;
 }
 
@@ -94,15 +113,15 @@ bool AbstractPlane::handleMoveEvent(const Vector2& position) {
     bool accepted = false;
 
     /* If moved across widgets, emit hover out event for the previous one */
-    if(_lastHoveredWidget && _lastHoveredWidget != currentHoveredWidget && (_lastHoveredWidget->_flags & StateFlag::Hovered)) {
-        _lastHoveredWidget->_flags &= ~StateFlag::Hovered;
+    if(_lastHoveredWidget && _lastHoveredWidget != currentHoveredWidget && (_lastHoveredWidget->_flags & WidgetFlag::Hovered)) {
+        _lastHoveredWidget->_flags &= ~WidgetFlag::Hovered;
         _lastHoveredWidget->hoverEvent();
         accepted = true;
     }
 
     if(currentHoveredWidget) {
         /* Mark the widget as hovered and call hover event on it */
-        currentHoveredWidget->_flags |= StateFlag::Hovered;
+        currentHoveredWidget->_flags |= WidgetFlag::Hovered;
         accepted = currentHoveredWidget->hoverEvent();
     }
 
@@ -119,15 +138,15 @@ bool AbstractPlane::handlePressEvent(const Vector2& position) {
     bool accepted = false;
 
     /* Pressed outside the previous widget, call blur event on it */
-    if(_lastActiveWidget && _lastActiveWidget != currentHoveredWidget && (_lastActiveWidget->_flags & StateFlag::Active)) {
-        _lastActiveWidget->_flags &= ~StateFlag::Active;
+    if(_lastActiveWidget && _lastActiveWidget != currentHoveredWidget && (_lastActiveWidget->_flags & WidgetFlag::Active)) {
+        _lastActiveWidget->_flags &= ~WidgetFlag::Active;
         _lastActiveWidget->blurEvent();
         accepted = true;
     }
 
     if(currentHoveredWidget) {
         /* Mark the widget as active and call press event on it */
-        currentHoveredWidget->_flags |= StateFlag::Pressed;
+        currentHoveredWidget->_flags |= WidgetFlag::Pressed;
         accepted = currentHoveredWidget->pressEvent();
     }
 
@@ -144,8 +163,8 @@ bool AbstractPlane::handleReleaseEvent(const Vector2& position) {
 
     /* If moved across widgets during the mouse down, emit release event also
        for the previous one, but remove the active mark before doing so */
-    if(_lastActiveWidget && _lastActiveWidget != currentHoveredWidget && (_lastActiveWidget->_flags & StateFlag::Pressed)) {
-        _lastActiveWidget->_flags &= ~StateFlag::Pressed;
+    if(_lastActiveWidget && _lastActiveWidget != currentHoveredWidget && (_lastActiveWidget->_flags & WidgetFlag::Pressed)) {
+        _lastActiveWidget->_flags &= ~WidgetFlag::Pressed;
         _lastActiveWidget->releaseEvent();
         accepted = true;
     }
@@ -153,9 +172,9 @@ bool AbstractPlane::handleReleaseEvent(const Vector2& position) {
     if(currentHoveredWidget) {
         /* If the widget was pressed previously, it is active now. Remove the
            pressed flag, add the active flag and call the focus event. */
-        if(currentHoveredWidget->_flags & StateFlag::Pressed) {
-            currentHoveredWidget->_flags &= ~StateFlag::Pressed;
-            currentHoveredWidget->_flags |= StateFlag::Active;
+        if(currentHoveredWidget->_flags & WidgetFlag::Pressed) {
+            currentHoveredWidget->_flags &= ~WidgetFlag::Pressed;
+            currentHoveredWidget->_flags |= WidgetFlag::Active;
             accepted = currentHoveredWidget->focusEvent();
         }
 

@@ -25,10 +25,37 @@
 
 #include "Widget.h"
 
+#include <Corrade/Containers/EnumSet.hpp>
+
 #include "Magnum/Ui/BasicPlane.h"
 #include "Magnum/Ui/Anchor.h"
 
 namespace Magnum { namespace Ui {
+
+Debug& operator<<(Debug& debug, const WidgetFlag value) {
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case WidgetFlag::value: return debug << "Ui::WidgetFlag::" #value;
+        _c(Hovered)
+        _c(Pressed)
+        _c(Active)
+        _c(Disabled)
+        _c(Hidden)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "Ui::WidgetFlag(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const WidgetFlags value) {
+    return Containers::enumSetDebugOutput(debug, value, "Ui::WidgetFlags{}", {
+        WidgetFlag::Hovered,
+        WidgetFlag::Pressed,
+        WidgetFlag::Active,
+        WidgetFlag::Disabled,
+        WidgetFlag::Hidden});
+}
 
 void Widget::disable(const std::initializer_list<std::reference_wrapper<Widget>> widgets) {
     for(Widget& widget: widgets) widget.disable();
@@ -61,13 +88,13 @@ Widget::~Widget() {
 }
 
 Widget& Widget::disable() {
-    _flags |= StateFlag::Disabled;
+    _flags |= WidgetFlag::Disabled;
     update();
     return *this;
 }
 
 Widget& Widget::enable() {
-    _flags &= ~StateFlag::Disabled;
+    _flags &= ~WidgetFlag::Disabled;
     update();
     return *this;
 }
@@ -77,13 +104,13 @@ Widget& Widget::setEnabled(const bool enabled) {
 }
 
 Widget& Widget::hide() {
-    _flags |= StateFlag::Hidden;
+    _flags |= WidgetFlag::Hidden;
     update();
     return *this;
 }
 
 Widget& Widget::show() {
-    _flags &= ~StateFlag::Hidden;
+    _flags &= ~WidgetFlag::Hidden;
     update();
     return *this;
 }

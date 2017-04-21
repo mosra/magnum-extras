@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_BasicUserInterface_hpp
-#define Magnum_Ui_BasicUserInterface_hpp
 /*
     This file is part of Magnum.
 
@@ -25,28 +23,39 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "BasicUserInterface.h"
+#include <sstream>
+#include <Corrade/TestSuite/Tester.h>
 
-#include <Magnum/Math/Matrix3.h>
+#include "Magnum/Ui/BasicPlane.hpp"
 
-#include "Magnum/Ui/BasicPlane.h"
+namespace Magnum { namespace Ui { namespace Test {
 
-namespace Magnum { namespace Ui {
+struct BasicPlaneTest: TestSuite::Tester {
+    explicit BasicPlaneTest();
 
-template<class ...Layers> BasicUserInterface<Layers...>::~BasicUserInterface() {}
+    void debugFlag();
+    void debugFlags();
+};
 
-template<class ...Layers> void BasicUserInterface<Layers...>::update() {
-    for(auto& planeReference: _planes) static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).update();
+BasicPlaneTest::BasicPlaneTest() {
+    addTests({&BasicPlaneTest::debugFlag,
+              &BasicPlaneTest::debugFlags});
 }
 
-template<class ...Layers> void BasicUserInterface<Layers...>::draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
-    const Matrix3 projectionMatrix = Matrix3::scaling(2.0f/_size)*Matrix3::translation(-_size/2);
-    for(const auto& planeReference: _planes) {
-        if(planeReference.plane.get().flags() & PlaneFlag::Hidden) continue;
-        static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).draw(projectionMatrix, shaders);
-    }
+void BasicPlaneTest::debugFlag() {
+    std::ostringstream out;
+
+    Debug{&out} << PlaneFlag::Hidden << PlaneFlag(0xdeadbabe);
+    CORRADE_COMPARE(out.str(), "Ui::PlaneFlag::Hidden Ui::PlaneFlag(0xdeadbabe)\n");
 }
 
-}}
+void BasicPlaneTest::debugFlags() {
+    std::ostringstream out;
 
-#endif
+    Debug{&out} << PlaneFlags{} << PlaneFlag::Hidden << (PlaneFlag(0xdead0000)|PlaneFlag::Hidden);
+    CORRADE_COMPARE(out.str(), "Ui::PlaneFlags{} Ui::PlaneFlag::Hidden Ui::PlaneFlag::Hidden|Ui::PlaneFlag(0xdead0000)\n");
+}
+
+}}}
+
+CORRADE_TEST_MAIN(Magnum::Ui::Test::BasicPlaneTest)

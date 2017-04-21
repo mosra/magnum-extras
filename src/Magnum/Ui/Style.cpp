@@ -475,26 +475,26 @@ UnsignedByte textColorIndex(const Type type, const Style style, const State stat
 
 namespace {
 
-State stateForFlags(StateFlags flags) {
-    if(flags & StateFlag::Hidden) return State::Hidden;
-    if(flags & StateFlag::Disabled) return State::Disabled;
-    if(flags & StateFlag::Pressed) return State::Pressed;
-    if(flags & StateFlag::Active) return State::Active;
-    if(flags & StateFlag::Hovered) return State::Hover;
+State stateForFlags(WidgetFlags flags) {
+    if(flags & WidgetFlag::Hidden) return State::Hidden;
+    if(flags & WidgetFlag::Disabled) return State::Disabled;
+    if(flags & WidgetFlag::Pressed) return State::Pressed;
+    if(flags & WidgetFlag::Active) return State::Active;
+    if(flags & WidgetFlag::Hovered) return State::Hover;
     return State::Default;
 }
 
 }
 
-UnsignedByte backgroundColorIndex(const Type type, const Style style, const StateFlags flags) {
+UnsignedByte backgroundColorIndex(const Type type, const Style style, const WidgetFlags flags) {
     return backgroundColorIndex(type, style, stateForFlags(flags));
 }
 
-UnsignedByte foregroundColorIndex(const Type type, const Style style, const StateFlags flags) {
+UnsignedByte foregroundColorIndex(const Type type, const Style style, const WidgetFlags flags) {
     return foregroundColorIndex(type, style, stateForFlags(flags));
 }
 
-UnsignedByte textColorIndex(const Type type, const Style style, const StateFlags flags) {
+UnsignedByte textColorIndex(const Type type, const Style style, const WidgetFlags flags) {
     return textColorIndex(type, style, stateForFlags(flags));
 }
 
@@ -502,20 +502,23 @@ UnsignedByte textColorIndex(const Type type, const Style style, const StateFlags
 
 Debug& operator<<(Debug& debug, const Type value) {
     switch(value) {
-        #define _c(value) case Type::value: return debug << "Type::" #value;
+        /* LCOV_EXCL_START */
+        #define _c(value) case Type::value: return debug << "Ui::Type::" #value;
         _c(Button)
         _c(Input)
         _c(Label)
         _c(Modal)
         #undef _c
+        /* LCOV_EXCL_STOP */
     }
 
-    return debug << "Type::(invalid)";
+    return debug << "Ui::Type(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
 }
 
 Debug& operator<<(Debug& debug, const State value) {
     switch(value) {
-        #define _c(value) case State::value: return debug << "State::" #value;
+        /* LCOV_EXCL_START */
+        #define _c(value) case State::value: return debug << "Ui::State::" #value;
         _c(Default)
         _c(Hover)
         _c(Pressed)
@@ -523,14 +526,16 @@ Debug& operator<<(Debug& debug, const State value) {
         _c(Disabled)
         _c(Hidden)
         #undef _c
+        /* LCOV_EXCL_STOP */
     }
 
-    return debug << "State::(invalid)";
+    return debug << "Ui::State(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
 }
 
 Debug& operator<<(Debug& debug, const Style value) {
     switch(value) {
-        #define _c(value) case Style::value: return debug << "Style::" #value;
+        /* LCOV_EXCL_START */
+        #define _c(value) case Style::value: return debug << "Ui::Style::" #value;
         _c(Default)
         _c(Primary)
         _c(Success)
@@ -540,9 +545,10 @@ Debug& operator<<(Debug& debug, const Style value) {
         _c(Dim)
         _c(Flat)
         #undef _c
+        /* LCOV_EXCL_STOP */
     }
 
-    return debug << "Style::(invalid)";
+    return debug << "Ui::Style(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
 }
 
 StyleConfiguration::StyleConfiguration() {

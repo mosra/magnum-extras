@@ -46,11 +46,11 @@ namespace Implementation {
     };
 
     UnsignedByte MAGNUM_UI_EXPORT backgroundColorIndex(Type type, Style style, State state);
-    UnsignedByte MAGNUM_UI_EXPORT backgroundColorIndex(Type type, Style style, StateFlags flags);
+    UnsignedByte MAGNUM_UI_EXPORT backgroundColorIndex(Type type, Style style, WidgetFlags flags);
     UnsignedByte MAGNUM_UI_EXPORT foregroundColorIndex(Type type, Style style, State state);
-    UnsignedByte MAGNUM_UI_EXPORT foregroundColorIndex(Type type, Style style, StateFlags flags);
+    UnsignedByte MAGNUM_UI_EXPORT foregroundColorIndex(Type type, Style style, WidgetFlags flags);
     UnsignedByte MAGNUM_UI_EXPORT textColorIndex(Type type, Style style, State state);
-    UnsignedByte MAGNUM_UI_EXPORT textColorIndex(Type type, Style style, StateFlags flags);
+    UnsignedByte MAGNUM_UI_EXPORT textColorIndex(Type type, Style style, WidgetFlags flags);
 }
 
 /**
@@ -68,12 +68,12 @@ enum class Type: UnsignedInt {
 /** @debugoperatorenum{Magnum::Ui::Type}
  * @experimental
  */
-Debug& operator<<(Debug& debug, Type value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Type value);
 
 /**
 @brief Widget state
 
-Extracted from @ref StateFlags, see particular values for details.
+Extracted from @ref WidgetFlags, see particular values for details.
 @see @ref Widget::flags()
 @experimental
 */
@@ -113,7 +113,7 @@ enum class State: UnsignedInt {
 /** @debugoperatorenum{Magnum::Ui::State}
  * @experimental
  */
-Debug& operator<<(Debug& debug, State value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, State value);
 
 /**
 @brief Widget style
@@ -152,7 +152,7 @@ enum class Style: UnsignedInt {
 /** @debugoperatorenum{Magnum::Ui::Style}
  * @experimental
  */
-Debug& operator<<(Debug& debug, Style value);
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, Style value);
 
 /**
 @brief Style configuration

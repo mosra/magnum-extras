@@ -40,6 +40,38 @@
 namespace Magnum { namespace Ui {
 
 /**
+@brief Plane flag
+
+@see @ref PlaneFlags, @ref AbstractPlane::flags()
+*/
+enum class PlaneFlag: UnsignedInt {
+    /**
+     * The plane is hidden.
+     * @see @ref AbstractPlane::hide(), @ref AbstractPlane::activate()
+     */
+    Hidden = 1 << 0
+};
+
+/** @debugoperatorenum{PlaneFlag}
+ * @experimental
+ */
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, PlaneFlag value);
+
+/**
+@brief Plane flags
+
+@see @ref AbstractPlane::flags()
+*/
+typedef Containers::EnumSet<PlaneFlag> PlaneFlags;
+
+CORRADE_ENUMSET_OPERATORS(PlaneFlags)
+
+/** @debugoperatorenum{PlaneFlags}
+ * @experimental
+ */
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, PlaneFlags value);
+
+/**
 @brief Non-templated base for planes
 
 See @ref BasicPlane for more information.
@@ -50,25 +82,17 @@ class MAGNUM_UI_EXPORT AbstractPlane {
     friend Widget;
 
     public:
-        /**
-         * @brief State flag
-         *
-         * @see @ref Flags, @ref flags()
+        #ifdef MAGNUM_BUILD_DEPRECATED
+        /** @copybrief PlaneFlag
+         * @deprecated Use @ref PlaneFlag instead.
          */
-        enum class Flag: UnsignedInt {
-            /**
-             * The plane is hidden.
-             * @see @ref hide(), @ref activate()
-             */
-            Hidden = 1 << 0
-        };
+        CORRADE_DEPRECATED("use PlaneFlag instead") typedef PlaneFlag Flag;
 
-        /**
-         * @brief State flags
-         *
-         * @see @ref flags()
+        /** @copybrief PlaneFlags
+         * @deprecated Use @ref PlaneFlags instead.
          */
-        typedef Containers::EnumSet<Flag> Flags;
+        CORRADE_DEPRECATED("use PlaneFlags instead") typedef PlaneFlags Flags;
+        #endif
 
         /**
          * @brief Constructor
@@ -97,11 +121,11 @@ class MAGNUM_UI_EXPORT AbstractPlane {
         Vector2 margin() const { return _margin; }
 
         /**
-         * @brief State flags
+         * @brief Flags
          *
          * @see @ref activate(), @ref hide()
          */
-        Flags flags() const { return _flags; }
+        PlaneFlags flags() const { return _flags; }
 
         /**
          * @brief Previous active plane
@@ -161,11 +185,9 @@ class MAGNUM_UI_EXPORT AbstractPlane {
         Vector2 _lastCursorPosition;
         Widget *_lastHoveredWidget = nullptr,
             *_lastActiveWidget = nullptr;
-        AbstractPlane* _previousActivePlane;
-        Flags _flags;
+        AbstractPlane* _previousActivePlane = nullptr;
+        PlaneFlags _flags;
 };
-
-CORRADE_ENUMSET_OPERATORS(AbstractPlane::Flags)
 
 /**
 @brief Base for planes

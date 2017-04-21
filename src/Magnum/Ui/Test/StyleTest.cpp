@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_BasicUserInterface_hpp
-#define Magnum_Ui_BasicUserInterface_hpp
 /*
     This file is part of Magnum.
 
@@ -25,28 +23,48 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "BasicUserInterface.h"
+#include <sstream>
+#include <Corrade/TestSuite/Tester.h>
 
-#include <Magnum/Math/Matrix3.h>
+#include "Magnum/Ui/Style.h"
 
-#include "Magnum/Ui/BasicPlane.h"
+namespace Magnum { namespace Ui { namespace Test {
 
-namespace Magnum { namespace Ui {
+struct StyleTest: TestSuite::Tester {
+    explicit StyleTest();
 
-template<class ...Layers> BasicUserInterface<Layers...>::~BasicUserInterface() {}
+    void debugType();
+    void debugState();
+    void debugStyle();
+};
 
-template<class ...Layers> void BasicUserInterface<Layers...>::update() {
-    for(auto& planeReference: _planes) static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).update();
+StyleTest::StyleTest() {
+    addTests({&StyleTest::debugType,
+              &StyleTest::debugState,
+              &StyleTest::debugStyle});
 }
 
-template<class ...Layers> void BasicUserInterface<Layers...>::draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
-    const Matrix3 projectionMatrix = Matrix3::scaling(2.0f/_size)*Matrix3::translation(-_size/2);
-    for(const auto& planeReference: _planes) {
-        if(planeReference.plane.get().flags() & PlaneFlag::Hidden) continue;
-        static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).draw(projectionMatrix, shaders);
-    }
+void StyleTest::debugType() {
+    std::ostringstream out;
+
+    Debug{&out} << Type::Button << Type(0xdeadbabe);
+    CORRADE_COMPARE(out.str(), "Ui::Type::Button Ui::Type(0xdeadbabe)\n");
 }
 
-}}
+void StyleTest::debugState() {
+    std::ostringstream out;
 
-#endif
+    Debug{&out} << State::Hover << State(0xdeadbabe);
+    CORRADE_COMPARE(out.str(), "Ui::State::Hover Ui::State(0xdeadbabe)\n");
+}
+
+void StyleTest::debugStyle() {
+    std::ostringstream out;
+
+    Debug{&out} << Style::Danger << Style(0xdeadbabe);
+    CORRADE_COMPARE(out.str(), "Ui::Style::Danger Ui::Style(0xdeadbabe)\n");
+}
+
+}}}
+
+CORRADE_TEST_MAIN(Magnum::Ui::Test::StyleTest)

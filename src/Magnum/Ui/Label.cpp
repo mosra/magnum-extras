@@ -50,7 +50,7 @@ Label::Label(Plane& plane, const Anchor& anchor, const Containers::ArrayView<con
     else _cursor.y() = rect().centerY();
 
     _textElementId = plane.addText(
-        Implementation::textColorIndex(Type::Label, style, flags() & ~(StateFlag::Active|StateFlag::Hovered|StateFlag::Pressed)),
+        Implementation::textColorIndex(Type::Label, style, flags() & ~(WidgetFlag::Active|WidgetFlag::Hovered|WidgetFlag::Pressed)),
         plane.ui().styleConfiguration().fontSize(),
         text,
         _cursor, alignment, capacity);
@@ -68,7 +68,7 @@ Label& Label::setText(const Containers::ArrayView<const char> text) {
     auto& plane = static_cast<Plane&>(this->plane());
 
     plane.setText(_textElementId,
-        Implementation::textColorIndex(Type::Label, _style, flags() & ~(StateFlag::Active|StateFlag::Hovered|StateFlag::Pressed)),
+        Implementation::textColorIndex(Type::Label, _style, flags() & ~(WidgetFlag::Active|WidgetFlag::Hovered|WidgetFlag::Pressed)),
         plane.ui().styleConfiguration().fontSize(),
         text,
         _cursor, _alignment);
@@ -77,7 +77,7 @@ Label& Label::setText(const Containers::ArrayView<const char> text) {
 
 void Label::update() {
     for(Implementation::TextVertex& v: static_cast<Plane&>(plane())._textLayer.modifyElement(_textElementId))
-        v.colorIndex = Implementation::textColorIndex(Type::Label, _style, flags() & ~(StateFlag::Active|StateFlag::Hovered|StateFlag::Pressed));
+        v.colorIndex = Implementation::textColorIndex(Type::Label, _style, flags() & ~(WidgetFlag::Active|WidgetFlag::Hovered|WidgetFlag::Pressed));
 }
 
 }}
