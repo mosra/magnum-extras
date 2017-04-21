@@ -50,19 +50,18 @@ Range2D anchorRect(Snaps snaps, const Range2D& referenceRect, const Range2D& ref
     Vector2 size{rect.size()};
     Vector2 position;
 
-    /* Snapping inside given direction is either explicitly or if snapping
-       inside in the opposite direction and either filling or centering in this
-       direction */
+    /* Snapping inside given direction is either explicitly or if either
+       filling or centering in this direction */
     Math::BoolVector<2> snapInside = Ui::snapInside(snaps);
-    snapInside.set(0, snapInside[0] || ((snaps & Snap::InsideY) && (!(snaps & Snap::Left) == !(snaps & Snap::Right))));
-    snapInside.set(1, snapInside[1] || ((snaps & Snap::InsideX) && (!(snaps & Snap::Bottom) == !(snaps & Snap::Top))));
+    snapInside.set(0, snapInside[0] || !(snaps & Snap::Left) == !(snaps & Snap::Right));
+    snapInside.set(1, snapInside[1] || !(snaps & Snap::Bottom) == !(snaps & Snap::Top));
 
     /* Spacing in given direction is ignored either explicitly or if snapping
-       outside in the opposite direction (that means also no center or fill in
-       the opposite direction) */
+       inside in this direction and snapping outside in the opposite direction
+       (that means also no center or fill in the opposite direction) */
     Math::BoolVector<2> ignoreSpace((UnsignedByte(snaps) & UnsignedByte(Snap::NoSpaceX|Snap::NoSpaceY)) >> 6);
-    ignoreSpace.set(0, ignoreSpace[0] || (!(snaps & Snap::InsideY) && (!(snaps & Snap::Bottom) != !(snaps & Snap::Top))));
-    ignoreSpace.set(1, ignoreSpace[1] || (!(snaps & Snap::InsideX) && (!(snaps & Snap::Left) != !(snaps & Snap::Right))));
+    ignoreSpace.set(0, ignoreSpace[0] || (snapInside[0] && !snapInside[1] && (!(snaps & Snap::Bottom) != !(snaps & Snap::Top))));
+    ignoreSpace.set(1, ignoreSpace[1] || (snapInside[1] && !snapInside[0] && (!(snaps & Snap::Left) != !(snaps & Snap::Right))));
 
     /* Padded reference rect */
     const Range2D referenceRectPadded{
