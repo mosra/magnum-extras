@@ -108,6 +108,14 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Te
 
 UserInterface::~UserInterface() = default;
 
+const Plane* UserInterface::activePlane() const {
+    return static_cast<const Plane*>(BasicUserInterface::activePlane());
+}
+
+Plane* UserInterface::activePlane() {
+    return static_cast<Plane*>(BasicUserInterface::activePlane());
+}
+
 void UserInterface::setStyleConfiguration(const StyleConfiguration& configuration) {
     _styleConfiguration = configuration;
     configuration.pack(_backgroundUniforms, _foregroundUniforms, _textUniforms);

@@ -78,6 +78,18 @@ class MAGNUM_UI_EXPORT Plane: public BasicPlane<Implementation::QuadLayer, Imple
         const UserInterface& ui() const; /**< @overload */
 
         /**
+         * @brief Previous active plane
+         *
+         * See @ref AbstractPlane::previousActivePlane() for more information.
+         */
+        Plane* previousActivePlane() {
+            return static_cast<Plane*>(BasicPlane::previousActivePlane());
+        }
+        const Plane* previousActivePlane() const {
+            return static_cast<const Plane*>(BasicPlane::previousActivePlane());
+        } /**< @overload */
+
+        /**
          * @brief Reset plane contents
          * @param backgroundCapacity    Number of background elements to reserve
          * @param foregroundCapacity    Number of foreground elements to reserve

@@ -69,6 +69,10 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
 
         ~UserInterface();
 
+        /** @brief Active plane */
+        Plane* activePlane();
+        const Plane* activePlane() const; /**< @overload */
+
         /** @brief Used style configuration */
         const StyleConfiguration& styleConfiguration() const { return _styleConfiguration; }
 

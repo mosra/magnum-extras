@@ -62,6 +62,14 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /** @brief User interface size */
         Vector2 size() const { return _size; }
 
+        /**
+         * @brief Active plane
+         *
+         * @see @ref AbstractPlane::previousActivePlane()
+         */
+        AbstractPlane* activePlane() { return _activePlane; }
+        const AbstractPlane* activePlane() const { return _activePlane; } /**< @overload */
+
         /** @brief Handle application mouse move event */
         bool handleMoveEvent(const Vector2i& screenPosition);
 

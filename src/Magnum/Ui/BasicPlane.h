@@ -104,11 +104,22 @@ class MAGNUM_UI_EXPORT AbstractPlane {
         Flags flags() const { return _flags; }
 
         /**
+         * @brief Previous active plane
+         *
+         * Plane that was active before this plane was active. If this plane is
+         * not part of the hierarchy or at the end of the hierarchy, the
+         * function returns `nullptr`.
+         */
+        AbstractPlane* previousActivePlane() { return _previousActivePlane; }
+        const AbstractPlane* previousActivePlane() const { return _previousActivePlane; } /**< @overload */
+
+        /**
          * @brief Activate the plane
          *
          * Activates the plane so it is frontmost, receives input events and
-         * visible.
-         * @see @ref Flag::Hidden, @ref flags()
+         * visible. If the plane is already active, the function is a no-op.
+         * @see @ref BasicUserInterface::activePlane(),
+         *      @ref previousActivePlane(), @ref Flag::Hidden, @ref flags()
          */
         void activate();
 
@@ -118,7 +129,7 @@ class MAGNUM_UI_EXPORT AbstractPlane {
          * Hides the plane and transfers the focus to previously active plane.
          * Expects that the plane is currently active. If the plane is already
          * hidden, the function is a no-op.
-         * @see @ref Flag::Hidden, @ref flags()
+         * @see @ref previousActivePlane(), @ref Flag::Hidden, @ref flags()
          */
         void hide();
 
@@ -150,7 +161,7 @@ class MAGNUM_UI_EXPORT AbstractPlane {
         Vector2 _lastCursorPosition;
         Widget *_lastHoveredWidget = nullptr,
             *_lastActiveWidget = nullptr;
-        AbstractPlane* _lastActivePlane;
+        AbstractPlane* _previousActivePlane;
         Flags _flags;
 };
 
@@ -162,6 +173,23 @@ CORRADE_ENUMSET_OPERATORS(AbstractPlane::Flags)
 Each plane instance contains widgets on the same Z index and consists of layers
 from which the widgets are made of. The order of layers denotes the drawing
 order, first layer is drawn first.
+
+## Plane hierarchy
+
+The user interface has a concept of active planes. Only one plane can be active
+at a time. If a plane is active, it's receiving user input and is displayed in
+front of all other inactive planes. Initially the UI has no planes, meaning
+that @ref BasicUserInterface::activePlane() is returning `nullptr`. Adding
+first plane to an UI will make it active. If there already is an active plane,
+adding more planes to the UI will not change the active plane and the newly
+added planes are added as hidden. Calling @ref hide() on a currently active
+plane will make the previous plane active (if there is any) and the plane is
+hidden. Calling @ref activate() on an inactive plane will bring it to the
+front, make it receive input events and show it in case it was hidden.
+
+Destroying a plane that's currently currently active makes the previous plane
+active, otherwise it's just removed from the plane hierarchy.
+
 @see @ref Widget, @ref BasicLayer
 @experimental
 */
@@ -176,12 +204,29 @@ template<class ...Layers> class BasicPlane: public AbstractPlane {
          * @param padding   Padding for widgets inside
          * @param margin    Margin between the widgets inside
          * @param layers    Layers the widgets on this plane are made of
+         *
+         * If @p ui doesn't have any active plane yet, this plane is set as
+         * active. Otherwise the active plane is unchanged and this plane is
+         * added as hidden.
+         * @see @ref BasicUserInterface::activePlane()
          */
         explicit BasicPlane(BasicUserInterface<Layers...>& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin, Layers&... layers): AbstractPlane{ui, anchor, padding, margin}, _layers{layers...} {}
 
         /** @brief User interface this plane is part of */
         BasicUserInterface<Layers...>& ui();
         const BasicUserInterface<Layers...>& ui() const; /**< @overload */
+
+        /**
+         * @brief Previous active plane
+         *
+         * See @ref AbstractPlane::previousActivePlane() for more information.
+         */
+        BasicPlane<Layers...>* previousActivePlane() {
+            return static_cast<BasicPlane<Layers...>*>(AbstractPlane::previousActivePlane());
+        }
+        const BasicPlane<Layers...>* previousActivePlane() const {
+            return static_cast<const BasicPlane<Layers...>*>(AbstractPlane::previousActivePlane());
+        } /**< @overload */
 
         /**
          * @brief Update a plane
