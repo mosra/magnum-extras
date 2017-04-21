@@ -26,6 +26,9 @@
 #include <sstream>
 #include <Corrade/TestSuite/Tester.h>
 
+#include "Magnum/Ui/Anchor.h"
+#include "Magnum/Ui/BasicUserInterface.hpp"
+#include "Magnum/Ui/BasicPlane.hpp"
 #include "Magnum/Ui/Widget.h"
 
 namespace Magnum { namespace Ui { namespace Test {
@@ -33,13 +36,123 @@ namespace Magnum { namespace Ui { namespace Test {
 struct WidgetTest: TestSuite::Tester {
     explicit WidgetTest();
 
+    void construct();
+
+    void flags();
+
     void debugWidgetFlag();
     void debugWidgetFlags();
 };
 
 WidgetTest::WidgetTest() {
-    addTests({&WidgetTest::debugWidgetFlag,
+    addTests({&WidgetTest::construct,
+
+              &WidgetTest::flags,
+
+              &WidgetTest::debugWidgetFlag,
               &WidgetTest::debugWidgetFlags});
+}
+
+namespace {
+    struct UserInterface: BasicUserInterface<> {
+        #ifndef CORRADE_GCC47_COMPATIBILITY
+        using BasicUserInterface::BasicUserInterface;
+        #else
+        explicit UserInterface(const Vector2& size, const Vector2i& screenSize): BasicUserInterface<>{size, screenSize} {}
+        #endif
+    };
+
+    struct Plane: BasicPlane<> {
+        #ifndef CORRADE_GCC47_COMPATIBILITY
+        using BasicPlane::BasicPlane;
+        #else
+        explicit Plane(UserInterface& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin): BasicPlane<>{ui, anchor, padding, margin} {}
+        #endif
+    };
+
+    struct Widget: Ui::Widget {
+        #ifndef CORRADE_GCC47_COMPATIBILITY
+        using Ui::Widget::Widget;
+        #else
+        explicit Widget(AbstractPlane& plane, const Anchor& anchor, const Range2D& padding = {}): Ui::Widget{plane, anchor, padding} {}
+        #endif
+
+        Plane& plane() { return static_cast<Plane&>(Ui::Widget::plane()); }
+        const Plane& plane() const { return static_cast<const Plane&>(Ui::Widget::plane()); }
+    };
+}
+
+void WidgetTest::construct() {
+    UserInterface ui{{800.0f, 600.0f}, {800, 600}};
+    Plane plane{ui, {Snap::Left|Snap::Top, {400.0f, 300.0f}}, {}, {}};
+    Widget a{plane, {Snap::Bottom|Snap::Right, {100.0f, 100.0f}}, {{7.5f, -0.3f}, {1.5f, 0.7f}}};
+
+    CORRADE_COMPARE(a.rect(), Range2D::fromSize({300, 0}, {100, 100}));
+    CORRADE_COMPARE(a.padding(), (Range2D{{7.5f, -0.3f}, {1.5f, 0.7f}}));
+    CORRADE_COMPARE(a.flags(), WidgetFlags{});
+    CORRADE_COMPARE(&a.plane(), &plane);
+
+    /* Verify also the const overloads */
+    const Widget& ca = a;
+    CORRADE_COMPARE(&ca.plane(), &plane);
+}
+
+void WidgetTest::flags() {
+    UserInterface ui{{800.0f, 600.0f}, {800, 600}};
+    Plane plane{ui, {Snap::Left|Snap::Top, {400.0f, 300.0f}}, {}, {}};
+    Widget a{plane, {Snap::Bottom|Snap::Right, {100.0f, 100.0f}}};
+    Widget b{plane, {Snap::Left, a, {100.0f, 100.0f}}};
+    Widget c{plane, {Snap::Left, b, {100.0f, 100.0f}}};
+
+    CORRADE_COMPARE(a.flags(), WidgetFlags{});
+    CORRADE_COMPARE(b.flags(), WidgetFlags{});
+    CORRADE_COMPARE(c.flags(), WidgetFlags{});
+
+    a.disable();
+    a.hide();
+    CORRADE_COMPARE(a.flags(), WidgetFlag::Disabled|WidgetFlag::Hidden);
+
+    Widget::disable({b, c});
+    CORRADE_COMPARE(b.flags(), WidgetFlag::Disabled);
+    CORRADE_COMPARE(c.flags(), WidgetFlag::Disabled);
+
+    Widget::enable({a, b});
+    CORRADE_COMPARE(a.flags(), WidgetFlag::Hidden);
+    CORRADE_COMPARE(b.flags(), WidgetFlags{});
+
+    Widget::hide({b, c});
+    CORRADE_COMPARE(b.flags(), WidgetFlag::Hidden);
+    CORRADE_COMPARE(c.flags(), WidgetFlag::Hidden|WidgetFlag::Disabled);
+
+    c.enable();
+    CORRADE_COMPARE(c.flags(), WidgetFlag::Hidden);
+
+    Widget::show({a, c});
+    b.show();
+    CORRADE_COMPARE(a.flags(), WidgetFlags{});
+    CORRADE_COMPARE(b.flags(), WidgetFlags{});
+    CORRADE_COMPARE(c.flags(), WidgetFlags{});
+
+    Widget::setEnabled(false, {c, a});
+    Widget::setVisible(false, {b, c});
+    CORRADE_COMPARE(a.flags(), WidgetFlag::Disabled);
+    CORRADE_COMPARE(b.flags(), WidgetFlag::Hidden);
+    CORRADE_COMPARE(c.flags(), WidgetFlag::Hidden|WidgetFlag::Disabled);
+
+    a.setVisible(false);
+    b.setEnabled(false);
+    c.setVisible(true);
+    CORRADE_COMPARE(a.flags(), WidgetFlag::Hidden|WidgetFlag::Disabled);
+    CORRADE_COMPARE(b.flags(), WidgetFlag::Hidden|WidgetFlag::Disabled);
+    CORRADE_COMPARE(c.flags(), WidgetFlag::Disabled);
+
+    a.setEnabled(true);
+    Widget::setEnabled(true, {b});
+    CORRADE_COMPARE(a.flags(), WidgetFlag::Hidden);
+    CORRADE_COMPARE(b.flags(), WidgetFlag::Hidden);
+
+    Widget::setVisible(true, {b});
+    CORRADE_COMPARE(b.flags(), WidgetFlags{});
 }
 
 void WidgetTest::debugWidgetFlag() {
