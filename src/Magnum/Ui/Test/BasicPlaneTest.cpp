@@ -108,22 +108,28 @@ void BasicPlaneTest::hierarchy() {
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
 
     Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 
     Plane c{ui, {{}, {800.0f, 600.0f}}, {}, {}};
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
     CORRADE_COMPARE(c.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(c.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(c.nextActivePlane(), nullptr);
 }
 
 void BasicPlaneTest::hierarchyActivate() {
@@ -133,29 +139,36 @@ void BasicPlaneTest::hierarchyActivate() {
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
 
     Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 
     b.activate();
     CORRADE_COMPARE(ui.activePlane(), &b);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), &b);
     CORRADE_COMPARE(b.flags(), PlaneFlags{});
     CORRADE_COMPARE(b.previousActivePlane(), &a);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 
     /* Just to test the const overload */
     const Plane& cb = b;
     CORRADE_COMPARE(cb.previousActivePlane(), &a);
+    CORRADE_COMPARE(cb.nextActivePlane(), nullptr);
 
     a.activate();
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), &b);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
     CORRADE_COMPARE(b.flags(), PlaneFlags{});
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), &a);
 }
 
 void BasicPlaneTest::hierarchyActivateActivated() {
@@ -165,18 +178,22 @@ void BasicPlaneTest::hierarchyActivateActivated() {
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
 
     Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 
     a.activate();
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 }
 
 void BasicPlaneTest::hierarchyHide() {
@@ -186,18 +203,22 @@ void BasicPlaneTest::hierarchyHide() {
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
 
     Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 
     a.hide();
     CORRADE_COMPARE(ui.activePlane(), nullptr);
     CORRADE_COMPARE(a.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 }
 
 void BasicPlaneTest::hierarchyHideHidden() {
@@ -207,18 +228,22 @@ void BasicPlaneTest::hierarchyHideHidden() {
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
 
     Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 
     b.hide();
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 }
 
 void BasicPlaneTest::hierarchyHideInactive() {
@@ -228,23 +253,27 @@ void BasicPlaneTest::hierarchyHideInactive() {
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(a.nextActivePlane(), nullptr);
 
     Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
     CORRADE_COMPARE(ui.activePlane(), &a);
     CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 
     b.activate();
     CORRADE_COMPARE(ui.activePlane(), &b);
     CORRADE_COMPARE(a.flags(), PlaneFlags{});
     CORRADE_COMPARE(b.flags(), PlaneFlags{});
     CORRADE_COMPARE(b.previousActivePlane(), &a);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 
     a.hide();
     CORRADE_COMPARE(ui.activePlane(), &b);
     CORRADE_COMPARE(a.flags(), PlaneFlag::Hidden);
     CORRADE_COMPARE(b.flags(), PlaneFlags{});
     CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.nextActivePlane(), nullptr);
 }
 
 void BasicPlaneTest::debugFlag() {

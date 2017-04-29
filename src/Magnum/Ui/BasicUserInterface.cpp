@@ -35,24 +35,22 @@ AbstractUserInterface::AbstractUserInterface(const Vector2& size, const Vector2i
 
 AbstractUserInterface::~AbstractUserInterface() = default;
 
-AbstractPlane* AbstractUserInterface::addPlane(AbstractPlane& plane) {
-    CORRADE_INTERNAL_ASSERT(!_activePlane == _planes.empty());
-
-    _planes.emplace_back(plane.rect(), plane);
-
-    if(!_activePlane) {
-        _activePlane = &plane;
-        return nullptr;
-    } else return _activePlane;
+AbstractPlane* AbstractUserInterface::activePlane() {
+    return const_cast<AbstractPlane*>(const_cast<const AbstractUserInterface&>(*this).activePlane());
+}
+const AbstractPlane* AbstractUserInterface::activePlane() const {
+    auto p = Containers::LinkedList<AbstractPlane>::last();
+    return p && !(p->flags() & PlaneFlag::Hidden) ? p : nullptr;
 }
 
 std::pair<Vector2, AbstractPlane*> AbstractUserInterface::handleEvent(const Vector2i& screenPosition) {
     Vector2 position = Vector2(screenPosition)*_coordinateScaling;
     position.y() = _size.y() - position.y();
 
-    if(_activePlane && _activePlane->rect().contains(position) && !(_activePlane->flags() & PlaneFlag::Hidden))
-        return {position, _activePlane};
-
+    if(Containers::LinkedList<AbstractPlane>::last() &&
+     !(Containers::LinkedList<AbstractPlane>::last()->flags() & PlaneFlag::Hidden) &&
+       Containers::LinkedList<AbstractPlane>::last()->rect().contains(position))
+        return {position, Containers::LinkedList<AbstractPlane>::last()};
     return {position, nullptr};
 }
 

@@ -31,6 +31,7 @@
 
 #include <tuple>
 #include <vector>
+#include <Corrade/Containers/LinkedList.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Range.h>
 
@@ -77,7 +78,9 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, PlaneFlags value);
 See @ref BasicPlane for more information.
 @experimental
 */
-class MAGNUM_UI_EXPORT AbstractPlane {
+class MAGNUM_UI_EXPORT AbstractPlane: private Containers::LinkedListItem<AbstractPlane, AbstractUserInterface> {
+    friend Containers::LinkedList<AbstractPlane>;
+    friend Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>;
     friend AbstractUserInterface;
     friend Widget;
 
@@ -104,8 +107,12 @@ class MAGNUM_UI_EXPORT AbstractPlane {
         explicit AbstractPlane(AbstractUserInterface& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin);
 
         /** @brief User interface this plane is part of */
-        AbstractUserInterface& ui() { return _ui; }
-        const AbstractUserInterface& ui() const { return _ui; } /**< @overload */
+        AbstractUserInterface& ui() {
+            return *Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>::list();
+        }
+        const AbstractUserInterface& ui() const {
+            return *Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>::list();
+        } /**< @overload */
 
         /** @brief Plane rectangle */
         Range2D rect() const { return _rect; }
@@ -131,11 +138,21 @@ class MAGNUM_UI_EXPORT AbstractPlane {
          * @brief Previous active plane
          *
          * Plane that was active before this plane was active. If this plane is
-         * not part of the hierarchy or at the end of the hierarchy, the
-         * function returns `nullptr`.
+         * at the back of the active hierarchy or not part of the active
+         * hierarchy at all, the function returns `nullptr`.
          */
-        AbstractPlane* previousActivePlane() { return _previousActivePlane; }
-        const AbstractPlane* previousActivePlane() const { return _previousActivePlane; } /**< @overload */
+        AbstractPlane* previousActivePlane();
+        const AbstractPlane* previousActivePlane() const; /**< @overload */
+
+        /**
+         * @brief Next active plane
+         *
+         * Active plane immediately in front of current. If this plane is at
+         * the front of the active hierarchy or not part of the active
+         * hierarchy at all, the function returns `nullptr`.
+         */
+        AbstractPlane* nextActivePlane();
+        const AbstractPlane* nextActivePlane() const; /**< @overload */
 
         /**
          * @brief Activate the plane
@@ -151,8 +168,7 @@ class MAGNUM_UI_EXPORT AbstractPlane {
          * @brief Hide the plane
          *
          * Hides the plane and transfers the focus to previously active plane.
-         * Expects that the plane is currently active. If the plane is already
-         * hidden, the function is a no-op.
+         * If the plane is already hidden, the function is a no-op.
          * @see @ref previousActivePlane(), @ref Flag::Hidden, @ref flags()
          */
         void hide();
@@ -178,14 +194,12 @@ class MAGNUM_UI_EXPORT AbstractPlane {
         bool handlePressEvent(const Vector2& position);
         bool handleReleaseEvent(const Vector2& position);
 
-        AbstractUserInterface& _ui;
         Range2D _rect, _padding;
         Vector2 _margin;
         std::vector<WidgetReference> _widgets;
         Vector2 _lastCursorPosition;
         Widget *_lastHoveredWidget = nullptr,
             *_lastActiveWidget = nullptr;
-        AbstractPlane* _previousActivePlane = nullptr;
         PlaneFlags _flags;
 };
 
@@ -248,6 +262,18 @@ template<class ...Layers> class BasicPlane: public AbstractPlane {
         }
         const BasicPlane<Layers...>* previousActivePlane() const {
             return static_cast<const BasicPlane<Layers...>*>(AbstractPlane::previousActivePlane());
+        } /**< @overload */
+
+        /**
+         * @brief Next active plane
+         *
+         * See @ref AbstractPlane::nextActivePlane() for more information.
+         */
+        BasicPlane<Layers...>* nextActivePlane() {
+            return static_cast<BasicPlane<Layers...>*>(AbstractPlane::nextActivePlane());
+        }
+        const BasicPlane<Layers...>* nextActivePlane() const {
+            return static_cast<const BasicPlane<Layers...>*>(AbstractPlane::nextActivePlane());
         } /**< @overload */
 
         /**

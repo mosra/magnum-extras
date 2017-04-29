@@ -36,14 +36,16 @@ namespace Magnum { namespace Ui {
 template<class ...Layers> BasicUserInterface<Layers...>::~BasicUserInterface() {}
 
 template<class ...Layers> void BasicUserInterface<Layers...>::update() {
-    for(auto& planeReference: _planes) static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).update();
+    /** @todo Update only non-hidden to save cycles? */
+    for(AbstractPlane& plane: *this) static_cast<BasicPlane<Layers...>&>(plane).update();
 }
 
 template<class ...Layers> void BasicUserInterface<Layers...>::draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
     const Matrix3 projectionMatrix = Matrix3::scaling(2.0f/_size)*Matrix3::translation(-_size/2);
-    for(const auto& planeReference: _planes) {
-        if(planeReference.plane.get().flags() & PlaneFlag::Hidden) continue;
-        static_cast<BasicPlane<Layers...>&>(planeReference.plane.get()).draw(projectionMatrix, shaders);
+    for(AbstractPlane& plane: *this) {
+        /* Ignore all hidden planes in the back, draw back-to-front */
+        if(plane.flags() & PlaneFlag::Hidden) continue;
+        static_cast<BasicPlane<Layers...>&>(plane).draw(projectionMatrix, shaders);
     }
 }
 

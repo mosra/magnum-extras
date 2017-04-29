@@ -32,6 +32,7 @@
 #include <array>
 #include <functional>
 #include <vector>
+#include <Corrade/Containers/LinkedList.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Range.h>
 
@@ -46,7 +47,9 @@ namespace Magnum { namespace Ui {
 See @ref BasicUserInterface for more information.
 @experimental
 */
-class MAGNUM_UI_EXPORT AbstractUserInterface {
+class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<AbstractPlane> {
+    friend Containers::LinkedList<AbstractPlane>;
+    friend Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>;
     friend AbstractPlane;
     template<class ...> friend class BasicUserInterface;
 
@@ -65,10 +68,12 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Active plane
          *
-         * @see @ref AbstractPlane::previousActivePlane()
+         * If there is no active plane, returns `nullptr`.
+         * @see @ref AbstractPlane::previousActivePlane(),
+         *      @ref AbstractPlane::nextActivePlane()
          */
-        AbstractPlane* activePlane() { return _activePlane; }
-        const AbstractPlane* activePlane() const { return _activePlane; } /**< @overload */
+        AbstractPlane* activePlane();
+        const AbstractPlane* activePlane() const; /**< @overload */
 
         /** @brief Handle application mouse move event */
         bool handleMoveEvent(const Vector2i& screenPosition);
@@ -80,24 +85,10 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         bool handleReleaseEvent(const Vector2i& screenPosition);
 
     private:
-        /* MSVC 2015 doesn't like std::vector of undefined type so I have to
-           put it here. It also doesn't like having non-assignable types in it,
-           so I have to use std::reference_wrapper. */
-        struct PlaneReference {
-            explicit PlaneReference(const Range2D& rect, AbstractPlane& plane): rect{rect}, plane(plane) {}
-
-            Range2D rect;
-            std::reference_wrapper<AbstractPlane> plane;
-        };
-
         ~AbstractUserInterface();
-
-        AbstractPlane* addPlane(AbstractPlane& plane);
 
         std::pair<Vector2, AbstractPlane*> handleEvent(const Vector2i& screenPosition);
 
-        std::vector<PlaneReference> _planes;
-        AbstractPlane* _activePlane = nullptr;
         Vector2 _size;
         Vector2 _coordinateScaling;
 };

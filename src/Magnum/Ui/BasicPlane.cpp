@@ -50,25 +50,49 @@ Debug& operator<<(Debug& debug, const PlaneFlags value) {
         PlaneFlag::Hidden});
 }
 
-AbstractPlane::AbstractPlane(AbstractUserInterface& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin): _ui(ui), _rect{anchor.rect(ui)}, _padding{padding}, _margin{margin} {
-    if((_previousActivePlane = ui.addPlane(*this)))
-        _flags |= PlaneFlag::Hidden;
+AbstractPlane::AbstractPlane(AbstractUserInterface& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin): _rect{anchor.rect(ui)}, _padding{padding}, _margin{margin} {
+    ui.Containers::LinkedList<AbstractPlane>::insert(this, ui.Containers::LinkedList<AbstractPlane>::first());
+
+    /* Implicitly hide the plane if there is already something in front */
+    if(next()) _flags |= PlaneFlag::Hidden;
 }
 
 AbstractPlane::~AbstractPlane() = default;
 
+AbstractPlane* AbstractPlane::previousActivePlane() {
+    return const_cast<AbstractPlane*>(const_cast<const AbstractPlane&>(*this).previousActivePlane());
+}
+const AbstractPlane* AbstractPlane::previousActivePlane() const {
+    auto p = Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>::previous();
+    return p && !(p->flags() & PlaneFlag::Hidden) ? p : nullptr;
+}
+
+AbstractPlane* AbstractPlane::nextActivePlane() {
+    return const_cast<AbstractPlane*>(const_cast<const AbstractPlane&>(*this).nextActivePlane());
+}
+const AbstractPlane* AbstractPlane::nextActivePlane() const {
+    auto p = Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>::next();
+    return !(flags() & PlaneFlag::Hidden) && p && !(p->flags() & PlaneFlag::Hidden) ? p : nullptr;
+}
+
 void AbstractPlane::activate() {
-    _previousActivePlane = _ui._activePlane;
-    _ui._activePlane = this;
+    /* Already active, no-op */
+    if(list()->last() == this) {
+        CORRADE_INTERNAL_ASSERT(!(_flags & PlaneFlag::Hidden));
+        return;
+    }
+
+    /* Move to front of the hierarchy and show */
+    list()->move(this, nullptr);
     _flags &= ~PlaneFlag::Hidden;
 }
 
 void AbstractPlane::hide() {
+    /* Already hidden, no-op */
     if(_flags & PlaneFlag::Hidden) return;
 
-    CORRADE_ASSERT(_ui._activePlane == this, "Ui::AbstractPlane::hide(): can't hide plane that is not currently active", );
-
-    _ui._activePlane = _previousActivePlane;
+    /* Move to back of the hierarchy and hide */
+    list()->move(this, list()->first());
     _flags |= PlaneFlag::Hidden;
 }
 
