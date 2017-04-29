@@ -26,20 +26,225 @@
 #include <sstream>
 #include <Corrade/TestSuite/Tester.h>
 
+#include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BasicPlane.hpp"
+#include "Magnum/Ui/BasicUserInterface.hpp"
 
 namespace Magnum { namespace Ui { namespace Test {
 
 struct BasicPlaneTest: TestSuite::Tester {
     explicit BasicPlaneTest();
 
+    void construct();
+
+    /* Anchoring tested in AnchorTest */
+
+    void hierarchy();
+    void hierarchyActivate();
+    void hierarchyActivateActivated();
+    void hierarchyHide();
+    void hierarchyHideHidden();
+    void hierarchyHideInactive();
+
     void debugFlag();
     void debugFlags();
 };
 
 BasicPlaneTest::BasicPlaneTest() {
-    addTests({&BasicPlaneTest::debugFlag,
+    addTests({&BasicPlaneTest::construct,
+
+              &BasicPlaneTest::hierarchy,
+              &BasicPlaneTest::hierarchyActivate,
+              &BasicPlaneTest::hierarchyActivateActivated,
+              &BasicPlaneTest::hierarchyHide,
+              &BasicPlaneTest::hierarchyHideHidden,
+              &BasicPlaneTest::hierarchyHideInactive,
+
+              &BasicPlaneTest::debugFlag,
               &BasicPlaneTest::debugFlags});
+}
+
+namespace {
+    struct UserInterface: BasicUserInterface<> {
+        #ifndef CORRADE_GCC47_COMPATIBILITY
+        using BasicUserInterface::BasicUserInterface;
+        #else
+        explicit UserInterface(const Vector2& size, const Vector2i& screenSize): BasicUserInterface<>{size, screenSize} {}
+        #endif
+    };
+
+    struct Plane: BasicPlane<> {
+        #ifndef CORRADE_GCC47_COMPATIBILITY
+        using BasicPlane::BasicPlane;
+        #else
+        explicit Plane(UserInterface& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin): BasicPlane<>{ui, anchor, padding, margin} {}
+        #endif
+    };
+}
+
+void BasicPlaneTest::construct() {
+    UserInterface ui{{800, 600}, {1600, 900}};
+    Plane plane{ui, {Snap::Left|Snap::Top, {400.0f, 300.0f}}, {{10.0f, 25.0f}, {-15.0f, -5.0f}}, {7.0f, 3.0f}};
+
+    CORRADE_COMPARE(&plane.ui(), &ui);
+    CORRADE_COMPARE(ui.activePlane(), &plane);
+    CORRADE_COMPARE(plane.rect(), Range2D::fromSize({0, 300.0f}, {400.0f, 300.0f}));
+    CORRADE_COMPARE(plane.padding(), (Range2D{{10.0f, 25.0f}, {-15.0f, -5.0f}}));
+    CORRADE_COMPARE(plane.margin(), (Vector2{7.0f, 3.0f}));
+    CORRADE_COMPARE(plane.flags(), PlaneFlags{});
+
+    /* Just to test the const overload */
+    const UserInterface& cui = ui;
+    const Plane& cplane = plane;
+    CORRADE_COMPARE(&cplane.ui(), &cui);
+    CORRADE_COMPARE(cui.activePlane(), &cplane);
+}
+
+void BasicPlaneTest::hierarchy() {
+    UserInterface ui{{800, 600}, {800, 600}};
+    CORRADE_COMPARE(ui.activePlane(), nullptr);
+
+    Plane a{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+
+    Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+
+    Plane c{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(c.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(c.previousActivePlane(), nullptr);
+}
+
+void BasicPlaneTest::hierarchyActivate() {
+    UserInterface ui{{800, 600}, {800, 600}};
+
+    Plane a{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+
+    Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+
+    b.activate();
+    CORRADE_COMPARE(ui.activePlane(), &b);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.flags(), PlaneFlags{});
+    CORRADE_COMPARE(b.previousActivePlane(), &a);
+
+    /* Just to test the const overload */
+    const Plane& cb = b;
+    CORRADE_COMPARE(cb.previousActivePlane(), &a);
+
+    a.activate();
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), &b);
+    CORRADE_COMPARE(b.flags(), PlaneFlags{});
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+}
+
+void BasicPlaneTest::hierarchyActivateActivated() {
+    UserInterface ui{{800, 600}, {800, 600}};
+
+    Plane a{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+
+    Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+
+    a.activate();
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+}
+
+void BasicPlaneTest::hierarchyHide() {
+    UserInterface ui{{800, 600}, {800, 600}};
+
+    Plane a{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+
+    Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+
+    a.hide();
+    CORRADE_COMPARE(ui.activePlane(), nullptr);
+    CORRADE_COMPARE(a.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+}
+
+void BasicPlaneTest::hierarchyHideHidden() {
+    UserInterface ui{{800, 600}, {800, 600}};
+
+    Plane a{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+
+    Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+
+    b.hide();
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+}
+
+void BasicPlaneTest::hierarchyHideInactive() {
+    UserInterface ui{{800, 600}, {800, 600}};
+
+    Plane a{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(a.previousActivePlane(), nullptr);
+
+    Plane b{ui, {{}, {800.0f, 600.0f}}, {}, {}};
+    CORRADE_COMPARE(ui.activePlane(), &a);
+    CORRADE_COMPARE(b.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
+
+    b.activate();
+    CORRADE_COMPARE(ui.activePlane(), &b);
+    CORRADE_COMPARE(a.flags(), PlaneFlags{});
+    CORRADE_COMPARE(b.flags(), PlaneFlags{});
+    CORRADE_COMPARE(b.previousActivePlane(), &a);
+
+    a.hide();
+    CORRADE_COMPARE(ui.activePlane(), &b);
+    CORRADE_COMPARE(a.flags(), PlaneFlag::Hidden);
+    CORRADE_COMPARE(b.flags(), PlaneFlags{});
+    CORRADE_COMPARE(b.previousActivePlane(), nullptr);
 }
 
 void BasicPlaneTest::debugFlag() {
