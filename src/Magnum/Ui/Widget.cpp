@@ -30,6 +30,10 @@
 #include "Magnum/Ui/BasicPlane.h"
 #include "Magnum/Ui/Anchor.h"
 
+#ifdef CORRADE_MSVC2015_COMPATIBILITY
+#include "Magnum/Ui/BasicUserInterface.h" /* Why? */
+#endif
+
 namespace Magnum { namespace Ui {
 
 Debug& operator<<(Debug& debug, const WidgetFlag value) {
