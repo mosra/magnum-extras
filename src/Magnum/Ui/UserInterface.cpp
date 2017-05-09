@@ -101,7 +101,7 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Te
     /* Prepare glyph cache */
     _font.fillGlyphCache(_glyphCache, "abcdefghijklmnopqrstuvwxyz"
                                       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                      "0123456789 _.,-=*:;?!@$&#/\\|`\"'<>()[]{}%…");
+                                      "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
 }
 
 UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font): UserInterface{size, screenSize, font, defaultStyleConfiguration()} {}
