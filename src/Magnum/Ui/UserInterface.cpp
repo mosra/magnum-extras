@@ -64,9 +64,7 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Te
     _quadVertices.setData(vertexData, BufferUsage::StaticDraw);
 
     /* Prepare quad indices */
-    _quadIndices.setData({nullptr, IndexCount*6*sizeof(UnsignedShort)}, BufferUsage::StaticDraw);
-    Containers::ArrayView<UnsignedShort> data{_quadIndices.map<UnsignedShort>(0, IndexCount*6*sizeof(UnsignedShort), Buffer::MapFlag::Write|Buffer::MapFlag::InvalidateBuffer), IndexCount*6};
-
+    Containers::Array<UnsignedShort> data{Containers::NoInit, IndexCount*6};
     for(std::size_t i = 0; i != IndexCount; ++i) {
         /* 0---2 0---2 5
            |   | |  / /|
@@ -80,8 +78,7 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Te
         data[i*6 + 4] = i*4 + 3;
         data[i*6 + 5] = i*4 + 2;
     }
-
-    _quadIndices.unmap();
+    _quadIndices.setData(data, BufferUsage::StaticDraw);
 
     /* Prepare corner texture */
     Containers::StaticArray<32*32, UnsignedByte> corner;
