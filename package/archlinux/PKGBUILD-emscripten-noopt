@@ -1,6 +1,6 @@
 # Author: mosra <mosra@centrum.cz>
 pkgname=emscripten-magnum-extras
-pkgver=dev
+pkgver=dev.webgl2
 pkgrel=1
 pkgdesc="Extras for Magnum OpenGL graphics engine (Emscripten)"
 arch=('any')
@@ -13,31 +13,33 @@ options=(!strip !buildflags)
 _rootdir=$startdir/../../
 
 build() {
-    if [ ! -d "$_rootdir/build-emscripten" ] ; then
-        mkdir "$_rootdir/build-emscripten"
-        cd "$_rootdir/build-emscripten"
+    if [ ! -d "$_rootdir/build-emscripten-noopt" ] ; then
+        mkdir "$_rootdir/build-emscripten-noopt"
+        cd "$_rootdir/build-emscripten-noopt"
 
         cmake .. \
             -DCMAKE_TOOLCHAIN_FILE="$_rootdir/toolchains/generic/Emscripten.cmake" \
             -G Ninja
     fi
 
-    cd "$_rootdir/build-emscripten"
+    cd "$_rootdir/build-emscripten-noopt"
 
     cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/lib/emscripten/system \
+        -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG -O1" \
+        -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
         -DWITH_UI=OFF \
         -DWITH_UI_GALLERY=OFF
     ninja
 }
 
 check() {
-    cd "$_rootdir/build-emscripten"
+    cd "$_rootdir/build-emscripten-noopt"
     CORRADE_TEST_COLOR=ON ctest --output-on-failure
 }
 
 package() {
-    cd "$_rootdir/build-emscripten"
+    cd "$_rootdir/build-emscripten-noopt"
     DESTDIR="$pkgdir/" ninja install
 }
