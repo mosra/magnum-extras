@@ -28,7 +28,7 @@ cmake .. \
     -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG -O1" \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DWITH_INTERCONNECT=OFF
+    -DWITH_INTERCONNECT=ON
 make -j install
 cd ../..
 
@@ -51,15 +51,14 @@ cmake .. \
     -DWITH_SCENEGRAPH=OFF \
     -DWITH_SHADERS=OFF \
     -DWITH_SHAPES=OFF \
-    -DWITH_TEXT=OFF \
-    -DWITH_TEXTURETOOLS=OFF \
+    -DWITH_TEXT=$TARGET_GLES3 \
+    -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
     -DWITH_SDL2APPLICATION=OFF \
     -DTARGET_GLES2=$TARGET_GLES2
 make -j install
 cd ../..
 
-# Crosscompile. Not building the Ui library because I don't want to port the
-# buffer mapping to glBufferSubData() yet.
+# Crosscompile
 mkdir build-emscripten && cd build-emscripten
 cmake .. \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
@@ -70,7 +69,7 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
-    -DWITH_UI=OFF \
+    -DWITH_UI=$TARGET_GLES3 \
     -DWITH_UI_GALLERY=OFF \
     -DBUILD_TESTS=ON
 # Otherwise the job gets killed (probably because using too much memory)
