@@ -54,4 +54,5 @@ build_script:
 
 cache:
 - SDL2-devel-2.0.4-VC.zip
+- SDL2-devel-2.0.4-mingw.tar.gz
 - x86_64-6.3.0-release-posix-seh-rt_v5-rev1.7z
