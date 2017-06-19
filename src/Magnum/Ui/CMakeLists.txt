@@ -96,7 +96,7 @@ add_library(MagnumExtras::Ui ALIAS MagnumUi)
 
 if(WITH_UI_GALLERY)
     find_package(Magnum REQUIRED Sdl2Application)
-    if(CORRADE_TARGET_IOS)
+    if(CORRADE_TARGET_IOS OR CORRADE_TARGET_EMSCRIPTEN)
         find_package(MagnumPlugins REQUIRED StbTrueTypeFont)
     endif()
 
@@ -112,15 +112,23 @@ if(WITH_UI_GALLERY)
     target_link_libraries(magnum-ui-gallery PRIVATE
         MagnumUi
         Magnum::Application)
-    if(CORRADE_TARGET_IOS)
+    if(CORRADE_TARGET_IOS OR CORRADE_TARGET_EMSCRIPTEN)
         target_link_libraries(magnum-ui-gallery PRIVATE MagnumPlugins::StbTrueTypeFont)
+    endif()
+    if(CORRADE_TARGET_IOS)
         set_target_properties(magnum-ui-gallery PROPERTIES
             MACOSX_BUNDLE ON
             MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES")
     endif()
 
-    install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
+    if(CORRADE_TARGET_EMSCRIPTEN)
+        install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_DEPLOY_PREFIX})
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/magnum-ui-gallery.js.mem DESTINATION ${MAGNUM_DEPLOY_PREFIX} OPTIONAL)
+        install(FILES magnum-ui-gallery.html EmscriptenApplication.js WebApplication.css DESTINATION ${MAGNUM_DEPLOY_PREFIX})
+    else()
+        install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
+    endif()
 endif()
 
 if(BUILD_TESTS)

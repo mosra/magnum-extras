@@ -41,8 +41,8 @@
 
 #include "configure-gallery.h"
 
-/* Import the font plugin statically on iOS */
-#ifdef CORRADE_TARGET_IOS
+/* Import the font plugin statically on iOS / Emscripten */
+#if defined(CORRADE_TARGET_IOS) || defined(CORRADE_TARGET_EMSCRIPTEN)
 static int importFontPlugin() {
     CORRADE_PLUGIN_IMPORT(StbTrueTypeFont)
     return 1;
@@ -267,8 +267,10 @@ Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, C
     Renderer::setBlendFunction(Renderer::BlendFunction::One, Renderer::BlendFunction::OneMinusSourceAlpha);
     Renderer::setBlendEquation(Renderer::BlendEquation::Add, Renderer::BlendEquation::Add);
 
+    #ifndef MAGNUM_TARGET_WEBGL
     /* Have some sane speed, please */
     setMinimalLoopPeriod(16);
+    #endif
 
     /* Load TTF font plugin */
     if(!(_font = _fontManager.loadAndInstantiate("TrueTypeFont")))
