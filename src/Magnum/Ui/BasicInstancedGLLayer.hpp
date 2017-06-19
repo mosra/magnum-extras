@@ -31,6 +31,8 @@
 
 #include "BasicInstancedGLLayer.h"
 
+#include <memory>
+
 #include "Magnum/Ui/AbstractUiShader.h"
 
 namespace Magnum { namespace Ui {

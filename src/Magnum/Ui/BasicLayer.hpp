@@ -31,6 +31,7 @@
 
 #include "BasicLayer.h"
 
+#include <memory>
 #include <type_traits>
 
 namespace Magnum { namespace Ui {
