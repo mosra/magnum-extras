@@ -97,7 +97,7 @@ else()
     set(SHARED_OR_STATIC STATIC)
 endif()
 
-set(MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/share/cmake/MagnumExtras)
+set(MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR share/cmake/MagnumExtras)
 
 add_subdirectory(modules)
 add_subdirectory(src)
