@@ -69,6 +69,7 @@ set(MagnumUi_HEADERS
     UserInterface.h)
 
 corrade_add_resource(MagnumUi_RESOURCES resources.conf)
+set_target_properties(MagnumUi_RESOURCES-dependencies PROPERTIES FOLDER "Magnum/Ui")
 
 # Ui library
 add_library(MagnumUi ${SHARED_OR_STATIC}
@@ -76,7 +77,9 @@ add_library(MagnumUi ${SHARED_OR_STATIC}
     ${MagnumUi_HEADERS}
     ${MagnumUi_RESOURCES})
 target_include_directories(MagnumUi PUBLIC ${PROJECT_SOURCE_DIR}/src)
-set_target_properties(MagnumUi PROPERTIES DEBUG_POSTFIX "-d")
+set_target_properties(MagnumUi PROPERTIES
+    DEBUG_POSTFIX "-d"
+    FOLDER "Magnum/Ui")
 if(BUILD_STATIC_PIC)
     set_target_properties(MagnumUi PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
@@ -104,11 +107,13 @@ if(WITH_UI_GALLERY)
                    ${CMAKE_CURRENT_BINARY_DIR}/configure-gallery.h)
 
     corrade_add_resource(MagnumUiGallery_RESOURCES resources-gallery.conf)
+    set_target_properties(MagnumUiGallery_RESOURCES-dependencies PROPERTIES FOLDER "Magnum/Ui")
 
     add_executable(magnum-ui-gallery
         gallery.cpp
         ${MagnumUiGallery_RESOURCES})
     target_include_directories(magnum-ui-gallery PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    set_target_properties(magnum-ui-gallery PROPERTIES FOLDER "Magnum/Ui")
     target_link_libraries(magnum-ui-gallery PRIVATE
         MagnumUi
         Magnum::Application)

@@ -29,3 +29,12 @@ corrade_add_test(UiBasicLayerTest BasicLayerTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiBasicPlaneTest BasicPlaneTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiWidgetTest WidgetTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiStyleTest StyleTest.cpp LIBRARIES MagnumUi)
+
+set_target_properties(
+    UiAnchorTest
+    UiBasicInstancedLayerTest
+    UiBasicLayerTest
+    UiBasicPlaneTest
+    UiWidgetTest
+    UiStyleTest
+    PROPERTIES FOLDER "Magnum/Ui/Test")
