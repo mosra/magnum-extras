@@ -2,7 +2,7 @@
 
 class MagnumExtras < Formula
   desc "Extras for Magnum graphics engine"
-  homepage "https://github.com/mosra/magnum"
+  homepage "http://magnum.graphics"
   head "git://github.com/mosra/magnum-extras.git"
 
   depends_on "cmake"
