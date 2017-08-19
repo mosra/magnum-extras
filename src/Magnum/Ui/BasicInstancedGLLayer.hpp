@@ -60,9 +60,9 @@ template<class InstanceData> void BasicInstancedGLLayer<InstanceData>::update() 
     /* Update modified instance data */
     const Math::Range1D<std::size_t> modifiedBytes = this->modified().scaled(sizeof(InstanceData));
     #ifndef MAGNUM_TARGET_WEBGL
-    const auto bufferData = _buffer.map<InstanceData>(modifiedBytes.min()[0], modifiedBytes.size()[0], Buffer::MapFlag::Write|Buffer::MapFlag::InvalidateRange);
+    const auto bufferData = Containers::arrayCast<InstanceData>(_buffer.map(modifiedBytes.min()[0], modifiedBytes.size()[0], Buffer::MapFlag::Write|Buffer::MapFlag::InvalidateRange));
     std::uninitialized_copy(this->data() + std::size_t{this->modified().min()[0]},
-                            this->data() + std::size_t{this->modified().max()[0]}, bufferData);
+                            this->data() + std::size_t{this->modified().max()[0]}, bufferData.begin());
     _buffer.unmap();
     #else
     _buffer.setSubData(modifiedBytes.min()[0], this->data().slice(this->modified().min()[0],
