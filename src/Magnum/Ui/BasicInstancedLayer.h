@@ -29,8 +29,7 @@
  * @brief Class @ref Magnum::Ui::BasicInstancedLayer
  */
 
-#include <Magnum/Buffer.h>
-#include <Magnum/Mesh.h>
+#include <Corrade/Containers/Array.h>
 #include <Magnum/Math/Range.h>
 
 #include "Magnum/Ui/Ui.h"

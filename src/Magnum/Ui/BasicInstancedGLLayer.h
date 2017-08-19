@@ -29,6 +29,9 @@
  * @brief Class @ref Magnum::Ui::BasicInstancedGLLayer
  */
 
+#include <Magnum/Buffer.h>
+#include <Magnum/Mesh.h>
+
 #include "Magnum/Ui/BasicInstancedLayer.h"
 
 namespace Magnum { namespace Ui {
