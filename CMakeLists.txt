@@ -58,9 +58,8 @@ cmake_dependent_option(BUILD_STATIC_PIC "Build static libraries with position-in
 option(WITH_UI "Build Ui library" OFF)
 cmake_dependent_option(WITH_UI_GALLERY "Build magnum-ui-gallery executable" OFF "WITH_UI" OFF)
 
-# Newlib toolchain supports only static linking, dynamic linking is
-# meaningless on Emscripten and too inconvenient on Android
-if(CORRADE_TARGET_NACL_NEWLIB OR CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
+# Dynamic linking is meaningless on Emscripten and too inconvenient on Android
+if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
     set(BUILD_STATIC ON)
 endif()
 
