@@ -16,7 +16,7 @@ SUPPORTED PLATFORMS
 *   **Android** [![Build Status](https://travis-ci.org/mosra/magnum-extras.svg?branch=master)](https://travis-ci.org/mosra/magnum-extras)
 *   **Windows RT** [![Build status](https://ci.appveyor.com/api/projects/status/f75u5eow2qiso7m5/branch/master?svg=true)](https://ci.appveyor.com/project/mosra/magnum-extras/branch/master)
 *   **Google Chrome**
-*   **HTML5/JavaScript** [![Build Status](https://travis-ci.org/mosra/magnum-extras.svg?branch=master)](https://travis-ci.org/mosra/magnum-extras)
+*   **Web** [![Build Status](https://travis-ci.org/mosra/magnum-extras.svg?branch=master)](https://travis-ci.org/mosra/magnum-extras)
 
 INSTALLATION
 ============
