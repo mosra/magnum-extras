@@ -28,6 +28,7 @@ namespace Magnum {
 @brief Guide how to download and build extras for Magnum engine.
 
 @tableofcontents
+@m_footernavigation
 
 Extras are additional functionality for Magnum C++11/C++14 graphics engine --
 playground for testing new APIs, specialized stuff that doesn't necessarily
@@ -51,8 +52,8 @@ to `Debug`) have `-d` suffix, similarly to what is done when
 
 By default no components are built and you need to select them manually:
 
--   `WITH_UI` -- @ref Ui library
--   `WITH_UI_GALLERY` -- `magnum-ui-gallery` executable, showcases the default
+-   `WITH_UI` --- @ref Ui library
+-   `WITH_UI_GALLERY` --- `magnum-ui-gallery` executable, showcases the default
     @ref Ui library widget style
 
 Note that [each namespace](namespaces.html) contains more detailed information
@@ -66,8 +67,8 @@ build. The package is also in AUR under the same name.
 
 There are also a few development PKGBUILDs in `package/archlinux`, which allow
 you to build and install the package directly from source tree without
-downloading anything. The native PKGBUILDs also contain `check()` function
-which will run all unit tests before packaging.
+downloading anything. The native PKGBUILDs also contain @cb{.sh} check() @ce
+function which will run all unit tests before packaging.
 
 @section building-extras-gentoo Gentoo ebuilds
 
