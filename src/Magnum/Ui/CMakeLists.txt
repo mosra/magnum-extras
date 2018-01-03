@@ -110,7 +110,7 @@ if(WITH_UI_GALLERY)
     set_target_properties(MagnumUiGallery_RESOURCES-dependencies PROPERTIES FOLDER "Magnum/Ui")
 
     add_executable(magnum-ui-gallery
-        gallery.cpp
+        magnum-ui-gallery.cpp
         ${MagnumUiGallery_RESOURCES})
     target_include_directories(magnum-ui-gallery PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     set_target_properties(magnum-ui-gallery PROPERTIES FOLDER "Magnum/Ui")

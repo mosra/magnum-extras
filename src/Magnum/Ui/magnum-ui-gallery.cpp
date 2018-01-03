@@ -30,13 +30,13 @@
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/Alignment.h>
-#include <Magnum/Ui/Anchor.h>
-#include <Magnum/Ui/Button.h>
-#include <Magnum/Ui/Input.h>
-#include <Magnum/Ui/Label.h>
-#include <Magnum/Ui/Modal.h>
-#include <Magnum/Ui/Plane.h>
-#include <Magnum/Ui/UserInterface.h>
+#include "Magnum/Ui/Anchor.h"
+#include "Magnum/Ui/Button.h"
+#include "Magnum/Ui/Input.h"
+#include "Magnum/Ui/Label.h"
+#include "Magnum/Ui/Modal.h"
+#include "Magnum/Ui/Plane.h"
+#include "Magnum/Ui/UserInterface.h"
 #include <MagnumExternal/Optional/optional.hpp>
 
 #include "configure-gallery.h"
