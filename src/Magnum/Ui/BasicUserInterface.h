@@ -48,11 +48,6 @@ See @ref BasicUserInterface for more information.
 @experimental
 */
 class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<AbstractPlane> {
-    friend Containers::LinkedList<AbstractPlane>;
-    friend Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>;
-    friend AbstractPlane;
-    template<class ...> friend class BasicUserInterface;
-
     public:
         /**
          * @brief Constructor
@@ -85,6 +80,13 @@ class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<Abs
         bool handleReleaseEvent(const Vector2i& screenPosition);
 
     private:
+        #ifndef DOXYGEN_GENERATING_OUTPUT /* https://bugzilla.gnome.org/show_bug.cgi?id=776986 */
+        friend Containers::LinkedList<AbstractPlane>;
+        friend Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>;
+        friend AbstractPlane;
+        template<class ...> friend class BasicUserInterface;
+        #endif
+
         ~AbstractUserInterface();
 
         std::pair<Vector2, AbstractPlane*> handleEvent(const Vector2i& screenPosition);

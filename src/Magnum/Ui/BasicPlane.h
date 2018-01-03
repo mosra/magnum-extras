@@ -79,11 +79,6 @@ See @ref BasicPlane for more information.
 @experimental
 */
 class MAGNUM_UI_EXPORT AbstractPlane: private Containers::LinkedListItem<AbstractPlane, AbstractUserInterface> {
-    friend Containers::LinkedList<AbstractPlane>;
-    friend Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>;
-    friend AbstractUserInterface;
-    friend Widget;
-
     public:
         #ifdef MAGNUM_BUILD_DEPRECATED
         /** @copybrief PlaneFlag
@@ -177,6 +172,13 @@ class MAGNUM_UI_EXPORT AbstractPlane: private Containers::LinkedListItem<Abstrac
         ~AbstractPlane();
 
     private:
+        #ifndef DOXYGEN_GENERATING_OUTPUT /* https://bugzilla.gnome.org/show_bug.cgi?id=776986 */
+        friend Containers::LinkedList<AbstractPlane>;
+        friend Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>;
+        friend AbstractUserInterface;
+        friend Widget;
+        #endif
+
         /* MSVC 2015 doesn't like std::vector of undefined type so I have to
            put it here */
         struct MAGNUM_UI_LOCAL WidgetReference {
