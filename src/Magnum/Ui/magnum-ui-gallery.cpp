@@ -23,6 +23,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Magnum/DefaultFramebuffer.h>
@@ -37,7 +38,6 @@
 #include "Magnum/Ui/Modal.h"
 #include "Magnum/Ui/Plane.h"
 #include "Magnum/Ui/UserInterface.h"
-#include <MagnumExternal/Optional/optional.hpp>
 
 #include "configure-gallery.h"
 
@@ -247,9 +247,9 @@ class Gallery: public Platform::Application, public Interconnect::Receiver {
         PluginManager::Manager<Text::AbstractFont> _fontManager;
         std::unique_ptr<Text::AbstractFont> _font;
 
-        std::optional<Ui::UserInterface> _ui;
-        std::optional<BaseUiPlane> _baseUiPlane;
-        std::optional<ModalUiPlane> _defaultModalUiPlane,
+        Containers::Optional<Ui::UserInterface> _ui;
+        Containers::Optional<BaseUiPlane> _baseUiPlane;
+        Containers::Optional<ModalUiPlane> _defaultModalUiPlane,
             _dangerModalUiPlane,
             _successModalUiPlane,
             _warningModalUiPlane,
