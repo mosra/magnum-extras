@@ -125,12 +125,17 @@ if(WITH_UI_GALLERY)
             MACOSX_BUNDLE ON
             MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES")
-    endif()
-
-    if(CORRADE_TARGET_EMSCRIPTEN)
-        install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_DEPLOY_PREFIX})
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/magnum-ui-gallery.js.mem DESTINATION ${MAGNUM_DEPLOY_PREFIX} OPTIONAL)
-        install(FILES magnum-ui-gallery.html EmscriptenApplication.js WebApplication.css DESTINATION ${MAGNUM_DEPLOY_PREFIX})
+    elseif(CORRADE_TARGET_EMSCRIPTEN)
+        install(FILES magnum-ui-gallery.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery RENAME index.html)
+        install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery)
+        install(FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/magnum-ui-gallery.js.mem
+            ${CMAKE_CURRENT_BINARY_DIR}/magnum-ui-gallery.wasm
+            DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery OPTIONAL)
+        install(FILES
+            EmscriptenApplication.js
+            WebApplication.css
+            DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery)
     else()
         install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
     endif()
