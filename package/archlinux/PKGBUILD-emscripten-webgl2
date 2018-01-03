@@ -2,13 +2,13 @@
 pkgname=emscripten-magnum-extras
 pkgver=dev.webgl2
 pkgrel=1
-pkgdesc="Extras for Magnum OpenGL graphics engine (Emscripten, WebGL 2)"
+pkgdesc="Extras for Magnum OpenGL graphics engine (Emscripten, WebGL 2.0)"
 arch=('any')
 url="http://magnum.graphics"
 license=('MIT')
-depends=('emscripten-magnum')
+depends=('emscripten-magnum=dev.webgl2' 'emscripten-magnum-plugins=dev.webgl2')
 makedepends=('cmake' 'emscripten' 'corrade' 'ninja')
-options=(!strip !buildflags)
+options=('!strip' '!buildflags')
 
 _rootdir=$startdir/../../
 
@@ -19,6 +19,7 @@ build() {
 
         cmake .. \
             -DCMAKE_TOOLCHAIN_FILE="$_rootdir/toolchains/generic/Emscripten.cmake" \
+            -DCMAKE_PREFIX_PATH=/usr/lib/emscripten/system \
             -G Ninja
     fi
 
@@ -27,9 +28,10 @@ build() {
     cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/lib/emscripten/system \
-        -DMAGNUM_DEPLOY_PREFIX=/srv/http/emscripten/magnum \
+        -DMAGNUM_DEPLOY_PREFIX=/srv/http/emscripten \
         -DWITH_UI=ON \
-        -DWITH_UI_GALLERY=ON
+        -DWITH_UI_GALLERY=ON \
+        -DBUILD_TESTS=ON
     ninja
 }
 
