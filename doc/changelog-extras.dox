@@ -31,9 +31,9 @@ namespace Magnum {
 
 @section changelog-extras-latest Changes during the initial release
 
-## De­pen­den­cy changes
+@subsection changelog-extras-latest-dependencies De­pen­den­cy changes
 
-## New features
+@subsection changelog-extras-latest-new New features
 
 -   MSVC 2015 and MSVC 2017 support in `master` branch
 -   ANGLE ES2/ES3 support, ability to create desktop GLES contexts on Windows
@@ -43,7 +43,7 @@ namespace Magnum {
 -   WebGL 2.0 support
 -   New experimental @ref Ui library
 
-## Build system
+@subsection changelog-extras-latest-buildsystem Build system
 
 -   Continuous testing for Linux, macOS, Windows MSVC, Windows MinGW, Windows RT,
     iOS, Android and Emscripten on [Travis CI](https://travis-ci.org/mosra/magnum-extras)
@@ -51,12 +51,12 @@ namespace Magnum {
     coverage on [coveralls.io](https://coveralls.io/github/mosra/magnum-extras)
 -   @ref building-examples-brew "Homebrew package"
 
-## Deprecated APIs
+@subsection changelog-extras-latest-deprecated Deprecated APIs
 
 -   `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum set are
     deprecated, use @ref Ui::PlaneFlag and @ref Ui::PlaneFlags instead
 
-## Potential compatibility breakages, removed APIs
+@subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
 No APIs were removed since last release.
 
