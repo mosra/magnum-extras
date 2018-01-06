@@ -24,7 +24,7 @@
 */
 
 /** @dir magnum-extras/src/Magnum
- * @brief Root namespace (part of @ref building-extras "Magnum Extras library")
+ * @brief Namespace @ref Magnum (part of @ref building-extras "Magnum Extras library")
  */
 
 /** @dir Magnum/Ui

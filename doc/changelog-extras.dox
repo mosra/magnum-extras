@@ -25,9 +25,10 @@
 
 namespace Magnum {
 
-/** @page changelog-extras Extras changelog
+/** @page changelog-extras Extras
 
 @tableofcontents
+@m_footernavigation
 
 @section changelog-extras-latest Changes during the initial release
 
@@ -55,6 +56,11 @@ namespace Magnum {
 
 -   `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum set are
     deprecated, use @ref Ui::PlaneFlag and @ref Ui::PlaneFlags instead
+
+@subsection changelog-extras-latest-documentation Documentation
+
+-   New documentation theme powered by [m.css](http://mcss.mosra.cz) and
+    related massive updates of *everything*
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
