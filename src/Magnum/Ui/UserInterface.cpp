@@ -115,6 +115,11 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, co
     _font = _fontState->font.get();
     _glyphCache = &_fontState->glyphCache;
 
+    /* Open the font */
+    if(!_font->openSingleData(Utility::Resource{"MagnumUi"}.getRaw("SourceSansPro-Regular.ttf"),
+        18.0f*size.x()/screenSize.x()))
+        std::exit(1);
+
     /* Prepare glyph cache */
     _font->fillGlyphCache(*_glyphCache,
         "abcdefghijklmnopqrstuvwxyz"

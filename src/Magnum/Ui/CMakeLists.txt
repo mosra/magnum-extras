@@ -110,16 +110,7 @@ if(WITH_UI_GALLERY)
         find_package(MagnumPlugins REQUIRED StbTrueTypeFont)
     endif()
 
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure-gallery.h.cmake
-                   ${CMAKE_CURRENT_BINARY_DIR}/configure-gallery.h)
-
-    corrade_add_resource(MagnumUiGallery_RESOURCES resources-gallery.conf)
-    set_target_properties(MagnumUiGallery_RESOURCES-dependencies PROPERTIES FOLDER "Magnum/Ui")
-
-    add_executable(magnum-ui-gallery
-        magnum-ui-gallery.cpp
-        ${MagnumUiGallery_RESOURCES})
-    target_include_directories(magnum-ui-gallery PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    add_executable(magnum-ui-gallery magnum-ui-gallery.cpp)
     set_target_properties(magnum-ui-gallery PROPERTIES FOLDER "Magnum/Ui")
     target_link_libraries(magnum-ui-gallery PRIVATE
         MagnumUi

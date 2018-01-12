@@ -29,8 +29,8 @@
 #include <Magnum/DefaultFramebuffer.h>
 #include <Magnum/Renderer.h>
 #include <Magnum/Platform/Sdl2Application.h>
-#include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/Alignment.h>
+
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Button.h"
 #include "Magnum/Ui/Input.h"
@@ -38,8 +38,6 @@
 #include "Magnum/Ui/Modal.h"
 #include "Magnum/Ui/Plane.h"
 #include "Magnum/Ui/UserInterface.h"
-
-#include "configure-gallery.h"
 
 /* Import the font plugin statically on iOS / Emscripten */
 #if defined(CORRADE_TARGET_IOS) || defined(CORRADE_TARGET_EMSCRIPTEN)
@@ -244,9 +242,6 @@ class Gallery: public Platform::Application, public Interconnect::Receiver {
         void keyPressEvent(KeyEvent& event) override;
         void textInputEvent(TextInputEvent& event) override;
 
-        PluginManager::Manager<Text::AbstractFont> _fontManager;
-        std::unique_ptr<Text::AbstractFont> _font;
-
         Containers::Optional<Ui::UserInterface> _ui;
         Containers::Optional<BaseUiPlane> _baseUiPlane;
         Containers::Optional<ModalUiPlane> _defaultModalUiPlane,
@@ -260,7 +255,7 @@ Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, C
     #ifdef CORRADE_TARGET_IOS
     .setWindowFlags(Configuration::WindowFlag::Borderless|Configuration::WindowFlag::AllowHighDpi)
     #endif
-    }, _fontManager{MAGNUM_PLUGINS_FONT_DIR}
+    }
 {
     /* Enable blending with premultiplied alpha */
     Renderer::enable(Renderer::Feature::Blending);
@@ -272,17 +267,8 @@ Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, C
     setMinimalLoopPeriod(16);
     #endif
 
-    /* Load TTF font plugin */
-    if(!(_font = _fontManager.loadAndInstantiate("TrueTypeFont")))
-        std::exit(1);
-
-    /* Open the font */
-    if(!_font->openSingleData(Utility::Resource{"MagnumUiGallery"}.getRaw("SourceSansPro-Regular.ttf"),
-        18.0f*defaultFramebuffer.viewport().size().x()/windowSize().x()))
-        std::exit(1);
-
     /* Create the UI */
-    _ui.emplace(Math::max(Vector2(windowSize()), {800.0f, 600.0f}), windowSize(), *_font);
+    _ui.emplace(Math::max(Vector2(windowSize()), {800.0f, 600.0f}), windowSize());
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetFocused, *this, &Gallery::startTextInput);
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetBlurred, *this, &Gallery::stopTextInput);
 
