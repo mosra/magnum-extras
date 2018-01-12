@@ -50,7 +50,7 @@ namespace Magnum {
     iOS, Android and Emscripten on [Travis CI](https://travis-ci.org/mosra/magnum-extras)
     and [AppVeyor CI](https://ci.appveyor.com/project/mosra/magnum-extras), with code
     coverage on [coveralls.io](https://coveralls.io/github/mosra/magnum-extras)
--   @ref building-examples-brew "Homebrew package"
+-   Added a @ref building-extras-packages-brew "Homebrew package"
 
 @subsection changelog-extras-latest-deprecated Deprecated APIs
 

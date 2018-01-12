@@ -36,8 +36,16 @@
 Widgets for efficient and simple user interfaces.
 
 This library is built if `WITH_UI` is enabled when building Magnum Extras. To
-use this library, you need to request `Ui` component of `MagnumExtras` package
-in CMake and link to `MagnumExtras::Ui` target. See @ref building-extras and
-@ref cmake-extras for more information.
+use this library with Cmake, you need to request the `Ui` component of the
+`MagnumExtras` package and link to the `MagnumExtras::Ui` target:
+
+@code{.cmake}
+find_package(MagnumExtras REQUIRED)
+
+# ...
+target_link_libraries(your-app MagnumExtras::Ui)
+@endcode
+
+See @ref building-extras and @ref cmake-extras for more information.
 @experimental
 */
