@@ -42,7 +42,7 @@ namespace Magnum { namespace Ui {
 Should be snapped to whole area of a plane. Gives the plane a background and
 fills the rest with semi-transparent dim color to suggest modality.
 
-### Styling
+@section Ui-Modal-styling Styling
 
 Ignores @ref StateFlag::Hovered, @ref StateFlag::Pressed and
 @ref StateFlag::Active, @ref Style::Flat.

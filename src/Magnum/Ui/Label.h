@@ -41,7 +41,7 @@ namespace Magnum { namespace Ui {
 
 Just a text with no interactivity.
 
-### Styling
+@section Ui-Label-styling Styling
 
 Ignores @ref StateFlag::Hovered, @ref StateFlag::Pressed and
 @ref StateFlag::Active, @ref Style::Flat.

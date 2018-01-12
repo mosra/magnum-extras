@@ -212,7 +212,7 @@ Each plane instance contains widgets on the same Z index and consists of layers
 from which the widgets are made of. The order of layers denotes the drawing
 order, first layer is drawn first.
 
-## Plane hierarchy
+@section Ui-BasicPlane-hierarchy Plane hierarchy
 
 The user interface has a concept of active planes. Only one plane can be active
 at a time. If a plane is active, it's receiving user input and is displayed in

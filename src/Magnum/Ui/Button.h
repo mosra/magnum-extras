@@ -41,7 +41,7 @@ namespace Magnum { namespace Ui {
 
 Text and foreground. Emits @ref tapped() signal on tap.
 
-### Styling
+@section Ui-Button-styling Styling
 
 Ignores @ref StateFlag::Active.
 @experimental
