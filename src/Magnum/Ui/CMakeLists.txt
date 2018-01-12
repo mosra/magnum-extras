@@ -39,6 +39,7 @@ set(MagnumUi_SRCS
     Plane.cpp
     Style.cpp
     UserInterface.cpp
+    ValidatedInput.cpp
     instantiation.cpp)
 
 set(MagnumUi_HEADERS
@@ -66,7 +67,8 @@ set(MagnumUi_HEADERS
     Modal.h
     Plane.h
     Style.h
-    UserInterface.h)
+    UserInterface.h
+    ValidatedInput.h)
 
 corrade_add_resource(MagnumUi_RESOURCES resources.conf)
 set_target_properties(MagnumUi_RESOURCES-dependencies PROPERTIES FOLDER "Magnum/Ui")
