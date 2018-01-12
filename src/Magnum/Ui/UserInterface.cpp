@@ -26,13 +26,17 @@
 #include "UserInterface.h"
 
 #include <Corrade/Containers/StaticArray.h>
+#include <Corrade/PluginManager/Manager.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/TextureFormat.h>
 #include <Magnum/Text/AbstractFont.h>
+#include <Magnum/Text/GlyphCache.h>
 
 #include "Magnum/Ui/Plane.h"
 #include "Magnum/Ui/visibility.h"
+
+#include "Magnum/Ui/configure.h"
 
 namespace Magnum { namespace Ui {
 
@@ -40,14 +44,13 @@ namespace {
     enum: std::size_t { IndexCount = 16384 };
 }
 
-UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration):
+UserInterface::UserInterface(NoCreateT, const Vector2& size, const Vector2i& screenSize):
     BasicUserInterface<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer>(size, screenSize),
     _backgroundUniforms{Buffer::TargetHint::Uniform},
     _foregroundUniforms{Buffer::TargetHint::Uniform},
     _textUniforms{Buffer::TargetHint::Uniform},
     _quadVertices{Buffer::TargetHint::Array},
-    _quadIndices{Buffer::TargetHint::ElementArray},
-    _font(font), _glyphCache{Vector2i{1024}}
+    _quadIndices{Buffer::TargetHint::ElementArray}
 {
     /* Prepare quad vertices */
     /** @todo make this a shader constant and use gl_VertexId */
@@ -91,17 +94,76 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Te
         .setWrapping(Sampler::Wrapping::ClampToEdge)
         .setStorage(1, TextureFormat::R8, {32, 32})
         .setSubImage(0, {}, ImageView2D{PixelFormat::Red, PixelType::UnsignedByte, {32, 32}, Containers::ArrayView<const void>(corner)});
+}
+
+struct UserInterface::FontState {
+    explicit FontState(const char* pluginDirectory, const Vector2i& glyphCacheSize):
+        manager{pluginDirectory}, glyphCache{glyphCacheSize} {}
+
+    PluginManager::Manager<Text::AbstractFont> manager;
+    std::unique_ptr<Text::AbstractFont> font;
+    Text::GlyphCache glyphCache;
+};
+
+UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, screenSize} {
+    /* Load TTF font plugin */
+    _fontState.reset(new UserInterface::FontState{MAGNUM_PLUGINS_FONT_DIR, Vector2i{1024}});
+    if(!(_fontState->font = _fontState->manager.loadAndInstantiate("TrueTypeFont")))
+        std::exit(1);
+
+    /* Make the font and glyph cache pointers public */
+    _font = _fontState->font.get();
+    _glyphCache = &_fontState->glyphCache;
+
+    /* Prepare glyph cache */
+    _font->fillGlyphCache(*_glyphCache,
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
 
     /* Set default style */
     setStyleConfiguration(styleConfiguration);
-
-    /* Prepare glyph cache */
-    _font.fillGlyphCache(_glyphCache, "abcdefghijklmnopqrstuvwxyz"
-                                      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                      "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
 }
 
+UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize): UserInterface{size, screenSize, defaultStyleConfiguration()} {}
+
+UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, Text::GlyphCache& glyphCache, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, screenSize} {
+    _font = &font;
+    _glyphCache = &glyphCache;
+    setStyleConfiguration(styleConfiguration);
+}
+
+#ifdef MAGNUM_BUILD_DEPRECATED
+UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, screenSize} {
+    /* Populate the state only for the glyph cache */
+    _fontState.reset(new UserInterface::FontState{MAGNUM_PLUGINS_FONT_DIR, Vector2i{1024}});
+    _font = &font;
+    _glyphCache = &_fontState->glyphCache;
+
+    /* Prepare glyph cache */
+    _font->fillGlyphCache(*_glyphCache,
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
+
+    /* Set desired style */
+    setStyleConfiguration(styleConfiguration);
+}
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
 UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font): UserInterface{size, screenSize, font, defaultStyleConfiguration()} {}
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+#endif
 
 UserInterface::~UserInterface() = default;
 
@@ -128,7 +190,7 @@ void UserInterface::draw() {
         .bindCornerTexture(_corner)
         .bindStyleBuffer(_foregroundUniforms);
     _textShader
-        .bindGlyphCacheTexture(_glyphCache.texture())
+        .bindGlyphCacheTexture(_glyphCache->texture())
         .bindStyleBuffer(_textUniforms);
 
     BasicUserInterface::draw({{_backgroundShader, _foregroundShader, _textShader}});

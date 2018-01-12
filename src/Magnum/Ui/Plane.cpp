@@ -86,7 +86,7 @@ std::size_t Plane::addText(const UnsignedByte colorIndex, const Float size, cons
     std::vector<Vector2> textureCoordinates;
     Range2D rect;
     std::tie(positions, textureCoordinates, std::ignore, rect) = Text::AbstractRenderer::render(
-        ui()._font, ui()._glyphCache, size, std::string{text, text.size()}, alignment);
+        *ui()._font, *ui()._glyphCache, size, std::string{text, text.size()}, alignment);
     for(Vector2& position: positions) position += cursor;
 
     CORRADE_ASSERT(!capacity || capacity*4 >= positions.size(),
@@ -108,7 +108,7 @@ void Plane::setText(const std::size_t id, const UnsignedByte colorIndex, const F
     std::vector<Vector2> textureCoordinates;
     Range2D rect;
     std::tie(positions, textureCoordinates, std::ignore, rect) = Text::AbstractRenderer::render(
-        ui()._font, ui()._glyphCache, size, std::string{text, text.size()}, alignment);
+        *ui()._font, *ui()._glyphCache, size, std::string{text, text.size()}, alignment);
     for(Vector2& position: positions) position += cursor;
 
     Containers::ArrayView<Implementation::TextVertex> vertices = _textLayer.modifyElement(id);

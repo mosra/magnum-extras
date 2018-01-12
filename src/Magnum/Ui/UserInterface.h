@@ -29,10 +29,11 @@
  * @brief Class @ref Magnum::Ui::UserInterface
  */
 
+#include <memory>
 #include <Corrade/Interconnect/Emitter.h>
 #include <Magnum/Buffer.h>
+#include <Magnum/Texture.h>
 #include <Magnum/Text/Text.h>
-#include <Magnum/Text/GlyphCache.h>
 
 #include "Magnum/Ui/AbstractUiShader.h"
 #include "Magnum/Ui/BasicUserInterface.h"
@@ -43,6 +44,19 @@ namespace Magnum { namespace Ui {
 
 /**
 @brief Default user interface
+
+All positioning and sizing inside the interface is done in regard to the size
+parameter passed to the constructor, without taking actual screen size into
+account. This allows to have DPI-independent sizes.
+
+@section Ui-UserInterface-fonts Font plugins
+
+Unless you pass your own font instance via
+@ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&),
+the constructor expects that it can load some @cpp "TrueTypeFont" @ce plugin.
+The plugin should be either in a system directory or be linked and correctly
+imported statically. If the plugin cannot be loaded, the application exits. See
+@ref plugins for more information.
 
 @experimental
 */
@@ -55,17 +69,53 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @brief Constructor
          * @param size                  User interface size
          * @param screenSize            Actual screen size
-         * @param font                  Font to use
+         *
+         * Uses @ref defaultStyleConfiguration() and a builtin font with
+         * pre-populated glyph cache.
+         */
+        explicit UserInterface(const Vector2& size, const Vector2i& screenSize);
+
+        /**
+         * @brief Construct the user interface with a custom style
+         * @param size                  User interface size
+         * @param screenSize            Actual screen size
          * @param styleConfiguration    Style configuration to use
          *
-         * All positioning and sizing inside the interface is done in regard to
-         * @p size, without taking actual screen size into account. This allows
-         * to have DPI-independent sizes.
+         * Uses a builtin font with pre-populated glyph cache.
          */
-        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration);
+        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, const StyleConfiguration& styleConfiguration);
 
-        /** @overload */
-        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font);
+        /**
+         * @brief Construct the user interface with custom style and font
+         * @param size                  User interface size
+         * @param screenSize            Actual screen size
+         * @param font                  Font to use
+         * @param glyphCache            Populated glyph cache to use
+         * @param styleConfiguration    Style configuration to use
+         *
+         * The @p font and @p glyphCache is expected to be kept in scope for
+         * the whole user interface lifetime.
+         * @see @ref defaultStyleConfiguration()
+         */
+        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, Text::GlyphCache& glyphCache, const StyleConfiguration& styleConfiguration);
+
+        #ifdef MAGNUM_BUILD_DEPRECATED
+        /**
+         * @brief Construct the user interface with custom style and font
+         * @deprecated Use either @ref UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&)
+         *      or @ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
+         *      instead.
+         */
+        explicit CORRADE_DEPRECATED("use either UserInterface(const Vector2&, const Vector2i&) or UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&) instead") UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration);
+
+        /**
+         * @brief Construct the user interface with a custom font
+         * @deprecated Use either @ref UserInterface(const Vector2&, const Vector2i&)
+         *      or @ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
+         *      instead.
+         */
+        explicit CORRADE_DEPRECATED("use either UserInterface(const Vector2&, const Vector2i&) or UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&) instead") UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font);
+        #endif
 
         ~UserInterface();
 
@@ -86,7 +136,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         void setStyleConfiguration(const StyleConfiguration& configuration);
 
         /** @brief Font used for the interface */
-        const Text::AbstractFont& font() const { return _font; }
+        const Text::AbstractFont& font() const { return *_font; }
 
         /**
          * @brief Currently focused input widget
@@ -128,6 +178,11 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         }
 
     private:
+        struct MAGNUM_UI_LOCAL FontState;
+
+        /* Internal constructor used by all the public ones */
+        explicit UserInterface(NoCreateT, const Vector2& size, const Vector2i& screenSize);
+
         Buffer _backgroundUniforms,
             _foregroundUniforms,
             _textUniforms,
@@ -140,8 +195,9 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         Implementation::ForegroundShader _foregroundShader;
         Implementation::TextShader _textShader;
 
-        Text::AbstractFont& _font;
-        Text::GlyphCache _glyphCache;
+        std::unique_ptr<FontState> _fontState;
+        Text::AbstractFont* _font;
+        Text::GlyphCache* _glyphCache;
         Texture2D _corner;
 
         Input* _focusedInputWidget = nullptr;
