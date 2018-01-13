@@ -105,7 +105,7 @@ struct UserInterface::FontState {
     Text::GlyphCache glyphCache;
 };
 
-UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, screenSize} {
+UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs): UserInterface{NoCreate, size, screenSize} {
     /* Load TTF font plugin */
     _fontState.reset(new UserInterface::FontState{MAGNUM_PLUGINS_FONT_DIR, Vector2i{1024}});
     if(!(_fontState->font = _fontState->manager.loadAndInstantiate("TrueTypeFont")))
@@ -124,13 +124,13 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, co
     _font->fillGlyphCache(*_glyphCache,
         "abcdefghijklmnopqrstuvwxyz"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
+        "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…" + extraGlyphs);
 
     /* Set default style */
     setStyleConfiguration(styleConfiguration);
 }
 
-UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize): UserInterface{size, screenSize, defaultStyleConfiguration()} {}
+UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, const std::string& extraGlyphs): UserInterface{size, screenSize, defaultStyleConfiguration(), extraGlyphs} {}
 
 UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, Text::GlyphCache& glyphCache, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, screenSize} {
     _font = &font;

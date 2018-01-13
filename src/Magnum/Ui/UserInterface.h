@@ -69,21 +69,23 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @brief Constructor
          * @param size                  User interface size
          * @param screenSize            Actual screen size
+         * @param extraGlyphs           Extra characters to add to glyph cache
          *
          * Uses @ref defaultStyleConfiguration() and a builtin font with
          * pre-populated glyph cache.
          */
-        explicit UserInterface(const Vector2& size, const Vector2i& screenSize);
+        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, const std::string& extraGlyphs = {});
 
         /**
          * @brief Construct the user interface with a custom style
          * @param size                  User interface size
          * @param screenSize            Actual screen size
          * @param styleConfiguration    Style configuration to use
+         * @param extraGlyphs           Extra characters to add to glyph cache
          *
          * Uses a builtin font with pre-populated glyph cache.
          */
-        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, const StyleConfiguration& styleConfiguration);
+        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs = {});
 
         /**
          * @brief Construct the user interface with custom style and font
