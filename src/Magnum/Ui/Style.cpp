@@ -573,7 +573,7 @@ StyleConfiguration defaultStyleConfiguration() {
     using namespace Math::Literals;
 
     return Ui::StyleConfiguration{}
-        .setFontSize(18.0f)
+        .setFontSize(16.0f)
         .setMargin({10.0f, 7.0f})
         .setPadding({13.0f, 10.0f})
         .setCornerRadius(4.0f)

@@ -117,7 +117,7 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, co
 
     /* Open the font */
     if(!_font->openSingleData(Utility::Resource{"MagnumUi"}.getRaw("SourceSansPro-Regular.ttf"),
-        18.0f*size.x()/screenSize.x()))
+        32.0f*size.x()/screenSize.x()))
         std::exit(1);
 
     /* Prepare glyph cache */
