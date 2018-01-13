@@ -54,15 +54,17 @@ using namespace Magnum::Math::Literals;
 
 namespace {
 
-constexpr const Float WidgetHeight{40.0f};
-constexpr const Float LabelHeight{30.0f};
-constexpr const Vector2 ButtonSize{120.0f, WidgetHeight};
-constexpr const Vector2 LabelSize{100.0f, LabelHeight};
+constexpr const Float WidgetHeight{36.0f};
+constexpr const Float LabelHeight{24.0f};
+constexpr const Vector2 ButtonSize{96.0f, WidgetHeight};
+constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 
 struct BaseUiPlane: Ui::Plane {
     explicit BaseUiPlane(Ui::UserInterface& ui):
         Ui::Plane{ui, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right, 0, 50, 640},
-        buttonPrimary{*this, {Ui::Snap::Top|Ui::Snap::Left, Range2D::fromSize(Vector2::yAxis(-40.0f), ButtonSize)},
+        buttonDefault{*this, {Ui::Snap::Top|Ui::Snap::Left, Range2D::fromSize(Vector2::yAxis(-36.0f), ButtonSize)},
+            "Default", Ui::Style::Default},
+        buttonPrimary{*this, {Ui::Snap::Right, buttonDefault, ButtonSize},
             "Primary", Ui::Style::Primary},
         buttonDanger{*this, {Ui::Snap::Right, buttonPrimary, ButtonSize},
             "Danger", Ui::Style::Danger},
@@ -70,36 +72,36 @@ struct BaseUiPlane: Ui::Plane {
             "Success", Ui::Style::Success},
         buttonWarning{*this, {Ui::Snap::Right, buttonSuccess, ButtonSize},
             "Warning", Ui::Style::Warning},
-        buttonFlat{*this, {Ui::Snap::Right, buttonWarning, ButtonSize},
+        buttonFlat{*this, {Ui::Snap::Right, buttonWarning, {60.0f, WidgetHeight}},
             "Flat", Ui::Style::Flat},
-        buttonDefault{*this, {Ui::Snap::Right, buttonFlat, ButtonSize},
-            "Default", Ui::Style::Default},
 
         inputDefault{*this, {Ui::Snap::Top|Ui::Snap::Left,
-            Range2D::fromSize(Vector2::yAxis(-310.0f), ButtonSize)},
-            "Default", 32, Ui::Style::Default},
+            Range2D::fromSize(Vector2::yAxis(-282.0f), ButtonSize)},
+            "Default", 8, Ui::Style::Default},
         inputDanger{*this, {Ui::Snap::Right, inputDefault, ButtonSize},
-            "Danger", 32, Ui::Style::Danger},
+            "Danger", 8, Ui::Style::Danger},
         inputSuccess{*this, {Ui::Snap::Right, inputDanger, ButtonSize},
-            "Success", 32, Ui::Style::Success},
+            "Success", 8, Ui::Style::Success},
         inputWarning{*this, {Ui::Snap::Right, inputSuccess, ButtonSize},
-            "Warning", 32, Ui::Style::Warning},
+            "Warning", 8, Ui::Style::Warning},
         inputFlat{*this, {Ui::Snap::Right, inputWarning, ButtonSize},
-            "Flat", 32, Ui::Style::Flat},
+            "Flat", 8, Ui::Style::Flat},
 
         modalDefault{*this, {Ui::Snap::Top|Ui::Snap::Left,
-            Range2D::fromSize(Vector2::yAxis(-460.0f), ButtonSize)},
-            "Default"},
+            Range2D::fromSize(Vector2::yAxis(-414.0f), ButtonSize)},
+            "Default »"},
         modalDanger{*this, {Ui::Snap::Right, modalDefault, ButtonSize},
-            "Danger"},
+            "Danger »"},
         modalSuccess{*this, {Ui::Snap::Right, modalDanger, ButtonSize},
-            "Success"},
+            "Success »"},
         modalWarning{*this, {Ui::Snap::Right, modalSuccess, ButtonSize},
-            "Warning"},
+            "Warning »"},
         modalInfo{*this, {Ui::Snap::Right, modalWarning, ButtonSize},
-            "Info"}
+            "Info »"}
     {
         Ui::Button
+            buttonDefaultDisabled{*this, {Ui::Snap::Bottom, buttonDefault, ButtonSize},
+                "Default", Ui::Style::Default},
             buttonPrimaryDisabled{*this, {Ui::Snap::Bottom, buttonPrimary, ButtonSize},
                 "Primary", Ui::Style::Primary},
             buttonDangerDisabled{*this, {Ui::Snap::Bottom, buttonDanger, ButtonSize},
@@ -109,9 +111,7 @@ struct BaseUiPlane: Ui::Plane {
             buttonWarningDisabled{*this, {Ui::Snap::Bottom, buttonWarning, ButtonSize},
                 "Warning", Ui::Style::Warning},
             buttonFlatDisabled{*this, {Ui::Snap::Bottom, buttonFlat, ButtonSize},
-                "Flat", Ui::Style::Flat},
-            buttonDefaultDisabled{*this, {Ui::Snap::Bottom, buttonDefault, ButtonSize},
-                "Default", Ui::Style::Default};
+                "Flat", Ui::Style::Flat};
 
         Ui::Widget::disable({
             buttonPrimaryDisabled,
@@ -122,7 +122,9 @@ struct BaseUiPlane: Ui::Plane {
             buttonDefaultDisabled});
 
         Ui::Label
-            labelPrimary{*this, {Ui::Snap::Top|Ui::Snap::Left, Range2D::fromSize(Vector2::yAxis(-190.0f), LabelSize)},
+            labelDefault{*this, {Ui::Snap::Top|Ui::Snap::Left, Range2D::fromSize(Vector2::yAxis(-172.0f), LabelSize)},
+                "Default", Text::Alignment::LineCenterIntegral, Ui::Style::Default},
+            labelPrimary{*this, {Ui::Snap::Right, labelDefault, LabelSize},
                 "Primary", Text::Alignment::LineCenterIntegral, Ui::Style::Primary},
             labelDanger{*this, {Ui::Snap::Right, labelPrimary, LabelSize},
                 "Danger", Text::Alignment::LineCenterIntegral, Ui::Style::Danger},
@@ -132,12 +134,12 @@ struct BaseUiPlane: Ui::Plane {
                 "Warning", Text::Alignment::LineCenterIntegral, Ui::Style::Warning},
             labelInfo{*this, {Ui::Snap::Right, labelWarning, LabelSize},
                 "Info", Text::Alignment::LineCenterIntegral, Ui::Style::Info},
-            labelDefault{*this, {Ui::Snap::Right, labelInfo, LabelSize},
-                "Default", Text::Alignment::LineCenterIntegral, Ui::Style::Default},
-            labelDim{*this, {Ui::Snap::Right, labelDefault, LabelSize},
+            labelDim{*this, {Ui::Snap::Right, labelInfo, LabelSize},
                 "Dim", Text::Alignment::LineCenterIntegral, Ui::Style::Dim};
 
         Ui::Label
+            labelDefaultDisabled{*this, {Ui::Snap::Bottom, labelDefault, LabelSize},
+                "Default", Text::Alignment::LineCenterIntegral, Ui::Style::Default},
             labelPrimaryDisabled{*this, {Ui::Snap::Bottom, labelPrimary, LabelSize},
                 "Primary", Text::Alignment::LineCenterIntegral, Ui::Style::Primary},
             labelDangerDisabled{*this, {Ui::Snap::Bottom, labelDanger, LabelSize},
@@ -148,18 +150,16 @@ struct BaseUiPlane: Ui::Plane {
                 "Warning", Text::Alignment::LineCenterIntegral, Ui::Style::Warning},
             labelInfoDisabled{*this, {Ui::Snap::Bottom, labelInfo, LabelSize},
                 "Info", Text::Alignment::LineCenterIntegral, Ui::Style::Info},
-            labelDefaultDisabled{*this, {Ui::Snap::Bottom, labelDefault, LabelSize},
-                "Default", Text::Alignment::LineCenterIntegral, Ui::Style::Default},
             labelDimDisabled{*this, {Ui::Snap::Bottom, labelDim, LabelSize},
                 "Dim", Text::Alignment::LineCenterIntegral, Ui::Style::Dim};
 
         Ui::Widget::disable({
+            labelDefaultDisabled,
             labelPrimaryDisabled,
             labelDangerDisabled,
             labelSuccessDisabled,
             labelWarningDisabled,
             labelInfoDisabled,
-            labelDefaultDisabled,
             labelDimDisabled});
 
         Ui::Input
@@ -181,9 +181,9 @@ struct BaseUiPlane: Ui::Plane {
             inputWarningDisabled,
             inputFlatDisabled});
 
-        Ui::Label{*this, {Ui::Snap::Top|Ui::Snap::Left|Ui::Snap::InsideX, buttonPrimary, LabelSize},
+        Ui::Label{*this, {Ui::Snap::Top|Ui::Snap::Left|Ui::Snap::InsideX, buttonDefault, LabelSize},
             "Buttons", Text::Alignment::LineLeft, Ui::Style::Dim};
-        Ui::Label{*this, {Ui::Snap::Top|Ui::Snap::Left|Ui::Snap::InsideX, labelPrimary, LabelSize},
+        Ui::Label{*this, {Ui::Snap::Top|Ui::Snap::Left|Ui::Snap::InsideX, labelDefault, LabelSize},
             "Labels", Text::Alignment::LineLeft, Ui::Style::Dim};
         Ui::Label{*this, {Ui::Snap::Top|Ui::Snap::Left|Ui::Snap::InsideX, inputDefault, LabelSize},
             "Inputs", Text::Alignment::LineLeft, Ui::Style::Dim};
@@ -191,12 +191,12 @@ struct BaseUiPlane: Ui::Plane {
             "Modals", Text::Alignment::LineLeft, Ui::Style::Dim};
     }
 
-    Ui::Button buttonPrimary,
+    Ui::Button buttonDefault,
+        buttonPrimary,
         buttonDanger,
         buttonSuccess,
         buttonWarning,
-        buttonFlat,
-        buttonDefault;
+        buttonFlat;
 
     Ui::Input inputDefault,
         inputDanger,
@@ -217,7 +217,7 @@ struct ModalUiPlane: Ui::Plane, Interconnect::Receiver {
         message{*this, {{}, Range2D::fromSize(Vector2::yAxis(20.0f), {})},
             "This is a modal dialog.", Text::Alignment::LineCenterIntegral, style},
         close{*this, {Ui::Snap::Bottom|Ui::Snap::Right, ButtonSize},
-            "Close", style}
+            "Close", style == Ui::Style::Info ? Ui::Style::Default : style}
     {
         Ui::Modal{*this, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right|Ui::Snap::NoSpaceX|Ui::Snap::NoSpaceY, style};
 
@@ -252,7 +252,7 @@ class Gallery: public Platform::Application, public Interconnect::Receiver {
             _infoModalUiPlane;
 };
 
-Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Ui gallery")
+Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Ui Gallery").setSize({640, 480})
     #ifdef CORRADE_TARGET_IOS
     .setWindowFlags(Configuration::WindowFlag::Borderless|Configuration::WindowFlag::AllowHighDpi)
     #endif
@@ -288,7 +288,7 @@ be one of:
     } else Debug{} << "Unrecognized --style option" << args.value("style");
 
     /* Create the UI */
-    _ui.emplace(Math::max(Vector2(windowSize()), {640.0f, 480.0f}), windowSize(), style);
+    _ui.emplace(Math::max(Vector2(windowSize()), {640.0f, 480.0f}), windowSize(), style, "»");
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetFocused, *this, &Gallery::startTextInput);
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetBlurred, *this, &Gallery::stopTextInput);
 
