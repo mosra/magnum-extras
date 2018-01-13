@@ -32,7 +32,15 @@ bool ValidatedInput::allValid(std::initializer_list<std::reference_wrapper<const
     return true;
 }
 
-ValidatedInput::ValidatedInput(Plane& plane, const Anchor& anchor, const std::regex& validator, std::string value, const std::size_t maxValueSize, const Style style): Input{plane, anchor, std::move(value), maxValueSize, style}, _validator{validator} {
+ValidatedInput::ValidatedInput(Plane& plane, const Anchor& anchor, const std::regex& validator, std::string value, const std::size_t maxValueSize, const Style style):
+    #ifdef CORRADE_MSVC2017_COMPATIBILITY
+    /* This gets never called and is here only because of that virtual base. So
+       we might as well blow up if it ever gets here. I feel awful for this. */
+    Widget{*static_cast<AbstractPlane*>(nullptr), anchor, {}},
+    #endif
+    Input{plane, anchor, std::move(value), maxValueSize, style},
+    _validator{validator}
+{
     if(!isValid()) setStyle(Ui::Style::Warning);
     Interconnect::connect(*this, &Ui::Input::valueChanged, *this, &Ui::ValidatedInput::updateStyle);
 }

@@ -47,7 +47,7 @@ Ignores @ref StateFlag::Active.
 @experimental
 */
 class MAGNUM_UI_EXPORT Button: public
-    #ifdef CORRADE_MSVC2015_COMPATIBILITY
+    #ifdef CORRADE_MSVC2017_COMPATIBILITY
     /* Corrade::Interconnect signal/slot connections are broken on MSVC when
        using multiple inheritance at the moment. This is a dirty workaround
        until that is properly investigated. */
