@@ -58,6 +58,7 @@ The plugin should be either in a system directory or be linked and correctly
 imported statically. If the plugin cannot be loaded, the application exits. See
 @ref plugins for more information.
 
+@see @ref defaultStyleConfiguration(), @ref mcssDarkStyleConfiguration()
 @experimental
 */
 class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer>, public Interconnect::Emitter {
@@ -97,7 +98,6 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          *
          * The @p font and @p glyphCache is expected to be kept in scope for
          * the whole user interface lifetime.
-         * @see @ref defaultStyleConfiguration()
          */
         explicit UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, Text::GlyphCache& glyphCache, const StyleConfiguration& styleConfiguration);
 

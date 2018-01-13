@@ -390,6 +390,14 @@ class MAGNUM_UI_EXPORT StyleConfiguration {
 */
 MAGNUM_UI_EXPORT StyleConfiguration defaultStyleConfiguration();
 
+/**
+@brief m.css dark style configuration
+
+The dark CSS theme from http://mcss.mosra.cz.
+@experimental
+*/
+MAGNUM_UI_EXPORT StyleConfiguration mcssDarkStyleConfiguration();
+
 namespace Implementation {
 
 struct QuadVertex {
