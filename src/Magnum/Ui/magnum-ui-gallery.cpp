@@ -26,6 +26,7 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Arguments.h>
 #include <Magnum/DefaultFramebuffer.h>
 #include <Magnum/Renderer.h>
 #include <Magnum/Platform/Sdl2Application.h>
@@ -257,6 +258,16 @@ Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, C
     #endif
     }
 {
+    Utility::Arguments args;
+    args.addOption("style", "mcss-dark").setHelp("style", "specify style to use")
+        .addSkippedPrefix("magnum", "engine-specific options")
+        .setHelp(
+R"(Showcases different widgets in the Magnum::Ui library. The --style option can
+be one of:
+  default       the default style
+  mcss-dark     dark m.css theme from http://mcss.mosra.cz)")
+        .parse(arguments.argc, arguments.argv);
+
     /* Enable blending with premultiplied alpha */
     Renderer::enable(Renderer::Feature::Blending);
     Renderer::setBlendFunction(Renderer::BlendFunction::One, Renderer::BlendFunction::OneMinusSourceAlpha);
@@ -267,8 +278,17 @@ Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, C
     setMinimalLoopPeriod(16);
     #endif
 
+    /* Decide about style to use */
+    Ui::StyleConfiguration style;
+    if(args.value("style") == "default")
+        style = Ui::defaultStyleConfiguration();
+    else if(args.value("style") == "mcss-dark") {
+        style = Ui::mcssDarkStyleConfiguration();
+        Renderer::setClearColor(0x22272e_rgbf);
+    } else Debug{} << "Unrecognized --style option" << args.value("style");
+
     /* Create the UI */
-    _ui.emplace(Math::max(Vector2(windowSize()), {800.0f, 600.0f}), windowSize());
+    _ui.emplace(Math::max(Vector2(windowSize()), {640.0f, 480.0f}), windowSize(), style);
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetFocused, *this, &Gallery::startTextInput);
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetBlurred, *this, &Gallery::stopTextInput);
 
