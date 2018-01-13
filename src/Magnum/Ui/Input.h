@@ -91,6 +91,9 @@ class MAGNUM_UI_EXPORT Input: public
         Input& setValue(const std::string& value);
         Input& setValue(std::string&& value); /**< @overload */
         Input& setValue(Containers::ArrayView<const char> value); /**< @overload */
+        template<std::size_t size> Input& setValue(const char(&value)[size]) {
+            return setValue(Containers::arrayView(value, size - 1));
+        } /**< @overload */
 
         /**
          * @brief Handle key press from an application
