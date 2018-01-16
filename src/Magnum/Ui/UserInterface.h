@@ -104,19 +104,19 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         #ifdef MAGNUM_BUILD_DEPRECATED
         /**
          * @brief Construct the user interface with custom style and font
-         * @deprecated Use either @ref UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&)
+         * @deprecated Use either @ref UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&)
          *      or @ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
          *      instead.
          */
-        explicit CORRADE_DEPRECATED("use either UserInterface(const Vector2&, const Vector2i&) or UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&) instead") UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration);
+        explicit CORRADE_DEPRECATED("use either UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&) or UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&) instead") UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration);
 
         /**
          * @brief Construct the user interface with a custom font
-         * @deprecated Use either @ref UserInterface(const Vector2&, const Vector2i&)
+         * @deprecated Use either @ref UserInterface(const Vector2&, const Vector2i&, const std::string&)
          *      or @ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
          *      instead.
          */
-        explicit CORRADE_DEPRECATED("use either UserInterface(const Vector2&, const Vector2i&) or UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&) instead") UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font);
+        explicit CORRADE_DEPRECATED("use either UserInterface(const Vector2&, const Vector2i&, const std::string&) or UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&) instead") UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font);
         #endif
 
         ~UserInterface();
