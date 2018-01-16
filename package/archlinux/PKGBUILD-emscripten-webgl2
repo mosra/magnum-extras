@@ -2,7 +2,7 @@
 pkgname=emscripten-magnum-extras
 pkgver=dev.webgl2
 pkgrel=1
-pkgdesc="Extras for Magnum OpenGL graphics engine (Emscripten, WebGL 2.0)"
+pkgdesc="Extras for the Magnum C++11/C++14 graphics engine (Emscripten, WebGL 2.0)"
 arch=('any')
 url="http://magnum.graphics"
 license=('MIT')

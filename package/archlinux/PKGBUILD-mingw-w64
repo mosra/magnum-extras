@@ -2,7 +2,7 @@
 pkgname=mingw-w64-magnum-extras
 pkgver=dev
 pkgrel=1
-pkgdesc="Extras for Magnum OpenGL graphics engine (mingw-w64)"
+pkgdesc="Extras for the Magnum C++11/C++14 graphics engine (mingw-w64)"
 arch=('any')
 url="http://magnum.graphics"
 license=('MIT')

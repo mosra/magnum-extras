@@ -2,7 +2,7 @@
 pkgname=magnum-extras
 pkgver=dev
 pkgrel=1
-pkgdesc="Extras for Magnum OpenGL graphics engine (coverage build)"
+pkgdesc="Extras for the Magnum C++11/C++14 graphics engine (coverage build)"
 arch=('i686' 'x86_64')
 url="http://magnum.graphics"
 license=('MIT')
