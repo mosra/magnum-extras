@@ -61,6 +61,8 @@ namespace Magnum {
 
 -   New documentation theme powered by [m.css](http://mcss.mosra.cz) and
     related massive updates of *everything*
+-   The @ref building-extras documentation now prefers package installation
+    instead of manual build
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
