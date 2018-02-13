@@ -14,8 +14,9 @@ cmake .. \
     -DCMAKE_INSTALL_RPATH=$HOME/deps-native/lib \
     -DWITH_INTERCONNECT=OFF \
     -DWITH_PLUGINMANAGER=OFF \
-    -DWITH_TESTSUITE=OFF
-make -j install
+    -DWITH_TESTSUITE=OFF \
+    -G Ninja
+ninja install
 cd ..
 
 # Crosscompile Corrade
@@ -28,8 +29,9 @@ cmake .. \
     -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG -O1" \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DWITH_INTERCONNECT=ON
-make -j install
+    -DWITH_INTERCONNECT=ON \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile Magnum
@@ -55,8 +57,9 @@ cmake .. \
     -DWITH_TEXT=$TARGET_GLES3 \
     -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
     -DWITH_SDL2APPLICATION=$TARGET_GLES3 \
-    -DTARGET_GLES2=$TARGET_GLES2
-make -j install
+    -DTARGET_GLES2=$TARGET_GLES2 \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile Magnum Plugins
@@ -72,8 +75,9 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
-    -DWITH_STBTRUETYPEFONT=$TARGET_GLES3
-make -j install
+    -DWITH_STBTRUETYPEFONT=$TARGET_GLES3 \
+    -G Ninja
+ninja install
 cd ../..
 
 # Crosscompile
@@ -89,9 +93,10 @@ cmake .. \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
     -DWITH_UI=$TARGET_GLES3 \
     -DWITH_UI_GALLERY=$TARGET_GLES3 \
-    -DBUILD_TESTS=ON
+    -DBUILD_TESTS=ON \
+    -G Ninja
 # Otherwise the job gets killed (probably because using too much memory)
-make -j4
+ninja -j4
 
 # Test
 CORRADE_TEST_COLOR=ON ctest -V

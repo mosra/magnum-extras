@@ -10,8 +10,9 @@ cmake .. \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Debug \
     -DWITH_INTERCONNECT=ON \
-    -DBUILD_DEPRECATED=$BUILD_DEPRECATED
-make -j install
+    -DBUILD_DEPRECATED=$BUILD_DEPRECATED \
+    -G Ninja
+ninja install
 cd ../..
 
 # Magnum
@@ -35,8 +36,9 @@ cmake .. \
     -DWITH_OPENGLTESTER=ON \
     -DWITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON \
     -DWITH_SDL2APPLICATION=ON \
-    -DBUILD_DEPRECATED=$BUILD_DEPRECATED
-make -j install
+    -DBUILD_DEPRECATED=$BUILD_DEPRECATED \
+    -G Ninja
+ninja install
 cd ../..
 
 mkdir build && cd build
@@ -49,7 +51,8 @@ cmake .. \
     -DWITH_UI=ON \
     -DWITH_UI_GALLERY=ON \
     -DBUILD_TESTS=ON \
-    -DBUILD_GL_TESTS=ON
+    -DBUILD_GL_TESTS=ON \
+    -G Ninja
 # Otherwise the job gets killed (probably because using too much memory)
-make -j4
+ninja -j4
 ASAN_OPTIONS="color=always" LSAN_OPTIONS="color=always" CORRADE_TEST_COLOR=ON ctest -V -E GLTest

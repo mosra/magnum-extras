@@ -9,8 +9,9 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
     -DCMAKE_BUILD_TYPE=Release \
-    -DWITH_INTERCONNECT=$TARGET_GLES3
-make -j install
+    -DWITH_INTERCONNECT=$TARGET_GLES3 \
+    -G Ninja
+ninja install
 cd ../..
 
 # Magnum
@@ -36,8 +37,9 @@ cmake .. \
     -DWITH_TEXTURETOOLS=$TARGET_GLES3 \
     -DWITH_OPENGLTESTER=$TARGET_GLES3 \
     -DWITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON \
-    -DWITH_SDL2APPLICATION=$TARGET_GLES3
-make -j install
+    -DWITH_SDL2APPLICATION=$TARGET_GLES3 \
+    -G Ninja
+ninja install
 cd ../..
 
 mkdir build && cd build
@@ -49,7 +51,8 @@ cmake .. \
     -DWITH_UI=$TARGET_GLES3 \
     -DWITH_UI_GALLERY=$TARGET_GLES3 \
     -DBUILD_TESTS=ON \
-    -DBUILD_GL_TESTS=ON
+    -DBUILD_GL_TESTS=ON \
+    -G Ninja
 # Otherwise the job gets killed (probably because using too much memory)
-make -j4
+ninja -j4
 CORRADE_TEST_COLOR=ON ctest -V -E GLTest
