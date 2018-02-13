@@ -6,7 +6,7 @@ functionality.
 [![Join the chat at https://gitter.im/mosra/magnum](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/mosra/magnum?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/mosra/magnum-extras.svg?branch=master)](https://travis-ci.org/mosra/magnum-extras)
 [![Build status](https://ci.appveyor.com/api/projects/status/f75u5eow2qiso7m5/branch/master?svg=true)](https://ci.appveyor.com/project/mosra/magnum-extras/branch/master)
-[![Coverage Status](https://coveralls.io/repos/github/mosra/magnum-extras/badge.svg?branch=master)](https://coveralls.io/github/mosra/magnum-extras?branch=master)
+[![Coverage Status](https://codecov.io/gh/mosra/magnum-extras/branch/master/graph/badge.svg)](https://codecov.io/gh/mosra/magnum-extras)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 -   Project homepage — http://magnum.graphics/
