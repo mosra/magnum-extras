@@ -52,6 +52,8 @@ Released 2018-02-15, tagged as
     and [AppVeyor CI](https://ci.appveyor.com/project/mosra/magnum-extras), with code
     coverage on [codecov.io](https://codecov.io/gh/mosra/magnum-extras)
 -   Added a @ref building-extras-packages-brew "Homebrew package"
+-   Properly install CMake modules in the Debian package (see
+    [mosra/magnum-extras#2](https://github.com/mosra/magnum-extras/issues/2))
 
 @subsection changelog-extras-2018-02-deprecated Deprecated APIs
 
