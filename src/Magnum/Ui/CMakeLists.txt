@@ -87,7 +87,9 @@ target_include_directories(MagnumUi PUBLIC
 set_target_properties(MagnumUi PROPERTIES
     DEBUG_POSTFIX "-d"
     FOLDER "Magnum/Ui")
-if(BUILD_STATIC_PIC)
+if(NOT BUILD_STATIC)
+    set_target_properties(MagnumUi PROPERTIES VERSION ${MAGNUM_LIBRARY_VERSION} SOVERSION ${MAGNUM_LIBRARY_SOVERSION})
+elseif(BUILD_STATIC_PIC)
     set_target_properties(MagnumUi PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 target_link_libraries(MagnumUi
