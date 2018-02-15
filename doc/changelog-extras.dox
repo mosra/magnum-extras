@@ -30,11 +30,12 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-@section changelog-extras-latest Changes during the initial release
+@section changelog-extras-2018-02 2018.02
 
-@subsection changelog-extras-latest-dependencies De­pen­den­cy changes
+Released 2018-02-15, tagged as
+[v2018.02](https://github.com/mosra/magnum-extras/releases/tag/v2018.02).
 
-@subsection changelog-extras-latest-new New features
+@subsection changelog-extras-2018-02-new New features
 
 -   MSVC 2015 and MSVC 2017 support in `master` branch
 -   ANGLE ES2/ES3 support, ability to create desktop GLES contexts on Windows
@@ -44,29 +45,25 @@ namespace Magnum {
 -   WebGL 2.0 support
 -   New experimental @ref Ui library
 
-@subsection changelog-extras-latest-buildsystem Build system
+@subsection changelog-extras-2018-02-buildsystem Build system
 
 -   Continuous testing for Linux, macOS, Windows MSVC, Windows MinGW, Windows RT,
     iOS, Android and Emscripten on [Travis CI](https://travis-ci.org/mosra/magnum-extras)
     and [AppVeyor CI](https://ci.appveyor.com/project/mosra/magnum-extras), with code
-    coverage on [coveralls.io](https://coveralls.io/github/mosra/magnum-extras)
+    coverage on [codecov.io](https://codecov.io/gh/mosra/magnum-extras)
 -   Added a @ref building-extras-packages-brew "Homebrew package"
 
-@subsection changelog-extras-latest-deprecated Deprecated APIs
+@subsection changelog-extras-2018-02-deprecated Deprecated APIs
 
 -   `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum set are
     deprecated, use @ref Ui::PlaneFlag and @ref Ui::PlaneFlags instead
 
-@subsection changelog-extras-latest-documentation Documentation
+@subsection changelog-extras-2018-02-documentation Documentation
 
 -   New documentation theme powered by [m.css](http://mcss.mosra.cz) and
     related massive updates of *everything*
 -   The @ref building-extras documentation now prefers package installation
     instead of manual build
-
-@subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
-
-No APIs were removed since last release.
 
 */
 
