@@ -33,10 +33,6 @@
 
 #include "Magnum/Ui/Widget.h"
 
-#ifdef CORRADE_TARGET_ANDROID
-#include <sstream>
-#endif
-
 #ifdef MAGNUM_BUILD_STATIC
 static void importShaderResources() {
     CORRADE_RESOURCE_INITIALIZE(MagnumUi_RESOURCES)
@@ -983,15 +979,8 @@ BackgroundShader::BackgroundShader() {
         Version::GLES300,
         #endif
         Shader::Type::Fragment};
-    #ifndef CORRADE_TARGET_ANDROID
     vert.addSource("#define BACKGROUND_COLOR_COUNT " + std::to_string(Implementation::BackgroundColorCount) + "\n");
     frag.addSource("#define BACKGROUND_COLOR_COUNT " + std::to_string(Implementation::BackgroundColorCount) + "\n");
-    #else
-    std::ostringstream out;
-    out << Implementation::BackgroundColorCount;
-    vert.addSource("#define BACKGROUND_COLOR_COUNT " + out.str() + "\n");
-    frag.addSource("#define BACKGROUND_COLOR_COUNT " + out.str() + "\n");
-    #endif
     vert.addSource(rs.get("BackgroundShader.vert"));
     frag.addSource(rs.get("BackgroundShader.frag"));
 
@@ -1032,15 +1021,8 @@ ForegroundShader::ForegroundShader() {
         Version::GLES300,
         #endif
         Shader::Type::Fragment};
-    #ifndef CORRADE_TARGET_ANDROID
     vert.addSource("#define FOREGROUND_COLOR_COUNT " + std::to_string(Implementation::ForegroundColorCount) + "\n");
     frag.addSource("#define FOREGROUND_COLOR_COUNT " + std::to_string(Implementation::ForegroundColorCount) + "\n");
-    #else
-    std::ostringstream out;
-    out << Implementation::ForegroundColorCount;
-    vert.addSource("#define FOREGROUND_COLOR_COUNT " + out.str() + "\n");
-    frag.addSource("#define FOREGROUND_COLOR_COUNT " + out.str() + "\n");
-    #endif
     vert.addSource(rs.get("ForegroundShader.vert"));
     frag.addSource(rs.get("ForegroundShader.frag"));
 
@@ -1082,13 +1064,7 @@ TextShader::TextShader() {
         #endif
         Shader::Type::Fragment};
     vert.addSource(rs.get("TextShader.vert"));
-    #ifndef CORRADE_TARGET_ANDROID
     frag.addSource("#define TEXT_COLOR_COUNT " + std::to_string(Implementation::TextColorCount) + "\n");
-    #else
-    std::ostringstream out;
-    out << Implementation::TextColorCount;
-    frag.addSource("#define TEXT_COLOR_COUNT " + out.str() + "\n");
-    #endif
     frag.addSource(rs.get("TextShader.frag"));
 
     CORRADE_INTERNAL_ASSERT(Shader::compile({vert, frag}));
