@@ -117,9 +117,9 @@ if(WITH_UI_GALLERY)
     endif()
 
     if(NOT CORRADE_TARGET_ANDROID)
-        add_executable(magnum-ui-gallery magnum-ui-gallery.cpp)
+        add_executable(magnum-ui-gallery ui-gallery.cpp)
     else()
-        add_library(magnum-ui-gallery SHARED magnum-ui-gallery.cpp)
+        add_library(magnum-ui-gallery SHARED ui-gallery.cpp)
     endif()
     set_target_properties(magnum-ui-gallery PROPERTIES FOLDER "Magnum/Ui")
     target_link_libraries(magnum-ui-gallery PRIVATE
@@ -134,7 +134,7 @@ if(WITH_UI_GALLERY)
             MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES")
     elseif(CORRADE_TARGET_EMSCRIPTEN)
-        install(FILES magnum-ui-gallery.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery RENAME index.html)
+        install(FILES ui-gallery.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery RENAME index.html)
         install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery)
         install(FILES
             ${CMAKE_CURRENT_BINARY_DIR}/magnum-ui-gallery.js.mem
