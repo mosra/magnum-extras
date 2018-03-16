@@ -29,7 +29,11 @@
 #include <Corrade/Utility/Arguments.h>
 #include <Magnum/DefaultFramebuffer.h>
 #include <Magnum/Renderer.h>
+#ifndef CORRADE_TARGET_ANDROID
 #include <Magnum/Platform/Sdl2Application.h>
+#else
+#include <Magnum/Platform/AndroidApplication.h>
+#endif
 #include <Magnum/Text/Alignment.h>
 
 #include "Magnum/Ui/Anchor.h"
@@ -40,8 +44,8 @@
 #include "Magnum/Ui/Plane.h"
 #include "Magnum/Ui/UserInterface.h"
 
-/* Import the font plugin statically on iOS / Emscripten */
-#if defined(CORRADE_TARGET_IOS) || defined(CORRADE_TARGET_EMSCRIPTEN)
+/* Import the font plugin statically on iOS / Emscripten / Android */
+#if defined(CORRADE_TARGET_IOS) || defined(CORRADE_TARGET_EMSCRIPTEN) || defined(CORRADE_TARGET_ANDROID)
 static int importFontPlugin() {
     CORRADE_PLUGIN_IMPORT(StbTrueTypeFont)
     return 1;
@@ -240,8 +244,10 @@ class Gallery: public Platform::Application, public Interconnect::Receiver {
         void mousePressEvent(MouseEvent& event) override;
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
+        #ifndef CORRADE_TARGET_ANDROID
         void keyPressEvent(KeyEvent& event) override;
         void textInputEvent(TextInputEvent& event) override;
+        #endif
 
         Containers::Optional<Ui::UserInterface> _ui;
         Containers::Optional<BaseUiPlane> _baseUiPlane;
@@ -252,7 +258,10 @@ class Gallery: public Platform::Application, public Interconnect::Receiver {
             _infoModalUiPlane;
 };
 
-Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Ui Gallery").setSize({640, 480})
+Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Ui Gallery")
+    #ifndef CORRADE_TARGET_ANDROID
+    .setSize({640, 480})
+    #endif
     #ifdef CORRADE_TARGET_IOS
     .setWindowFlags(Configuration::WindowFlag::Borderless|Configuration::WindowFlag::AllowHighDpi)
     #endif
@@ -266,14 +275,19 @@ R"(Showcases different widgets in the Magnum::Ui library. The --style option can
 be one of:
   default       the default style
   mcss-dark     dark m.css theme from http://mcss.mosra.cz)")
-        .parse(arguments.argc, arguments.argv);
+        #ifndef CORRADE_TARGET_ANDROID
+        .parse(arguments.argc, arguments.argv)
+        #else
+        .parse(0, nullptr)
+        #endif
+        ;
 
     /* Enable blending with premultiplied alpha */
     Renderer::enable(Renderer::Feature::Blending);
     Renderer::setBlendFunction(Renderer::BlendFunction::One, Renderer::BlendFunction::OneMinusSourceAlpha);
     Renderer::setBlendEquation(Renderer::BlendEquation::Add, Renderer::BlendEquation::Add);
 
-    #ifndef MAGNUM_TARGET_WEBGL
+    #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
     /* Have some sane speed, please */
     setMinimalLoopPeriod(16);
     #endif
@@ -287,10 +301,13 @@ be one of:
         Renderer::setClearColor(0x22272e_rgbf);
     } else Debug{} << "Unrecognized --style option" << args.value("style");
 
-    /* Create the UI */
-    _ui.emplace(Math::max(Vector2(windowSize()), {640.0f, 480.0f}), windowSize(), style, "»");
+    /* Create the UI. It should get at least some screen space, but also
+       shouldn't be tucked away into a small corner on ultra-dense displays. */
+    _ui.emplace(Math::clamp({640.0f, 480.0f}, {1024.0f, 576.0f}, Vector2(windowSize())), windowSize(), style, "»");
+    #ifndef CORRADE_TARGET_ANDROID
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetFocused, *this, &Gallery::startTextInput);
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetBlurred, *this, &Gallery::stopTextInput);
+    #endif
 
     /* Create base UI plane */
     _baseUiPlane.emplace(*_ui);
@@ -343,6 +360,7 @@ void Gallery::mouseMoveEvent(MouseMoveEvent& event) {
     redraw();
 }
 
+#ifndef CORRADE_TARGET_ANDROID
 void Gallery::keyPressEvent(KeyEvent& event) {
     if(isTextInputActive() && _ui->focusedInputWidget() && _ui->focusedInputWidget()->handleKeyPress(event))
         redraw();
@@ -352,6 +370,7 @@ void Gallery::textInputEvent(TextInputEvent& event) {
     if(isTextInputActive() && _ui->focusedInputWidget() && _ui->focusedInputWidget()->handleTextInput(event))
         redraw();
 }
+#endif
 
 }
 
