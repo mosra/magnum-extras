@@ -44,14 +44,6 @@
 #include "Magnum/Ui/Plane.h"
 #include "Magnum/Ui/UserInterface.h"
 
-/* Import the font plugin statically on iOS / Emscripten / Android */
-#if defined(CORRADE_TARGET_IOS) || defined(CORRADE_TARGET_EMSCRIPTEN) || defined(CORRADE_TARGET_ANDROID)
-static int importFontPlugin() {
-    CORRADE_PLUGIN_IMPORT(StbTrueTypeFont)
-    return 1;
-} CORRADE_AUTOMATIC_INITIALIZER(importFontPlugin);
-#endif
-
 namespace Magnum {
 
 using namespace Magnum::Math::Literals;

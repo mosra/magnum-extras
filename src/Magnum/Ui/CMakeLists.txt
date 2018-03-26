@@ -73,17 +73,13 @@ set(MagnumUi_HEADERS
 corrade_add_resource(MagnumUi_RESOURCES resources.conf)
 set_target_properties(MagnumUi_RESOURCES-dependencies PROPERTIES FOLDER "Magnum/Ui")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
-               ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
-
 # Ui library
 add_library(MagnumUi ${SHARED_OR_STATIC}
     ${MagnumUi_SRCS}
     ${MagnumUi_HEADERS}
     ${MagnumUi_RESOURCES})
 target_include_directories(MagnumUi PUBLIC
-    ${PROJECT_SOURCE_DIR}/src
-    ${PROJECT_BINARY_DIR}/src)
+    ${PROJECT_SOURCE_DIR}/src)
 set_target_properties(MagnumUi PROPERTIES
     DEBUG_POSTFIX "-d"
     FOLDER "Magnum/Ui")

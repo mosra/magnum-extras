@@ -36,8 +36,6 @@
 #include "Magnum/Ui/Plane.h"
 #include "Magnum/Ui/visibility.h"
 
-#include "Magnum/Ui/configure.h"
-
 namespace Magnum { namespace Ui {
 
 namespace {
@@ -97,8 +95,7 @@ UserInterface::UserInterface(NoCreateT, const Vector2& size, const Vector2i& scr
 }
 
 struct UserInterface::FontState {
-    explicit FontState(const char* pluginDirectory, const Vector2i& glyphCacheSize):
-        manager{pluginDirectory}, glyphCache{glyphCacheSize} {}
+    explicit FontState(const Vector2i& glyphCacheSize): glyphCache{glyphCacheSize} {}
 
     PluginManager::Manager<Text::AbstractFont> manager;
     std::unique_ptr<Text::AbstractFont> font;
@@ -107,7 +104,7 @@ struct UserInterface::FontState {
 
 UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs): UserInterface{NoCreate, size, screenSize} {
     /* Load TTF font plugin */
-    _fontState.reset(new UserInterface::FontState{MAGNUM_PLUGINS_FONT_DIR, Vector2i{1024}});
+    _fontState.reset(new UserInterface::FontState{Vector2i{1024}});
     if(!(_fontState->font = _fontState->manager.loadAndInstantiate("TrueTypeFont")))
         std::exit(1);
 
@@ -141,7 +138,7 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Te
 #ifdef MAGNUM_BUILD_DEPRECATED
 UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, screenSize} {
     /* Populate the state only for the glyph cache */
-    _fontState.reset(new UserInterface::FontState{MAGNUM_PLUGINS_FONT_DIR, Vector2i{1024}});
+    _fontState.reset(new UserInterface::FontState{Vector2i{1024}});
     _font = &font;
     _glyphCache = &_fontState->glyphCache;
 
