@@ -736,6 +736,7 @@ StyleConfiguration defaultStyleConfiguration() {
         .setTextColor(Ui::Type::Input, Ui::Style::Flat, Ui::State::Active,   0x456ce0_rgbf)
         .setTextColor(Ui::Type::Input, Ui::Style::Flat, Ui::State::Disabled, premult(0xa6a6a64d_rgbaf))
 
+        .setBackgroundColor(Ui::Type::Modal, Ui::Style::Dim, Ui::State::Default, premult(0x00000099_rgbaf))
         .setBackgroundColor(Ui::Type::Modal, Ui::Style::Default, Ui::State::Default, premult(0x1f1f1fe5_rgbaf))
         .setBackgroundColor(Ui::Type::Modal, Ui::Style::Danger, Ui::State::Default, premult(0x411713e5_rgbaf))
         .setBackgroundColor(Ui::Type::Modal, Ui::Style::Success, Ui::State::Default, premult(0x102c10e5_rgbaf))
@@ -937,6 +938,7 @@ StyleConfiguration mcssDarkStyleConfiguration() {
         .setTextColor(Ui::Type::Input, Ui::Style::Flat, Ui::State::Disabled, 0x747474ff_rgbaf*0.8f)
 
         /* Modal background is --*-filled-background-color with 30% opacity. */
+        .setBackgroundColor(Ui::Type::Modal, Ui::Style::Dim, Ui::State::Default, 0x00000099_rgbaf)
         .setBackgroundColor(Ui::Type::Modal, Ui::Style::Default, Ui::State::Default, 0x34424dff_rgbaf*0.8f)
         .setBackgroundColor(Ui::Type::Modal, Ui::Style::Success, Ui::State::Default, 0x2a703fff_rgbaf*0.8f)
         .setBackgroundColor(Ui::Type::Modal, Ui::Style::Warning, Ui::State::Default, 0x6d702aff_rgbaf*0.8f)
