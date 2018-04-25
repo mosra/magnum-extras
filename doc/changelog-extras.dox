@@ -40,6 +40,11 @@ namespace Magnum {
     dropped, as it was still missing some important C++11 functionality. See
     @ref building-cross-android for more information.
 
+@subsection changelog-extras-latest-buildsystem Build system
+
+-   Fixed the Debian package to not include a revision. While just a warning on
+    Ubuntu, it's a hard error on Debian.
+
 @section changelog-extras-2018-02 2018.02
 
 Released 2018-02-15, tagged as
