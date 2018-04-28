@@ -43,7 +43,7 @@ Plane::Plane(UserInterface& ui, const Anchor& anchor): BasicPlane<Implementation
 {
     for(Implementation::QuadLayer& quadLayer: {std::ref(_backgroundLayer), std::ref(_foregroundLayer)}) {
         quadLayer.mesh()
-            .setPrimitive(MeshPrimitive::TriangleStrip)
+            .setPrimitive(GL::MeshPrimitive::TriangleStrip)
             .setCount(4)
             .addVertexBuffer(ui._quadVertices, 0,
                 Implementation::AbstractQuadShader::Position{},
@@ -55,7 +55,7 @@ Plane::Plane(UserInterface& ui, const Anchor& anchor): BasicPlane<Implementation
     }
 
     _textLayer.mesh()
-        .setIndexBuffer(ui._quadIndices, 0, Mesh::IndexType::UnsignedShort)
+        .setIndexBuffer(ui._quadIndices, 0, GL::MeshIndexType::UnsignedShort)
         .addVertexBuffer(_textLayer.buffer(), 0,
             Implementation::TextShader::Position{},
             Implementation::TextShader::TextureCoordinates{},
@@ -74,9 +74,9 @@ const UserInterface& Plane::ui() const {
 }
 
 void Plane::reset(const std::size_t backgroundCapacity, const std::size_t foregroundCapacity, const std::size_t textCapacity) {
-    _backgroundLayer.reset(4*backgroundCapacity, BufferUsage::StaticDraw);
-    _foregroundLayer.reset(4*foregroundCapacity, BufferUsage::StaticDraw);
-    _textLayer.reset(foregroundCapacity, 4*textCapacity, BufferUsage::StaticDraw);
+    _backgroundLayer.reset(4*backgroundCapacity, GL::BufferUsage::StaticDraw);
+    _foregroundLayer.reset(4*foregroundCapacity, GL::BufferUsage::StaticDraw);
+    _textLayer.reset(foregroundCapacity, 4*textCapacity, GL::BufferUsage::StaticDraw);
 }
 
 std::size_t Plane::addText(const UnsignedByte colorIndex, const Float size, const Containers::ArrayView<const char> text, const Vector2& cursor, const Text::Alignment alignment, const std::size_t capacity) {

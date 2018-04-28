@@ -31,8 +31,8 @@
 
 #include <memory>
 #include <Corrade/Interconnect/Emitter.h>
-#include <Magnum/Buffer.h>
-#include <Magnum/Texture.h>
+#include <Magnum/GL/Buffer.h>
+#include <Magnum/GL/Texture.h>
 #include <Magnum/Text/Text.h>
 
 #include "Magnum/Ui/AbstractUiShader.h"
@@ -185,7 +185,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         /* Internal constructor used by all the public ones */
         explicit UserInterface(NoCreateT, const Vector2& size, const Vector2i& screenSize);
 
-        Buffer _backgroundUniforms,
+        GL::Buffer _backgroundUniforms,
             _foregroundUniforms,
             _textUniforms,
             _quadVertices,
@@ -200,7 +200,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         std::unique_ptr<FontState> _fontState;
         Text::AbstractFont* _font;
         Text::GlyphCache* _glyphCache;
-        Texture2D _corner;
+        GL::Texture2D _corner;
 
         Input* _focusedInputWidget = nullptr;
 };

@@ -24,7 +24,7 @@
 #
 
 find_package(Corrade REQUIRED Interconnect)
-find_package(Magnum REQUIRED Text)
+find_package(Magnum REQUIRED GL Text)
 
 set(MagnumUi_SRCS
     Anchor.cpp
@@ -90,6 +90,7 @@ elseif(BUILD_STATIC_PIC)
 endif()
 target_link_libraries(MagnumUi
     Corrade::Interconnect
+    Magnum::GL
     Magnum::Magnum
     Magnum::Text)
 

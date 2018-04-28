@@ -355,7 +355,7 @@ class MAGNUM_UI_EXPORT StyleConfiguration {
         }
 
         /** @brief Pack style configuration into OpenGL uniform buffers */
-        void pack(Buffer& backgroundUniforms, Buffer& foregroundUniforms, Buffer& textUniforms) const;
+        void pack(GL::Buffer& backgroundUniforms, GL::Buffer& foregroundUniforms, GL::Buffer& textUniforms) const;
 
     private:
         struct Background {
@@ -449,46 +449,46 @@ using TextLayer = BasicGLLayer<TextVertex>;
 
 class AbstractQuadShader: public AbstractUiShader {
     public:
-        typedef Attribute<0, Vector2> Position;
-        typedef Attribute<1, Vector4> EdgeDistance;
-        typedef Attribute<2, Vector4> Rect;
-        typedef Attribute<3, Int> ColorIndex;
+        typedef GL::Attribute<0, Vector2> Position;
+        typedef GL::Attribute<1, Vector4> EdgeDistance;
+        typedef GL::Attribute<2, Vector4> Rect;
+        typedef GL::Attribute<3, Int> ColorIndex;
 
-        AbstractQuadShader& bindCornerTexture(Texture2D& texture);
+        AbstractQuadShader& bindCornerTexture(GL::Texture2D& texture);
 };
 
 class MAGNUM_UI_EXPORT BackgroundShader: public AbstractQuadShader {
     public:
         explicit BackgroundShader();
 
-        BackgroundShader& bindCornerTexture(Texture2D& texture) {
+        BackgroundShader& bindCornerTexture(GL::Texture2D& texture) {
             AbstractQuadShader::bindCornerTexture(texture);
             return *this;
         }
-        BackgroundShader& bindStyleBuffer(Buffer& buffer);
+        BackgroundShader& bindStyleBuffer(GL::Buffer& buffer);
 };
 
 class MAGNUM_UI_EXPORT ForegroundShader: public AbstractQuadShader {
     public:
         explicit ForegroundShader();
 
-        ForegroundShader& bindCornerTexture(Texture2D& texture) {
+        ForegroundShader& bindCornerTexture(GL::Texture2D& texture) {
             AbstractQuadShader::bindCornerTexture(texture);
             return *this;
         }
-        ForegroundShader& bindStyleBuffer(Buffer& buffer);
+        ForegroundShader& bindStyleBuffer(GL::Buffer& buffer);
 };
 
 class MAGNUM_UI_EXPORT TextShader: public AbstractUiShader {
     public:
-        typedef Attribute<0, Vector2> Position;
-        typedef Attribute<1, Vector2> TextureCoordinates;
-        typedef Attribute<2, Int> ColorIndex;
+        typedef GL::Attribute<0, Vector2> Position;
+        typedef GL::Attribute<1, Vector2> TextureCoordinates;
+        typedef GL::Attribute<2, Int> ColorIndex;
 
         explicit TextShader();
 
-        TextShader& bindGlyphCacheTexture(Texture2D& texture);
-        TextShader& bindStyleBuffer(Buffer& buffer);
+        TextShader& bindGlyphCacheTexture(GL::Texture2D& texture);
+        TextShader& bindStyleBuffer(GL::Buffer& buffer);
 };
 
 }

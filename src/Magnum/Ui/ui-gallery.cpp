@@ -27,8 +27,8 @@
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
-#include <Magnum/DefaultFramebuffer.h>
-#include <Magnum/Renderer.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Renderer.h>
 #ifndef CORRADE_TARGET_ANDROID
 #include <Magnum/Platform/Sdl2Application.h>
 #else
@@ -275,9 +275,9 @@ be one of:
         ;
 
     /* Enable blending with premultiplied alpha */
-    Renderer::enable(Renderer::Feature::Blending);
-    Renderer::setBlendFunction(Renderer::BlendFunction::One, Renderer::BlendFunction::OneMinusSourceAlpha);
-    Renderer::setBlendEquation(Renderer::BlendEquation::Add, Renderer::BlendEquation::Add);
+    GL::Renderer::enable(GL::Renderer::Feature::Blending);
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
 
     #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
     /* Have some sane speed, please */
@@ -290,7 +290,7 @@ be one of:
         style = Ui::defaultStyleConfiguration();
     else if(args.value("style") == "mcss-dark") {
         style = Ui::mcssDarkStyleConfiguration();
-        Renderer::setClearColor(0x22272e_rgbf);
+        GL::Renderer::setClearColor(0x22272e_rgbf);
     } else Debug{} << "Unrecognized --style option" << args.value("style");
 
     /* Create the UI. It should get at least some screen space, but also
@@ -324,7 +324,7 @@ be one of:
 }
 
 void Gallery::drawEvent() {
-    defaultFramebuffer.clear(FramebufferClear::Color|FramebufferClear::Depth);
+    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
 
     _ui->draw();
 

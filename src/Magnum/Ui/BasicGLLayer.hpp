@@ -37,11 +37,11 @@
 
 namespace Magnum { namespace Ui {
 
-template<class VertexData> BasicGLLayer<VertexData>::BasicGLLayer(): _buffer{Buffer::TargetHint::Array} {}
+template<class VertexData> BasicGLLayer<VertexData>::BasicGLLayer(): _buffer{GL::Buffer::TargetHint::Array} {}
 
 template<class VertexData> BasicGLLayer<VertexData>::~BasicGLLayer() = default;
 
-template<class VertexData> void BasicGLLayer<VertexData>::reset(const std::size_t elementCapacity, const std::size_t dataCapacity, const BufferUsage usage) {
+template<class VertexData> void BasicGLLayer<VertexData>::reset(const std::size_t elementCapacity, const std::size_t dataCapacity, const GL::BufferUsage usage) {
     /* Reallocate the buffer, if needed */
     if(dataCapacity > this->capacity())
         _buffer.setData({nullptr, sizeof(VertexData)*dataCapacity}, usage);
@@ -60,7 +60,7 @@ template<class VertexData> void BasicGLLayer<VertexData>::update() {
     /* Upload modified vertex data */
     const Math::Range1D<std::size_t> modifiedBytes = this->modified().scaled(sizeof(VertexData));
     #ifndef MAGNUM_TARGET_WEBGL
-    const auto bufferData = Containers::arrayCast<VertexData>(_buffer.map(modifiedBytes.min()[0], modifiedBytes.size()[0], Buffer::MapFlag::Write|Buffer::MapFlag::InvalidateRange));
+    const auto bufferData = Containers::arrayCast<VertexData>(_buffer.map(modifiedBytes.min()[0], modifiedBytes.size()[0], GL::Buffer::MapFlag::Write|GL::Buffer::MapFlag::InvalidateRange));
     std::uninitialized_copy(this->data() + std::size_t{this->modified().min()[0]},
                             this->data() + std::size_t{this->modified().max()[0]}, bufferData.begin());
     _buffer.unmap();

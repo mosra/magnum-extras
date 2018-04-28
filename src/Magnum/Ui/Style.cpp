@@ -26,10 +26,10 @@
 #include "Style.h"
 
 #include <Corrade/Utility/Resource.h>
-#include <Magnum/Buffer.h>
-#include <Magnum/Shader.h>
-#include <Magnum/Texture.h>
-#include <Magnum/Version.h>
+#include <Magnum/GL/Buffer.h>
+#include <Magnum/GL/Shader.h>
+#include <Magnum/GL/Texture.h>
+#include <Magnum/GL/Version.h>
 
 #include "Magnum/Ui/Widget.h"
 
@@ -946,15 +946,15 @@ StyleConfiguration mcssDarkStyleConfiguration() {
         .setBackgroundColor(Ui::Type::Modal, Ui::Style::Info, Ui::State::Default, 0x2a4f70ff_rgbaf*0.8f);
 }
 
-void StyleConfiguration::pack(Buffer& backgroundUniforms, Buffer& foregroundUniforms, Buffer& textUniforms) const {
-    backgroundUniforms.setData({&_background, 1}, BufferUsage::StaticDraw);
-    foregroundUniforms.setData({&_foreground, 1}, BufferUsage::StaticDraw);
-    textUniforms.setData({&_text, 1}, BufferUsage::StaticDraw);
+void StyleConfiguration::pack(GL::Buffer& backgroundUniforms, GL::Buffer& foregroundUniforms, GL::Buffer& textUniforms) const {
+    backgroundUniforms.setData({&_background, 1}, GL::BufferUsage::StaticDraw);
+    foregroundUniforms.setData({&_foreground, 1}, GL::BufferUsage::StaticDraw);
+    textUniforms.setData({&_text, 1}, GL::BufferUsage::StaticDraw);
 }
 
 namespace Implementation {
 
-AbstractQuadShader& AbstractQuadShader::bindCornerTexture(Texture2D& texture) {
+AbstractQuadShader& AbstractQuadShader::bindCornerTexture(GL::Texture2D& texture) {
     texture.bind(0);
     return *this;
 }
@@ -967,26 +967,26 @@ BackgroundShader::BackgroundShader() {
 
     Utility::Resource rs{"MagnumUi"};
 
-    Shader vert{
+    GL::Shader vert{
         #ifndef MAGNUM_TARGET_GLES
-        Version::GL330,
+        GL::Version::GL330,
         #else
-        Version::GLES300,
+        GL::Version::GLES300,
         #endif
-        Shader::Type::Vertex};
-    Shader frag{
+        GL::Shader::Type::Vertex};
+    GL::Shader frag{
         #ifndef MAGNUM_TARGET_GLES
-        Version::GL330,
+        GL::Version::GL330,
         #else
-        Version::GLES300,
+        GL::Version::GLES300,
         #endif
-        Shader::Type::Fragment};
+        GL::Shader::Type::Fragment};
     vert.addSource("#define BACKGROUND_COLOR_COUNT " + std::to_string(Implementation::BackgroundColorCount) + "\n");
     frag.addSource("#define BACKGROUND_COLOR_COUNT " + std::to_string(Implementation::BackgroundColorCount) + "\n");
     vert.addSource(rs.get("BackgroundShader.vert"));
     frag.addSource(rs.get("BackgroundShader.frag"));
 
-    CORRADE_INTERNAL_ASSERT(Shader::compile({vert, frag}));
+    CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
@@ -996,8 +996,8 @@ BackgroundShader::BackgroundShader() {
     _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix");
 }
 
-BackgroundShader& BackgroundShader::bindStyleBuffer(Buffer& buffer) {
-    buffer.bind(Buffer::Target::Uniform, 0);
+BackgroundShader& BackgroundShader::bindStyleBuffer(GL::Buffer& buffer) {
+    buffer.bind(GL::Buffer::Target::Uniform, 0);
     return *this;
 }
 
@@ -1009,26 +1009,26 @@ ForegroundShader::ForegroundShader() {
 
     Utility::Resource rs{"MagnumUi"};
 
-    Shader vert{
+    GL::Shader vert{
         #ifndef MAGNUM_TARGET_GLES
-        Version::GL330,
+        GL::Version::GL330,
         #else
-        Version::GLES300,
+        GL::Version::GLES300,
         #endif
-        Shader::Type::Vertex};
-    Shader frag{
+        GL::Shader::Type::Vertex};
+    GL::Shader frag{
         #ifndef MAGNUM_TARGET_GLES
-        Version::GL330,
+        GL::Version::GL330,
         #else
-        Version::GLES300,
+        GL::Version::GLES300,
         #endif
-        Shader::Type::Fragment};
+        GL::Shader::Type::Fragment};
     vert.addSource("#define FOREGROUND_COLOR_COUNT " + std::to_string(Implementation::ForegroundColorCount) + "\n");
     frag.addSource("#define FOREGROUND_COLOR_COUNT " + std::to_string(Implementation::ForegroundColorCount) + "\n");
     vert.addSource(rs.get("ForegroundShader.vert"));
     frag.addSource(rs.get("ForegroundShader.frag"));
 
-    CORRADE_INTERNAL_ASSERT(Shader::compile({vert, frag}));
+    CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
@@ -1038,8 +1038,8 @@ ForegroundShader::ForegroundShader() {
     _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix");
 }
 
-ForegroundShader& ForegroundShader::bindStyleBuffer(Buffer& buffer) {
-    buffer.bind(Buffer::Target::Uniform, 1);
+ForegroundShader& ForegroundShader::bindStyleBuffer(GL::Buffer& buffer) {
+    buffer.bind(GL::Buffer::Target::Uniform, 1);
     return *this;
 }
 
@@ -1051,25 +1051,25 @@ TextShader::TextShader() {
 
     Utility::Resource rs{"MagnumUi"};
 
-    Shader vert{
+    GL::Shader vert{
         #ifndef MAGNUM_TARGET_GLES
-        Version::GL330,
+        GL::Version::GL330,
         #else
-        Version::GLES300,
+        GL::Version::GLES300,
         #endif
-        Shader::Type::Vertex};
-    Shader frag{
+        GL::Shader::Type::Vertex};
+    GL::Shader frag{
         #ifndef MAGNUM_TARGET_GLES
-        Version::GL330,
+        GL::Version::GL330,
         #else
-        Version::GLES300,
+        GL::Version::GLES300,
         #endif
-        Shader::Type::Fragment};
+        GL::Shader::Type::Fragment};
     vert.addSource(rs.get("TextShader.vert"));
     frag.addSource("#define TEXT_COLOR_COUNT " + std::to_string(Implementation::TextColorCount) + "\n");
     frag.addSource(rs.get("TextShader.frag"));
 
-    CORRADE_INTERNAL_ASSERT(Shader::compile({vert, frag}));
+    CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
@@ -1079,13 +1079,13 @@ TextShader::TextShader() {
     setUniform(uniformLocation("textureData"), 1);
 }
 
-TextShader& TextShader::bindGlyphCacheTexture(Texture2D& texture) {
+TextShader& TextShader::bindGlyphCacheTexture(GL::Texture2D& texture) {
     texture.bind(1);
     return *this;
 }
 
-TextShader& TextShader::bindStyleBuffer(Buffer& buffer) {
-    buffer.bind(Buffer::Target::Uniform, 2);
+TextShader& TextShader::bindStyleBuffer(GL::Buffer& buffer) {
+    buffer.bind(GL::Buffer::Target::Uniform, 2);
     return *this;
 }
 

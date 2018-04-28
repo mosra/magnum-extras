@@ -29,8 +29,8 @@
  * @brief Class @ref Magnum::Ui::BasicGLLayer
  */
 
-#include <Magnum/Buffer.h>
-#include <Magnum/Mesh.h>
+#include <Magnum/GL/Buffer.h>
+#include <Magnum/GL/Mesh.h>
 
 #include "Magnum/Ui/BasicLayer.h"
 
@@ -49,10 +49,10 @@ template<class VertexData> class BasicGLLayer: public BasicLayer<VertexData> {
         ~BasicGLLayer();
 
         /** @brief Vertex data buffer */
-        Buffer& buffer() { return _buffer; }
+        GL::Buffer& buffer() { return _buffer; }
 
         /** @brief Layer mesh */
-        Mesh& mesh() { return _mesh; }
+        GL::Mesh& mesh() { return _mesh; }
 
         /**
          * @brief Reset the layer
@@ -62,7 +62,7 @@ template<class VertexData> class BasicGLLayer: public BasicLayer<VertexData> {
          * has been set before. If current memory capacity is larger or equal
          * to @p elementCapacity/@p capacity, no reallocation is done.
          */
-        void reset(std::size_t elementCapacity, std::size_t dataCapacity, BufferUsage usage);
+        void reset(std::size_t elementCapacity, std::size_t dataCapacity, GL::BufferUsage usage);
 
         /**
          * @brief Update a layer
@@ -78,8 +78,8 @@ template<class VertexData> class BasicGLLayer: public BasicLayer<VertexData> {
         void draw(AbstractUiShader& shader);
 
     private:
-        Buffer _buffer;
-        Mesh _mesh;
+        GL::Buffer _buffer;
+        GL::Mesh _mesh;
 };
 
 }}

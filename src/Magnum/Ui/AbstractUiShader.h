@@ -29,7 +29,7 @@
  * @brief Class @ref Magnum::Ui::AbstractUiShader
  */
 
-#include <Magnum/AbstractShaderProgram.h>
+#include <Magnum/GL/AbstractShaderProgram.h>
 #include <Magnum/Math/Matrix3.h>
 
 namespace Magnum { namespace Ui {
@@ -39,7 +39,7 @@ namespace Magnum { namespace Ui {
 
 @experimental
 */
-class AbstractUiShader: public AbstractShaderProgram {
+class AbstractUiShader: public GL::AbstractShaderProgram {
     public:
         /**
          * @brief Set transformation and projection matrix

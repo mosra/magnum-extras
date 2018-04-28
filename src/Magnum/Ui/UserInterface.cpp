@@ -29,7 +29,7 @@
 #include <Corrade/PluginManager/Manager.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
-#include <Magnum/TextureFormat.h>
+#include <Magnum/GL/TextureFormat.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/GlyphCache.h>
 
@@ -44,11 +44,11 @@ namespace {
 
 UserInterface::UserInterface(NoCreateT, const Vector2& size, const Vector2i& screenSize):
     BasicUserInterface<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer>(size, screenSize),
-    _backgroundUniforms{Buffer::TargetHint::Uniform},
-    _foregroundUniforms{Buffer::TargetHint::Uniform},
-    _textUniforms{Buffer::TargetHint::Uniform},
-    _quadVertices{Buffer::TargetHint::Array},
-    _quadIndices{Buffer::TargetHint::ElementArray}
+    _backgroundUniforms{GL::Buffer::TargetHint::Uniform},
+    _foregroundUniforms{GL::Buffer::TargetHint::Uniform},
+    _textUniforms{GL::Buffer::TargetHint::Uniform},
+    _quadVertices{GL::Buffer::TargetHint::Array},
+    _quadIndices{GL::Buffer::TargetHint::ElementArray}
 {
     /* Prepare quad vertices */
     /** @todo make this a shader constant and use gl_VertexId */
@@ -62,7 +62,7 @@ UserInterface::UserInterface(NoCreateT, const Vector2& size, const Vector2i& scr
         {{0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
         {{1.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 0.0f}},
         {{1.0f, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}}};
-    _quadVertices.setData(vertexData, BufferUsage::StaticDraw);
+    _quadVertices.setData(vertexData, GL::BufferUsage::StaticDraw);
 
     /* Prepare quad indices */
     Containers::Array<UnsignedShort> data{Containers::NoInit, IndexCount*6};
@@ -79,7 +79,7 @@ UserInterface::UserInterface(NoCreateT, const Vector2& size, const Vector2i& scr
         data[i*6 + 4] = i*4 + 3;
         data[i*6 + 5] = i*4 + 2;
     }
-    _quadIndices.setData(data, BufferUsage::StaticDraw);
+    _quadIndices.setData(data, GL::BufferUsage::StaticDraw);
 
     /* Prepare corner texture */
     Containers::StaticArray<32*32, UnsignedByte> corner;
@@ -87,11 +87,11 @@ UserInterface::UserInterface(NoCreateT, const Vector2& size, const Vector2i& scr
         for(std::size_t x = 0; x != 32; ++x)
             corner[y*32 + x] = 255*Math::max(0.0f, 1.0f - Vector2(x, y).length()/31.0f);
     _corner
-        .setMinificationFilter(Sampler::Filter::Linear)
-        .setMagnificationFilter(Sampler::Filter::Linear)
-        .setWrapping(Sampler::Wrapping::ClampToEdge)
-        .setStorage(1, TextureFormat::R8, {32, 32})
-        .setSubImage(0, {}, ImageView2D{PixelFormat::Red, PixelType::UnsignedByte, {32, 32}, Containers::ArrayView<const void>(corner)});
+        .setMinificationFilter(GL::SamplerFilter::Linear)
+        .setMagnificationFilter(GL::SamplerFilter::Linear)
+        .setWrapping(GL::SamplerWrapping::ClampToEdge)
+        .setStorage(1, GL::TextureFormat::R8, {32, 32})
+        .setSubImage(0, {}, ImageView2D{PixelFormat::R8Unorm, {32, 32}, Containers::ArrayView<const void>(corner)});
 }
 
 struct UserInterface::FontState {

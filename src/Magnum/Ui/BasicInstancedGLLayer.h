@@ -29,8 +29,8 @@
  * @brief Class @ref Magnum::Ui::BasicInstancedGLLayer
  */
 
-#include <Magnum/Buffer.h>
-#include <Magnum/Mesh.h>
+#include <Magnum/GL/Buffer.h>
+#include <Magnum/GL/Mesh.h>
 
 #include "Magnum/Ui/BasicInstancedLayer.h"
 
@@ -49,10 +49,10 @@ template<class InstanceData> class BasicInstancedGLLayer: public BasicInstancedL
         ~BasicInstancedGLLayer();
 
         /** @brief Instance data buffer */
-        Buffer& buffer() { return _buffer; }
+        GL::Buffer& buffer() { return _buffer; }
 
         /** @brief Layer mesh */
-        Mesh& mesh() { return _mesh; }
+        GL::Mesh& mesh() { return _mesh; }
 
         /**
          * @brief Reset the layer
@@ -62,7 +62,7 @@ template<class InstanceData> class BasicInstancedGLLayer: public BasicInstancedL
          * memory capacity is larger or equal to @p capacity, no reallocation
          * is done.
          */
-        void reset(std::size_t capacity, BufferUsage usage);
+        void reset(std::size_t capacity, GL::BufferUsage usage);
 
         /**
          * @brief Update the layer
@@ -78,8 +78,8 @@ template<class InstanceData> class BasicInstancedGLLayer: public BasicInstancedL
         void draw(AbstractUiShader& shader);
 
     private:
-        Buffer _buffer;
-        Mesh _mesh;
+        GL::Buffer _buffer;
+        GL::Mesh _mesh;
 };
 
 }}
