@@ -13,6 +13,7 @@
 # This command alone is useless without specifying the components:
 #
 #  Ui                       - Ui library
+#  ui-gallery               - magnum-ui-gallery executable
 #
 # Example usage with specifying additional components is:
 #
@@ -66,26 +67,22 @@
 # Corrade library dependencies
 set(_MAGNUMEXTRAS_CORRADE_DEPENDENCIES )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
-    string(TOUPPER ${_component} _COMPONENT)
-
     if(_component STREQUAL Ui)
-        set(_MAGNUMEXTRAS_${_COMPONENT}_CORRADE_DEPENDENCIES Interconnect)
+        set(_MAGNUMEXTRAS_${_component}_CORRADE_DEPENDENCIES Interconnect)
     endif()
 
-    list(APPEND _MAGNUMEXTRAS_CORRADE_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_CORRADE_DEPENDENCIES})
+    list(APPEND _MAGNUMEXTRAS_CORRADE_DEPENDENCIES ${_MAGNUMEXTRAS_${_component}_CORRADE_DEPENDENCIES})
 endforeach()
 find_package(Corrade REQUIRED ${_MAGNUMEXTRAS_CORRADE_DEPENDENCIES})
 
 # Magnum library dependencies
 set(_MAGNUMEXTRAS_MAGNUM_DEPENDENCIES )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
-    string(TOUPPER ${_component} _COMPONENT)
-
     if(_component STREQUAL Ui)
-        set(_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES Text)
+        set(_MAGNUMEXTRAS_${_component}_MAGNUM_DEPENDENCIES Text GL)
     endif()
 
-    list(APPEND _MAGNUMEXTRAS_MAGNUM_DEPENDENCIES ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES})
+    list(APPEND _MAGNUMEXTRAS_MAGNUM_DEPENDENCIES ${_MAGNUMEXTRAS_${_component}_MAGNUM_DEPENDENCIES})
 endforeach()
 find_package(Magnum REQUIRED ${_MAGNUMEXTRAS_MAGNUM_DEPENDENCIES})
 
@@ -94,21 +91,25 @@ find_path(MAGNUMEXTRAS_INCLUDE_DIR Magnum
     HINTS ${MAGNUM_INCLUDE_DIR})
 mark_as_advanced(MAGNUMEXTRAS_INCLUDE_DIR)
 
+# Component distinction (listing them explicitly to avoid mistakes with finding
+# components from other repositories)
+set(_MAGNUMEXTRAS_LIBRARY_COMPONENT_LIST Ui)
+set(_MAGNUMEXTRAS_EXECUTABLE_COMPONENT_LIST ui-gallery)
+
+# Inter-component dependencies
+set(_MAGNUMEXTRAS_ui-gallery_DEPENDENCIES Ui)
+
 # Ensure that all inter-component dependencies are specified as well
 set(_MAGNUMEXTRAS_ADDITIONAL_COMPONENTS )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
-    string(TOUPPER ${_component} _COMPONENT)
-
-    # (no inter-component dependencies yet)
-
     # Mark the dependencies as required if the component is also required
     if(MagnumExtras_FIND_REQUIRED_${_component})
-        foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_DEPENDENCIES})
+        foreach(_dependency ${_MAGNUMEXTRAS_${_component}_DEPENDENCIES})
             set(MagnumExtras_FIND_REQUIRED_${_dependency} TRUE)
         endforeach()
     endif()
 
-    list(APPEND _MAGNUMEXTRAS_ADDITIONAL_COMPONENTS ${_MAGNUMEXTRAS_${_COMPONENT}_DEPENDENCIES})
+    list(APPEND _MAGNUMEXTRAS_ADDITIONAL_COMPONENTS ${_MAGNUMEXTRAS_${_component}_DEPENDENCIES})
 endforeach()
 
 # Join the lists, remove duplicate components
@@ -119,9 +120,12 @@ if(MagnumExtras_FIND_COMPONENTS)
     list(REMOVE_DUPLICATES MagnumExtras_FIND_COMPONENTS)
 endif()
 
-# Component distinction (listing them explicitly to avoid mistakes with finding
-# components from other repositories)
-set(_MAGNUMEXTRAS_LIBRARY_COMPONENTS "^(Ui)$")
+# Convert components lists to regular expressions so I can use if(MATCHES).
+# TODO: Drop this once CMake 3.3 and if(IN_LIST) can be used
+foreach(_WHAT LIBRARY EXECUTABLE)
+    string(REPLACE ";" "|" _MAGNUMEXTRAS_${_WHAT}_COMPONENTS "${_MAGNUMEXTRAS_${_WHAT}_COMPONENT_LIST}")
+    set(_MAGNUMEXTRAS_${_WHAT}_COMPONENTS "^(${_MAGNUMEXTRAS_${_WHAT}_COMPONENTS})$")
+endforeach()
 
 # Additional components
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
@@ -158,6 +162,19 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
             endif()
         endif()
 
+        # Executables
+        if(_component MATCHES ${_MAGNUMEXTRAS_EXECUTABLE_COMPONENTS})
+            add_executable(MagnumExtras::${_component} IMPORTED)
+
+            find_program(MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE magnum-${_component})
+            mark_as_advanced(MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE)
+
+            if(MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE)
+                set_property(TARGET MagnumExtras::${_component} PROPERTY
+                    IMPORTED_LOCATION ${MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE})
+            endif()
+        endif()
+
         # No special setup required for Ui library
 
         # Find library includes
@@ -170,26 +187,26 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
         if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS})
             # Link to Corrade dependencies, link to core Magnum library and
             # other Magnum dependencies
-            foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_CORRADE_DEPENDENCIES})
+            foreach(_dependency ${_MAGNUMEXTRAS_${_component}_CORRADE_DEPENDENCIES})
                 set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
                     INTERFACE_LINK_LIBRARIES Corrade::${_dependency})
             endforeach()
             set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
                 INTERFACE_LINK_LIBRARIES Magnum::Magnum)
-            foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_MAGNUM_DEPENDENCIES})
+            foreach(_dependency ${_MAGNUMEXTRAS_${_component}_MAGNUM_DEPENDENCIES})
                 set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
                     INTERFACE_LINK_LIBRARIES Magnum::${_dependency})
             endforeach()
 
             # Add inter-project dependencies
-            foreach(_dependency ${_MAGNUMEXTRAS_${_COMPONENT}_DEPENDENCIES})
+            foreach(_dependency ${_MAGNUMEXTRAS_${_component}_DEPENDENCIES})
                 set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
                     INTERFACE_LINK_LIBRARIES MagnumExtras::${_dependency})
             endforeach()
         endif()
 
         # Decide if the library was found
-        if(_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS} AND _MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR AND (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG OR MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE))
+        if((_component MATCHES ${_MAGNUMEXTRAS_LIBRARY_COMPONENTS} AND _MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR AND (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG OR MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)) OR (_component MATCHES ${_MAGNUMEXTRAS_EXECUTABLE_COMPONENTS} AND MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE))
             set(MagnumExtras_${_component}_FOUND TRUE)
         else()
             set(MagnumExtras_${_component}_FOUND FALSE)
