@@ -1,5 +1,3 @@
-#ifndef Magnum_Ui_visibility_h
-#define Magnum_Ui_visibility_h
 /*
     This file is part of Magnum.
 
@@ -25,24 +23,5 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <Corrade/Utility/VisibilityMacros.h>
+#cmakedefine MAGNUM_UI_BUILD_STATIC
 
-#include "Magnum/configure.h"
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-#ifndef MAGNUM_UI_BUILD_STATIC
-    #ifdef MagnumUi_EXPORTS
-        #define MAGNUM_UI_EXPORT CORRADE_VISIBILITY_EXPORT
-    #else
-        #define MAGNUM_UI_EXPORT CORRADE_VISIBILITY_IMPORT
-    #endif
-#else
-    #define MAGNUM_UI_EXPORT CORRADE_VISIBILITY_STATIC
-#endif
-#define MAGNUM_UI_LOCAL CORRADE_VISIBILITY_LOCAL
-#else
-#define MAGNUM_UI_EXPORT
-#define MAGNUM_UI_LOCAL
-#endif
-
-#endif

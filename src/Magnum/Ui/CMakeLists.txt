@@ -26,6 +26,13 @@
 find_package(Corrade REQUIRED Interconnect)
 find_package(Magnum REQUIRED GL Text)
 
+if(BUILD_STATIC)
+    set(MAGNUM_UI_BUILD_STATIC 1)
+endif()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
+
 set(MagnumUi_SRCS
     Anchor.cpp
     BasicPlane.cpp
@@ -79,7 +86,8 @@ add_library(MagnumUi ${SHARED_OR_STATIC}
     ${MagnumUi_HEADERS}
     ${MagnumUi_RESOURCES})
 target_include_directories(MagnumUi PUBLIC
-    ${PROJECT_SOURCE_DIR}/src)
+    ${PROJECT_SOURCE_DIR}/src
+    ${PROJECT_BINARY_DIR}/src)
 set_target_properties(MagnumUi PROPERTIES
     DEBUG_POSTFIX "-d"
     FOLDER "Magnum/Ui")
@@ -99,6 +107,7 @@ install(TARGETS MagnumUi
     LIBRARY DESTINATION ${MAGNUM_LIBRARY_INSTALL_DIR}
     ARCHIVE DESTINATION ${MAGNUM_LIBRARY_INSTALL_DIR})
 install(FILES ${MagnumUi_HEADERS} DESTINATION ${MAGNUM_INCLUDE_INSTALL_DIR}/Ui)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/configure.h DESTINATION ${MAGNUM_INCLUDE_INSTALL_DIR}/Ui)
 
 # Magnum Ui target alias for superprojects
 add_library(MagnumExtras::Ui ALIAS MagnumUi)
