@@ -49,6 +49,8 @@ Released 2018-05-01, tagged as
     (see [mosra/magnum#237](https://github.com/mosra/magnum/issues/237))
 -   By mistake it was not possible to control static build of the @ref Ui
     library independently on the core Magnum libraries
+-   Homebrew macOS packages were updated to install the stable version by
+    default
 -   Fixed the Debian package to not include a revision. While just a warning on
     Ubuntu, it's a hard error on Debian. (See [mosra/corrade#44](https://github.com/mosra/corrade/issues/44).)
 
