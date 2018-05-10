@@ -30,7 +30,7 @@ layout(std140) uniform Style {
 
 #define cornerRadius noneCornerRadiusNoneSmoothnessOut.y
 
-uniform mediump mat3 transformationProjectionMatrix;
+uniform mediump mat4 transformationProjectionMatrix;
 
 layout(location = 0) in mediump vec2 vertexPosition;
 layout(location = 1) in mediump vec4 edgeDistance;
@@ -52,5 +52,5 @@ void main() {
 
     mediump vec2 position = rect.xy + vertexPosition*rectSize;
 
-    gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
+    gl_Position = transformationProjectionMatrix*vec4(position, 0.0, 1.0);
 }

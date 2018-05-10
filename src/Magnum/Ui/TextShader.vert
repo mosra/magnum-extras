@@ -23,7 +23,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-uniform mediump mat3 transformationProjectionMatrix;
+uniform mediump mat4 transformationProjectionMatrix;
 
 layout(location = 0) in mediump vec4 position;
 layout(location = 1) in mediump vec2 textureCoordinates;
@@ -36,5 +36,5 @@ void main() {
     fragmentColorIndex = colorIndex;
     fragmentTextureCoordinates = textureCoordinates;
 
-    gl_Position = vec4(transformationProjectionMatrix*position.xyw, 0.0).xywz;
+    gl_Position = transformationProjectionMatrix*position;
 }

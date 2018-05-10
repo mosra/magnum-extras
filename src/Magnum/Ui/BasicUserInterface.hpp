@@ -41,7 +41,7 @@ template<class ...Layers> void BasicUserInterface<Layers...>::update() {
 }
 
 template<class ...Layers> void BasicUserInterface<Layers...>::draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
-    const Matrix3 projectionMatrix = Matrix3::scaling(2.0f/_size)*Matrix3::translation(-_size/2);
+    const Matrix4 projectionMatrix = Matrix4::scaling(Vector3{2.0f/_size, 1.0f})*Matrix4::translation(Vector3{-_size/2, 0.0f});
     for(AbstractPlane& plane: *this) {
         /* Ignore all hidden planes in the back, draw back-to-front */
         if(plane.flags() & PlaneFlag::Hidden) continue;
