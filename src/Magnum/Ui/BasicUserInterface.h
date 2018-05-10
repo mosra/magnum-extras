@@ -35,6 +35,7 @@
 #include <Corrade/Containers/LinkedList.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Range.h>
+#include <Magnum/Math/Matrix4.h>
 
 #include "Magnum/Ui/Ui.h"
 #include "Magnum/Ui/visibility.h"
@@ -79,6 +80,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<Abs
         /** @brief Handle application mouse release event */
         bool handleReleaseEvent(const Vector2i& screenPosition);
 
+        /** @brief Set view projection matrix */
+        void setViewProjectionMatrix(const Matrix4& viewProjection) {
+            _viewProjection = viewProjection;
+        }
+
     private:
         #ifndef DOXYGEN_GENERATING_OUTPUT /* https://bugzilla.gnome.org/show_bug.cgi?id=776986 */
         friend Containers::LinkedList<AbstractPlane>;
@@ -93,6 +99,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<Abs
 
         Vector2 _size;
         Vector2 _coordinateScaling;
+        Matrix4 _viewProjection;
 };
 
 /**

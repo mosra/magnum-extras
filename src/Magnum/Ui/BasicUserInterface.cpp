@@ -31,7 +31,7 @@
 
 namespace Magnum { namespace Ui {
 
-AbstractUserInterface::AbstractUserInterface(const Vector2& size, const Vector2i& screenSize): _size{size}, _coordinateScaling{size/Vector2{screenSize}} {}
+AbstractUserInterface::AbstractUserInterface(const Vector2& size, const Vector2i& screenSize): _size{size}, _coordinateScaling{size/Vector2{screenSize}}, _viewProjection{} {}
 
 AbstractUserInterface::~AbstractUserInterface() = default;
 
