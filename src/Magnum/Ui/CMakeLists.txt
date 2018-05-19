@@ -26,6 +26,10 @@
 find_package(Corrade REQUIRED Interconnect)
 find_package(Magnum REQUIRED GL Text)
 
+if(MAGNUM_TARGET_GLES2)
+    message(FATAL_ERROR "Magnum::Ui doesn't work on OpenGL ES 2.0 or WebGL 1.0 builds at the moment. Switch to ES 3 or WebGL 2 if you want to use it.")
+endif()
+
 if(BUILD_STATIC)
     set(MAGNUM_UI_BUILD_STATIC 1)
 endif()
