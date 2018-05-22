@@ -30,7 +30,7 @@
  */
 
 #include <Magnum/GL/AbstractShaderProgram.h>
-#include <Magnum/Math/Matrix3.h>
+#include <Magnum/Math/Matrix4.h>
 
 namespace Magnum { namespace Ui {
 
@@ -45,7 +45,7 @@ class AbstractUiShader: public GL::AbstractShaderProgram {
          * @brief Set transformation and projection matrix
          * @return Reference to self (for method chaining)
          */
-        AbstractUiShader& setTransformationProjectionMatrix(const Matrix3& matrix) {
+        AbstractUiShader& setTransformationProjectionMatrix(const Matrix4& matrix) {
             setUniform(_transformationProjectionMatrixUniform, matrix);
             return *this;
         }

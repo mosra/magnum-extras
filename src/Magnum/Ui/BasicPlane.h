@@ -295,9 +295,9 @@ template<class ...Layers> class BasicPlane: public AbstractPlane {
         template<std::size_t i> void updateInternal(std::integral_constant<std::size_t, i>);
         void updateInternal(std::integral_constant<std::size_t, sizeof...(Layers)>) {}
 
-        void draw(const Matrix3& projectionMatrix, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders);
-        template<std::size_t i> void drawInternal(const Matrix3& transformationProjectionMatrix, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders, std::integral_constant<std::size_t, i>);
-        void drawInternal(const Matrix3&, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>&, std::integral_constant<std::size_t, sizeof...(Layers)>) {}
+        void draw(const Matrix4& projectionMatrix, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders);
+        template<std::size_t i> void drawInternal(const Matrix4& transformationProjectionMatrix, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders, std::integral_constant<std::size_t, i>);
+        void drawInternal(const Matrix4&, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>&, std::integral_constant<std::size_t, sizeof...(Layers)>) {}
 
         std::tuple<Layers&...> _layers;
 };
