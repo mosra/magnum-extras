@@ -30,6 +30,16 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
+@section changelog-extras-latest Changes since 2018.04
+
+@subsection changelog-extras-latest-buildsystem Build system
+
+-   Provide a better error when trying to build the @ref Ui library on OpenGL
+    ES 2.0 / WebGL 1.0 --- before it failed somewhere deep with no clear
+    relation to requiring ES3 features.
+-   There's now a PPA for Ubuntu packages. See @ref building-extras-packages-deb
+    for more information.
+
 @section changelog-extras-2018-04 2018.04
 
 Released 2018-05-01, tagged as
