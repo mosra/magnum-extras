@@ -24,4 +24,3 @@
 */
 
 #cmakedefine MAGNUM_UI_BUILD_STATIC
-
