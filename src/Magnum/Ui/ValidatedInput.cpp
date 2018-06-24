@@ -25,6 +25,11 @@
 
 #include "ValidatedInput.h"
 
+#ifdef CORRADE_MSVC2017_COMPATIBILITY
+#include "Magnum/Ui/BasicUserInterface.h"
+#include "Magnum/Ui/Plane.h"
+#endif
+
 namespace Magnum { namespace Ui {
 
 bool ValidatedInput::allValid(std::initializer_list<std::reference_wrapper<const ValidatedInput>> inputs) {
@@ -34,9 +39,10 @@ bool ValidatedInput::allValid(std::initializer_list<std::reference_wrapper<const
 
 ValidatedInput::ValidatedInput(Plane& plane, const Anchor& anchor, const std::regex& validator, std::string value, const std::size_t maxValueSize, const Style style):
     #ifdef CORRADE_MSVC2017_COMPATIBILITY
-    /* This gets never called and is here only because of that virtual base. So
-       we might as well blow up if it ever gets here. I feel awful for this. */
-    Widget{*static_cast<AbstractPlane*>(nullptr), anchor, {}},
+    /* For some reason this is needed because of the virtual inheritance hack.
+       Before I was passing *static_cast<AbstractPlane*>(nullptr) here but that
+       blew up. Not doing that anymore, no. */
+    Widget{plane, anchor},
     #endif
     Input{plane, anchor, std::move(value), maxValueSize, style},
     _validator{validator}
