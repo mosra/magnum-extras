@@ -248,7 +248,7 @@ template<class ...Layers> class BasicPlane: public AbstractPlane {
          * added as hidden.
          * @see @ref BasicUserInterface::activePlane()
          */
-        explicit BasicPlane(BasicUserInterface<Layers...>& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin, Layers&... layers): AbstractPlane{ui, anchor, padding, margin}, _layers{layers...} {}
+        explicit BasicPlane(BasicUserInterface<Layers...>& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin, Layers&... layers);
 
         /** @brief User interface this plane is part of */
         BasicUserInterface<Layers...>& ui();

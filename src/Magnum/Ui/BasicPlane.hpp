@@ -32,9 +32,12 @@
 #include "BasicPlane.h"
 
 #include "Magnum/Ui/AbstractUiShader.h"
+#include "Magnum/Ui/BasicUserInterface.h"
 #include "Magnum/Ui/Widget.h"
 
 namespace Magnum { namespace Ui {
+
+template<class ...Layers> BasicPlane<Layers...>::BasicPlane(BasicUserInterface<Layers...>& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin, Layers&... layers): AbstractPlane{ui, anchor, padding, margin}, _layers{layers...} {}
 
 template<class ...Layers> BasicPlane<Layers...>::~BasicPlane() = default;
 
