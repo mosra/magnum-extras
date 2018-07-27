@@ -34,6 +34,8 @@ namespace Magnum {
 
 @subsection changelog-extras-latest-new New features
 
+-   New @ref magnum-player "magnum-player" app for previewing, playing back and
+    inspecting animated scene files
 -   Rudimentary support for user interface relayouting using
     @ref Ui::UserInterface::relayout()
 

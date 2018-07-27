@@ -23,26 +23,24 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
-# On MSVC remove /W3, as we are replacing it with /W4
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
-    string(REPLACE "/W3" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endif()
+find_package(Magnum REQUIRED
+    GL
+    MeshTools
+    Shaders
+    SceneGraph
+    Trade
+    Sdl2Application)
 
-set_directory_properties(PROPERTIES
-    CORRADE_CXX_STANDARD 11
-    CORRADE_USE_PEDANTIC_FLAGS ON)
+set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
-# On Windows enable UNICODE/_UNICODE macros to avoid accidentally passing UTF-8
-# values to ANSI functions
-if(CORRADE_TARGET_WINDOWS)
-    add_definitions("-DUNICODE" "-D_UNICODE")
-endif()
+add_executable(magnum-player Player.cpp)
+target_link_libraries(magnum-player PRIVATE
+    Magnum::Application
+    Magnum::GL
+    Magnum::Magnum
+    Magnum::MeshTools
+    Magnum::SceneGraph
+    Magnum::Shaders
+    Magnum::Trade)
 
-add_subdirectory(Magnum)
-
-if(WITH_PLAYER)
-    add_subdirectory(player)
-endif()
-
-# Magnum extras include dir for superprojects
-set(MAGNUMEXTRAS_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "")
+install(TARGETS magnum-player DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})

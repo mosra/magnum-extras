@@ -60,6 +60,7 @@ This command alone is useless without specifying the components:
 
 Besides libraries, the following apps are available:
 
+-   `player` --- @ref magnum-player "magnum-player" executable
 -   `ui-gallery` --- @ref magnum-ui-gallery "magnum-ui-gallery" executable
 
 Note that [each namespace](namespaces.html) contains more detailed information

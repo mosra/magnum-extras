@@ -64,6 +64,7 @@ cmake_dependent_option(BUILD_GL_TESTS "Build unit tests for OpenGL code" OFF "BU
 option(BUILD_STATIC "Build static libraries (default are dynamic)" OFF)
 cmake_dependent_option(BUILD_STATIC_PIC "Build static libraries with position-independent code" ON "BUILD_STATIC" OFF)
 
+option(WITH_PLAYER "Build the magnum-player application" OFF)
 option(WITH_UI "Build Ui library" OFF)
 cmake_dependent_option(WITH_UI_GALLERY "Build magnum-ui-gallery executable" OFF "WITH_UI" OFF)
 

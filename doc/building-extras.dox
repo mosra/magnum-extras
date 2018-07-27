@@ -249,6 +249,7 @@ By default no libraries are built and you need to select them manually:
 Besides libraries, the following apps are available, also all disabled by
 default:
 
+-   `WITH_PLAYER` -- Build the @ref magnum-player "magnum-player" executable
 -   `WITH_UI_GALLERY` --- Build the @ref magnum-ui-gallery "magnum-ui-gallery"
     executable
 
