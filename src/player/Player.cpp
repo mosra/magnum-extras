@@ -169,11 +169,19 @@ Player::Player(const Arguments& arguments):
 
         Containers::Optional<Trade::ImageData2D> imageData = importer->image2D(textureData->image());
         GL::TextureFormat format;
-        if(imageData && imageData->format() == PixelFormat::RGB8Unorm)
+        if(imageData && imageData->format() == PixelFormat::RGB8Unorm) {
+            #ifndef MAGNUM_TARGET_GLES2
             format = GL::TextureFormat::RGB8;
-        else if(imageData && imageData->format() == PixelFormat::RGBA8Unorm)
+            #else
+            format = GL::TextureFormat::RGB;
+            #endif
+        } else if(imageData && imageData->format() == PixelFormat::RGBA8Unorm) {
+            #ifndef MAGNUM_TARGET_GLES2
             format = GL::TextureFormat::RGBA8;
-        else {
+            #else
+            format = GL::TextureFormat::RGBA;
+            #endif
+        } else {
             Warning{} << "Cannot load texture image, skipping";
             continue;
         }
