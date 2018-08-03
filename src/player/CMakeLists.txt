@@ -33,6 +33,10 @@ find_package(Magnum REQUIRED
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
+if(CORRADE_TARGET_EMSCRIPTEN)
+    find_package(MagnumPlugins REQUIRED TinyGltfImporter)
+endif()
+
 add_executable(magnum-player Player.cpp)
 target_link_libraries(magnum-player PRIVATE
     Magnum::Application
@@ -42,5 +46,21 @@ target_link_libraries(magnum-player PRIVATE
     Magnum::SceneGraph
     Magnum::Shaders
     Magnum::Trade)
+if(CORRADE_TARGET_EMSCRIPTEN)
+    target_link_libraries(magnum-player PRIVATE MagnumPlugins::TinyGltfImporter)
+endif()
 
-install(TARGETS magnum-player DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
+if(CORRADE_TARGET_EMSCRIPTEN)
+    install(FILES player.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player RENAME index.html)
+    install(TARGETS magnum-player DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player)
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/magnum-player.js.mem
+        ${CMAKE_CURRENT_BINARY_DIR}/magnum-player.wasm
+        DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player OPTIONAL)
+    install(FILES
+        ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+        ${MAGNUM_WEBAPPLICATION_CSS}
+        DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player)
+else()
+    install(TARGETS magnum-player DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
+endif()

@@ -130,9 +130,11 @@ Player::Player(const Arguments& arguments):
         .setWindowFlags(Configuration::WindowFlag::Resizable)}
 {
     Utility::Arguments args;
+    #ifndef CORRADE_TARGET_EMSCRIPTEN
     args.addArgument("file").setHelp("file", "file to load")
-        .addOption("importer", "AnySceneImporter").setHelp("importer", "importer plugin to use")
-        .addSkippedPrefix("magnum").setHelp("engine-specific options")
+        .addOption("importer", "TinyGltfImporter").setHelp("importer", "importer plugin to use");
+    #endif
+    args.addSkippedPrefix("magnum").setHelp("engine-specific options")
         .setHelp("Displays a 3D scene file provided on command line.")
         .parse(arguments.argc, arguments.argv);
 
@@ -148,6 +150,7 @@ Player::Player(const Arguments& arguments):
         .setSpecularColor(0x111111_rgbf)
         .setShininess(80.0f);
 
+    #ifndef CORRADE_TARGET_EMSCRIPTEN
     /* Load a scene importer plugin */
     std::unique_ptr<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
@@ -160,6 +163,7 @@ Player::Player(const Arguments& arguments):
         std::exit(4);
 
     load(*importer);
+    #endif
 
     setSwapInterval(1);
 }
