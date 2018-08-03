@@ -43,6 +43,7 @@
 #include <Magnum/Shaders/Phong.h>
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/AnimationData.h>
+#include <Magnum/Trade/CameraData.h>
 #include <Magnum/Trade/ImageData.h>
 #include <Magnum/Trade/MeshData3D.h>
 #include <Magnum/Trade/MeshObjectData3D.h>
@@ -81,7 +82,8 @@ class Player: public Platform::Application {
         Containers::Array<Containers::Optional<GL::Texture2D>> _textures;
 
         Scene3D _scene;
-        Object3D _manipulator, _cameraObject;
+        Object3D _manipulator;
+        Object3D* _cameraObject{};
         SceneGraph::Camera3D* _camera;
         SceneGraph::DrawableGroup3D _drawables;
         Vector3 _previousPosition;
@@ -125,15 +127,6 @@ Player::Player(const Arguments& arguments):
         .addSkippedPrefix("magnum").setHelp("engine-specific options")
         .setHelp("Displays a 3D scene file provided on command line.")
         .parse(arguments.argc, arguments.argv);
-
-    /* Every scene needs a camera */
-    _cameraObject
-        .setParent(&_scene)
-        .translate(Vector3::zAxis(5.0f));
-    (*(_camera = new SceneGraph::Camera3D{_cameraObject}))
-        .setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
-        .setProjectionMatrix(Matrix4::perspectiveProjection(35.0_degf, 1.0f, 0.01f, 1000.0f))
-        .setViewport(GL::defaultFramebuffer.viewport().size());
 
     /* Base object, parent of all (for easy manipulation) */
     _manipulator.setParent(&_scene);
@@ -250,6 +243,25 @@ Player::Player(const Arguments& arguments):
     } else if(!_meshes.empty() && _meshes[0])
         new ColoredDrawable{_manipulator, _coloredShader, *_meshes[0], 0xffffff_rgbf, _drawables};
 
+    /* Create a camera object in case it wasn't present in the scene already */
+    if(!_cameraObject) {
+        _cameraObject = new Object3D{&_scene};
+        _cameraObject->translate(Vector3::zAxis(5.0f));
+    }
+
+    /* Basic camera setup */
+    (*(_camera = new SceneGraph::Camera3D{*_cameraObject}))
+        .setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
+        .setProjectionMatrix(Matrix4::perspectiveProjection(35.0_degf, 1.0f, 0.01f, 1000.0f))
+        .setViewport(GL::defaultFramebuffer.viewport().size());
+
+    /* Use the settings with parameters of the camera in the model, if any,
+       otherwise just used the hardcoded setup from above */
+    if(importer->cameraCount()) {
+        Containers::Optional<Trade::CameraData> camera = importer->camera(0);
+        if(camera) _camera->setProjectionMatrix(Matrix4::perspectiveProjection(camera->fov(), 1.0f, camera->near(), camera->far()));
+    }
+
     /* Import animations */
     for(UnsignedInt i = 0; i != importer->animationCount(); ++i) {
         Debug{} << "Importing animation" << i << importer->animationName(i);
@@ -337,6 +349,11 @@ void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<
         } else {
             new ColoredDrawable{*object, _coloredShader, *_meshes[objectData->instance()], materials[materialId]->diffuseColor(), _drawables};
         }
+
+    /* This is a node that holds the default camera -> assign the object to the
+       global camera pointer */
+    } else if(objectData->instanceType() == Trade::ObjectInstanceType3D::Camera && objectData->instance() == 0) {
+        _cameraObject = object;
     }
 
     /* Recursively add children */
@@ -400,10 +417,10 @@ void Player::mouseScrollEvent(MouseScrollEvent& event) {
     if(!event.offset().y()) return;
 
     /* Distance to origin */
-    const Float distance = _cameraObject.transformation().translation().z();
+    const Float distance = _cameraObject->transformation().translation().z();
 
     /* Move 15% of the distance back or forward */
-    _cameraObject.translate(Vector3::zAxis(
+    _cameraObject->translate(Vector3::zAxis(
         distance*(1.0f - (event.offset().y() > 0 ? 1/0.85f : 0.85f))));
 
     redraw();
