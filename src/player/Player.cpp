@@ -71,6 +71,7 @@ class Player: public Platform::Application {
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
         Vector3 positionOnSphere(const Vector2i& position) const;
+        void load(Trade::AbstractImporter& importer);
 
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
 
@@ -78,18 +79,25 @@ class Player: public Platform::Application {
         Shaders::Phong _texturedShader{
             Shaders::Phong::Flag::DiffuseTexture|
             Shaders::Phong::Flag::AlphaMask}; /** @todo remove once I have OIT */
-        Containers::Array<Containers::Optional<GL::Mesh>> _meshes;
-        Containers::Array<Containers::Optional<GL::Texture2D>> _textures;
 
-        Scene3D _scene;
-        Object3D _manipulator;
-        Object3D* _cameraObject{};
-        SceneGraph::Camera3D* _camera;
-        SceneGraph::DrawableGroup3D _drawables;
-        Vector3 _previousPosition;
+        PluginManager::Manager<Trade::AbstractImporter> _manager;
 
-        Containers::Array<char> _animationData;
-        Animation::Player<std::chrono::nanoseconds, Float> _player;
+        struct Data {
+            Containers::Array<Containers::Optional<GL::Mesh>> meshes;
+            Containers::Array<Containers::Optional<GL::Texture2D>> textures;
+
+            Scene3D scene;
+            Object3D manipulator;
+            Object3D* cameraObject{};
+            SceneGraph::Camera3D* camera;
+            SceneGraph::DrawableGroup3D drawables;
+            Vector3 previousPosition;
+
+            Containers::Array<char> animationData;
+            Animation::Player<std::chrono::nanoseconds, Float> player;
+        };
+
+        Containers::Optional<Data> _data;
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -128,9 +136,6 @@ Player::Player(const Arguments& arguments):
         .setHelp("Displays a 3D scene file provided on command line.")
         .parse(arguments.argc, arguments.argv);
 
-    /* Base object, parent of all (for easy manipulation) */
-    _manipulator.setParent(&_scene);
-
     /* Setup renderer and shader defaults */
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
@@ -144,8 +149,8 @@ Player::Player(const Arguments& arguments):
         .setShininess(80.0f);
 
     /* Load a scene importer plugin */
-    PluginManager::Manager<Trade::AbstractImporter> manager;
-    std::unique_ptr<Trade::AbstractImporter> importer = manager.loadAndInstantiate(args.value("importer"));
+    std::unique_ptr<Trade::AbstractImporter> importer =
+        _manager.loadAndInstantiate(args.value("importer"));
     if(!importer) std::exit(1);
 
     Debug{} << "Opening file" << args.value("file");
@@ -154,20 +159,31 @@ Player::Player(const Arguments& arguments):
     if(!importer->openFile(args.value("file")))
         std::exit(4);
 
-    /* Load all textures. Textures that fail to load will be NullOpt. */
-    _textures = Containers::Array<Containers::Optional<GL::Texture2D>>{importer->textureCount()};
-    for(UnsignedInt i = 0; i != importer->textureCount(); ++i) {
-        Debug{} << "Importing texture" << i << importer->textureName(i);
+    load(*importer);
 
-        Containers::Optional<Trade::TextureData> textureData = importer->texture(i);
+    setSwapInterval(1);
+}
+
+void Player::load(Trade::AbstractImporter& importer) {
+    _data.emplace();
+
+    /* Base object, parent of all (for easy manipulation) */
+    _data->manipulator.setParent(&_data->scene);
+
+    /* Load all textures. Textures that fail to load will be NullOpt. */
+    _data->textures = Containers::Array<Containers::Optional<GL::Texture2D>>{importer.textureCount()};
+    for(UnsignedInt i = 0; i != importer.textureCount(); ++i) {
+        Debug{} << "Importing texture" << i << importer.textureName(i);
+
+        Containers::Optional<Trade::TextureData> textureData = importer.texture(i);
         if(!textureData || textureData->type() != Trade::TextureData::Type::Texture2D) {
             Warning{} << "Cannot load texture properties, skipping";
             continue;
         }
 
-        Debug{} << "Importing image" << textureData->image() << importer->image2DName(textureData->image());
+        Debug{} << "Importing image" << textureData->image() << importer.image2DName(textureData->image());
 
-        Containers::Optional<Trade::ImageData2D> imageData = importer->image2D(textureData->image());
+        Containers::Optional<Trade::ImageData2D> imageData = importer.image2D(textureData->image());
         GL::TextureFormat format;
         if(imageData && imageData->format() == PixelFormat::RGB8Unorm) {
             #ifndef MAGNUM_TARGET_GLES2
@@ -196,17 +212,17 @@ Player::Player(const Arguments& arguments):
             .setSubImage(0, {}, *imageData)
             .generateMipmap();
 
-        _textures[i] = std::move(texture);
+        _data->textures[i] = std::move(texture);
     }
 
     /* Load all materials. Materials that fail to load will be NullOpt. The
        data will be stored directly in objects later, so save them only
        temporarily. */
-    Containers::Array<Containers::Optional<Trade::PhongMaterialData>> materials{importer->materialCount()};
-    for(UnsignedInt i = 0; i != importer->materialCount(); ++i) {
-        Debug{} << "Importing material" << i << importer->materialName(i);
+    Containers::Array<Containers::Optional<Trade::PhongMaterialData>> materials{importer.materialCount()};
+    for(UnsignedInt i = 0; i != importer.materialCount(); ++i) {
+        Debug{} << "Importing material" << i << importer.materialName(i);
 
-        std::unique_ptr<Trade::AbstractMaterialData> materialData = importer->material(i);
+        std::unique_ptr<Trade::AbstractMaterialData> materialData = importer.material(i);
         if(!materialData || materialData->type() != Trade::MaterialType::Phong) {
             Warning{} << "Cannot load material, skipping";
             continue;
@@ -216,27 +232,27 @@ Player::Player(const Arguments& arguments):
     }
 
     /* Load all meshes. Meshes that fail to load will be NullOpt. */
-    _meshes = Containers::Array<Containers::Optional<GL::Mesh>>{importer->mesh3DCount()};
-    for(UnsignedInt i = 0; i != importer->mesh3DCount(); ++i) {
-        Debug{} << "Importing mesh" << i << importer->mesh3DName(i);
+    _data->meshes = Containers::Array<Containers::Optional<GL::Mesh>>{importer.mesh3DCount()};
+    for(UnsignedInt i = 0; i != importer.mesh3DCount(); ++i) {
+        Debug{} << "Importing mesh" << i << importer.mesh3DName(i);
 
-        Containers::Optional<Trade::MeshData3D> meshData = importer->mesh3D(i);
+        Containers::Optional<Trade::MeshData3D> meshData = importer.mesh3D(i);
         if(!meshData || !meshData->hasNormals() || meshData->primitive() != MeshPrimitive::Triangles) {
             Warning{} << "Cannot load the mesh, skipping";
             continue;
         }
 
         /* Compile the mesh */
-        _meshes[i] = MeshTools::compile(*meshData);
+        _data->meshes[i] = MeshTools::compile(*meshData);
     }
 
     /* Load the scene. Save the object pointers in an array for easier mapping
        of animations later. */
-    Containers::Array<Object3D*> objects{Containers::ValueInit, importer->object3DCount()};
-    if(importer->defaultScene() != -1) {
-        Debug{} << "Adding default scene" << importer->sceneName(importer->defaultScene());
+    Containers::Array<Object3D*> objects{Containers::ValueInit, importer.object3DCount()};
+    if(importer.defaultScene() != -1) {
+        Debug{} << "Adding default scene" << importer.sceneName(importer.defaultScene());
 
-        Containers::Optional<Trade::SceneData> sceneData = importer->scene(importer->defaultScene());
+        Containers::Optional<Trade::SceneData> sceneData = importer.scene(importer.defaultScene());
         if(!sceneData) {
             Error{} << "Cannot load scene, exiting";
             return;
@@ -244,37 +260,37 @@ Player::Player(const Arguments& arguments):
 
         /* Recursively add all children */
         for(UnsignedInt objectId: sceneData->children3D())
-            addObject(*importer, objects, materials, _manipulator, objectId);
+            addObject(importer, objects, materials, _data->manipulator, objectId);
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
-    } else if(!_meshes.empty() && _meshes[0])
-        new ColoredDrawable{_manipulator, _coloredShader, *_meshes[0], 0xffffff_rgbf, _drawables};
+    } else if(!_data->meshes.empty() && _data->meshes[0])
+        new ColoredDrawable{_data->manipulator, _coloredShader, *_data->meshes[0], 0xffffff_rgbf, _data->drawables};
 
     /* Create a camera object in case it wasn't present in the scene already */
-    if(!_cameraObject) {
-        _cameraObject = new Object3D{&_scene};
-        _cameraObject->translate(Vector3::zAxis(5.0f));
+    if(!_data->cameraObject) {
+        _data->cameraObject = new Object3D{&_data->scene};
+        _data->cameraObject->translate(Vector3::zAxis(5.0f));
     }
 
     /* Basic camera setup */
-    (*(_camera = new SceneGraph::Camera3D{*_cameraObject}))
+    (*(_data->camera = new SceneGraph::Camera3D{*_data->cameraObject}))
         .setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(35.0_degf, 1.0f, 0.01f, 1000.0f))
         .setViewport(GL::defaultFramebuffer.viewport().size());
 
     /* Use the settings with parameters of the camera in the model, if any,
        otherwise just used the hardcoded setup from above */
-    if(importer->cameraCount()) {
-        Containers::Optional<Trade::CameraData> camera = importer->camera(0);
-        if(camera) _camera->setProjectionMatrix(Matrix4::perspectiveProjection(camera->fov(), 1.0f, camera->near(), camera->far()));
+    if(importer.cameraCount()) {
+        Containers::Optional<Trade::CameraData> camera = importer.camera(0);
+        if(camera) _data->camera->setProjectionMatrix(Matrix4::perspectiveProjection(camera->fov(), 1.0f, camera->near(), camera->far()));
     }
 
     /* Import animations */
-    for(UnsignedInt i = 0; i != importer->animationCount(); ++i) {
-        Debug{} << "Importing animation" << i << importer->animationName(i);
+    for(UnsignedInt i = 0; i != importer.animationCount(); ++i) {
+        Debug{} << "Importing animation" << i << importer.animationName(i);
 
-        Containers::Optional<Trade::AnimationData> animation = importer->animation(i);
+        Containers::Optional<Trade::AnimationData> animation = importer.animation(i);
         if(!animation) {
             Warning{} << "Cannot load the animation, skipping";
             continue;
@@ -286,33 +302,32 @@ Player::Player(const Arguments& arguments):
 
             if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Translation3D) {
                 CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
-                _player.addWithCallback(animation->track<Vector3>(j),
+                _data->player.addWithCallback(animation->track<Vector3>(j),
                     [](const Float&, const Vector3& translation, Object3D& object) {
                         object.setTranslation(translation);
                     }, *objects[animation->trackTargetId(j)]);
             } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Rotation3D) {
                 CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Quaternion);
-                _player.addWithCallback(animation->track<Quaternion>(j),
+                _data->player.addWithCallback(animation->track<Quaternion>(j),
                     [](const Float&, const Quaternion& rotation, Object3D& object) {
                         object.setRotation(rotation);
                     }, *objects[animation->trackTargetId(j)]);
             } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Scaling3D) {
                 CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
-                _player.addWithCallback(animation->track<Vector3>(j),
+                _data->player.addWithCallback(animation->track<Vector3>(j),
                     [](const Float&, const Vector3& scaling, Object3D& object) {
                         object.setScaling(scaling);
                     }, *objects[animation->trackTargetId(j)]);
             }
         }
-        _animationData = animation->release();
+        _data->animationData = animation->release();
 
         /* Load only the first animation at the moment */
         break;
     }
 
     /* Start the animation */
-    setSwapInterval(1);
-    _player.setPlayCount(0)
+    _data->player.setPlayCount(0)
         .play(std::chrono::system_clock::now().time_since_epoch());
 }
 
@@ -337,31 +352,31 @@ void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<
     objects[i] = object;
 
     /* Add a drawable if the object has a mesh and the mesh is loaded */
-    if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _meshes[objectData->instance()]) {
+    if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _data->meshes[objectData->instance()]) {
         const Int materialId = static_cast<Trade::MeshObjectData3D*>(objectData.get())->material();
 
         /* Material not available / not loaded, use a default material */
         if(materialId == -1 || !materials[materialId]) {
-            new ColoredDrawable{*object, _coloredShader, *_meshes[objectData->instance()], 0xffffff_rgbf, _drawables};
+            new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->drawables};
 
         /* Textured material. If the texture failed to load, again just use a
            default colored material. */
         } else if(materials[materialId]->flags() & Trade::PhongMaterialData::Flag::DiffuseTexture) {
-            Containers::Optional<GL::Texture2D>& texture = _textures[materials[materialId]->diffuseTexture()];
+            Containers::Optional<GL::Texture2D>& texture = _data->textures[materials[materialId]->diffuseTexture()];
             if(texture)
-                new TexturedDrawable{*object, _texturedShader, *_meshes[objectData->instance()], *texture, _drawables};
+                new TexturedDrawable{*object, _texturedShader, *_data->meshes[objectData->instance()], *texture, _data->drawables};
             else
-                new ColoredDrawable{*object, _coloredShader, *_meshes[objectData->instance()], 0xffffff_rgbf, _drawables};
+                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->drawables};
 
         /* Color-only material */
         } else {
-            new ColoredDrawable{*object, _coloredShader, *_meshes[objectData->instance()], materials[materialId]->diffuseColor(), _drawables};
+            new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], materials[materialId]->diffuseColor(), _data->drawables};
         }
 
     /* This is a node that holds the default camera -> assign the object to the
        global camera pointer */
     } else if(objectData->instanceType() == Trade::ObjectInstanceType3D::Camera && objectData->instance() == 0) {
-        _cameraObject = object;
+        _data->cameraObject = object;
     }
 
     /* Recursively add children */
@@ -394,13 +409,15 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
 void Player::drawEvent() {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
 
-    _player.advance(std::chrono::system_clock::now().time_since_epoch());
+    if(_data) {
+        _data->player.advance(std::chrono::system_clock::now().time_since_epoch());
 
-    _camera->draw(_drawables);
+        _data->camera->draw(_data->drawables);
 
-    /* Schedule a redraw only if the player is not empty to avoid hogging the
-       CPU */
-    if(!_player.isEmpty()) redraw();
+        /* Schedule a redraw only if the player is not empty to avoid hogging
+           the CPU */
+        if(!_data->player.isEmpty()) redraw();
+    }
 
     swapBuffers();
 
@@ -408,49 +425,49 @@ void Player::drawEvent() {
 
 void Player::viewportEvent(ViewportEvent& event) {
     GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
-    _camera->setViewport(event.framebufferSize());
+    if(_data) _data->camera->setViewport(event.framebufferSize());
 }
 
 void Player::mousePressEvent(MouseEvent& event) {
-    if(event.button() == MouseEvent::Button::Left)
-        _previousPosition = positionOnSphere(event.position());
+    if(_data && event.button() == MouseEvent::Button::Left)
+        _data->previousPosition = positionOnSphere(event.position());
 }
 
 void Player::mouseReleaseEvent(MouseEvent& event) {
-    if(event.button() == MouseEvent::Button::Left)
-        _previousPosition = Vector3();
+    if(_data && event.button() == MouseEvent::Button::Left)
+        _data->previousPosition = Vector3();
 }
 
 void Player::mouseScrollEvent(MouseScrollEvent& event) {
-    if(!event.offset().y()) return;
+    if(!_data || !event.offset().y()) return;
 
     /* Distance to origin */
-    const Float distance = _cameraObject->transformation().translation().z();
+    const Float distance = _data->cameraObject->transformation().translation().z();
 
     /* Move 15% of the distance back or forward */
-    _cameraObject->translate(Vector3::zAxis(
+    _data->cameraObject->translate(Vector3::zAxis(
         distance*(1.0f - (event.offset().y() > 0 ? 1/0.85f : 0.85f))));
 
     redraw();
 }
 
 Vector3 Player::positionOnSphere(const Vector2i& position) const {
-    const Vector2 positionNormalized = Vector2{position}/Vector2{_camera->viewport()} - Vector2{0.5f};
+    const Vector2 positionNormalized = Vector2{position}/Vector2{_data->camera->viewport()} - Vector2{0.5f};
     const Float length = positionNormalized.length();
     const Vector3 result(length > 1.0f ? Vector3(positionNormalized, 0.0f) : Vector3(positionNormalized, 1.0f - length));
     return (result*Vector3::yScale(-1.0f)).normalized();
 }
 
 void Player::mouseMoveEvent(MouseMoveEvent& event) {
-    if(!(event.buttons() & MouseMoveEvent::Button::Left)) return;
+    if(!_data || !(event.buttons() & MouseMoveEvent::Button::Left)) return;
 
     const Vector3 currentPosition = positionOnSphere(event.position());
-    const Vector3 axis = Math::cross(_previousPosition, currentPosition);
+    const Vector3 axis = Math::cross(_data->previousPosition, currentPosition);
 
-    if(_previousPosition.length() < 0.001f || axis.length() < 0.001f) return;
+    if(_data->previousPosition.length() < 0.001f || axis.length() < 0.001f) return;
 
-    _manipulator.rotate(Math::angle(_previousPosition, currentPosition), axis.normalized());
-    _previousPosition = currentPosition;
+    _data->manipulator.rotate(Math::angle(_data->previousPosition, currentPosition), axis.normalized());
+    _data->previousPosition = currentPosition;
 
     redraw();
 }
