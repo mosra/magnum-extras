@@ -73,8 +73,10 @@ class Player: public Platform::Application {
 
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
 
-        Shaders::Phong _coloredShader,
-            _texturedShader{Shaders::Phong::Flag::DiffuseTexture};
+        Shaders::Phong _coloredShader;
+        Shaders::Phong _texturedShader{
+            Shaders::Phong::Flag::DiffuseTexture|
+            Shaders::Phong::Flag::AlphaMask}; /** @todo remove once I have OIT */
         Containers::Array<Containers::Optional<GL::Mesh>> _meshes;
         Containers::Array<Containers::Optional<GL::Texture2D>> _textures;
 
@@ -144,7 +146,7 @@ Player::Player(const Arguments& arguments):
         .setSpecularColor(0xffffff_rgbf)
         .setShininess(80.0f);
     _texturedShader
-        .setAmbientColor(0x111111_rgbf)
+        .setAmbientColor(0x00000000_rgbaf)
         .setSpecularColor(0x111111_rgbf)
         .setShininess(80.0f);
 
