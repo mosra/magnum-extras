@@ -37,7 +37,7 @@
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
-#include <Magnum/SceneGraph/MatrixTransformation3D.h>
+#include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
 #include <Magnum/SceneGraph/Scene.h>
 #include <Magnum/Shaders/Phong.h>
 #include <Magnum/Trade/AbstractImporter.h>
@@ -52,8 +52,8 @@ namespace Magnum {
 
 using namespace Math::Literals;
 
-typedef SceneGraph::Object<SceneGraph::MatrixTransformation3D> Object3D;
-typedef SceneGraph::Scene<SceneGraph::MatrixTransformation3D> Scene3D;
+typedef SceneGraph::Object<SceneGraph::TranslationRotationScalingTransformation3D> Object3D;
+typedef SceneGraph::Scene<SceneGraph::TranslationRotationScalingTransformation3D> Scene3D;
 
 class Player: public Platform::Application {
     public:
@@ -250,9 +250,14 @@ void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<
         return;
     }
 
-    /* Add the object to the scene and set its transformation */
+    /* Add the object to the scene and set its transformation. If it has a
+       separate TRS, use that to avoid precision issues. */
     auto* object = new Object3D{&parent};
-    object->setTransformation(objectData->transformation());
+    if(objectData->flags() & Trade::ObjectFlag3D::HasTranslationRotationScaling)
+        (*object).setTranslation(objectData->translation())
+                 .setRotation(objectData->rotation())
+                 .setScaling(objectData->scaling());
+    else object->setTransformation(objectData->transformation());
 
     /* Add a drawable if the object has a mesh and the mesh is loaded */
     if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _meshes[objectData->instance()]) {
