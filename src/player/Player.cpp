@@ -28,6 +28,7 @@
 #include <Corrade/Utility/Arguments.h>
 #include <Magnum/Mesh.h>
 #include <Magnum/PixelFormat.h>
+#include <Magnum/Animation/Player.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>
@@ -41,6 +42,7 @@
 #include <Magnum/SceneGraph/Scene.h>
 #include <Magnum/Shaders/Phong.h>
 #include <Magnum/Trade/AbstractImporter.h>
+#include <Magnum/Trade/AnimationData.h>
 #include <Magnum/Trade/ImageData.h>
 #include <Magnum/Trade/MeshData3D.h>
 #include <Magnum/Trade/MeshObjectData3D.h>
@@ -69,7 +71,7 @@ class Player: public Platform::Application {
 
         Vector3 positionOnSphere(const Vector2i& position) const;
 
-        void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
+        void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
 
         Shaders::Phong _coloredShader,
             _texturedShader{Shaders::Phong::Flag::DiffuseTexture};
@@ -81,6 +83,9 @@ class Player: public Platform::Application {
         SceneGraph::Camera3D* _camera;
         SceneGraph::DrawableGroup3D _drawables;
         Vector3 _previousPosition;
+
+        Containers::Array<char> _animationData;
+        Animation::Player<std::chrono::nanoseconds, Float> _player;
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -222,7 +227,9 @@ Player::Player(const Arguments& arguments):
         _meshes[i] = MeshTools::compile(*meshData);
     }
 
-    /* Load the scene */
+    /* Load the scene. Save the object pointers in an array for easier mapping
+       of animations later. */
+    Containers::Array<Object3D*> objects{Containers::ValueInit, importer->object3DCount()};
     if(importer->defaultScene() != -1) {
         Debug{} << "Adding default scene" << importer->sceneName(importer->defaultScene());
 
@@ -234,15 +241,60 @@ Player::Player(const Arguments& arguments):
 
         /* Recursively add all children */
         for(UnsignedInt objectId: sceneData->children3D())
-            addObject(*importer, materials, _manipulator, objectId);
+            addObject(*importer, objects, materials, _manipulator, objectId);
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
     } else if(!_meshes.empty() && _meshes[0])
         new ColoredDrawable{_manipulator, _coloredShader, *_meshes[0], 0xffffff_rgbf, _drawables};
+
+    /* Import animations */
+    for(UnsignedInt i = 0; i != importer->animationCount(); ++i) {
+        Debug{} << "Importing animation" << i << importer->animationName(i);
+
+        Containers::Optional<Trade::AnimationData> animation = importer->animation(i);
+        if(!animation) {
+            Warning{} << "Cannot load the animation, skipping";
+            continue;
+        }
+
+        for(UnsignedInt j = 0; j != animation->trackCount(); ++j) {
+            if(animation->trackTargetId(j) >= objects.size() || !objects[animation->trackTargetId(j)])
+                continue;
+
+            if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Translation3D) {
+                CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
+                _player.addWithCallback(animation->track<Vector3>(j),
+                    [](const Float&, const Vector3& translation, Object3D& object) {
+                        object.setTranslation(translation);
+                    }, *objects[animation->trackTargetId(j)]);
+            } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Rotation3D) {
+                CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Quaternion);
+                _player.addWithCallback(animation->track<Quaternion>(j),
+                    [](const Float&, const Quaternion& rotation, Object3D& object) {
+                        object.setRotation(rotation);
+                    }, *objects[animation->trackTargetId(j)]);
+            } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Scaling3D) {
+                CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
+                _player.addWithCallback(animation->track<Vector3>(j),
+                    [](const Float&, const Vector3& scaling, Object3D& object) {
+                        object.setScaling(scaling);
+                    }, *objects[animation->trackTargetId(j)]);
+            }
+        }
+        _animationData = animation->release();
+
+        /* Load only the first animation at the moment */
+        break;
+    }
+
+    /* Start the animation */
+    setSwapInterval(1);
+    _player.setPlayCount(0)
+        .play(std::chrono::system_clock::now().time_since_epoch());
 }
 
-void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i) {
+void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i) {
     Debug{} << "Importing object" << i << importer.object3DName(i);
     std::unique_ptr<Trade::ObjectData3D> objectData = importer.object3D(i);
     if(!objectData) {
@@ -258,6 +310,9 @@ void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<
                  .setRotation(objectData->rotation())
                  .setScaling(objectData->scaling());
     else object->setTransformation(objectData->transformation());
+
+    /* Save it to the ID -> pointer mapping array for animation targets */
+    objects[i] = object;
 
     /* Add a drawable if the object has a mesh and the mesh is loaded */
     if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _meshes[objectData->instance()]) {
@@ -284,7 +339,7 @@ void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<
 
     /* Recursively add children */
     for(std::size_t id: objectData->children())
-        addObject(importer, materials, *object, id);
+        addObject(importer, objects, materials, *object, id);
 }
 
 void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
@@ -312,9 +367,16 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
 void Player::drawEvent() {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
 
+    _player.advance(std::chrono::system_clock::now().time_since_epoch());
+
     _camera->draw(_drawables);
 
+    /* Schedule a redraw only if the player is not empty to avoid hogging the
+       CPU */
+    if(!_player.isEmpty()) redraw();
+
     swapBuffers();
+
 }
 
 void Player::viewportEvent(ViewportEvent& event) {
