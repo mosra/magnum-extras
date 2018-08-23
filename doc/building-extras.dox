@@ -270,8 +270,12 @@ By default no libraries are built and you need to select them manually:
 
 -   `WITH_UI` --- Build the @ref Ui library. Does not work on
     @ref MAGNUM_TARGET_GLES2 "OpenGL ES 2.0" / WebGL 1.0 builds of Magnum.
--   `WITH_UI_GALLERY` --- Build the `magnum-ui-gallery` executable, which
-    showcases the default @ref Ui library widget style
+
+Besides libraries, the following apps are available, also all disabled by
+default:
+
+-   `WITH_UI_GALLERY` --- Build the @ref magnum-ui-gallery "magnum-ui-gallery"
+    executable
 
 Note that each [namespace](namespaces.html) documentation contains more
 detailed information about its dependencies, availability on particular

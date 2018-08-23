@@ -46,6 +46,8 @@ find_package(MagnumExtras REQUIRED)
 target_link_libraries(your-app MagnumExtras::Ui)
 @endcode
 
-See @ref building-extras and @ref cmake-extras for more information.
+Additional apps are built separately. See the
+@ref magnum-ui-gallery "magnum-ui-gallery" app documentation,
+@ref building-extras and @ref cmake-extras for more information.
 @experimental
 */

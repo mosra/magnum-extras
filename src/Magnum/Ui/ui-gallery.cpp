@@ -46,6 +46,41 @@
 
 namespace Magnum {
 
+/** @page magnum-ui-gallery Magnum::Ui Gallery
+@brief Showcases widgets and features provided by @ref Magnum::Ui
+
+@m_footernavigation
+
+@m_div{m-button m-primary} <a href="http://magnum.graphics/showcase/magnum-ui-gallery/">@m_div{m-big}Live web version @m_enddiv @m_div{m-small} uses WebAssembly & WebGL 2 @m_enddiv </a> @m_enddiv
+
+This app is built if both `WITH_UI` and `WITH_UI_GALLERY` is enabled when
+building Magnum Extras. To use this app with CMake, you need to request the
+`ui-gallery` component of the `MagnumExtras` package and use the
+`MagnumExtras::ui-gallery` target for example in a custom command:
+
+@code{.cmake}
+find_package(MagnumExtras REQUIRED ui-gallery)
+
+add_custom_command(OUTPUT ... COMMAND MagnumExtras::ui-gallery ...)
+@endcode
+
+@section magnum-ui-gallery-usage Usage
+
+@code{.sh}
+magnum-ui-gallery [--magnum-...] [-h|--help] [--style STYLE]
+@endcode
+
+Arguments:
+
+-   `-h`, `--help` --- display this help message and exit
+-   `--style STYLE` --- specify style to use (default: `mcss-dark`). One of:
+    -   `default` --- the default style
+    -   `mcss-dark` --- dark [m.css](http://mcss.mosra.cz) theme
+-   `--magnum-...` --- engine-specific options (see
+    @ref GL-Context-command-line for details)
+
+*/
+
 using namespace Magnum::Math::Literals;
 
 namespace {

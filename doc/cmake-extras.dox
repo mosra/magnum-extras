@@ -57,7 +57,10 @@ This command tries to find Magnum extras and then defines:
 This command alone is useless without specifying the components:
 
 -   `Ui` --- @ref Ui library
--   `ui-gallery` -- `magnum-ui-gallery` executable for the @ref Ui library
+
+Besides libraries, the following apps are available:
+
+-   `ui-gallery` --- @ref magnum-ui-gallery "magnum-ui-gallery" executable
 
 Note that [each namespace](namespaces.html) contains more detailed information
 about dependencies, availability on particular platform and also guide how to
