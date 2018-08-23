@@ -295,7 +295,7 @@ be one of:
 
     /* Create the UI. It should get at least some screen space, but also
        shouldn't be tucked away into a small corner on ultra-dense displays. */
-    _ui.emplace(Math::clamp({640.0f, 480.0f}, {1024.0f, 576.0f}, Vector2(windowSize())), windowSize(), style, "»");
+    _ui.emplace(Math::clamp({640.0f, 480.0f}, {1024.0f, 576.0f}, Vector2(windowSize()/dpiScaling())), windowSize(), framebufferSize(), style, "»");
     #ifndef CORRADE_TARGET_ANDROID
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetFocused, *this, &Gallery::startTextInput);
     Interconnect::connect(*_ui, &Ui::UserInterface::inputWidgetBlurred, *this, &Gallery::stopTextInput);

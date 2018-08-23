@@ -151,8 +151,8 @@ if(WITH_UI_GALLERY)
             ${CMAKE_CURRENT_BINARY_DIR}/magnum-ui-gallery.wasm
             DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery OPTIONAL)
         install(FILES
-            EmscriptenApplication.js
-            WebApplication.css
+            ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+            ${MAGNUM_WEBAPPLICATION_CSS}
             DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery)
     else()
         install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
