@@ -32,6 +32,11 @@ namespace Magnum {
 
 @section changelog-extras-latest Changes since 2018.04
 
+@subsection changelog-extras-latest-changes Changes and improvements
+
+-   @ref Ui::UserInterface can now take an explicit framebuffer size parameter
+    for more flexibility when rendering on HiDPI screens or in VR.
+
 @subsection changelog-extras-latest-buildsystem Build system
 
 -   Provide a better error when trying to build the @ref Ui library on OpenGL

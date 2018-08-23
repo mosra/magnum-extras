@@ -55,7 +55,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<Abs
          * See @ref BasicUserInterface::BasicUserInterface(const Vector2&, const Vector2i&)
          * for more information.
          */
-        explicit AbstractUserInterface(const Vector2& size, const Vector2i& screenSize);
+        explicit AbstractUserInterface(const Vector2& size, const Vector2i& windowSize);
 
         /** @brief User interface size */
         Vector2 size() const { return _size; }
@@ -107,13 +107,14 @@ template<class ...Layers> class BasicUserInterface: public AbstractUserInterface
         /**
          * @brief Constructor
          * @param size          User interface size
-         * @param screenSize    Actual screen size
+         * @param windowSize    Size of the window to which all inputs
+         *      events are related
          *
          * All positioning and sizing inside the interface is done in regard to
          * @p size, without taking actual screen size into account. This allows
          * to have DPI-independent sizes.
          */
-        explicit BasicUserInterface(const Vector2& size, const Vector2i& screenSize): AbstractUserInterface{size, screenSize} {}
+        explicit BasicUserInterface(const Vector2& size, const Vector2i& windowSize): AbstractUserInterface{size, windowSize} {}
 
         /**
          * @brief Update the interface

@@ -45,9 +45,42 @@ namespace Magnum { namespace Ui {
 /**
 @brief Default user interface
 
-All positioning and sizing inside the interface is done in regard to the size
-parameter passed to the constructor, without taking actual screen size into
-account. This allows to have DPI-independent sizes.
+@section Ui-UserInterface-dpi DPI awareness
+
+There are three separate concepts for DPI-aware UI rendering:
+
+-   UI size --- size of the user interface to which all widgets are positioned
+-   Window size --- size of the window to which all input events are related
+-   Framebuffer size --- size of the framebuffer the UI is being rendered to
+
+Depending on the platform and use case, each of these three values can be
+different. For example, a game menu screen can have the UI size the same
+regardless of window size. Or on Retina macOS you can have different window and
+framebuffer size and the UI size might be related to window size but
+independent on the framebuffer size.
+
+When using for example @ref Platform::Sdl2Application or other `*Application`
+implementations, you usually have three values at your disposal ---
+@ref Platform::Sdl2Application::windowSize() "windowSize()",
+@ref Platform::Sdl2Application::framebufferSize() "framebufferSize()" and
+@ref Platform::Sdl2Application::dpiScaling() "dpiScaling()". If you want the UI
+to have the same layout and just scale on bigger window sizes, pass a fixed
+value to the UI size:
+
+@snippet Ui-sdl2.cpp UserInterface-dpi-fixed
+
+If you want the UI to get more room with larger window sizes and behave
+properly with different DPI scaling values, pass a ratio of window size and DPI
+scaling to the UI size:
+
+@snippet Ui-sdl2.cpp UserInterface-dpi-ratio
+
+Finally, to gracefully deal with extremely small or extremely large windows,
+you can apply @ref Math::clamp() on top with some defined bounds. Windows
+outside of the reasonable size range will then get a scaled version of the UI
+at boundary size:
+
+@snippet Ui-sdl2.cpp UserInterface-dpi-clamp
 
 @section Ui-UserInterface-fonts Font plugins
 
@@ -68,30 +101,60 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
     public:
         /**
          * @brief Constructor
-         * @param size                  User interface size
-         * @param screenSize            Actual screen size
+         * @param size                  Size of the user interface to which all
+         *      widgets are positioned
+         * @param windowSize            Size of the window to which all inputs
+         *      events are related
+         * @param framebufferSize       Size of the window framebuffer. On
+         *      HiDPI screens usually different from window size.
          * @param extraGlyphs           Extra characters to add to glyph cache
          *
          * Uses @ref defaultStyleConfiguration() and a builtin font with
          * pre-populated glyph cache.
          */
-        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, const std::string& extraGlyphs = {});
+        explicit UserInterface(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const std::string& extraGlyphs = {});
+
+        /** @overload
+         *
+         * Equivalent to @ref UserInterface(const Vector2&, const Vector2i&, const Vector2i&, const std::string&)
+         * with both @p windowSize and @p framebufferSize set to the same
+         * value. In order to have crisp rendering on HiDPI screens, it's
+         * advised to set those two values separately.
+         */
+        explicit UserInterface(const Vector2& size, const Vector2i& windowSize, const std::string& extraGlyphs = {}): UserInterface{size, windowSize, windowSize, extraGlyphs} {}
 
         /**
          * @brief Construct the user interface with a custom style
-         * @param size                  User interface size
-         * @param screenSize            Actual screen size
+         * @param size                  Size of the user interface to which all
+         *      widgets are positioned
+         * @param windowSize            Size of the window to which all inputs
+         *      events are related
+         * @param framebufferSize       Size of the window framebuffer. On
+         *      HiDPI screens usually different from window size.
          * @param styleConfiguration    Style configuration to use
          * @param extraGlyphs           Extra characters to add to glyph cache
          *
          * Uses a builtin font with pre-populated glyph cache.
          */
-        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs = {});
+        explicit UserInterface(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs = {});
+
+        /** @overload
+         *
+         * Equivalent to @ref UserInterface(const Vector2&, const Vector2i&, const Vector2i&, const StyleConfiguration&, const std::string&)
+         * with both @p windowSize and @p framebufferSize set to the same
+         * value. In order to have crisp rendering on HiDPI screens, it's
+         * advised to set those two values separately.
+         */
+        explicit UserInterface(const Vector2& size, const Vector2i& windowSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs = {}): UserInterface{size, windowSize, windowSize, styleConfiguration, extraGlyphs} {}
 
         /**
          * @brief Construct the user interface with custom style and font
-         * @param size                  User interface size
-         * @param screenSize            Actual screen size
+         * @param size                  Size of the user interface to which all
+         *      widgets are positioned
+         * @param windowSize            Size of the window to which all inputs
+         *      events are related
+         * @param framebufferSize       Size of the window framebuffer. On
+         *      HiDPI screens usually different from window size.
          * @param font                  Font to use
          * @param glyphCache            Populated glyph cache to use
          * @param styleConfiguration    Style configuration to use
@@ -99,7 +162,16 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * The @p font and @p glyphCache is expected to be kept in scope for
          * the whole user interface lifetime.
          */
-        explicit UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, Text::GlyphCache& glyphCache, const StyleConfiguration& styleConfiguration);
+        explicit UserInterface(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, Text::AbstractFont& font, Text::GlyphCache& glyphCache, const StyleConfiguration& styleConfiguration);
+
+        /** @overload
+         *
+         * Equivalent to @ref UserInterface(const Vector2&, const Vector2i&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
+         * with both @p windowSize and @p framebufferSize set to the same
+         * value. In order to have crisp rendering on HiDPI screens, it's
+         * advised to set those two values separately.
+         */
+        explicit UserInterface(const Vector2& size, const Vector2i& windowSize, Text::AbstractFont& font, Text::GlyphCache& glyphCache, const StyleConfiguration& styleConfiguration): UserInterface{size, windowSize, windowSize, font, glyphCache, styleConfiguration} {}
 
         #ifdef MAGNUM_BUILD_DEPRECATED
         /**
@@ -183,7 +255,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         struct MAGNUM_UI_LOCAL FontState;
 
         /* Internal constructor used by all the public ones */
-        explicit UserInterface(NoCreateT, const Vector2& size, const Vector2i& screenSize);
+        explicit UserInterface(NoCreateT, const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize);
 
         GL::Buffer _backgroundUniforms,
             _foregroundUniforms,
