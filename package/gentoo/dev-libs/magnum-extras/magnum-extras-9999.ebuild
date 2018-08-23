@@ -22,6 +22,7 @@ src_configure() {
 	local mycmakeargs=(
 		-DCMAKE_INSTALL_PREFIX="${EPREFIX}/usr"
 		-DCMAKE_BUILD_TYPE=Release
+		-DWITH_PLAYER=ON
 		-DWITH_UI=ON
 		-DWITH_UI_GALLERY=ON
 	)

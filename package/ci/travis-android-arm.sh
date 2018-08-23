@@ -79,6 +79,7 @@ cmake .. \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
+    -DWITH_PLAYER=OFF \
     -DWITH_UI=$TARGET_GLES3 \
     -DWITH_UI_GALLERY=OFF \
     -DBUILD_TESTS=ON \
