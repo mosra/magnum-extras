@@ -132,7 +132,10 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, co
 
     /* Set default style. As with the font, adjust the smoothness to cover the
        difference between desired size and framebuffer size. */
-    setStyleConfiguration(StyleConfiguration{styleConfiguration}
+    /* Using StyleConfiguration{styleConfiguration} on MSVC 2015 and 2017
+       apparently doesn't make a copy but rather just a const&, which means the
+       setters fail to compile. Using () does the right thing WHAT THE HELL! */
+    setStyleConfiguration(StyleConfiguration(styleConfiguration)
         .setCornerSmoothnessIn(styleConfiguration.cornerSmoothnessIn()*supersamplingRatio)
         .setCornerSmoothnessOut(styleConfiguration.cornerSmoothnessOut()*supersamplingRatio));
 }
