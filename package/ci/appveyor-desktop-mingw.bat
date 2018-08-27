@@ -11,6 +11,7 @@ cmake .. ^
     -DCMAKE_BUILD_TYPE=Debug ^
     -DCMAKE_INSTALL_PREFIX=%APPVEYOR_BUILD_FOLDER%/deps ^
     -DWITH_INTERCONNECT=ON ^
+    -DUTILITY_USE_ANSI_COLORS=ON ^
     -G Ninja || exit /b
 cmake --build . || exit /b
 cmake --build . --target install || exit /b
@@ -58,6 +59,7 @@ cmake --build . || exit /b
 cmake --build . --target install || exit /b
 
 rem Test
+set CORRADE_TEST_COLOR=ON
 ctest -V -E GLTest || exit /b
 
 rem Coverage upload
