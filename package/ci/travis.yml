@@ -17,7 +17,7 @@ matrix:
     dist: trusty
     compiler: gcc
     env:
-    - JOBID=linux-desktop
+    - JOBID=linux-gl
     - TARGET=desktop
     - CMAKE_CXX_FLAGS="--coverage"
     - LCOV_EXTRA_OPTS="--gcov-tool /usr/bin/gcov-4.7"
@@ -26,7 +26,7 @@ matrix:
     dist: trusty
     compiler: gcc
     env:
-    - JOBID=linux-desktop-nondeprecated
+    - JOBID=linux-nondeprecated
     - TARGET=desktop
     - BUILD_DEPRECATED=OFF
   - language: cpp
@@ -34,7 +34,7 @@ matrix:
     dist: trusty
     compiler: clang
     env:
-    - JOBID=linux-desktop-sanitizers
+    - JOBID=linux-sanitizers
     - TARGET=desktop-sanitizers
     - CMAKE_CXX_FLAGS=-fsanitize=address
     addons:
@@ -51,7 +51,7 @@ matrix:
     #dist: trusty
     #compiler: gcc
     #env:
-    #- JOBID=linux-es2
+    #- JOBID=linux-gles2
     #- TARGET=desktop-gles
     #- TARGET_GLES2=ON
     #- CMAKE_CXX_FLAGS="--coverage"
@@ -61,7 +61,7 @@ matrix:
     dist: trusty
     compiler: gcc
     env:
-    - JOBID=linux-es3
+    - JOBID=linux-gles3
     - TARGET=desktop-gles
     - TARGET_GLES2=OFF
     - CMAKE_CXX_FLAGS="--coverage"
@@ -77,14 +77,14 @@ matrix:
     #os: osx
     #osx_image: xcode7.3
     #env:
-    #- JOBID=ios-es2
+    #- JOBID=ios-gles2
     #- TARGET=ios-simulator
     #- TARGET_GLES2=ON
   - language: cpp
     os: osx
     osx_image: xcode7.3
     env:
-    - JOBID=ios-es3
+    - JOBID=ios-gles3
     - TARGET=ios-simulator
     - TARGET_GLES2=OFF
   #- language: cpp
@@ -105,7 +105,7 @@ matrix:
     #os: linux
     #dist: trusty
     #env:
-    #- JOBID=android-es2
+    #- JOBID=android-gles2
     #- TARGET=android
     #- TARGET_GLES2=ON
     #addons:
@@ -121,7 +121,7 @@ matrix:
     os: linux
     dist: trusty
     env:
-    - JOBID=android-es3
+    - JOBID=android-gles3
     - TARGET=android
     - TARGET_GLES2=OFF
     addons:
