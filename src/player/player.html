@@ -8,14 +8,55 @@
 </head>
 <body>
   <h1>Magnum glTF Player</h1>
-  <div id="container">
-    <div id="sizer"><div id="expander"><div id="listener">
+  <div id="container"><div id="sizer">
+    <div id="expander"><div id="listener">
       <canvas id="module"></canvas>
       <div id="status">Initialization...</div>
       <div id="status-description"></div>
       <script src="EmscriptenApplication.js"></script>
       <script async="async" src="magnum-player.js"></script>
-    </div></div></div>
-  </div>
+    </div></div>
+    <p>Drag &amp; drop your <code>*.glb</code> (or an <em>embedded</em>
+    <code>*.gltf</code>) file into the grey rectangle above to play it. I'm not
+    responsible for anything :P</p>
+  </div></div>
+  <script>
+    "use strict"; /* it summons the Cthulhu in a proper way, they say */
+
+    function handleDragOver(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+    }
+
+    function handleDrop(event) {
+        event.stopPropagation();
+        event.preventDefault();
+
+        const files = event.dataTransfer.files;
+        if(!files || files.length !== 1) {
+            console.error("Unsupported files or content dropped.");
+            return;
+        }
+
+        const fileReader = new FileReader();
+        fileReader.onload = function(event) {
+            /* TODO: isn't here way too much copying? */
+            const fileData = new Uint8Array(event.target.result);
+            const pointer = Module._malloc(fileData.length);
+            const data = new Uint8Array(Module.HEAPU8.buffer, pointer, fileData.length);
+            data.set(fileData);
+            Module.ccall('loadFile', null, ['number', 'number'], [pointer, fileData.length]);
+            Module._free(pointer);
+        };
+        fileReader.onerror = function() {
+            console.error("Unable to read file " + file.name);
+        };
+        fileReader.readAsArrayBuffer(files[0]);
+    }
+
+    document.getElementById('module').addEventListener('drop', handleDrop);
+    document.getElementById('module').addEventListener('dragover', handleDragOver);
+  </script>
 </body>
 </html>

@@ -51,6 +51,10 @@
 #include <Magnum/Trade/SceneData.h>
 #include <Magnum/Trade/TextureData.h>
 
+#ifdef CORRADE_TARGET_EMSCRIPTEN
+#include <emscripten/emscripten.h>
+#endif
+
 namespace Magnum {
 
 using namespace Math::Literals;
@@ -61,6 +65,11 @@ typedef SceneGraph::Scene<SceneGraph::TranslationRotationScalingTransformation3D
 class Player: public Platform::Application {
     public:
         explicit Player(const Arguments& arguments);
+
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        /* Need to be public to be called from C (which is called from JS) */
+        void loadFile(Containers::ArrayView<const char> data);
+        #endif
 
     private:
         void drawEvent() override;
@@ -124,6 +133,10 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
         GL::Texture2D& _texture;
 };
 
+#ifdef CORRADE_TARGET_EMSCRIPTEN
+Player* app;
+#endif
+
 Player::Player(const Arguments& arguments):
     Platform::Application{arguments, Configuration{}
         .setTitle("Magnum Player")
@@ -166,7 +179,27 @@ Player::Player(const Arguments& arguments):
     #endif
 
     setSwapInterval(1);
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    app = this;
+    #endif
 }
+
+#ifdef CORRADE_TARGET_EMSCRIPTEN
+void Player::loadFile(Containers::ArrayView<const char> data) {
+    std::unique_ptr<Trade::AbstractImporter> importer =
+        _manager.loadAndInstantiate("TinyGltfImporter");
+    if(!importer) std::exit(1);
+
+    Debug{} << "Opening D&D data";
+
+    /* Load file */
+    if(!importer->openData(data))
+        std::exit(4);
+
+    load(*importer);
+    redraw();
+}
+#endif
 
 void Player::load(Trade::AbstractImporter& importer) {
     _data.emplace();
@@ -477,5 +510,14 @@ void Player::mouseMoveEvent(MouseMoveEvent& event) {
 }
 
 }
+
+#ifdef CORRADE_TARGET_EMSCRIPTEN
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void loadFile(const char* ptr, const std::size_t size);
+    void loadFile(const char* ptr, const std::size_t size) {
+        Magnum::app->loadFile({ptr, size});
+    }
+}
+#endif
 
 MAGNUM_APPLICATION_MAIN(Magnum::Player)

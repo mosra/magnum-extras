@@ -51,6 +51,9 @@ if(CORRADE_TARGET_EMSCRIPTEN)
 endif()
 
 if(CORRADE_TARGET_EMSCRIPTEN)
+    # globals yay :/
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s 'EXTRA_EXPORTED_RUNTIME_METHODS=[\"ccall\"]' -s ALLOW_MEMORY_GROWTH=1")
+
     install(FILES player.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player RENAME index.html)
     install(TARGETS magnum-player DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player)
     install(FILES
