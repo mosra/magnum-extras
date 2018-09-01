@@ -338,24 +338,45 @@ void Player::load(Trade::AbstractImporter& importer) {
                 continue;
 
             if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Translation3D) {
-                CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
-                _data->player.addWithCallback(animation->track<Vector3>(j),
-                    [](const Float&, const Vector3& translation, Object3D& object) {
-                        object.setTranslation(translation);
-                    }, *objects[animation->trackTargetId(j)]);
+                if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
+                    _data->player.addWithCallback(animation->track<CubicHermite3D>(j),
+                        [](const Float&, const Vector3& translation, Object3D& object) {
+                            object.setTranslation(translation);
+                        }, *objects[animation->trackTargetId(j)]);
+                } else {
+                    CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
+                    _data->player.addWithCallback(animation->track<Vector3>(j),
+                        [](const Float&, const Vector3& translation, Object3D& object) {
+                            object.setTranslation(translation);
+                        }, *objects[animation->trackTargetId(j)]);
+                }
             } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Rotation3D) {
-                CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Quaternion);
-                _data->player.addWithCallback(animation->track<Quaternion>(j),
-                    [](const Float&, const Quaternion& rotation, Object3D& object) {
-                        object.setRotation(rotation);
-                    }, *objects[animation->trackTargetId(j)]);
+                if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermiteQuaternion) {
+                    _data->player.addWithCallback(animation->track<CubicHermiteQuaternion>(j),
+                        [](const Float&, const Quaternion& rotation, Object3D& object) {
+                            object.setRotation(rotation);
+                        }, *objects[animation->trackTargetId(j)]);
+                } else {
+                    CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Quaternion);
+                    _data->player.addWithCallback(animation->track<Quaternion>(j),
+                        [](const Float&, const Quaternion& rotation, Object3D& object) {
+                            object.setRotation(rotation);
+                        }, *objects[animation->trackTargetId(j)]);
+                }
             } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Scaling3D) {
-                CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
-                _data->player.addWithCallback(animation->track<Vector3>(j),
-                    [](const Float&, const Vector3& scaling, Object3D& object) {
-                        object.setScaling(scaling);
-                    }, *objects[animation->trackTargetId(j)]);
-            }
+                if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
+                    _data->player.addWithCallback(animation->track<CubicHermite3D>(j),
+                        [](const Float&, const Vector3& scaling, Object3D& object) {
+                            object.setScaling(scaling);
+                        }, *objects[animation->trackTargetId(j)]);
+                } else {
+                    CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
+                    _data->player.addWithCallback(animation->track<Vector3>(j),
+                        [](const Float&, const Vector3& scaling, Object3D& object) {
+                            object.setScaling(scaling);
+                        }, *objects[animation->trackTargetId(j)]);
+                }
+            } else CORRADE_ASSERT_UNREACHABLE();
         }
         _data->animationData = animation->release();
 
