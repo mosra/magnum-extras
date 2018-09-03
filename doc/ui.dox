@@ -28,6 +28,9 @@ namespace Magnum {
 /** @page ui UI library
 @brief Basic overview of the @ref Magnum::Ui library
 
+@tableofcontents
+@m_footernavigation
+
 To be written.
 
 */
