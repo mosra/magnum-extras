@@ -160,7 +160,7 @@ Player::Player(const Arguments& arguments):
         .setShininess(80.0f);
     _texturedShader
         .setAmbientColor(0x00000000_rgbaf)
-        .setSpecularColor(0x111111_rgbf)
+        .setSpecularColor(0x11111100_rgbaf)
         .setShininess(80.0f);
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
