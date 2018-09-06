@@ -84,10 +84,10 @@ class Player: public Platform::Application {
 
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
 
-        Shaders::Phong _coloredShader;
+        Shaders::Phong _coloredShader{{}, 3};
         Shaders::Phong _texturedShader{
             Shaders::Phong::Flag::DiffuseTexture|
-            Shaders::Phong::Flag::AlphaMask}; /** @todo remove once I have OIT */
+            Shaders::Phong::Flag::AlphaMask, 3}; /** @todo remove once I have OIT */
 
         PluginManager::Manager<Trade::AbstractImporter> _manager;
 
@@ -445,7 +445,12 @@ void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<
 void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     _shader
         .setDiffuseColor(_color)
-        .setLightPosition(camera.cameraMatrix().transformPoint({-3.0f, 10.0f, 10.0f}))
+        .setLightPositions({
+            /** @todo make this configurable, deduplicate and calculate only once */
+            camera.cameraMatrix().transformPoint(Vector3{10.0f, 10.0f, 10.0f}*100.0f),
+            camera.cameraMatrix().transformPoint(Vector3{-5.0f, -5.0f, 10.0f}*100.0f),
+            camera.cameraMatrix().transformPoint(Vector3{0.0f, 10.0f, -10.0f}*100.0f)})
+        .setLightColors({0xffffff_rgbf, 0xff9999_rgbf, 0x9999ff_rgbf})
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.rotationScaling())
         .setProjectionMatrix(camera.projectionMatrix());
@@ -455,7 +460,12 @@ void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Came
 
 void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     _shader
-        .setLightPosition(camera.cameraMatrix().transformPoint({-3.0f, 10.0f, 10.0f}))
+        .setLightPositions({
+            /** @todo make this configurable, deduplicate and calculate only once */
+            camera.cameraMatrix().transformPoint(Vector3{10.0f, 10.0f, 10.0f}*100.0f),
+            camera.cameraMatrix().transformPoint(Vector3{-5.0f, -5.0f, 10.0f}*100.0f),
+            camera.cameraMatrix().transformPoint(Vector3{0.0f, 30.0f, -10.0f}*100.0f)})
+        .setLightColors({0xffffff_rgbf, 0xff9999_rgbf, 0x9999ff_rgbf})
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.rotationScaling())
         .setProjectionMatrix(camera.projectionMatrix())
