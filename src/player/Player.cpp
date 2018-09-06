@@ -313,7 +313,7 @@ void Player::load(Trade::AbstractImporter& importer) {
     /* Basic camera setup */
     (*(_data->camera = new SceneGraph::Camera3D{*_data->cameraObject}))
         .setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
-        .setProjectionMatrix(Matrix4::perspectiveProjection(35.0_degf, 1.0f, 0.01f, 1000.0f))
+        .setProjectionMatrix(Matrix4::perspectiveProjection(75.0_degf, 1.0f, 0.01f, 1000.0f))
         .setViewport(GL::defaultFramebuffer.viewport().size());
 
     /* Use the settings with parameters of the camera in the model, if any,
