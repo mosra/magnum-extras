@@ -45,6 +45,11 @@ namespace Magnum {
 -   There's now a PPA for Ubuntu packages. See @ref building-extras-packages-deb
     for more information.
 
+@subsection changelog-extras-latest-bugfixed Bug fixes
+
+-   @ref Ui::Button::setStyle() was mistakenly not returning a reference to
+    self, breaking method chaining
+
 @section changelog-extras-2018-04 2018.04
 
 Released 2018-05-01, tagged as

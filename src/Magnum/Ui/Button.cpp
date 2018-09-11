@@ -51,9 +51,10 @@ Button::Button(Plane& plane, const Anchor& anchor, const Containers::ArrayView<c
 
 Button::~Button() = default;
 
-void Button::setStyle(Style style) {
+Button& Button::setStyle(Style style) {
     _style = style;
     update();
+    return *this;
 }
 
 Button& Button::setText(const Containers::ArrayView<const char> text) {

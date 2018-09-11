@@ -83,8 +83,11 @@ class MAGNUM_UI_EXPORT Button: public
 
         ~Button();
 
-        /** @brief Set widget style */
-        void setStyle(Style style);
+        /**
+         * @brief Set widget style
+         * @return Reference to self (for method chaining)
+         */
+        Button& setStyle(Style style);
 
         /**
          * @brief Set text
