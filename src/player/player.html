@@ -10,7 +10,7 @@
   <h1>Magnum glTF Player</h1>
   <div id="container">
     <div id="sizer"><div id="expander"><div id="listener">
-      <canvas id="module"></canvas>
+      <canvas id="module" tabindex="0"></canvas>
       <div id="status">Initialization...</div>
       <div id="status-description"></div>
       <script src="EmscriptenApplication.js"></script>
@@ -52,8 +52,12 @@
         fileReader.readAsArrayBuffer(files[0]);
     }
 
-    document.getElementById('module').addEventListener('drop', handleDrop);
-    document.getElementById('module').addEventListener('dragover', handleDragOver);
+    Module.keyboardListeningElement = Module.canvas;
+    Module.canvas.addEventListener('drop', handleDrop);
+    Module.canvas.addEventListener('dragover', handleDragOver);
+    Module.canvas.addEventListener('mousedown', function(event) {
+        event.target.focus();
+    });
   </script>
 </body>
 </html>
