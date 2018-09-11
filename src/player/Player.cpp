@@ -27,6 +27,7 @@
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
+#include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/Format.h>
 #include <Magnum/Mesh.h>
 #include <Magnum/PixelFormat.h>
@@ -128,7 +129,7 @@ class Player: public Platform::Application, public Interconnect::Receiver {
 
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         /* Need to be public to be called from C (which is called from JS) */
-        void loadFile(Containers::ArrayView<const char> data);
+        void loadFile(const char* filename, Containers::ArrayView<const char> data);
         #endif
 
     private:
@@ -145,7 +146,7 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void stop();
 
         Vector3 positionOnSphere(const Vector2i& position) const;
-        void load(Trade::AbstractImporter& importer);
+        void load(const std::string& filename, Trade::AbstractImporter& importer);
 
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
 
@@ -266,7 +267,7 @@ Player::Player(const Arguments& arguments):
     if(!importer->openFile(args.value("file")))
         std::exit(4);
 
-    load(*importer);
+    load(args.value("file"), *importer);
     #endif
 
     setSwapInterval(1);
@@ -338,7 +339,7 @@ void Player::stop() {
 }
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
-void Player::loadFile(Containers::ArrayView<const char> data) {
+void Player::loadFile(const char* filename, Containers::ArrayView<const char> data) {
     std::unique_ptr<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate("TinyGltfImporter");
     if(!importer) std::exit(1);
@@ -349,7 +350,7 @@ void Player::loadFile(Containers::ArrayView<const char> data) {
     if(!importer->openData(data))
         std::exit(4);
 
-    load(*importer);
+    load(filename, *importer);
 
     Ui::Widget::hide({
         _baseUiPlane->dropHintBackground,
@@ -361,24 +362,21 @@ void Player::loadFile(Containers::ArrayView<const char> data) {
 }
 #endif
 
-void Player::load(Trade::AbstractImporter& importer) {
+void Player::load(const std::string& filename, Trade::AbstractImporter& importer) {
     _data.emplace();
 
     /* Base object, parent of all (for easy manipulation) */
     _data->manipulator.setParent(&_data->scene);
 
     /* Load all textures. Textures that fail to load will be NullOpt. */
+    Debug{} << "Loading" << importer.textureCount() << "textures";
     _data->textures = Containers::Array<Containers::Optional<GL::Texture2D>>{importer.textureCount()};
     for(UnsignedInt i = 0; i != importer.textureCount(); ++i) {
-        Debug{} << "Importing texture" << i << importer.textureName(i);
-
         Containers::Optional<Trade::TextureData> textureData = importer.texture(i);
         if(!textureData || textureData->type() != Trade::TextureData::Type::Texture2D) {
-            Warning{} << "Cannot load texture properties, skipping";
+            Warning{} << "Cannot load texture" << i << importer.textureName(i);
             continue;
         }
-
-        Debug{} << "Importing image" << textureData->image() << importer.image2DName(textureData->image());
 
         Containers::Optional<Trade::ImageData2D> imageData = importer.image2D(textureData->image());
         GL::TextureFormat format;
@@ -395,7 +393,7 @@ void Player::load(Trade::AbstractImporter& importer) {
             format = GL::TextureFormat::RGBA;
             #endif
         } else {
-            Warning{} << "Cannot load texture image, skipping";
+            Warning{} << "Cannot load texture image" << textureData->image() << importer.image2DName(textureData->image());
             continue;
         }
 
@@ -415,13 +413,12 @@ void Player::load(Trade::AbstractImporter& importer) {
     /* Load all materials. Materials that fail to load will be NullOpt. The
        data will be stored directly in objects later, so save them only
        temporarily. */
+    Debug{} << "Loading" << importer.materialCount() << "materials";
     Containers::Array<Containers::Optional<Trade::PhongMaterialData>> materials{importer.materialCount()};
     for(UnsignedInt i = 0; i != importer.materialCount(); ++i) {
-        Debug{} << "Importing material" << i << importer.materialName(i);
-
         std::unique_ptr<Trade::AbstractMaterialData> materialData = importer.material(i);
         if(!materialData || materialData->type() != Trade::MaterialType::Phong) {
-            Warning{} << "Cannot load material, skipping";
+            Warning{} << "Cannot load material" << i << importer.materialName(i);
             continue;
         }
 
@@ -429,13 +426,12 @@ void Player::load(Trade::AbstractImporter& importer) {
     }
 
     /* Load all meshes. Meshes that fail to load will be NullOpt. */
+    Debug{} << "Loading" << importer.mesh3DCount() << "meshes";
     _data->meshes = Containers::Array<Containers::Optional<GL::Mesh>>{importer.mesh3DCount()};
     for(UnsignedInt i = 0; i != importer.mesh3DCount(); ++i) {
-        Debug{} << "Importing mesh" << i << importer.mesh3DName(i);
-
         Containers::Optional<Trade::MeshData3D> meshData = importer.mesh3D(i);
         if(!meshData || meshData->primitive() != MeshPrimitive::Triangles) {
-            Warning{} << "Cannot load the mesh, skipping";
+            Warning{} << "Cannot load mesh" << i << importer.mesh3DName(i);
             continue;
         }
 
@@ -449,13 +445,14 @@ void Player::load(Trade::AbstractImporter& importer) {
 
     /* Load the scene. Save the object pointers in an array for easier mapping
        of animations later. */
+    Debug{} << "Loading" << importer.object3DCount() << "objects";
     Containers::Array<Object3D*> objects{Containers::ValueInit, importer.object3DCount()};
     if(importer.defaultScene() != -1) {
         Debug{} << "Adding default scene" << importer.sceneName(importer.defaultScene());
 
         Containers::Optional<Trade::SceneData> sceneData = importer.scene(importer.defaultScene());
         if(!sceneData) {
-            Error{} << "Cannot load scene, exiting";
+            Error{} << "Cannot load the scene, aborting";
             return;
         }
 
@@ -488,12 +485,12 @@ void Player::load(Trade::AbstractImporter& importer) {
     }
 
     /* Import animations */
+    if(importer.animationCount())
+        Debug{} << "Importing the first animation out of" << importer.animationCount();
     for(UnsignedInt i = 0; i != importer.animationCount(); ++i) {
-        Debug{} << "Importing animation" << i << importer.animationName(i);
-
         Containers::Optional<Trade::AnimationData> animation = importer.animation(i);
         if(!animation) {
-            Warning{} << "Cannot load the animation, skipping";
+            Warning{} << "Cannot load animation" << i << importer.animationName(i);
             continue;
         }
 
@@ -549,9 +546,12 @@ void Player::load(Trade::AbstractImporter& importer) {
 
     /* Populate the model info */
     _baseUiPlane->modelInfo.setText(Utility::formatString(
-        "{} objs, {} meshes, {} texs, {} anims",
+        "{}: {} objs, {} cams, {} meshes, {} mats, {} texs, {} anims",
+        Utility::Directory::filename(filename).substr(0, 32),
         importer.object3DCount(),
+        importer.cameraCount(),
         importer.mesh3DCount(),
+        importer.materialCount(),
         importer.textureCount(),
         importer.animationCount()));
 
@@ -576,10 +576,9 @@ void Player::load(Trade::AbstractImporter& importer) {
 }
 
 void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i) {
-    Debug{} << "Importing object" << i << importer.object3DName(i);
     std::unique_ptr<Trade::ObjectData3D> objectData = importer.object3D(i);
     if(!objectData) {
-        Error{} << "Cannot import object, skipping";
+        Error{} << "Cannot import object" << i << importer.object3DName(i);
         return;
     }
 
@@ -756,9 +755,9 @@ void Player::mouseMoveEvent(MouseMoveEvent& event) {
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 extern "C" {
-    EMSCRIPTEN_KEEPALIVE void loadFile(const char* ptr, const std::size_t size);
-    void loadFile(const char* ptr, const std::size_t size) {
-        Magnum::app->loadFile({ptr, size});
+    EMSCRIPTEN_KEEPALIVE void loadFile(const char* name, const char* data, const std::size_t dataSize);
+    void loadFile(const char* name, const char* data, const std::size_t dataSize) {
+        Magnum::app->loadFile(name, {data, dataSize});
     }
 }
 #endif

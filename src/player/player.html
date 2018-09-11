@@ -43,7 +43,7 @@
             const pointer = Module._malloc(fileData.length);
             const data = new Uint8Array(Module.HEAPU8.buffer, pointer, fileData.length);
             data.set(fileData);
-            Module.ccall('loadFile', null, ['number', 'number'], [pointer, fileData.length]);
+            Module.ccall('loadFile', null, ['string', 'number', 'number'], [files[0].name, pointer, fileData.length]);
             Module._free(pointer);
         };
         fileReader.onerror = function() {
