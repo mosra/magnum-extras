@@ -245,6 +245,7 @@ By default no libraries are built and you need to select them manually:
 
 -   `WITH_UI` --- Build the @ref Ui library. Does not work on
     @ref MAGNUM_TARGET_GLES2 "OpenGL ES 2.0" / WebGL 1.0 builds of Magnum.
+    Enabled automatically if `WITH_PLAYER` is enabled.
 
 Besides libraries, the following apps are available, also all disabled by
 default:

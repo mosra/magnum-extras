@@ -34,7 +34,9 @@ find_package(Magnum REQUIRED
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
 if(CORRADE_TARGET_EMSCRIPTEN)
-    find_package(MagnumPlugins REQUIRED TinyGltfImporter)
+    find_package(MagnumPlugins REQUIRED
+        TinyGltfImporter
+        StbTrueTypeFont)
 endif()
 
 add_executable(magnum-player Player.cpp)
@@ -45,9 +47,12 @@ target_link_libraries(magnum-player PRIVATE
     Magnum::MeshTools
     Magnum::SceneGraph
     Magnum::Shaders
-    Magnum::Trade)
+    Magnum::Trade
+    MagnumUi)
 if(CORRADE_TARGET_EMSCRIPTEN)
-    target_link_libraries(magnum-player PRIVATE MagnumPlugins::TinyGltfImporter)
+    target_link_libraries(magnum-player PRIVATE
+        MagnumPlugins::TinyGltfImporter
+        MagnumPlugins::StbTrueTypeFont)
 endif()
 
 if(CORRADE_TARGET_EMSCRIPTEN)

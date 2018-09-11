@@ -24,8 +24,10 @@
 */
 
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
+#include <Corrade/Utility/Format.h>
 #include <Magnum/Mesh.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Player.h>
@@ -41,6 +43,7 @@
 #include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
 #include <Magnum/SceneGraph/Scene.h>
 #include <Magnum/Shaders/Phong.h>
+#include <Magnum/Text/Alignment.h>
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/AnimationData.h>
 #include <Magnum/Trade/CameraData.h>
@@ -51,8 +54,18 @@
 #include <Magnum/Trade/SceneData.h>
 #include <Magnum/Trade/TextureData.h>
 
+#include "Magnum/Ui/Anchor.h"
+#include "Magnum/Ui/Button.h"
+#include "Magnum/Ui/Label.h"
+#include "Magnum/Ui/Plane.h"
+#include "Magnum/Ui/UserInterface.h"
+
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 #include <emscripten/emscripten.h>
+#endif
+
+#ifdef MAGNUM_TARGET_WEBGL
+#include "Magnum/Ui/Modal.h"
 #endif
 
 namespace Magnum {
@@ -62,7 +75,54 @@ using namespace Math::Literals;
 typedef SceneGraph::Object<SceneGraph::TranslationRotationScalingTransformation3D> Object3D;
 typedef SceneGraph::Scene<SceneGraph::TranslationRotationScalingTransformation3D> Scene3D;
 
-class Player: public Platform::Application {
+constexpr const Float WidgetHeight{36.0f};
+constexpr const Float LabelHeight{36.0f};
+constexpr const Vector2 ButtonSize{96.0f, WidgetHeight};
+constexpr const Vector2 ControlSize{56.0f, WidgetHeight};
+constexpr const Vector2 LabelSize{72.0f, LabelHeight};
+
+struct BaseUiPlane: Ui::Plane {
+    explicit BaseUiPlane(Ui::UserInterface& ui):
+        Ui::Plane{ui, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right, 1, 50, 640},
+        controls{*this, {Ui::Snap::Top|Ui::Snap::Right, ButtonSize}, "Controls", Ui::Style::Success},
+        play{*this, {Ui::Snap::Bottom|Ui::Snap::Left, ControlSize}, "Play", Ui::Style::Success},
+        pause{*this, {Ui::Snap::Bottom|Ui::Snap::Left, ControlSize}, "Pause", Ui::Style::Warning},
+        stop{*this, {Ui::Snap::Right, play, ControlSize}, "Stop", Ui::Style::Danger},
+        modelInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim},
+        animationProgress{*this, {Ui::Snap::Right, stop, LabelSize}, "", Text::Alignment::LineLeft, 17}
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        ,
+        dropHintBackground{*this, {{}, {540, 140}}, Ui::Style::Info},
+        dropHint{*this, {{}, {Vector2::yAxis(30.0f), {}}}, "Drag&drop a self-contained glTF file here to view and play it.", Text::Alignment::LineCenter, Ui::Style::Info},
+        disclaimer{*this, {{}, {Vector2::yAxis(-10.0f), {}}}, "All data are processed and viewed locally in your\nweb browser. Nothing is uploaded to the server.", Text::Alignment::LineCenter, Ui::Style::Dim}
+        #endif
+    {
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        Ui::Widget::hide({
+            controls,
+            play,
+            pause,
+            stop,
+            modelInfo,
+            animationProgress});
+        #else
+        play.hide();
+        #endif
+    }
+
+    Ui::Button controls,
+        play,
+        pause,
+        stop;
+    Ui::Label modelInfo,
+        animationProgress;
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    Ui::Modal dropHintBackground;
+    Ui::Label dropHint, disclaimer;
+    #endif
+};
+
+class Player: public Platform::Application, public Interconnect::Receiver {
     public:
         explicit Player(const Arguments& arguments);
 
@@ -78,6 +138,11 @@ class Player: public Platform::Application {
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
+
+        void toggleControls();
+        void play();
+        void pause();
+        void stop();
 
         Vector3 positionOnSphere(const Vector2i& position) const;
         void load(Trade::AbstractImporter& importer);
@@ -104,9 +169,27 @@ class Player: public Platform::Application {
 
             Containers::Array<char> animationData;
             Animation::Player<std::chrono::nanoseconds, Float> player;
+
+            Int elapsedTimeAnimationDestination;
         };
 
+        const std::pair<Float, Int> _elapsedTimeAnimationData[2] {
+            {0.0f, 0},
+            {1.0f, 10}
+        };
+        const Animation::TrackView<Float, Int> _elapsedTimeAnimation{_elapsedTimeAnimationData, Math::lerp};
+
         Containers::Optional<Data> _data;
+
+        Containers::Optional<Ui::UserInterface> _ui;
+        Containers::Optional<BaseUiPlane> _baseUiPlane;
+        bool _controlsHidden =
+            #ifndef CORRADE_TARGET_EMSCRIPTEN
+            false
+            #else
+            true
+            #endif
+            ;
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -163,6 +246,14 @@ Player::Player(const Arguments& arguments):
         .setSpecularColor(0x11111100_rgbaf)
         .setShininess(80.0f);
 
+    /* Setup the UI */
+    _ui.emplace(Vector2(windowSize())/dpiScaling(), windowSize(), framebufferSize(), Ui::mcssDarkStyleConfiguration());
+    _baseUiPlane.emplace(*_ui);
+    Interconnect::connect(_baseUiPlane->controls, &Ui::Button::tapped, *this, &Player::toggleControls);
+    Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
+    Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
+    Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
+
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     /* Load a scene importer plugin */
     std::unique_ptr<Trade::AbstractImporter> importer =
@@ -184,6 +275,68 @@ Player::Player(const Arguments& arguments):
     #endif
 }
 
+void Player::toggleControls() {
+    if(_controlsHidden) {
+        if(_data) {
+            if(!_data->player.isEmpty()) {
+                if(_data->player.state() == Animation::State::Playing) {
+                    _baseUiPlane->play.hide();
+                    _baseUiPlane->pause.show();
+                } else {
+                    _baseUiPlane->play.show();
+                    _baseUiPlane->pause.hide();
+                }
+                Ui::Widget::show({
+                    _baseUiPlane->stop,
+                    _baseUiPlane->animationProgress});
+            }
+
+            _baseUiPlane->modelInfo.show();
+        }
+
+        _baseUiPlane->controls.setStyle(Ui::Style::Success);
+        _controlsHidden = false;
+
+    } else {
+        Ui::Widget::hide({
+            _baseUiPlane->play,
+            _baseUiPlane->pause,
+            _baseUiPlane->stop,
+            _baseUiPlane->modelInfo,
+            _baseUiPlane->animationProgress});
+
+        _baseUiPlane->controls.setStyle(Ui::Style::Flat);
+        _controlsHidden = true;
+    }
+}
+
+void Player::play() {
+    if(!_data) return;
+
+    _baseUiPlane->play.hide();
+    _baseUiPlane->pause.show();
+    _baseUiPlane->stop.enable();
+    _data->player.play(std::chrono::system_clock::now().time_since_epoch());
+}
+
+void Player::pause() {
+    if(!_data) return;
+
+    _baseUiPlane->play.show();
+    _baseUiPlane->pause.hide();
+    _data->player.pause(std::chrono::system_clock::now().time_since_epoch());
+}
+
+void Player::stop() {
+    if(!_data) return;
+
+    _data->player.stop();
+
+    _baseUiPlane->play.show();
+    _baseUiPlane->pause.hide();
+    _baseUiPlane->stop.disable();
+}
+
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 void Player::loadFile(Containers::ArrayView<const char> data) {
     std::unique_ptr<Trade::AbstractImporter> importer =
@@ -197,6 +350,13 @@ void Player::loadFile(Containers::ArrayView<const char> data) {
         std::exit(4);
 
     load(*importer);
+
+    Ui::Widget::hide({
+        _baseUiPlane->dropHintBackground,
+        _baseUiPlane->dropHint,
+        _baseUiPlane->disclaimer});
+    _baseUiPlane->controls.show();
+
     redraw();
 }
 #endif
@@ -387,9 +547,32 @@ void Player::load(Trade::AbstractImporter& importer) {
         break;
     }
 
-    /* Start the animation */
-    _data->player.setPlayCount(0)
-        .play(std::chrono::system_clock::now().time_since_epoch());
+    /* Populate the model info */
+    _baseUiPlane->modelInfo.setText(Utility::formatString(
+        "{} objs, {} meshes, {} texs, {} anims",
+        importer.object3DCount(),
+        importer.mesh3DCount(),
+        importer.textureCount(),
+        importer.animationCount()));
+
+    if(!_data->player.isEmpty()) {
+        /* Animate the elapsed time -- trigger update every 1/10th a second */
+        _data->player.addWithCallbackOnChange(_elapsedTimeAnimation, [](const Float&, const Int& elapsed, Player& player) {
+            if(player._baseUiPlane->animationProgress.flags() & Ui::WidgetFlag::Hidden) return;
+            const Int duration = player._data->player.duration().size()[0]*10;
+            player._baseUiPlane->animationProgress.setText(Utility::formatString(
+                "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1}",
+                elapsed/600, elapsed/10%60, elapsed%10,
+                duration/600, duration/10%60, duration%10));
+        }, _data->elapsedTimeAnimationDestination, *this);
+
+        /* Start the animation */
+        _data->player.setPlayCount(0)
+            .play(std::chrono::system_clock::now().time_since_epoch());
+    }
+
+    _controlsHidden = true;
+    toggleControls();
 }
 
 void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i) {
@@ -484,14 +667,25 @@ void Player::drawEvent() {
         _data->player.advance(std::chrono::system_clock::now().time_since_epoch());
 
         _data->camera->draw(_data->drawables);
-
-        /* Schedule a redraw only if the player is not empty to avoid hogging
-           the CPU */
-        if(!_data->player.isEmpty()) redraw();
     }
 
-    swapBuffers();
+    /* Draw the UI. Disable the depth buffer and enable premultiplied alpha
+       blending. */
+    {
+        GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
+        GL::Renderer::enable(GL::Renderer::Feature::Blending);
+        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+        _ui->draw();
+        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
+        GL::Renderer::disable(GL::Renderer::Feature::Blending);
+        GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+    }
 
+    /* Schedule a redraw only if the player is playing to avoid hogging the
+       CPU */
+    if(_data && _data->player.state() == Animation::State::Playing) redraw();
+
+    swapBuffers();
 }
 
 void Player::viewportEvent(ViewportEvent& event) {
@@ -500,11 +694,21 @@ void Player::viewportEvent(ViewportEvent& event) {
 }
 
 void Player::mousePressEvent(MouseEvent& event) {
+    if(_ui->handlePressEvent(event.position())) {
+        redraw();
+        return;
+    }
+
     if(_data && event.button() == MouseEvent::Button::Left)
         _data->previousPosition = positionOnSphere(event.position());
 }
 
 void Player::mouseReleaseEvent(MouseEvent& event) {
+    if(_ui->handleReleaseEvent(event.position())) {
+        redraw();
+        return;
+    }
+
     if(_data && event.button() == MouseEvent::Button::Left)
         _data->previousPosition = Vector3();
 }
@@ -530,6 +734,11 @@ Vector3 Player::positionOnSphere(const Vector2i& position) const {
 }
 
 void Player::mouseMoveEvent(MouseMoveEvent& event) {
+    if(_ui->handleMoveEvent(event.position())) {
+        redraw();
+        return;
+    }
+
     if(!_data || !(event.buttons() & MouseMoveEvent::Button::Left)) return;
 
     const Vector3 currentPosition = positionOnSphere(event.position());
