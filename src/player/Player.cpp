@@ -144,6 +144,7 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void play();
         void pause();
         void stop();
+        void updateAnimationTime(Int deciseconds);
 
         Vector3 positionOnSphere(const Vector2i& position) const;
         void load(const std::string& filename, Trade::AbstractImporter& importer);
@@ -172,6 +173,11 @@ class Player: public Platform::Application, public Interconnect::Receiver {
             Animation::Player<std::chrono::nanoseconds, Float> player;
 
             Int elapsedTimeAnimationDestination;
+
+            /* The UI is recreated on window resize and we need to repopulate
+               the info */
+            /** @todo remove once the UI has relayouting */
+            std::string modelInfo;
         };
 
         const std::pair<Float, Int> _elapsedTimeAnimationData[2] {
@@ -336,6 +342,17 @@ void Player::stop() {
     _baseUiPlane->play.show();
     _baseUiPlane->pause.hide();
     _baseUiPlane->stop.disable();
+}
+
+void Player::updateAnimationTime(Int deciseconds) {
+    if(_baseUiPlane->animationProgress.flags() & Ui::WidgetFlag::Hidden)
+        return;
+
+    const Int duration = _data->player.duration().size()[0]*10;
+    _baseUiPlane->animationProgress.setText(Utility::formatString(
+        "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1}",
+        deciseconds/600, deciseconds/10%60, deciseconds%10,
+        duration/600, duration/10%60, duration%10));
 }
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
@@ -545,7 +562,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
     }
 
     /* Populate the model info */
-    _baseUiPlane->modelInfo.setText(Utility::formatString(
+    _baseUiPlane->modelInfo.setText(_data->modelInfo = Utility::formatString(
         "{}: {} objs, {} cams, {} meshes, {} mats, {} texs, {} anims",
         Utility::Directory::filename(filename).substr(0, 32),
         importer.object3DCount(),
@@ -558,12 +575,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
     if(!_data->player.isEmpty()) {
         /* Animate the elapsed time -- trigger update every 1/10th a second */
         _data->player.addWithCallbackOnChange(_elapsedTimeAnimation, [](const Float&, const Int& elapsed, Player& player) {
-            if(player._baseUiPlane->animationProgress.flags() & Ui::WidgetFlag::Hidden) return;
-            const Int duration = player._data->player.duration().size()[0]*10;
-            player._baseUiPlane->animationProgress.setText(Utility::formatString(
-                "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1}",
-                elapsed/600, elapsed/10%60, elapsed%10,
-                duration/600, duration/10%60, duration%10));
+            player.updateAnimationTime(elapsed);
         }, _data->elapsedTimeAnimationDestination, *this);
 
         /* Start the animation */
@@ -689,7 +701,31 @@ void Player::drawEvent() {
 
 void Player::viewportEvent(ViewportEvent& event) {
     GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
-    if(_data) _data->camera->setViewport(event.framebufferSize());
+
+    /* Recreate the UI for the new size */
+    /** @todo Slow and ugly, redo once UI has full relayouting support */
+    _baseUiPlane = Containers::NullOpt;
+    _ui->relayout(Vector2(event.windowSize())/event.dpiScaling(), event.windowSize(), event.framebufferSize());
+    _baseUiPlane.emplace(*_ui);
+    Interconnect::connect(_baseUiPlane->controls, &Ui::Button::tapped, *this, &Player::toggleControls);
+    Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
+    Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
+    Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
+
+    if(_data) {
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        Ui::Widget::hide({
+            _baseUiPlane->dropHint,
+            _baseUiPlane->disclaimer});
+        _baseUiPlane->controls.show();
+        _controlsHidden = true;
+        toggleControls();
+        #endif
+
+        _data->camera->setViewport(event.framebufferSize());
+        _baseUiPlane->modelInfo.setText(_data->modelInfo);
+        updateAnimationTime(_data->elapsedTimeAnimationDestination);
+    }
 }
 
 void Player::mousePressEvent(MouseEvent& event) {
