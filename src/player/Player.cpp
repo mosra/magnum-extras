@@ -341,44 +341,43 @@ void Player::load(Trade::AbstractImporter& importer) {
             if(animation->trackTargetId(j) >= objects.size() || !objects[animation->trackTargetId(j)])
                 continue;
 
+            Object3D& animatedObject = *objects[animation->trackTargetId(j)];
+
             if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Translation3D) {
+                const auto callback = [](const Float&, const Vector3& translation, Object3D& object) {
+                    object.setTranslation(translation);
+                };
                 if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
                     _data->player.addWithCallback(animation->track<CubicHermite3D>(j),
-                        [](const Float&, const Vector3& translation, Object3D& object) {
-                            object.setTranslation(translation);
-                        }, *objects[animation->trackTargetId(j)]);
+                        callback, animatedObject);
                 } else {
                     CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
                     _data->player.addWithCallback(animation->track<Vector3>(j),
-                        [](const Float&, const Vector3& translation, Object3D& object) {
-                            object.setTranslation(translation);
-                        }, *objects[animation->trackTargetId(j)]);
+                        callback, animatedObject);
                 }
             } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Rotation3D) {
+                const auto callback = [](const Float&, const Quaternion& rotation, Object3D& object) {
+                    object.setRotation(rotation);
+                };
                 if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermiteQuaternion) {
                     _data->player.addWithCallback(animation->track<CubicHermiteQuaternion>(j),
-                        [](const Float&, const Quaternion& rotation, Object3D& object) {
-                            object.setRotation(rotation);
-                        }, *objects[animation->trackTargetId(j)]);
+                        callback, animatedObject);
                 } else {
                     CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Quaternion);
                     _data->player.addWithCallback(animation->track<Quaternion>(j),
-                        [](const Float&, const Quaternion& rotation, Object3D& object) {
-                            object.setRotation(rotation);
-                        }, *objects[animation->trackTargetId(j)]);
+                        callback, animatedObject);
                 }
             } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Scaling3D) {
+                const auto callback = [](const Float&, const Vector3& scaling, Object3D& object) {
+                    object.setScaling(scaling);
+                };
                 if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
                     _data->player.addWithCallback(animation->track<CubicHermite3D>(j),
-                        [](const Float&, const Vector3& scaling, Object3D& object) {
-                            object.setScaling(scaling);
-                        }, *objects[animation->trackTargetId(j)]);
+                        callback, animatedObject);
                 } else {
                     CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
                     _data->player.addWithCallback(animation->track<Vector3>(j),
-                        [](const Float&, const Vector3& scaling, Object3D& object) {
-                            object.setScaling(scaling);
-                        }, *objects[animation->trackTargetId(j)]);
+                        callback, animatedObject);
                 }
             } else CORRADE_ASSERT_UNREACHABLE();
         }
