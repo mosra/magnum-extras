@@ -274,10 +274,14 @@ void Player::load(Trade::AbstractImporter& importer) {
         Debug{} << "Importing mesh" << i << importer.mesh3DName(i);
 
         Containers::Optional<Trade::MeshData3D> meshData = importer.mesh3D(i);
-        if(!meshData || !meshData->hasNormals() || meshData->primitive() != MeshPrimitive::Triangles) {
+        if(!meshData || meshData->primitive() != MeshPrimitive::Triangles) {
             Warning{} << "Cannot load the mesh, skipping";
             continue;
         }
+
+        /** @todo do something about this? */
+        if(!meshData->normalArrayCount())
+            Warning{} << "The mesh doesn't have normals, might render improperly";
 
         /* Compile the mesh */
         _data->meshes[i] = MeshTools::compile(*meshData);
