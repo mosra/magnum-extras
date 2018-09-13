@@ -23,6 +23,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <algorithm>
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
@@ -158,9 +159,10 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
 
         Shaders::Phong _coloredShader{{}, 3};
-        Shaders::Phong _texturedShader{
+        Shaders::Phong _texturedShader{Shaders::Phong::Flag::DiffuseTexture, 3};
+        Shaders::Phong _texturedMaskShader{
             Shaders::Phong::Flag::DiffuseTexture|
-            Shaders::Phong::Flag::AlphaMask, 3}; /** @todo remove once I have OIT */
+            Shaders::Phong::Flag::AlphaMask, 3};
 
         PluginManager::Manager<Trade::AbstractImporter> _manager;
 
@@ -172,7 +174,7 @@ class Player: public Platform::Application, public Interconnect::Receiver {
             Object3D manipulator;
             Object3D* cameraObject{};
             SceneGraph::Camera3D* camera;
-            SceneGraph::DrawableGroup3D drawables;
+            SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables;
             Vector3 previousPosition;
 
             Containers::Array<char> animationData;
@@ -222,7 +224,7 @@ class ColoredDrawable: public SceneGraph::Drawable3D {
 
 class TexturedDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, GL::Texture2D& texture, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _texture(texture) {}
+        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, GL::Texture2D& texture, Float alphaMask, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _texture(texture), _alphaMask{alphaMask} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -230,6 +232,7 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
         Shaders::Phong& _shader;
         GL::Mesh& _mesh;
         GL::Texture2D& _texture;
+        Float _alphaMask;
 };
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
@@ -258,6 +261,10 @@ Player::Player(const Arguments& arguments):
         .setSpecularColor(0xffffff_rgbf)
         .setShininess(80.0f);
     _texturedShader
+        .setAmbientColor(0x00000000_rgbaf)
+        .setSpecularColor(0x11111100_rgbaf)
+        .setShininess(80.0f);
+    _texturedMaskShader
         .setAmbientColor(0x00000000_rgbaf)
         .setSpecularColor(0x11111100_rgbaf)
         .setShininess(80.0f);
@@ -519,7 +526,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
     } else if(!_data->meshes.empty() && _data->meshes[0])
-        new ColoredDrawable{_data->manipulator, _coloredShader, *_data->meshes[0], 0xffffff_rgbf, _data->drawables};
+        new ColoredDrawable{_data->manipulator, _coloredShader, *_data->meshes[0], 0xffffff_rgbf, _data->opaqueDrawables};
 
     /* Create a camera object in case it wasn't present in the scene already */
     if(!_data->cameraObject) {
@@ -651,20 +658,27 @@ void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<
 
         /* Material not available / not loaded, use a default material */
         if(materialId == -1 || !materials[materialId]) {
-            new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->drawables};
-
-        /* Textured material. If the texture failed to load, again just use a
-           default colored material. */
-        } else if(materials[materialId]->flags() & Trade::PhongMaterialData::Flag::DiffuseTexture) {
-            Containers::Optional<GL::Texture2D>& texture = _data->textures[materials[materialId]->diffuseTexture()];
-            if(texture)
-                new TexturedDrawable{*object, _texturedShader, *_data->meshes[objectData->instance()], *texture, _data->drawables};
-            else
-                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->drawables};
-
-        /* Color-only material */
+            new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->opaqueDrawables};
         } else {
-            new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], materials[materialId]->diffuseColor(), _data->drawables};
+            const Trade::PhongMaterialData& material = *materials[materialId];
+
+            /* Textured material. If the texture failed to load, again just use
+               a default-colored material. */
+            if(material.flags() & Trade::PhongMaterialData::Flag::DiffuseTexture) {
+                Containers::Optional<GL::Texture2D>& texture = _data->textures[material.diffuseTexture()];
+                if(texture) new TexturedDrawable{*object,
+                    material.alphaMode() == Trade::MaterialAlphaMode::Mask ?
+                        _texturedMaskShader : _texturedShader,
+                    *_data->meshes[objectData->instance()], *texture, material.alphaMask(),
+                    material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
+                        _data->transparentDrawables : _data->opaqueDrawables};
+                else
+                    new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->opaqueDrawables};
+
+            /* Color-only material */
+            } else {
+                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], material.diffuseColor(), _data->opaqueDrawables};
+            }
         }
 
     /* This is a node that holds the default camera -> assign the object to the
@@ -707,6 +721,9 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
         .setProjectionMatrix(camera.projectionMatrix())
         .bindDiffuseTexture(_texture);
 
+    if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
+        _shader.setAlphaMask(_alphaMask);
+
     _mesh.draw(_shader);
 }
 
@@ -716,7 +733,29 @@ void Player::drawEvent() {
     if(_data) {
         _data->player.advance(std::chrono::system_clock::now().time_since_epoch());
 
-        _data->camera->draw(_data->drawables);
+        /* Draw opaque stuff as usual */
+        _data->camera->draw(_data->opaqueDrawables);
+
+        /* Draw transparent stuff back-to-front with blending enabled */
+        if(!_data->transparentDrawables.isEmpty()) {
+            GL::Renderer::setDepthMask(false);
+            GL::Renderer::enable(GL::Renderer::Feature::Blending);
+            /* Ugh non-premultiplied alpha */
+            GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+
+            std::vector<std::pair<std::reference_wrapper<SceneGraph::Drawable3D>, Matrix4>>
+                drawableTransformations = _data->camera->drawableTransformations(_data->transparentDrawables);
+            std::sort(drawableTransformations.begin(), drawableTransformations.end(),
+                [](const std::pair<std::reference_wrapper<SceneGraph::Drawable3D>, Matrix4>& a,
+                   const std::pair<std::reference_wrapper<SceneGraph::Drawable3D>, Matrix4>& b) {
+                    return a.second.translation().z() > b.second.translation().z();
+                });
+            _data->camera->draw(drawableTransformations);
+
+            GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
+            GL::Renderer::disable(GL::Renderer::Feature::Blending);
+            GL::Renderer::setDepthMask(true);
+        }
     }
 
     /* Draw the UI. Disable the depth buffer and enable premultiplied alpha
