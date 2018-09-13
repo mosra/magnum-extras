@@ -93,6 +93,7 @@ struct BaseUiPlane: Ui::Plane {
         animationProgress{*this, {Ui::Snap::Right, stop, LabelSize}, "", Text::Alignment::LineLeft, 17}
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         ,
+        fullsize{*this, {Ui::Snap::Bottom, controls, ButtonSize}, "Full size"},
         dropHintBackground{*this, {{}, {540, 140}}, Ui::Style::Info},
         dropHint{*this, {{}, {Vector2::yAxis(30.0f), {}}}, "Drag&drop a self-contained glTF file here to view and play it.", Text::Alignment::LineCenter, Ui::Style::Info},
         disclaimer{*this, {{}, {Vector2::yAxis(-10.0f), {}}}, "All data are processed and viewed locally in your\nweb browser. Nothing is uploaded to the server.", Text::Alignment::LineCenter, Ui::Style::Dim}
@@ -101,6 +102,7 @@ struct BaseUiPlane: Ui::Plane {
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         Ui::Widget::hide({
             controls,
+            fullsize,
             play,
             pause,
             stop,
@@ -118,6 +120,7 @@ struct BaseUiPlane: Ui::Plane {
     Ui::Label modelInfo,
         animationProgress;
     #ifdef CORRADE_TARGET_EMSCRIPTEN
+    Ui::Button fullsize;
     Ui::Modal dropHintBackground;
     Ui::Label dropHint, disclaimer;
     #endif
@@ -145,6 +148,9 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void pause();
         void stop();
         void updateAnimationTime(Int deciseconds);
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        void toggleFullsize();
+        #endif
 
         Vector3 positionOnSphere(const Vector2i& position) const;
         void load(const std::string& filename, Trade::AbstractImporter& importer);
@@ -197,6 +203,9 @@ class Player: public Platform::Application, public Interconnect::Receiver {
             true
             #endif
             ;
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        bool _isFullsize = false;
+        #endif
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -260,6 +269,9 @@ Player::Player(const Arguments& arguments):
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
     Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
+    #endif
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     /* Load a scene importer plugin */
@@ -298,7 +310,11 @@ void Player::toggleControls() {
                     _baseUiPlane->animationProgress});
             }
 
-            _baseUiPlane->modelInfo.show();
+            Ui::Widget::show({
+                #ifdef CORRADE_TARGET_EMSCRIPTEN
+                _baseUiPlane->fullsize,
+                #endif
+                _baseUiPlane->modelInfo});
         }
 
         _baseUiPlane->controls.setStyle(Ui::Style::Success);
@@ -309,6 +325,9 @@ void Player::toggleControls() {
             _baseUiPlane->play,
             _baseUiPlane->pause,
             _baseUiPlane->stop,
+            #ifdef CORRADE_TARGET_EMSCRIPTEN
+            _baseUiPlane->fullsize,
+            #endif
             _baseUiPlane->modelInfo,
             _baseUiPlane->animationProgress});
 
@@ -343,6 +362,26 @@ void Player::stop() {
     _baseUiPlane->pause.hide();
     _baseUiPlane->stop.disable();
 }
+
+#ifdef CORRADE_TARGET_EMSCRIPTEN
+void Player::toggleFullsize() {
+    if(_isFullsize) {
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+        EM_ASM({setFullsize(false)});
+        #pragma GCC diagnostic pop
+        _isFullsize = false;
+        _baseUiPlane->fullsize.setStyle(Ui::Style::Default);
+    } else {
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+        EM_ASM({setFullsize(true)});
+        #pragma GCC diagnostic pop
+        _isFullsize = true;
+        _baseUiPlane->fullsize.setStyle(Ui::Style::Success);
+    }
+}
+#endif
 
 void Player::updateAnimationTime(Int deciseconds) {
     if(_baseUiPlane->animationProgress.flags() & Ui::WidgetFlag::Hidden)
@@ -711,13 +750,18 @@ void Player::viewportEvent(ViewportEvent& event) {
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
     Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
+    #endif
 
     if(_data) {
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         Ui::Widget::hide({
+            _baseUiPlane->dropHintBackground,
             _baseUiPlane->dropHint,
             _baseUiPlane->disclaimer});
         _baseUiPlane->controls.show();
+        if(_isFullsize) _baseUiPlane->fullsize.setStyle(Ui::Style::Success);
         _controlsHidden = true;
         toggleControls();
         #endif
