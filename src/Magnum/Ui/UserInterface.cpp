@@ -185,6 +185,10 @@ void UserInterface::setStyleConfiguration(const StyleConfiguration& configuratio
     configuration.pack(_backgroundUniforms, _foregroundUniforms, _textUniforms);
 }
 
+void UserInterface::relayout(const Vector2& size, const Vector2i& windowSize, const Vector2i&) {
+    BasicUserInterface<Implementation::QuadLayer, Implementation::QuadLayer, Implementation::TextLayer>::relayout(size, windowSize);
+}
+
 void UserInterface::draw() {
     update();
 

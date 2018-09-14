@@ -79,6 +79,20 @@ class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<Abs
         /** @brief Handle application mouse release event */
         bool handleReleaseEvent(const Vector2i& screenPosition);
 
+        /**
+         * @brief Relayout the UI
+         *
+         * Adapts event handlers for a new size / window size. Overriden in
+         * subclasses to do an actual work, see @ref BasicUserInterface::relayout()
+         * for more information.
+         *
+         * @attention Currently, due to implementation limitations, the
+         *      function expects the UI to be empty --- i.e., all planes
+         *      attached to it need to be destroyed before and recreated again
+         *      after. This will improve in the future.
+         */
+        void relayout(const Vector2& size, const Vector2i& windowSize);
+
     private:
         #ifndef DOXYGEN_GENERATING_OUTPUT /* https://bugzilla.gnome.org/show_bug.cgi?id=776986 */
         friend Containers::LinkedList<AbstractPlane>;

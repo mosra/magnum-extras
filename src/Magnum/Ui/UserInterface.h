@@ -209,6 +209,21 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          */
         void setStyleConfiguration(const StyleConfiguration& configuration);
 
+        /**
+         * @brief Relayout the user interface
+         *
+         * Adapts the internal state for a new size / window size.
+         *
+         * @attention Currently, due to implementation limitations, the
+         *      function expects the UI to be empty --- i.e., all planes
+         *      attached to it need to be destroyed before and recreated again
+         *      after. This will improve in the future.
+         * @attention Also, at the moment, the UI assumes the pixel density did
+         *      not change. If it did change, you may experience blurry and/or
+         *      aliased font look. To fix that, fully reconstruct the instance.
+         */
+        void relayout(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize);
+
         /** @brief Font used for the interface */
         const Text::AbstractFont& font() const { return *_font; }
 

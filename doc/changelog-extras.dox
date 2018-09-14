@@ -32,6 +32,11 @@ namespace Magnum {
 
 @section changelog-extras-latest Changes since 2018.04
 
+@subsection changelog-extras-latest-new New features
+
+-   Rudimentary support for user interface relayouting using
+    @ref Ui::UserInterface::relayout()
+
 @subsection changelog-extras-latest-changes Changes and improvements
 
 -   @ref Ui::UserInterface can now take an explicit framebuffer size parameter

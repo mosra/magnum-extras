@@ -81,4 +81,11 @@ bool AbstractUserInterface::handleReleaseEvent(const Vector2i& screenPosition) {
     return false;
 }
 
+void AbstractUserInterface::relayout(const Vector2& size, const Vector2i& windowSize) {
+    CORRADE_ASSERT(Containers::LinkedList<AbstractPlane>::isEmpty(),
+        "Ui::AbstractUserInterface::relayout(): due to implementation limitations, the UI has to be empty in order to perform a relayout", );
+    _size = size;
+    _coordinateScaling = size/Vector2{windowSize};
+}
+
 }}
