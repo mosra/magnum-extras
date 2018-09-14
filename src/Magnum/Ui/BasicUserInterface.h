@@ -60,6 +60,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<Abs
         /** @brief User interface size */
         Vector2 size() const { return _size; }
 
+        /** @brief Coordinate scaling */
+        Vector2 coordinateScaling() const { return _coordinateScaling; }
+
         /**
          * @brief Active plane
          *
