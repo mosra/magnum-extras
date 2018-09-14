@@ -70,7 +70,7 @@ matrix:
     os: osx
     compiler: clang
     env:
-    - JOBID=macos-desktop
+    - JOBID=macos-gl
     - TARGET=desktop
     - CMAKE_CXX_FLAGS="--coverage"
   #- language: cpp
