@@ -63,7 +63,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface: private Containers::LinkedList<Abs
         /**
          * @brief Active plane
          *
-         * If there is no active plane, returns `nullptr`.
+         * If there is no active plane, returns @cpp nullptr @ce.
          * @see @ref AbstractPlane::previousActivePlane(),
          *      @ref AbstractPlane::nextActivePlane()
          */
