@@ -568,12 +568,12 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
         }
 
         for(UnsignedInt j = 0; j != animation->trackCount(); ++j) {
-            if(animation->trackTargetId(j) >= objects.size() || !objects[animation->trackTargetId(j)])
+            if(animation->trackTarget(j) >= objects.size() || !objects[animation->trackTarget(j)])
                 continue;
 
-            Object3D& animatedObject = *objects[animation->trackTargetId(j)];
+            Object3D& animatedObject = *objects[animation->trackTarget(j)];
 
-            if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Translation3D) {
+            if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Translation3D) {
                 const auto callback = [](const Float&, const Vector3& translation, Object3D& object) {
                     object.setTranslation(translation);
                 };
@@ -585,7 +585,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
                     _data->player.addWithCallback(animation->track<Vector3>(j),
                         callback, animatedObject);
                 }
-            } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Rotation3D) {
+            } else if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Rotation3D) {
                 const auto callback = [](const Float&, const Quaternion& rotation, Object3D& object) {
                     object.setRotation(rotation);
                 };
@@ -597,7 +597,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
                     _data->player.addWithCallback(animation->track<Quaternion>(j),
                         callback, animatedObject);
                 }
-            } else if(animation->trackTarget(j) == Trade::AnimationTrackTarget::Scaling3D) {
+            } else if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Scaling3D) {
                 const auto callback = [](const Float&, const Vector3& scaling, Object3D& object) {
                     object.setScaling(scaling);
                 };
