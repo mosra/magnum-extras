@@ -27,7 +27,9 @@
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
+#include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/Utility/Arguments.h>
+#include <Corrade/Utility/ConfigurationGroup.h>
 #include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/Format.h>
 #include <Magnum/Mesh.h>
@@ -249,7 +251,8 @@ Player::Player(const Arguments& arguments):
     args.addArgument("file").setHelp("file", "file to load")
         .addOption("importer", "TinyGltfImporter").setHelp("importer", "importer plugin to use");
     #endif
-    args.addSkippedPrefix("magnum").setHelp("engine-specific options")
+    args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
+        .addSkippedPrefix("magnum").setHelp("engine-specific options")
         .setHelp("Displays a 3D scene file provided on command line.")
         .parse(arguments.argc, arguments.argv);
 
@@ -279,6 +282,13 @@ Player::Player(const Arguments& arguments):
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
     #endif
+
+    /* Setup plugin defaults */
+    {
+        PluginManager::PluginMetadata* const metadata = _manager.metadata("TinyGltfImporter");
+        if(metadata) metadata->configuration().setValue("mergeAnimationClips",
+            !args.isSet("no-merge-animations"));
+    }
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     /* Load a scene importer plugin */
