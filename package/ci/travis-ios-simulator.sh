@@ -50,7 +50,7 @@ cmake .. \
     -DWITH_DEBUGTOOLS=OFF \
     -DWITH_MESHTOOLS=OFF \
     -DWITH_PRIMITIVES=OFF \
-    -DWITH_SCENEGRAPH=OFF \
+    -DWITH_SCENEGRAPH=ON \
     -DWITH_SHADERS=OFF \
     -DWITH_SHAPES=OFF \
     -DWITH_TEXT=$TARGET_GLES3 \
@@ -94,6 +94,7 @@ cmake .. \
     -DWITH_UI_GALLERY=$TARGET_GLES3 \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON \
+    -DWITH_OCTREE=ON \
     -G Xcode
 set -o pipefail && cmake --build . --config Release | xcpretty
 

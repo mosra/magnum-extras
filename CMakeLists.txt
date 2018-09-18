@@ -3,6 +3,8 @@
 #
 #   Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018
 #             Vladimír Vondruš <mosra@centrum.cz>
+#   Copyright © 2015 Andrea Capobianco <andrea.c.2205@gmail.com>
+#   Copyright © 2015, 2018 Jonathan Hale <squareys@googlemail.com>
 #
 #   Permission is hereby granted, free of charge, to any person obtaining a
 #   copy of this software and associated documentation files (the "Software"),
@@ -64,6 +66,7 @@ cmake_dependent_option(BUILD_GL_TESTS "Build unit tests for OpenGL code" OFF "BU
 option(BUILD_STATIC "Build static libraries (default are dynamic)" OFF)
 cmake_dependent_option(BUILD_STATIC_PIC "Build static libraries with position-independent code" ON "BUILD_STATIC" OFF)
 
+option(WITH_OCTREE "Build Octree library" OFF)
 option(WITH_UI "Build Ui library" OFF)
 cmake_dependent_option(WITH_UI_GALLERY "Build magnum-ui-gallery executable" OFF "WITH_UI" OFF)
 
