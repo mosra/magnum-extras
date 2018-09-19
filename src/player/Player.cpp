@@ -32,11 +32,13 @@
 #include <Corrade/Utility/ConfigurationGroup.h>
 #include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/Format.h>
+#include <Magnum/Image.h>
 #include <Magnum/Mesh.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Player.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/PixelFormat.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureFormat.h>
@@ -136,7 +138,6 @@ struct Data {
     Containers::Array<Containers::Optional<GL::Texture2D>> textures;
 
     Scene3D scene;
-    Object3D manipulator;
     Object3D* cameraObject{};
     SceneGraph::Camera3D* camera;
     SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables;
@@ -167,6 +168,8 @@ class Player: public Platform::Application, public Interconnect::Receiver {
     private:
         void drawEvent() override;
         void viewportEvent(ViewportEvent& event) override;
+
+        void keyPressEvent(KeyEvent& event) override;
         void mousePressEvent(MouseEvent& event) override;
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
@@ -181,7 +184,8 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void toggleFullsize();
         #endif
 
-        Vector3 positionOnSphere(const Vector2i& position) const;
+        Float depthAt(const Vector2i& position);
+        Vector3 unproject(const Vector2i& position, Float depth) const;
 
         void load(const std::string& filename, Trade::AbstractImporter& importer);
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
@@ -215,6 +219,11 @@ class Player: public Platform::Application, public Interconnect::Receiver {
             {1.0f, 10}
         };
         const Animation::TrackView<Float, Int> _elapsedTimeAnimation{_elapsedTimeAnimationData, Math::lerp};
+
+        /* Mouse interaction */
+        Float _lastDepth;
+        Vector2i _lastPosition{-1};
+        Vector3 _rotationPoint, _translationPoint;
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -443,9 +452,6 @@ void Player::loadFile(const char* filename, Containers::ArrayView<const char> da
 void Player::load(const std::string& filename, Trade::AbstractImporter& importer) {
     _data.emplace();
 
-    /* Base object, parent of all (for easy manipulation) */
-    _data->manipulator.setParent(&_data->scene);
-
     /* Load all textures. Textures that fail to load will be NullOpt. */
     Debug{} << "Loading" << importer.textureCount() << "textures";
     _data->textures = Containers::Array<Containers::Optional<GL::Texture2D>>{importer.textureCount()};
@@ -536,12 +542,12 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
 
         /* Recursively add all children */
         for(UnsignedInt objectId: sceneData->children3D())
-            addObject(importer, objects, materials, _data->manipulator, objectId);
+            addObject(importer, objects, materials, _data->scene, objectId);
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
     } else if(!_data->meshes.empty() && _data->meshes[0])
-        new ColoredDrawable{_data->manipulator, _coloredShader, *_data->meshes[0], 0xffffff_rgbf, _data->opaqueDrawables};
+        new ColoredDrawable{_data->scene, _coloredShader, *_data->meshes[0], 0xffffff_rgbf, _data->opaqueDrawables};
 
     /* Create a camera object in case it wasn't present in the scene already */
     if(!_data->cameraObject) {
@@ -826,14 +832,84 @@ void Player::viewportEvent(ViewportEvent& event) {
     }
 }
 
+Float Player::depthAt(const Vector2i& position) {
+    const Vector2i fbPosition{position.x(), GL::defaultFramebuffer.viewport().sizeY() - position.y() - 1};
+
+    GL::defaultFramebuffer.mapForRead(GL::DefaultFramebuffer::ReadAttachment::Front);
+    Image2D data = GL::defaultFramebuffer.read(
+        Range2Di::fromSize(fbPosition, Vector2i{1}).padded(Vector2i{2}),
+        {GL::PixelFormat::DepthComponent, GL::PixelType::Float});
+
+    return Math::min(Containers::arrayCast<const Float>(data.data()));
+}
+
+Vector3 Player::unproject(const Vector2i& position, Float depth) const {
+    const Range2Di view = GL::defaultFramebuffer.viewport();
+    const Vector2i fbPosition{position.x(), view.sizeY() - position.y() - 1};
+    const Vector3 in{2*Vector2{fbPosition - view.min()}/Vector2{view.size()} - Vector2{1.0f}, depth*2.0f - 1.0f};
+
+    return _data->camera->projectionMatrix().inverted().transformPoint(in);
+}
+
+void Player::keyPressEvent(KeyEvent& event) {
+    if(!_data) return;
+
+    /* Reset the transformation to the original view */
+    if(event.key() == KeyEvent::Key::NumZero) {
+        (*_data->cameraObject)
+            .resetTransformation()
+            .translate(Vector3::zAxis(5.0f));
+
+    /* Axis-aligned view */
+    } else if(event.key() == KeyEvent::Key::NumOne ||
+              event.key() == KeyEvent::Key::NumThree ||
+              event.key() == KeyEvent::Key::NumSeven)
+    {
+        /* Start with current camera translation with the rotation inverted */
+        const Vector3 viewTranslation = _data->cameraObject->rotation().inverted().transformVector(_data->cameraObject->translation());
+
+        /* Front/back */
+        const Float multiplier = event.modifiers() & KeyEvent::Modifier::Ctrl ? -1.0f : 1.0f;
+
+        Quaternion rotation{Math::NoInit};
+        if(event.key() == KeyEvent::Key::NumSeven) /* Top/bottom */
+            rotation = Quaternion::rotation(-90.0_degf*multiplier, Vector3::xAxis());
+        else if(event.key() == KeyEvent::Key::NumOne) /* Front/back */
+            rotation = Quaternion::rotation(90.0_degf - 90.0_degf*multiplier, Vector3::yAxis());
+        else if(event.key() == KeyEvent::Key::NumThree) /* Right/left */
+            rotation = Quaternion::rotation(90.0_degf*multiplier, Vector3::yAxis());
+        else CORRADE_ASSERT_UNREACHABLE();
+
+        (*_data->cameraObject)
+            .setRotation(rotation)
+            .setTranslation(rotation.transformVector(viewTranslation));
+    } else return;
+
+    redraw();
+}
+
 void Player::mousePressEvent(MouseEvent& event) {
     if(_ui->handlePressEvent(event.position())) {
         redraw();
         return;
     }
 
-    if(_data && event.button() == MouseEvent::Button::Left)
-        _data->previousPosition = positionOnSphere(event.position());
+    /* Due to compatibility reasons, scroll is also reported as a press event,
+       so filter that out */
+    if((event.button() != MouseEvent::Button::Left &&
+        event.button() != MouseEvent::Button::Middle) || !_data) return;
+
+    _lastPosition = event.position();
+
+    const Float currentDepth = depthAt(event.position());
+    const Float depth = currentDepth == 1.0f ? _lastDepth : currentDepth;
+    _translationPoint = unproject(event.position(), depth);
+    /* Update the rotation point only if we're not zooming against infinite
+       depth or if the original rotation point is not yet initialized */
+    if(currentDepth != 1.0f || _rotationPoint.isZero()) {
+        _rotationPoint = _translationPoint;
+        _lastDepth = depth;
+    }
 }
 
 void Player::mouseReleaseEvent(MouseEvent& event) {
@@ -841,29 +917,6 @@ void Player::mouseReleaseEvent(MouseEvent& event) {
         redraw();
         return;
     }
-
-    if(_data && event.button() == MouseEvent::Button::Left)
-        _data->previousPosition = Vector3();
-}
-
-void Player::mouseScrollEvent(MouseScrollEvent& event) {
-    if(!_data || !event.offset().y()) return;
-
-    /* Distance to origin */
-    const Float distance = _data->cameraObject->transformation().translation().z();
-
-    /* Move 15% of the distance back or forward */
-    _data->cameraObject->translate(Vector3::zAxis(
-        distance*(1.0f - (event.offset().y() > 0 ? 1/0.85f : 0.85f))));
-
-    redraw();
-}
-
-Vector3 Player::positionOnSphere(const Vector2i& position) const {
-    const Vector2 positionNormalized = Vector2{position}/Vector2{_data->camera->viewport()} - Vector2{0.5f};
-    const Float length = positionNormalized.length();
-    const Vector3 result(length > 1.0f ? Vector3(positionNormalized, 0.0f) : Vector3(positionNormalized, 1.0f - length));
-    return (result*Vector3::yScale(-1.0f)).normalized();
 }
 
 void Player::mouseMoveEvent(MouseMoveEvent& event) {
@@ -872,15 +925,56 @@ void Player::mouseMoveEvent(MouseMoveEvent& event) {
         return;
     }
 
-    if(!_data || !(event.buttons() & MouseMoveEvent::Button::Left)) return;
+    if(!(event.buttons() & (MouseMoveEvent::Button::Left|
+                            MouseMoveEvent::Button::Middle)) || !_data) return;
 
-    const Vector3 currentPosition = positionOnSphere(event.position());
-    const Vector3 axis = Math::cross(_data->previousPosition, currentPosition);
+    if(_lastPosition == Vector2i{-1}) _lastPosition = event.position();
+    const Vector2i delta = event.position() - _lastPosition;
+    _lastPosition = event.position();
 
-    if(_data->previousPosition.length() < 0.001f || axis.length() < 0.001f) return;
 
-    _data->manipulator.rotate(Math::angle(_data->previousPosition, currentPosition), axis.normalized());
-    _data->previousPosition = currentPosition;
+    /* Translate */
+    if(event.modifiers() & MouseMoveEvent::Modifier::Shift) {
+        const Vector3 p = unproject(event.position(), _lastDepth);
+
+        _data->cameraObject->translateLocal(
+            _data->cameraObject->rotation().transformVector(_translationPoint - p));
+
+        _translationPoint = p;
+
+    /* Rotate around rotation point */
+    } else {
+        const auto r =
+            Quaternion::rotation(-0.01_radf*delta.y(), Vector3::xAxis())*
+            Quaternion::rotation(-0.01_radf*delta.x(), Vector3::yAxis());
+        (*_data->cameraObject)
+            .translateLocal(_data->cameraObject->rotation()
+                .transformVector(_rotationPoint + r.transformVector(-_rotationPoint)))
+            .rotateLocal(r);
+    }
+
+    redraw();
+}
+
+void Player::mouseScrollEvent(MouseScrollEvent& event) {
+    if(!_data || !event.offset().y()) return;
+
+    const Float currentDepth = depthAt(event.position());
+    const Float depth = currentDepth == 1.0f ? _lastDepth : currentDepth;
+    const Vector3 p = unproject(event.position(), depth);
+    /* Update the rotation point only if we're not zooming against infinite
+       depth or if the original rotation point is not yet initialized */
+    if(currentDepth != 1.0f || _rotationPoint.isZero()) {
+        _rotationPoint = p;
+        _lastDepth = depth;
+    }
+
+    const Int direction = event.offset().y();
+    if(!direction) return;
+
+    /* Move towards/backwards the rotation point in cam coords */
+    _data->cameraObject->translateLocal(
+        _data->cameraObject->rotation().transformVector(_rotationPoint*(direction < 0 ? -1.0f : 1.0f)*0.1f));
 
     redraw();
 }
