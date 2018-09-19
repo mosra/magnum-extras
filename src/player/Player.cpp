@@ -718,9 +718,9 @@ void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Came
         .setDiffuseColor(_color)
         .setLightPositions({
             /** @todo make this configurable, deduplicate and calculate only once */
-            camera.cameraMatrix().transformPoint(Vector3{10.0f, 10.0f, 10.0f}*100.0f),
-            camera.cameraMatrix().transformPoint(Vector3{-5.0f, -5.0f, 10.0f}*100.0f),
-            camera.cameraMatrix().transformPoint(Vector3{0.0f, 10.0f, -10.0f}*100.0f)})
+            Vector3{10.0f, 10.0f, 10.0f}*100.0f,
+            Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
+            Vector3{0.0f, 10.0f, -10.0f}*100.0f})
         .setLightColors({0xffffff_rgbf, 0xff9999_rgbf, 0x9999ff_rgbf})
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.rotationScaling())
@@ -733,9 +733,9 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
     _shader
         .setLightPositions({
             /** @todo make this configurable, deduplicate and calculate only once */
-            camera.cameraMatrix().transformPoint(Vector3{10.0f, 10.0f, 10.0f}*100.0f),
-            camera.cameraMatrix().transformPoint(Vector3{-5.0f, -5.0f, 10.0f}*100.0f),
-            camera.cameraMatrix().transformPoint(Vector3{0.0f, 30.0f, -10.0f}*100.0f)})
+            Vector3{10.0f, 10.0f, 10.0f}*100.0f,
+            Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
+            Vector3{0.0f, 30.0f, -10.0f}*100.0f})
         .setLightColors({0xffffff_rgbf, 0xff9999_rgbf, 0x9999ff_rgbf})
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.rotationScaling())
