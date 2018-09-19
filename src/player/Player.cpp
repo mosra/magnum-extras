@@ -71,6 +71,13 @@
 #endif
 
 #ifdef MAGNUM_TARGET_WEBGL
+#include <Corrade/Utility/Resource.h>
+#include <Magnum/GL/Framebuffer.h>
+#include <Magnum/GL/Shader.h>
+#include <Magnum/GL/Version.h>
+#include <Magnum/GL/Renderbuffer.h>
+#include <Magnum/GL/RenderbufferFormat.h>
+
 #include "Magnum/Ui/Modal.h"
 #endif
 
@@ -82,6 +89,35 @@ using namespace Math::Literals;
 
 typedef SceneGraph::Object<SceneGraph::TranslationRotationScalingTransformation3D> Object3D;
 typedef SceneGraph::Scene<SceneGraph::TranslationRotationScalingTransformation3D> Scene3D;
+
+#ifdef MAGNUM_TARGET_WEBGL
+class DepthReinterpretShader: public GL::AbstractShaderProgram {
+    public:
+        explicit DepthReinterpretShader(NoCreateT): GL::AbstractShaderProgram{NoCreate} {}
+        explicit DepthReinterpretShader();
+
+        DepthReinterpretShader& bindDepthTexture(GL::Texture2D& texture) {
+            texture.bind(7);
+            return *this;
+        }
+};
+
+DepthReinterpretShader::DepthReinterpretShader() {
+    GL::Shader vert{GL::Version::GLES300, GL::Shader::Type::Vertex};
+    GL::Shader frag{GL::Version::GLES300, GL::Shader::Type::Fragment};
+
+    Utility::Resource rs{"data"};
+    vert.addSource(rs.get("DepthReinterpretShader.vert"));
+    frag.addSource(rs.get("DepthReinterpretShader.frag"));
+
+    CORRADE_INTERNAL_ASSERT_OUTPUT(GL::Shader::compile({vert, frag}));
+
+    attachShaders({vert, frag});
+    CORRADE_INTERNAL_ASSERT_OUTPUT(link());
+
+    setUniform(uniformLocation("depthTexture"), 7);
+}
+#endif
 
 constexpr const Float WidgetHeight{36.0f};
 constexpr const Float LabelHeight{36.0f};
@@ -224,6 +260,14 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         Float _lastDepth;
         Vector2i _lastPosition{-1};
         Vector3 _rotationPoint, _translationPoint;
+        #ifdef MAGNUM_TARGET_WEBGL
+        GL::Framebuffer _depthFramebuffer{NoCreate};
+        GL::Texture2D _depth{NoCreate};
+        GL::Framebuffer _reinterpretFramebuffer{NoCreate};
+        GL::Renderbuffer _reinterpretDepth{NoCreate};
+        GL::Mesh _fullscreenTriangle{NoCreate};
+        DepthReinterpretShader _reinterpretShader{NoCreate};
+        #endif
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -255,10 +299,20 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
 Player* app;
 #endif
 
-Player::Player(const Arguments& arguments):
-    Platform::Application{arguments, Configuration{}
+Player::Player(const Arguments& arguments): Platform::Application{arguments,
+    Configuration{}
         .setTitle("Magnum Player")
-        .setWindowFlags(Configuration::WindowFlag::Resizable)}
+        .setWindowFlags(Configuration::WindowFlag::Resizable),
+    GLConfiguration{}
+        #ifdef MAGNUM_TARGET_WEBGL
+        /* Needed to ensure the canvas depth buffer is always Depth24Stencil8,
+           stencil size is 0 by default, some browser enable stencil for that
+           (Chrome) and some don't (Firefox) and thus our texture format for
+           blitting might not always match. */
+        .setDepthBufferSize(24)
+        .setStencilBufferSize(8)
+        #endif
+    }
 {
     Utility::Arguments args;
     #ifndef CORRADE_TARGET_EMSCRIPTEN
@@ -295,6 +349,36 @@ Player::Player(const Arguments& arguments):
     Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
+    #endif
+
+    /* Setup the depth aware mouse interaction -- on WebGL we can't just read
+       depth. The only possibility to read depth is to use a depth texture and
+       read it from a shader, then reinterpret as color and write to a RGBA
+       texture which can finally be read back using glReadPixels(). However,
+       with a depth texture we can't use multisampling so I'm instead blitting
+       the depth from the default framebuffer to another framebuffer with an
+       attached depth texture and then processing that texture with a custom
+       shader to reinterpret the depth as RGBA values, packing 8 bit of the
+       depth into each channel. That's finally read back on the client. */
+    #ifdef MAGNUM_TARGET_WEBGL
+    _depth = GL::Texture2D{};
+    _depth.setMinificationFilter(GL::SamplerFilter::Nearest)
+        .setMagnificationFilter(GL::SamplerFilter::Nearest)
+        .setWrapping(GL::SamplerWrapping::ClampToEdge)
+        /* The format is set to combined depth/stencil in hope it will match
+           the browser depth/stencil format, requested in the GLConfiguration
+           above. If it won't, the blit() won't work properly. */
+        .setStorage(1, GL::TextureFormat::Depth24Stencil8, framebufferSize());
+    _depthFramebuffer = GL::Framebuffer{{{}, framebufferSize()}};
+    _depthFramebuffer.attachTexture(GL::Framebuffer::BufferAttachment::Depth, _depth, 0);
+
+    _reinterpretDepth = GL::Renderbuffer{};
+    _reinterpretDepth.setStorage(GL::RenderbufferFormat::RGBA8, framebufferSize());
+    _reinterpretFramebuffer = GL::Framebuffer{{{}, framebufferSize()}};
+    _reinterpretFramebuffer.attachRenderbuffer(GL::Framebuffer::ColorAttachment{0}, _reinterpretDepth);
+    _reinterpretShader = DepthReinterpretShader{};
+    _fullscreenTriangle = GL::Mesh{};
+    _fullscreenTriangle.setCount(3);
     #endif
 
     /* Setup plugin defaults */
@@ -749,6 +833,9 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
 }
 
 void Player::drawEvent() {
+    #ifdef MAGNUM_TARGET_WEBGL /* Another FB could be bound from the depth read */
+    GL::defaultFramebuffer.bind();
+    #endif
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
 
     if(_data) {
@@ -795,6 +882,12 @@ void Player::drawEvent() {
        CPU */
     if(_data && _data->player.state() == Animation::State::Playing) redraw();
 
+    #ifdef MAGNUM_TARGET_WEBGL
+    /* The rendered depth buffer might get lost later, so resolve it to our
+       depth texture before swapping it to the canvas */
+    GL::Framebuffer::blit(GL::defaultFramebuffer, _depthFramebuffer, GL::defaultFramebuffer.viewport(), GL::FramebufferBlit::Depth);
+    #endif
+
     swapBuffers();
 }
 
@@ -830,17 +923,63 @@ void Player::viewportEvent(ViewportEvent& event) {
         _baseUiPlane->modelInfo.setText(_data->modelInfo);
         updateAnimationTime(_data->elapsedTimeAnimationDestination);
     }
+
+    /* Recreate depth reading textures and renderbuffers that depend on
+       viewport size */
+    #ifdef MAGNUM_TARGET_WEBGL
+    _depth = GL::Texture2D{};
+    _depth.setMinificationFilter(GL::SamplerFilter::Nearest)
+        .setMagnificationFilter(GL::SamplerFilter::Nearest)
+        .setWrapping(GL::SamplerWrapping::ClampToEdge)
+        .setStorage(1, GL::TextureFormat::Depth24Stencil8, event.framebufferSize());
+    _depthFramebuffer.attachTexture(GL::Framebuffer::BufferAttachment::Depth, _depth, 0);
+
+    _reinterpretDepth = GL::Renderbuffer{};
+    _reinterpretDepth.setStorage(GL::RenderbufferFormat::RGBA8, event.framebufferSize());
+    _reinterpretFramebuffer.attachRenderbuffer(GL::Framebuffer::ColorAttachment{0}, _reinterpretDepth);
+
+    _reinterpretFramebuffer.setViewport({{}, event.framebufferSize()});
+    #endif
 }
 
 Float Player::depthAt(const Vector2i& position) {
     const Vector2i fbPosition{position.x(), GL::defaultFramebuffer.viewport().sizeY() - position.y() - 1};
+    const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1}).padded(Vector2i{2});
 
+    /* Easy on sane platforms */
+    #ifndef MAGNUM_TARGET_WEBGL
     GL::defaultFramebuffer.mapForRead(GL::DefaultFramebuffer::ReadAttachment::Front);
-    Image2D data = GL::defaultFramebuffer.read(
-        Range2Di::fromSize(fbPosition, Vector2i{1}).padded(Vector2i{2}),
-        {GL::PixelFormat::DepthComponent, GL::PixelType::Float});
+    Image2D image = GL::defaultFramebuffer.read(area, {GL::PixelFormat::DepthComponent, GL::PixelType::Float});
 
-    return Math::min(Containers::arrayCast<const Float>(data.data()));
+    return Math::min(Containers::arrayCast<const Float>(image.data()));
+
+    /* On WebGL we first need to resolve the multisampled backbuffer depth to a
+       texture -- that needs to be done right in the draw event otherwise the
+       data might get lost -- then read that via a custom shader and manually
+       pack the 24 depth bits to a RGBA8 output. It's not possible to just
+       glReadPixels() the depth, we need to read a color, moreover Firefox
+       doesn't allow us to read anything else than RGBA8 so we can't just use
+       floatBitsToUint() and read R32UI back, we have to pack the values. */
+    #else
+    _reinterpretFramebuffer.clearColor(0, Vector4{})
+        .bind();
+    _reinterpretShader.bindDepthTexture(_depth);
+    GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
+    GL::Renderer::setScissor(area);
+    _fullscreenTriangle.draw(_reinterpretShader);
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
+
+    Image2D image = _reinterpretFramebuffer.read(area, {PixelFormat::RGBA8Unorm});
+
+    /* Unpack the values back. Can't just use UnsignedInt as the values are
+       packed as big-endian. */
+    Float depth[25];
+    auto packed = Containers::arrayCast<const Math::Vector4<UnsignedByte>>(image.data());
+    for(std::size_t i = 0; i != packed.size(); ++i)
+        depth[i] = Math::unpack<Float, UnsignedInt, 24>((packed[i].x() << 16) | (packed[i].y() << 8) | packed[i].z());
+
+    return Math::min(depth);
+    #endif
 }
 
 Vector3 Player::unproject(const Vector2i& position, Float depth) const {

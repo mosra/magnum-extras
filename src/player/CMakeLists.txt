@@ -39,7 +39,14 @@ if(CORRADE_TARGET_EMSCRIPTEN)
         StbTrueTypeFont)
 endif()
 
-add_executable(magnum-player Player.cpp)
+set(Player_SRCS Player.cpp)
+
+if(MAGNUM_TARGET_WEBGL)
+    corrade_add_resource(Player_RESOURCES resources.conf)
+    list(APPEND Player_SRCS ${Player_RESOURCES})
+endif()
+
+add_executable(magnum-player ${Player_SRCS})
 target_link_libraries(magnum-player PRIVATE
     Magnum::Application
     Magnum::GL
