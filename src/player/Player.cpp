@@ -74,6 +74,8 @@
 
 namespace Magnum {
 
+namespace {
+
 using namespace Math::Literals;
 
 typedef SceneGraph::Object<SceneGraph::TranslationRotationScalingTransformation3D> Object3D;
@@ -129,6 +131,30 @@ struct BaseUiPlane: Ui::Plane {
     #endif
 };
 
+struct Data {
+    Containers::Array<Containers::Optional<GL::Mesh>> meshes;
+    Containers::Array<Containers::Optional<GL::Texture2D>> textures;
+
+    Scene3D scene;
+    Object3D manipulator;
+    Object3D* cameraObject{};
+    SceneGraph::Camera3D* camera;
+    SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables;
+    Vector3 previousPosition;
+
+    Containers::Array<char> animationData;
+    Animation::Player<std::chrono::nanoseconds, Float> player;
+
+    Int elapsedTimeAnimationDestination;
+
+    /* The UI is recreated on window resize and we need to repopulate
+        the info */
+    /** @todo remove once the UI has relayouting */
+    std::string modelInfo;
+};
+
+}
+
 class Player: public Platform::Application, public Interconnect::Receiver {
     public:
         explicit Player(const Arguments& arguments);
@@ -156,48 +182,22 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         #endif
 
         Vector3 positionOnSphere(const Vector2i& position) const;
-        void load(const std::string& filename, Trade::AbstractImporter& importer);
 
+        void load(const std::string& filename, Trade::AbstractImporter& importer);
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
 
+        /* Global rendering stuff */
         Shaders::Phong _coloredShader{{}, 3};
         Shaders::Phong _texturedShader{Shaders::Phong::Flag::DiffuseTexture, 3};
         Shaders::Phong _texturedMaskShader{
             Shaders::Phong::Flag::DiffuseTexture|
             Shaders::Phong::Flag::AlphaMask, 3};
 
+        /* Data loading */
         PluginManager::Manager<Trade::AbstractImporter> _manager;
-
-        struct Data {
-            Containers::Array<Containers::Optional<GL::Mesh>> meshes;
-            Containers::Array<Containers::Optional<GL::Texture2D>> textures;
-
-            Scene3D scene;
-            Object3D manipulator;
-            Object3D* cameraObject{};
-            SceneGraph::Camera3D* camera;
-            SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables;
-            Vector3 previousPosition;
-
-            Containers::Array<char> animationData;
-            Animation::Player<std::chrono::nanoseconds, Float> player;
-
-            Int elapsedTimeAnimationDestination;
-
-            /* The UI is recreated on window resize and we need to repopulate
-               the info */
-            /** @todo remove once the UI has relayouting */
-            std::string modelInfo;
-        };
-
-        const std::pair<Float, Int> _elapsedTimeAnimationData[2] {
-            {0.0f, 0},
-            {1.0f, 10}
-        };
-        const Animation::TrackView<Float, Int> _elapsedTimeAnimation{_elapsedTimeAnimationData, Math::lerp};
-
         Containers::Optional<Data> _data;
 
+        /* UI */
         Containers::Optional<Ui::UserInterface> _ui;
         Containers::Optional<BaseUiPlane> _baseUiPlane;
         bool _controlsHidden =
@@ -210,6 +210,11 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         bool _isFullsize = false;
         #endif
+        const std::pair<Float, Int> _elapsedTimeAnimationData[2] {
+            {0.0f, 0},
+            {1.0f, 10}
+        };
+        const Animation::TrackView<Float, Int> _elapsedTimeAnimation{_elapsedTimeAnimationData, Math::lerp};
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
