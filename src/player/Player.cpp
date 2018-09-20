@@ -32,6 +32,7 @@
 #include <Corrade/Utility/ConfigurationGroup.h>
 #include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/Format.h>
+#include <Corrade/Utility/String.h>
 #include <Magnum/Image.h>
 #include <Magnum/Mesh.h>
 #include <Magnum/PixelFormat.h>
@@ -138,7 +139,7 @@ struct BaseUiPlane: Ui::Plane {
         ,
         fullsize{*this, {Ui::Snap::Bottom, controls, ButtonSize}, "Full size"},
         dropHintBackground{*this, {{}, {540, 140}}, Ui::Style::Info},
-        dropHint{*this, {{}, {Vector2::yAxis(30.0f), {}}}, "Drag&drop a self-contained glTF file here to view and play it.", Text::Alignment::LineCenter, Ui::Style::Info},
+        dropHint{*this, {{}, {Vector2::yAxis(30.0f), {}}}, "Drag&drop a glTF file and everything it references here to play it.", Text::Alignment::LineCenter, Ui::Style::Info},
         disclaimer{*this, {{}, {Vector2::yAxis(-10.0f), {}}}, "All data are processed and viewed locally in your\nweb browser. Nothing is uploaded to the server.", Text::Alignment::LineCenter, Ui::Style::Dim}
         #endif
     {
@@ -198,7 +199,7 @@ class Player: public Platform::Application, public Interconnect::Receiver {
 
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         /* Need to be public to be called from C (which is called from JS) */
-        void loadFile(const char* filename, Containers::ArrayView<const char> data);
+        void loadFile(const std::size_t totalCount, const char* filename, Containers::Array<char> data);
         #endif
 
     private:
@@ -232,6 +233,9 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         Shaders::Phong _texturedMaskShader{NoCreate};
 
         /* Data loading */
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        std::unordered_map<std::string, Containers::Array<char>> _droppedFiles;
+        #endif
         PluginManager::Manager<Trade::AbstractImporter> _manager;
         Containers::Optional<Data> _data;
 
@@ -521,18 +525,70 @@ void Player::updateAnimationTime(Int deciseconds) {
 }
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
-void Player::loadFile(const char* filename, Containers::ArrayView<const char> data) {
+void Player::loadFile(std::size_t totalCount, const char* filename, Containers::Array<char> data) {
+    _droppedFiles.emplace(filename, std::move(data));
+
+    Debug{} << "Dropped file" << _droppedFiles.size() << Debug::nospace << "/" << Debug::nospace << totalCount << filename;
+
+    /* We don't have all files, don't do anything yet */
+    if(_droppedFiles.size() != totalCount) return;
+
+    /* We have everything, find the top-level file */
+    const std::string* gltfFile = nullptr;
+    for(const auto& file: _droppedFiles) {
+        if(Utility::String::endsWith(file.first, ".gltf") ||
+           Utility::String::endsWith(file.first, ".glb")) {
+            if(gltfFile) {
+                Error{} << "More than one glTF file dropped";
+                _droppedFiles.clear();
+                return;
+            }
+
+            gltfFile = &file.first;
+        }
+    }
+
+    if(!gltfFile) {
+        Error{} << "No glTF file dropped";
+        _droppedFiles.clear();
+        return;
+    }
+
     std::unique_ptr<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate("TinyGltfImporter");
     if(!importer) std::exit(1);
 
-    Debug{} << "Opening D&D data";
+    /* Make the extra files available to the importer */
+    importer->setFileCallback([](const std::string& filename,
+        Trade::ImporterFileCallbackPolicy, Player& player)
+            -> Containers::Optional<Containers::ArrayView<const char>>
+        {
+            auto found = player._droppedFiles.find(filename);
+
+            /* Not found: maybe it's referencing something from a subdirectory,
+               try just the filename */
+            if(found == player._droppedFiles.end()) {
+                const std::string relative = Utility::Directory::filename(filename);
+                found = player._droppedFiles.find(relative);
+                if(found == player._droppedFiles.end()) return {};
+
+                Warning{} << filename << "was not found, supplying" << relative << "instead";
+            }
+            return Containers::ArrayView<const char>{found->second};
+        }, *this);
+
+    Debug{} << "Loading glTF file" << *gltfFile;
 
     /* Load file */
-    if(!importer->openData(data))
-        std::exit(4);
+    if(!importer->openFile(*gltfFile)) {
+        Error{} << "Can't load the file.";
+        return;
+    }
 
-    load(filename, *importer);
+    load(*gltfFile, *importer);
+
+    /* Clear all loaded files, not needed anymore */
+    _droppedFiles.clear();
 
     Ui::Widget::hide({
         _baseUiPlane->dropHintBackground,
@@ -1133,9 +1189,13 @@ void Player::mouseScrollEvent(MouseScrollEvent& event) {
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 extern "C" {
-    EMSCRIPTEN_KEEPALIVE void loadFile(const char* name, const char* data, const std::size_t dataSize);
-    void loadFile(const char* name, const char* data, const std::size_t dataSize) {
-        Magnum::app->loadFile(name, {data, dataSize});
+    EMSCRIPTEN_KEEPALIVE void loadFile(std::size_t totalCount, const char* name, char* data, std::size_t dataSize);
+    void loadFile(const std::size_t totalCount, const char* name, char* data, const std::size_t dataSize) {
+        /* Add the data to the storage and take ownership of it. Memory was
+           allocated using malloc() on JS side, so it needs to be freed using
+           free() on C++ side. */
+        Magnum::app->loadFile(totalCount, name, Corrade::Containers::Array<char>{
+            data, dataSize, [](char* ptr, std::size_t) { free(ptr); }});
     }
 }
 #endif
