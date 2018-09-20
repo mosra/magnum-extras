@@ -227,11 +227,9 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
 
         /* Global rendering stuff */
-        Shaders::Phong _coloredShader{{}, 3};
-        Shaders::Phong _texturedShader{Shaders::Phong::Flag::DiffuseTexture, 3};
-        Shaders::Phong _texturedMaskShader{
-            Shaders::Phong::Flag::DiffuseTexture|
-            Shaders::Phong::Flag::AlphaMask, 3};
+        Shaders::Phong _coloredShader{NoCreate};
+        Shaders::Phong _texturedShader{NoCreate};
+        Shaders::Phong _texturedMaskShader{NoCreate};
 
         /* Data loading */
         PluginManager::Manager<Trade::AbstractImporter> _manager;
@@ -299,42 +297,55 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
 Player* app;
 #endif
 
-Player::Player(const Arguments& arguments): Platform::Application{arguments,
-    Configuration{}
-        .setTitle("Magnum Player")
-        .setWindowFlags(Configuration::WindowFlag::Resizable),
-    GLConfiguration{}
-        #ifdef MAGNUM_TARGET_WEBGL
-        /* Needed to ensure the canvas depth buffer is always Depth24Stencil8,
-           stencil size is 0 by default, some browser enable stencil for that
-           (Chrome) and some don't (Firefox) and thus our texture format for
-           blitting might not always match. */
-        .setDepthBufferSize(24)
-        .setStencilBufferSize(8)
-        #endif
-    }
-{
+Player::Player(const Arguments& arguments): Platform::Application{arguments, NoCreate} {
     Utility::Arguments args;
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     args.addArgument("file").setHelp("file", "file to load")
         .addOption("importer", "TinyGltfImporter").setHelp("importer", "importer plugin to use");
     #endif
     args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
+        .addOption("msaa").setHelp("msaa", "MSAA level to use (if not set, defaults to 8x or 2x for HiDPI)", "N")
         .addSkippedPrefix("magnum").setHelp("engine-specific options")
         .setHelp("Displays a 3D scene file provided on command line.")
         .parse(arguments.argc, arguments.argv);
 
+    /* Try 8x MSAA, fall back to zero samples if not possible. Enable only 2x
+       MSAA if we have enough DPI. */
+    {
+        const Vector2 dpiScaling = this->dpiScaling({});
+        Configuration conf;
+        conf.setTitle("Magnum Player")
+            .setWindowFlags(Configuration::WindowFlag::Resizable)
+            .setSize(conf.size(), dpiScaling);
+        GLConfiguration glConf;
+        glConf.setSampleCount(args.value("msaa").empty() ? dpiScaling.max() < 2.0f ? 8 : 2 : args.value<Int>("msaa"));
+        #ifdef MAGNUM_TARGET_WEBGL
+        /* Needed to ensure the canvas depth buffer is always Depth24Stencil8,
+           stencil size is 0 by default, some browser enable stencil for that
+           (Chrome) and some don't (Firefox) and thus our texture format for
+           blitting might not always match. */
+        glConf.setDepthBufferSize(24)
+            .setStencilBufferSize(8);
+        #endif
+        if(!tryCreate(conf, glConf))
+            create(conf, glConf.setSampleCount(0));
+    }
+
     /* Setup renderer and shader defaults */
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    _coloredShader = Shaders::Phong{{}, 3};
     _coloredShader
         .setAmbientColor(0x111111_rgbf)
         .setSpecularColor(0xffffff_rgbf)
         .setShininess(80.0f);
+    _texturedShader = Shaders::Phong{Shaders::Phong::Flag::DiffuseTexture, 3};
     _texturedShader
         .setAmbientColor(0x00000000_rgbaf)
         .setSpecularColor(0x11111100_rgbaf)
         .setShininess(80.0f);
+    _texturedMaskShader = Shaders::Phong{
+        Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
     _texturedMaskShader
         .setAmbientColor(0x00000000_rgbaf)
         .setSpecularColor(0x11111100_rgbaf)
