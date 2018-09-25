@@ -107,7 +107,8 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @param windowSize            Size of the window to which all inputs
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
-         *      HiDPI screens usually different from window size.
+         *      some platforms with HiDPI screens may be different from window
+         *      size.
          * @param extraGlyphs           Extra characters to add to glyph cache
          *
          * Uses @ref defaultStyleConfiguration() and a builtin font with
@@ -131,7 +132,8 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @param windowSize            Size of the window to which all inputs
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
-         *      HiDPI screens usually different from window size.
+         *      some platforms with HiDPI screens may be different from window
+         *      size.
          * @param styleConfiguration    Style configuration to use
          * @param extraGlyphs           Extra characters to add to glyph cache
          *
@@ -156,7 +158,8 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @param windowSize            Size of the window to which all inputs
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
-         *      HiDPI screens usually different from window size.
+         *      some platforms with HiDPI screens may be different from window
+         *      size.
          * @param extraGlyphs           Extra characters to add to glyph cache
          *
          * Uses @ref defaultStyleConfiguration() and a builtin font with
@@ -172,7 +175,8 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @param windowSize            Size of the window to which all inputs
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
-         *      HiDPI screens usually different from window size.
+         *      some platforms with HiDPI screens may be different from window
+         *      size.
          * @param styleConfiguration    Style configuration to use
          * @param extraGlyphs           Extra characters to add to glyph cache
          *
@@ -197,7 +201,8 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @param windowSize            Size of the window to which all inputs
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
-         *      HiDPI screens usually different from window size.
+         *      some platforms with HiDPI screens may be different from window
+         *      size.
          * @param font                  Font to use
          * @param glyphCache            Populated glyph cache to use
          * @param styleConfiguration    Style configuration to use
