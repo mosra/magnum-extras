@@ -31,6 +31,7 @@
 
 #include <memory>
 #include <Corrade/Interconnect/Emitter.h>
+#include <Corrade/PluginManager/PluginManager.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/Text/Text.h>
@@ -146,6 +147,48 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * advised to set those two values separately.
          */
         explicit UserInterface(const Vector2& size, const Vector2i& windowSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs = {}): UserInterface{size, windowSize, windowSize, styleConfiguration, extraGlyphs} {}
+
+        /**
+         * @brief Construct using a external font plugin manager
+         * @param fontManager           Font plugin manager
+         * @param size                  Size of the user interface to which all
+         *      widgets are positioned
+         * @param windowSize            Size of the window to which all inputs
+         *      events are related
+         * @param framebufferSize       Size of the window framebuffer. On
+         *      HiDPI screens usually different from window size.
+         * @param extraGlyphs           Extra characters to add to glyph cache
+         *
+         * Uses @ref defaultStyleConfiguration() and a builtin font with
+         * pre-populated glyph cache, loaded from @p fontManager.
+         */
+        explicit UserInterface(PluginManager::Manager<Text::AbstractFont>& fontManager, const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const std::string& extraGlyphs = {});
+
+        /**
+         * @brief Construct the user interface with a custom style
+         * @param fontManager           Font plugin manager
+         * @param size                  Size of the user interface to which all
+         *      widgets are positioned
+         * @param windowSize            Size of the window to which all inputs
+         *      events are related
+         * @param framebufferSize       Size of the window framebuffer. On
+         *      HiDPI screens usually different from window size.
+         * @param styleConfiguration    Style configuration to use
+         * @param extraGlyphs           Extra characters to add to glyph cache
+         *
+         * Uses a builtin font with pre-populated glyph cache, loaded from
+         * @p fontManager.
+         */
+        explicit UserInterface(PluginManager::Manager<Text::AbstractFont>& fontManager, const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs = {});
+
+        /** @overload
+         *
+         * Equivalent to @ref UserInterface(PluginManager::Manager<Text::AbstractFont>&, const Vector2&, const Vector2i&, const Vector2i&, const StyleConfiguration&, const std::string&)
+         * with both @p windowSize and @p framebufferSize set to the same
+         * value. In order to have crisp rendering on HiDPI screens, it's
+         * advised to set those two values separately.
+         */
+        explicit UserInterface(PluginManager::Manager<Text::AbstractFont>& fontManager, const Vector2& size, const Vector2i& windowSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs = {}): UserInterface{fontManager, size, windowSize, windowSize, styleConfiguration, extraGlyphs} {}
 
         /**
          * @brief Construct the user interface with custom style and font
@@ -272,6 +315,10 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         /* Internal constructor used by all the public ones */
         explicit UserInterface(NoCreateT, const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize);
 
+        /* Shared code between constructors taking or not taking an external
+           plugin manager */
+        void MAGNUM_UI_LOCAL initialize(const Vector2& size, const Vector2i& framebufferSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs);
+
         GL::Buffer _backgroundUniforms,
             _foregroundUniforms,
             _textUniforms,
@@ -285,6 +332,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         Implementation::TextShader _textShader;
 
         std::unique_ptr<FontState> _fontState;
+        PluginManager::Manager<Text::AbstractFont>* _fontManager;
         Text::AbstractFont* _font;
         Text::GlyphCache* _glyphCache;
         GL::Texture2D _corner;

@@ -25,6 +25,7 @@
 
 #include "UserInterface.h"
 
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StaticArray.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Magnum/ImageView.h>
@@ -97,7 +98,7 @@ UserInterface::UserInterface(NoCreateT, const Vector2& size, const Vector2i& win
 struct UserInterface::FontState {
     explicit FontState(const Vector2i& glyphCacheSize): glyphCache{glyphCacheSize} {}
 
-    PluginManager::Manager<Text::AbstractFont> manager;
+    Containers::Optional<PluginManager::Manager<Text::AbstractFont>> manager;
     std::unique_ptr<Text::AbstractFont> font;
     Text::GlyphCache glyphCache;
 };
@@ -105,14 +106,36 @@ struct UserInterface::FontState {
 UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs): UserInterface{NoCreate, size, windowSize, framebufferSize} {
     /* Load TTF font plugin */
     _fontState.reset(new UserInterface::FontState{Vector2i{1024}});
-    _fontState->manager.setPreferredPlugins("TrueTypeFont", {"HarfBuzzFont", "FreeTypeFont"});
-    if(!(_fontState->font = _fontState->manager.loadAndInstantiate("TrueTypeFont")))
+    _fontState->manager.emplace();
+    _fontState->manager->setPreferredPlugins("TrueTypeFont", {"HarfBuzzFont", "FreeTypeFont"});
+    if(!(_fontState->font = _fontState->manager->loadAndInstantiate("TrueTypeFont")))
         std::exit(1);
 
-    /* Make the font and glyph cache pointers public */
+    /* Make the manager, font and glyph cache pointers public and finish the initialization */
+    _fontManager = &*_fontState->manager;
     _font = _fontState->font.get();
     _glyphCache = &_fontState->glyphCache;
+    initialize(size, framebufferSize, styleConfiguration, extraGlyphs);
+}
 
+UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const std::string& extraGlyphs): UserInterface{size, windowSize, framebufferSize, defaultStyleConfiguration(), extraGlyphs} {}
+
+UserInterface::UserInterface(PluginManager::Manager<Text::AbstractFont>& fontManager, const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs): UserInterface{NoCreate, size, windowSize, framebufferSize} {
+    /* Load TTF font plugin using the external manager */
+    _fontManager = &fontManager;
+    _fontState.reset(new UserInterface::FontState{Vector2i{1024}});
+    if(!(_fontState->font = _fontManager->loadAndInstantiate("TrueTypeFont")))
+        std::exit(1);
+
+    /* Make the and glyph cache pointers public and finish the initialization */
+    _font = _fontState->font.get();
+    _glyphCache = &_fontState->glyphCache;
+    initialize(size, framebufferSize, styleConfiguration, extraGlyphs);
+}
+
+UserInterface::UserInterface(PluginManager::Manager<Text::AbstractFont>& fontManager, const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const std::string& extraGlyphs): UserInterface{fontManager, size, windowSize, framebufferSize, defaultStyleConfiguration(), extraGlyphs} {}
+
+void UserInterface::initialize(const Vector2& size, const Vector2i& framebufferSize, const StyleConfiguration& styleConfiguration, const std::string& extraGlyphs) {
     /* If size of the UI is 1024x576 with a 16px font but it's rendered to a
        3840x2160 framebuffer, we need to supersample the font 3,75x to get
        crisp enough look. */
@@ -140,8 +163,6 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, co
         .setCornerSmoothnessOut(styleConfiguration.cornerSmoothnessOut()*supersamplingRatio));
 }
 
-UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, const std::string& extraGlyphs): UserInterface{size, windowSize, framebufferSize, defaultStyleConfiguration(), extraGlyphs} {}
-
 UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize, Text::AbstractFont& font, Text::GlyphCache& glyphCache, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, windowSize, framebufferSize} {
     _font = &font;
     _glyphCache = &glyphCache;
@@ -150,7 +171,8 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, co
 
 #ifdef MAGNUM_BUILD_DEPRECATED
 UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, screenSize, screenSize} {
-    /* Populate the state only for the glyph cache */
+    /* Populate the state only for the glyph cache. Neither the manager nor
+       the font is used. */
     _fontState.reset(new UserInterface::FontState{Vector2i{1024}});
     _font = &font;
     _glyphCache = &_fontState->glyphCache;

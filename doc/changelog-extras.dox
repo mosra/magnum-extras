@@ -41,6 +41,8 @@ namespace Magnum {
 
 -   @ref Ui::UserInterface can now take an explicit framebuffer size parameter
     for more flexibility when rendering on HiDPI screens or in VR.
+-   @ref Ui::UserInterface can now take an external font plugin mananger to
+    work better together with code that does text rendering on its own
 
 @subsection changelog-extras-latest-buildsystem Build system
 
