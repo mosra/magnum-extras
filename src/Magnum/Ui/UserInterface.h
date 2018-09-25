@@ -313,7 +313,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         struct MAGNUM_UI_LOCAL FontState;
 
         /* Internal constructor used by all the public ones */
-        explicit UserInterface(NoCreateT, const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize);
+        explicit MAGNUM_UI_LOCAL UserInterface(NoCreateT, const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize);
 
         /* Shared code between constructors taking or not taking an external
            plugin manager */
