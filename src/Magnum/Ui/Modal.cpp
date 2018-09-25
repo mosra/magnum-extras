@@ -30,7 +30,7 @@
 
 namespace Magnum { namespace Ui {
 
-Modal::Modal(Plane& plane, const Anchor& anchor, const Style style): Widget{plane, anchor, {plane.ui().styleConfiguration().padding(), plane.ui().styleConfiguration().padding()}} {
+Modal::Modal(Plane& plane, const Anchor& anchor, const Style style): Widget{plane, anchor, {plane.ui().styleConfiguration().padding(), plane.ui().styleConfiguration().padding()}}, _style{style} {
     _dimElementId = plane._backgroundLayer.addElement({{-plane.rect().min(), plane.ui().size()},
         Implementation::backgroundColorIndex(Type::Modal, Style::Dim, State::Default)});
 
@@ -39,5 +39,20 @@ Modal::Modal(Plane& plane, const Anchor& anchor, const Style style): Widget{plan
 }
 
 Modal::~Modal() = default;
+
+Modal& Modal::setStyle(Style style) {
+    _style = style;
+    update();
+    return *this;
+}
+
+void Modal::update() {
+    auto& plane = static_cast<Plane&>(this->plane());
+
+    plane._backgroundLayer.modifyElement(_dimElementId).colorIndex =
+        Implementation::backgroundColorIndex(Type::Modal, Style::Dim, flags() & ~(WidgetFlag::Active|WidgetFlag::Hovered|WidgetFlag::Pressed));
+    plane._backgroundLayer.modifyElement(_backgroundElementId).colorIndex =
+        Implementation::backgroundColorIndex(Type::Modal, _style, flags() & ~(WidgetFlag::Active|WidgetFlag::Hovered|WidgetFlag::Pressed));
+}
 
 }}

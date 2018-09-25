@@ -60,8 +60,17 @@ class MAGNUM_UI_EXPORT Modal: public Widget {
 
         ~Modal();
 
+        /**
+         * @brief Set widget style
+         * @return Reference to self (for method chaining)
+         */
+        Modal& setStyle(Style style);
+
     private:
+        void MAGNUM_UI_LOCAL update() override;
+
         std::size_t _dimElementId, _backgroundElementId;
+        Style _style;
 };
 
 }}
