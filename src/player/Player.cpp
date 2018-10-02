@@ -183,7 +183,7 @@ struct Data {
     Containers::Array<char> animationData;
     Animation::Player<std::chrono::nanoseconds, Float> player;
 
-    Int elapsedTimeAnimationDestination;
+    Int elapsedTimeAnimationDestination = -1; /* So it gets updated with 0 as well */
 
     /* The UI is recreated on window resize and we need to repopulate
         the info */
