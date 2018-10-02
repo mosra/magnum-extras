@@ -124,17 +124,20 @@ constexpr const Float WidgetHeight{36.0f};
 constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 ButtonSize{96.0f, WidgetHeight};
 constexpr const Vector2 ControlSize{56.0f, WidgetHeight};
+constexpr const Vector2 HalfControlSize{28.0f, WidgetHeight};
 constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 
 struct BaseUiPlane: Ui::Plane {
     explicit BaseUiPlane(Ui::UserInterface& ui):
         Ui::Plane{ui, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right, 1, 50, 640},
         controls{*this, {Ui::Snap::Top|Ui::Snap::Right, ButtonSize}, "Controls", Ui::Style::Success},
-        play{*this, {Ui::Snap::Bottom|Ui::Snap::Left, ControlSize}, "Play", Ui::Style::Success},
-        pause{*this, {Ui::Snap::Bottom|Ui::Snap::Left, ControlSize}, "Pause", Ui::Style::Warning},
+        backward{*this, {Ui::Snap::Bottom|Ui::Snap::Left, HalfControlSize}, "«"},
+        play{*this, {Ui::Snap::Right, backward, ControlSize}, "Play", Ui::Style::Success},
+        pause{*this, {Ui::Snap::Right, backward, ControlSize}, "Pause", Ui::Style::Warning},
         stop{*this, {Ui::Snap::Right, play, ControlSize}, "Stop", Ui::Style::Danger},
+        forward{*this, {Ui::Snap::Right, stop, HalfControlSize}, "»"},
         modelInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim},
-        animationProgress{*this, {Ui::Snap::Right, stop, LabelSize}, "", Text::Alignment::LineLeft, 17}
+        animationProgress{*this, {Ui::Snap::Right, forward, LabelSize}, "", Text::Alignment::LineLeft, 17}
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         ,
         fullsize{*this, {Ui::Snap::Bottom, controls, ButtonSize}, "Full size"},
@@ -147,9 +150,11 @@ struct BaseUiPlane: Ui::Plane {
         Ui::Widget::hide({
             controls,
             fullsize,
+            backward,
             play,
             pause,
             stop,
+            forward,
             modelInfo,
             animationProgress});
         #else
@@ -158,9 +163,11 @@ struct BaseUiPlane: Ui::Plane {
     }
 
     Ui::Button controls,
+        backward,
         play,
         pause,
-        stop;
+        stop,
+        forward;
     Ui::Label modelInfo,
         animationProgress;
     #ifdef CORRADE_TARGET_EMSCRIPTEN
@@ -216,6 +223,8 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void play();
         void pause();
         void stop();
+        void backward();
+        void forward();
         void updateAnimationTime(Int deciseconds);
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         void toggleFullsize();
@@ -356,12 +365,14 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
         .setShininess(80.0f);
 
     /* Setup the UI */
-    _ui.emplace(Vector2(windowSize())/dpiScaling(), windowSize(), framebufferSize(), Ui::mcssDarkStyleConfiguration());
+    _ui.emplace(Vector2(windowSize())/dpiScaling(), windowSize(), framebufferSize(), Ui::mcssDarkStyleConfiguration(), "«»");
     _baseUiPlane.emplace(*_ui);
     Interconnect::connect(_baseUiPlane->controls, &Ui::Button::tapped, *this, &Player::toggleControls);
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
     Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
+    Interconnect::connect(_baseUiPlane->backward, &Ui::Button::tapped, *this, &Player::backward);
+    Interconnect::connect(_baseUiPlane->forward, &Ui::Button::tapped, *this, &Player::forward);
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
     #endif
@@ -436,7 +447,9 @@ void Player::toggleControls() {
                     _baseUiPlane->pause.hide();
                 }
                 Ui::Widget::show({
+                    _baseUiPlane->backward,
                     _baseUiPlane->stop,
+                    _baseUiPlane->forward,
                     _baseUiPlane->animationProgress});
             }
 
@@ -452,9 +465,11 @@ void Player::toggleControls() {
 
     } else {
         Ui::Widget::hide({
+            _baseUiPlane->backward,
             _baseUiPlane->play,
             _baseUiPlane->pause,
             _baseUiPlane->stop,
+            _baseUiPlane->forward,
             #ifdef CORRADE_TARGET_EMSCRIPTEN
             _baseUiPlane->fullsize,
             #endif
@@ -471,7 +486,10 @@ void Player::play() {
 
     _baseUiPlane->play.hide();
     _baseUiPlane->pause.show();
-    _baseUiPlane->stop.enable();
+    Ui::Widget::enable({
+        _baseUiPlane->backward,
+        _baseUiPlane->stop,
+        _baseUiPlane->forward});
     _data->player.play(std::chrono::system_clock::now().time_since_epoch());
 }
 
@@ -490,7 +508,18 @@ void Player::stop() {
 
     _baseUiPlane->play.show();
     _baseUiPlane->pause.hide();
-    _baseUiPlane->stop.disable();
+    Ui::Widget::disable({
+        _baseUiPlane->backward,
+        _baseUiPlane->stop,
+        _baseUiPlane->forward});
+}
+
+void Player::backward() {
+    _data->player.seekBy(std::chrono::nanoseconds{-33333333});
+}
+
+void Player::forward() {
+    _data->player.seekBy(std::chrono::nanoseconds{33333333});
 }
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
@@ -1089,6 +1118,15 @@ void Player::keyPressEvent(KeyEvent& event) {
         (*_data->cameraObject)
             .setRotation(rotation)
             .setTranslation(rotation.transformVector(viewTranslation));
+
+    /* Pause/seek the animation */
+    } else if(event.key() == KeyEvent::Key::Space) {
+        _data->player.state() == Animation::State::Paused ? play() : pause();
+    } else if(event.key() == KeyEvent::Key::Left) {
+        backward();
+    } else if(event.key() == KeyEvent::Key::Right) {
+        forward();
+
     } else return;
 
     redraw();
