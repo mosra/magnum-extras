@@ -27,7 +27,7 @@
 
 #include <Corrade/Utility/VisibilityMacros.h>
 
-#include "Magnum/configure.h"
+#include "Magnum/Ui/configure.h"
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #ifndef MAGNUM_UI_BUILD_STATIC
