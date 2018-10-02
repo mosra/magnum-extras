@@ -107,7 +107,11 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, co
     /* Load TTF font plugin */
     _fontState.reset(new UserInterface::FontState{Vector2i{1024}});
     _fontState->manager.emplace();
-    _fontState->manager->setPreferredPlugins("TrueTypeFont", {"HarfBuzzFont", "FreeTypeFont"});
+    /* HarfBuzz tries to use ligatures where possible, (ft, fl, ...) and since
+       there's no on-demand glyph rendering yet (and ft is not even in Unicode
+       so we can't pass it though extraGlyphs), it'll cause invalid glyph
+       markers to get rendered. So can't use HB at the moment. */
+    //_fontState->manager->setPreferredPlugins("TrueTypeFont", {"HarfBuzzFont", "FreeTypeFont"});
     if(!(_fontState->font = _fontState->manager->loadAndInstantiate("TrueTypeFont")))
         std::exit(1);
 
