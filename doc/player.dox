@@ -31,6 +31,8 @@ namespace Magnum {
 @m_footernavigation
 @m_keywords{magnum-player player}
 
+@image html player.jpg width=400px
+
 @m_div{m-button m-primary} <a href="http://magnum.graphics/showcase/player/">@m_div{m-big}Live web version @m_enddiv @m_div{m-small} uses WebAssembly & WebGL @m_enddiv </a> @m_enddiv
 
 This app is built if `WITH_PLAYER` is enabled when building Magnum Extras. To
@@ -44,10 +46,31 @@ find_package(MagnumExtras REQUIRED player)
 add_custom_command(OUTPUT ... COMMAND MagnumExtras::player ...)
 @endcode
 
+@section magnum-player-controls Controls
+
+-   @m_class{m-label m-default} **Space** plays or pauses the animation
+-   @m_class{m-label m-default} **arrow keys** seek the animation forward or
+    backward
+-   @m_class{m-label m-default} **mouse drag** rotates the scene around the
+    cursor
+-   @m_class{m-label m-warning} **Shift** @m_class{m-label m-default} **mouse
+    drag** pans the scene at depth of the cursor
+-   @m_class{m-label m-default} **mouse wheel** zooms in/out relative to cursor
+    position
+-   @m_class{m-label m-default} **Num 1** / @m_class{m-label m-warning} **Ctrl**
+    @m_class{m-label m-default} **Num 1** switches to a front / back view
+-   @m_class{m-label m-default} **Num 3** / @m_class{m-label m-warning} **Ctrl**
+    @m_class{m-label m-default} **Num 3** switches to a right / left view
+-   @m_class{m-label m-default} **Num 7** / @m_class{m-label m-warning} **Ctrl**
+    @m_class{m-label m-default} **Num 7** switches to a top / bottom view
+-   @m_class{m-label m-default} **Num 0** resets the camera back to the
+    original view
+
 @section magnum-player-usage Usage
 
 @code{.sh}
-magnum-player [--magnum-...] [-h|--help] [--importer IMPORTER] [--] file
+magnum-player [--magnum-...] [-h|--help] [--importer IMPORTER] \
+    [--no-merge-animations] [--msaa N] [--] file
 @endcode
 
 Arguments:
@@ -55,9 +78,20 @@ Arguments:
 -   `file` --- file to load
 -   `-h`, `--help` --- display this help message and exit
 -   `--importer IMPORTER` --- importer plugin to use (default:
-    `TinyGltfImporter`)
+    @ref Trade::TinyGltfImporter "TinyGltfImporter")
+-   `--no-merge-animations` --- don't merge glTF animations into a single clip
+-   `--msaa N` --- MSAA level to use (if not set, defaults to 8x or 2x for
+    HiDPI)
 -   `--magnum-...` --- engine-specific options (see
     @ref GL-Context-command-line for details)
+
+@section magnum-player-credits Credits
+
+The screenshot was made using the
+[Littlest Tokyo](https://sketchfab.com/models/94b24a60dc1b48248de50bf087c0f042)
+model by [Glen Fox](https://www.artstation.com/glenatron), licensed under the
+CC 4.0 Attribution license.
+
 */
 
 }
