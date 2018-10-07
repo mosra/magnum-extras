@@ -52,6 +52,8 @@ namespace Magnum {
 @m_footernavigation
 @m_keywords{magnum-ui-gallery ui-gallery}
 
+@image html ui-gallery.png width=400px
+
 @m_div{m-button m-primary} <a href="http://magnum.graphics/showcase/magnum-ui-gallery/">@m_div{m-big}Live web version @m_enddiv @m_div{m-small} uses WebAssembly & WebGL 2 @m_enddiv </a> @m_enddiv
 
 This app is built if both `WITH_UI` and `WITH_UI_GALLERY` is enabled when
