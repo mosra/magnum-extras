@@ -219,6 +219,8 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
+        void initializeUi();
+
         void toggleControls();
         void play();
         void pause();
@@ -366,16 +368,7 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
 
     /* Setup the UI */
     _ui.emplace(Vector2(windowSize())/dpiScaling(), windowSize(), framebufferSize(), Ui::mcssDarkStyleConfiguration(), "«»");
-    _baseUiPlane.emplace(*_ui);
-    Interconnect::connect(_baseUiPlane->controls, &Ui::Button::tapped, *this, &Player::toggleControls);
-    Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
-    Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
-    Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
-    Interconnect::connect(_baseUiPlane->backward, &Ui::Button::tapped, *this, &Player::backward);
-    Interconnect::connect(_baseUiPlane->forward, &Ui::Button::tapped, *this, &Player::forward);
-    #ifdef CORRADE_TARGET_EMSCRIPTEN
-    Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
-    #endif
+    initializeUi();
 
     /* Setup the depth aware mouse interaction -- on WebGL we can't just read
        depth. The only possibility to read depth is to use a depth texture and
@@ -438,6 +431,19 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
     setSwapInterval(1);
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     app = this;
+    #endif
+}
+
+void Player::initializeUi() {
+    _baseUiPlane.emplace(*_ui);
+    Interconnect::connect(_baseUiPlane->controls, &Ui::Button::tapped, *this, &Player::toggleControls);
+    Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
+    Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
+    Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
+    Interconnect::connect(_baseUiPlane->backward, &Ui::Button::tapped, *this, &Player::backward);
+    Interconnect::connect(_baseUiPlane->forward, &Ui::Button::tapped, *this, &Player::forward);
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
     #endif
 }
 
@@ -1004,14 +1010,7 @@ void Player::viewportEvent(ViewportEvent& event) {
     /** @todo Slow and ugly, redo once UI has full relayouting support */
     _baseUiPlane = Containers::NullOpt;
     _ui->relayout(Vector2(event.windowSize())/event.dpiScaling(), event.windowSize(), event.framebufferSize());
-    _baseUiPlane.emplace(*_ui);
-    Interconnect::connect(_baseUiPlane->controls, &Ui::Button::tapped, *this, &Player::toggleControls);
-    Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
-    Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
-    Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &Player::stop);
-    #ifdef CORRADE_TARGET_EMSCRIPTEN
-    Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
-    #endif
+    initializeUi();
 
     if(_data) {
         #ifdef CORRADE_TARGET_EMSCRIPTEN
