@@ -127,6 +127,23 @@ constexpr const Vector2 ControlSize{56.0f, WidgetHeight};
 constexpr const Vector2 HalfControlSize{28.0f, WidgetHeight};
 constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 
+#ifdef CORRADE_TARGET_EMSCRIPTEN
+struct ImportErrorUiPlane: Ui::Plane, Interconnect::Receiver {
+    explicit ImportErrorUiPlane(Ui::UserInterface& ui):
+        Ui::Plane{ui, {{}, {440, 200}}, 1, 5, 256},
+        what{*this, {Ui::Snap::Top, Range2D::fromSize(Vector2::yAxis(-15.0f), LabelSize)}, "", Text::Alignment::LineCenter, 64, Ui::Style::Danger},
+        close{*this, {Ui::Snap::Bottom, ButtonSize}, "Oh well", Ui::Style::Danger}
+    {
+        Ui::Modal{*this, {Ui::Snap::Left|Ui::Snap::Right|Ui::Snap::Bottom|Ui::Snap::Top|Ui::Snap::NoSpaceX|Ui::Snap::NoSpaceY}, Ui::Style::Danger};
+
+        Ui::Label{*this, {Ui::Snap::Top, Range2D::fromSize(Vector2::yAxis(-60.0f), LabelSize)}, "Try with another file or check the browser\nconsole for details. Bug reports welcome.", Text::Alignment::LineCenter, Ui::Style::Dim};
+    }
+
+    Ui::Label what;
+    Ui::Button close;
+};
+#endif
+
 struct BaseUiPlane: Ui::Plane {
     explicit BaseUiPlane(Ui::UserInterface& ui):
         Ui::Plane{ui, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right, 1, 50, 640},
@@ -253,6 +270,9 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         /* UI */
         Containers::Optional<Ui::UserInterface> _ui;
         Containers::Optional<BaseUiPlane> _baseUiPlane;
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        Containers::Optional<ImportErrorUiPlane> _importErrorUiPlane;
+        #endif
         bool _controlsHidden =
             #ifndef CORRADE_TARGET_EMSCRIPTEN
             false
@@ -436,6 +456,9 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
 
 void Player::initializeUi() {
     _baseUiPlane.emplace(*_ui);
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    _importErrorUiPlane.emplace(*_ui);
+    #endif
     Interconnect::connect(_baseUiPlane->controls, &Ui::Button::tapped, *this, &Player::toggleControls);
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &Player::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &Player::pause);
@@ -444,6 +467,7 @@ void Player::initializeUi() {
     Interconnect::connect(_baseUiPlane->forward, &Ui::Button::tapped, *this, &Player::forward);
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     Interconnect::connect(_baseUiPlane->fullsize, &Ui::Button::tapped, *this, &Player::toggleFullsize);
+    Interconnect::connect(_importErrorUiPlane->close, &Ui::Button::tapped, *_importErrorUiPlane, &Ui::Plane::hide);
     #endif
 }
 
@@ -569,6 +593,12 @@ void Player::updateAnimationTime(Int deciseconds) {
 void Player::loadFile(std::size_t totalCount, const char* filename, Containers::Array<char> data) {
     _droppedFiles.emplace(filename, std::move(data));
 
+    /* If the error is displayed, hide it */
+    /** @todo make it just _importErrorUiPlane->hide() once the bug with a
+            no-op hiding is fixed */
+    if(_ui->activePlane() == &*_importErrorUiPlane)
+        _importErrorUiPlane->hide();
+
     Debug{} << "Dropped file" << _droppedFiles.size() << Debug::nospace << "/" << Debug::nospace << totalCount << filename;
 
     /* We don't have all files, don't do anything yet */
@@ -580,8 +610,10 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
         if(Utility::String::endsWith(file.first, ".gltf") ||
            Utility::String::endsWith(file.first, ".glb")) {
             if(gltfFile) {
-                Error{} << "More than one glTF file dropped";
+                _importErrorUiPlane->what.setText("More than one glTF file dropped.");
+                _importErrorUiPlane->activate();
                 _droppedFiles.clear();
+                redraw();
                 return;
             }
 
@@ -590,8 +622,10 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     }
 
     if(!gltfFile) {
-        Error{} << "No glTF file dropped";
+        _importErrorUiPlane->what.setText("No glTF file dropped.");
+        _importErrorUiPlane->activate();
         _droppedFiles.clear();
+        redraw();
         return;
     }
 
@@ -622,7 +656,10 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
 
     /* Load file */
     if(!importer->openFile(*gltfFile)) {
-        Error{} << "Can't load the file.";
+        _importErrorUiPlane->what.setText("File import failed :(");
+        _importErrorUiPlane->activate();
+        _droppedFiles.clear();
+        redraw();
         return;
     }
 
@@ -1008,6 +1045,9 @@ void Player::viewportEvent(ViewportEvent& event) {
 
     /* Recreate the UI for the new size */
     /** @todo Slow and ugly, redo once UI has full relayouting support */
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    _importErrorUiPlane = Containers::NullOpt;
+    #endif
     _baseUiPlane = Containers::NullOpt;
     _ui->relayout(Vector2(event.windowSize())/event.dpiScaling(), event.windowSize(), event.framebufferSize());
     initializeUi();
