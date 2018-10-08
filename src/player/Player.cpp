@@ -350,7 +350,7 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
     _coloredShader = Shaders::Phong{{}, 3};
     _coloredShader
         .setAmbientColor(0x111111_rgbf)
-        .setSpecularColor(0xffffff_rgbf)
+        .setSpecularColor(0x11111100_rgbaf)
         .setShininess(80.0f);
     _texturedShader = Shaders::Phong{Shaders::Phong::Flag::DiffuseTexture, 3};
     _texturedShader
