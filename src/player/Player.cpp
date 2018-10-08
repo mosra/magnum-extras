@@ -427,6 +427,12 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
         std::exit(4);
 
     load(args.value("file"), *importer);
+    #else
+    std::unique_ptr<Trade::AbstractImporter> importer =
+        _manager.loadAndInstantiate("TinyGltfImporter");
+    Utility::Resource rs{"data"};
+    importer->openData(rs.getRaw("artwork/default.glb"));
+    load({}, *importer);
     #endif
 
     setSwapInterval(1);
@@ -826,12 +832,16 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
         }, _data->elapsedTimeAnimationDestination, *this);
 
         /* Start the animation */
-        _data->player.setPlayCount(0)
-            .play(std::chrono::system_clock::now().time_since_epoch());
+        _data->player.play(std::chrono::system_clock::now().time_since_epoch());
     }
 
-    _controlsHidden = true;
-    toggleControls();
+    /* If this is not the initial animation, make it repeat indefinitely and
+       show the controls. Otherwise just play it once and without controls. */
+    if(!filename.empty()) {
+        _data->player.setPlayCount(0);
+        _controlsHidden = true;
+        toggleControls();
+    }
 }
 
 void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i) {
