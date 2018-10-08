@@ -65,7 +65,7 @@ option(BUILD_STATIC "Build static libraries (default are dynamic)" OFF)
 cmake_dependent_option(BUILD_STATIC_PIC "Build static libraries with position-independent code" ON "BUILD_STATIC" OFF)
 
 option(WITH_PLAYER "Build the magnum-player application" OFF)
-cmake_dependent_option(WITH_UI "Build Ui library" OFF "WITH_PLAYER" ON)
+cmake_dependent_option(WITH_UI "Build Ui library" OFF "NOT WITH_PLAYER" ON)
 cmake_dependent_option(WITH_UI_GALLERY "Build magnum-ui-gallery executable" OFF "WITH_UI" OFF)
 
 # Dynamic linking is meaningless on Emscripten and too inconvenient on Android
