@@ -20,13 +20,24 @@
   <script>
     "use strict"; /* it summons the Cthulhu in a proper way, they say */
 
-    function handleDragOver(event) {
+    /* Done here instead of using Sdl2Application::setContainerCssClass() so
+       we can do extra things like hiding scrollbars on magnum.graphics. Not
+       needed here though. */
+    function setFullsize(fullsize) {
+        if(fullsize) {
+            document.getElementById('container').className = 'fullsize';
+        } else {
+            document.getElementById('container').className = '';
+        }
+    }
+
+    Module.keyboardListeningElement = Module.canvas;
+    Module.canvas.addEventListener('dragover', function(event) {
         event.stopPropagation();
         event.preventDefault();
         event.dataTransfer.dropEffect = 'copy';
-    }
-
-    function handleDrop(event) {
+    });
+    Module.canvas.addEventListener('drop', function(event) {
         event.stopPropagation();
         event.preventDefault();
 
@@ -55,22 +66,7 @@
                 fileReader.readAsArrayBuffer(file);
             })(files[i]); /* this is how you do a capturing lambda?! ugh */
         }
-    }
-
-    /* Done here instead of using Sdl2Application::setContainerCssClass() so
-       we can do extra things like hiding scrollbars on magnum.graphics. Not
-       needed here though. */
-    function setFullsize(fullsize) {
-        if(fullsize) {
-            document.getElementById('container').className = 'fullsize';
-        } else {
-            document.getElementById('container').className = '';
-        }
-    }
-
-    Module.keyboardListeningElement = Module.canvas;
-    Module.canvas.addEventListener('drop', handleDrop);
-    Module.canvas.addEventListener('dragover', handleDragOver);
+    });
     Module.canvas.addEventListener('mousedown', function(event) {
         event.target.focus();
     });
