@@ -814,7 +814,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
             Object3D& animatedObject = *objects[animation->trackTarget(j)];
 
             if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Translation3D) {
-                const auto callback = [](const Float&, const Vector3& translation, Object3D& object) {
+                const auto callback = [](Float, const Vector3& translation, Object3D& object) {
                     object.setTranslation(translation);
                 };
                 if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
@@ -826,7 +826,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
                         callback, animatedObject);
                 }
             } else if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Rotation3D) {
-                const auto callback = [](const Float&, const Quaternion& rotation, Object3D& object) {
+                const auto callback = [](Float, const Quaternion& rotation, Object3D& object) {
                     object.setRotation(rotation);
                 };
                 if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermiteQuaternion) {
@@ -838,7 +838,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
                         callback, animatedObject);
                 }
             } else if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Scaling3D) {
-                const auto callback = [](const Float&, const Vector3& scaling, Object3D& object) {
+                const auto callback = [](Float, const Vector3& scaling, Object3D& object) {
                     object.setScaling(scaling);
                 };
                 if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
@@ -870,7 +870,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
 
     if(!_data->player.isEmpty()) {
         /* Animate the elapsed time -- trigger update every 1/10th a second */
-        _data->player.addWithCallbackOnChange(_elapsedTimeAnimation, [](const Float&, const Int& elapsed, Player& player) {
+        _data->player.addWithCallbackOnChange(_elapsedTimeAnimation, [](Float, const Int& elapsed, Player& player) {
             player.updateAnimationTime(elapsed);
         }, _data->elapsedTimeAnimationDestination, *this);
 
