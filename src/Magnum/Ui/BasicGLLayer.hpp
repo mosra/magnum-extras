@@ -55,18 +55,18 @@ template<class VertexData> void BasicGLLayer<VertexData>::reset(const std::size_
 }
 
 template<class VertexData> void BasicGLLayer<VertexData>::update() {
-    if(this->modified().size().isZero()) return;
+    if(!this->modified().size()) return;
 
     /* Upload modified vertex data */
     const Math::Range1D<std::size_t> modifiedBytes = this->modified().scaled(sizeof(VertexData));
     #ifndef MAGNUM_TARGET_WEBGL
-    const auto bufferData = Containers::arrayCast<VertexData>(_buffer.map(modifiedBytes.min()[0], modifiedBytes.size()[0], GL::Buffer::MapFlag::Write|GL::Buffer::MapFlag::InvalidateRange));
-    std::uninitialized_copy(this->data() + std::size_t{this->modified().min()[0]},
-                            this->data() + std::size_t{this->modified().max()[0]}, bufferData.begin());
+    const auto bufferData = Containers::arrayCast<VertexData>(_buffer.map(modifiedBytes.min(), modifiedBytes.size(), GL::Buffer::MapFlag::Write|GL::Buffer::MapFlag::InvalidateRange));
+    std::uninitialized_copy(this->data() + std::size_t{this->modified().min()},
+                            this->data() + std::size_t{this->modified().max()}, bufferData.begin());
     _buffer.unmap();
     #else
-    _buffer.setSubData(modifiedBytes.min()[0], this->data().slice(this->modified().min()[0],
-                                                                  this->modified().max()[0]));
+    _buffer.setSubData(modifiedBytes.min(), this->data().slice(this->modified().min(),
+                                                               this->modified().max()));
     #endif
 
     /* Reset modified range */

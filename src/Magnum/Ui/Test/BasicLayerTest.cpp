@@ -73,7 +73,7 @@ void BasicLayerTest::construct() {
     CORRADE_COMPARE(layer.elementCount(), 0);
     CORRADE_COMPARE(layer.indexCount(), 0);
     CORRADE_VERIFY(layer.data().empty());
-    CORRADE_VERIFY(layer.modified().size().isZero());
+    CORRADE_VERIFY(!layer.modified().size());
 }
 
 void BasicLayerTest::addElement() {
@@ -148,7 +148,7 @@ void BasicLayerTest::reset() {
     CORRADE_COMPARE(layer.elementCount(), 0);
     CORRADE_COMPARE(layer.indexCount(), 0);
     CORRADE_VERIFY(layer.data().empty());
-    CORRADE_VERIFY(layer.modified().size().isZero());
+    CORRADE_VERIFY(!layer.modified().size());
 
     /* First element after reset should be zero again */
     CORRADE_COMPARE(layer.addElement(
@@ -175,7 +175,7 @@ void BasicLayerTest::resetNoReallocData() {
     CORRADE_COMPARE(layer.elementCount(), 0);
     CORRADE_COMPARE(layer.indexCount(), 0);
     CORRADE_VERIFY(layer.data().empty());
-    CORRADE_VERIFY(layer.modified().size().isZero());
+    CORRADE_VERIFY(!layer.modified().size());
 }
 
 void BasicLayerTest::resetNoReallocElementData() {
@@ -198,7 +198,7 @@ void BasicLayerTest::resetNoReallocElementData() {
     CORRADE_COMPARE(layer.elementCount(), 0);
     CORRADE_COMPARE(layer.indexCount(), 0);
     CORRADE_VERIFY(layer.data().empty());
-    CORRADE_VERIFY(layer.modified().size().isZero());
+    CORRADE_VERIFY(!layer.modified().size());
 }
 
 void BasicLayerTest::modifyElement() {
@@ -214,7 +214,7 @@ void BasicLayerTest::modifyElement() {
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{0, 8}));
 
     layer.resetModified();
-    CORRADE_VERIFY(layer.modified().size().isZero());
+    CORRADE_VERIFY(!layer.modified().size());
 
     layer.modifyElement(2)[0] = 2555;
     layer.modifyElement(1)[2] = 5704;

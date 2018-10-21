@@ -582,7 +582,7 @@ void Player::updateAnimationTime(Int deciseconds) {
     if(_baseUiPlane->animationProgress.flags() & Ui::WidgetFlag::Hidden)
         return;
 
-    const Int duration = _data->player.duration().size()[0]*10;
+    const Int duration = _data->player.duration().size()*10;
     _baseUiPlane->animationProgress.setText(Utility::formatString(
         "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1}",
         deciseconds/600, deciseconds/10%60, deciseconds%10,
