@@ -9,8 +9,8 @@ functionality.
 [![Coverage Status](https://codecov.io/gh/mosra/magnum-extras/branch/master/graph/badge.svg)](https://codecov.io/gh/mosra/magnum-extras)
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
--   Project homepage — http://magnum.graphics/
--   Documentation — http://doc.magnum.graphics/
+-   Project homepage — https://magnum.graphics/
+-   Documentation — https://doc.magnum.graphics/
 -   GitHub project page — https://github.com/mosra/magnum-extras
 
 SUPPORTED PLATFORMS
@@ -27,14 +27,14 @@ WHAT'S NEW?
 ===========
 
 Curious about what was added or improved recently? Check out the
-[Changelog](http://doc.magnum.graphics/magnum/changelog-extras.html#changelog-extras-latest)
+[Changelog](https://doc.magnum.graphics/magnum/changelog-extras.html#changelog-extras-latest)
 page in the documentation.
 
 BUILDING MAGNUM EXTRAS
 ======================
 
 The building process is similar to Magnum itself. See the
-[building documentation](http://doc.magnum.graphics/magnum/building-extras.html)
+[building documentation](https://doc.magnum.graphics/magnum/building-extras.html)
 for a comprehensive guide for building, packaging and crosscompiling — we
 provide packages for many platforms, including Windows, Linux and macOS.
 
@@ -44,13 +44,13 @@ CONTACT & SUPPORT
 If you want to contribute to Magnum, if you spotted a bug, need a feature or
 have an awesome idea, you can get a copy of the sources from GitHub and start
 right away! There is the already mentioned guide about
-[how to download and build Magnum Extras](http://doc.magnum.graphics/magnum/building-extras.html)
-and also a guide about [coding style and best practices](http://doc.magnum.graphics/magnum/coding-style.html)
+[how to download and build Magnum Extras](https://doc.magnum.graphics/magnum/building-extras.html)
+and also a guide about [coding style and best practices](https://doc.magnum.graphics/magnum/coding-style.html)
 which you should follow to keep the library as consistent and maintainable as
 possible.
 
--   Project homepage — http://magnum.graphics/
--   Documentation — http://doc.magnum.graphics/
+-   Project homepage — https://magnum.graphics/
+-   Documentation — https://doc.magnum.graphics/
 -   GitHub project page — https://github.com/mosra/magnum-extras
 -   Gitter community chat — https://gitter.im/mosra/magnum
 -   E-mail — info@magnum.graphics
@@ -58,7 +58,7 @@ possible.
 -   Google Groups mailing list — magnum-engine@googlegroups.com ([archive](https://groups.google.com/forum/#!forum/magnum-engine))
 -   Author's personal Twitter — https://twitter.com/czmosra
 
-See also the Magnum Project [Contact & Support page](http://magnum.graphics/contact/)
+See also the Magnum Project [Contact & Support page](https://magnum.graphics/contact/)
 for further information.
 
 CREDITS
