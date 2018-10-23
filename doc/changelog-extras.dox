@@ -30,16 +30,22 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-@section changelog-extras-latest Changes since 2018.04
+@anchor changelog-extras-latest
 
-@subsection changelog-extras-latest-new New features
+@section changelog-extras-2018-10 2018.10
+
+Released 2018-10-23, tagged as
+[v2018.10](https://github.com/mosra/magnum-extras/releases/tag/v2018.10).
+
+@subsection changelog-extras-2018-10-new New features
 
 -   New @ref magnum-player "magnum-player" app for previewing, playing back and
-    inspecting animated scene files
+    inspecting animated scene files (see
+    [mosra/magnum-extras#6](https://github.com/mosra/magnum-extras/pull/6))
 -   Rudimentary support for user interface relayouting using
     @ref Ui::UserInterface::relayout()
 
-@subsection changelog-extras-latest-changes Changes and improvements
+@subsection changelog-extras-2018-10-changes Changes and improvements
 
 -   @ref Ui::UserInterface can now take an explicit framebuffer size parameter
     for more flexibility when rendering on HiDPI screens or in VR.
@@ -47,15 +53,16 @@ namespace Magnum {
     work better together with code that does text rendering on its own
 -   It's now possible to change style of a @ref Ui::Modal as well
 
-@subsection changelog-extras-latest-buildsystem Build system
+@subsection changelog-extras-2018-10-buildsystem Build system
 
+-   There's now a PPA for Ubuntu packages. See @ref building-extras-packages-deb
+    for more information. See also [mosra/magnum-extras#5](https://github.com/mosra/magnum-extras/pull/5).
 -   Provide a better error when trying to build the @ref Ui library on OpenGL
     ES 2.0 / WebGL 1.0 --- before it failed somewhere deep with no clear
-    relation to requiring ES3 features.
--   There's now a PPA for Ubuntu packages. See @ref building-extras-packages-deb
-    for more information.
+    relation to requiring ES3 features (see
+    [mosra/magnum-extras#4](https://github.com/mosra/magnum-extras/issues/4))
 
-@subsection changelog-extras-latest-bugfixed Bug fixes
+@subsection changelog-extras-2018-10-bugfixed Bug fixes
 
 -   @ref Ui::Button::setStyle() was mistakenly not returning a reference to
     self, breaking method chaining
