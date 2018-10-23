@@ -98,7 +98,7 @@ endif()
 set(MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR share/cmake/MagnumExtras)
 
 # Library version
-set(MAGNUM_LIBRARY_VERSION 2.0)
+set(MAGNUM_LIBRARY_VERSION 2.1)
 set(MAGNUM_LIBRARY_SOVERSION 2)
 
 add_subdirectory(modules)
