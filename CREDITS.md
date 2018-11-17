@@ -1,14 +1,11 @@
 Third-party components
 ----------------------
 
-Contributors to Magnum Extras library
---------------------------------------
+Third party components that affect public usage of the project are listed
+[in the documentation](https://doc.magnum.graphics/magnum/credits-third-party.html).
 
-Listing only people with code contributions, because otherwise there's too many
-:) Big thanks to everyone involved!
+Contributors to Magnum Extras
+-----------------------------
 
--   Nathan Ollerenshaw ([@matjam](https://github.com/matjam)) --- Ubuntu
-    package updates, a PPA repository for stable versions
-
-Is this list missing your name or something's wrong?
-[Let us know!](https://magnum.graphics/contact/)
+[Detailed contributor list](https://doc.magnum.graphics/magnum/credits-contributors.html#extras)
+is maintained in the documentation. Big thanks to everyone involved!
