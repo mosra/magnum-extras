@@ -7,7 +7,7 @@ functionality.
 [![Build Status](https://travis-ci.org/mosra/magnum-extras.svg?branch=master)](https://travis-ci.org/mosra/magnum-extras)
 [![Build status](https://ci.appveyor.com/api/projects/status/f75u5eow2qiso7m5/branch/master?svg=true)](https://ci.appveyor.com/project/mosra/magnum-extras/branch/master)
 [![Coverage Status](https://codecov.io/gh/mosra/magnum-extras/branch/master/graph/badge.svg)](https://codecov.io/gh/mosra/magnum-extras)
-[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 -   Project homepage — https://magnum.graphics/
 -   Documentation — https://doc.magnum.graphics/
