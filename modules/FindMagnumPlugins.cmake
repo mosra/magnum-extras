@@ -16,10 +16,12 @@
 #  ColladaImporter              - Collada importer
 #  DdsImporter                  - DDS importer
 #  DevIlImageImporter           - Image importer using DevIL
-#  DrFlacAudioImporter          - FLAC audio importer plugin using dr_flac
-#  DrWavAudioImporter           - WAV audio importer plugin using dr_wav
+#  DrFlacAudioImporter          - FLAC audio importer using dr_flac
+#  DrWavAudioImporter           - WAV audio importer using dr_wav
+#  Faad2AudioImporter           - AAC audio importer using FAAD2
 #  FreeTypeFont                 - FreeType font
 #  HarfBuzzFont                 - HarfBuzz font
+#  JpegImageConverter           - JPEG image converter
 #  JpegImporter                 - JPEG importer
 #  MiniExrImageConverter        - OpenEXR image converter using miniexr
 #  OpenGexImporter              - OpenGEX importer
@@ -60,13 +62,6 @@
 #  MAGNUMPLUGINS_*_LIBRARY      - Plugin library (w/o dependencies)
 #  MAGNUMPLUGINS_*_LIBRARY_DEBUG - Debug version of given library, if found
 #  MAGNUMPLUGINS_*_LIBRARY_RELEASE - Release version of given library, if found
-#
-# Workflows without imported targets are deprecated and the following variables
-# are included just for backwards compatibility and only if
-# :variable:`MAGNUM_BUILD_DEPRECATED` is enabled:
-#
-#  MAGNUMPLUGINS_*_LIBRARIES    - Expands to ``MagnumPlugins::*` target. Use
-#   ``MagnumPlugins::*`` target directly instead.
 #
 
 #
@@ -130,14 +125,17 @@ mark_as_advanced(MAGNUMPLUGINS_INCLUDE_DIR)
 # components from other repositories)
 set(_MAGNUMPLUGINS_LIBRARY_COMPONENT_LIST OpenDdl)
 set(_MAGNUMPLUGINS_PLUGIN_COMPONENT_LIST
-    AssimpImporter ColladaImporter DdsImporter DevIlImageImporter
-    DrFlacAudioImporter DrWavAudioImporter FreeTypeFont HarfBuzzFont
-    JpegImporter MiniExrImageConverter OpenGexImporter PngImageConverter
-    PngImporter StanfordImporter StbImageConverter StbImageImporter
-    StbTrueTypeFont StbVorbisAudioImporter TinyGltfImporter)
+    AssimpImporter DdsImporter DevIlImageImporter
+    DrFlacAudioImporter DrWavAudioImporter Faad2AudioImporter FreeTypeFont
+    HarfBuzzFont JpegImageConverter JpegImporter MiniExrImageConverter
+    OpenGexImporter PngImageConverter PngImporter StanfordImporter
+    StbImageConverter StbImageImporter StbTrueTypeFont StbVorbisAudioImporter
+    TinyGltfImporter)
+if(MAGNUM_BUILD_DEPRECATED)
+    list(APPEND _MAGNUMPLUGINS_PLUGIN_COMPONENT_LIST ColladaImporter)
+endif()
 
 # Inter-component dependencies
-set(_MAGNUMPLUGINS_TinyGltfImporter_DEPENDENCIES StbImageImporter)
 set(_MAGNUMPLUGINS_HarfBuzzFont_DEPENDENCIES FreeTypeFont)
 set(_MAGNUMPLUGINS_OpenGexImporter_DEPENDENCIES OpenDdl)
 
@@ -293,6 +291,12 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
         # DrFlacAudioImporter has no dependencies
         # DrWavAudioImporter has no dependencies
 
+        # Faad2AudioImporter plugin dependencies
+        elseif(_component STREQUAL Faad2AudioImporter)
+            find_package(FAAD2)
+            set_property(TARGET MagnumPlugins::${_component} APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES FAAD2::FAAD2)
+
         # FreeTypeFont plugin dependencies
         elseif(_component STREQUAL FreeTypeFont)
             find_package(Freetype)
@@ -322,7 +326,7 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
                     INTERFACE_LINK_LIBRARIES ${FREETYPE_LIBRARIES})
             endif()
             set_property(TARGET MagnumPlugins::${_component} APPEND PROPERTY
-                INTERFACE_LINK_LIBRARIES ${HARFBUZZ_LIBRARIES})
+                INTERFACE_LINK_LIBRARIES HarfBuzz::HarfBuzz)
 
         # JpegImporter plugin dependencies
         elseif(_component STREQUAL JpegImporter)
@@ -410,11 +414,6 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
         else()
             set(MagnumPlugins_${_component}_FOUND FALSE)
         endif()
-    endif()
-
-    # Deprecated variables
-    if(MAGNUM_BUILD_DEPRECATED AND _component MATCHES ${_MAGNUMPLUGINS_PLUGIN_COMPONENTS})
-        set(MAGNUMPLUGINS_${_COMPONENT}_LIBRARIES MagnumPlugins::${_component})
     endif()
 endforeach()
 
