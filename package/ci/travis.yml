@@ -4,7 +4,7 @@ addons:
   apt:
     packages:
     - libgl1-mesa-dev
-    - g++-4.7
+    - g++-4.8
     - libsdl2-dev
     - ninja-build
     - lcov
@@ -20,7 +20,7 @@ matrix:
     - JOBID=linux-gl
     - TARGET=desktop
     - CMAKE_CXX_FLAGS="--coverage"
-    - LCOV_EXTRA_OPTS="--gcov-tool /usr/bin/gcov-4.7"
+    - LCOV_EXTRA_OPTS="--gcov-tool /usr/bin/gcov-4.8"
   - language: cpp
     os: linux
     dist: trusty
@@ -55,7 +55,7 @@ matrix:
     #- TARGET=desktop-gles
     #- TARGET_GLES2=ON
     #- CMAKE_CXX_FLAGS="--coverage"
-    #- LCOV_EXTRA_OPTS="--gcov-tool /usr/bin/gcov-4.7"
+    #- LCOV_EXTRA_OPTS="--gcov-tool /usr/bin/gcov-4.8"
   - language: cpp
     os: linux
     dist: trusty
@@ -65,7 +65,7 @@ matrix:
     - TARGET=desktop-gles
     - TARGET_GLES2=OFF
     - CMAKE_CXX_FLAGS="--coverage"
-    - LCOV_EXTRA_OPTS="--gcov-tool /usr/bin/gcov-4.7"
+    - LCOV_EXTRA_OPTS="--gcov-tool /usr/bin/gcov-4.8"
   - language: cpp
     os: osx
     compiler: clang
@@ -148,7 +148,7 @@ cache:
   - $HOME/cmake
 
 install:
-- if [ "$TRAVIS_OS_NAME" == "linux" ] && [ ! "$TARGET" == "desktop-sanitizers" ] && [ ! "$TARGET" == "android" ]; then export CXX=g++-4.7; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ] && [ ! "$TARGET" == "desktop-sanitizers" ] && [ ! "$TARGET" == "android" ]; then export CXX=g++-4.8; fi
 - if [ "$TRAVIS_OS_NAME" == "linux" ] && [ "$TARGET" == "desktop-sanitizers" ]; then export CXX=clang++-3.8; fi
 - if [ "$BUILD_DEPRECATED" != "OFF" ]; then export BUILD_DEPRECATED=ON; fi
 - if [ "$TRAVIS_OS_NAME" == "linux" ]; then export PLATFORM_GL_API=GLX; fi

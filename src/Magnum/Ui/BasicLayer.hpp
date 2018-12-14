@@ -37,9 +37,7 @@
 namespace Magnum { namespace Ui {
 
 template<class VertexData> BasicLayer<VertexData>::BasicLayer(): _elementCount{}, _size{}, _indexCount{} {
-    #ifndef CORRADE_GCC47_COMPATIBILITY /* Not available on that thing */
     static_assert(std::is_trivially_destructible<VertexData>::value, "");
-    #endif
 }
 
 template<class VertexData> BasicLayer<VertexData>::~BasicLayer() = default;

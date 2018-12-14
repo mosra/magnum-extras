@@ -419,10 +419,10 @@ struct QuadInstance {
     Range2D rect;
     UnsignedShort colorIndex;
 
-    /* GCC 4.7 fails with "error: non-trivial conversion at assignment" on
+    /* GCC < 4.9 fails with "error: non-trivial conversion at assignment" on
        unnamed bitfields: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54808
        It's now emitting missing initializer warnings, but IDGAF. */
-    #ifndef CORRADE_GCC47_COMPATIBILITY
+    #if defined(__GNUC__) && !defined(__clang__) && 100*__GNUC__ + __GNUC_MINOR__ < 409
     UnsignedShort:16;
     #else
     UnsignedShort _dummy:16;
@@ -434,10 +434,10 @@ struct TextVertex {
     Vector2 textureCoordinates;
     UnsignedShort colorIndex;
 
-    /* GCC 4.7 fails with "error: non-trivial conversion at assignment" on
+    /* GCC < 4.9 fails with "error: non-trivial conversion at assignment" on
        unnamed bitfields: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=54808
        It's now emitting missing initializer warnings, but IDGAF. */
-    #ifndef CORRADE_GCC47_COMPATIBILITY
+    #if defined(__GNUC__) && !defined(__clang__) && 100*__GNUC__ + __GNUC_MINOR__ < 409
     UnsignedShort:16;
     #else
     UnsignedShort _dummy:16;

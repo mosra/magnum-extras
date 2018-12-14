@@ -36,9 +36,7 @@
 namespace Magnum { namespace Ui {
 
 template<class InstanceData> BasicInstancedLayer<InstanceData>::BasicInstancedLayer(): _size{} {
-    #ifndef CORRADE_GCC47_COMPATIBILITY /* Not available on that thing */
     static_assert(std::is_trivially_destructible<InstanceData>::value, "");
-    #endif
 }
 
 template<class InstanceData> BasicInstancedLayer<InstanceData>::~BasicInstancedLayer() = default;

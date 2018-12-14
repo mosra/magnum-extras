@@ -55,27 +55,15 @@ WidgetTest::WidgetTest() {
 
 namespace {
     struct UserInterface: BasicUserInterface<> {
-        #ifndef CORRADE_GCC47_COMPATIBILITY
         using BasicUserInterface::BasicUserInterface;
-        #else
-        explicit UserInterface(const Vector2& size, const Vector2i& screenSize): BasicUserInterface<>{size, screenSize} {}
-        #endif
     };
 
     struct Plane: BasicPlane<> {
-        #ifndef CORRADE_GCC47_COMPATIBILITY
         using BasicPlane::BasicPlane;
-        #else
-        explicit Plane(UserInterface& ui, const Anchor& anchor, const Range2D& padding, const Vector2& margin): BasicPlane<>{ui, anchor, padding, margin} {}
-        #endif
     };
 
     struct Widget: Ui::Widget {
-        #ifndef CORRADE_GCC47_COMPATIBILITY
         using Ui::Widget::Widget;
-        #else
-        explicit Widget(AbstractPlane& plane, const Anchor& anchor, const Range2D& padding = {}): Ui::Widget{plane, anchor, padding} {}
-        #endif
 
         Plane& plane() { return static_cast<Plane&>(Ui::Widget::plane()); }
         const Plane& plane() const { return static_cast<const Plane&>(Ui::Widget::plane()); }
