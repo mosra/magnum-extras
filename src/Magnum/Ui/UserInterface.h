@@ -104,7 +104,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @brief Constructor
          * @param size                  Size of the user interface to which all
          *      widgets are positioned
-         * @param windowSize            Size of the window to which all inputs
+         * @param windowSize            Size of the window to which all input
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
          *      some platforms with HiDPI screens may be different from window
@@ -129,7 +129,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @brief Construct the user interface with a custom style
          * @param size                  Size of the user interface to which all
          *      widgets are positioned
-         * @param windowSize            Size of the window to which all inputs
+         * @param windowSize            Size of the window to which all input
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
          *      some platforms with HiDPI screens may be different from window
@@ -155,7 +155,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @param fontManager           Font plugin manager
          * @param size                  Size of the user interface to which all
          *      widgets are positioned
-         * @param windowSize            Size of the window to which all inputs
+         * @param windowSize            Size of the window to which all input
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
          *      some platforms with HiDPI screens may be different from window
@@ -172,7 +172,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @param fontManager           Font plugin manager
          * @param size                  Size of the user interface to which all
          *      widgets are positioned
-         * @param windowSize            Size of the window to which all inputs
+         * @param windowSize            Size of the window to which all input
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
          *      some platforms with HiDPI screens may be different from window
@@ -198,7 +198,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @brief Construct the user interface with custom style and font
          * @param size                  Size of the user interface to which all
          *      widgets are positioned
-         * @param windowSize            Size of the window to which all inputs
+         * @param windowSize            Size of the window to which all input
          *      events are related
          * @param framebufferSize       Size of the window framebuffer. On
          *      some platforms with HiDPI screens may be different from window
