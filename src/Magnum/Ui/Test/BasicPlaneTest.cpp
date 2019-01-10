@@ -30,7 +30,7 @@
 #include "Magnum/Ui/BasicPlane.hpp"
 #include "Magnum/Ui/BasicUserInterface.hpp"
 
-namespace Magnum { namespace Ui { namespace Test {
+namespace Magnum { namespace Ui { namespace Test { namespace {
 
 struct BasicPlaneTest: TestSuite::Tester {
     explicit BasicPlaneTest();
@@ -64,15 +64,13 @@ BasicPlaneTest::BasicPlaneTest() {
               &BasicPlaneTest::debugFlags});
 }
 
-namespace {
-    struct UserInterface: BasicUserInterface<> {
-        using BasicUserInterface::BasicUserInterface;
-    };
+struct UserInterface: BasicUserInterface<> {
+    using BasicUserInterface::BasicUserInterface;
+};
 
-    struct Plane: BasicPlane<> {
-        using BasicPlane::BasicPlane;
-    };
-}
+struct Plane: BasicPlane<> {
+    using BasicPlane::BasicPlane;
+};
 
 void BasicPlaneTest::construct() {
     UserInterface ui{{800, 600}, {1600, 900}};
@@ -282,6 +280,6 @@ void BasicPlaneTest::debugFlags() {
     CORRADE_COMPARE(out.str(), "Ui::PlaneFlags{} Ui::PlaneFlag::Hidden Ui::PlaneFlag::Hidden|Ui::PlaneFlag(0xdead0000)\n");
 }
 
-}}}
+}}}}
 
 CORRADE_TEST_MAIN(Magnum::Ui::Test::BasicPlaneTest)

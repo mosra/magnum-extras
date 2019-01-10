@@ -28,7 +28,7 @@
 
 #include "Magnum/Ui/BasicInstancedLayer.hpp"
 
-namespace Magnum { namespace Ui { namespace Test {
+namespace Magnum { namespace Ui { namespace Test { namespace {
 
 struct BasicInstancedLayerTest: TestSuite::Tester {
     explicit BasicInstancedLayerTest();
@@ -52,11 +52,9 @@ BasicInstancedLayerTest::BasicInstancedLayerTest() {
               &BasicInstancedLayerTest::modifyElement});
 }
 
-namespace {
-    struct InstancedLayer: BasicInstancedLayer<Int> {
-        using BasicInstancedLayer<Int>::BasicInstancedLayer;
-    };
-}
+struct InstancedLayer: BasicInstancedLayer<Int> {
+    using BasicInstancedLayer<Int>::BasicInstancedLayer;
+};
 
 void BasicInstancedLayerTest::construct() {
     InstancedLayer layer;
@@ -158,6 +156,6 @@ void BasicInstancedLayerTest::modifyElement() {
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{1, 3}));
 }
 
-}}}
+}}}}
 
 CORRADE_TEST_MAIN(Magnum::Ui::Test::BasicInstancedLayerTest)

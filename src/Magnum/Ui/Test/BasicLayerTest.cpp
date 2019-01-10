@@ -28,7 +28,7 @@
 
 #include "Magnum/Ui/BasicLayer.hpp"
 
-namespace Magnum { namespace Ui { namespace Test {
+namespace Magnum { namespace Ui { namespace Test { namespace {
 
 struct BasicLayerTest: TestSuite::Tester {
     explicit BasicLayerTest();
@@ -54,11 +54,9 @@ BasicLayerTest::BasicLayerTest() {
               &BasicLayerTest::modifyElement});
 }
 
-namespace {
-    struct Layer: BasicLayer<Int> {
-        using BasicLayer<Int>::BasicLayer;
-    };
-}
+struct Layer: BasicLayer<Int> {
+    using BasicLayer<Int>::BasicLayer;
+};
 
 void BasicLayerTest::construct() {
     Layer layer;
@@ -223,6 +221,6 @@ void BasicLayerTest::modifyElement() {
     CORRADE_COMPARE(layer.modified(), (Math::Range1D<std::size_t>{3, 8}));
 }
 
-}}}
+}}}}
 
 CORRADE_TEST_MAIN(Magnum::Ui::Test::BasicLayerTest)

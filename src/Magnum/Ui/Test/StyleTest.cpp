@@ -28,7 +28,7 @@
 
 #include "Magnum/Ui/Style.h"
 
-namespace Magnum { namespace Ui { namespace Test {
+namespace Magnum { namespace Ui { namespace Test { namespace {
 
 struct StyleTest: TestSuite::Tester {
     explicit StyleTest();
@@ -65,6 +65,6 @@ void StyleTest::debugStyle() {
     CORRADE_COMPARE(out.str(), "Ui::Style::Danger Ui::Style(0xdeadbabe)\n");
 }
 
-}}}
+}}}}
 
 CORRADE_TEST_MAIN(Magnum::Ui::Test::StyleTest)

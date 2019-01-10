@@ -31,7 +31,7 @@
 #include "Magnum/Ui/BasicPlane.hpp"
 #include "Magnum/Ui/Widget.h"
 
-namespace Magnum { namespace Ui { namespace Test {
+namespace Magnum { namespace Ui { namespace Test { namespace {
 
 struct WidgetTest: TestSuite::Tester {
     explicit WidgetTest();
@@ -53,22 +53,20 @@ WidgetTest::WidgetTest() {
               &WidgetTest::debugWidgetFlags});
 }
 
-namespace {
-    struct UserInterface: BasicUserInterface<> {
-        using BasicUserInterface::BasicUserInterface;
-    };
+struct UserInterface: BasicUserInterface<> {
+    using BasicUserInterface::BasicUserInterface;
+};
 
-    struct Plane: BasicPlane<> {
-        using BasicPlane::BasicPlane;
-    };
+struct Plane: BasicPlane<> {
+    using BasicPlane::BasicPlane;
+};
 
-    struct Widget: Ui::Widget {
-        using Ui::Widget::Widget;
+struct Widget: Ui::Widget {
+    using Ui::Widget::Widget;
 
-        Plane& plane() { return static_cast<Plane&>(Ui::Widget::plane()); }
-        const Plane& plane() const { return static_cast<const Plane&>(Ui::Widget::plane()); }
-    };
-}
+    Plane& plane() { return static_cast<Plane&>(Ui::Widget::plane()); }
+    const Plane& plane() const { return static_cast<const Plane&>(Ui::Widget::plane()); }
+};
 
 void WidgetTest::construct() {
     UserInterface ui{{800.0f, 600.0f}, {800, 600}};
@@ -157,6 +155,6 @@ void WidgetTest::debugWidgetFlags() {
     CORRADE_COMPARE(out.str(), "Ui::WidgetFlags{} Ui::WidgetFlag::Active|Ui::WidgetFlag::Disabled Ui::WidgetFlag::Hovered|Ui::WidgetFlag(0xdead0000)\n");
 }
 
-}}}
+}}}}
 
 CORRADE_TEST_MAIN(Magnum::Ui::Test::WidgetTest)
