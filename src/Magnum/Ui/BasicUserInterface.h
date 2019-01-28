@@ -29,12 +29,9 @@
  * @brief Class @ref Magnum::Ui::AbstractUserInterface, @ref Magnum::Ui::BasicUserInterface
  */
 
-#include <array>
-#include <functional>
-#include <vector>
 #include <Corrade/Containers/LinkedList.h>
 #include <Magnum/Magnum.h>
-#include <Magnum/Math/Range.h>
+#include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/Ui.h"
 #include "Magnum/Ui/visibility.h"
@@ -147,7 +144,10 @@ template<class ...Layers> class BasicUserInterface: public AbstractUserInterface
         ~BasicUserInterface();
 
         /** @brief Draw the interface using designated shader for each layer */
-        void draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders);
+        /* Using StaticArray instead of StaticArrayView so the function can
+           be called easily with {}. Not using initializer_list as we need to
+           match the size. */
+        void draw(const Containers::StaticArray<sizeof...(Layers), Containers::Reference<AbstractUiShader>>& shaders);
 };
 
 }}

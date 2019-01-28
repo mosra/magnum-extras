@@ -40,7 +40,7 @@ template<class ...Layers> void BasicUserInterface<Layers...>::update() {
     for(AbstractPlane& plane: *this) static_cast<BasicPlane<Layers...>&>(plane).update();
 }
 
-template<class ...Layers> void BasicUserInterface<Layers...>::draw(const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
+template<class ...Layers> void BasicUserInterface<Layers...>::draw(const Containers::StaticArray<sizeof...(Layers), Containers::Reference<AbstractUiShader>>& shaders) {
     const Matrix3 projectionMatrix = Matrix3::scaling(2.0f/_size)*Matrix3::translation(-_size/2);
     for(AbstractPlane& plane: *this) {
         /* Ignore all hidden planes in the back, draw back-to-front */

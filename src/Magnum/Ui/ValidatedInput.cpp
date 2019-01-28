@@ -25,6 +25,8 @@
 
 #include "ValidatedInput.h"
 
+#include <Corrade/Containers/Reference.h>
+
 #ifdef CORRADE_MSVC2017_COMPATIBILITY
 #include "Magnum/Ui/BasicUserInterface.h"
 #include "Magnum/Ui/Plane.h"
@@ -32,7 +34,7 @@
 
 namespace Magnum { namespace Ui {
 
-bool ValidatedInput::allValid(std::initializer_list<std::reference_wrapper<const ValidatedInput>> inputs) {
+bool ValidatedInput::allValid(std::initializer_list<Containers::Reference<const ValidatedInput>> inputs) {
     for(const ValidatedInput& i: inputs) if(!i.isValid()) return false;
     return true;
 }

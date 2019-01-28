@@ -31,6 +31,9 @@
 
 #include "BasicPlane.h"
 
+#include <Corrade/Containers/StaticArray.h>
+#include <Corrade/Containers/Reference.h>
+
 #include "Magnum/Ui/AbstractUiShader.h"
 #include "Magnum/Ui/BasicUserInterface.h"
 #include "Magnum/Ui/Widget.h"
@@ -58,12 +61,12 @@ template<class ...Layers> template<std::size_t i> void BasicPlane<Layers...>::up
     updateInternal(std::integral_constant<std::size_t, i + 1>{});
 }
 
-template<class ...Layers> void BasicPlane<Layers...>::draw(const Matrix3& projectionMatrix, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders) {
+template<class ...Layers> void BasicPlane<Layers...>::draw(const Matrix3& projectionMatrix, const Containers::StaticArray<sizeof...(Layers), Containers::Reference<AbstractUiShader>>& shaders) {
     drawInternal(projectionMatrix*Matrix3::translation(rect().min()), shaders, std::integral_constant<std::size_t, 0>{});
 }
 
-template<class ...Layers> template<std::size_t i> void BasicPlane<Layers...>::drawInternal(const Matrix3& transformationProjectionMatrix, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders, std::integral_constant<std::size_t, i>) {
-    shaders[i].get().setTransformationProjectionMatrix(transformationProjectionMatrix);
+template<class ...Layers> template<std::size_t i> void BasicPlane<Layers...>::drawInternal(const Matrix3& transformationProjectionMatrix, const Containers::StaticArray<sizeof...(Layers), Containers::Reference<AbstractUiShader>>& shaders, std::integral_constant<std::size_t, i>) {
+    shaders[i]->setTransformationProjectionMatrix(transformationProjectionMatrix);
     std::get<i>(_layers).draw(shaders[i]);
     drawInternal(transformationProjectionMatrix, shaders, std::integral_constant<std::size_t, i + 1>{});
 }

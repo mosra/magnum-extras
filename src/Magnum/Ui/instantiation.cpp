@@ -23,6 +23,8 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/Reference.h>
+
 #include "Magnum/Ui/BasicLayer.hpp"
 #include "Magnum/Ui/BasicGLLayer.hpp"
 #include "Magnum/Ui/BasicInstancedLayer.hpp"

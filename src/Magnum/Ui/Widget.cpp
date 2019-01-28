@@ -26,6 +26,7 @@
 #include "Widget.h"
 
 #include <Corrade/Containers/EnumSet.hpp>
+#include <Corrade/Containers/Reference.h>
 
 #include "Magnum/Ui/BasicPlane.h"
 #include "Magnum/Ui/Anchor.h"
@@ -61,27 +62,27 @@ Debug& operator<<(Debug& debug, const WidgetFlags value) {
         WidgetFlag::Hidden});
 }
 
-void Widget::disable(const std::initializer_list<std::reference_wrapper<Widget>> widgets) {
+void Widget::disable(const std::initializer_list<Containers::Reference<Widget>> widgets) {
     for(Widget& widget: widgets) widget.disable();
 }
 
-void Widget::enable(const std::initializer_list<std::reference_wrapper<Widget>> widgets) {
+void Widget::enable(const std::initializer_list<Containers::Reference<Widget>> widgets) {
     for(Widget& widget: widgets) widget.enable();
 }
 
-void Widget::setEnabled(const bool enabled, const std::initializer_list<std::reference_wrapper<Widget>> widgets) {
+void Widget::setEnabled(const bool enabled, const std::initializer_list<Containers::Reference<Widget>> widgets) {
     enabled ? enable(widgets) : disable(widgets);
 }
 
-void Widget::hide(const std::initializer_list<std::reference_wrapper<Widget>> widgets) {
+void Widget::hide(const std::initializer_list<Containers::Reference<Widget>> widgets) {
     for(Widget& widget: widgets) widget.hide();
 }
 
-void Widget::show(const std::initializer_list<std::reference_wrapper<Widget>> widgets) {
+void Widget::show(const std::initializer_list<Containers::Reference<Widget>> widgets) {
     for(Widget& widget: widgets) widget.show();
 }
 
-void Widget::setVisible(const bool visible, const std::initializer_list<std::reference_wrapper<Widget>> widgets) {
+void Widget::setVisible(const bool visible, const std::initializer_list<Containers::Reference<Widget>> widgets) {
     visible ? show(widgets) : hide(widgets);
 }
 

@@ -25,6 +25,8 @@
 
 #include <algorithm>
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/Reference.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
@@ -429,7 +431,7 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     /* Load a scene importer plugin */
-    std::unique_ptr<Trade::AbstractImporter> importer =
+    Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
     if(!importer) std::exit(1);
 
@@ -441,7 +443,7 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
 
     load(args.value("file"), *importer);
     #else
-    std::unique_ptr<Trade::AbstractImporter> importer =
+    Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate("TinyGltfImporter");
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
@@ -629,7 +631,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
         return;
     }
 
-    std::unique_ptr<Trade::AbstractImporter> importer =
+    Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate("TinyGltfImporter");
     if(!importer) std::exit(1);
 
@@ -729,7 +731,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
     Debug{} << "Loading" << importer.materialCount() << "materials";
     Containers::Array<Containers::Optional<Trade::PhongMaterialData>> materials{importer.materialCount()};
     for(UnsignedInt i = 0; i != importer.materialCount(); ++i) {
-        std::unique_ptr<Trade::AbstractMaterialData> materialData = importer.material(i);
+        Containers::Pointer<Trade::AbstractMaterialData> materialData = importer.material(i);
         if(!materialData || materialData->type() != Trade::MaterialType::Phong) {
             Warning{} << "Cannot load material" << i << importer.materialName(i);
             continue;
@@ -888,7 +890,7 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
 }
 
 void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i) {
-    std::unique_ptr<Trade::ObjectData3D> objectData = importer.object3D(i);
+    Containers::Pointer<Trade::ObjectData3D> objectData = importer.object3D(i);
     if(!objectData) {
         Error{} << "Cannot import object" << i << importer.object3DName(i);
         return;

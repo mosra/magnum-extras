@@ -29,7 +29,7 @@
  * @brief Class @ref Magnum::Ui::UserInterface
  */
 
-#include <memory>
+#include <Corrade/Containers/Pointer.h>
 #include <Corrade/Interconnect/Emitter.h>
 #include <Corrade/PluginManager/PluginManager.h>
 #include <Magnum/GL/Buffer.h>
@@ -336,7 +336,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         Implementation::ForegroundShader _foregroundShader;
         Implementation::TextShader _textShader;
 
-        std::unique_ptr<FontState> _fontState;
+        Containers::Pointer<FontState> _fontState;
         PluginManager::Manager<Text::AbstractFont>* _fontManager;
         Text::AbstractFont* _font;
         Text::GlyphCache* _glyphCache;

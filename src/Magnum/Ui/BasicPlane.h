@@ -295,9 +295,12 @@ template<class ...Layers> class BasicPlane: public AbstractPlane {
         template<std::size_t i> void updateInternal(std::integral_constant<std::size_t, i>);
         void updateInternal(std::integral_constant<std::size_t, sizeof...(Layers)>) {}
 
-        void draw(const Matrix3& projectionMatrix, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders);
-        template<std::size_t i> void drawInternal(const Matrix3& transformationProjectionMatrix, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>& shaders, std::integral_constant<std::size_t, i>);
-        void drawInternal(const Matrix3&, const std::array<std::reference_wrapper<AbstractUiShader>, sizeof...(Layers)>&, std::integral_constant<std::size_t, sizeof...(Layers)>) {}
+        /* Using StaticArray instead of StaticArrayView so the function can
+           be called easily with {}. Not using initializer_list as we need to
+           match the size. */
+        void draw(const Matrix3& projectionMatrix, const Containers::StaticArray<sizeof...(Layers), Containers::Reference<AbstractUiShader>>& shaders);
+        template<std::size_t i> void drawInternal(const Matrix3& transformationProjectionMatrix, const Containers::StaticArray<sizeof...(Layers), Containers::Reference<AbstractUiShader>>& shaders, std::integral_constant<std::size_t, i>);
+        void drawInternal(const Matrix3&, const Containers::StaticArray<sizeof...(Layers), Containers::Reference<AbstractUiShader>>&, std::integral_constant<std::size_t, sizeof...(Layers)>) {}
 
         std::tuple<Layers&...> _layers;
 };

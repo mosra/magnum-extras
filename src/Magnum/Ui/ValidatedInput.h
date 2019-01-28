@@ -54,7 +54,7 @@ class MAGNUM_UI_EXPORT ValidatedInput: public Input, public Interconnect::Receiv
          * `false` if one of the passed input values is not valid, `true`
          * otherwise. In particular, returns `true` also for an empty list.
          */
-        static bool allValid(std::initializer_list<std::reference_wrapper<const ValidatedInput>> inputs);
+        static bool allValid(std::initializer_list<Containers::Reference<const ValidatedInput>> inputs);
 
         /**
          * @brief Constructor

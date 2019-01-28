@@ -29,7 +29,6 @@
  * @brief Class @ref Magnum::Ui::Widget
  */
 
-#include <functional>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Range.h>
 
@@ -113,42 +112,42 @@ class MAGNUM_UI_EXPORT Widget {
          *
          * Convenience batch alternative to @ref disable().
          */
-        static void disable(std::initializer_list<std::reference_wrapper<Widget>> widgets);
+        static void disable(std::initializer_list<Containers::Reference<Widget>> widgets);
 
         /**
          * @brief Enable a set of widgets
          *
          * Convenience batch alternative to @ref enable().
          */
-        static void enable(std::initializer_list<std::reference_wrapper<Widget>> widgets);
+        static void enable(std::initializer_list<Containers::Reference<Widget>> widgets);
 
         /**
          * @brief Enable or disable a set of widgets
          *
          * Convenience batch alternative to @ref setEnabled().
          */
-        static void setEnabled(bool enabled, std::initializer_list<std::reference_wrapper<Widget>> widgets);
+        static void setEnabled(bool enabled, std::initializer_list<Containers::Reference<Widget>> widgets);
 
         /**
          * @brief Hide a set of widgets
          *
          * Convenience batch alternative to @ref hide().
          */
-        static void hide(std::initializer_list<std::reference_wrapper<Widget>> widgets);
+        static void hide(std::initializer_list<Containers::Reference<Widget>> widgets);
 
         /**
          * @brief Show a set of widgets
          *
          * Convenience batch alternative to @ref show().
          */
-        static void show(std::initializer_list<std::reference_wrapper<Widget>> widgets);
+        static void show(std::initializer_list<Containers::Reference<Widget>> widgets);
 
         /**
          * @brief Set a set of widgets visible
          *
          * Convenience batch alternative to @ref setVisible().
          */
-        static void setVisible(bool visible, std::initializer_list<std::reference_wrapper<Widget>> widgets);
+        static void setVisible(bool visible, std::initializer_list<Containers::Reference<Widget>> widgets);
 
         /**
          * @brief Constructor
@@ -173,7 +172,7 @@ class MAGNUM_UI_EXPORT Widget {
          *
          * Disabled widget does not receive any input events until it is
          * enabled again using @ref enable().
-         * @see @ref disable(std::initializer_list<std::reference_wrapper<Widget>>),
+         * @see @ref disable(std::initializer_list<Containers::Reference<Widget>>),
          *      @ref hide()
          */
         Widget& disable();
@@ -183,7 +182,7 @@ class MAGNUM_UI_EXPORT Widget {
          * @return Reference to self (for method chaining)
          *
          * Enables the widget again after it was disabled using @ref disable().
-         * @see @ref enable(std::initializer_list<std::reference_wrapper<Widget>>),
+         * @see @ref enable(std::initializer_list<Containers::Reference<Widget>>),
          *      @ref show()
          */
         Widget& enable();
@@ -192,7 +191,7 @@ class MAGNUM_UI_EXPORT Widget {
          * @brief Enable or disable widget
          * @return Reference to self (for method chaining)
          *
-         * @see @ref setEnabled(bool, std::initializer_list<std::reference_wrapper<Widget>>),
+         * @see @ref setEnabled(bool, std::initializer_list<Containers::Reference<Widget>>),
          *      @ref enable(), @ref disable(), @ref setVisible()
          */
         Widget& setEnabled(bool enabled);
@@ -203,7 +202,7 @@ class MAGNUM_UI_EXPORT Widget {
          *
          * Hidden widget is not visible and doesn't receive any input events
          * until it is shown again using @ref show().
-         * @see @ref hide(std::initializer_list<std::reference_wrapper<Widget>>),
+         * @see @ref hide(std::initializer_list<Containers::Reference<Widget>>),
          *      @ref disable()
          */
         Widget& hide();
@@ -213,7 +212,7 @@ class MAGNUM_UI_EXPORT Widget {
          * @return Reference to self (for method chaining)
          *
          * Shows the widget again after it was hidden using @ref hide().
-         * @see @ref show(std::initializer_list<std::reference_wrapper<Widget>>),
+         * @see @ref show(std::initializer_list<Containers::Reference<Widget>>),
          *      @ref enable()
          */
         Widget& show();
@@ -222,7 +221,7 @@ class MAGNUM_UI_EXPORT Widget {
          * @brief Set widget visible
          * @return Reference to self (for method chaining)
          *
-         * @see @ref setVisible(bool, std::initializer_list<std::reference_wrapper<Widget>>),
+         * @see @ref setVisible(bool, std::initializer_list<Containers::Reference<Widget>>),
          *      @ref show(), @ref hide(), @ref setEnabled()
          */
         Widget& setVisible(bool visible);

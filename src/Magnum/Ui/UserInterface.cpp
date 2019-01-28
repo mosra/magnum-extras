@@ -26,6 +26,7 @@
 #include "UserInterface.h"
 
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StaticArray.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Magnum/ImageView.h>
@@ -99,7 +100,7 @@ struct UserInterface::FontState {
     explicit FontState(const Vector2i& glyphCacheSize): glyphCache{glyphCacheSize} {}
 
     Containers::Optional<PluginManager::Manager<Text::AbstractFont>> manager;
-    std::unique_ptr<Text::AbstractFont> font;
+    Containers::Pointer<Text::AbstractFont> font;
     Text::GlyphCache glyphCache;
 };
 
@@ -228,7 +229,7 @@ void UserInterface::draw() {
         .bindGlyphCacheTexture(_glyphCache->texture())
         .bindStyleBuffer(_textUniforms);
 
-    BasicUserInterface::draw({{_backgroundShader, _foregroundShader, _textShader}});
+    BasicUserInterface::draw({_backgroundShader, _foregroundShader, _textShader});
 }
 
 }}

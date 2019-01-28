@@ -41,7 +41,9 @@ Plane::Plane(UserInterface& ui, const Anchor& anchor): BasicPlane<Implementation
     _foregroundLayer,
     _textLayer}
 {
-    for(Implementation::QuadLayer& quadLayer: {std::ref(_backgroundLayer), std::ref(_foregroundLayer)}) {
+    /** @todo ugh Containers::reference()? How about creference()? */
+    for(Implementation::QuadLayer& quadLayer: {Containers::Reference<Implementation::QuadLayer>{_backgroundLayer},
+                                               Containers::Reference<Implementation::QuadLayer>{_foregroundLayer}}) {
         quadLayer.mesh()
             .setPrimitive(GL::MeshPrimitive::TriangleStrip)
             .setCount(4)

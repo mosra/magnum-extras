@@ -25,6 +25,7 @@
 
 #include "Style.h"
 
+#include <Corrade/Containers/Reference.h>
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/Shader.h>
