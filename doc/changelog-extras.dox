@@ -30,9 +30,14 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-@section changelog-extras-latest Changes since 2018.10
+@anchor changelog-extras-latest
 
-@subsection changelog-extras-latest-dependencies Dependency changes
+@section changelog-extras-2019-01 2019.01
+
+Released 2019-02-04, tagged as
+[v2019.01](https://github.com/mosra/magnum-extras/releases/tag/v2019.01).
+
+@subsection changelog-extras-2019-01-dependencies Dependency changes
 
 -   Minimal supported GCC version is now 4.8.1, GCC 4.7 is not supported
     anymore. Minimal Clang version is now 3.3, since that's the first version
