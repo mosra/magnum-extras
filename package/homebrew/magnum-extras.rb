@@ -1,5 +1,3 @@
-# kate: indent-width 2;
-
 class MagnumExtras < Formula
   desc "Extras for the Magnum C++11/C++14 graphics engine"
   homepage "https://magnum.graphics"
