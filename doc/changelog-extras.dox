@@ -30,7 +30,12 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-@anchor changelog-extras-latest
+@section changelog-extras-latest Changes since 2019.01
+
+@subsection changelog-extras-latest-buildsystem Build system
+
+-   ES 2.0 and ES 3.0 subset of tests requiring GL context is now run on Travis
+    CI using SwiftShader for better code coverage
 
 @section changelog-extras-2019-01 2019.01
 
