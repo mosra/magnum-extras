@@ -301,7 +301,7 @@ Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, C
     Utility::Arguments args;
     args.addOption("style", "mcss-dark").setHelp("style", "specify style to use")
         .addSkippedPrefix("magnum", "engine-specific options")
-        .setHelp(
+        .setGlobalHelp(
 R"(Showcases different widgets in the Magnum::Ui library. The --style option can
 be one of:
   default       the default style

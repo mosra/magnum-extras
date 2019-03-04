@@ -342,8 +342,8 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
     #endif
     args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
         .addOption("msaa").setHelp("msaa", "MSAA level to use (if not set, defaults to 8x or 2x for HiDPI)", "N")
-        .addSkippedPrefix("magnum").setHelp("engine-specific options")
-        .setHelp("Displays a 3D scene file provided on command line.")
+        .addSkippedPrefix("magnum", "engine-specific options")
+        .setGlobalHelp("Displays a 3D scene file provided on command line.")
         .parse(arguments.argc, arguments.argv);
 
     /* Try 8x MSAA, fall back to zero samples if not possible. Enable only 2x
