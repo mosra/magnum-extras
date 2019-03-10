@@ -148,7 +148,7 @@ void UserInterface::initialize(const Vector2& size, const Vector2i& framebufferS
 
     /* Open the font. 2x supersampling in addition to above to be even
        crisper. */
-    if(!_font->openSingleData(Utility::Resource{"MagnumUi"}.getRaw("SourceSansPro-Regular.ttf"),
+    if(!_font->openData(Utility::Resource{"MagnumUi"}.getRaw("SourceSansPro-Regular.ttf"),
         styleConfiguration.fontSize()*2.0f*supersamplingRatio))
         std::exit(1);
 
