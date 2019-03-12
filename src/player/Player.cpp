@@ -637,7 +637,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
 
     /* Make the extra files available to the importer */
     importer->setFileCallback([](const std::string& filename,
-        Trade::ImporterFileCallbackPolicy, Player& player)
+        InputFileCallbackPolicy, Player& player)
             -> Containers::Optional<Containers::ArrayView<const char>>
         {
             auto found = player._droppedFiles.find(filename);
