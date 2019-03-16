@@ -47,6 +47,13 @@ if(MAGNUM_TARGET_WEBGL)
 endif()
 
 add_executable(magnum-player ${Player_SRCS})
+if(CORRADE_TARGET_WINDOWS AND NOT CORRADE_TARGET_WINDOWS_RT)
+    if(MSVC)
+        target_sources(magnum-player PRIVATE WindowsHiDPI.manifest)
+    elseif(MINGW)
+        target_sources(magnum-player PRIVATE WindowsHiDPI.rc)
+    endif()
+endif()
 target_link_libraries(magnum-player PRIVATE
     Magnum::Application
     Magnum::GL
