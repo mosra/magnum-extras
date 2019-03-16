@@ -44,15 +44,7 @@ namespace Magnum { namespace Ui {
 Can attach to application-specific keyboard and text input.
 @experimental
 */
-class MAGNUM_UI_EXPORT Input: public
-    #ifdef CORRADE_MSVC2017_COMPATIBILITY
-    /* Corrade::Interconnect signal/slot connections are broken on MSVC when
-       using multiple inheritance at the moment. This is a dirty workaround
-       until that is properly investigated. */
-    virtual
-    #endif
-    Widget, public Interconnect::Emitter
-{
+class MAGNUM_UI_EXPORT Input: public Widget, public Interconnect::Emitter {
     public:
         /**
          * @brief Constructor

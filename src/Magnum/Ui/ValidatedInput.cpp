@@ -39,16 +39,7 @@ bool ValidatedInput::allValid(std::initializer_list<Containers::Reference<const 
     return true;
 }
 
-ValidatedInput::ValidatedInput(Plane& plane, const Anchor& anchor, const std::regex& validator, std::string value, const std::size_t maxValueSize, const Style style):
-    #ifdef CORRADE_MSVC2017_COMPATIBILITY
-    /* For some reason this is needed because of the virtual inheritance hack.
-       Before I was passing *static_cast<AbstractPlane*>(nullptr) here but that
-       blew up. Not doing that anymore, no. */
-    Widget{plane, anchor},
-    #endif
-    Input{plane, anchor, std::move(value), maxValueSize, style},
-    _validator{validator}
-{
+ValidatedInput::ValidatedInput(Plane& plane, const Anchor& anchor, const std::regex& validator, std::string value, const std::size_t maxValueSize, const Style style): Input{plane, anchor, std::move(value), maxValueSize, style}, _validator{validator} {
     if(!isValid()) setStyle(Ui::Style::Warning);
     Interconnect::connect(*this, &Ui::Input::valueChanged, *this, &Ui::ValidatedInput::updateStyle);
 }
