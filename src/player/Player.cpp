@@ -339,7 +339,7 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
     Utility::Arguments args;
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     args.addArgument("file").setHelp("file", "file to load")
-        .addOption("importer", "TinyGltfImporter").setHelp("importer", "importer plugin to use");
+        .addOption("importer", "AnySceneImporter").setHelp("importer", "importer plugin to use");
     #endif
     args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
         .addOption("msaa").setHelp("msaa", "MSAA level to use (if not set, defaults to 8x or 2x for HiDPI)", "N")
@@ -422,6 +422,10 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
     _fullscreenTriangle = GL::Mesh{};
     _fullscreenTriangle.setCount(3);
     #endif
+
+    /* Prefer TinyGltfImporter (otherwise AssimpImporter would get selected
+       first) */
+    _manager.setPreferredPlugins("GltfImporter", {"TinyGltfImporter"});
 
     /* Setup plugin defaults */
     {
