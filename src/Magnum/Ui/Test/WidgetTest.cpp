@@ -26,6 +26,7 @@
 #include <sstream>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/TestSuite/Tester.h>
+#include <Corrade/Utility/DebugStl.h>
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/BasicUserInterface.hpp"

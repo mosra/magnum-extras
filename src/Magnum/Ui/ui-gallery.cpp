@@ -28,6 +28,7 @@
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
+#include <Corrade/Utility/DebugStl.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #ifndef CORRADE_TARGET_ANDROID
