@@ -167,19 +167,24 @@ struct BaseUiPlane: Ui::Plane {
         disclaimer{*this, {{}, {Vector2::yAxis(-10.0f), {}}}, "All data are processed and viewed locally in your\nweb browser. Nothing is uploaded to the server.", Text::Alignment::LineCenter, Ui::Style::Dim}
         #endif
     {
-        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        /* Implicitly hide all animation controls, they get shown if there is
+           an actual animation being played */
         Ui::Widget::hide({
-            controls,
-            fullsize,
             backward,
             play,
             pause,
             stop,
             forward,
-            modelInfo,
-            animationProgress});
-        #else
-        play.hide();
+            animationProgress
+        });
+
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        /* Hide everything on Emscripten as there is a welcome screen shown
+           first */
+        Ui::Widget::hide({
+            controls,
+            fullsize,
+            modelInfo});
         #endif
     }
 
@@ -1068,9 +1073,11 @@ void Player::viewportEvent(ViewportEvent& event) {
             _baseUiPlane->disclaimer});
         _baseUiPlane->controls.show();
         if(_isFullsize) _baseUiPlane->fullsize.setStyle(Ui::Style::Success);
-        _controlsHidden = true;
-        toggleControls();
         #endif
+        /* Refresh proper state of all controls -- keep hidden if hidden, show
+           if shown, animation state only when there's an animation */
+        _controlsHidden ^= true;
+        toggleControls();
 
         _data->camera->setViewport(event.framebufferSize());
         _baseUiPlane->modelInfo.setText(_data->modelInfo);
