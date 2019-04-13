@@ -296,7 +296,7 @@ class Player: public Platform::Application, public Interconnect::Receiver {
             {0.0f, 0},
             {1.0f, 10}
         };
-        const Animation::TrackView<Float, Int> _elapsedTimeAnimation{_elapsedTimeAnimationData, Math::lerp};
+        const Animation::TrackView<Float, Int> _elapsedTimeAnimation{_elapsedTimeAnimationData, Math::lerp, Animation::Extrapolation::Extrapolated};
 
         /* Mouse interaction */
         Float _lastDepth;
