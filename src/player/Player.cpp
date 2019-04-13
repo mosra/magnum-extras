@@ -761,12 +761,19 @@ void Player::load(const std::string& filename, Trade::AbstractImporter& importer
             continue;
         }
 
-        /** @todo do something about this? */
-        if(!meshData->normalArrayCount())
-            Warning{} << "The mesh doesn't have normals, might render improperly";
+        MeshTools::CompileFlags flags;
+        if(!meshData->normalArrayCount()) {
+            if(meshData->isIndexed()) {
+                Debug{} << "The mesh doesn't have normals, generating smooth ones using information from the index buffer";
+                flags |= MeshTools::CompileFlag::GenerateSmoothNormals;
+            } else {
+                Debug{} << "The mesh doesn't have normals, generating flat ones";
+                flags |= MeshTools::CompileFlag::GenerateFlatNormals;
+            }
+        }
 
         /* Compile the mesh */
-        _data->meshes[i] = MeshTools::compile(*meshData);
+        _data->meshes[i] = MeshTools::compile(*meshData, flags);
     }
 
     /* Load the scene. Save the object pointers in an array for easier mapping

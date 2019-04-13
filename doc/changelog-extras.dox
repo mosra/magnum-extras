@@ -32,6 +32,11 @@ namespace Magnum {
 
 @section changelog-extras-latest Changes since 2019.01
 
+@subsection changelog-extras-latest-new New features
+
+-   @ref magnum-player "magnum-player" now autogenerates flat normals if the
+    imported model doesn't have any
+
 @subsection changelog-extras-latest-buildsystem Build system
 
 -   ES 2.0 and ES 3.0 subset of tests requiring GL context is now run on Travis
