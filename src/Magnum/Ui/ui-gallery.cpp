@@ -31,10 +31,12 @@
 #include <Corrade/Utility/DebugStl.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
-#ifndef CORRADE_TARGET_ANDROID
-#include <Magnum/Platform/Sdl2Application.h>
-#else
+#ifdef CORRADE_TARGET_ANDROID
 #include <Magnum/Platform/AndroidApplication.h>
+#elif defined(CORRADE_TARGET_EMSCRIPTEN)
+#include <Magnum/Platform/EmscriptenApplication.h>
+#else
+#include <Magnum/Platform/Sdl2Application.h>
 #endif
 #include <Magnum/Text/Alignment.h>
 
