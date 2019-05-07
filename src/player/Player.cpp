@@ -48,7 +48,11 @@
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/Math/FunctionsBatch.h>
 #include <Magnum/MeshTools/Compile.h>
+#ifdef CORRADE_TARGET_EMSCRIPTEN
+#include <Magnum/Platform/EmscriptenApplication.h>
+#else
 #include <Magnum/Platform/Sdl2Application.h>
+#endif
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
@@ -469,7 +473,10 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
     load({}, *importer);
     #endif
 
+    #ifndef CORRADE_TARGET_EMSCRIPTEN
     setSwapInterval(1);
+    #endif
+
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     app = this;
     #endif
