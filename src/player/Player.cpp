@@ -1111,7 +1111,7 @@ Float Player::depthAt(const Vector2i& position) {
     GL::defaultFramebuffer.mapForRead(GL::DefaultFramebuffer::ReadAttachment::Front);
     Image2D image = GL::defaultFramebuffer.read(area, {GL::PixelFormat::DepthComponent, GL::PixelType::Float});
 
-    return Math::min(Containers::arrayCast<const Float>(image.data()));
+    return Math::min<Float>(Containers::arrayCast<const Float>(image.data()));
 
     /* On WebGL we first need to resolve the multisampled backbuffer depth to a
        texture -- that needs to be done right in the draw event otherwise the
