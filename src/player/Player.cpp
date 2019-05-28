@@ -380,20 +380,25 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
     _coloredShader = Shaders::Phong{{}, 3};
     _coloredShader
-        .setAmbientColor(0x111111_rgbf)
-        .setSpecularColor(0x11111100_rgbaf)
-        .setShininess(80.0f);
+        .setAmbientColor(0x111111_rgbf);
     _texturedShader = Shaders::Phong{Shaders::Phong::Flag::DiffuseTexture, 3};
     _texturedShader
-        .setAmbientColor(0x00000000_rgbaf)
-        .setSpecularColor(0x11111100_rgbaf)
-        .setShininess(80.0f);
+        .setAmbientColor(0x00000000_rgbaf);
     _texturedMaskShader = Shaders::Phong{
         Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
     _texturedMaskShader
-        .setAmbientColor(0x00000000_rgbaf)
-        .setSpecularColor(0x11111100_rgbaf)
-        .setShininess(80.0f);
+        .setAmbientColor(0x00000000_rgbaf);
+    for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader}) {
+        (*shader)
+            .setLightPositions({
+                /** @todo make this configurable */
+                Vector3{10.0f, 10.0f, 10.0f}*100.0f,
+                Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
+                Vector3{0.0f, 10.0f, -10.0f}*100.0f})
+            .setLightColors({0xffffff_rgbf, 0xff9999_rgbf, 0x9999ff_rgbf})
+            .setSpecularColor(0x11111100_rgbaf)
+            .setShininess(80.0f);
+    }
 
     /* Setup the UI */
     _ui.emplace(Vector2(windowSize())/dpiScaling(), windowSize(), framebufferSize(), Ui::mcssDarkStyleConfiguration(), "«»");
@@ -969,12 +974,6 @@ void Player::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<
 void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     _shader
         .setDiffuseColor(_color)
-        .setLightPositions({
-            /** @todo make this configurable, deduplicate and calculate only once */
-            Vector3{10.0f, 10.0f, 10.0f}*100.0f,
-            Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
-            Vector3{0.0f, 10.0f, -10.0f}*100.0f})
-        .setLightColors({0xffffff_rgbf, 0xff9999_rgbf, 0x9999ff_rgbf})
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.rotationScaling())
         .setProjectionMatrix(camera.projectionMatrix());
@@ -984,12 +983,6 @@ void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Came
 
 void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     _shader
-        .setLightPositions({
-            /** @todo make this configurable, deduplicate and calculate only once */
-            Vector3{10.0f, 10.0f, 10.0f}*100.0f,
-            Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
-            Vector3{0.0f, 30.0f, -10.0f}*100.0f})
-        .setLightColors({0xffffff_rgbf, 0xff9999_rgbf, 0x9999ff_rgbf})
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.rotationScaling())
         .setProjectionMatrix(camera.projectionMatrix())
