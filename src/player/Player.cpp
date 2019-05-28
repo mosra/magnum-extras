@@ -268,6 +268,7 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         Shaders::Phong _coloredShader{NoCreate};
         Shaders::Phong _texturedShader{NoCreate};
         Shaders::Phong _texturedMaskShader{NoCreate};
+        Float _brightness{0.8f};
 
         /* Data loading */
         #ifdef CORRADE_TARGET_EMSCRIPTEN
@@ -395,7 +396,9 @@ Player::Player(const Arguments& arguments): Platform::Application{arguments, NoC
                 Vector3{10.0f, 10.0f, 10.0f}*100.0f,
                 Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
                 Vector3{0.0f, 10.0f, -10.0f}*100.0f})
-            .setLightColors({0xffffff_rgbf, 0xff9999_rgbf, 0x9999ff_rgbf})
+            .setLightColors({0xffffff_rgbf*_brightness,
+                             0xffcccc_rgbf*_brightness,
+                             0xccccff_rgbf*_brightness})
             .setSpecularColor(0x11111100_rgbaf)
             .setShininess(80.0f);
     }
@@ -1190,6 +1193,20 @@ void Player::keyPressEvent(KeyEvent& event) {
         backward();
     } else if(event.key() == KeyEvent::Key::Right) {
         forward();
+
+    /* Adjust brightness */
+    } else if(event.key() == KeyEvent::Key::NumAdd ||
+              event.key() == KeyEvent::Key::NumSubtract ||
+              event.key() == KeyEvent::Key::Plus ||
+              event.key() == KeyEvent::Key::Minus) {
+        _brightness *= (event.key() == KeyEvent::Key::NumAdd ||
+                        event.key() == KeyEvent::Key::Plus) ? 1.1f : 1/1.1f;
+        for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader}) {
+            shader->setLightColors({
+                0xffffff_rgbf*_brightness,
+                0xffcccc_rgbf*_brightness,
+                0xccccff_rgbf*_brightness});
+        }
 
     } else return;
 
