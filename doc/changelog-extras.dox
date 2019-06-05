@@ -34,8 +34,8 @@ namespace Magnum {
 
 @subsection changelog-extras-latest-new New features
 
--   @ref magnum-player "magnum-player" now autogenerates flat normals if the
-    imported model doesn't have any
+-   @ref magnum-player "magnum-player" now autogenerates normals if the
+    imported model doesn't have any (see also [mosra/magnum#229](https://github.com/mosra/magnum/pull/229))
 
 @subsection changelog-extras-latest-buildsystem Build system
 
