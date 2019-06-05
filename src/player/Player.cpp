@@ -1294,12 +1294,12 @@ void Player::mouseScrollEvent(MouseScrollEvent& event) {
         _lastDepth = depth;
     }
 
-    const Int direction = event.offset().y();
+    const Float direction = event.offset().y();
     if(!direction) return;
 
     /* Move towards/backwards the rotation point in cam coords */
     _data->cameraObject->translateLocal(
-        _data->cameraObject->rotation().transformVector(_rotationPoint*(direction < 0 ? -1.0f : 1.0f)*0.1f));
+        _data->cameraObject->rotation().transformVector(_rotationPoint*direction*0.1f));
 
     redraw();
 }
