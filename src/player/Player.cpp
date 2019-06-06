@@ -1217,12 +1217,14 @@ void Player::keyPressEvent(KeyEvent& event) {
 
     } else return;
 
+    event.setAccepted();
     redraw();
 }
 
 void Player::mousePressEvent(MouseEvent& event) {
     if(_ui->handlePressEvent(event.position())) {
         redraw();
+        event.setAccepted();
         return;
     }
 
@@ -1308,6 +1310,7 @@ void Player::mouseScrollEvent(MouseScrollEvent& event) {
     _data->cameraObject->translateLocal(
         _data->cameraObject->rotation().transformVector(_rotationPoint*direction*0.1f));
 
+    event.setAccepted();
     redraw();
 }
 
