@@ -591,14 +591,14 @@ void Player::toggleFullsize() {
     if(_isFullsize) {
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-        EM_ASM({setFullsize(false)});
+        EM_ASM({Module['setFullsize'](false)});
         #pragma GCC diagnostic pop
         _isFullsize = false;
         _baseUiPlane->fullsize.setStyle(Ui::Style::Default);
     } else {
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-        EM_ASM({setFullsize(true)});
+        EM_ASM({Module['setFullsize'](true)});
         #pragma GCC diagnostic pop
         _isFullsize = true;
         _baseUiPlane->fullsize.setStyle(Ui::Style::Success);

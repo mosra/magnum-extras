@@ -23,13 +23,13 @@
     /* Done here instead of using Sdl2Application::setContainerCssClass() so
        we can do extra things like hiding scrollbars on magnum.graphics. Not
        needed here though. */
-    function setFullsize(fullsize) {
+    Module.setFullsize = function(fullsize) {
         if(fullsize) {
             document.getElementById('container').className = 'fullsize';
         } else {
             document.getElementById('container').className = '';
         }
-    }
+    };
 
     Module.keyboardListeningElement = Module.canvas;
     Module.canvas.addEventListener('dragover', function(event) {
