@@ -37,6 +37,13 @@ namespace Magnum {
 -   @ref magnum-player "magnum-player" now autogenerates normals if the
     imported model doesn't have any (see also [mosra/magnum#229](https://github.com/mosra/magnum/pull/229))
 
+@subsection changelog-extras-latest-changes Changes and improvements
+
+-   Switched @ref magnum-player "magnum-player" and
+    @ref magnum-ui-gallery "magnum-ui-gallery" to use the new
+    @ref Platform::EmscriptenApplication on Emscripten (see
+    [mosra/magnum-extras#10](https://github.com/mosra/magnum-extras/pull/10))
+
 @subsection changelog-extras-latest-buildsystem Build system
 
 -   ES 2.0 and ES 3.0 subset of tests requiring GL context is now run on Travis

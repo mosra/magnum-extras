@@ -31,6 +31,9 @@ namespace Magnum {
 
 -   **Nathan Ollerenshaw** ([\@matjam](https://github.com/matjam)) --- Ubuntu
     package updates, a PPA repository for stable versions
+-   **Jonathan Hale** ([\@Squareys](https://github.com/Squareys)) --- porting
+    to @ref Platform::EmscriptenApplication
+
 */
 
 }
