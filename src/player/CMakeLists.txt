@@ -41,7 +41,8 @@ set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 if(CORRADE_TARGET_EMSCRIPTEN)
     find_package(MagnumPlugins REQUIRED
         TinyGltfImporter
-        StbTrueTypeFont)
+        StbTrueTypeFont
+        StbImageImporter)
 endif()
 
 set(Player_SRCS Player.cpp)
@@ -71,7 +72,8 @@ target_link_libraries(magnum-player PRIVATE
 if(CORRADE_TARGET_EMSCRIPTEN)
     target_link_libraries(magnum-player PRIVATE
         MagnumPlugins::TinyGltfImporter
-        MagnumPlugins::StbTrueTypeFont)
+        MagnumPlugins::StbTrueTypeFont
+        MagnumPlugins::StbImageImporter)
 endif()
 
 if(CORRADE_TARGET_EMSCRIPTEN)
