@@ -101,9 +101,7 @@ class MAGNUM_UI_EXPORT Button: public Widget, public Interconnect::Emitter {
         }
 
         /** @brief The button was tapped */
-        Signal tapped() {
-            return emit(&Button::tapped);
-        }
+        Signal tapped();
 
     private:
         void MAGNUM_UI_LOCAL update() override;

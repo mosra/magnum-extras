@@ -119,9 +119,7 @@ class MAGNUM_UI_EXPORT Input: public Widget, public Interconnect::Emitter {
          * @see @ref UserInterface::inputWidgetFocused(),
          *      @ref Platform::Sdl2Application::startTextInput() "Platform::*Application::startTextInput()"
          */
-        Signal focused() {
-            return emit(&Input::focused);
-        }
+        Signal focused();
 
         /**
          * @brief The widget was blurred
@@ -131,18 +129,14 @@ class MAGNUM_UI_EXPORT Input: public Widget, public Interconnect::Emitter {
          * @see @ref UserInterface::inputWidgetBlurred(),
          *      @ref Platform::Sdl2Application::stopTextInput() "Platform::*Application::stopTextInput()"
          */
-        Signal blurred() {
-            return emit(&Input::blurred);
-        }
+        Signal blurred();
 
         /**
          * @brief The input value changed
          *
          * Useful for attaching input validators.
          */
-        Signal valueChanged(const std::string& value) {
-            return emit(&Input::valueChanged, value);
-        }
+        Signal valueChanged(const std::string& value);
 
     private:
         void MAGNUM_UI_LOCAL update() override;

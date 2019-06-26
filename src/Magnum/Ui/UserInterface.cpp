@@ -232,4 +232,14 @@ void UserInterface::draw() {
     BasicUserInterface::draw({_backgroundShader, _foregroundShader, _textShader});
 }
 
+auto UserInterface::inputWidgetFocused() -> Signal {
+    /* See https://github.com/mosra/corrade/issues/72 for details */
+    return emit(&UserInterface::inputWidgetFocused);
+}
+
+auto UserInterface::inputWidgetBlurred() -> Signal {
+    /* See https://github.com/mosra/corrade/issues/72 for details */
+    return emit(&UserInterface::inputWidgetBlurred);
+}
+
 }}

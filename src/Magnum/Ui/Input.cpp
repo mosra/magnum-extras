@@ -80,6 +80,21 @@ Input& Input::setValue(const Containers::ArrayView<const char> value) {
     return *this;
 }
 
+auto Input::focused() -> Signal {
+    /* See https://github.com/mosra/corrade/issues/72 for details */
+    return emit(&Input::focused);
+}
+
+auto Input::blurred() -> Signal {
+    /* See https://github.com/mosra/corrade/issues/72 for details */
+    return emit(&Input::blurred);
+}
+
+auto Input::valueChanged(const std::string& value) -> Signal {
+    /* See https://github.com/mosra/corrade/issues/72 for details */
+    return emit(&Input::valueChanged, value);
+}
+
 void Input::update() {
     auto& plane = static_cast<Plane&>(this->plane());
 

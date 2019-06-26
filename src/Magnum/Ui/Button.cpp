@@ -69,6 +69,11 @@ Button& Button::setText(const Containers::ArrayView<const char> text) {
     return *this;
 }
 
+auto Button::tapped() -> Signal {
+    /* See https://github.com/mosra/corrade/issues/72 for details */
+    return emit(&Button::tapped);
+}
+
 void Button::update() {
     auto& plane = static_cast<Plane&>(this->plane());
 

@@ -297,9 +297,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @see @ref Input::focused(),
          *      @ref Platform::Sdl2Application::startTextInput() "Platform::*Application::startTextInput()"
          */
-        Signal inputWidgetFocused() {
-            return emit(&UserInterface::inputWidgetFocused);
-        }
+        Signal inputWidgetFocused();
 
         /**
          * @brief Input widget was blurred
@@ -310,9 +308,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
          * @see @ref Input::focused(),
          *      @ref Platform::Sdl2Application::stopTextInput() "Platform::*Application::stopTextInput()"
          */
-        Signal inputWidgetBlurred() {
-            return emit(&UserInterface::inputWidgetBlurred);
-        }
+        Signal inputWidgetBlurred();
 
     private:
         struct MAGNUM_UI_LOCAL FontState;
