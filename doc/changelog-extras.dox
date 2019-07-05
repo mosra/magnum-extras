@@ -48,6 +48,9 @@ namespace Magnum {
 
 -   ES 2.0 and ES 3.0 subset of tests requiring GL context is now run on Travis
     CI using SwiftShader for better code coverage
+-   Emscripten builds now have the `-fPIC` option disabled by default as it
+    causes linker errors related to `__memory_base` on 1.38.36 (see also
+    [emscripten-core/emscripten#8761](https://github.com/emscripten-core/emscripten/issues/8761))
 
 @section changelog-extras-2019-01 2019.01
 
