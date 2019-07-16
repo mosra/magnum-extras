@@ -1272,7 +1272,6 @@ void Player::mouseMoveEvent(MouseMoveEvent& event) {
     const Vector2i delta = event.position() - _lastPosition;
     _lastPosition = event.position();
 
-
     /* Translate */
     if(event.modifiers() & MouseMoveEvent::Modifier::Shift) {
         const Vector3 p = unproject(event.position(), _lastDepth);
