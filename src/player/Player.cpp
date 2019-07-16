@@ -262,8 +262,8 @@ class Player: public Platform::Application, public Interconnect::Receiver {
         void toggleFullsize();
         #endif
 
-        Float depthAt(const Vector2i& position);
-        Vector3 unproject(const Vector2i& position, Float depth) const;
+        Float depthAt(const Vector2i& windowPosition);
+        Vector3 unproject(const Vector2i& windowPosition, Float depth) const;
 
         void load(const std::string& filename, Trade::AbstractImporter& importer);
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
@@ -1112,7 +1112,11 @@ void Player::viewportEvent(ViewportEvent& event) {
     #endif
 }
 
-Float Player::depthAt(const Vector2i& position) {
+Float Player::depthAt(const Vector2i& windowPosition) {
+    /* First scale the position from being relative to window size to being
+       relative to framebuffer size as those two can be different on HiDPI
+       systems */
+    const Vector2i position = windowPosition*Vector2{framebufferSize()}/Vector2{windowSize()};
     const Vector2i fbPosition{position.x(), GL::defaultFramebuffer.viewport().sizeY() - position.y() - 1};
     const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1}).padded(Vector2i{2});
 
@@ -1152,10 +1156,12 @@ Float Player::depthAt(const Vector2i& position) {
     #endif
 }
 
-Vector3 Player::unproject(const Vector2i& position, Float depth) const {
-    const Range2Di view = GL::defaultFramebuffer.viewport();
-    const Vector2i fbPosition{position.x(), view.sizeY() - position.y() - 1};
-    const Vector3 in{2*Vector2{fbPosition - view.min()}/Vector2{view.size()} - Vector2{1.0f}, depth*2.0f - 1.0f};
+Vector3 Player::unproject(const Vector2i& windowPosition, Float depth) const {
+    /* We have to take window size, not framebuffer size, since the position is
+       in window coordinates and the two can be different on HiDPI systems */
+    const Vector2i viewSize = windowSize();
+    const Vector2i viewPosition{windowPosition.x(), viewSize.y() - windowPosition.y() - 1};
+    const Vector3 in{2*Vector2{viewPosition}/Vector2{viewSize} - Vector2{1.0f}, depth*2.0f - 1.0f};
 
     return _data->camera->projectionMatrix().inverted().transformPoint(in);
 }
