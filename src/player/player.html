@@ -20,16 +20,12 @@
   <script>
     "use strict"; /* it summons the Cthulhu in a proper way, they say */
 
-    /* Done here instead of using Sdl2Application::setContainerCssClass() so
-       we can do extra things like hiding scrollbars on magnum.graphics. Not
-       needed here though. */
-    Module.setFullsize = function(fullsize) {
-        if(fullsize) {
-            document.getElementById('container').className = 'fullsize';
-        } else {
-            document.getElementById('container').className = '';
-        }
-    };
+    /* Done here in addition to using
+       EmscriptenApplication::setContainerCssClass() so we can do extra things
+       like hiding scrollbars on magnum.graphics (none of that needed here,
+       tho). The original function still needs to be called in order to
+       properly propagate window size changes. */
+    Module.setFullsize = function(fullsize) {};
 
     Module.keyboardListeningElement = Module.canvas;
     Module.canvas.addEventListener('dragover', function(event) {

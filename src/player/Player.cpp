@@ -603,6 +603,10 @@ void Player::toggleFullsize() {
         _isFullsize = true;
         _baseUiPlane->fullsize.setStyle(Ui::Style::Success);
     }
+
+    /* This function needs to be called instead of doing it all in JS in order
+       to correctly propagate canvas size change */
+    setContainerCssClass(_isFullsize ? "fullsize" : "");
 }
 #endif
 
