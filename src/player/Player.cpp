@@ -1264,17 +1264,26 @@ void Player::mouseReleaseEvent(MouseEvent& event) {
 }
 
 void Player::mouseMoveEvent(MouseMoveEvent& event) {
+    /* In some cases (when focusing a window by a click) the browser reports a
+       move event with pressed buttons *before* the corresponding press event.
+       To avoid jumpy behavior in that case, make sure the last position is
+       always up-to-date by calculating it every time. The same applies for UI
+       as well -- if the user grabs over a button, it should ignore the
+       movement while the mouse is over the button but then shouldn't jump when
+       the mouse leaves the button again. */
+    if(_lastPosition == Vector2i{-1}) _lastPosition = event.position();
+    const Vector2i delta = event.position() - _lastPosition;
+    _lastPosition = event.position();
+
     if(_ui->handleMoveEvent(event.position())) {
         redraw();
         return;
     }
 
+    /* Due to compatibility reasons, scroll is also reported as a press event,
+       so filter that out */
     if(!(event.buttons() & (MouseMoveEvent::Button::Left|
                             MouseMoveEvent::Button::Middle)) || !_data) return;
-
-    if(_lastPosition == Vector2i{-1}) _lastPosition = event.position();
-    const Vector2i delta = event.position() - _lastPosition;
-    _lastPosition = event.position();
 
     /* Translate */
     if(event.modifiers() & MouseMoveEvent::Modifier::Shift) {
