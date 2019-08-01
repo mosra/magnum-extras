@@ -30,14 +30,20 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-The logic is in module `FindMagnumExtras.cmake` distributed in extras
-repository in `modules/` directory, you are encouraged to copy it into your
-project and add path to the files to `CMAKE_MODULE_PATH`. Otherwise, if CMake
-won't be able to find this file in predefined locations, it will error out even
-if Magnum Extras libraries might be installed on the system.
+The main logic is in the [FindMagnumExtras.cmake](https://github.com/mosra/magnum-extras/blob/master/modules/FindMagnumExtras.cmake)
+module distributed in the `modules/` directory of the integration repository,
+you are encouraged to copy it into your project and add path to the files to
+`CMAKE_MODULE_PATH`:
 
-Note that the module file is updated as the library evolves, you are encouraged
-to update your copy from time to time to avoid strange building issues.
+@code{.cmake}
+# Path where FindMagnumExtras.cmake can be found, adapt as needed
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/modules/" ${CMAKE_MODULE_PATH})
+@endcode
+
+Otherwise, if CMake won't be able to find this file in predefined locations, it
+will error out even if Magnum Extras might be installed on the system. Note
+that the module file is updated as the library evolves, you are encouraged to
+update your copy from time to time to avoid strange building issues.
 
 If you installed the library or its dependencies to non-standard location
 (other than `/usr`, e.g. `/home/xyz/projects`), set `CMAKE_PREFIX_PATH` to that
