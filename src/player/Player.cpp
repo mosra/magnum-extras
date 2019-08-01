@@ -91,7 +91,7 @@
 #include "Magnum/Ui/Modal.h"
 #endif
 
-namespace Magnum {
+namespace Magnum { namespace Player {
 
 namespace {
 
@@ -1333,7 +1333,7 @@ void Player::mouseScrollEvent(MouseScrollEvent& event) {
     redraw();
 }
 
-}
+}}
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 extern "C" {
@@ -1348,4 +1348,4 @@ extern "C" {
 }
 #endif
 
-MAGNUM_APPLICATION_MAIN(Magnum::Player)
+MAGNUM_APPLICATION_MAIN(Magnum::Player::Player)
