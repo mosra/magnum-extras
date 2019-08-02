@@ -351,26 +351,41 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
 
     /* Set up the screens */
     _overlay.emplace(*this);
-    _player = createScenePlayer(*this, *_overlay->ui);
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     /* Load a scene importer plugin */
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
-    if(!importer) std::exit(1);
 
     Debug{} << "Opening file" << args.value("file");
 
-    /* Load file */
-    if(!importer->openFile(args.value("file")))
-        std::exit(4);
+    /* Load file. If fails and this was not a custom importer, try loading it
+       as an image instead */
+    /** @todo redo once canOpen*() is implemented */
+    if(importer && importer->openFile(args.value("file"))) {
+        /* If we passed a custom importer, try to figure out if it's an image
+           or a scene */
+        /** @todo ugh the importer should have an API for that */
+        if(args.value("importer") != "AnySceneImporter" && !importer->object3DCount() && !importer->mesh3DCount() && importer->image2DCount() == 1)
+            _player = createImagePlayer(*this, *_overlay->ui);
+        else
+            _player = createScenePlayer(*this, *_overlay->ui);
+        _player->load(args.value("file"), *importer);
+    } else if(args.value("importer") == "AnySceneImporter") {
+        Debug{} << "Opening as a scene failed, trying as an image...";
+        Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
+        if(imageImporter && imageImporter->openFile(args.value("file"))) {
+            _player = createImagePlayer(*this, *_overlay->ui);
+            _player->load(args.value("file"), *imageImporter);
+        } else std::exit(2);
+    } else std::exit(1);
 
-    _player->load(args.value("file"), *importer);
     #else
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate("TinyGltfImporter");
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
+    _player = createScenePlayer(*this, *_overlay->ui);
     _player->load({}, *importer);
     #endif
 

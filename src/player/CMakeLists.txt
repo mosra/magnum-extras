@@ -26,6 +26,7 @@
 find_package(Magnum REQUIRED
     GL
     MeshTools
+    Primitives
     Shaders
     SceneGraph
     Trade)
@@ -47,6 +48,7 @@ endif()
 
 set(Player_SRCS
     Player.cpp
+    ImagePlayer.cpp
     ScenePlayer.cpp)
 
 if(MAGNUM_TARGET_WEBGL)
@@ -67,6 +69,7 @@ target_link_libraries(magnum-player PRIVATE
     Magnum::GL
     Magnum::Magnum
     Magnum::MeshTools
+    Magnum::Primitives
     Magnum::SceneGraph
     Magnum::Shaders
     Magnum::Trade
