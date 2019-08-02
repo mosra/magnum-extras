@@ -45,7 +45,9 @@ if(CORRADE_TARGET_EMSCRIPTEN)
         StbImageImporter)
 endif()
 
-set(Player_SRCS Player.cpp)
+set(Player_SRCS
+    Player.cpp
+    ScenePlayer.cpp)
 
 if(MAGNUM_TARGET_WEBGL)
     corrade_add_resource(Player_RESOURCES resources.conf)
