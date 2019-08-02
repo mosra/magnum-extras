@@ -273,7 +273,12 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         void relayout(const Vector2& size, const Vector2i& windowSize, const Vector2i& framebufferSize);
 
         /** @brief Font used for the interface */
-        const Text::AbstractFont& font() const { return *_font; }
+        Text::AbstractFont& font() { return *_font; }
+        const Text::AbstractFont& font() const { return *_font; } /**< @overload */
+
+        /** @brief Glyph cache used for the interface */
+        Text::GlyphCache& glyphCache() { return *_glyphCache; }
+        const Text::GlyphCache& glyphCache() const { return *_glyphCache; } /**< @overload */
 
         /**
          * @brief Currently focused input widget
