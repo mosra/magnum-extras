@@ -98,3 +98,9 @@ if(CORRADE_TARGET_EMSCRIPTEN)
 else()
     install(TARGETS magnum-player DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
 endif()
+
+# Install a desktop file for Linux, BSD, ... (basically all Unix except Apple
+# and Android)
+if(CORRADE_TARGET_UNIX AND NOT CORRADE_TARGET_APPLE AND NOT CORRADE_TARGET_ANDROID)
+    install(FILES magnum-player.desktop DESTINATION share/applications)
+endif()
