@@ -1029,12 +1029,9 @@ void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
         _lastDepth = depth;
     }
 
-    const Float direction = event.offset().y();
-    if(!direction) return;
-
     /* Move towards/backwards the rotation point in cam coords */
     _data->cameraObject->translateLocal(
-        _data->cameraObject->rotation().transformVector(_rotationPoint*direction*0.1f));
+        _data->cameraObject->rotation().transformVector(_rotationPoint*event.offset().y()*0.1f));
 
     event.setAccepted();
     redraw();
