@@ -125,6 +125,9 @@ struct Overlay: public AbstractUiScreen, public Interconnect::Receiver {
         void drawEvent() override;
         void viewportEvent(ViewportEvent& event) override;
 
+        #ifndef CORRADE_TARGET_EMSCRIPTEN
+        void keyPressEvent(KeyEvent& event) override;
+        #endif
         void mousePressEvent(MouseEvent& event) override;
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
@@ -155,6 +158,9 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
 
         /* Accessed from Overlay */
         void toggleControls();
+        #ifndef CORRADE_TARGET_EMSCRIPTEN
+        void reload();
+        #endif
 
     private:
         void globalViewportEvent(ViewportEvent& size) override;
@@ -170,6 +176,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         std::unordered_map<std::string, Containers::Array<char>> _droppedFiles;
         #endif
 
+        std::string _importer, _file;
         bool _controlsVisible =
             #ifndef CORRADE_TARGET_EMSCRIPTEN
             true
@@ -226,6 +233,17 @@ void Overlay::viewportEvent(ViewportEvent& event) {
         #endif
     }
 }
+
+#ifndef CORRADE_TARGET_EMSCRIPTEN
+void Overlay::keyPressEvent(KeyEvent& event) {
+    if(event.key() == KeyEvent::Key::F5 && !(event.modifiers() & (KeyEvent::Modifier::Shift|KeyEvent::Modifier::Ctrl|KeyEvent::Modifier::Super|KeyEvent::Modifier::Alt|KeyEvent::Modifier::AltGr))) {
+        static_cast<Player*>(application())->reload();
+    } else return;
+
+    redraw();
+    event.setAccepted();
+}
+#endif
 
 void Overlay::mousePressEvent(MouseEvent& event) {
     if(ui->handlePressEvent(event.position())) {
@@ -353,16 +371,18 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     _overlay.emplace(*this);
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
+    _file = args.value("file");
+
     /* Load a scene importer plugin */
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
 
-    Debug{} << "Opening file" << args.value("file");
+    Debug{} << "Opening file" << _file;
 
     /* Load file. If fails and this was not a custom importer, try loading it
        as an image instead */
     /** @todo redo once canOpen*() is implemented */
-    if(importer && importer->openFile(args.value("file"))) {
+    if(importer && importer->openFile(_file)) {
         /* If we passed a custom importer, try to figure out if it's an image
            or a scene */
         /** @todo ugh the importer should have an API for that */
@@ -370,16 +390,17 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
             _player = createImagePlayer(*this, *_overlay->ui);
         else
             _player = createScenePlayer(*this, *_overlay->ui);
-        _player->load(args.value("file"), *importer);
+        _player->load(_file, *importer);
+        _importer = args.value("importer");
     } else if(args.value("importer") == "AnySceneImporter") {
         Debug{} << "Opening as a scene failed, trying as an image...";
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
-        if(imageImporter && imageImporter->openFile(args.value("file"))) {
+        if(imageImporter && imageImporter->openFile(_file)) {
             _player = createImagePlayer(*this, *_overlay->ui);
-            _player->load(args.value("file"), *imageImporter);
+            _player->load(_file, *imageImporter);
+            _importer = "AnyImageImporter";
         } else std::exit(2);
     } else std::exit(1);
-
     #else
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate("TinyGltfImporter");
@@ -397,6 +418,15 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     app = this;
     #endif
 }
+
+#ifndef CORRADE_TARGET_EMSCRIPTEN
+void Player::reload() {
+    Containers::Pointer<Trade::AbstractImporter> importer =
+        _manager.loadAndInstantiate(_importer);
+    if(importer && importer->openFile(_file))
+        _player->load(_file, *importer);
+}
+#endif
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 void Player::loadFile(std::size_t totalCount, const char* filename, Containers::Array<char> data) {

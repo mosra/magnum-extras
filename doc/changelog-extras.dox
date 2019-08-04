@@ -47,6 +47,8 @@ namespace Magnum {
     @ref magnum-ui-gallery "magnum-ui-gallery" to use the new
     @ref Platform::EmscriptenApplication on Emscripten (see
     [mosra/magnum-extras#10](https://github.com/mosra/magnum-extras/pull/10))
+-   Desktop build of @ref magnum-player "magnum-player" can now refresh
+    the currently loaded file using @m_class{m-label m-default} **F5**
 
 @subsection changelog-extras-latest-buildsystem Build system
 

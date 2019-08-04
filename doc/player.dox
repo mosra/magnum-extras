@@ -68,6 +68,9 @@ add_custom_command(OUTPUT ... COMMAND MagnumExtras::player ...)
 -   @m_class{m-label m-default} **+** / @m_class{m-label m-default} **Num +**
     or @m_class{m-label m-default} **-** / @m_class{m-label m-default} **Num -**
     increases or decreases lighting brightness
+-   @m_class{m-label m-default} **F5** re-imports currently loaded file
+    (desktop version only, on the web drop a file again for equivalent
+    behavior)
 
 @section magnum-player-usage Usage
 

@@ -232,7 +232,8 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
     /* Set up default transformation (1:1 scale, centered) */
     _imageSize = image->size();
-    _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
+    if(_transformation == Matrix3{})
+        _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
 
     /* Populate the model info */
     /** @todo ugh debug->format converter?! */
