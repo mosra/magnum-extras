@@ -152,7 +152,10 @@ void ImagePlayer::viewportEvent(ViewportEvent& event) {
 
 void ImagePlayer::keyPressEvent(KeyEvent& event) {
     if(event.key() == KeyEvent::Key::NumZero) {
-        _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
+        if((_imageSize > application()->framebufferSize()*0.5f).any())
+            _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
+        else
+            _transformation = Matrix3::scaling(application()->framebufferSize().min()*0.9f*Vector2{1.0f, Vector2{_imageSize}.aspectRatio()}/2.0f);
     } else return;
 
     event.setAccepted();
@@ -235,10 +238,15 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         .setStorage(1, GL::TextureFormat::RGBA8, image->size())
         .setSubImage(0, {}, *image);
 
-    /* Set up default transformation (1:1 scale, centered) */
+    /* Set up default transformation. Centered, 1:1 scale if more than 50% of
+       the view, otherwise scaled up to 90% of the view. */
     _imageSize = image->size();
-    if(_transformation == Matrix3{})
-        _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
+    if(_transformation == Matrix3{}) {
+        if((_imageSize > application()->framebufferSize()*0.5f).any())
+            _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
+        else
+            _transformation = Matrix3::scaling(application()->framebufferSize().min()*0.9f*Vector2{1.0f, Vector2{_imageSize}.aspectRatio()}/2.0f);
+    }
 
     /* Populate the model info */
     /** @todo ugh debug->format converter?! */
