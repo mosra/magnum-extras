@@ -52,6 +52,7 @@
 #include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
 #include <Magnum/SceneGraph/Scene.h>
 #include <Magnum/Shaders/Phong.h>
+#include <Magnum/Shaders/VertexColor.h>
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/AnimationData.h>
@@ -218,13 +219,14 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         Float depthAt(const Vector2i& windowPosition);
         Vector3 unproject(const Vector2i& windowPosition, Float depth) const;
 
-        void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i);
+        void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
 
         /* Global rendering stuff */
         Shaders::Phong _coloredShader{{}, 3};
         Shaders::Phong _texturedShader{Shaders::Phong::Flag::DiffuseTexture, 3};
         Shaders::Phong _texturedMaskShader{
         Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
+        Shaders::VertexColor3D _vertexColorShader;
         Float _brightness{0.8f};
 
         /* Data loading */
@@ -251,6 +253,17 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         GL::Mesh _fullscreenTriangle{NoCreate};
         DepthReinterpretShader _reinterpretShader{NoCreate};
         #endif
+};
+
+class VertexColoredDrawable: public SceneGraph::Drawable3D {
+    public:
+        explicit VertexColoredDrawable(Object3D& object, Shaders::VertexColor3D& shader, GL::Mesh& mesh, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh) {}
+
+    private:
+        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
+
+        Shaders::VertexColor3D& _shader;
+        GL::Mesh& _mesh;
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -489,9 +502,12 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         materials[i] = std::move(static_cast<Trade::PhongMaterialData&>(*materialData));
     }
 
-    /* Load all meshes. Meshes that fail to load will be NullOpt. */
+    /* Load all meshes. Meshes that fail to load will be NullOpt. Remember
+       which have vertex colors, so in case there's no material we can use that
+       instead. */
     Debug{} << "Loading" << importer.mesh3DCount() << "meshes";
     _data->meshes = Containers::Array<Containers::Optional<GL::Mesh>>{importer.mesh3DCount()};
+    Containers::Array<bool> hasVertexColors{Containers::DirectInit, importer.mesh3DCount(), false};
     for(UnsignedInt i = 0; i != importer.mesh3DCount(); ++i) {
         Containers::Optional<Trade::MeshData3D> meshData = importer.mesh3D(i);
         if(!meshData || meshData->primitive() != MeshPrimitive::Triangles) {
@@ -509,6 +525,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
                 flags |= MeshTools::CompileFlag::GenerateFlatNormals;
             }
         }
+
+        hasVertexColors[i] = meshData->hasColors();
 
         /* Compile the mesh */
         _data->meshes[i] = MeshTools::compile(*meshData, flags);
@@ -529,12 +547,16 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
         /* Recursively add all children */
         for(UnsignedInt objectId: sceneData->children3D())
-            addObject(importer, objects, materials, _data->scene, objectId);
+            addObject(importer, objects, materials, hasVertexColors, _data->scene, objectId);
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
-    } else if(!_data->meshes.empty() && _data->meshes[0])
-        new ColoredDrawable{_data->scene, _coloredShader, *_data->meshes[0], 0xffffff_rgbf, _data->opaqueDrawables};
+    } else if(!_data->meshes.empty() && _data->meshes[0]) {
+        if(hasVertexColors[0])
+            new VertexColoredDrawable{_data->scene, _vertexColorShader, *_data->meshes[0], _data->opaqueDrawables};
+        else
+            new ColoredDrawable{_data->scene, _coloredShader, *_data->meshes[0], 0xffffff_rgbf, _data->opaqueDrawables};
+    }
 
     /* Create a camera object in case it wasn't present in the scene already */
     if(!_data->cameraObject) {
@@ -644,7 +666,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     }
 }
 
-void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Object3D& parent, UnsignedInt i) {
+void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i) {
     Containers::Pointer<Trade::ObjectData3D> objectData = importer.object3D(i);
     if(!objectData) {
         Error{} << "Cannot import object" << i << importer.object3DName(i);
@@ -667,9 +689,15 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
     if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _data->meshes[objectData->instance()]) {
         const Int materialId = static_cast<Trade::MeshObjectData3D*>(objectData.get())->material();
 
-        /* Material not available / not loaded, use a default material */
+        /* Material not available / not loaded. If the mesh has vertex colors,
+           use that, otherwise apply a default material. */
         if(materialId == -1 || !materials[materialId]) {
-            new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->opaqueDrawables};
+            if(hasVertexColors[objectData->instance()])
+                new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()], _data->opaqueDrawables};
+            else
+                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->opaqueDrawables};
+
+        /* Material available */
         } else {
             const Trade::PhongMaterialData& material = *materials[materialId];
 
@@ -686,6 +714,10 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 else
                     new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->opaqueDrawables};
 
+            /* Vertex color material */
+            } else if(hasVertexColors[objectData->instance()]) {
+                new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()], _data->opaqueDrawables};
+
             /* Color-only material */
             } else {
                 new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], material.diffuseColor(), _data->opaqueDrawables};
@@ -700,7 +732,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
     /* Recursively add children */
     for(std::size_t id: objectData->children())
-        addObject(importer, objects, materials, *object, id);
+        addObject(importer, objects, materials, hasVertexColors, *object, id);
 }
 
 void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
@@ -723,6 +755,12 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
     if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
         _shader.setAlphaMask(_alphaMask);
 
+    _mesh.draw(_shader);
+}
+
+void VertexColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
+    _shader
+        .setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix);
     _mesh.draw(_shader);
 }
 
