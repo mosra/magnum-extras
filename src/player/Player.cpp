@@ -187,8 +187,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
 };
 
 bool AbstractUiScreen::controlsVisible() const {
-    CORRADE_INTERNAL_ASSERT(application());
-    return static_cast<const Player*>(application())->controlsVisible();
+    return application<Player>().controlsVisible();
 }
 
 Overlay::Overlay(Platform::ScreenedApplication& application): AbstractUiScreen{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
@@ -237,7 +236,7 @@ void Overlay::viewportEvent(ViewportEvent& event) {
 #ifndef CORRADE_TARGET_EMSCRIPTEN
 void Overlay::keyPressEvent(KeyEvent& event) {
     if(event.key() == KeyEvent::Key::F5 && !(event.modifiers() & (KeyEvent::Modifier::Shift|KeyEvent::Modifier::Ctrl|KeyEvent::Modifier::Super|KeyEvent::Modifier::Alt|KeyEvent::Modifier::AltGr))) {
-        static_cast<Player*>(application())->reload();
+        application<Player>().reload();
     } else return;
 
     redraw();
@@ -272,13 +271,11 @@ void Overlay::mouseMoveEvent(MouseMoveEvent& event) {
 }
 
 void Overlay::initializeUi() {
-    CORRADE_INTERNAL_ASSERT(application());
-
     overlayUiPlane.emplace(*ui);
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     importErrorUiPlane.emplace(*ui);
     #endif
-    Interconnect::connect(overlayUiPlane->controls, &Ui::Button::tapped, static_cast<Player&>(*application()), &Player::toggleControls);
+    Interconnect::connect(overlayUiPlane->controls, &Ui::Button::tapped, application<Player>(), &Player::toggleControls);
     #ifdef CORRADE_TARGET_EMSCRIPTEN
     Interconnect::connect(overlayUiPlane->fullsize, &Ui::Button::tapped, *this, &Overlay::toggleFullsize);
     Interconnect::connect(importErrorUiPlane->close, &Ui::Button::tapped, *importErrorUiPlane, &Ui::Plane::hide);

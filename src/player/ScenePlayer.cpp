@@ -819,12 +819,10 @@ void ScenePlayer::viewportEvent(ViewportEvent& event) {
 }
 
 Float ScenePlayer::depthAt(const Vector2i& windowPosition) {
-    CORRADE_INTERNAL_ASSERT(application());
-
     /* First scale the position from being relative to window size to being
        relative to framebuffer size as those two can be different on HiDPI
        systems */
-    const Vector2i position = windowPosition*Vector2{application()->framebufferSize()}/Vector2{application()->windowSize()};
+    const Vector2i position = windowPosition*Vector2{application().framebufferSize()}/Vector2{application().windowSize()};
     const Vector2i fbPosition{position.x(), GL::defaultFramebuffer.viewport().sizeY() - position.y() - 1};
     const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1}).padded(Vector2i{2});
 
@@ -865,11 +863,9 @@ Float ScenePlayer::depthAt(const Vector2i& windowPosition) {
 }
 
 Vector3 ScenePlayer::unproject(const Vector2i& windowPosition, Float depth) const {
-    CORRADE_INTERNAL_ASSERT(application());
-
     /* We have to take window size, not framebuffer size, since the position is
        in window coordinates and the two can be different on HiDPI systems */
-    const Vector2i viewSize = application()->windowSize();
+    const Vector2i viewSize = application().windowSize();
     const Vector2i viewPosition{windowPosition.x(), viewSize.y() - windowPosition.y() - 1};
     const Vector3 in{2*Vector2{viewPosition}/Vector2{viewSize} - Vector2{1.0f}, depth*2.0f - 1.0f};
 

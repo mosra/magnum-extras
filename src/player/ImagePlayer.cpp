@@ -152,10 +152,10 @@ void ImagePlayer::viewportEvent(ViewportEvent& event) {
 
 void ImagePlayer::keyPressEvent(KeyEvent& event) {
     if(event.key() == KeyEvent::Key::NumZero) {
-        if((_imageSize > application()->framebufferSize()*0.5f).any())
+        if((_imageSize > application().framebufferSize()*0.5f).any())
             _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
         else
-            _transformation = Matrix3::scaling(application()->framebufferSize().min()*0.9f*Vector2{1.0f, Vector2{_imageSize}.aspectRatio()}/2.0f);
+            _transformation = Matrix3::scaling(application().framebufferSize().min()*0.9f*Vector2{1.0f, Vector2{_imageSize}.aspectRatio()}/2.0f);
     } else return;
 
     event.setAccepted();
@@ -179,20 +179,16 @@ void ImagePlayer::mouseReleaseEvent(MouseEvent& event) {
 }
 
 Vector2 ImagePlayer::unproject(const Vector2i& windowPosition) const {
-    CORRADE_INTERNAL_ASSERT(application());
-
     /* Normalize from window-relative position with origin at top left and Y
        down to framebuffer-relative position with origin at center and Y going
        up */
-    return (Vector2{windowPosition}/Vector2{application()->windowSize()} - Vector2{0.5f})*Vector2{application()->framebufferSize()}*Vector2::yScale(-1.0f);
+    return (Vector2{windowPosition}/Vector2{application().windowSize()} - Vector2{0.5f})*Vector2{application().framebufferSize()}*Vector2::yScale(-1.0f);
 }
 
 Vector2 ImagePlayer::unprojectRelative(const Vector2i& relativeWindowPosition) const {
-    CORRADE_INTERNAL_ASSERT(application());
-
     /* Only resizing for framebuffer-relative position and Y going up instead
        of down, no origin movements */
-    return Vector2{relativeWindowPosition}*Vector2{application()->framebufferSize()}*Vector2::yScale(-1.0f)/Vector2{application()->windowSize()};
+    return Vector2{relativeWindowPosition}*Vector2{application().framebufferSize()}*Vector2::yScale(-1.0f)/Vector2{application().windowSize()};
 }
 
 void ImagePlayer::mouseMoveEvent(MouseMoveEvent& event) {
@@ -242,10 +238,10 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
        the view, otherwise scaled up to 90% of the view. */
     _imageSize = image->size();
     if(_transformation == Matrix3{}) {
-        if((_imageSize > application()->framebufferSize()*0.5f).any())
+        if((_imageSize > application().framebufferSize()*0.5f).any())
             _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
         else
-            _transformation = Matrix3::scaling(application()->framebufferSize().min()*0.9f*Vector2{1.0f, Vector2{_imageSize}.aspectRatio()}/2.0f);
+            _transformation = Matrix3::scaling(application().framebufferSize().min()*0.9f*Vector2{1.0f, Vector2{_imageSize}.aspectRatio()}/2.0f);
     }
 
     /* Populate the model info */
