@@ -120,19 +120,24 @@ void ImagePlayer::drawEvent() {
 
     _shader.bindTexture(_texture)
         .setTransformationProjectionMatrix(_projection*_transformation);
+
+    /* Enable blending, disable depth test */
+    GL::Renderer::enable(GL::Renderer::Feature::Blending);
+    GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
+
+    /* Draw the image with non-premultiplied alpha blending as that's the
+       common format */
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
     _square.draw(_shader);
 
-    /* Draw the UI. Disable the depth buffer and enable premultiplied alpha
-       blending. */
-    {
-        GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
-        GL::Renderer::enable(GL::Renderer::Feature::Blending);
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-        _ui->draw();
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
-        GL::Renderer::disable(GL::Renderer::Feature::Blending);
-        GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
-    }
+    /* Draw the UI, this time with premultiplied alpha blending */
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    _ui->draw();
+
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
+
+    GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+    GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
 void ImagePlayer::viewportEvent(ViewportEvent& event) {
