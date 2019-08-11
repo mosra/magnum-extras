@@ -149,6 +149,7 @@ struct BaseUiPlane: Ui::Plane {
         stop{*this, {Ui::Snap::Right, play, ControlSize}, "Stop", Ui::Style::Danger},
         forward{*this, {Ui::Snap::Right, stop, HalfControlSize}, "»"},
         modelInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim},
+        objectInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim},
         animationProgress{*this, {Ui::Snap::Right, forward, LabelSize}, "", Text::Alignment::LineLeft, 17}
     {
         /* Implicitly hide all animation controls, they get shown if there is
@@ -161,6 +162,9 @@ struct BaseUiPlane: Ui::Plane {
             forward,
             animationProgress
         });
+
+        /* Hide object info, it gets shown only on selection */
+        objectInfo.hide();
 
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         /* Hide everything on Emscripten as there is a welcome screen shown
@@ -177,11 +181,26 @@ struct BaseUiPlane: Ui::Plane {
         stop,
         forward;
     Ui::Label modelInfo,
+        objectInfo,
         animationProgress;
 };
 
+struct MeshInfo {
+    Containers::Optional<GL::Mesh> mesh;
+    UnsignedInt vertices;
+    UnsignedInt triangles;
+    std::size_t size;
+    std::string name;
+};
+
+struct ObjectInfo {
+    Object3D* object;
+    std::string name;
+    UnsignedInt meshId{0xffffffffu};
+};
+
 struct Data {
-    Containers::Array<Containers::Optional<GL::Mesh>> meshes;
+    Containers::Array<MeshInfo> meshes;
     Containers::Array<Containers::Optional<GL::Texture2D>> textures;
 
     Scene3D scene;
@@ -190,7 +209,7 @@ struct Data {
     SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables;
     Vector3 previousPosition;
 
-    Containers::Array<std::pair<Object3D*, GL::Mesh*>> objects;
+    Containers::Array<ObjectInfo> objects;
     SceneGraph::Drawable3D* selectedObject{};
 
     Containers::Array<char> animationData;
@@ -198,10 +217,9 @@ struct Data {
 
     Int elapsedTimeAnimationDestination = -1; /* So it gets updated with 0 as well */
 
-    /* The UI is recreated on window resize and we need to repopulate
-        the info */
+    /* UI is recreated on window resize and we need to repopulate the info */
     /** @todo remove once the UI has relayouting */
-    std::string modelInfo;
+    std::string modelInfo, objectInfo;
 };
 
 class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
@@ -435,7 +453,9 @@ void ScenePlayer::setControlsVisible(bool visible) {
                     _baseUiPlane->animationProgress});
             }
 
-            Ui::Widget::show({_baseUiPlane->modelInfo});
+            Ui::Widget::show({_data->selectedObject ?
+                _baseUiPlane->objectInfo :
+                _baseUiPlane->modelInfo});
         }
 
     } else {
@@ -446,6 +466,7 @@ void ScenePlayer::setControlsVisible(bool visible) {
             _baseUiPlane->stop,
             _baseUiPlane->forward,
             _baseUiPlane->modelInfo,
+            _baseUiPlane->objectInfo,
             _baseUiPlane->animationProgress});
     }
 }
@@ -566,7 +587,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
        which have vertex colors, so in case there's no material we can use that
        instead. */
     Debug{} << "Loading" << importer.mesh3DCount() << "meshes";
-    _data->meshes = Containers::Array<Containers::Optional<GL::Mesh>>{importer.mesh3DCount()};
+    _data->meshes = Containers::Array<MeshInfo>{importer.mesh3DCount()};
     Containers::Array<bool> hasVertexColors{Containers::DirectInit, importer.mesh3DCount(), false};
     for(UnsignedInt i = 0; i != importer.mesh3DCount(); ++i) {
         Containers::Optional<Trade::MeshData3D> meshData = importer.mesh3D(i);
@@ -588,8 +609,23 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
         hasVertexColors[i] = meshData->hasColors();
 
-        /* Compile the mesh */
-        _data->meshes[i] = MeshTools::compile(*meshData, flags);
+        /* Save metadata, compile the mesh */
+        _data->meshes[i].vertices = meshData->positions(0).size();
+        if(meshData->isIndexed()) {
+            _data->meshes[i].triangles = meshData->indices().size()/3;
+            _data->meshes[i].size = meshData->indices().size();
+            if(meshData->positions(0).size() > 65535)
+                _data->meshes[i].size *= 4;
+            else if(meshData->positions(0).size() > 255)
+                _data->meshes[i].size *= 2;
+        }
+        _data->meshes[i].size += meshData->positions(0).size()*(12 + 12 +
+            (meshData->hasColors() ? 16 : 0) +
+            (meshData->hasTextureCoords2D() ? 8 : 0));
+        _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
+        _data->meshes[i].name = importer.mesh3DName(i);
+        if(_data->meshes[i].name.empty())
+            _data->meshes[i].name = Utility::formatString("mesh #{}", i);
     }
 
     /* Load the scene. Save the object pointers in an array for easier mapping
@@ -605,20 +641,21 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         }
 
         /* Recursively add all children */
-        _data->objects = Containers::Array<std::pair<Object3D*, GL::Mesh*>>{Containers::ValueInit, importer.object3DCount()};
+        _data->objects = Containers::Array<ObjectInfo>{Containers::ValueInit, importer.object3DCount()};
         for(UnsignedInt objectId: sceneData->children3D())
             addObject(importer, materials, hasVertexColors, _data->scene, objectId);
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
-    } else if(!_data->meshes.empty() && _data->meshes[0]) {
-        _data->objects = Containers::Array<std::pair<Object3D*, GL::Mesh*>>{Containers::ValueInit, 1};
-        _data->objects[0].first = &_data->scene;
-        _data->objects[0].second = &*_data->meshes[0];
+    } else if(!_data->meshes.empty() && _data->meshes[0].mesh) {
+        _data->objects = Containers::Array<ObjectInfo>{Containers::ValueInit, 1};
+        _data->objects[0].object = &_data->scene;
+        _data->objects[0].meshId = 0;
+        _data->objects[0].name = "object #0";
         if(hasVertexColors[0])
-            new VertexColoredDrawable{_data->scene, _vertexColorShader, *_data->meshes[0], _data->opaqueDrawables};
+            new VertexColoredDrawable{_data->scene, _vertexColorShader, *_data->meshes[0].mesh, _data->opaqueDrawables};
         else
-            new ColoredDrawable{_data->scene, _coloredShader, *_data->meshes[0], 0, 0xffffff_rgbf, _data->opaqueDrawables};
+            new ColoredDrawable{_data->scene, _coloredShader, *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _data->opaqueDrawables};
     }
 
     /* Create a camera object in case it wasn't present in the scene already */
@@ -651,10 +688,10 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         }
 
         for(UnsignedInt j = 0; j != animation->trackCount(); ++j) {
-            if(animation->trackTarget(j) >= _data->objects.size() || !_data->objects[animation->trackTarget(j)].first)
+            if(animation->trackTarget(j) >= _data->objects.size() || !_data->objects[animation->trackTarget(j)].object)
                 continue;
 
-            Object3D& animatedObject = *_data->objects[animation->trackTarget(j)].first;
+            Object3D& animatedObject = *_data->objects[animation->trackTarget(j)].object;
 
             if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Translation3D) {
                 const auto callback = [](Float, const Vector3& translation, Object3D& object) {
@@ -747,23 +784,26 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
     /* Save it to the ID -> pointer mapping array for animation target and
        object selection */
-    _data->objects[i].first = object;
+    _data->objects[i].object = object;
 
     /* Add a drawable if the object has a mesh and the mesh is loaded */
-    if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _data->meshes[objectData->instance()]) {
+    if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _data->meshes[objectData->instance()].mesh) {
         const Int materialId = static_cast<Trade::MeshObjectData3D*>(objectData.get())->material();
 
         /* Save the mesh pointer as well, so we know what to draw for object
            selection */
-        _data->objects[i].second = &*_data->meshes[objectData->instance()];
+        _data->objects[i].meshId = objectData->instance();
+        _data->objects[i].name = importer.object3DName(i);
+        if(_data->objects[i].name.empty())
+            _data->objects[i].name = Utility::formatString("object #{}", i);
 
         /* Material not available / not loaded. If the mesh has vertex colors,
            use that, otherwise apply a default material. */
         if(materialId == -1 || !materials[materialId]) {
             if(hasVertexColors[objectData->instance()])
-                new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()], _data->opaqueDrawables};
+                new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()].mesh, _data->opaqueDrawables};
             else
-                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], i, 0xffffff_rgbf, _data->opaqueDrawables};
+                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()].mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -776,19 +816,19 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 if(texture) new TexturedDrawable{*object,
                     material.alphaMode() == Trade::MaterialAlphaMode::Mask ?
                         _texturedMaskShader : _texturedShader,
-                    *_data->meshes[objectData->instance()], i, *texture, material.alphaMask(),
+                    *_data->meshes[objectData->instance()].mesh, i, *texture, material.alphaMask(),
                     material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                         _data->transparentDrawables : _data->opaqueDrawables};
                 else
-                    new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], i, 0xffffff_rgbf, _data->opaqueDrawables};
+                    new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()].mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
             /* Vertex color material */
             } else if(hasVertexColors[objectData->instance()]) {
-                new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()], _data->opaqueDrawables};
+                new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()].mesh, _data->opaqueDrawables};
 
             /* Color-only material */
             } else {
-                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], i, material.diffuseColor(), _data->opaqueDrawables};
+                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()].mesh, i, material.diffuseColor(), _data->opaqueDrawables};
             }
         }
 
@@ -918,6 +958,7 @@ void ScenePlayer::viewportEvent(ViewportEvent& event) {
 
         _data->camera->setViewport(event.framebufferSize());
         _baseUiPlane->modelInfo.setText(_data->modelInfo);
+        _baseUiPlane->objectInfo.setText(_data->objectInfo);
         updateAnimationTime(_data->elapsedTimeAnimationDestination);
     }
 
@@ -1126,15 +1167,43 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
         const Vector2i fbPosition{position.x(), _selectionFramebuffer.viewport().sizeY() - position.y() - 1};
         const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1});
 
-        /* Create a visualizer for the selected object. All bits set denote
-           there's nothing. */
         const UnsignedInt selectedId = _selectionFramebuffer.read(area, {PixelFormat::R16UI}).pixels<UnsignedShort>()[0][0];
-        if(selectedId != 0xffff) {
+        /* If nothing is selected, reset the info text */
+        if(selectedId == 0xffff) {
+            _baseUiPlane->objectInfo.hide();
+            _baseUiPlane->modelInfo.show();
+
+        /* Otherwise add a visualizer and update the info */
+        } else {
             CORRADE_INTERNAL_ASSERT(!_data->selectedObject);
             CORRADE_INTERNAL_ASSERT(selectedId < _data->objects.size());
-            CORRADE_INTERNAL_ASSERT(_data->objects[selectedId].first && _data->objects[selectedId].second);
+            CORRADE_INTERNAL_ASSERT(_data->objects[selectedId].object && _data->objects[selectedId].meshId != 0xffffffffu && _data->meshes[_data->objects[selectedId].meshId].mesh);
 
-            _data->selectedObject = new MeshVisualizerDrawable{*_data->objects[selectedId].first, _meshVisualizerShader, *_data->objects[selectedId].second, _data->transparentDrawables};
+            ObjectInfo& objectInfo = _data->objects[selectedId];
+            MeshInfo& meshInfo = _data->meshes[_data->objects[selectedId].meshId];
+
+            /* Create a visualizer for the selected object */
+            _data->selectedObject = new MeshVisualizerDrawable{*objectInfo.object, _meshVisualizerShader, *meshInfo.mesh, _data->transparentDrawables};
+
+            /* Show object & mesh info */
+            _baseUiPlane->modelInfo.hide();
+            _baseUiPlane->objectInfo.show();
+            if(meshInfo.triangles) {
+                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                    "{}: {}, indexed, {} verts, {} tris, {:.1f} kB",
+                    objectInfo.name,
+                    meshInfo.name,
+                    meshInfo.vertices,
+                    meshInfo.triangles,
+                    meshInfo.size/1024.0f));
+            } else {
+                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                    "{}: {}, non-indexed, {} verts, {:.1f} kB",
+                    objectInfo.name,
+                    meshInfo.name,
+                    meshInfo.vertices,
+                    meshInfo.size/1024.0f));
+            }
         }
 
         event.setAccepted();
