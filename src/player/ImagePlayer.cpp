@@ -226,12 +226,30 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     Containers::Optional<Trade::ImageData2D> image = importer.image2D(0);
     if(!image) return;
 
+    GL::TextureFormat format;
+    if(image->format() == PixelFormat::RGB8Unorm) {
+        #ifndef MAGNUM_TARGET_GLES2
+        format = GL::TextureFormat::RGB8;
+        #else
+        format = GL::TextureFormat::RGB;
+        #endif
+    } else if(image->format() == PixelFormat::RGBA8Unorm) {
+        #ifndef MAGNUM_TARGET_GLES2
+        format = GL::TextureFormat::RGBA8;
+        #else
+        format = GL::TextureFormat::RGBA;
+        #endif
+    } else {
+        Warning{} << "Cannot load an image of format" << image->format();
+        return;
+    }
+
     _texture = GL::Texture2D{};
     _texture
         .setMagnificationFilter(GL::SamplerFilter::Nearest)
         .setMinificationFilter(GL::SamplerFilter::Linear)
         .setWrapping(GL::SamplerWrapping::ClampToEdge)
-        .setStorage(1, GL::TextureFormat::RGBA8, image->size())
+        .setStorage(1, format, image->size())
         .setSubImage(0, {}, *image);
 
     /* Set up default transformation. Centered, 1:1 scale if more than 50% of
