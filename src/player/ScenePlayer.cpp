@@ -850,7 +850,7 @@ void ScenePlayer::drawEvent() {
        color output disabled), set it back to the default framebuffer */
     GL::defaultFramebuffer.bind(); /** @todo mapForDraw() should bind implicitly */
     GL::defaultFramebuffer
-        .mapForDraw({{Shaders::Phong::ColorOutput, GL::DefaultFramebuffer::DrawAttachment::BackLeft}})
+        .mapForDraw({{Shaders::Phong::ColorOutput, GL::DefaultFramebuffer::DrawAttachment::Back}})
         .clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
 
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
@@ -1129,7 +1129,6 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
         /* Create a visualizer for the selected object. All bits set denote
            there's nothing. */
         const UnsignedInt selectedId = _selectionFramebuffer.read(area, {PixelFormat::R16UI}).pixels<UnsignedShort>()[0][0];
-        Debug{} << selectedId;
         if(selectedId != 0xffff) {
             CORRADE_INTERNAL_ASSERT(!_data->selectedObject);
             CORRADE_INTERNAL_ASSERT(selectedId < _data->objects.size());

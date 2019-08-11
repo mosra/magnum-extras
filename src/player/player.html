@@ -66,6 +66,9 @@
     Module.canvas.addEventListener('mousedown', function(event) {
         event.target.focus();
     });
+    Module.canvas.addEventListener('contextmenu', function(event) {
+        event.preventDefault();
+    }, true);
   </script>
 </body>
 </html>
