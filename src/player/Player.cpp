@@ -551,6 +551,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
         _overlay->overlayUiPlane->dropHint,
         _overlay->overlayUiPlane->disclaimer});
     _overlay->overlayUiPlane->controls.show();
+    _controlsVisible = false;
     toggleControls();
 
     redraw();
