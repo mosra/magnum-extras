@@ -183,7 +183,9 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         std::unordered_map<std::string, Containers::Array<char>> _droppedFiles;
         #endif
 
+        #ifndef CORRADE_TARGET_EMSCRIPTEN
         std::string _importer, _file;
+        #endif
         bool _controlsVisible =
             #ifndef CORRADE_TARGET_EMSCRIPTEN
             true
