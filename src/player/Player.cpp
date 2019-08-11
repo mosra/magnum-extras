@@ -481,49 +481,67 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
         }
     }
 
-    if(!gltfFile) {
-        _overlay->importErrorUiPlane->what.setText("No glTF file dropped.");
+    /* There's a glTF file, load it */
+    if(gltfFile) {
+        Containers::Pointer<Trade::AbstractImporter> importer =
+            _manager.loadAndInstantiate("TinyGltfImporter");
+        if(!importer) std::exit(1);
+
+        /* Make the extra files available to the importer */
+        importer->setFileCallback([](const std::string& filename,
+            InputFileCallbackPolicy, Player& player)
+                -> Containers::Optional<Containers::ArrayView<const char>>
+            {
+                auto found = player._droppedFiles.find(filename);
+
+                /* Not found: maybe it's referencing something from a subdirectory,
+                try just the filename */
+                if(found == player._droppedFiles.end()) {
+                    const std::string relative = Utility::Directory::filename(filename);
+                    found = player._droppedFiles.find(relative);
+                    if(found == player._droppedFiles.end()) return {};
+
+                    Warning{} << filename << "was not found, supplying" << relative << "instead";
+                }
+                return Containers::ArrayView<const char>{found->second};
+            }, *this);
+
+        Debug{} << "Loading glTF file" << *gltfFile;
+
+        /* Load file */
+        if(!importer->openFile(*gltfFile)) {
+            _overlay->importErrorUiPlane->what.setText("File import failed :(");
+            _overlay->importErrorUiPlane->activate();
+            _droppedFiles.clear();
+            redraw();
+            return;
+        }
+
+        _player = createScenePlayer(*this, *_overlay->ui);
+        _player->load(*gltfFile, *importer);
+
+    /* If there's just one non-glTF file, try to load it as an image instead */
+    } else if(_droppedFiles.size() == 1) {
+        Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
+        if(imageImporter->openData(_droppedFiles.begin()->second)) {
+            _player = createImagePlayer(*this, *_overlay->ui);
+            _player->load(_droppedFiles.begin()->first, *imageImporter);
+        } else {
+            _overlay->importErrorUiPlane->what.setText("No recognizable file dropped.");
+            _overlay->importErrorUiPlane->activate();
+            _droppedFiles.clear();
+            redraw();
+            return;
+        }
+
+    /* Otherwise it's doomed */
+    } else {
+        _overlay->importErrorUiPlane->what.setText("No recognizable file dropped.");
         _overlay->importErrorUiPlane->activate();
         _droppedFiles.clear();
         redraw();
         return;
     }
-
-    Containers::Pointer<Trade::AbstractImporter> importer =
-        _manager.loadAndInstantiate("TinyGltfImporter");
-    if(!importer) std::exit(1);
-
-    /* Make the extra files available to the importer */
-    importer->setFileCallback([](const std::string& filename,
-        InputFileCallbackPolicy, Player& player)
-            -> Containers::Optional<Containers::ArrayView<const char>>
-        {
-            auto found = player._droppedFiles.find(filename);
-
-            /* Not found: maybe it's referencing something from a subdirectory,
-               try just the filename */
-            if(found == player._droppedFiles.end()) {
-                const std::string relative = Utility::Directory::filename(filename);
-                found = player._droppedFiles.find(relative);
-                if(found == player._droppedFiles.end()) return {};
-
-                Warning{} << filename << "was not found, supplying" << relative << "instead";
-            }
-            return Containers::ArrayView<const char>{found->second};
-        }, *this);
-
-    Debug{} << "Loading glTF file" << *gltfFile;
-
-    /* Load file */
-    if(!importer->openFile(*gltfFile)) {
-        _overlay->importErrorUiPlane->what.setText("File import failed :(");
-        _overlay->importErrorUiPlane->activate();
-        _droppedFiles.clear();
-        redraw();
-        return;
-    }
-
-    _player->load(*gltfFile, *importer);
 
     /* Clear all loaded files, not needed anymore */
     _droppedFiles.clear();
