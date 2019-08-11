@@ -27,6 +27,7 @@
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Reference.h>
+#include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
@@ -40,8 +41,11 @@
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Player.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/PixelFormat.h>
+#include <Magnum/GL/Renderbuffer.h>
+#include <Magnum/GL/RenderbufferFormat.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/TextureFormat.h>
@@ -52,6 +56,7 @@
 #include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
 #include <Magnum/SceneGraph/Scene.h>
 #include <Magnum/Shaders/Phong.h>
+#include <Magnum/Shaders/MeshVisualizer.h>
 #include <Magnum/Shaders/VertexColor.h>
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Trade/AbstractImporter.h>
@@ -76,7 +81,6 @@
 
 #ifdef MAGNUM_TARGET_WEBGL
 #include <Corrade/Utility/Resource.h>
-#include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Shader.h>
 #include <Magnum/GL/Version.h>
 #include <Magnum/GL/Renderbuffer.h>
@@ -84,6 +88,13 @@
 #endif
 
 #include "AbstractPlayer.h"
+
+#ifdef CORRADE_IS_DEBUG_BUILD
+#include <Corrade/Utility/Tweakable.h>
+#define _ CORRADE_TWEAKABLE
+#else
+#define _
+#endif
 
 namespace Magnum { namespace Player {
 
@@ -179,6 +190,9 @@ struct Data {
     SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables;
     Vector3 previousPosition;
 
+    Containers::Array<std::pair<Object3D*, GL::Mesh*>> objects;
+    SceneGraph::Drawable3D* selectedObject{};
+
     Containers::Array<char> animationData;
     Animation::Player<std::chrono::nanoseconds, Float> player;
 
@@ -219,14 +233,19 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         Float depthAt(const Vector2i& windowPosition);
         Vector3 unproject(const Vector2i& windowPosition, Float depth) const;
 
-        void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
+        void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
 
         /* Global rendering stuff */
-        Shaders::Phong _coloredShader{{}, 3};
-        Shaders::Phong _texturedShader{Shaders::Phong::Flag::DiffuseTexture, 3};
+        Shaders::Phong _coloredShader{Shaders::Phong::Flag::ObjectId, 3};
+        Shaders::Phong _texturedShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::DiffuseTexture, 3};
         Shaders::Phong _texturedMaskShader{
-        Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
+        Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
         Shaders::VertexColor3D _vertexColorShader;
+        Shaders::MeshVisualizer _meshVisualizerShader{
+            #ifndef MAGNUM_TARGET_WEBGL
+            Shaders::MeshVisualizer::Flag::Wireframe
+            #endif
+        };
         Float _brightness{0.8f};
 
         /* Data loading */
@@ -240,6 +259,10 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
             {1.0f, 10}
         };
         const Animation::TrackView<Float, Int> _elapsedTimeAnimation{_elapsedTimeAnimationData, Math::lerp, Animation::Extrapolation::Extrapolated};
+
+        /* Offscreen framebuffer with object ID attachment */
+        GL::Renderbuffer _selectionDepth, _selectionObjectId;
+        GL::Framebuffer _selectionFramebuffer{NoCreate};
 
         /* Mouse interaction */
         Float _lastDepth;
@@ -268,27 +291,40 @@ class VertexColoredDrawable: public SceneGraph::Drawable3D {
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit ColoredDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, const Color4& color, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _color{color} {}
+        explicit ColoredDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
         Shaders::Phong& _shader;
         GL::Mesh& _mesh;
+        UnsignedInt _objectId;
         Color4 _color;
 };
 
 class TexturedDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, GL::Texture2D& texture, Float alphaMask, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _texture(texture), _alphaMask{alphaMask} {}
+        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, GL::Texture2D& texture, Float alphaMask, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _texture(texture), _alphaMask{alphaMask} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
         Shaders::Phong& _shader;
         GL::Mesh& _mesh;
+        UnsignedInt _objectId;
         GL::Texture2D& _texture;
         Float _alphaMask;
+};
+
+class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
+    public:
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer& shader, GL::Mesh& mesh, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh) {}
+
+    private:
+        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
+
+        Shaders::MeshVisualizer& _shader;
+        GL::Mesh& _mesh;
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
@@ -310,12 +346,36 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
             .setShininess(80.0f);
     }
 
+    auto setup = [](ScenePlayer& self) {
+        self._meshVisualizerShader
+            .setWireframeColor(_(0xdcdcdcff_rgbaf))
+            .setColor(_(0x2f83ccff_rgbaf)*_(0.5f))
+            .setViewportSize(Vector2{self.application().framebufferSize()});
+    };
+    #ifdef CORRADE_IS_DEBUG_BUILD
+    Utility::Tweakable::instance().scope(setup, *this);
+    #else
+    setup(*this);
+    #endif
+
     /* Setup the UI, steal font etc. from the existing one to avoid having
        everything built twice */
     /** @todo this is extremely bad, there should be just one global UI (or
         not?) */
     _ui.emplace(Vector2(application.windowSize())/application.dpiScaling(), application.windowSize(), application.framebufferSize(), uiToStealFontFrom.font(), uiToStealFontFrom.glyphCache(), Ui::mcssDarkStyleConfiguration());
     initializeUi();
+
+    /* Set up offscreen rendering for object ID retrieval */
+    _selectionDepth.setStorage(GL::RenderbufferFormat::DepthComponent24, application.framebufferSize());
+    _selectionObjectId.setStorage(GL::RenderbufferFormat::R16UI, application.framebufferSize());
+    _selectionFramebuffer = GL::Framebuffer{{{}, application.framebufferSize()}};
+    _selectionFramebuffer
+        .attachRenderbuffer(GL::Framebuffer::BufferAttachment::Depth, _selectionDepth)
+        .attachRenderbuffer(GL::Framebuffer::ColorAttachment{1}, _selectionObjectId);
+    _selectionFramebuffer.mapForDraw({
+        {Shaders::Generic3D::ColorOutput, GL::Framebuffer::DrawAttachment::None},
+        {Shaders::Generic3D::ObjectIdOutput, GL::Framebuffer::ColorAttachment{1}}});
+    CORRADE_INTERNAL_ASSERT(_selectionFramebuffer.checkStatus(GL::FramebufferTarget::Draw) == GL::Framebuffer::Status::Complete);
 
     /* Setup the depth aware mouse interaction -- on WebGL we can't just read
        depth. The only possibility to read depth is to use a depth texture and
@@ -535,7 +595,6 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     /* Load the scene. Save the object pointers in an array for easier mapping
        of animations later. */
     Debug{} << "Loading" << importer.object3DCount() << "objects";
-    Containers::Array<Object3D*> objects{Containers::ValueInit, importer.object3DCount()};
     if(importer.defaultScene() != -1) {
         Debug{} << "Adding default scene" << importer.sceneName(importer.defaultScene());
 
@@ -546,16 +605,20 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         }
 
         /* Recursively add all children */
+        _data->objects = Containers::Array<std::pair<Object3D*, GL::Mesh*>>{Containers::ValueInit, importer.object3DCount()};
         for(UnsignedInt objectId: sceneData->children3D())
-            addObject(importer, objects, materials, hasVertexColors, _data->scene, objectId);
+            addObject(importer, materials, hasVertexColors, _data->scene, objectId);
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
     } else if(!_data->meshes.empty() && _data->meshes[0]) {
+        _data->objects = Containers::Array<std::pair<Object3D*, GL::Mesh*>>{Containers::ValueInit, 1};
+        _data->objects[0].first = &_data->scene;
+        _data->objects[0].second = &*_data->meshes[0];
         if(hasVertexColors[0])
             new VertexColoredDrawable{_data->scene, _vertexColorShader, *_data->meshes[0], _data->opaqueDrawables};
         else
-            new ColoredDrawable{_data->scene, _coloredShader, *_data->meshes[0], 0xffffff_rgbf, _data->opaqueDrawables};
+            new ColoredDrawable{_data->scene, _coloredShader, *_data->meshes[0], 0, 0xffffff_rgbf, _data->opaqueDrawables};
     }
 
     /* Create a camera object in case it wasn't present in the scene already */
@@ -588,10 +651,10 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         }
 
         for(UnsignedInt j = 0; j != animation->trackCount(); ++j) {
-            if(animation->trackTarget(j) >= objects.size() || !objects[animation->trackTarget(j)])
+            if(animation->trackTarget(j) >= _data->objects.size() || !_data->objects[animation->trackTarget(j)].first)
                 continue;
 
-            Object3D& animatedObject = *objects[animation->trackTarget(j)];
+            Object3D& animatedObject = *_data->objects[animation->trackTarget(j)].first;
 
             if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Translation3D) {
                 const auto callback = [](Float, const Vector3& translation, Object3D& object) {
@@ -666,7 +729,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     }
 }
 
-void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<Object3D*> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i) {
+void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i) {
     Containers::Pointer<Trade::ObjectData3D> objectData = importer.object3D(i);
     if(!objectData) {
         Error{} << "Cannot import object" << i << importer.object3DName(i);
@@ -682,12 +745,17 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                  .setScaling(objectData->scaling());
     else object->setTransformation(objectData->transformation());
 
-    /* Save it to the ID -> pointer mapping array for animation targets */
-    objects[i] = object;
+    /* Save it to the ID -> pointer mapping array for animation target and
+       object selection */
+    _data->objects[i].first = object;
 
     /* Add a drawable if the object has a mesh and the mesh is loaded */
     if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _data->meshes[objectData->instance()]) {
         const Int materialId = static_cast<Trade::MeshObjectData3D*>(objectData.get())->material();
+
+        /* Save the mesh pointer as well, so we know what to draw for object
+           selection */
+        _data->objects[i].second = &*_data->meshes[objectData->instance()];
 
         /* Material not available / not loaded. If the mesh has vertex colors,
            use that, otherwise apply a default material. */
@@ -695,7 +763,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
             if(hasVertexColors[objectData->instance()])
                 new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()], _data->opaqueDrawables};
             else
-                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->opaqueDrawables};
+                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], i, 0xffffff_rgbf, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -708,11 +776,11 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 if(texture) new TexturedDrawable{*object,
                     material.alphaMode() == Trade::MaterialAlphaMode::Mask ?
                         _texturedMaskShader : _texturedShader,
-                    *_data->meshes[objectData->instance()], *texture, material.alphaMask(),
+                    *_data->meshes[objectData->instance()], i, *texture, material.alphaMask(),
                     material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                         _data->transparentDrawables : _data->opaqueDrawables};
                 else
-                    new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], 0xffffff_rgbf, _data->opaqueDrawables};
+                    new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], i, 0xffffff_rgbf, _data->opaqueDrawables};
 
             /* Vertex color material */
             } else if(hasVertexColors[objectData->instance()]) {
@@ -720,7 +788,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
             /* Color-only material */
             } else {
-                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], material.diffuseColor(), _data->opaqueDrawables};
+                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()], i, material.diffuseColor(), _data->opaqueDrawables};
             }
         }
 
@@ -732,7 +800,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
     /* Recursively add children */
     for(std::size_t id: objectData->children())
-        addObject(importer, objects, materials, hasVertexColors, *object, id);
+        addObject(importer, materials, hasVertexColors, *object, id);
 }
 
 void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
@@ -740,7 +808,8 @@ void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Came
         .setDiffuseColor(_color)
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.rotationScaling())
-        .setProjectionMatrix(camera.projectionMatrix());
+        .setProjectionMatrix(camera.projectionMatrix())
+        .setObjectId(_objectId);
 
     _mesh.draw(_shader);
 }
@@ -750,6 +819,7 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.rotationScaling())
         .setProjectionMatrix(camera.projectionMatrix())
+        .setObjectId(_objectId)
         .bindDiffuseTexture(_texture);
 
     if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
@@ -764,11 +834,24 @@ void VertexColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph
     _mesh.draw(_shader);
 }
 
+void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
+    GL::Renderer::enable(GL::Renderer::Feature::PolygonOffsetFill);
+    GL::Renderer::setPolygonOffset(_(-5.0f), _(-5.0f));
+
+    _shader.setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix);
+    _mesh.draw(_shader);
+
+    GL::Renderer::setPolygonOffset(0.0f, 0.0f);
+    GL::Renderer::disable(GL::Renderer::Feature::PolygonOffsetFill);
+}
+
 void ScenePlayer::drawEvent() {
-    #ifdef MAGNUM_TARGET_WEBGL /* Another FB could be bound from the depth read */
-    GL::defaultFramebuffer.bind();
-    #endif
-    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
+    /* Another FB could be bound from a depth / object ID read (moreover with
+       color output disabled), set it back to the default framebuffer */
+    GL::defaultFramebuffer.bind(); /** @todo mapForDraw() should bind implicitly */
+    GL::defaultFramebuffer
+        .mapForDraw({{Shaders::Phong::ColorOutput, GL::DefaultFramebuffer::DrawAttachment::BackLeft}})
+        .clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
 
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
 
@@ -837,6 +920,18 @@ void ScenePlayer::viewportEvent(ViewportEvent& event) {
         _baseUiPlane->modelInfo.setText(_data->modelInfo);
         updateAnimationTime(_data->elapsedTimeAnimationDestination);
     }
+
+    _meshVisualizerShader.setViewportSize(Vector2{event.framebufferSize()});
+
+    /* Recreate object ID reading renderbuffers that depend on viewport size */
+    _selectionDepth = GL::Renderbuffer{};
+    _selectionDepth.setStorage(GL::RenderbufferFormat::DepthComponent24, event.framebufferSize());
+    _selectionObjectId = GL::Renderbuffer{};
+    _selectionObjectId.setStorage(GL::RenderbufferFormat::R16UI, event.framebufferSize());
+    _selectionFramebuffer
+        .attachRenderbuffer(GL::Framebuffer::BufferAttachment::Depth, _selectionDepth)
+        .attachRenderbuffer(GL::Framebuffer::ColorAttachment{1}, _selectionObjectId)
+        .setViewport({{}, event.framebufferSize()});
 
     /* Recreate depth reading textures and renderbuffers that depend on
        viewport size */
@@ -975,6 +1070,76 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
     if(_ui->handlePressEvent(event.position())) {
         redraw();
         event.setAccepted();
+        return;
+    }
+
+    /* RMB to select */
+    if(event.button() == MouseEvent::Button::Right && _data) {
+        _selectionFramebuffer.bind(); /** @todo mapForDraw() should bind implicitly */
+        _selectionFramebuffer.mapForDraw({
+                {Shaders::Generic3D::ColorOutput, GL::Framebuffer::DrawAttachment::None},
+                {Shaders::Generic3D::ObjectIdOutput, GL::Framebuffer::ColorAttachment{1}}})
+            .clearDepth(1.0f)
+            .clearColor(1, Vector4ui{0xffff});
+        CORRADE_INTERNAL_ASSERT(_selectionFramebuffer.checkStatus(GL::FramebufferTarget::Draw) == GL::Framebuffer::Status::Complete);
+
+        /* If there's a selected object already, remove it */
+        if(_data->selectedObject) {
+            delete _data->selectedObject;
+            _data->selectedObject = nullptr;
+        }
+
+        /** @todo reduce duplication in the below code */
+
+        /* Draw opaque stuff as usual */
+        _data->camera->draw(_data->opaqueDrawables);
+
+        /* Draw transparent stuff back-to-front with blending enabled */
+        if(!_data->transparentDrawables.isEmpty()) {
+            GL::Renderer::setDepthMask(false);
+            GL::Renderer::enable(GL::Renderer::Feature::Blending);
+            /* Ugh non-premultiplied alpha */
+            GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+
+            std::vector<std::pair<std::reference_wrapper<SceneGraph::Drawable3D>, Matrix4>>
+                drawableTransformations = _data->camera->drawableTransformations(_data->transparentDrawables);
+            std::sort(drawableTransformations.begin(), drawableTransformations.end(),
+                [](const std::pair<std::reference_wrapper<SceneGraph::Drawable3D>, Matrix4>& a,
+                   const std::pair<std::reference_wrapper<SceneGraph::Drawable3D>, Matrix4>& b) {
+                    return a.second.translation().z() > b.second.translation().z();
+                });
+            _data->camera->draw(drawableTransformations);
+
+            GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
+            GL::Renderer::disable(GL::Renderer::Feature::Blending);
+            GL::Renderer::setDepthMask(true);
+        }
+
+        /* Read the ID back */
+        _selectionFramebuffer.mapForRead(GL::Framebuffer::ColorAttachment{1});
+        CORRADE_INTERNAL_ASSERT(_selectionFramebuffer.checkStatus(GL::FramebufferTarget::Read) == GL::Framebuffer::Status::Complete);
+
+        /* First scale the position from being relative to window size to being
+           relative to framebuffer size as those two can be different on HiDPI
+           systems */
+        const Vector2i position = event.position()*Vector2{application().framebufferSize()}/Vector2{application().windowSize()};
+        const Vector2i fbPosition{position.x(), _selectionFramebuffer.viewport().sizeY() - position.y() - 1};
+        const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1});
+
+        /* Create a visualizer for the selected object. All bits set denote
+           there's nothing. */
+        const UnsignedInt selectedId = _selectionFramebuffer.read(area, {PixelFormat::R16UI}).pixels<UnsignedShort>()[0][0];
+        Debug{} << selectedId;
+        if(selectedId != 0xffff) {
+            CORRADE_INTERNAL_ASSERT(!_data->selectedObject);
+            CORRADE_INTERNAL_ASSERT(selectedId < _data->objects.size());
+            CORRADE_INTERNAL_ASSERT(_data->objects[selectedId].first && _data->objects[selectedId].second);
+
+            _data->selectedObject = new MeshVisualizerDrawable{*_data->objects[selectedId].first, _meshVisualizerShader, *_data->objects[selectedId].second, _data->transparentDrawables};
+        }
+
+        event.setAccepted();
+        redraw();
         return;
     }
 
