@@ -354,6 +354,9 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
             create(conf, glConf.setSampleCount(0));
     }
 
+    /* Setup renderer defaults */
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+
     /* Prefer TinyGltfImporter (otherwise AssimpImporter would get selected
        first) */
     _manager.setPreferredPlugins("GltfImporter", {"TinyGltfImporter"});
