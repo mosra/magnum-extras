@@ -44,6 +44,10 @@
 #include "Magnum/Ui/Plane.h"
 #include "Magnum/Ui/UserInterface.h"
 
+#ifdef CORRADE_IS_DEBUG_BUILD
+#include <Corrade/Utility/Tweakable.h>
+#endif
+
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 #include <emscripten/emscripten.h>
 #include <Magnum/Text/Alignment.h>
@@ -165,6 +169,9 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
     private:
         void globalViewportEvent(ViewportEvent& size) override;
         void globalDrawEvent() override;
+        #ifdef CORRADE_IS_DEBUG_BUILD
+        void tickEvent() override;
+        #endif
 
         PluginManager::Manager<Trade::AbstractImporter> _manager;
 
@@ -184,6 +191,10 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
             false
             #endif
             ;
+
+        #ifdef CORRADE_IS_DEBUG_BUILD
+        Utility::Tweakable _tweakable;
+        #endif
 };
 
 bool AbstractUiScreen::controlsVisible() const {
@@ -328,6 +339,9 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     #endif
     args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
         .addOption("msaa").setHelp("msaa", "MSAA level to use (if not set, defaults to 8x or 2x for HiDPI)", "N")
+        #ifdef CORRADE_IS_DEBUG_BUILD
+        .addBooleanOption("tweakable").setHelp("tweakable", "Enable live source tweakability")
+        #endif
         .addSkippedPrefix("magnum", "engine-specific options")
         .setGlobalHelp("Displays a 3D scene file provided on command line.")
         .parse(arguments.argc, arguments.argv);
@@ -353,6 +367,10 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
         if(!tryCreate(conf, glConf))
             create(conf, glConf.setSampleCount(0));
     }
+
+    #ifdef CORRADE_IS_DEBUG_BUILD
+    if(args.isSet("tweakable")) _tweakable.enable();
+    #endif
 
     /* Setup renderer defaults */
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
@@ -526,6 +544,19 @@ void Player::globalViewportEvent(ViewportEvent& event) {
 void Player::globalDrawEvent() {
     swapBuffers();
 }
+
+#ifdef CORRADE_IS_DEBUG_BUILD
+void Player::tickEvent() {
+    /* If tweakable is not enabled, call the base tick event implementation,
+       which effectively stops it from being called again */
+    if(!_tweakable.isEnabled()) {
+        Platform::ScreenedApplication::tickEvent();
+        return;
+    }
+
+    _tweakable.update();
+}
+#endif
 
 void Player::toggleControls() {
     _controlsVisible ^= true;
