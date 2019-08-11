@@ -246,8 +246,8 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         Vector2i _lastPosition{-1};
         Vector3 _rotationPoint, _translationPoint;
         #ifdef MAGNUM_TARGET_WEBGL
-        GL::Framebuffer _depthFramebuffer{NoCreate};
-        GL::Texture2D _depth{NoCreate};
+        GL::Framebuffer _depthResolveFramebuffer{NoCreate};
+        GL::Texture2D _depthResolve{NoCreate};
         GL::Framebuffer _reinterpretFramebuffer{NoCreate};
         GL::Renderbuffer _reinterpretDepth{NoCreate};
         GL::Mesh _fullscreenTriangle{NoCreate};
@@ -327,16 +327,16 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
        shader to reinterpret the depth as RGBA values, packing 8 bit of the
        depth into each channel. That's finally read back on the client. */
     #ifdef MAGNUM_TARGET_WEBGL
-    _depth = GL::Texture2D{};
-    _depth.setMinificationFilter(GL::SamplerFilter::Nearest)
+    _depthResolve = GL::Texture2D{};
+    _depthResolve.setMinificationFilter(GL::SamplerFilter::Nearest)
         .setMagnificationFilter(GL::SamplerFilter::Nearest)
         .setWrapping(GL::SamplerWrapping::ClampToEdge)
         /* The format is set to combined depth/stencil in hope it will match
            the browser depth/stencil format, requested in the GLConfiguration
            above. If it won't, the blit() won't work properly. */
         .setStorage(1, GL::TextureFormat::Depth24Stencil8, application.framebufferSize());
-    _depthFramebuffer = GL::Framebuffer{{{}, application.framebufferSize()}};
-    _depthFramebuffer.attachTexture(GL::Framebuffer::BufferAttachment::Depth, _depth, 0);
+    _depthResolveFramebuffer = GL::Framebuffer{{{}, application.framebufferSize()}};
+    _depthResolveFramebuffer.attachTexture(GL::Framebuffer::BufferAttachment::Depth, _depthResolve, 0);
 
     _reinterpretDepth = GL::Renderbuffer{};
     _reinterpretDepth.setStorage(GL::RenderbufferFormat::RGBA8, application.framebufferSize());
@@ -819,7 +819,7 @@ void ScenePlayer::drawEvent() {
     #ifdef MAGNUM_TARGET_WEBGL
     /* The rendered depth buffer might get lost later, so resolve it to our
        depth texture before swapping it to the canvas */
-    GL::Framebuffer::blit(GL::defaultFramebuffer, _depthFramebuffer, GL::defaultFramebuffer.viewport(), GL::FramebufferBlit::Depth);
+    GL::Framebuffer::blit(GL::defaultFramebuffer, _depthResolveFramebuffer, GL::defaultFramebuffer.viewport(), GL::FramebufferBlit::Depth);
     #endif
 }
 
@@ -841,12 +841,12 @@ void ScenePlayer::viewportEvent(ViewportEvent& event) {
     /* Recreate depth reading textures and renderbuffers that depend on
        viewport size */
     #ifdef MAGNUM_TARGET_WEBGL
-    _depth = GL::Texture2D{};
-    _depth.setMinificationFilter(GL::SamplerFilter::Nearest)
+    _depthResolve = GL::Texture2D{};
+    _depthResolve.setMinificationFilter(GL::SamplerFilter::Nearest)
         .setMagnificationFilter(GL::SamplerFilter::Nearest)
         .setWrapping(GL::SamplerWrapping::ClampToEdge)
         .setStorage(1, GL::TextureFormat::Depth24Stencil8, event.framebufferSize());
-    _depthFramebuffer.attachTexture(GL::Framebuffer::BufferAttachment::Depth, _depth, 0);
+    _depthResolveFramebuffer.attachTexture(GL::Framebuffer::BufferAttachment::Depth, _depthResolve, 0);
 
     _reinterpretDepth = GL::Renderbuffer{};
     _reinterpretDepth.setStorage(GL::RenderbufferFormat::RGBA8, event.framebufferSize());
@@ -881,7 +881,7 @@ Float ScenePlayer::depthAt(const Vector2i& windowPosition) {
     #else
     _reinterpretFramebuffer.clearColor(0, Vector4{})
         .bind();
-    _reinterpretShader.bindDepthTexture(_depth);
+    _reinterpretShader.bindDepthTexture(_depthResolve);
     GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::setScissor(area);
     _fullscreenTriangle.draw(_reinterpretShader);
