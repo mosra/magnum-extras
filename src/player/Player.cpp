@@ -231,6 +231,8 @@ void Overlay::viewportEvent(ViewportEvent& event) {
         if(_isFullsize) overlayUiPlane->fullsize.setStyle(Ui::Style::Success);
         #endif
     }
+
+    setControlsVisible(application<Player>().controlsVisible());
 }
 
 #ifndef CORRADE_TARGET_EMSCRIPTEN
