@@ -310,8 +310,7 @@ void Overlay::toggleFullsize() {
 
     /* This function needs to be called instead of doing it all in JS in order
        to correctly propagate canvas size change */
-    CORRADE_INTERNAL_ASSERT(application());
-    application()->setContainerCssClass(_isFullsize ? "fullsize" : "");
+    application().setContainerCssClass(_isFullsize ? "fullsize" : "");
 }
 #endif
 
