@@ -417,6 +417,10 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
         Debug{} << "Opening as a scene failed, trying as an image...";
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
         if(imageImporter && imageImporter->openFile(_file)) {
+            if(!imageImporter->image2DCount()) {
+                Error{} << "No 2D images found in the file";
+                std::exit(3);
+            }
             _player = createImagePlayer(*this, *_overlay->ui);
             _player->load(_file, *imageImporter);
             _importer = "AnyImageImporter";
@@ -523,7 +527,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     /* If there's just one non-glTF file, try to load it as an image instead */
     } else if(_droppedFiles.size() == 1) {
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
-        if(imageImporter->openData(_droppedFiles.begin()->second)) {
+        if(imageImporter->openData(_droppedFiles.begin()->second) && imageImporter->image2DCount()) {
             _player = createImagePlayer(*this, *_overlay->ui);
             _player->load(_droppedFiles.begin()->first, *imageImporter);
         } else {
