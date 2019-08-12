@@ -57,7 +57,6 @@
 #include <Magnum/SceneGraph/Scene.h>
 #include <Magnum/Shaders/Phong.h>
 #include <Magnum/Shaders/MeshVisualizer.h>
-#include <Magnum/Shaders/VertexColor.h>
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/AnimationData.h>
@@ -258,7 +257,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         Shaders::Phong _texturedShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::DiffuseTexture, 3};
         Shaders::Phong _texturedMaskShader{
         Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
-        Shaders::VertexColor3D _vertexColorShader;
+        Shaders::Phong _vertexColorShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::VertexColor, 3};
         Shaders::MeshVisualizer _meshVisualizerShader{
             #ifndef MAGNUM_TARGET_WEBGL
             Shaders::MeshVisualizer::Flag::Wireframe
@@ -294,17 +293,6 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         GL::Mesh _fullscreenTriangle{NoCreate};
         DepthReinterpretShader _reinterpretShader{NoCreate};
         #endif
-};
-
-class VertexColoredDrawable: public SceneGraph::Drawable3D {
-    public:
-        explicit VertexColoredDrawable(Object3D& object, Shaders::VertexColor3D& shader, GL::Mesh& mesh, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh) {}
-
-    private:
-        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
-
-        Shaders::VertexColor3D& _shader;
-        GL::Mesh& _mesh;
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -350,7 +338,8 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
     _coloredShader.setAmbientColor(0x111111_rgbf);
     _texturedShader.setAmbientColor(0x00000000_rgbaf);
     _texturedMaskShader.setAmbientColor(0x00000000_rgbaf);
-    for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader}) {
+    _vertexColorShader.setAmbientColor(0x00000000_rgbaf);
+    for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader, &_vertexColorShader}) {
         (*shader)
             .setLightPositions({
                 /** @todo make this configurable */
@@ -652,10 +641,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->objects[0].object = &_data->scene;
         _data->objects[0].meshId = 0;
         _data->objects[0].name = "object #0";
-        if(hasVertexColors[0])
-            new VertexColoredDrawable{_data->scene, _vertexColorShader, *_data->meshes[0].mesh, _data->opaqueDrawables};
-        else
-            new ColoredDrawable{_data->scene, _coloredShader, *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _data->opaqueDrawables};
+        new ColoredDrawable{_data->scene, hasVertexColors[0] ? _vertexColorShader : _coloredShader, *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _data->opaqueDrawables};
     }
 
     /* Create a camera object in case it wasn't present in the scene already */
@@ -800,10 +786,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
         /* Material not available / not loaded. If the mesh has vertex colors,
            use that, otherwise apply a default material. */
         if(materialId == -1 || !materials[materialId]) {
-            if(hasVertexColors[objectData->instance()])
-                new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()].mesh, _data->opaqueDrawables};
-            else
-                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()].mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+            new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, *_data->meshes[objectData->instance()].mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -822,13 +805,9 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 else
                     new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()].mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
-            /* Vertex color material */
-            } else if(hasVertexColors[objectData->instance()]) {
-                new VertexColoredDrawable{*object, _vertexColorShader, *_data->meshes[objectData->instance()].mesh, _data->opaqueDrawables};
-
-            /* Color-only material */
+            /* Vertex color / color-only material */
             } else {
-                new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()].mesh, i, material.diffuseColor(), _data->opaqueDrawables};
+                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, *_data->meshes[objectData->instance()].mesh, i, material.diffuseColor(), _data->opaqueDrawables};
             }
         }
 
@@ -865,12 +844,6 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
     if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
         _shader.setAlphaMask(_alphaMask);
 
-    _mesh.draw(_shader);
-}
-
-void VertexColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
-    _shader
-        .setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix);
     _mesh.draw(_shader);
 }
 
@@ -1094,7 +1067,7 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
               event.key() == KeyEvent::Key::Minus) {
         _brightness *= (event.key() == KeyEvent::Key::NumAdd ||
                         event.key() == KeyEvent::Key::Plus) ? 1.1f : 1/1.1f;
-        for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader}) {
+        for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader, &_vertexColorShader}) {
             shader->setLightColors({
                 0xffffff_rgbf*_brightness,
                 0xffcccc_rgbf*_brightness,
