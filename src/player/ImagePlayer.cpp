@@ -155,7 +155,7 @@ void ImagePlayer::keyPressEvent(KeyEvent& event) {
         if((_imageSize > application().framebufferSize()*0.5f).any())
             _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
         else
-            _transformation = Matrix3::scaling(application().framebufferSize().min()*0.9f*Vector2{1.0f, Vector2{_imageSize}.aspectRatio()}/2.0f);
+            _transformation = Matrix3::scaling(application().framebufferSize().min()*0.9f*Vector2{1.0f, 1.0f/Vector2{_imageSize}.aspectRatio()});
     } else return;
 
     event.setAccepted();
@@ -259,7 +259,7 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         if((_imageSize > application().framebufferSize()*0.5f).any())
             _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
         else
-            _transformation = Matrix3::scaling(application().framebufferSize().min()*0.9f*Vector2{1.0f, Vector2{_imageSize}.aspectRatio()}/2.0f);
+            _transformation = Matrix3::scaling(application().framebufferSize().min()*0.9f*Vector2{1.0f, 1.0f/Vector2{_imageSize}.aspectRatio()}/2.0f);
     }
 
     /* Populate the model info */
