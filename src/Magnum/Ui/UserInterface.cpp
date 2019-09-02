@@ -29,6 +29,7 @@
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StaticArray.h>
 #include <Corrade/PluginManager/Manager.h>
+#include <Corrade/Utility/Resource.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/GL/TextureFormat.h>
