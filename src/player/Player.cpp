@@ -31,6 +31,7 @@
 #include <Corrade/Utility/Configuration.h>
 #include <Corrade/Utility/DebugStl.h>
 #include <Corrade/Utility/Directory.h>
+#include <Corrade/Utility/Resource.h>
 #include <Corrade/Utility/String.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
