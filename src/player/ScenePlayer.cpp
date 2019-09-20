@@ -761,13 +761,14 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
     /* Populate the model info */
     _baseUiPlane->modelInfo.setText(_data->modelInfo = Utility::formatString(
-        "{}: {} objs, {} cams, {} meshes, {} mats, {} texs, {} anims",
+        "{}: {} objs, {} cams, {} meshes, {} mats, {}/{} texs, {} anims",
         Utility::Directory::filename(filename).substr(0, 32),
         importer.object3DCount(),
         importer.cameraCount(),
         importer.mesh3DCount(),
         importer.materialCount(),
         importer.textureCount(),
+        importer.image2DCount(),
         importer.animationCount()));
 
     if(!_data->player.isEmpty()) {
