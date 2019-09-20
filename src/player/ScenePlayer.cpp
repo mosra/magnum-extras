@@ -134,6 +134,8 @@ DepthReinterpretShader::DepthReinterpretShader() {
 #endif
 
 constexpr const Float WidgetHeight{36.0f};
+constexpr const Float PaddingY{10.0f}; /* same as in mcssDarkStyleConfiguration() */
+constexpr const Vector2 ButtonSize{96.0f, WidgetHeight};
 constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 ControlSize{56.0f, WidgetHeight};
 constexpr const Vector2 HalfControlSize{28.0f, WidgetHeight};
@@ -142,6 +144,12 @@ constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 struct BaseUiPlane: Ui::Plane {
     explicit BaseUiPlane(Ui::UserInterface& ui):
         Ui::Plane{ui, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right, 1, 50, 640},
+        shadeless{*this, {Ui::Snap::Top|Ui::Snap::Right,
+            Range2D::fromSize(-Vector2::yAxis(WidgetHeight + PaddingY)
+                #ifdef CORRADE_TARGET_EMSCRIPTEN
+                *2.0f /* on Emscripten there's the fullscreen button as well */
+                #endif
+            , ButtonSize)}, "Shadeless", Ui::Style::Default},
         backward{*this, {Ui::Snap::Bottom|Ui::Snap::Left, HalfControlSize}, "«"},
         play{*this, {Ui::Snap::Right, backward, ControlSize}, "Play", Ui::Style::Success},
         pause{*this, {Ui::Snap::Right, backward, ControlSize}, "Pause", Ui::Style::Warning},
@@ -169,11 +177,13 @@ struct BaseUiPlane: Ui::Plane {
         /* Hide everything on Emscripten as there is a welcome screen shown
            first */
         Ui::Widget::hide({
+            shadeless,
             modelInfo});
         #endif
     }
 
     Ui::Button
+        shadeless,
         backward,
         play,
         pause,
@@ -240,6 +250,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         void initializeUi();
 
+        void toggleShadeless();
         void play();
         void pause();
         void stop();
@@ -267,6 +278,8 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         /* Data loading */
         Containers::Optional<Data> _data;
+
+        bool _shadeless;
 
         /* UI */
         Containers::Optional<Ui::UserInterface> _ui;
@@ -334,10 +347,8 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
-    /* Setup shader defaults */
+    /* Setup shader defaults. Partially done later in toggleShadeless(). */
     _coloredShader.setAmbientColor(0x111111_rgbf);
-    _texturedShader.setAmbientColor(0x11111100_rgbaf);
-    _texturedMaskShader.setAmbientColor(0x11111100_rgbaf);
     _vertexColorShader.setAmbientColor(0x00000000_rgbaf);
     for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader, &_vertexColorShader}) {
         (*shader)
@@ -371,6 +382,10 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
         not?) */
     _ui.emplace(Vector2(application.windowSize())/application.dpiScaling(), application.windowSize(), application.framebufferSize(), uiToStealFontFrom.font(), uiToStealFontFrom.glyphCache(), Ui::mcssDarkStyleConfiguration());
     initializeUi();
+
+    /* Default to shaded */
+    _shadeless = true;
+    toggleShadeless();
 
     /* Set up offscreen rendering for object ID retrieval */
     _selectionDepth.setStorage(GL::RenderbufferFormat::DepthComponent24, application.framebufferSize());
@@ -417,6 +432,7 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
 
 void ScenePlayer::initializeUi() {
     _baseUiPlane.emplace(*_ui);
+    Interconnect::connect(_baseUiPlane->shadeless, &Ui::Button::tapped, *this, &ScenePlayer::toggleShadeless);
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &ScenePlayer::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &ScenePlayer::pause);
     Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &ScenePlayer::stop);
@@ -442,13 +458,15 @@ void ScenePlayer::setControlsVisible(bool visible) {
                     _baseUiPlane->animationProgress});
             }
 
-            Ui::Widget::show({_data->selectedObject ?
-                _baseUiPlane->objectInfo :
-                _baseUiPlane->modelInfo});
+            Ui::Widget::show({
+                _baseUiPlane->shadeless,
+                _data->selectedObject ?
+                    _baseUiPlane->objectInfo : _baseUiPlane->modelInfo});
         }
 
     } else {
         Ui::Widget::hide({
+            _baseUiPlane->shadeless,
             _baseUiPlane->backward,
             _baseUiPlane->play,
             _baseUiPlane->pause,
@@ -457,6 +475,24 @@ void ScenePlayer::setControlsVisible(bool visible) {
             _baseUiPlane->modelInfo,
             _baseUiPlane->objectInfo,
             _baseUiPlane->animationProgress});
+    }
+}
+
+void ScenePlayer::toggleShadeless() {
+    /* For shadeless, render the ambient texture at full and diffuse not at
+       all so the lighting doesn't affect it */
+    if((_shadeless ^= true)) {
+        _texturedShader.setAmbientColor(0xffffff00_rgbaf);
+        _texturedMaskShader.setAmbientColor(0xffffff00_rgbaf);
+        _texturedShader.setDiffuseColor(0x00000000_rgbaf);
+        _texturedMaskShader.setDiffuseColor(0x00000000_rgbaf);
+        _baseUiPlane->shadeless.setStyle(Ui::Style::Success);
+    } else {
+        _texturedShader.setAmbientColor(0x11111100_rgbaf);
+        _texturedMaskShader.setAmbientColor(0x11111100_rgbaf);
+        _texturedShader.setDiffuseColor(0xffffffff_rgbaf);
+        _texturedMaskShader.setDiffuseColor(0xffffffff_rgbaf);
+        _baseUiPlane->shadeless.setStyle(Ui::Style::Default);
     }
 }
 
