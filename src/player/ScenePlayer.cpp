@@ -254,9 +254,9 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         /* Global rendering stuff */
         Shaders::Phong _coloredShader{Shaders::Phong::Flag::ObjectId, 3};
-        Shaders::Phong _texturedShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::DiffuseTexture, 3};
+        Shaders::Phong _texturedShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture, 3};
         Shaders::Phong _texturedMaskShader{
-        Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
+        Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
         Shaders::Phong _vertexColorShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::VertexColor, 3};
         Shaders::MeshVisualizer _meshVisualizerShader{
             #ifndef MAGNUM_TARGET_WEBGL
@@ -336,8 +336,8 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
     /* Setup shader defaults */
     _coloredShader.setAmbientColor(0x111111_rgbf);
-    _texturedShader.setAmbientColor(0x00000000_rgbaf);
-    _texturedMaskShader.setAmbientColor(0x00000000_rgbaf);
+    _texturedShader.setAmbientColor(0x11111100_rgbaf);
+    _texturedMaskShader.setAmbientColor(0x11111100_rgbaf);
     _vertexColorShader.setAmbientColor(0x00000000_rgbaf);
     for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader, &_vertexColorShader}) {
         (*shader)
@@ -839,6 +839,7 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
         .setNormalMatrix(transformationMatrix.rotationScaling())
         .setProjectionMatrix(camera.projectionMatrix())
         .setObjectId(_objectId)
+        .bindAmbientTexture(_texture)
         .bindDiffuseTexture(_texture);
 
     if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
