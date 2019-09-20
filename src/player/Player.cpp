@@ -379,8 +379,12 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
 
     /* Prefer TinyGltfImporter (otherwise AssimpImporter would get selected
-       first) */
-    _manager.setPreferredPlugins("GltfImporter", {"TinyGltfImporter"});
+       first), however for OBJ AssimpImporter is better than magnum's builtin
+       ObjImporter */
+    if(_manager.loadState("GltfImporter") != PluginManager::LoadState::NotFound)
+        _manager.setPreferredPlugins("GltfImporter", {"TinyGltfImporter"});
+    if(_manager.loadState("ObjImporter") != PluginManager::LoadState::NotFound)
+        _manager.setPreferredPlugins("ObjImporter", {"AssimpImporter"});
 
     /* Set up plugin defaults */
     {
