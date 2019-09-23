@@ -33,7 +33,9 @@
 #include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/Resource.h>
 #include <Corrade/Utility/String.h>
+#include <Magnum/GL/Context.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Extensions.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/Platform/Screen.h>
 #include <Magnum/Platform/ScreenedApplication.h>
@@ -391,6 +393,74 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
         PluginManager::PluginMetadata* const metadata = _manager.metadata("TinyGltfImporter");
         if(metadata) metadata->configuration().setValue("mergeAnimationClips",
             !args.isSet("no-merge-animations"));
+    }
+
+    /* Set Basis target format, but only if it wasn't forced on command line
+       (which isn't possible on the web) */
+    #ifndef CORRADE_TARGET_EMSCRIPTEN
+    if(!Utility::String::beginsWith(args.value("importer"), "BasisImporter"))
+    #endif
+    {
+        if(PluginManager::PluginMetadata* const metadata = _manager.metadata("BasisImporter")) {
+            GL::Context& context = GL::Context::current();
+            #ifdef MAGNUM_TARGET_WEBGL
+            if(context.isExtensionSupported<GL::Extensions::WEBGL::compressed_texture_astc>())
+            #else
+            if(context.isExtensionSupported<GL::Extensions::KHR::texture_compression_astc_ldr>())
+            #endif
+            {
+                Debug{} << "Importing Basis files as ASTC 4x4";
+                metadata->configuration().setValue("format", "Astc4x4RGBA");
+            }
+            #ifdef MAGNUM_TARGET_GLES
+            else if(context.isExtensionSupported<GL::Extensions::EXT::texture_compression_bptc>())
+            #else
+            else if(context.isExtensionSupported<GL::Extensions::ARB::texture_compression_bptc>())
+            #endif
+            {
+                Debug{} << "Importing Basis files as BC7";
+                metadata->configuration().setValue("format", "Bc7RGBA");
+            }
+            #ifdef MAGNUM_TARGET_WEBGL
+            else if(context.isExtensionSupported<GL::Extensions::WEBGL::compressed_texture_s3tc>())
+            #elif defined(MAGNUM_TARGET_GLES)
+            else if(context.isExtensionSupported<GL::Extensions::EXT::texture_compression_s3tc>() || context.isExtensionSupported<GL::Extensions::ANGLE::texture_compression_dxt5>())
+            #else
+            else if(context.isExtensionSupported<GL::Extensions::EXT::texture_compression_s3tc>())
+            #endif
+            {
+                Debug{} << "Importing Basis files as BC3";
+                metadata->configuration().setValue("format", "Bc3RGBA");
+            }
+            #ifndef MAGNUM_TARGET_GLES2
+            else
+            #ifndef MAGNUM_TARGET_GLES
+            if(context.isExtensionSupported<GL::Extensions::ARB::ES3_compatibility>())
+            #endif
+            {
+                Debug{} << "Importing Basis files as ETC2";
+                metadata->configuration().setValue("format", "Etc2RGBA");
+            }
+            #else /* For ES2, fall back to PVRTC as ETC2 is not available */
+            else
+            #ifdef MAGNUM_TARGET_WEBGL
+            if(context.isExtensionSupported<WEBGL::compressed_texture_pvrtc>())
+            #else
+            if(context.isExtensionSupported<IMG::texture_compression_pvrtc>())
+            #endif
+            {
+                Debug{} << "Importing Basis files as PVRTC 4bpp";
+                metadata->configuration().setValue("format", "PvrtcRGBA4bpp");
+            }
+            #endif
+            #if defined(MAGNUM_TARGET_GLES2) || !defined(MAGNUM_TARGET_GLES)
+            else /* ES3 has ETC2 always */
+            {
+                Warning{} << "No supported GPU compressed texture format detected, Basis images will get imported as RGBA8";
+                metadata->configuration().setValue("format", "RGBA8");
+            }
+            #endif
+        }
     }
 
     /* Set up the screens */
