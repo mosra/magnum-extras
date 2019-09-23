@@ -49,6 +49,7 @@ endif()
 set(Player_SRCS
     Player.cpp
     ImagePlayer.cpp
+    LoadImage.cpp
     ScenePlayer.cpp)
 
 if(MAGNUM_TARGET_WEBGL)

@@ -36,7 +36,6 @@
 #include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/FormatStl.h>
 #include <Magnum/Image.h>
-#include <Magnum/ImageView.h>
 #include <Magnum/Mesh.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Player.h>
@@ -48,7 +47,6 @@
 #include <Magnum/GL/RenderbufferFormat.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Texture.h>
-#include <Magnum/GL/TextureFormat.h>
 #include <Magnum/Math/FunctionsBatch.h>
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/SceneGraph/Camera.h>
@@ -84,9 +82,11 @@
 #include <Magnum/GL/Version.h>
 #include <Magnum/GL/Renderbuffer.h>
 #include <Magnum/GL/RenderbufferFormat.h>
+#include <Magnum/GL/TextureFormat.h>
 #endif
 
 #include "AbstractPlayer.h"
+#include "LoadImage.h"
 
 #ifdef CORRADE_IS_DEBUG_BUILD
 #include <Corrade/Utility/Tweakable.h>
@@ -562,33 +562,15 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         }
 
         Containers::Optional<Trade::ImageData2D> imageData = importer.image2D(textureData->image());
-        GL::TextureFormat format;
-        if(imageData && imageData->format() == PixelFormat::RGB8Unorm) {
-            #ifndef MAGNUM_TARGET_GLES2
-            format = GL::TextureFormat::RGB8;
-            #else
-            format = GL::TextureFormat::RGB;
-            #endif
-        } else if(imageData && imageData->format() == PixelFormat::RGBA8Unorm) {
-            #ifndef MAGNUM_TARGET_GLES2
-            format = GL::TextureFormat::RGBA8;
-            #else
-            format = GL::TextureFormat::RGBA;
-            #endif
-        } else {
-            Warning{} << "Cannot load texture image" << textureData->image() << importer.image2DName(textureData->image());
-            continue;
-        }
 
         /* Configure the texture */
         GL::Texture2D texture;
         texture
             .setMagnificationFilter(textureData->magnificationFilter())
             .setMinificationFilter(textureData->minificationFilter(), textureData->mipmapFilter())
-            .setWrapping(textureData->wrapping().xy())
-            .setStorage(Math::log2(imageData->size().max()) + 1, format, imageData->size())
-            .setSubImage(0, {}, *imageData)
-            .generateMipmap();
+            .setWrapping(textureData->wrapping().xy());
+
+        loadImage(texture, *imageData);
 
         _data->textures[i] = std::move(texture);
     }

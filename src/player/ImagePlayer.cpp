@@ -27,12 +27,10 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/FormatStl.h>
-#include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Texture.h>
-#include <Magnum/GL/TextureFormat.h>
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/Primitives/Square.h>
 #include <Magnum/Shaders/Flat.h>
@@ -47,6 +45,7 @@
 #include "Magnum/Ui/UserInterface.h"
 
 #include "AbstractPlayer.h"
+#include "LoadImage.h"
 
 namespace Magnum { namespace Player {
 
@@ -226,31 +225,13 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     Containers::Optional<Trade::ImageData2D> image = importer.image2D(0);
     if(!image) return;
 
-    GL::TextureFormat format;
-    if(image->format() == PixelFormat::RGB8Unorm) {
-        #ifndef MAGNUM_TARGET_GLES2
-        format = GL::TextureFormat::RGB8;
-        #else
-        format = GL::TextureFormat::RGB;
-        #endif
-    } else if(image->format() == PixelFormat::RGBA8Unorm) {
-        #ifndef MAGNUM_TARGET_GLES2
-        format = GL::TextureFormat::RGBA8;
-        #else
-        format = GL::TextureFormat::RGBA;
-        #endif
-    } else {
-        Warning{} << "Cannot load an image of format" << image->format();
-        return;
-    }
-
     _texture = GL::Texture2D{};
     _texture
         .setMagnificationFilter(GL::SamplerFilter::Nearest)
         .setMinificationFilter(GL::SamplerFilter::Linear)
-        .setWrapping(GL::SamplerWrapping::ClampToEdge)
-        .setStorage(1, format, image->size())
-        .setSubImage(0, {}, *image);
+        .setWrapping(GL::SamplerWrapping::ClampToEdge);
+
+    loadImage(_texture, *image);
 
     /* Set up default transformation. Centered, 1:1 scale if more than 50% of
        the view, otherwise scaled up to 90% of the view. */
@@ -265,7 +246,10 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     /* Populate the model info */
     /** @todo ugh debug->format converter?! */
     std::ostringstream out;
-    Debug{&out, Debug::Flag::NoNewlineAtTheEnd} << image->format();
+    if(!image->isCompressed())
+        Debug{&out, Debug::Flag::NoNewlineAtTheEnd} << image->format();
+    else
+        Debug{&out, Debug::Flag::NoNewlineAtTheEnd} << image->compressedFormat();
     _baseUiPlane->imageInfo.setText(_imageInfo = Utility::formatString(
         "{}: {}x{}, {}",
         Utility::Directory::filename(filename).substr(0, 32),
