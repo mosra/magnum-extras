@@ -245,7 +245,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
-        void load(const std::string& filename, Trade::AbstractImporter& importer) override;
+        void load(const std::string& filename, Trade::AbstractImporter& importer, Int id) override;
         void setControlsVisible(bool visible) override;
 
         void initializeUi();
@@ -548,7 +548,11 @@ void ScenePlayer::updateAnimationTime(Int deciseconds) {
         duration/600, duration/10%60, duration%10));
 }
 
-void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& importer) {
+void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& importer, Int id) {
+    if(id >= 0 && UnsignedInt(id) >= importer.sceneCount()) {
+        Fatal{} << "Cannot load a scene with ID" << id << "as there's only" << importer.sceneCount() << "scenes";
+    }
+
     _data.emplace();
 
     /* Load all textures. Textures that fail to load will be NullOpt. */
@@ -638,10 +642,11 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     /* Load the scene. Save the object pointers in an array for easier mapping
        of animations later. */
     Debug{} << "Loading" << importer.object3DCount() << "objects";
-    if(importer.defaultScene() != -1) {
-        Debug{} << "Adding default scene" << importer.sceneName(importer.defaultScene());
+    if((id < 0 && importer.defaultScene() != -1) || id >= 0) {
+        if(id < 0) id = importer.defaultScene();
+        Debug{} << "Loading scene" << id << importer.sceneName(id);
 
-        Containers::Optional<Trade::SceneData> sceneData = importer.scene(importer.defaultScene());
+        Containers::Optional<Trade::SceneData> sceneData = importer.scene(id);
         if(!sceneData) {
             Error{} << "Cannot load the scene, aborting";
             return;

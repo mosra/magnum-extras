@@ -25,6 +25,7 @@
 
 #include <sstream>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Utility/DebugStl.h>
 #include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/FormatStl.h>
 #include <Magnum/PixelFormat.h>
@@ -76,7 +77,7 @@ class ImagePlayer: public AbstractPlayer {
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
-        void load(const std::string& filename, Trade::AbstractImporter& importer) override;
+        void load(const std::string& filename, Trade::AbstractImporter& importer, Int id) override;
         void setControlsVisible(bool visible) override;
 
         void initializeUi();
@@ -221,8 +222,15 @@ void ImagePlayer::mouseScrollEvent(MouseScrollEvent& event) {
     redraw();
 }
 
-void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& importer) {
-    Containers::Optional<Trade::ImageData2D> image = importer.image2D(0);
+void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& importer, Int id) {
+    if(id < 0) id = 0;
+    else if(UnsignedInt(id) >= importer.image2DCount()) {
+        Fatal{} << "Cannot load an image with ID" << id << "as there's only" << importer.image2DCount() << "images";
+    }
+
+    Debug{} << "Loading image" << id << importer.image2DName(id);
+
+    Containers::Optional<Trade::ImageData2D> image = importer.image2D(id);
     if(!image) return;
 
     _texture = GL::Texture2D{};

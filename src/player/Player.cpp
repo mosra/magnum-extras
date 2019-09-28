@@ -188,6 +188,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
 
         #ifndef CORRADE_TARGET_EMSCRIPTEN
         std::string _importer, _file;
+        Int _id{-1};
         #endif
         bool _controlsVisible =
             #ifndef CORRADE_TARGET_EMSCRIPTEN
@@ -340,7 +341,8 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     Utility::Arguments args;
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     args.addArgument("file").setHelp("file", "file to load")
-        .addOption("importer", "AnySceneImporter").setHelp("importer", "importer plugin to use");
+        .addOption("importer", "AnySceneImporter").setHelp("importer", "importer plugin to use")
+        .addOption("id").setHelp("id", "image or scene ID to import");
     #endif
     args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
         .addOption("msaa").setHelp("msaa", "MSAA level to use (if not set, defaults to 8x or 2x for HiDPI)", "N")
@@ -469,6 +471,9 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     _file = args.value("file");
 
+    /* Scene / image ID to load. If not specified, -1 is used. */
+    if(!args.value("id").empty()) _id = args.value<Int>("id");
+
     /* Load a scene importer plugin */
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
@@ -486,7 +491,7 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
             _player = createImagePlayer(*this, *_overlay->ui);
         else
             _player = createScenePlayer(*this, *_overlay->ui);
-        _player->load(_file, *importer);
+        _player->load(_file, *importer, _id);
         _importer = args.value("importer");
     } else if(args.value("importer") == "AnySceneImporter") {
         Debug{} << "Opening as a scene failed, trying as an image...";
@@ -497,7 +502,7 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
                 std::exit(3);
             }
             _player = createImagePlayer(*this, *_overlay->ui);
-            _player->load(_file, *imageImporter);
+            _player->load(_file, *imageImporter, _id);
             _importer = "AnyImageImporter";
         } else std::exit(2);
     } else std::exit(1);
@@ -507,7 +512,7 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
     _player = createScenePlayer(*this, *_overlay->ui);
-    _player->load({}, *importer);
+    _player->load({}, *importer, -1);
     #endif
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
@@ -524,7 +529,7 @@ void Player::reload() {
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(_importer);
     if(importer && importer->openFile(_file))
-        _player->load(_file, *importer);
+        _player->load(_file, *importer, _id);
 }
 #endif
 
@@ -597,14 +602,14 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
         }
 
         _player = createScenePlayer(*this, *_overlay->ui);
-        _player->load(*gltfFile, *importer);
+        _player->load(*gltfFile, *importer, -1);
 
     /* If there's just one non-glTF file, try to load it as an image instead */
     } else if(_droppedFiles.size() == 1) {
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
         if(imageImporter->openData(_droppedFiles.begin()->second) && imageImporter->image2DCount()) {
             _player = createImagePlayer(*this, *_overlay->ui);
-            _player->load(_droppedFiles.begin()->first, *imageImporter);
+            _player->load(_droppedFiles.begin()->first, *imageImporter, -1);
         } else {
             _overlay->importErrorUiPlane->what.setText("No recognizable file dropped.");
             _overlay->importErrorUiPlane->activate();
