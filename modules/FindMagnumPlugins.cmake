@@ -13,9 +13,11 @@
 # This command will not try to find any actual plugin. The plugins are:
 #
 #  AssimpImporter               - Assimp importer
+#  BasisImporter                - Basis importer
 #  DdsImporter                  - DDS importer
 #  DevIlImageImporter           - Image importer using DevIL
 #  DrFlacAudioImporter          - FLAC audio importer using dr_flac
+#  DrMp3AudioImporter           - MP3 audio importer using dr_mp3
 #  DrWavAudioImporter           - WAV audio importer using dr_wav
 #  Faad2AudioImporter           - AAC audio importer using FAAD2
 #  FreeTypeFont                 - FreeType font
@@ -68,6 +70,7 @@
 #
 #   Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019
 #             Vladimír Vondruš <mosra@centrum.cz>
+#   Copyright © 2019 Jonathan Hale <squareys@googlemail.com>
 #
 #   Permission is hereby granted, free of charge, to any person obtaining a
 #   copy of this software and associated documentation files (the "Software"),
@@ -120,12 +123,12 @@ mark_as_advanced(MAGNUMPLUGINS_INCLUDE_DIR)
 # components from other repositories)
 set(_MAGNUMPLUGINS_LIBRARY_COMPONENT_LIST OpenDdl)
 set(_MAGNUMPLUGINS_PLUGIN_COMPONENT_LIST
-    AssimpImporter DdsImporter DevIlImageImporter
-    DrFlacAudioImporter DrWavAudioImporter Faad2AudioImporter FreeTypeFont
-    HarfBuzzFont JpegImageConverter JpegImporter MiniExrImageConverter
-    OpenGexImporter PngImageConverter PngImporter StanfordImporter
-    StbImageConverter StbImageImporter StbTrueTypeFont StbVorbisAudioImporter
-    TinyGltfImporter)
+    AssimpImporter BasisImporter DdsImporter DevIlImageImporter
+    DrFlacAudioImporter DrMp3AudioImporter DrWavAudioImporter Faad2AudioImporter
+    FreeTypeFont HarfBuzzFont JpegImageConverter JpegImporter
+    MiniExrImageConverter OpenGexImporter PngImageConverter PngImporter
+    StanfordImporter StbImageConverter StbImageImporter StbTrueTypeFont
+    StbVorbisAudioImporter TinyGltfImporter)
 
 # Inter-component dependencies
 set(_MAGNUMPLUGINS_HarfBuzzFont_DEPENDENCIES FreeTypeFont)
@@ -270,6 +273,18 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
             set_property(TARGET MagnumPlugins::${_component} APPEND PROPERTY
                 INTERFACE_LINK_LIBRARIES Assimp::Assimp)
 
+        # BasisImporter has only compiled-in dependencies, except in case of
+        # vcpkg, then we need to link to a library. Use a similar logic as in
+        # FindBasisUniversal, so in case an user wants to disable this, they
+        # can point BASIS_UNIVERSAL_DIR to something else (or just anything,
+        # because in that case it'll be a no-op.
+        elseif(_component STREQUAL BasisImporter)
+            find_package(basisu CONFIG QUIET)
+            if(basisu_FOUND AND NOT BASIS_UNIVERSAL_DIR)
+                set_property(TARGET MagnumPlugins::${_component} APPEND PROPERTY
+                    INTERFACE_LINK_LIBRARIES basisu_transcoder)
+            endif()
+
         # DdsImporter has no dependencies
 
         # DevIlImageImporter plugin dependencies
@@ -279,6 +294,7 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
                 INTERFACE_LINK_LIBRARIES ${IL_LIBRARIES} ${ILU_LIBRARIES})
 
         # DrFlacAudioImporter has no dependencies
+        # DrMp3AudioImporter has no dependencies
         # DrWavAudioImporter has no dependencies
 
         # Faad2AudioImporter plugin dependencies
