@@ -41,6 +41,7 @@ set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
 if(CORRADE_TARGET_EMSCRIPTEN)
     find_package(MagnumPlugins REQUIRED
+        BasisImporter
         TinyGltfImporter
         StbTrueTypeFont
         StbImageImporter)
@@ -77,6 +78,7 @@ target_link_libraries(magnum-player PRIVATE
     MagnumUi)
 if(CORRADE_TARGET_EMSCRIPTEN)
     target_link_libraries(magnum-player PRIVATE
+        MagnumPlugins::BasisImporter
         MagnumPlugins::TinyGltfImporter
         MagnumPlugins::StbTrueTypeFont
         MagnumPlugins::StbImageImporter)
