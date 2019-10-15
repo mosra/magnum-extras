@@ -12,14 +12,10 @@ Package: magnum-extras-dev
 Section: libdevel
 Architecture: any
 Depends: magnum-extras (= ${binary:Version}), magnum-dev
-Description: Magnum Extras development files
- Headers and tools needed for developing with Magnum Plugins.
+Description: Extras for the Magnum C++11/C++14 graphics engine
 
 Package: magnum-extras
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, magnum
 Description: Extras for the Magnum C++11/C++14 graphics engine
- Magnum is 2D/3D graphics engine written in C++11 and modern OpenGL. Its goal
- is to simplify low-level graphics development and interaction with OpenGL
- using recent C++11 features and to abstract away platform-specific issues.
