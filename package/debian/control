@@ -1,7 +1,7 @@
 Source: magnum-extras
 Priority: optional
 Maintainer: Vladimír Vondruš <mosra@centrum.cz>
-Build-Depends: debhelper (>= 9), cmake (>= 3.1), magnum-dev
+Build-Depends: debhelper (>= 9), cmake (>= 3.4), magnum-dev
 Standards-Version: 3.9.2
 Section: libs
 Homepage: https://magnum.graphics
