@@ -43,6 +43,12 @@ namespace Magnum {
 
 @subsection changelog-extras-latest-new New features
 
+-   MSVC 2019 compatibility, following other Magnum projects
+-   When using Magnum as a CMake subproject, it now puts all binaries into a
+    common directory to simplify `PATH` handling and dynamic plugin loading.
+    For more information see @ref cmake-extras-subproject,
+    [mosra/magnum#357](https://github.com/mosra/magnum/issues/357) and
+    [mosra/magnum-plugins#63](https://github.com/mosra/magnum-plugins/issues/63).
 -   @ref magnum-player "magnum-player" now autogenerates normals if the
     imported model doesn't have any (see also [mosra/magnum#229](https://github.com/mosra/magnum/pull/229))
 -   @ref magnum-player "magnum-player" has now a rudimentary support for

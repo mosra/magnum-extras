@@ -30,6 +30,8 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
+@section cmake-extras-installed Using Magnum Extras that were externally built and installed
+
 The main logic is in the [FindMagnumExtras.cmake](https://github.com/mosra/magnum-extras/blob/master/modules/FindMagnumExtras.cmake)
 module distributed in the `modules/` directory of the integration repository,
 you are encouraged to copy it into your project and add path to the files to
@@ -49,6 +51,23 @@ If you installed the library or its dependencies to non-standard location
 (other than `/usr`, e.g. `/home/xyz/projects`), set `CMAKE_PREFIX_PATH` to that
 directory to help CMake find it. You can enter more different dirs if you
 separate them with semicolons.
+
+@section cmake-extras-subproject Using Magnum Extras as a CMake subproject
+
+Continuing from @ref cmake-subproject, adding Magnum Extras is very similar.
+Again, the @ref building-extras-features "Extras build-time options" have to
+be specified before the subdirectory gets added:
+
+@code{.cmake}
+...
+
+set(WITH_UI ON CACHE BOOL "" FORCE) # enable what you need
+add_subdirectory(magnum-extras EXCLUDE_FROM_ALL)
+
+find_package(MagnumExtras REQUIRED ...) # see below
+@endcode
+
+@section cmake-extras-find-module Finding the package and its components
 
 Basic usage is:
 
