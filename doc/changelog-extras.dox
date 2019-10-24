@@ -30,9 +30,14 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-@section changelog-extras-latest Changes since 2019.01
+@anchor changelog-extras-latest
 
-@subsection changelog-extras-latest-dependencies Dependency changes
+@section changelog-extras-2019-10 2019.10
+
+Released 2019-10-24, tagged as
+[v2019.10](https://github.com/mosra/magnum-extras/releases/tag/v2019.10).
+
+@subsection changelog-extras-2019-10-dependencies Dependency changes
 
 -   Minimal supported CMake version is now 3.4. Older versions are not
     supported anymore and all workarounds for them were removed. Download a
@@ -41,7 +46,7 @@ namespace Magnum {
     that shouldn't affect any additional distribution compared to the CMake 3.1
     requirement in 2019.01.
 
-@subsection changelog-extras-latest-new New features
+@subsection changelog-extras-2019-10-new New features
 
 -   MSVC 2019 compatibility, following other Magnum projects
 -   When using Magnum as a CMake subproject, it now puts all binaries into a
@@ -58,7 +63,7 @@ namespace Magnum {
 -   @ref magnum-player "magnum-player" installs a `*.desktop` file on Linux and
     BSD systems in order to appear as a choice in "Open with..." dialogs.
 
-@subsection changelog-extras-latest-changes Changes and improvements
+@subsection changelog-extras-2019-10-changes Changes and improvements
 
 -   Switched @ref magnum-player "magnum-player" and
     @ref magnum-ui-gallery "magnum-ui-gallery" to use the new
@@ -67,10 +72,11 @@ namespace Magnum {
 -   Desktop build of @ref magnum-player "magnum-player" can now refresh
     the currently loaded file using @m_class{m-label m-default} **F5**
 
-@subsection changelog-extras-latest-buildsystem Build system
+@subsection changelog-extras-2019-10-buildsystem Build system
 
 -   ES 2.0 and ES 3.0 subset of tests requiring GL context is now run on Travis
-    CI using SwiftShader for better code coverage
+    CI using SwiftShader for better code coverage (see
+    [mosra/magnum#207](https://github.com/mosra/magnum/issues/207))
 -   Emscripten builds now have the `-fPIC` option disabled by default as it
     causes linker errors related to `__memory_base` on 1.38.36 (see also
     [emscripten-core/emscripten#8761](https://github.com/emscripten-core/emscripten/issues/8761))
