@@ -1,9 +1,9 @@
 class MagnumExtras < Formula
   desc "Extras for the Magnum C++11/C++14 graphics engine"
   homepage "https://magnum.graphics"
-  url "https://github.com/mosra/magnum-extras/archive/v2019.01.tar.gz"
-  # wget https://github.com/mosra/magnum-extras/archive/v2019.01.tar.gz -O - | sha256sum
-  sha256 "eac4e6874323e588c40a4ca20d80a4fcf16ccad2f8a7651f5f0b60d2a9b9c907"
+  url "https://github.com/mosra/magnum-extras/archive/v2019.10.tar.gz"
+  # wget https://github.com/mosra/magnum-extras/archive/v2019.10.tar.gz -O - | sha256sum
+  sha256 "74d6d2800ef3755899af0f012e6de006fdffba77080215748edcf1911ac1c770"
   head "git://github.com/mosra/magnum-extras.git"
 
   depends_on "cmake"
