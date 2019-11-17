@@ -224,7 +224,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
         #ifdef MAGNUM_BUILD_DEPRECATED
         /**
          * @brief Construct the user interface with custom style and font
-         * @deprecated Use either @ref UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&)
+         * @m_deprecated_since{2018,10} Use either @ref UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&)
          *      or @ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
          *      instead.
          */
@@ -232,7 +232,7 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
 
         /**
          * @brief Construct the user interface with a custom font
-         * @deprecated Use either @ref UserInterface(const Vector2&, const Vector2i&, const std::string&)
+         * @m_deprecated_since{2018,10} Use either @ref UserInterface(const Vector2&, const Vector2i&, const std::string&)
          *      or @ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
          *      instead.
          */
