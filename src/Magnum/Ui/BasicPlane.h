@@ -80,18 +80,6 @@ See @ref BasicPlane for more information.
 */
 class MAGNUM_UI_EXPORT AbstractPlane: private Containers::LinkedListItem<AbstractPlane, AbstractUserInterface> {
     public:
-        #ifdef MAGNUM_BUILD_DEPRECATED
-        /** @brief @copybrief PlaneFlag
-         * @deprecated Use @ref PlaneFlag instead.
-         */
-        CORRADE_DEPRECATED("use PlaneFlag instead") typedef PlaneFlag Flag;
-
-        /** @brief @copybrief PlaneFlags
-         * @deprecated Use @ref PlaneFlags instead.
-         */
-        CORRADE_DEPRECATED("use PlaneFlags instead") typedef PlaneFlags Flags;
-        #endif
-
         /**
          * @brief Constructor
          * @param ui        User interface this plane is part of

@@ -30,7 +30,13 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-@anchor changelog-extras-latest
+@section changelog-extras-latest Changes since 2019.10
+
+@subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
+
+-   Removed `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum
+    set deprecated in 2018.02, use @ref Ui::PlaneFlag and @ref Ui::PlaneFlags
+    instead
 
 @section changelog-extras-2019-10 2019.10
 
