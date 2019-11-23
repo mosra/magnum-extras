@@ -94,11 +94,18 @@ Arguments:
     @ref Trade::AnySceneImporter "AnySceneImporter", with a fallback to
     @ref Trade::AnyImageImporter "AnyImageImporter" when an image file is
     supplied)
+-   `-i`, `--importer-options key=val,key2=val2,…` --- configuration options to
+    pass to the importer
 -   `--no-merge-animations` --- don't merge glTF animations into a single clip
 -   `--msaa N` --- MSAA level to use (if not set, defaults to 8x or 2x for
     HiDPI)
 -   `--magnum-...` --- engine-specific options (see
     @ref GL-Context-command-line for details)
+
+The `-i` / `--importer-options` argument accepts a comma-separated list of
+key/value pairs to set in the importer plugin configuration. If the `=`
+character is omitted, it's equivalent to saying `key=true`; you can specify
+configuration subgroups using a slash.
 
 @section magnum-player-credits Credits
 

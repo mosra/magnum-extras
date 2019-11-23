@@ -342,6 +342,7 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     args.addArgument("file").setHelp("file", "file to load")
         .addOption("importer", "AnySceneImporter").setHelp("importer", "importer plugin to use")
+        .addOption('i', "importer-options").setHelp("importer-options", "configuration options to pass to the importer", "key=val,key2=val2,…")
         .addOption("id").setHelp("id", "image or scene ID to import");
     #endif
     args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
@@ -350,7 +351,12 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
         .addBooleanOption("tweakable").setHelp("tweakable", "Enable live source tweakability")
         #endif
         .addSkippedPrefix("magnum", "engine-specific options")
-        .setGlobalHelp("Displays a 3D scene file provided on command line.")
+        .setGlobalHelp(R"(Displays a 3D scene file provided on command line.
+
+The -i / --importer-options argument accepts a comma-separated list of
+key/value pairs to set in the importer plugin configuration. If the = character
+is omitted, it's equivalent to saying key=true; you can specify configuration
+subgroups using a slash.)")
         .parse(arguments.argc, arguments.argv);
 
     /* Try 8x MSAA, fall back to zero samples if not possible. Enable only 2x
@@ -477,6 +483,36 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     /* Load a scene importer plugin */
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
+
+    /* Propagate user-defined options from the command line */
+    if(importer) for(const std::string& option: Utility::String::splitWithoutEmptyParts(args.value("importer-options"), ',')) {
+        auto keyValue = Utility::String::partition(option, '=');
+        Utility::String::trimInPlace(keyValue[0]);
+        Utility::String::trimInPlace(keyValue[2]);
+
+        std::vector<std::string> keyParts = Utility::String::split(keyValue[0], '/');
+        CORRADE_INTERNAL_ASSERT(!keyParts.empty());
+        Utility::ConfigurationGroup* group = &importer->configuration();
+        for(std::size_t i = 0; i != keyParts.size() - 1; ++i) {
+            group = group->group(keyParts[i]);
+            if(!group) break;
+        }
+
+        /* Provide a warning message in case the plugin doesn't define given
+           option in its default config. The plugin is not *required* to have
+           those tho (could be backward compatibility entries, for example), so
+           not an error. */
+        if(!group || !group->hasValue(keyParts.back()))
+            Warning{} << "Option" << keyValue[0] << "not recognized by" << importer->plugin();
+
+        /* If the option doesn't have an =, treat it as a boolean flag that's
+           set to true. While there's no similar way to do an inverse, it's
+           still nicer than causing a fatal error with those. */
+        if(keyValue[1].empty())
+            group->setValue(keyParts.back(), true);
+        else
+            group->setValue(keyParts.back(), keyValue[2]);
+    }
 
     Debug{} << "Opening file" << _file;
 

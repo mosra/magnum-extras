@@ -32,6 +32,12 @@ namespace Magnum {
 
 @section changelog-extras-latest Changes since 2019.10
 
+@subsection changelog-extras-latest-changes Changes and improvements
+
+-   @ref magnum-player "magnum-player" now accepts an `-i` /
+    `--importer-options` command-line argument similarly to
+    @ref magnum-imageconverter "magnum-imageconverter"
+
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
 -   Removed `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum
