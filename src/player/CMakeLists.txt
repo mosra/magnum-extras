@@ -91,8 +91,8 @@ if(CORRADE_TARGET_EMSCRIPTEN)
     install(FILES player.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player RENAME index.html)
     install(TARGETS magnum-player DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player)
     install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/magnum-player.js.mem
-        ${CMAKE_CURRENT_BINARY_DIR}/magnum-player.wasm
+        $<TARGET_FILE_DIR:magnum-player>/magnum-player.js.mem
+        $<TARGET_FILE_DIR:magnum-player>/magnum-player.wasm
         DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player OPTIONAL)
     install(FILES
         ${MAGNUM_EMSCRIPTENAPPLICATION_JS}

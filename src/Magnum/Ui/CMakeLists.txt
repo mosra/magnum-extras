@@ -156,8 +156,8 @@ if(WITH_UI_GALLERY)
         install(FILES ui-gallery.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery RENAME index.html)
         install(TARGETS magnum-ui-gallery DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery)
         install(FILES
-            ${CMAKE_CURRENT_BINARY_DIR}/magnum-ui-gallery.js.mem
-            ${CMAKE_CURRENT_BINARY_DIR}/magnum-ui-gallery.wasm
+            $<TARGET_FILE_DIR:magnum-ui-gallery>/magnum-ui-gallery.js.mem
+            $<TARGET_FILE_DIR:magnum-ui-gallery>/magnum-ui-gallery.wasm
             DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-ui-gallery OPTIONAL)
         install(FILES
             ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
