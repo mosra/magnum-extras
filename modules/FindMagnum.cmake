@@ -243,10 +243,9 @@ endif()
 
 # Read flags from configuration
 file(READ ${_MAGNUM_CONFIGURE_FILE} _magnumConfigure)
+string(REGEX REPLACE ";" "\\\\;" _magnumConfigure "${_magnumConfigure}")
+string(REGEX REPLACE "\n" ";" _magnumConfigure "${_magnumConfigure}")
 set(_magnumFlags
-    # WARNING: CAREFUL HERE, the string(FIND) succeeds even if a subset is
-    # found -- so e.g. looking for TARGET_GL will match TARGET_GLES2 as well.
-    # So far that's not a problem, but might become an issue for new flags.
     BUILD_DEPRECATED
     BUILD_STATIC
     TARGET_GL
@@ -258,7 +257,7 @@ set(_magnumFlags
     TARGET_HEADLESS
     TARGET_VK)
 foreach(_magnumFlag ${_magnumFlags})
-    string(FIND "${_magnumConfigure}" "#define MAGNUM_${_magnumFlag}" _magnum_${_magnumFlag})
+    list(FIND _magnumConfigure "#define MAGNUM_${_magnumFlag}" _magnum_${_magnumFlag})
     if(NOT _magnum_${_magnumFlag} EQUAL -1)
         set(MAGNUM_${_magnumFlag} 1)
     endif()
@@ -363,17 +362,19 @@ set(_MAGNUM_EXECUTABLE_COMPONENT_LIST
 # Inter-component dependencies
 set(_MAGNUM_Audio_DEPENDENCIES )
 
-set(_MAGNUM_DebugTools_DEPENDENCIES )
+# Trade is used by CompareImage. If Trade is not enabled, CompareImage is not
+# compiled at all.
+set(_MAGNUM_DebugTools_DEPENDENCIES Trade)
+set(_MAGNUM_DebugTools_Trade_DEPENDENCY_IS_OPTIONAL ON)
+# MeshTools, Primitives, SceneGraph and Shaders are used only for GL renderers
+# in DebugTools. All of this is optional, compiled in only if the base library
+# was selected.
 if(MAGNUM_TARGET_GL)
-    # MeshTools, Primitives, SceneGraph and Shaders are used only for GL
-    # renderers. All of this is optional, compiled in only if the base library
-    # was selected.
-    list(APPEND _MAGNUM_DebugTools_DEPENDENCIES MeshTools Primitives SceneGraph Shaders Trade GL)
+    list(APPEND _MAGNUM_DebugTools_DEPENDENCIES MeshTools Primitives SceneGraph Shaders GL)
     set(_MAGNUM_DebugTools_MeshTools_DEPENDENCY_IS_OPTIONAL ON)
     set(_MAGNUM_DebugTools_Primitives_DEPENDENCY_IS_OPTIONAL ON)
     set(_MAGNUM_DebugTools_SceneGraph_DEPENDENCY_IS_OPTIONAL ON)
     set(_MAGNUM_DebugTools_Shaders_DEPENDENCY_IS_OPTIONAL ON)
-    set(_MAGNUM_DebugTools_Trade_DEPENDENCY_IS_OPTIONAL ON)
     set(_MAGNUM_DebugTools_GL_DEPENDENCY_IS_OPTIONAL ON)
 endif()
 
@@ -805,9 +806,6 @@ foreach(_component ${Magnum_FIND_COMPONENTS})
 
         # GL library
         elseif(_component STREQUAL GL)
-            set_property(TARGET Magnum::${_component} APPEND PROPERTY
-                INTERFACE_INCLUDE_DIRECTORIES ${MAGNUM_INCLUDE_DIR}/MagnumExternal/OpenGL)
-
             if(NOT MAGNUM_TARGET_GLES OR MAGNUM_TARGET_DESKTOP_GLES)
                 # If the GLVND library (CMake 3.11+) was found, link to the
                 # imported target. Otherwise (and also on all systems except
@@ -1011,15 +1009,15 @@ if(_MAGNUM_WINDOWLESSAPPLICATION_ALIAS AND NOT TARGET Magnum::WindowlessApplicat
         add_library(Magnum::WindowlessApplication ALIAS ${_MAGNUM_WINDOWLESSAPPLICATION_ALIASED_TARGET})
     else()
         add_library(Magnum::WindowlessApplication UNKNOWN IMPORTED)
-        get_target_property(_MAGNUM_WINDOWLESSAPPLICATION_IMPORTED_CONFIGURATIONS ${_MAGNUM_WINDOWLESSAPPLICATION_ALIAS} IMPORTED_CONFIGURATIONS)
+        foreach(property IMPORTED_CONFIGURATIONS INTERFACE_INCLUDE_DIRECTORIES INTERFACE_COMPILE_DEFINITIONS INTERFACE_COMPILE_OPTIONS INTERFACE_LINK_LIBRARIES)
+            get_target_property(_MAGNUM_WINDOWLESSAPPLICATION_${property} ${_MAGNUM_WINDOWLESSAPPLICATION_ALIAS} ${property})
+            if(_MAGNUM_WINDOWLESSAPPLICATION_${property})
+                set_target_properties(Magnum::WindowlessApplication PROPERTIES
+                    ${property} "${_MAGNUM_WINDOWLESSAPPLICATION_${property}}")
+            endif()
+        endforeach()
         get_target_property(_MAGNUM_WINDOWLESSAPPLICATION_IMPORTED_LOCATION_RELEASE ${_MAGNUM_WINDOWLESSAPPLICATION_ALIAS} IMPORTED_LOCATION_RELEASE)
         get_target_property(_MAGNUM_WINDOWLESSAPPLICATION_IMPORTED_LOCATION_DEBUG ${_MAGNUM_WINDOWLESSAPPLICATION_ALIAS} IMPORTED_LOCATION_DEBUG)
-        set_target_properties(Magnum::WindowlessApplication PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:${_MAGNUM_WINDOWLESSAPPLICATION_ALIAS},INTERFACE_INCLUDE_DIRECTORIES>
-            INTERFACE_COMPILE_DEFINITIONS $<TARGET_PROPERTY:${_MAGNUM_WINDOWLESSAPPLICATION_ALIAS},INTERFACE_COMPILE_DEFINITIONS>
-            INTERFACE_COMPILE_OPTIONS $<TARGET_PROPERTY:${_MAGNUM_WINDOWLESSAPPLICATION_ALIAS},INTERFACE_COMPILE_OPTIONS>
-            INTERFACE_LINK_LIBRARIES $<TARGET_PROPERTY:${_MAGNUM_WINDOWLESSAPPLICATION_ALIAS},INTERFACE_LINK_LIBRARIES>
-            IMPORTED_CONFIGURATIONS "${_MAGNUM_WINDOWLESSAPPLICATION_IMPORTED_CONFIGURATIONS}")
         if(_MAGNUM_WINDOWLESSAPPLICATION_IMPORTED_LOCATION_RELEASE)
             set_target_properties(Magnum::WindowlessApplication PROPERTIES
                 IMPORTED_LOCATION_RELEASE ${_MAGNUM_WINDOWLESSAPPLICATION_IMPORTED_LOCATION_RELEASE})
@@ -1038,15 +1036,16 @@ if(_MAGNUM_APPLICATION_ALIAS AND NOT TARGET Magnum::Application)
         add_library(Magnum::Application ALIAS ${_MAGNUM_APPLICATION_ALIASED_TARGET})
     else()
         add_library(Magnum::Application UNKNOWN IMPORTED)
-        get_target_property(_MAGNUM_APPLICATION_IMPORTED_CONFIGURATIONS ${_MAGNUM_APPLICATION_ALIAS} IMPORTED_CONFIGURATIONS)
+        foreach(property IMPORTED_CONFIGURATIONS INTERFACE_INCLUDE_DIRECTORIES INTERFACE_COMPILE_DEFINITIONS INTERFACE_COMPILE_OPTIONS INTERFACE_LINK_LIBRARIES)
+            get_target_property(_MAGNUM_APPLICATION_${property}
+                ${_MAGNUM_APPLICATION_ALIAS} ${property})
+            if(_MAGNUM_APPLICATION_${property})
+                set_target_properties(Magnum::Application PROPERTIES ${property}
+                    "${_MAGNUM_APPLICATION_${property}}")
+            endif()
+        endforeach()
         get_target_property(_MAGNUM_APPLICATION_IMPORTED_LOCATION_RELEASE ${_MAGNUM_APPLICATION_ALIAS} IMPORTED_LOCATION_RELEASE)
         get_target_property(_MAGNUM_APPLICATION_IMPORTED_LOCATION_DEBUG ${_MAGNUM_APPLICATION_ALIAS} IMPORTED_LOCATION_DEBUG)
-        set_target_properties(Magnum::Application PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:${_MAGNUM_APPLICATION_ALIAS},INTERFACE_INCLUDE_DIRECTORIES>
-            INTERFACE_COMPILE_DEFINITIONS $<TARGET_PROPERTY:${_MAGNUM_APPLICATION_ALIAS},INTERFACE_COMPILE_DEFINITIONS>
-            INTERFACE_COMPILE_OPTIONS $<TARGET_PROPERTY:${_MAGNUM_APPLICATION_ALIAS},INTERFACE_COMPILE_OPTIONS>
-            INTERFACE_LINK_LIBRARIES $<TARGET_PROPERTY:${_MAGNUM_APPLICATION_ALIAS},INTERFACE_LINK_LIBRARIES>
-            IMPORTED_CONFIGURATIONS "${_MAGNUM_APPLICATION_IMPORTED_CONFIGURATIONS}")
         if(_MAGNUM_APPLICATION_IMPORTED_LOCATION_RELEASE)
             set_target_properties(Magnum::Application PROPERTIES
                 IMPORTED_LOCATION_RELEASE ${_MAGNUM_APPLICATION_IMPORTED_LOCATION_RELEASE})
@@ -1065,15 +1064,15 @@ if(_MAGNUM_GLCONTEXT_ALIAS AND NOT TARGET Magnum::GLContext)
         add_library(Magnum::GLContext ALIAS ${_MAGNUM_GLCONTEXT_ALIASED_TARGET})
     else()
         add_library(Magnum::GLContext UNKNOWN IMPORTED)
-        get_target_property(_MAGNUM_GLCONTEXT_IMPORTED_CONFIGURATIONS ${_MAGNUM_GLCONTEXT_ALIAS} IMPORTED_CONFIGURATIONS)
+        foreach(property IMPORTED_CONFIGURATIONS INTERFACE_INCLUDE_DIRECTORIES INTERFACE_COMPILE_DEFINITIONS INTERFACE_COMPILE_OPTIONS INTERFACE_LINK_LIBRARIES)
+            get_target_property(_MAGNUM_GLCONTEXT_${property} ${_MAGNUM_GLCONTEXT_ALIAS} ${property})
+            if(_MAGNUM_GLCONTEXT_${property})
+                set_target_properties(Magnum::GLContext PROPERTIES ${property}
+                    "${_MAGNUM_GLCONTEXT_${property}}")
+            endif()
+        endforeach()
         get_target_property(_MAGNUM_GLCONTEXT_IMPORTED_LOCATION_RELEASE ${_MAGNUM_GLCONTEXT_ALIAS} IMPORTED_LOCATION_RELEASE)
         get_target_property(_MAGNUM_GLCONTEXT_IMPORTED_LOCATION_DEBUG ${_MAGNUM_GLCONTEXT_ALIAS} IMPORTED_LOCATION_DEBUG)
-        set_target_properties(Magnum::GLContext PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES $<TARGET_PROPERTY:${_MAGNUM_GLCONTEXT_ALIAS},INTERFACE_INCLUDE_DIRECTORIES>
-            INTERFACE_COMPILE_DEFINITIONS $<TARGET_PROPERTY:${_MAGNUM_GLCONTEXT_ALIAS},INTERFACE_COMPILE_DEFINITIONS>
-            INTERFACE_COMPILE_OPTIONS $<TARGET_PROPERTY:${_MAGNUM_GLCONTEXT_ALIAS},INTERFACE_COMPILE_OPTIONS>
-            INTERFACE_LINK_LIBRARIES $<TARGET_PROPERTY:${_MAGNUM_GLCONTEXT_ALIAS},INTERFACE_LINK_LIBRARIES>
-            IMPORTED_CONFIGURATIONS "${_MAGNUM_GLCONTEXT_IMPORTED_CONFIGURATIONS}")
         if(_MAGNUM_GLCONTEXT_IMPORTED_LOCATION_RELEASE)
             set_target_properties(Magnum::GLContext PROPERTIES
                 IMPORTED_LOCATION_RELEASE ${_MAGNUM_GLCONTEXT_IMPORTED_LOCATION_RELEASE})
