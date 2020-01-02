@@ -251,8 +251,8 @@ class MAGNUM_UI_EXPORT Widget {
          * @return `True` if the event was accepted, `false` if it was ignored
          *
          * Called when the widget is hovered by the mouse or when the mouse
-         * leaves it again. Use @ref Flag::Hovered to check for the state.
-         * Default implementation does nothing and returns `false`.
+         * leaves it again. Use @ref WidgetFlag::Hovered to check for the
+         * state. Default implementation does nothing and returns `false`.
          */
         virtual bool hoverEvent();
 
@@ -260,7 +260,7 @@ class MAGNUM_UI_EXPORT Widget {
          * @brief Press event
          * @return `True` if the event was accepted, `false` if it was ignored
          *
-         * When the widget is pressed, @ref Flag::Pressed is set and this
+         * When the widget is pressed, @ref WidgetFlag::Pressed is set and this
          * function is called. Default implementation does nothing and returns
          * `false`.
          */
@@ -270,8 +270,8 @@ class MAGNUM_UI_EXPORT Widget {
          * @brief Release event
          * @return `True` if the event was accepted, `false` if it was ignored
          *
-         * On release after previous press event, @ref Flag::Pressed flag is
-         * removed and this function is called. Default implementation does
+         * On release after previous press event, @ref WidgetFlag::Pressed flag
+         * is removed and this function is called. Default implementation does
          * nothing and returns `false`.
          */
         virtual bool releaseEvent();
@@ -281,7 +281,7 @@ class MAGNUM_UI_EXPORT Widget {
          * @return `True` if the event was accepted, `false` if it was ignored
          *
          * If both press and release event happened on the same widget,
-         * @ref Flag::Active is set and this function is called. Default
+         * @ref WidgetFlag::Active is set and this function is called. Default
          * implementation does nothing and returns `false`.
          */
         virtual bool focusEvent();
@@ -291,8 +291,8 @@ class MAGNUM_UI_EXPORT Widget {
          * @return `True` if the event was accepted, `false` if it was ignored
          *
          * If the widget was active previously and the user tapped outside,
-         * @ref Flag::Active is removed and this function is called. Default
-         * implementation does nothing and returns `false`.
+         * @ref WidgetFlag::Active is removed and this function is called.
+         * Default implementation does nothing and returns `false`.
          */
         virtual bool blurEvent();
 

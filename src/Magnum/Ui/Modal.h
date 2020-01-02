@@ -44,8 +44,8 @@ fills the rest with semi-transparent dim color to suggest modality.
 
 @section Ui-Modal-styling Styling
 
-Ignores @ref StateFlag::Hovered, @ref StateFlag::Pressed and
-@ref StateFlag::Active, @ref Style::Flat.
+Ignores @ref WidgetFlag::Hovered, @ref WidgetFlag::Pressed and
+@ref WidgetFlag::Active, @ref Style::Flat.
 @experimental
 */
 class MAGNUM_UI_EXPORT Modal: public Widget {

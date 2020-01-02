@@ -43,8 +43,8 @@ Just a text with no interactivity.
 
 @section Ui-Label-styling Styling
 
-Ignores @ref StateFlag::Hovered, @ref StateFlag::Pressed and
-@ref StateFlag::Active, @ref Style::Flat.
+Ignores @ref WidgetFlag::Hovered, @ref WidgetFlag::Pressed and
+@ref WidgetFlag::Active, @ref Style::Flat.
 @experimental
 */
 class MAGNUM_UI_EXPORT Label: public Widget {

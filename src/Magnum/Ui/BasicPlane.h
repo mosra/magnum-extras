@@ -143,7 +143,7 @@ class MAGNUM_UI_EXPORT AbstractPlane: private Containers::LinkedListItem<Abstrac
          * Activates the plane so it is frontmost, receives input events and
          * visible. If the plane is already active, the function is a no-op.
          * @see @ref BasicUserInterface::activePlane(),
-         *      @ref previousActivePlane(), @ref Flag::Hidden, @ref flags()
+         *      @ref previousActivePlane(), @ref PlaneFlag::Hidden, @ref flags()
          */
         void activate();
 
@@ -152,7 +152,7 @@ class MAGNUM_UI_EXPORT AbstractPlane: private Containers::LinkedListItem<Abstrac
          *
          * Hides the plane and transfers the focus to previously active plane.
          * If the plane is already hidden, the function is a no-op.
-         * @see @ref previousActivePlane(), @ref Flag::Hidden, @ref flags()
+         * @see @ref previousActivePlane(), @ref PlaneFlag::Hidden, @ref flags()
          */
         void hide();
 

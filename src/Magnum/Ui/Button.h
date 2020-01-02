@@ -43,7 +43,7 @@ Text and foreground. Emits @ref tapped() signal on tap.
 
 @section Ui-Button-styling Styling
 
-Ignores @ref StateFlag::Active.
+Ignores @ref WidgetFlag::Active.
 @experimental
 */
 class MAGNUM_UI_EXPORT Button: public Widget, public Interconnect::Emitter {

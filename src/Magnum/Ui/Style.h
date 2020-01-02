@@ -83,22 +83,22 @@ enum class State: UnsignedInt {
 
     /**
      * The widget was hovered. Note that to reduce combinatorial explosion of
-     * colors, @ref Style::Hover gets a preference over @ref Style::Pressed,
-     * but not before @ref Style::Active (so if the widget is both pressed and
+     * colors, @ref State::Hover gets a preference over @ref State::Pressed,
+     * but not before @ref State::Active (so if the widget is both pressed and
      * hovered, hover style gets a preference).
      */
     Hover = 1,
 
     /**
      * The widget was pressed. Note that to reduce combinatorial explosion of
-     * colors, @ref Style::Hover gets a preference over @ref Style::Pressed, if
+     * colors, @ref State::Hover gets a preference over @ref State::Pressed, if
      * the widget is both pressed and hovered.
      */
     Pressed = 2,
 
     /**
      * The widget is active. Note that to reduce combinatorial explosion of
-     * colors, @ref Style::Active gets a preference over @ref Style::Hover, if
+     * colors, @ref State::Active gets a preference over @ref State::Hover, if
      * the widget is both active and hovered.
      */
     Active = 3,
@@ -140,12 +140,12 @@ enum class Style: UnsignedInt {
     Danger = 5,
 
     /**
-     * Dim. Toned-down version of @ref Style::Default that tries hard to not
+     * Dim. Toned-down version of @ref State::Default that tries hard to not
      * gain attention. Used also for dimming out the background.
      */
     Dim = 6,
 
-    /** Flat version of @ref Style::Default. */
+    /** Flat version of @ref State::Default. */
     Flat = 7
 };
 
