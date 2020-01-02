@@ -43,7 +43,7 @@ use this library with Cmake, you need to request the `Ui` component of the
 find_package(MagnumExtras REQUIRED)
 
 # ...
-target_link_libraries(your-app MagnumExtras::Ui)
+target_link_libraries(your-app PRIVATE MagnumExtras::Ui)
 @endcode
 
 Additional apps are built separately. See the
