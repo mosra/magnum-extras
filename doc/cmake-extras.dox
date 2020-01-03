@@ -67,6 +67,9 @@ add_subdirectory(magnum-extras EXCLUDE_FROM_ALL)
 find_package(MagnumExtras REQUIRED ...) # see below
 @endcode
 
+Each namespace provides further information about additional steps needed for a
+CMake subproject setup.
+
 @section cmake-extras-find-module Finding the package and its components
 
 Basic usage is:
