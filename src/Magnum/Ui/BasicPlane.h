@@ -93,9 +93,11 @@ class MAGNUM_UI_EXPORT AbstractPlane: private Containers::LinkedListItem<Abstrac
         AbstractUserInterface& ui() {
             return *Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>::list();
         }
+
+        /** @overload */ /* https://github.com/doxygen/doxygen/issues/7472 */
         const AbstractUserInterface& ui() const {
             return *Containers::LinkedListItem<AbstractPlane, AbstractUserInterface>::list();
-        } /**< @overload */
+        }
 
         /** @brief Plane rectangle */
         Range2D rect() const { return _rect; }
@@ -250,9 +252,11 @@ template<class ...Layers> class BasicPlane: public AbstractPlane {
         BasicPlane<Layers...>* previousActivePlane() {
             return static_cast<BasicPlane<Layers...>*>(AbstractPlane::previousActivePlane());
         }
+
+        /** @overload */ /* https://github.com/doxygen/doxygen/issues/7472 */
         const BasicPlane<Layers...>* previousActivePlane() const {
             return static_cast<const BasicPlane<Layers...>*>(AbstractPlane::previousActivePlane());
-        } /**< @overload */
+        }
 
         /**
          * @brief Next active plane
@@ -262,9 +266,11 @@ template<class ...Layers> class BasicPlane: public AbstractPlane {
         BasicPlane<Layers...>* nextActivePlane() {
             return static_cast<BasicPlane<Layers...>*>(AbstractPlane::nextActivePlane());
         }
+
+        /** @overload */ /* https://github.com/doxygen/doxygen/issues/7472 */
         const BasicPlane<Layers...>* nextActivePlane() const {
             return static_cast<const BasicPlane<Layers...>*>(AbstractPlane::nextActivePlane());
-        } /**< @overload */
+        }
 
         /**
          * @brief Update a plane

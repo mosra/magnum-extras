@@ -231,7 +231,9 @@ class MAGNUM_UI_EXPORT Widget {
 
         /** @brief Plane this widget is a part of */
         AbstractPlane& plane() { return _plane; }
-        const AbstractPlane& plane() const { return _plane; } /**< @overload */
+
+        /** @overload */ /* https://github.com/doxygen/doxygen/issues/7472 */
+        const AbstractPlane& plane() const { return _plane; }
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
     protected:

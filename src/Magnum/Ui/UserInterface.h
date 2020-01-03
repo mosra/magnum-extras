@@ -274,11 +274,15 @@ class MAGNUM_UI_EXPORT UserInterface: public BasicUserInterface<Implementation::
 
         /** @brief Font used for the interface */
         Text::AbstractFont& font() { return *_font; }
-        const Text::AbstractFont& font() const { return *_font; } /**< @overload */
+
+        /** @overload */ /* https://github.com/doxygen/doxygen/issues/7472 */
+        const Text::AbstractFont& font() const { return *_font; }
 
         /** @brief Glyph cache used for the interface */
         Text::GlyphCache& glyphCache() { return *_glyphCache; }
-        const Text::GlyphCache& glyphCache() const { return *_glyphCache; } /**< @overload */
+
+        /** @overload */ /* https://github.com/doxygen/doxygen/issues/7472 */
+        const Text::GlyphCache& glyphCache() const { return *_glyphCache; }
 
         /**
          * @brief Currently focused input widget

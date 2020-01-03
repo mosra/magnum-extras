@@ -85,9 +85,11 @@ class MAGNUM_UI_EXPORT Plane: public BasicPlane<Implementation::QuadLayer, Imple
         Plane* previousActivePlane() {
             return static_cast<Plane*>(BasicPlane::previousActivePlane());
         }
+
+        /** @overload */ /* https://github.com/doxygen/doxygen/issues/7472 */
         const Plane* previousActivePlane() const {
             return static_cast<const Plane*>(BasicPlane::previousActivePlane());
-        } /**< @overload */
+        }
 
         /**
          * @brief Reset plane contents
