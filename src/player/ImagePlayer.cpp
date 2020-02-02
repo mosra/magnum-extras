@@ -37,7 +37,7 @@
 #include <Magnum/Shaders/Flat.h>
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/ImageData.h>
-#include <Magnum/Trade/MeshData2D.h>
+#include <Magnum/Trade/MeshData.h>
 
 #include "Magnum/Text/Alignment.h"
 #include "Magnum/Ui/Anchor.h"

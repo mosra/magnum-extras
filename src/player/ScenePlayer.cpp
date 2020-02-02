@@ -60,7 +60,7 @@
 #include <Magnum/Trade/AnimationData.h>
 #include <Magnum/Trade/CameraData.h>
 #include <Magnum/Trade/ImageData.h>
-#include <Magnum/Trade/MeshData3D.h>
+#include <Magnum/Trade/MeshData.h>
 #include <Magnum/Trade/MeshObjectData3D.h>
 #include <Magnum/Trade/PhongMaterialData.h>
 #include <Magnum/Trade/SceneData.h>
@@ -597,18 +597,18 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     /* Load all meshes. Meshes that fail to load will be NullOpt. Remember
        which have vertex colors, so in case there's no material we can use that
        instead. */
-    Debug{} << "Loading" << importer.mesh3DCount() << "meshes";
-    _data->meshes = Containers::Array<MeshInfo>{importer.mesh3DCount()};
-    Containers::Array<bool> hasVertexColors{Containers::DirectInit, importer.mesh3DCount(), false};
-    for(UnsignedInt i = 0; i != importer.mesh3DCount(); ++i) {
-        Containers::Optional<Trade::MeshData3D> meshData = importer.mesh3D(i);
+    Debug{} << "Loading" << importer.meshCount() << "meshes";
+    _data->meshes = Containers::Array<MeshInfo>{importer.meshCount()};
+    Containers::Array<bool> hasVertexColors{Containers::DirectInit, importer.meshCount(), false};
+    for(UnsignedInt i = 0; i != importer.meshCount(); ++i) {
+        Containers::Optional<Trade::MeshData> meshData = importer.mesh(i);
         if(!meshData || meshData->primitive() != MeshPrimitive::Triangles) {
-            Warning{} << "Cannot load mesh" << i << importer.mesh3DName(i);
+            Warning{} << "Cannot load mesh" << i << importer.meshName(i);
             continue;
         }
 
         MeshTools::CompileFlags flags;
-        if(!meshData->normalArrayCount()) {
+        if(!meshData->attributeCount(Trade::MeshAttribute::Normal)) {
             if(meshData->isIndexed()) {
                 Debug{} << "The mesh doesn't have normals, generating smooth ones using information from the index buffer";
                 flags |= MeshTools::CompileFlag::GenerateSmoothNormals;
@@ -618,23 +618,17 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             }
         }
 
-        hasVertexColors[i] = meshData->hasColors();
+        hasVertexColors[i] = meshData->hasAttribute(Trade::MeshAttribute::Color);
 
         /* Save metadata, compile the mesh */
-        _data->meshes[i].vertices = meshData->positions(0).size();
+        _data->meshes[i].vertices = meshData->vertexCount();
+        _data->meshes[i].size = meshData->vertexData().size();
         if(meshData->isIndexed()) {
-            _data->meshes[i].triangles = meshData->indices().size()/3;
-            _data->meshes[i].size = meshData->indices().size();
-            if(meshData->positions(0).size() > 65535)
-                _data->meshes[i].size *= 4;
-            else if(meshData->positions(0).size() > 255)
-                _data->meshes[i].size *= 2;
+            _data->meshes[i].triangles = meshData->indexCount()/3;
+            _data->meshes[i].size += meshData->indexData().size();
         }
-        _data->meshes[i].size += meshData->positions(0).size()*(12 + 12 +
-            (meshData->hasColors() ? 16 : 0) +
-            (meshData->hasTextureCoords2D() ? 8 : 0));
         _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
-        _data->meshes[i].name = importer.mesh3DName(i);
+        _data->meshes[i].name = importer.meshName(i);
         if(_data->meshes[i].name.empty())
             _data->meshes[i].name = Utility::formatString("mesh #{}", i);
     }
@@ -752,7 +746,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         Utility::Directory::filename(filename).substr(0, 32),
         importer.object3DCount(),
         importer.cameraCount(),
-        importer.mesh3DCount(),
+        importer.meshCount(),
         importer.materialCount(),
         importer.textureCount(),
         importer.image2DCount(),
