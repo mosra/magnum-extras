@@ -47,7 +47,7 @@ want to have more control. Cross-compiling is very similar to
 -   @ref building-extras-packages-gentoo
 -   @ref building-extras-packages-brew
 
-@subsection building-extras-packages-vcpkg Vcpkg packages on Windows
+@subsection building-extras-packages-vcpkg Vcpkg package
 
 Magnum Extras are available as a [Vcpkg](https://github.com/Microsoft/vcpkg)
 package. See @ref building-packages-vcpkg "the Magnum Vcpkg documentation" for
