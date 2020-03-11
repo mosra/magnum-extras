@@ -607,16 +607,41 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             continue;
         }
 
-        MeshTools::CompileFlags flags;
+        std::string meshName = importer.meshName(i);
+        if(meshName.empty()) meshName = Utility::formatString("{}", i);
+
+        /* Disable warnings on custom attributes, as we printed them with
+           actual string names below */
+        MeshTools::CompileFlags flags = MeshTools::CompileFlag::NoWarnOnCustomAttributes;
         if(!meshData->attributeCount(Trade::MeshAttribute::Normal)) {
             if(meshData->isIndexed()) {
-                Debug{} << "The mesh doesn't have normals, generating smooth ones using information from the index buffer";
+                Debug{} << "Mesh" << meshName << "doesn't have normals, generating smooth ones using information from the index buffer";
                 flags |= MeshTools::CompileFlag::GenerateSmoothNormals;
             } else {
-                Debug{} << "The mesh doesn't have normals, generating flat ones";
+                Debug{} << "Mesh" << meshName << "doesn't have normals, generating flat ones";
                 flags |= MeshTools::CompileFlag::GenerateFlatNormals;
             }
         }
+
+        /* Print messages about ignored attributes / levels */
+        for(UnsignedInt i = 0; i != meshData->attributeCount(); ++i) {
+            const Trade::MeshAttribute name = meshData->attributeName(i);
+            if(Trade::isMeshAttributeCustom(name)) {
+                const std::string stringName = importer.meshAttributeName(name);
+                if(!stringName.empty())
+                    Warning{} << "Mesh" << meshName << "has a custom mesh attribute" << stringName << Debug::nospace << ", ignoring";
+                else
+                    Warning{} << "Mesh" << meshName << "has a custom mesh attribute" << name << Debug::nospace << ", ignoring";
+                continue;
+            }
+
+            const VertexFormat format = meshData->attributeFormat(i);
+            if(isVertexFormatImplementationSpecific(format))
+                Warning{} << "Mesh" << meshName << "has" << name << "of format" << format << Debug::nospace << ", ignoring";
+        }
+        const UnsignedInt meshLevels = importer.meshLevelCount(i);
+        if(meshLevels > 1)
+            Warning{} << "Mesh" << meshName << "has" << meshLevels - 1 << "additional mesh levels, ignoring";
 
         hasVertexColors[i] = meshData->hasAttribute(Trade::MeshAttribute::Color);
 
