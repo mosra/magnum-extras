@@ -29,6 +29,7 @@
  * @brief Class @ref Magnum::Ui::Widget
  */
 
+#include <initializer_list>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Range.h>
 
