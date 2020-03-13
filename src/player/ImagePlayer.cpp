@@ -128,7 +128,7 @@ void ImagePlayer::drawEvent() {
     /* Draw the image with non-premultiplied alpha blending as that's the
        common format */
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-    _square.draw(_shader);
+    _shader.draw(_square);
 
     /* Draw the UI, this time with premultiplied alpha blending */
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);

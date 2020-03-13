@@ -871,9 +871,8 @@ void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Came
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.normalMatrix())
         .setProjectionMatrix(camera.projectionMatrix())
-        .setObjectId(_objectId);
-
-    _mesh.draw(_shader);
+        .setObjectId(_objectId)
+        .draw(_mesh);
 }
 
 void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
@@ -888,15 +887,16 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
     if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
         _shader.setAlphaMask(_alphaMask);
 
-    _mesh.draw(_shader);
+    _shader.draw(_mesh);
 }
 
 void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     GL::Renderer::enable(GL::Renderer::Feature::PolygonOffsetFill);
     GL::Renderer::setPolygonOffset(_(-5.0f), _(-5.0f));
 
-    _shader.setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix);
-    _mesh.draw(_shader);
+    _shader
+        .setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix)
+        .draw(_mesh);
 
     GL::Renderer::setPolygonOffset(0.0f, 0.0f);
     GL::Renderer::disable(GL::Renderer::Feature::PolygonOffsetFill);

@@ -77,7 +77,7 @@ template<class VertexData> void BasicGLLayer<VertexData>::update() {
 }
 
 template<class VertexData> void BasicGLLayer<VertexData>::draw(AbstractUiShader& shader) {
-    _mesh.draw(shader);
+    shader.draw(_mesh);
 }
 
 }}

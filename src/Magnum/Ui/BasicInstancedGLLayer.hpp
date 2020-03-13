@@ -77,7 +77,7 @@ template<class InstanceData> void BasicInstancedGLLayer<InstanceData>::update() 
 }
 
 template<class InstanceData> void BasicInstancedGLLayer<InstanceData>::draw(AbstractUiShader& shader) {
-    _mesh.draw(shader);
+    shader.draw(_mesh);
 }
 
 }}
