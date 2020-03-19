@@ -826,10 +826,12 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
         if(_data->objects[i].name.empty())
             _data->objects[i].name = Utility::formatString("object #{}", i);
 
+        GL::Mesh& mesh = *_data->meshes[objectData->instance()].mesh;
+
         /* Material not available / not loaded. If the mesh has vertex colors,
            use that, otherwise apply a default material. */
         if(materialId == -1 || !materials[materialId]) {
-            new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, *_data->meshes[objectData->instance()].mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+            new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -842,15 +844,15 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 if(texture) new TexturedDrawable{*object,
                     material.alphaMode() == Trade::MaterialAlphaMode::Mask ?
                         _texturedMaskShader : _texturedShader,
-                    *_data->meshes[objectData->instance()].mesh, i, *texture, material.alphaMask(),
+                    mesh, i, *texture, material.alphaMask(),
                     material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                         _data->transparentDrawables : _data->opaqueDrawables};
                 else
-                    new ColoredDrawable{*object, _coloredShader, *_data->meshes[objectData->instance()].mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+                    new ColoredDrawable{*object, _coloredShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
             /* Vertex color / color-only material */
             } else {
-                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, *_data->meshes[objectData->instance()].mesh, i, material.diffuseColor(), _data->opaqueDrawables};
+                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, material.diffuseColor(), _data->opaqueDrawables};
             }
         }
 
