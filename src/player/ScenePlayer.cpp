@@ -49,10 +49,13 @@
 #include <Magnum/GL/Texture.h>
 #include <Magnum/Math/FunctionsBatch.h>
 #include <Magnum/MeshTools/Compile.h>
+#include <Magnum/MeshTools/Duplicate.h>
+#include <Magnum/MeshTools/GenerateIndices.h>
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
 #include <Magnum/SceneGraph/Scene.h>
+#include <Magnum/Shaders/Flat.h>
 #include <Magnum/Shaders/Phong.h>
 #include <Magnum/Shaders/MeshVisualizer.h>
 #include <Magnum/Text/Alignment.h>
@@ -264,6 +267,8 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
 
         /* Global rendering stuff */
+        Shaders::Flat3D _flatShader{Shaders::Flat3D::Flag::ObjectId};
+        Shaders::Flat3D _flatVertexColorShader{Shaders::Flat3D::Flag::ObjectId|Shaders::Flat3D::Flag::VertexColor};
         Shaders::Phong _coloredShader{Shaders::Phong::Flag::ObjectId, 3};
         Shaders::Phong _texturedShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture, 3};
         Shaders::Phong _texturedMaskShader{
@@ -306,6 +311,19 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         GL::Mesh _fullscreenTriangle{NoCreate};
         DepthReinterpretShader _reinterpretShader{NoCreate};
         #endif
+};
+
+class FlatDrawable: public SceneGraph::Drawable3D {
+    public:
+        explicit FlatDrawable(Object3D& object, Shaders::Flat3D& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color} {}
+
+    private:
+        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
+
+        Shaders::Flat3D& _shader;
+        GL::Mesh& _mesh;
+        UnsignedInt _objectId;
+        Color4 _color;
 };
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
@@ -602,7 +620,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     Containers::Array<bool> hasVertexColors{Containers::DirectInit, importer.meshCount(), false};
     for(UnsignedInt i = 0; i != importer.meshCount(); ++i) {
         Containers::Optional<Trade::MeshData> meshData = importer.mesh(i);
-        if(!meshData || meshData->primitive() != MeshPrimitive::Triangles) {
+        if(!meshData) {
             Warning{} << "Cannot load mesh" << i << importer.meshName(i);
             continue;
         }
@@ -611,10 +629,31 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         if(meshName.empty()) meshName = Utility::formatString("{}", i);
 
         /* Disable warnings on custom attributes, as we printed them with
-           actual string names below */
+           actual string names below. Generate normals for triangle meshes
+           (and don't do anything for line/point meshes, there it makes no
+           sense). */
         MeshTools::CompileFlags flags = MeshTools::CompileFlag::NoWarnOnCustomAttributes;
-        if(!meshData->attributeCount(Trade::MeshAttribute::Normal)) {
-            if(meshData->isIndexed()) {
+        if((meshData->primitive() == MeshPrimitive::Triangles ||
+            meshData->primitive() == MeshPrimitive::TriangleStrip ||
+            meshData->primitive() == MeshPrimitive::TriangleFan) &&
+           !meshData->attributeCount(Trade::MeshAttribute::Normal) &&
+            meshData->attributeFormat(Trade::MeshAttribute::Position) == VertexFormat::Vector3) {
+
+            /* If the mesh is a triangle strip/fan, convert to an indexed one
+               first. The tool additionally expects the mesh to be non-indexed,
+               so duplicate if necessary. Generating smooth normals for those
+               will most probably cause weird artifacts, so  */
+            if(meshData->primitive() == MeshPrimitive::TriangleStrip ||
+               meshData->primitive() == MeshPrimitive::TriangleFan) {
+                Debug{} << "Mesh" << meshName << "doesn't have normals, generating flat ones for a" << meshData->primitive();
+                if(meshData->isIndexed())
+                    meshData = MeshTools::duplicate(*std::move(meshData));
+                meshData = MeshTools::generateIndices(*std::move(meshData));
+                flags |= MeshTools::CompileFlag::GenerateFlatNormals;
+
+            /* Otherwise prefer smooth normals, if we have an index buffer
+               telling us neighboring faces */
+            } else if(meshData->isIndexed()) {
                 Debug{} << "Mesh" << meshName << "doesn't have normals, generating smooth ones using information from the index buffer";
                 flags |= MeshTools::CompileFlag::GenerateSmoothNormals;
             } else {
@@ -829,9 +868,15 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
         GL::Mesh& mesh = *_data->meshes[objectData->instance()].mesh;
 
         /* Material not available / not loaded. If the mesh has vertex colors,
-           use that, otherwise apply a default material. */
+           use that, otherwise apply a default material; use a flat shader for
+           lines / points */
         if(materialId == -1 || !materials[materialId]) {
-            new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+            if(mesh.primitive() == GL::MeshPrimitive::Triangles ||
+               mesh.primitive() == GL::MeshPrimitive::TriangleStrip ||
+               mesh.primitive() == GL::MeshPrimitive::TriangleFan)
+                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+            else
+                new FlatDrawable{*object, hasVertexColors[objectData->instance()] ? _flatVertexColorShader : _flatShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -865,6 +910,14 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
     /* Recursively add children */
     for(std::size_t id: objectData->children())
         addObject(importer, materials, hasVertexColors, *object, id);
+}
+
+void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
+    _shader
+        .setColor(_color)
+        .setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix)
+        .setObjectId(_objectId)
+        .draw(_mesh);
 }
 
 void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
