@@ -451,6 +451,9 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
 
 void ScenePlayer::initializeUi() {
     _baseUiPlane.emplace(*_ui);
+
+    if(_shadeless) _baseUiPlane->shadeless.setStyle(Ui::Style::Success);
+
     Interconnect::connect(_baseUiPlane->shadeless, &Ui::Button::tapped, *this, &ScenePlayer::toggleShadeless);
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &ScenePlayer::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &ScenePlayer::pause);
