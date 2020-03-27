@@ -42,6 +42,7 @@ namespace Magnum {
     well
 -   @ref magnum-player "magnum-player" now supports texture transformation in
     materials
+-   Tangent space visualization in @ref magnum-player "magnum-player"
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 

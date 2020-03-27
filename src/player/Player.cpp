@@ -65,7 +65,7 @@ namespace Magnum { namespace Player {
 namespace {
 
 constexpr const Float WidgetHeight{36.0f};
-constexpr const Vector2 ButtonSize{96.0f, WidgetHeight};
+constexpr const Vector2 ButtonSize{112.0f, WidgetHeight};
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 LabelSize{72.0f, LabelHeight};

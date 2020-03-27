@@ -138,7 +138,7 @@ DepthReinterpretShader::DepthReinterpretShader() {
 
 constexpr const Float WidgetHeight{36.0f};
 constexpr const Float PaddingY{10.0f}; /* same as in mcssDarkStyleConfiguration() */
-constexpr const Vector2 ButtonSize{96.0f, WidgetHeight};
+constexpr const Vector2 ButtonSize{112.0f, WidgetHeight};
 constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 ControlSize{56.0f, WidgetHeight};
 constexpr const Vector2 HalfControlSize{28.0f, WidgetHeight};
@@ -153,6 +153,9 @@ struct BaseUiPlane: Ui::Plane {
                 *2.0f /* on Emscripten there's the fullscreen button as well */
                 #endif
             , ButtonSize)}, "Shadeless", Ui::Style::Default},
+        #ifndef MAGNUM_TARGET_GLES
+        tangentSpace{*this, {Ui::Snap::Bottom, shadeless, ButtonSize}, "Tangent space"},
+        #endif
         backward{*this, {Ui::Snap::Bottom|Ui::Snap::Left, HalfControlSize}, "«"},
         play{*this, {Ui::Snap::Right, backward, ControlSize}, "Play", Ui::Style::Success},
         pause{*this, {Ui::Snap::Right, backward, ControlSize}, "Pause", Ui::Style::Warning},
@@ -173,8 +176,13 @@ struct BaseUiPlane: Ui::Plane {
             animationProgress
         });
 
-        /* Hide object info, it gets shown only on selection */
-        objectInfo.hide();
+        /* Hide everything that gets shown only on selection */
+        Ui::Widget::hide({
+            #ifndef MAGNUM_TARGET_GLES
+            tangentSpace,
+            #endif
+            objectInfo
+        });
 
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         /* Hide everything on Emscripten as there is a welcome screen shown
@@ -185,8 +193,11 @@ struct BaseUiPlane: Ui::Plane {
         #endif
     }
 
+    Ui::Button shadeless;
+    #ifndef MAGNUM_TARGET_GLES
+    Ui::Button tangentSpace;
+    #endif
     Ui::Button
-        shadeless,
         backward,
         play,
         pause,
@@ -203,6 +214,7 @@ struct MeshInfo {
     UnsignedInt triangles;
     std::size_t size;
     std::string name;
+    bool hasSeparateBitangents;
 };
 
 struct ObjectInfo {
@@ -211,6 +223,8 @@ struct ObjectInfo {
     UnsignedInt meshId{0xffffffffu};
 };
 
+class MeshVisualizerDrawable;
+
 struct Data {
     Containers::Array<MeshInfo> meshes;
     Containers::Array<Containers::Optional<GL::Texture2D>> textures;
@@ -218,11 +232,11 @@ struct Data {
     Scene3D scene;
     Object3D* cameraObject{};
     SceneGraph::Camera3D* camera;
-    SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables;
+    SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables, selectedObjectDrawables;
     Vector3 previousPosition;
 
     Containers::Array<ObjectInfo> objects;
-    SceneGraph::Drawable3D* selectedObject{};
+    MeshVisualizerDrawable* selectedObject{};
 
     Containers::Array<char> animationData;
     Animation::Player<std::chrono::nanoseconds, Float> player;
@@ -254,6 +268,9 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         void initializeUi();
 
         void toggleShadeless();
+        #ifndef MAGNUM_TARGET_GLES
+        void toggleTangentSpace();
+        #endif
         void play();
         void pause();
         void stop();
@@ -279,12 +296,27 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
             Shaders::MeshVisualizer3D::Flag::Wireframe
             #endif
         };
+        #ifndef MAGNUM_TARGET_GLES
+        Shaders::MeshVisualizer3D _tangentSpaceMeshVisualizerShader{
+            Shaders::MeshVisualizer3D::Flag::Wireframe|
+            Shaders::MeshVisualizer3D::Flag::NormalDirection|
+            Shaders::MeshVisualizer3D::Flag::TangentDirection|
+            Shaders::MeshVisualizer3D::Flag::BitangentFromTangentDirection};
+        Shaders::MeshVisualizer3D _tangentSpaceSeparateBitangentMeshVisualizerShader{
+            Shaders::MeshVisualizer3D::Flag::Wireframe|
+            Shaders::MeshVisualizer3D::Flag::NormalDirection|
+            Shaders::MeshVisualizer3D::Flag::TangentDirection|
+            Shaders::MeshVisualizer3D::Flag::BitangentDirection};
+        #endif
         Float _brightness{0.8f};
 
         /* Data loading */
         Containers::Optional<Data> _data;
 
         bool _shadeless;
+        #ifndef MAGNUM_TARGET_GLES
+        bool _tangentSpace = false;
+        #endif
 
         /* UI */
         Containers::Optional<Ui::UserInterface> _ui;
@@ -358,10 +390,14 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
         explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh) {}
 
+        Shaders::MeshVisualizer3D& shader() { return _shader; }
+
+        void setShader(Shaders::MeshVisualizer3D& shader) { _shader = shader; }
+
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
-        Shaders::MeshVisualizer3D& _shader;
+        Containers::Reference<Shaders::MeshVisualizer3D> _shader;
         GL::Mesh& _mesh;
 };
 
@@ -384,10 +420,20 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
     }
 
     auto setup = [](ScenePlayer& self) {
-        self._meshVisualizerShader
-            .setWireframeColor(_(0xdcdcdcff_rgbaf))
-            .setColor(_(0x2f83ccff_rgbaf)*_(0.5f))
-            .setViewportSize(Vector2{self.application().framebufferSize()});
+        for(auto* shader: {&self._meshVisualizerShader,
+            #ifndef MAGNUM_TARGET_GLES
+            &self._tangentSpaceMeshVisualizerShader
+            #endif
+        })
+            (*shader)
+                .setWireframeColor(_(0xdcdcdcff_rgbaf))
+                .setColor(_(0x2f83ccff_rgbaf)*_(0.5f))
+                .setViewportSize(Vector2{self.application().framebufferSize()});
+        #ifndef MAGNUM_TARGET_GLES
+        self._tangentSpaceMeshVisualizerShader
+            .setLineLength(0.3f)
+            .setLineWidth(2.0f);
+        #endif
     };
     #ifdef CORRADE_IS_DEBUG_BUILD
     Utility::Tweakable::instance().scope(setup, *this);
@@ -453,8 +499,14 @@ void ScenePlayer::initializeUi() {
     _baseUiPlane.emplace(*_ui);
 
     if(_shadeless) _baseUiPlane->shadeless.setStyle(Ui::Style::Success);
+    #ifndef MAGNUM_TARGET_GLES
+    if(_tangentSpace) _baseUiPlane->tangentSpace.setStyle(Ui::Style::Success);
+    #endif
 
     Interconnect::connect(_baseUiPlane->shadeless, &Ui::Button::tapped, *this, &ScenePlayer::toggleShadeless);
+    #ifndef MAGNUM_TARGET_GLES
+    Interconnect::connect(_baseUiPlane->tangentSpace, &Ui::Button::tapped, *this, &ScenePlayer::toggleTangentSpace);
+    #endif
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &ScenePlayer::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &ScenePlayer::pause);
     Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &ScenePlayer::stop);
@@ -480,10 +532,14 @@ void ScenePlayer::setControlsVisible(bool visible) {
                     _baseUiPlane->animationProgress});
             }
 
-            Ui::Widget::show({
-                _baseUiPlane->shadeless,
-                _data->selectedObject ?
-                    _baseUiPlane->objectInfo : _baseUiPlane->modelInfo});
+            _baseUiPlane->shadeless.show();
+
+            if(_data->selectedObject) Ui::Widget::show({
+                #ifndef MAGNUM_TARGET_GLES
+                _baseUiPlane->tangentSpace,
+                #endif
+                _baseUiPlane->objectInfo});
+            else _baseUiPlane->modelInfo.show();
         }
 
     } else {
@@ -495,6 +551,9 @@ void ScenePlayer::setControlsVisible(bool visible) {
             _baseUiPlane->stop,
             _baseUiPlane->forward,
             _baseUiPlane->modelInfo,
+            #ifndef MAGNUM_TARGET_GLES
+            _baseUiPlane->tangentSpace,
+            #endif
             _baseUiPlane->objectInfo,
             _baseUiPlane->animationProgress});
     }
@@ -517,6 +576,20 @@ void ScenePlayer::toggleShadeless() {
         _baseUiPlane->shadeless.setStyle(Ui::Style::Default);
     }
 }
+
+#ifndef MAGNUM_TARGET_GLES
+void ScenePlayer::toggleTangentSpace() {
+    CORRADE_INTERNAL_ASSERT(_data->selectedObject);
+
+    if(_tangentSpace ^= true) {
+        _data->selectedObject->setShader(_tangentSpaceMeshVisualizerShader);
+        _baseUiPlane->tangentSpace.setStyle(Ui::Style::Success);
+    } else {
+        _data->selectedObject->setShader(_meshVisualizerShader);
+        _baseUiPlane->tangentSpace.setStyle(Ui::Style::Default);
+    }
+}
+#endif
 
 void ScenePlayer::play() {
     if(!_data) return;
@@ -695,6 +768,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             _data->meshes[i].triangles = meshData->indexCount()/3;
             _data->meshes[i].size += meshData->indexData().size();
         }
+        /* Needed to decide how to visualize tangent space */
+        _data->meshes[i].hasSeparateBitangents = meshData->hasAttribute(Trade::MeshAttribute::Bitangent);
         _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
         _data->meshes[i].name = importer.meshName(i);
         if(_data->meshes[i].name.empty())
@@ -954,10 +1029,16 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
     GL::Renderer::enable(GL::Renderer::Feature::PolygonOffsetFill);
     GL::Renderer::setPolygonOffset(_(-5.0f), _(-5.0f));
 
-    _shader
+    (*_shader)
         .setProjectionMatrix(camera.projectionMatrix())
-        .setTransformationMatrix(transformationMatrix)
-        .draw(_mesh);
+        .setTransformationMatrix(transformationMatrix);
+
+    #ifndef MAGNUM_TARGET_GLES
+    if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::NormalDirection)
+        _shader->setNormalMatrix(transformationMatrix.normalMatrix());
+    #endif
+
+    _shader->draw(_mesh);
 
     GL::Renderer::setPolygonOffset(0.0f, 0.0f);
     GL::Renderer::disable(GL::Renderer::Feature::PolygonOffsetFill);
@@ -998,6 +1079,19 @@ void ScenePlayer::drawEvent() {
             GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
             GL::Renderer::disable(GL::Renderer::Feature::Blending);
             GL::Renderer::setDepthMask(true);
+        }
+
+        /* Draw selected object. This needs a depth buffer test again in order
+           to correctly order the tangent space visualizers. */
+        if(!_data->selectedObjectDrawables.isEmpty()) {;
+            GL::Renderer::enable(GL::Renderer::Feature::Blending);
+            /* Ugh non-premultiplied alpha */
+            GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+
+            _data->camera->draw(_data->selectedObjectDrawables);
+
+            GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
+            GL::Renderer::disable(GL::Renderer::Feature::Blending);
         }
     }
 
@@ -1041,6 +1135,9 @@ void ScenePlayer::viewportEvent(ViewportEvent& event) {
     }
 
     _meshVisualizerShader.setViewportSize(Vector2{event.framebufferSize()});
+    #ifndef MAGNUM_TARGET_GLES
+    _tangentSpaceMeshVisualizerShader.setViewportSize(Vector2{event.framebufferSize()});
+    #endif
 
     /* Recreate object ID reading renderbuffers that depend on viewport size */
     _selectionDepth = GL::Renderbuffer{};
@@ -1261,11 +1358,25 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             MeshInfo& meshInfo = _data->meshes[_data->objects[selectedId].meshId];
 
             /* Create a visualizer for the selected object */
-            _data->selectedObject = new MeshVisualizerDrawable{*objectInfo.object, _meshVisualizerShader, *meshInfo.mesh, _data->transparentDrawables};
+            _data->selectedObject = new MeshVisualizerDrawable{*objectInfo.object,
+                #ifndef MAGNUM_TARGET_GLES
+                _tangentSpace ? (meshInfo.hasSeparateBitangents ?
+                    _tangentSpaceSeparateBitangentMeshVisualizerShader :
+                    _tangentSpaceMeshVisualizerShader
+                    ) : _meshVisualizerShader,
+                #else
+                _meshVisualizerShader,
+                #endif
+                *meshInfo.mesh, _data->selectedObjectDrawables};
 
             /* Show object & mesh info */
             _baseUiPlane->modelInfo.hide();
-            _baseUiPlane->objectInfo.show();
+            Ui::Widget::show({
+                _baseUiPlane->objectInfo,
+                #ifndef MAGNUM_TARGET_GLES
+                _baseUiPlane->tangentSpace
+                #endif
+            });
             if(meshInfo.triangles) {
                 _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
                     "{}: {}, indexed, {} verts, {} tris, {:.1f} kB",
