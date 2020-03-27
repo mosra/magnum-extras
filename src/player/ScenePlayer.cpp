@@ -270,9 +270,9 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         Shaders::Flat3D _flatShader{Shaders::Flat3D::Flag::ObjectId};
         Shaders::Flat3D _flatVertexColorShader{Shaders::Flat3D::Flag::ObjectId|Shaders::Flat3D::Flag::VertexColor};
         Shaders::Phong _coloredShader{Shaders::Phong::Flag::ObjectId, 3};
-        Shaders::Phong _texturedShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture, 3};
+        Shaders::Phong _texturedShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::TextureTransformation, 3};
         Shaders::Phong _texturedMaskShader{
-        Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
+        Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask|Shaders::Phong::Flag::TextureTransformation, 3};
         Shaders::Phong _vertexColorShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::VertexColor, 3};
         Shaders::MeshVisualizer3D _meshVisualizerShader{
             #ifndef MAGNUM_TARGET_WEBGL
@@ -341,7 +341,7 @@ class ColoredDrawable: public SceneGraph::Drawable3D {
 
 class TexturedDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, GL::Texture2D& texture, Float alphaMask, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _texture(texture), _alphaMask{alphaMask} {}
+        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, GL::Texture2D& texture, Float alphaMask, Matrix3 textureMatrix, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _texture(texture), _alphaMask{alphaMask}, _textureMatrix{textureMatrix} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -351,6 +351,7 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
         UnsignedInt _objectId;
         GL::Texture2D& _texture;
         Float _alphaMask;
+        Matrix3 _textureMatrix;
 };
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
@@ -889,7 +890,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 if(texture) new TexturedDrawable{*object,
                     material.alphaMode() == Trade::MaterialAlphaMode::Mask ?
                         _texturedMaskShader : _texturedShader,
-                    mesh, i, *texture, material.alphaMask(),
+                    mesh, i, *texture, material.alphaMask(), material.textureMatrix(),
                     material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                         _data->transparentDrawables : _data->opaqueDrawables};
                 else
@@ -935,6 +936,7 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.normalMatrix())
         .setProjectionMatrix(camera.projectionMatrix())
+        .setTextureMatrix(_textureMatrix)
         .setObjectId(_objectId)
         .bindAmbientTexture(_texture)
         .bindDiffuseTexture(_texture);

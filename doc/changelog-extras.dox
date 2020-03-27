@@ -40,6 +40,8 @@ namespace Magnum {
 -   @ref magnum-player "magnum-player" can now visualize also point and line
     meshes, triangle strips and fans can now have their normals generated as
     well
+-   @ref magnum-player "magnum-player" now supports texture transformation in
+    materials
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
