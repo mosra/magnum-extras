@@ -108,7 +108,7 @@ ImagePlayer::ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInt
     initializeUi();
 
     /* Prepare the square mesh and initial projection equal to framebuffer size */
-    _square = MeshTools::compile(Primitives::squareSolid(Primitives::SquareTextureCoords::Generate));
+    _square = MeshTools::compile(Primitives::squareSolid(Primitives::SquareFlag::TextureCoordinates));
     _projection = Matrix3::projection(Vector2{application.framebufferSize()});
 }
 

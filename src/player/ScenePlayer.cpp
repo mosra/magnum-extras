@@ -269,9 +269,9 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         Shaders::Phong _texturedMaskShader{
         Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask, 3};
         Shaders::Phong _vertexColorShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::VertexColor, 3};
-        Shaders::MeshVisualizer _meshVisualizerShader{
+        Shaders::MeshVisualizer3D _meshVisualizerShader{
             #ifndef MAGNUM_TARGET_WEBGL
-            Shaders::MeshVisualizer::Flag::Wireframe
+            Shaders::MeshVisualizer3D::Flag::Wireframe
             #endif
         };
         Float _brightness{0.8f};
@@ -337,12 +337,12 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer& shader, GL::Mesh& mesh, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh) {}
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh) {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
-        Shaders::MeshVisualizer& _shader;
+        Shaders::MeshVisualizer3D& _shader;
         GL::Mesh& _mesh;
 };
 
@@ -895,7 +895,8 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
     GL::Renderer::setPolygonOffset(_(-5.0f), _(-5.0f));
 
     _shader
-        .setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix)
+        .setProjectionMatrix(camera.projectionMatrix())
+        .setTransformationMatrix(transformationMatrix)
         .draw(_mesh);
 
     GL::Renderer::setPolygonOffset(0.0f, 0.0f);
