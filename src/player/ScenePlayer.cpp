@@ -210,8 +210,9 @@ struct BaseUiPlane: Ui::Plane {
 
 struct MeshInfo {
     Containers::Optional<GL::Mesh> mesh;
+    UnsignedInt attributes;
     UnsignedInt vertices;
-    UnsignedInt triangles;
+    UnsignedInt primitives;
     std::size_t size;
     std::string name;
     bool hasSeparateBitangents;
@@ -762,12 +763,13 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         hasVertexColors[i] = meshData->hasAttribute(Trade::MeshAttribute::Color);
 
         /* Save metadata, compile the mesh */
+        _data->meshes[i].attributes = meshData->attributeCount();
         _data->meshes[i].vertices = meshData->vertexCount();
         _data->meshes[i].size = meshData->vertexData().size();
         if(meshData->isIndexed()) {
-            _data->meshes[i].triangles = meshData->indexCount()/3;
+            _data->meshes[i].primitives = MeshTools::primitiveCount(meshData->primitive(), meshData->indexCount());
             _data->meshes[i].size += meshData->indexData().size();
-        }
+        } else _data->meshes[i].primitives = MeshTools::primitiveCount(meshData->primitive(), meshData->vertexCount());
         /* Needed to decide how to visualize tangent space */
         _data->meshes[i].hasSeparateBitangents = meshData->hasAttribute(Trade::MeshAttribute::Bitangent);
         _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
@@ -1377,22 +1379,14 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                 _baseUiPlane->tangentSpace
                 #endif
             });
-            if(meshInfo.triangles) {
-                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
-                    "{}: {}, indexed, {} verts, {} tris, {:.1f} kB",
-                    objectInfo.name,
-                    meshInfo.name,
-                    meshInfo.vertices,
-                    meshInfo.triangles,
-                    meshInfo.size/1024.0f));
-            } else {
-                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
-                    "{}: {}, non-indexed, {} verts, {:.1f} kB",
-                    objectInfo.name,
-                    meshInfo.name,
-                    meshInfo.vertices,
-                    meshInfo.size/1024.0f));
-            }
+            _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                "{}: {}, indexed, {} attribs, {} verts, {} prims, {:.1f} kB",
+                objectInfo.name,
+                meshInfo.name,
+                meshInfo.attributes,
+                meshInfo.vertices,
+                meshInfo.primitives,
+                meshInfo.size/1024.0f));
         }
 
         event.setAccepted();
