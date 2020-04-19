@@ -374,7 +374,7 @@ class ColoredDrawable: public SceneGraph::Drawable3D {
 
 class TexturedDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, GL::Texture2D& texture, Float alphaMask, Matrix3 textureMatrix, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _texture(texture), _alphaMask{alphaMask}, _textureMatrix{textureMatrix} {}
+        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D& texture, Float alphaMask, Matrix3 textureMatrix, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _texture(texture), _alphaMask{alphaMask}, _textureMatrix{textureMatrix} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -382,6 +382,7 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
         Shaders::Phong& _shader;
         GL::Mesh& _mesh;
         UnsignedInt _objectId;
+        Color4 _color;
         GL::Texture2D& _texture;
         Float _alphaMask;
         Matrix3 _textureMatrix;
@@ -970,7 +971,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 if(texture) new TexturedDrawable{*object,
                     material.alphaMode() == Trade::MaterialAlphaMode::Mask ?
                         _texturedMaskShader : _texturedShader,
-                    mesh, i, *texture, material.alphaMask(), material.textureMatrix(),
+                    mesh, i, material.diffuseColor(), *texture, material.alphaMask(), material.textureMatrix(),
                     material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                         _data->transparentDrawables : _data->opaqueDrawables};
                 else
@@ -1018,6 +1019,8 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
         .setProjectionMatrix(camera.projectionMatrix())
         .setTextureMatrix(_textureMatrix)
         .setObjectId(_objectId)
+        .setAmbientColor(_color*0.06f)
+        .setDiffuseColor(_color)
         .bindAmbientTexture(_texture)
         .bindDiffuseTexture(_texture);
 
