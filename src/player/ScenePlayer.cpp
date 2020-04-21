@@ -314,7 +314,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         /* Data loading */
         Containers::Optional<Data> _data;
 
-        bool _shadeless;
+        bool _shadeless = false;
         #ifndef MAGNUM_TARGET_GLES
         bool _tangentSpace = false;
         #endif
@@ -361,7 +361,7 @@ class FlatDrawable: public SceneGraph::Drawable3D {
 
 class ColoredDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit ColoredDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color} {}
+        explicit ColoredDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _shadeless{shadeless} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -370,11 +370,12 @@ class ColoredDrawable: public SceneGraph::Drawable3D {
         GL::Mesh& _mesh;
         UnsignedInt _objectId;
         Color4 _color;
+        const bool& _shadeless;
 };
 
 class TexturedDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D& texture, Float alphaMask, Matrix3 textureMatrix, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _texture(texture), _alphaMask{alphaMask}, _textureMatrix{textureMatrix} {}
+        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D& texture, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _texture(texture), _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -386,6 +387,7 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
         GL::Texture2D& _texture;
         Float _alphaMask;
         Matrix3 _textureMatrix;
+        const bool& _shadeless;
 };
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
@@ -449,10 +451,6 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
         not?) */
     _ui.emplace(Vector2(application.windowSize())/application.dpiScaling(), application.windowSize(), application.framebufferSize(), uiToStealFontFrom.font(), uiToStealFontFrom.glyphCache(), Ui::mcssDarkStyleConfiguration());
     initializeUi();
-
-    /* Default to shaded */
-    _shadeless = true;
-    toggleShadeless();
 
     /* Set up offscreen rendering for object ID retrieval */
     _selectionDepth.setStorage(GL::RenderbufferFormat::DepthComponent24, application.framebufferSize());
@@ -562,21 +560,8 @@ void ScenePlayer::setControlsVisible(bool visible) {
 }
 
 void ScenePlayer::toggleShadeless() {
-    /* For shadeless, render the ambient texture at full and diffuse not at
-       all so the lighting doesn't affect it */
-    if((_shadeless ^= true)) {
-        _texturedShader.setAmbientColor(0xffffff00_rgbaf);
-        _texturedMaskShader.setAmbientColor(0xffffff00_rgbaf);
-        _texturedShader.setDiffuseColor(0x00000000_rgbaf);
-        _texturedMaskShader.setDiffuseColor(0x00000000_rgbaf);
-        _baseUiPlane->shadeless.setStyle(Ui::Style::Success);
-    } else {
-        _texturedShader.setAmbientColor(0x11111100_rgbaf);
-        _texturedMaskShader.setAmbientColor(0x11111100_rgbaf);
-        _texturedShader.setDiffuseColor(0xffffffff_rgbaf);
-        _texturedMaskShader.setDiffuseColor(0xffffffff_rgbaf);
-        _baseUiPlane->shadeless.setStyle(Ui::Style::Default);
-    }
+    /* _shadeless is used by the drawables to set up the shaders differently */
+    _baseUiPlane->shadeless.setStyle((_shadeless ^= true) ? Ui::Style::Success : Ui::Style::Default);
 }
 
 #ifndef MAGNUM_TARGET_GLES
@@ -804,7 +789,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->objects[0].object = &_data->scene;
         _data->objects[0].meshId = 0;
         _data->objects[0].name = "object #0";
-        new ColoredDrawable{_data->scene, hasVertexColors[0] ? _vertexColorShader : _coloredShader, *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _data->opaqueDrawables};
+        new ColoredDrawable{_data->scene, hasVertexColors[0] ? _vertexColorShader : _coloredShader, *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
     }
 
     /* Create a camera object in case it wasn't present in the scene already */
@@ -956,7 +941,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
             if(mesh.primitive() == GL::MeshPrimitive::Triangles ||
                mesh.primitive() == GL::MeshPrimitive::TriangleStrip ||
                mesh.primitive() == GL::MeshPrimitive::TriangleFan)
-                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
             else
                 new FlatDrawable{*object, hasVertexColors[objectData->instance()] ? _flatVertexColorShader : _flatShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
@@ -971,15 +956,15 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 if(texture) new TexturedDrawable{*object,
                     material.alphaMode() == Trade::MaterialAlphaMode::Mask ?
                         _texturedMaskShader : _texturedShader,
-                    mesh, i, material.diffuseColor(), *texture, material.alphaMask(), material.textureMatrix(),
+                    mesh, i, material.diffuseColor(), *texture, material.alphaMask(), material.textureMatrix(), _shadeless,
                     material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                         _data->transparentDrawables : _data->opaqueDrawables};
                 else
-                    new ColoredDrawable{*object, _coloredShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+                    new ColoredDrawable{*object, _coloredShader, mesh, i, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
 
             /* Vertex color / color-only material */
             } else {
-                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, material.diffuseColor(), _data->opaqueDrawables};
+                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, material.diffuseColor(), _shadeless, _data->opaqueDrawables};
             }
         }
 
@@ -1004,12 +989,19 @@ void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3
 
 void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     _shader
-        .setDiffuseColor(_color)
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.normalMatrix())
         .setProjectionMatrix(camera.projectionMatrix())
-        .setObjectId(_objectId)
-        .draw(_mesh);
+        .setObjectId(_objectId);
+
+    if(_shadeless) _shader
+        .setAmbientColor(_color)
+        .setDiffuseColor(0x00000000_rgbaf);
+    else _shader
+        .setAmbientColor(_color*0.06f)
+        .setDiffuseColor(_color);
+
+    _shader.draw(_mesh);
 }
 
 void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
@@ -1019,10 +1011,15 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
         .setProjectionMatrix(camera.projectionMatrix())
         .setTextureMatrix(_textureMatrix)
         .setObjectId(_objectId)
-        .setAmbientColor(_color*0.06f)
-        .setDiffuseColor(_color)
         .bindAmbientTexture(_texture)
         .bindDiffuseTexture(_texture);
+
+    if(_shadeless) _shader
+        .setAmbientColor(_color)
+        .setDiffuseColor(0x00000000_rgbaf);
+    else _shader
+        .setAmbientColor(_color*0.06f)
+        .setDiffuseColor(_color);
 
     if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
         _shader.setAlphaMask(_alphaMask);
