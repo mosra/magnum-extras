@@ -96,10 +96,7 @@ UnsignedByte backgroundColorIndex(const Type type, const Style style, const Stat
         #undef _c
     }
 
-    /* LCOV_EXCL_START */
-    CORRADE_ASSERT(false, "Ui::StyleConfiguration: unsupported background color index" << type << style << state, 0);
-    CORRADE_ASSERT_UNREACHABLE();
-    /* LCOV_EXCL_STOP */
+    CORRADE_ASSERT_UNREACHABLE("Ui::StyleConfiguration: unsupported background color index" << type << style << state, 0);
 }
 
 UnsignedByte foregroundColorIndex(const Type type, const Style style, const State state) {
@@ -256,10 +253,7 @@ UnsignedByte foregroundColorIndex(const Type type, const Style style, const Stat
         #undef _c
     }
 
-    /* LCOV_EXCL_START */
-    CORRADE_ASSERT(false, "Ui::StyleConfiguration: unsupported foreground color index" << type << style << state, 0);
-    CORRADE_ASSERT_UNREACHABLE();
-    /* LCOV_EXCL_STOP */
+    CORRADE_ASSERT_UNREACHABLE("Ui::StyleConfiguration: unsupported foreground color index" << type << style << state, {});
 }
 
 UnsignedByte textColorIndex(const Type type, const Style style, const State state) {
@@ -464,10 +458,7 @@ UnsignedByte textColorIndex(const Type type, const Style style, const State stat
         #undef _c
     }
 
-    /* LCOV_EXCL_START */
-    CORRADE_ASSERT(false, "Ui::StyleConfiguration: unsupported text color index" << type << style << state, 0);
-    CORRADE_ASSERT_UNREACHABLE();
-    /* LCOV_EXCL_STOP */
+    CORRADE_ASSERT_UNREACHABLE("Ui::StyleConfiguration: unsupported text color index" << type << style << state, {});
 }
 
 namespace {

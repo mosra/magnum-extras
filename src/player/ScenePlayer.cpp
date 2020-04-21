@@ -863,7 +863,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
                     _data->player.addWithCallback(animation->track<Vector3>(j),
                         callback, animatedObject);
                 }
-            } else CORRADE_ASSERT_UNREACHABLE();
+            } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
         _data->animationData = animation->release();
 
@@ -1250,7 +1250,7 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
             rotation = Quaternion::rotation(90.0_degf - 90.0_degf*multiplier, Vector3::yAxis());
         else if(event.key() == KeyEvent::Key::NumThree) /* Right/left */
             rotation = Quaternion::rotation(90.0_degf*multiplier, Vector3::yAxis());
-        else CORRADE_ASSERT_UNREACHABLE();
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
         (*_data->cameraObject)
             .setRotation(rotation)
