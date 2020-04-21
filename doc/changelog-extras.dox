@@ -44,6 +44,11 @@ namespace Magnum {
     materials
 -   Tangent space visualization in @ref magnum-player "magnum-player"
 
+@subsection changelog-extras-latest-buildsystem Build system
+
+-   The library again compiles and tests cleanly with @ref CORRADE_NO_ASSERT
+    enabled, and this setup is verified on the CI to avoid further regressions
+
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
 -   Removed `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum
