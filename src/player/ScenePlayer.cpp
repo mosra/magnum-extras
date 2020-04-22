@@ -249,6 +249,12 @@ struct Data {
     std::string modelInfo, objectInfo;
 };
 
+template<class T> struct EnumSetHash: std::hash<typename std::underlying_type<typename T::Type>::type> {
+    std::size_t operator()(const T& value) const {
+        return std::hash<typename std::underlying_type<typename T::Type>::type>::operator()(Containers::enumCastUnderlyingType(value));
+    }
+};
+
 class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
     public:
         explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom);
@@ -284,40 +290,23 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
 
+        Shaders::Flat3D& flatShader(Shaders::Flat3D::Flags flags);
+        Shaders::Phong& phongShader(Shaders::Phong::Flags flags);
+        Shaders::MeshVisualizer3D& meshVisualizerShader(Shaders::MeshVisualizer3D::Flags flags);
+
         /* Global rendering stuff */
-        Shaders::Flat3D _flatShader{Shaders::Flat3D::Flag::ObjectId};
-        Shaders::Flat3D _flatVertexColorShader{Shaders::Flat3D::Flag::ObjectId|Shaders::Flat3D::Flag::VertexColor};
-        Shaders::Phong _coloredShader{Shaders::Phong::Flag::ObjectId, 3};
-        Shaders::Phong _texturedShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::TextureTransformation, 3};
-        Shaders::Phong _texturedMaskShader{
-        Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::AmbientTexture|Shaders::Phong::Flag::DiffuseTexture|Shaders::Phong::Flag::AlphaMask|Shaders::Phong::Flag::TextureTransformation, 3};
-        Shaders::Phong _vertexColorShader{Shaders::Phong::Flag::ObjectId|Shaders::Phong::Flag::VertexColor, 3};
-        Shaders::MeshVisualizer3D _meshVisualizerShader{
-            #ifndef MAGNUM_TARGET_WEBGL
-            Shaders::MeshVisualizer3D::Flag::Wireframe
-            #endif
-        };
-        #ifndef MAGNUM_TARGET_GLES
-        Shaders::MeshVisualizer3D _tangentSpaceMeshVisualizerShader{
-            Shaders::MeshVisualizer3D::Flag::Wireframe|
-            Shaders::MeshVisualizer3D::Flag::NormalDirection|
-            Shaders::MeshVisualizer3D::Flag::TangentDirection|
-            Shaders::MeshVisualizer3D::Flag::BitangentFromTangentDirection};
-        Shaders::MeshVisualizer3D _tangentSpaceSeparateBitangentMeshVisualizerShader{
-            Shaders::MeshVisualizer3D::Flag::Wireframe|
-            Shaders::MeshVisualizer3D::Flag::NormalDirection|
-            Shaders::MeshVisualizer3D::Flag::TangentDirection|
-            Shaders::MeshVisualizer3D::Flag::BitangentDirection};
-        #endif
+        std::unordered_map<Shaders::Flat3D::Flags, Shaders::Flat3D, EnumSetHash<Shaders::Flat3D::Flags>> _flatShaders;
+        std::unordered_map<Shaders::Phong::Flags, Shaders::Phong, EnumSetHash<Shaders::Phong::Flags>> _phongShaders;
+        std::unordered_map<Shaders::MeshVisualizer3D::Flags, Shaders::MeshVisualizer3D, EnumSetHash<Shaders::MeshVisualizer3D::Flags>> _meshVisualizerShaders;
+
         Float _brightness{0.8f};
-
-        /* Data loading */
-        Containers::Optional<Data> _data;
-
         bool _shadeless = false;
         #ifndef MAGNUM_TARGET_GLES
         bool _tangentSpace = false;
         #endif
+
+        /* Data loading */
+        Containers::Optional<Data> _data;
 
         /* UI */
         Containers::Optional<Ui::UserInterface> _ui;
@@ -359,9 +348,11 @@ class FlatDrawable: public SceneGraph::Drawable3D {
         Color4 _color;
 };
 
-class ColoredDrawable: public SceneGraph::Drawable3D {
+class PhongDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit ColoredDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _shadeless{shadeless} {}
+        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
+
+        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{nullptr}, _alphaMask{0.5f}, _shadeless{shadeless} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -370,21 +361,7 @@ class ColoredDrawable: public SceneGraph::Drawable3D {
         GL::Mesh& _mesh;
         UnsignedInt _objectId;
         Color4 _color;
-        const bool& _shadeless;
-};
-
-class TexturedDrawable: public SceneGraph::Drawable3D {
-    public:
-        explicit TexturedDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D& texture, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _texture(texture), _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
-
-    private:
-        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
-
-        Shaders::Phong& _shader;
-        GL::Mesh& _mesh;
-        UnsignedInt _objectId;
-        Color4 _color;
-        GL::Texture2D& _texture;
+        GL::Texture2D* _diffuseTexture;
         Float _alphaMask;
         Matrix3 _textureMatrix;
         const bool& _shadeless;
@@ -392,59 +369,23 @@ class TexturedDrawable: public SceneGraph::Drawable3D {
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh) {}
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, std::size_t meshId, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId} {}
 
         Shaders::MeshVisualizer3D& shader() { return _shader; }
 
         void setShader(Shaders::MeshVisualizer3D& shader) { _shader = shader; }
+
+        std::size_t meshId() const { return _meshId; }
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
         Containers::Reference<Shaders::MeshVisualizer3D> _shader;
         GL::Mesh& _mesh;
+        std::size_t _meshId;
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
-    /* Setup shader defaults. Partially done later in toggleShadeless(). */
-    _coloredShader.setAmbientColor(0x111111_rgbf);
-    _vertexColorShader.setAmbientColor(0x00000000_rgbaf);
-    for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader, &_vertexColorShader}) {
-        (*shader)
-            .setLightPositions({
-                /** @todo make this configurable */
-                Vector3{10.0f, 10.0f, 10.0f}*100.0f,
-                Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
-                Vector3{0.0f, 10.0f, -10.0f}*100.0f})
-            .setLightColors({0xffffff_rgbf*_brightness,
-                             0xffcccc_rgbf*_brightness,
-                             0xccccff_rgbf*_brightness})
-            .setSpecularColor(0x11111100_rgbaf)
-            .setShininess(80.0f);
-    }
-
-    auto setup = [](ScenePlayer& self) {
-        for(auto* shader: {&self._meshVisualizerShader,
-            #ifndef MAGNUM_TARGET_GLES
-            &self._tangentSpaceMeshVisualizerShader
-            #endif
-        })
-            (*shader)
-                .setWireframeColor(_(0xdcdcdcff_rgbaf))
-                .setColor(_(0x2f83ccff_rgbaf)*_(0.5f))
-                .setViewportSize(Vector2{self.application().framebufferSize()});
-        #ifndef MAGNUM_TARGET_GLES
-        self._tangentSpaceMeshVisualizerShader
-            .setLineLength(0.3f)
-            .setLineWidth(2.0f);
-        #endif
-    };
-    #ifdef CORRADE_IS_DEBUG_BUILD
-    Utility::Tweakable::instance().scope(setup, *this);
-    #else
-    setup(*this);
-    #endif
-
     /* Setup the UI, steal font etc. from the existing one to avoid having
        everything built twice */
     /** @todo this is extremely bad, there should be just one global UI (or
@@ -493,6 +434,52 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
     _fullscreenTriangle = GL::Mesh{};
     _fullscreenTriangle.setCount(3);
     #endif
+}
+
+Shaders::Flat3D& ScenePlayer::flatShader(Shaders::Flat3D::Flags flags) {
+    auto found = _flatShaders.find(flags);
+    if(found == _flatShaders.end())
+        found = _flatShaders.emplace(flags, Shaders::Flat3D{Shaders::Flat3D::Flag::ObjectId|flags}).first;
+    return found->second;
+}
+
+Shaders::Phong& ScenePlayer::phongShader(Shaders::Phong::Flags flags) {
+    auto found = _phongShaders.find(flags);
+    if(found == _phongShaders.end()) {
+        found = _phongShaders.emplace(flags, Shaders::Phong{Shaders::Phong::Flag::ObjectId|flags, 3}).first;
+        found->second
+            .setLightPositions({
+                /** @todo make this configurable */
+                Vector3{10.0f, 10.0f, 10.0f}*100.0f,
+                Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
+                Vector3{0.0f, 10.0f, -10.0f}*100.0f})
+            .setLightColors({0xffffff_rgbf*_brightness,
+                             0xffcccc_rgbf*_brightness,
+                             0xccccff_rgbf*_brightness})
+            .setSpecularColor(0x11111100_rgbaf)
+            .setShininess(80.0f);
+    }
+    return found->second;
+}
+
+Shaders::MeshVisualizer3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisualizer3D::Flags flags) {
+    auto found = _meshVisualizerShaders.find(flags);
+    if(found == _meshVisualizerShaders.end()) {
+        found = _meshVisualizerShaders.emplace(flags, Shaders::MeshVisualizer3D{flags}).first;
+        found->second
+            .setColor(_(0x2f83ccff_rgbaf)*_(0.5f))
+            .setViewportSize(Vector2{application().framebufferSize()});
+
+        if(flags & Shaders::MeshVisualizer3D::Flag::Wireframe)
+            found->second.setWireframeColor(_(0xdcdcdcff_rgbaf));
+        #ifndef MAGNUM_TARGET_GLES
+        if(flags & Shaders::MeshVisualizer3D::Flag::NormalDirection)
+            found->second
+                .setLineLength(0.3f)
+                .setLineWidth(2.0f);
+        #endif
+    }
+    return found->second;
 }
 
 void ScenePlayer::initializeUi() {
@@ -569,10 +556,14 @@ void ScenePlayer::toggleTangentSpace() {
     CORRADE_INTERNAL_ASSERT(_data->selectedObject);
 
     if(_tangentSpace ^= true) {
-        _data->selectedObject->setShader(_tangentSpaceMeshVisualizerShader);
+        _data->selectedObject->setShader(meshVisualizerShader(
+            Shaders::MeshVisualizer3D::Flag::Wireframe|
+            Shaders::MeshVisualizer3D::Flag::TangentDirection|
+            Shaders::MeshVisualizer3D::Flag::NormalDirection|
+            (_data->meshes[_data->selectedObject->meshId()].hasSeparateBitangents ? Shaders::MeshVisualizer3D::Flag::BitangentDirection : Shaders::MeshVisualizer3D::Flag::BitangentFromTangentDirection)));
         _baseUiPlane->tangentSpace.setStyle(Ui::Style::Success);
     } else {
-        _data->selectedObject->setShader(_meshVisualizerShader);
+        _data->selectedObject->setShader(meshVisualizerShader(Shaders::MeshVisualizer3D::Flag::Wireframe));
         _baseUiPlane->tangentSpace.setStyle(Ui::Style::Default);
     }
 }
@@ -789,7 +780,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->objects[0].object = &_data->scene;
         _data->objects[0].meshId = 0;
         _data->objects[0].name = "object #0";
-        new ColoredDrawable{_data->scene, hasVertexColors[0] ? _vertexColorShader : _coloredShader, *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
+        new PhongDrawable{_data->scene, phongShader(hasVertexColors[0] ? Shaders::Phong::Flag::VertexColor : Shaders::Phong::Flags{}), *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
     }
 
     /* Create a camera object in case it wasn't present in the scene already */
@@ -934,6 +925,10 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
         GL::Mesh& mesh = *_data->meshes[objectData->instance()].mesh;
 
+        Shaders::Phong::Flags flags;
+        if(hasVertexColors[objectData->instance()])
+            flags |= Shaders::Phong::Flag::VertexColor;
+
         /* Material not available / not loaded. If the mesh has vertex colors,
            use that, otherwise apply a default material; use a flat shader for
            lines / points */
@@ -941,9 +936,11 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
             if(mesh.primitive() == GL::MeshPrimitive::Triangles ||
                mesh.primitive() == GL::MeshPrimitive::TriangleStrip ||
                mesh.primitive() == GL::MeshPrimitive::TriangleFan)
-                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
+                new PhongDrawable{*object, phongShader(flags),
+                    mesh, i,
+                    0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
             else
-                new FlatDrawable{*object, hasVertexColors[objectData->instance()] ? _flatVertexColorShader : _flatShader, mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+                new FlatDrawable{*object, flatShader(hasVertexColors[objectData->instance()] ? Shaders::Flat3D::Flag::VertexColor : Shaders::Flat3D::Flags{}), mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -951,21 +948,26 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
             /* Textured material. If the texture failed to load, again just use
                a default-colored material. */
+            GL::Texture2D* diffuseTexture = nullptr;
             if(material.flags() & Trade::PhongMaterialData::Flag::DiffuseTexture) {
                 Containers::Optional<GL::Texture2D>& texture = _data->textures[material.diffuseTexture()];
-                if(texture) new TexturedDrawable{*object,
-                    material.alphaMode() == Trade::MaterialAlphaMode::Mask ?
-                        _texturedMaskShader : _texturedShader,
-                    mesh, i, material.diffuseColor(), *texture, material.alphaMask(), material.textureMatrix(), _shadeless,
-                    material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
-                        _data->transparentDrawables : _data->opaqueDrawables};
-                else
-                    new ColoredDrawable{*object, _coloredShader, mesh, i, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
-
-            /* Vertex color / color-only material */
-            } else {
-                new ColoredDrawable{*object, hasVertexColors[objectData->instance()] ? _vertexColorShader : _coloredShader, mesh, i, material.diffuseColor(), _shadeless, _data->opaqueDrawables};
+                if(texture) {
+                    diffuseTexture = &*texture;
+                    flags |= Shaders::Phong::Flag::AmbientTexture|
+                        Shaders::Phong::Flag::DiffuseTexture;
+                    if(material.flags() & Trade::PhongMaterialData::Flag::TextureTransformation)
+                        flags |= Shaders::Phong::Flag::TextureTransformation;
+                    if(material.alphaMode() == Trade::MaterialAlphaMode::Mask)
+                        flags |= Shaders::Phong::Flag::AlphaMask;
+                }
             }
+
+            new PhongDrawable{*object, phongShader(flags),
+                mesh, i,
+                material.diffuseColor(), diffuseTexture,
+                material.alphaMask(), material.textureMatrix(), _shadeless,
+                material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
+                    _data->transparentDrawables : _data->opaqueDrawables};
         }
 
     /* This is a node that holds the default camera -> assign the object to the
@@ -987,32 +989,16 @@ void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3
         .draw(_mesh);
 }
 
-void ColoredDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
+void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
     _shader
         .setTransformationMatrix(transformationMatrix)
         .setNormalMatrix(transformationMatrix.normalMatrix())
         .setProjectionMatrix(camera.projectionMatrix())
         .setObjectId(_objectId);
 
-    if(_shadeless) _shader
-        .setAmbientColor(_color)
-        .setDiffuseColor(0x00000000_rgbaf);
-    else _shader
-        .setAmbientColor(_color*0.06f)
-        .setDiffuseColor(_color);
-
-    _shader.draw(_mesh);
-}
-
-void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
-    _shader
-        .setTransformationMatrix(transformationMatrix)
-        .setNormalMatrix(transformationMatrix.normalMatrix())
-        .setProjectionMatrix(camera.projectionMatrix())
-        .setTextureMatrix(_textureMatrix)
-        .setObjectId(_objectId)
-        .bindAmbientTexture(_texture)
-        .bindDiffuseTexture(_texture);
+    if(_diffuseTexture) _shader
+        .bindAmbientTexture(*_diffuseTexture)
+        .bindDiffuseTexture(*_diffuseTexture);
 
     if(_shadeless) _shader
         .setAmbientColor(_color)
@@ -1021,6 +1007,8 @@ void TexturedDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Cam
         .setAmbientColor(_color*0.06f)
         .setDiffuseColor(_color);
 
+    if(_shader.flags() & Shaders::Phong::Flag::TextureTransformation)
+        _shader.setTextureMatrix(_textureMatrix);
     if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
         _shader.setAlphaMask(_alphaMask);
 
@@ -1136,10 +1124,8 @@ void ScenePlayer::viewportEvent(ViewportEvent& event) {
         updateAnimationTime(_data->elapsedTimeAnimationDestination);
     }
 
-    _meshVisualizerShader.setViewportSize(Vector2{event.framebufferSize()});
-    #ifndef MAGNUM_TARGET_GLES
-    _tangentSpaceMeshVisualizerShader.setViewportSize(Vector2{event.framebufferSize()});
-    #endif
+    for(auto& i: _meshVisualizerShaders)
+        i.second.setViewportSize(Vector2{event.framebufferSize()});
 
     /* Recreate object ID reading renderbuffers that depend on viewport size */
     _selectionDepth = GL::Renderbuffer{};
@@ -1271,8 +1257,8 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
               event.key() == KeyEvent::Key::Minus) {
         _brightness *= (event.key() == KeyEvent::Key::NumAdd ||
                         event.key() == KeyEvent::Key::Plus) ? 1.1f : 1/1.1f;
-        for(auto* shader: {&_coloredShader, &_texturedShader, &_texturedMaskShader, &_vertexColorShader}) {
-            shader->setLightColors({
+        for(auto& shader: _phongShaders) {
+            shader.second.setLightColors({
                 0xffffff_rgbf*_brightness,
                 0xffcccc_rgbf*_brightness,
                 0xccccff_rgbf*_brightness});
@@ -1360,16 +1346,22 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             MeshInfo& meshInfo = _data->meshes[_data->objects[selectedId].meshId];
 
             /* Create a visualizer for the selected object */
-            _data->selectedObject = new MeshVisualizerDrawable{*objectInfo.object,
-                #ifndef MAGNUM_TARGET_GLES
-                _tangentSpace ? (meshInfo.hasSeparateBitangents ?
-                    _tangentSpaceSeparateBitangentMeshVisualizerShader :
-                    _tangentSpaceMeshVisualizerShader
-                    ) : _meshVisualizerShader,
-                #else
-                _meshVisualizerShader,
-                #endif
-                *meshInfo.mesh, _data->selectedObjectDrawables};
+            Shaders::MeshVisualizer3D::Flags flags = Shaders::MeshVisualizer3D::Flag::Wireframe;
+            #ifndef MAGNUM_TARGET_GLES
+            if(_tangentSpace) {
+                flags |= Shaders::MeshVisualizer3D::Flag::Wireframe|
+                    Shaders::MeshVisualizer3D::Flag::TangentDirection|
+                    Shaders::MeshVisualizer3D::Flag::NormalDirection;
+                if(meshInfo.hasSeparateBitangents)
+                    flags |= Shaders::MeshVisualizer3D::Flag::BitangentDirection;
+                else
+                    flags |= Shaders::MeshVisualizer3D::Flag::BitangentFromTangentDirection;
+            }
+            #endif
+            _data->selectedObject = new MeshVisualizerDrawable{
+                *objectInfo.object, meshVisualizerShader(flags),
+                *meshInfo.mesh, _data->objects[selectedId].meshId,
+                _data->selectedObjectDrawables};
 
             /* Show object & mesh info */
             _baseUiPlane->modelInfo.hide();
