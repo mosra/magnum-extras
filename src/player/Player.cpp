@@ -40,6 +40,7 @@
 #include <Magnum/Platform/Screen.h>
 #include <Magnum/Platform/ScreenedApplication.h>
 #include <Magnum/Trade/AbstractImporter.h>
+#include <Magnum/Trade/MeshData.h>
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Button.h"
@@ -150,6 +151,28 @@ struct Overlay: public AbstractUiScreen, public Interconnect::Receiver {
         #endif
 };
 
+class BlobImporter: public Trade::AbstractImporter {
+    public:
+        explicit BlobImporter(Containers::Array<const char, Utility::Directory::MapDeleter>& in): _in(in) {}
+
+    private:
+        Trade::ImporterFeatures doFeatures() const override { return {}; }
+
+        bool doIsOpened() const override { return _in; }
+        void doClose() override { _in = nullptr; }
+        void doOpenFile(const std::string& filename) override {
+            _in = Utility::Directory::mapRead(filename);
+        }
+
+        UnsignedInt doMeshCount() const override { return 1; }
+        Containers::Optional<Trade::MeshData> doMesh(UnsignedInt, UnsignedInt) override {
+            /* GCC 4.8 and old Clang has problems with an implicit cast here */
+            return Trade::MeshData::deserialize(Containers::ArrayView<const void>(_in));
+        }
+
+        Containers::Array<const char, Utility::Directory::MapDeleter>& _in;
+};
+
 }
 
 class Player: public Platform::ScreenedApplication, public Interconnect::Receiver {
@@ -189,6 +212,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         #ifndef CORRADE_TARGET_EMSCRIPTEN
         std::string _importer, _file;
         Int _id{-1};
+        Containers::Array<const char, Utility::Directory::MapDeleter> _mappedFile;
         #endif
         bool _controlsVisible =
             #ifndef CORRADE_TARGET_EMSCRIPTEN
@@ -481,37 +505,45 @@ subgroups using a slash.)")
     if(!args.value("id").empty()) _id = args.value<Int>("id");
 
     /* Load a scene importer plugin */
-    Containers::Pointer<Trade::AbstractImporter> importer =
-        _manager.loadAndInstantiate(args.value("importer"));
+    Containers::Pointer<Trade::AbstractImporter> importer;
+    if(Utility::String::endsWith(args.value("file"), ".blob") && args.value("importer") == "AnySceneImporter") {
+        importer.reset(new BlobImporter{_mappedFile});
+        if(!args.value("importer-options").empty())
+            Warning{} << "Importer options" << args.value("importer-options") << "ignored when loading a blob file";
 
-    /* Propagate user-defined options from the command line */
-    if(importer) for(const std::string& option: Utility::String::splitWithoutEmptyParts(args.value("importer-options"), ',')) {
-        auto keyValue = Utility::String::partition(option, '=');
-        Utility::String::trimInPlace(keyValue[0]);
-        Utility::String::trimInPlace(keyValue[2]);
+    } else {
+        importer = _manager.loadAndInstantiate(args.value("importer"));
 
-        std::vector<std::string> keyParts = Utility::String::split(keyValue[0], '/');
-        CORRADE_INTERNAL_ASSERT(!keyParts.empty());
-        Utility::ConfigurationGroup* group = &importer->configuration();
-        for(std::size_t i = 0; i != keyParts.size() - 1; ++i) {
-            group = group->group(keyParts[i]);
-            if(!group) break;
+        /* Propagate user-defined options from the command line */
+        if(importer) for(const std::string& option: Utility::String::splitWithoutEmptyParts(args.value("importer-options"), ',')) {
+            auto keyValue = Utility::String::partition(option, '=');
+            Utility::String::trimInPlace(keyValue[0]);
+            Utility::String::trimInPlace(keyValue[2]);
+
+            std::vector<std::string> keyParts = Utility::String::split(keyValue[0], '/');
+            CORRADE_INTERNAL_ASSERT(!keyParts.empty());
+            Utility::ConfigurationGroup* group = &importer->configuration();
+            for(std::size_t i = 0; i != keyParts.size() - 1; ++i) {
+                group = group->group(keyParts[i]);
+                if(!group) break;
+            }
+
+            /* Provide a warning message in case the plugin doesn't define
+               given option in its default config. The plugin is not *required*
+               to have those tho (could be backward compatibility entries, for
+               example), so not an error. */
+            if(!group || !group->hasValue(keyParts.back()))
+                Warning{} << "Option" << keyValue[0] << "not recognized by" << importer->plugin();
+
+            /* If the option doesn't have an =, treat it as a boolean flag
+               that's set to true. While there's no similar way to do an
+               inverse, it's still nicer than causing a fatal error with
+               those. */
+            if(keyValue[1].empty())
+                group->setValue(keyParts.back(), true);
+            else
+                group->setValue(keyParts.back(), keyValue[2]);
         }
-
-        /* Provide a warning message in case the plugin doesn't define given
-           option in its default config. The plugin is not *required* to have
-           those tho (could be backward compatibility entries, for example), so
-           not an error. */
-        if(!group || !group->hasValue(keyParts.back()))
-            Warning{} << "Option" << keyValue[0] << "not recognized by" << importer->plugin();
-
-        /* If the option doesn't have an =, treat it as a boolean flag that's
-           set to true. While there's no similar way to do an inverse, it's
-           still nicer than causing a fatal error with those. */
-        if(keyValue[1].empty())
-            group->setValue(keyParts.back(), true);
-        else
-            group->setValue(keyParts.back(), keyValue[2]);
     }
 
     Debug{} << "Opening file" << _file;
