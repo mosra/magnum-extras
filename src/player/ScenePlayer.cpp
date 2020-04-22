@@ -592,6 +592,13 @@ void ScenePlayer::cycleVisualization() {
 Shaders::MeshVisualizer3D::Flags ScenePlayer::setupVisualization(std::size_t meshId) {
     const MeshInfo& info = _data->meshes[meshId];
 
+    #ifndef MAGNUM_TARGET_GLES
+    if(_visualization == Visualization::WireframeTbn && info.primitives >= 100000) {
+        Warning{} << "Mesh has" << info.primitives << "primitives, skipping TBN visualization";
+        _visualization = Visualization(UnsignedByte(_visualization) + 1);
+    }
+    #endif
+
     /* If visualizing object ID, make sure the object actually has that */
     if((_visualization == Visualization::ObjectId ||
         _visualization == Visualization::WireframeObjectId) &&
