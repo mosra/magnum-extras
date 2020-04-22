@@ -350,9 +350,9 @@ class FlatDrawable: public SceneGraph::Drawable3D {
 
 class PhongDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
+        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, GL::Texture2D* normalTexture, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _normalTexture{normalTexture}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
 
-        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{nullptr}, _alphaMask{0.5f}, _shadeless{shadeless} {}
+        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{nullptr}, _normalTexture{nullptr}, _alphaMask{0.5f}, _shadeless{shadeless} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -362,6 +362,7 @@ class PhongDrawable: public SceneGraph::Drawable3D {
         UnsignedInt _objectId;
         Color4 _color;
         GL::Texture2D* _diffuseTexture;
+        GL::Texture2D* _normalTexture;
         Float _alphaMask;
         Matrix3 _textureMatrix;
         const bool& _shadeless;
@@ -949,6 +950,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
             /* Textured material. If the texture failed to load, again just use
                a default-colored material. */
             GL::Texture2D* diffuseTexture = nullptr;
+            GL::Texture2D* normalTexture = nullptr;
             if(material.flags() & Trade::PhongMaterialData::Flag::DiffuseTexture) {
                 Containers::Optional<GL::Texture2D>& texture = _data->textures[material.diffuseTexture()];
                 if(texture) {
@@ -962,9 +964,21 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 }
             }
 
+            /* Normal textured material. If the textures fail to load, again
+               just use a default-colored material. */
+            if(material.flags() & Trade::PhongMaterialData::Flag::NormalTexture) {
+                Containers::Optional<GL::Texture2D>& texture = _data->textures[material.normalTexture()];
+                if(texture) {
+                    normalTexture = &*texture;
+                    flags |= Shaders::Phong::Flag::NormalTexture;
+                    if(material.flags() & Trade::PhongMaterialData::Flag::TextureTransformation)
+                        flags |= Shaders::Phong::Flag::TextureTransformation;
+                }
+            }
+
             new PhongDrawable{*object, phongShader(flags),
                 mesh, i,
-                material.diffuseColor(), diffuseTexture,
+                material.diffuseColor(), diffuseTexture, normalTexture,
                 material.alphaMask(), material.textureMatrix(), _shadeless,
                 material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                     _data->transparentDrawables : _data->opaqueDrawables};
@@ -999,6 +1013,8 @@ void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera
     if(_diffuseTexture) _shader
         .bindAmbientTexture(*_diffuseTexture)
         .bindDiffuseTexture(*_diffuseTexture);
+    if(_normalTexture) _shader
+        .bindNormalTexture(*_normalTexture);
 
     if(_shadeless) _shader
         .setAmbientColor(_color)
