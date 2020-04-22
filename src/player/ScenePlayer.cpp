@@ -1437,7 +1437,10 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
         const UnsignedInt selectedId = _selectionFramebuffer.read(area, {PixelFormat::R16UI}).pixels<UnsignedShort>()[0][0];
         /* If nothing is selected, reset the info text */
         if(selectedId == 0xffff) {
-            _baseUiPlane->objectInfo.hide();
+            Ui::Widget::hide({
+                _baseUiPlane->objectInfo,
+                _baseUiPlane->visualization
+            });
             _baseUiPlane->modelInfo.show();
 
         /* Otherwise add a visualizer and update the info */
