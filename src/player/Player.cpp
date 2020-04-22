@@ -493,16 +493,21 @@ subgroups using a slash.)")
         std::vector<std::string> keyParts = Utility::String::split(keyValue[0], '/');
         CORRADE_INTERNAL_ASSERT(!keyParts.empty());
         Utility::ConfigurationGroup* group = &importer->configuration();
+        bool groupNotRecognized = false;
         for(std::size_t i = 0; i != keyParts.size() - 1; ++i) {
-            group = group->group(keyParts[i]);
-            if(!group) break;
+            Utility::ConfigurationGroup* subgroup = group->group(keyParts[i]);
+            if(!subgroup) {
+                groupNotRecognized = true;
+                subgroup = group->addGroup(keyParts[i]);
+            }
+            group = subgroup;
         }
 
         /* Provide a warning message in case the plugin doesn't define given
            option in its default config. The plugin is not *required* to have
            those tho (could be backward compatibility entries, for example), so
            not an error. */
-        if(!group || !group->hasValue(keyParts.back()))
+        if(groupNotRecognized || !group->hasValue(keyParts.back()))
             Warning{} << "Option" << keyValue[0] << "not recognized by" << importer->plugin();
 
         /* If the option doesn't have an =, treat it as a boolean flag that's
