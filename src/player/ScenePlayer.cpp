@@ -554,10 +554,12 @@ void ScenePlayer::setControlsVisible(bool visible) {
 
             _baseUiPlane->shadeless.show();
 
-            if(_data->selectedObject) Ui::Widget::show({
-                _baseUiPlane->visualization,
-                _baseUiPlane->objectInfo});
-            else _baseUiPlane->modelInfo.show();
+            if(_data->selectedObject) {
+                Ui::Widget::show({
+                    _baseUiPlane->visualization,
+                    _baseUiPlane->objectInfo});
+                _baseUiPlane->modelInfo.hide();
+            } else _baseUiPlane->modelInfo.show();
         }
 
     } else {
