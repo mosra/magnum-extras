@@ -36,9 +36,11 @@
 #include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/FormatStl.h>
 #include <Magnum/Image.h>
+#include <Magnum/ImageView.h>
 #include <Magnum/Mesh.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Player.h>
+#include <Magnum/DebugTools/ColorMap.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Mesh.h>
@@ -47,6 +49,7 @@
 #include <Magnum/GL/RenderbufferFormat.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureFormat.h>
 #include <Magnum/Math/FunctionsBatch.h>
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/MeshTools/Duplicate.h>
@@ -153,9 +156,7 @@ struct BaseUiPlane: Ui::Plane {
                 *2.0f /* on Emscripten there's the fullscreen button as well */
                 #endif
             , ButtonSize)}, "Shadeless", Ui::Style::Default},
-        #ifndef MAGNUM_TARGET_GLES
-        tangentSpace{*this, {Ui::Snap::Bottom, shadeless, ButtonSize}, "Tangent space"},
-        #endif
+        visualization{*this, {Ui::Snap::Bottom, shadeless, ButtonSize}, "Wireframe", 16},
         backward{*this, {Ui::Snap::Bottom|Ui::Snap::Left, HalfControlSize}, "«"},
         play{*this, {Ui::Snap::Right, backward, ControlSize}, "Play", Ui::Style::Success},
         pause{*this, {Ui::Snap::Right, backward, ControlSize}, "Pause", Ui::Style::Warning},
@@ -178,9 +179,7 @@ struct BaseUiPlane: Ui::Plane {
 
         /* Hide everything that gets shown only on selection */
         Ui::Widget::hide({
-            #ifndef MAGNUM_TARGET_GLES
-            tangentSpace,
-            #endif
+            visualization,
             objectInfo
         });
 
@@ -194,9 +193,7 @@ struct BaseUiPlane: Ui::Plane {
     }
 
     Ui::Button shadeless;
-    #ifndef MAGNUM_TARGET_GLES
-    Ui::Button tangentSpace;
-    #endif
+    Ui::Button visualization;
     Ui::Button
         backward,
         play,
@@ -213,6 +210,7 @@ struct MeshInfo {
     UnsignedInt attributes;
     UnsignedInt vertices;
     UnsignedInt primitives;
+    UnsignedInt objectIdCount;
     std::size_t size;
     std::string name;
     bool hasSeparateBitangents;
@@ -255,6 +253,23 @@ template<class T> struct EnumSetHash: std::hash<typename std::underlying_type<ty
     }
 };
 
+enum class Visualization: UnsignedByte {
+    Begin = 0,
+    Wireframe = 0,
+    #ifndef MAGNUM_TARGET_GLES
+    WireframeTbn,
+    #endif
+    WireframeObjectId,
+    #ifndef MAGNUM_TARGET_GLES
+    WireframePrimitiveId,
+    #endif
+    ObjectId,
+    #ifndef MAGNUM_TARGET_GLES
+    PrimitiveId,
+    #endif
+    End
+};
+
 class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
     public:
         explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom);
@@ -275,9 +290,10 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         void initializeUi();
 
         void toggleShadeless();
-        #ifndef MAGNUM_TARGET_GLES
-        void toggleTangentSpace();
-        #endif
+
+        void cycleVisualization();
+        Shaders::MeshVisualizer3D::Flags setupVisualization(std::size_t meshId);
+
         void play();
         void pause();
         void stop();
@@ -298,12 +314,11 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         std::unordered_map<Shaders::Flat3D::Flags, Shaders::Flat3D, EnumSetHash<Shaders::Flat3D::Flags>> _flatShaders;
         std::unordered_map<Shaders::Phong::Flags, Shaders::Phong, EnumSetHash<Shaders::Phong::Flags>> _phongShaders;
         std::unordered_map<Shaders::MeshVisualizer3D::Flags, Shaders::MeshVisualizer3D, EnumSetHash<Shaders::MeshVisualizer3D::Flags>> _meshVisualizerShaders;
+        GL::Texture2D _colorMapTexture;
 
         Float _brightness{0.8f};
         bool _shadeless = false;
-        #ifndef MAGNUM_TARGET_GLES
-        bool _tangentSpace = false;
-        #endif
+        Visualization _visualization = Visualization::Wireframe;
 
         /* Data loading */
         Containers::Optional<Data> _data;
@@ -370,7 +385,7 @@ class PhongDrawable: public SceneGraph::Drawable3D {
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, std::size_t meshId, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId} {}
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt primitiveCount, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _primitiveCount{primitiveCount} {}
 
         Shaders::MeshVisualizer3D& shader() { return _shader; }
 
@@ -384,9 +399,17 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         Containers::Reference<Shaders::MeshVisualizer3D> _shader;
         GL::Mesh& _mesh;
         std::size_t _meshId;
+        UnsignedInt _objectIdCount, _primitiveCount;
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
+    _colorMapTexture
+        .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
+        .setMagnificationFilter(SamplerFilter::Linear)
+        .setWrapping(SamplerWrapping::Repeat)
+        .setStorage(1, GL::TextureFormat::RGBA8, {256, 1})
+        .setSubImage(0, {}, ImageView2D{PixelFormat::RGB8Unorm, {256, 1}, DebugTools::ColorMap::turbo()});
+
     /* Setup the UI, steal font etc. from the existing one to avoid having
        everything built twice */
     /** @todo this is extremely bad, there should be just one global UI (or
@@ -468,7 +491,6 @@ Shaders::MeshVisualizer3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisual
     if(found == _meshVisualizerShaders.end()) {
         found = _meshVisualizerShaders.emplace(flags, Shaders::MeshVisualizer3D{flags}).first;
         found->second
-            .setColor(_(0x2f83ccff_rgbaf)*_(0.5f))
             .setViewportSize(Vector2{application().framebufferSize()});
 
         if(flags & Shaders::MeshVisualizer3D::Flag::Wireframe)
@@ -479,6 +501,17 @@ Shaders::MeshVisualizer3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisual
                 .setLineLength(0.3f)
                 .setLineWidth(2.0f);
         #endif
+
+        if(flags & Shaders::MeshVisualizer3D::Flag::InstancedObjectId
+            #ifndef MAGNUM_TARGET_GLES
+            || flags & Shaders::MeshVisualizer3D::Flag::PrimitiveId
+            #endif
+        )
+            found->second
+                .setColor(0xffffffff_rgbaf*0.66667f)
+                .bindColorMapTexture(_colorMapTexture);
+        else
+            found->second.setColor(0x2f83ccff_rgbaf*0.5f);
     }
     return found->second;
 }
@@ -487,13 +520,12 @@ void ScenePlayer::initializeUi() {
     _baseUiPlane.emplace(*_ui);
 
     if(_shadeless) _baseUiPlane->shadeless.setStyle(Ui::Style::Success);
-    #ifndef MAGNUM_TARGET_GLES
-    if(_tangentSpace) _baseUiPlane->tangentSpace.setStyle(Ui::Style::Success);
-    #endif
+    if(_data && _data->selectedObject)
+        setupVisualization(_data->selectedObject->meshId());
 
     Interconnect::connect(_baseUiPlane->shadeless, &Ui::Button::tapped, *this, &ScenePlayer::toggleShadeless);
     #ifndef MAGNUM_TARGET_GLES
-    Interconnect::connect(_baseUiPlane->tangentSpace, &Ui::Button::tapped, *this, &ScenePlayer::toggleTangentSpace);
+    Interconnect::connect(_baseUiPlane->visualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleVisualization);
     #endif
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &ScenePlayer::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &ScenePlayer::pause);
@@ -523,9 +555,7 @@ void ScenePlayer::setControlsVisible(bool visible) {
             _baseUiPlane->shadeless.show();
 
             if(_data->selectedObject) Ui::Widget::show({
-                #ifndef MAGNUM_TARGET_GLES
-                _baseUiPlane->tangentSpace,
-                #endif
+                _baseUiPlane->visualization,
                 _baseUiPlane->objectInfo});
             else _baseUiPlane->modelInfo.show();
         }
@@ -539,9 +569,7 @@ void ScenePlayer::setControlsVisible(bool visible) {
             _baseUiPlane->stop,
             _baseUiPlane->forward,
             _baseUiPlane->modelInfo,
-            #ifndef MAGNUM_TARGET_GLES
-            _baseUiPlane->tangentSpace,
-            #endif
+            _baseUiPlane->visualization,
             _baseUiPlane->objectInfo,
             _baseUiPlane->animationProgress});
     }
@@ -552,23 +580,73 @@ void ScenePlayer::toggleShadeless() {
     _baseUiPlane->shadeless.setStyle((_shadeless ^= true) ? Ui::Style::Success : Ui::Style::Default);
 }
 
-#ifndef MAGNUM_TARGET_GLES
-void ScenePlayer::toggleTangentSpace() {
+void ScenePlayer::cycleVisualization() {
     CORRADE_INTERNAL_ASSERT(_data->selectedObject);
 
-    if(_tangentSpace ^= true) {
-        _data->selectedObject->setShader(meshVisualizerShader(
+    /* Advance through the options */
+    _visualization = Visualization(UnsignedByte(_visualization) + 1);
+
+    _data->selectedObject->setShader(meshVisualizerShader(setupVisualization( _data->selectedObject->meshId())));
+}
+
+Shaders::MeshVisualizer3D::Flags ScenePlayer::setupVisualization(std::size_t meshId) {
+    const MeshInfo& info = _data->meshes[meshId];
+
+    /* If visualizing object ID, make sure the object actually has that */
+    if((_visualization == Visualization::ObjectId ||
+        _visualization == Visualization::WireframeObjectId) &&
+        !_data->meshes[_data->selectedObject->meshId()].objectIdCount)
+        _visualization = Visualization(UnsignedByte(_visualization) + 1);
+
+    /* Wrap around */
+    if(_visualization == Visualization::End)
+        _visualization = Visualization::Begin;
+
+    if(_visualization == Visualization::Wireframe) {
+        _baseUiPlane->visualization.setText("Wireframe");
+        return Shaders::MeshVisualizer3D::Flag::Wireframe;
+    }
+    #ifndef MAGNUM_TARGET_GLES
+    if(_visualization == Visualization::WireframeTbn) {
+        _baseUiPlane->visualization.setText("Wire + TBN");
+        Shaders::MeshVisualizer3D::Flags flags =
             Shaders::MeshVisualizer3D::Flag::Wireframe|
             Shaders::MeshVisualizer3D::Flag::TangentDirection|
-            Shaders::MeshVisualizer3D::Flag::NormalDirection|
-            (_data->meshes[_data->selectedObject->meshId()].hasSeparateBitangents ? Shaders::MeshVisualizer3D::Flag::BitangentDirection : Shaders::MeshVisualizer3D::Flag::BitangentFromTangentDirection)));
-        _baseUiPlane->tangentSpace.setStyle(Ui::Style::Success);
-    } else {
-        _data->selectedObject->setShader(meshVisualizerShader(Shaders::MeshVisualizer3D::Flag::Wireframe));
-        _baseUiPlane->tangentSpace.setStyle(Ui::Style::Default);
+            Shaders::MeshVisualizer3D::Flag::NormalDirection;
+        if(info.hasSeparateBitangents)
+            flags |= Shaders::MeshVisualizer3D::Flag::BitangentDirection;
+        else
+            flags |= Shaders::MeshVisualizer3D::Flag::BitangentFromTangentDirection;
+        return flags;
     }
+    #endif
+
+    if(_visualization == Visualization::WireframeObjectId) {
+        _baseUiPlane->visualization.setText("Wire + Object ID");
+        return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::InstancedObjectId;
+    }
+
+    #ifndef MAGNUM_TARGET_GLES
+    if(_visualization == Visualization::WireframePrimitiveId) {
+        _baseUiPlane->visualization.setText("Wire + Prim ID");
+        return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::PrimitiveId;
+    }
+    #endif
+
+    if(_visualization == Visualization::ObjectId) {
+        _baseUiPlane->visualization.setText("Object ID");
+        return Shaders::MeshVisualizer3D::Flag::InstancedObjectId;
+    }
+
+    #ifndef MAGNUM_TARGET_GLES
+    if(_visualization == Visualization::PrimitiveId) {
+        _baseUiPlane->visualization.setText("Primitive ID");
+        return Shaders::MeshVisualizer3D::Flag::PrimitiveId;
+    }
+    #endif
+
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 }
-#endif
 
 void ScenePlayer::play() {
     if(!_data) return;
@@ -750,6 +828,9 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         } else _data->meshes[i].primitives = MeshTools::primitiveCount(meshData->primitive(), meshData->vertexCount());
         /* Needed to decide how to visualize tangent space */
         _data->meshes[i].hasSeparateBitangents = meshData->hasAttribute(Trade::MeshAttribute::Bitangent);
+        if(meshData->hasAttribute(Trade::MeshAttribute::ObjectId)) {
+            _data->meshes[i].objectIdCount = Math::max(meshData->objectIdsAsArray());
+        } else _data->meshes[i].objectIdCount = 0;
         _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
         _data->meshes[i].name = importer.meshName(i);
         if(_data->meshes[i].name.empty())
@@ -1042,6 +1123,13 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
     #ifndef MAGNUM_TARGET_GLES
     if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::NormalDirection)
         _shader->setNormalMatrix(transformationMatrix.normalMatrix());
+    #endif
+
+    if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::InstancedObjectId)
+        _shader->setColorMapTransformation(0.0f, 1.0f/_objectIdCount);
+    #ifndef MAGNUM_TARGET_GLES
+    if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::PrimitiveId)
+        _shader->setColorMapTransformation(0.0f, 1.0f/_primitiveCount);
     #endif
 
     _shader->draw(_mesh);
@@ -1362,30 +1450,18 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             MeshInfo& meshInfo = _data->meshes[_data->objects[selectedId].meshId];
 
             /* Create a visualizer for the selected object */
-            Shaders::MeshVisualizer3D::Flags flags = Shaders::MeshVisualizer3D::Flag::Wireframe;
-            #ifndef MAGNUM_TARGET_GLES
-            if(_tangentSpace) {
-                flags |= Shaders::MeshVisualizer3D::Flag::Wireframe|
-                    Shaders::MeshVisualizer3D::Flag::TangentDirection|
-                    Shaders::MeshVisualizer3D::Flag::NormalDirection;
-                if(meshInfo.hasSeparateBitangents)
-                    flags |= Shaders::MeshVisualizer3D::Flag::BitangentDirection;
-                else
-                    flags |= Shaders::MeshVisualizer3D::Flag::BitangentFromTangentDirection;
-            }
-            #endif
+            const Shaders::MeshVisualizer3D::Flags flags = setupVisualization(_data->objects[selectedId].meshId);
             _data->selectedObject = new MeshVisualizerDrawable{
                 *objectInfo.object, meshVisualizerShader(flags),
                 *meshInfo.mesh, _data->objects[selectedId].meshId,
+                meshInfo.objectIdCount, meshInfo.primitives,
                 _data->selectedObjectDrawables};
 
             /* Show object & mesh info */
             _baseUiPlane->modelInfo.hide();
             Ui::Widget::show({
                 _baseUiPlane->objectInfo,
-                #ifndef MAGNUM_TARGET_GLES
-                _baseUiPlane->tangentSpace
-                #endif
+                _baseUiPlane->visualization
             });
             _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
                 "{}: {}, indexed, {} attribs, {} verts, {} prims, {:.1f} kB",

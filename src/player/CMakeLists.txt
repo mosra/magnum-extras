@@ -24,6 +24,7 @@
 #
 
 find_package(Magnum REQUIRED
+    DebugTools
     GL
     MeshTools
     Primitives
@@ -68,6 +69,7 @@ if(CORRADE_TARGET_WINDOWS AND NOT CORRADE_TARGET_WINDOWS_RT)
 endif()
 target_link_libraries(magnum-player PRIVATE
     Magnum::Application
+    Magnum::DebugTools
     Magnum::GL
     Magnum::Magnum
     Magnum::MeshTools

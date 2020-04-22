@@ -42,7 +42,8 @@ namespace Magnum {
     well
 -   @ref magnum-player "magnum-player" now supports normal maps and texture
     transformation in materials
--   Tangent space visualization in @ref magnum-player "magnum-player"
+-   Tangent space, object and primitive ID visualization in
+    @ref magnum-player "magnum-player"
 
 @subsection changelog-extras-latest-buildsystem Build system
 
