@@ -78,6 +78,8 @@ image file that can be opened with plugns derived from
 -   @m_class{m-label m-default} **F5** re-imports currently loaded file
     (desktop version only, on the web drop a file again for equivalent
     behavior)
+-   @m_class{m-label m-default} **P** toggles profiling output in the console
+    (see also the `--profile` command-line option below)
 
 @section magnum-player-usage Usage
 
@@ -99,6 +101,8 @@ Arguments:
 -   `--no-merge-animations` --- don't merge glTF animations into a single clip
 -   `--msaa N` --- MSAA level to use (if not set, defaults to 8x or 2x for
     HiDPI)
+-   `--profile VALUES` --- profile the rendering (default:
+    `FrameTime CpuDuration GpuDuration`)
 -   `--magnum-...` --- engine-specific options (see
     @ref GL-Context-command-line for details)
 
@@ -106,6 +110,9 @@ The `-i` / `--importer-options` argument accepts a comma-separated list of
 key/value pairs to set in the importer plugin configuration. If the `=`
 character is omitted, it's equivalent to saying `key=true`; you can specify
 configuration subgroups using a slash.
+
+The `--profile` option accepts a space-separated list of measured values.
+Available values correspond to @ref DebugTools::GLFrameProfiler::Value names.
 
 @section magnum-player-credits Credits
 

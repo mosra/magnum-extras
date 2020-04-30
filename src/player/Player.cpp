@@ -31,8 +31,10 @@
 #include <Corrade/Utility/Configuration.h>
 #include <Corrade/Utility/DebugStl.h>
 #include <Corrade/Utility/Directory.h>
+#include <Corrade/Utility/FormatStl.h>
 #include <Corrade/Utility/Resource.h>
 #include <Corrade/Utility/String.h>
+#include <Magnum/DebugTools/FrameProfiler.h>
 #include <Magnum/GL/Context.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Extensions.h>
@@ -198,6 +200,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
             #endif
             ;
 
+        DebugTools::GLFrameProfiler::Values _profilerValues;
         #ifdef CORRADE_IS_DEBUG_BUILD
         Utility::Tweakable _tweakable;
         #endif
@@ -347,6 +350,7 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     #endif
     args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
         .addOption("msaa").setHelp("msaa", "MSAA level to use (if not set, defaults to 8x or 2x for HiDPI)", "N")
+        .addOption("profile", "FrameTime CpuDuration GpuDuration").setHelp("profile", "profile the rendering", "VALUES")
         #ifdef CORRADE_IS_DEBUG_BUILD
         .addBooleanOption("tweakable").setHelp("tweakable", "Enable live source tweakability")
         #endif
@@ -356,7 +360,11 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
 The -i / --importer-options argument accepts a comma-separated list of
 key/value pairs to set in the importer plugin configuration. If the = character
 is omitted, it's equivalent to saying key=true; you can specify configuration
-subgroups using a slash.)")
+subgroups using a slash.
+
+The --profile option accepts a space-separated list of measured values.
+Available values are FrameTime, CpuDuration, GpuDuration, VertexFetchRatio and
+PrimitiveClipRatio.)")
         .parse(arguments.argc, arguments.argv);
 
     /* Try 8x MSAA, fall back to zero samples if not possible. Enable only 2x
@@ -380,6 +388,8 @@ subgroups using a slash.)")
         if(!tryCreate(conf, glConf))
             create(conf, glConf.setSampleCount(0));
     }
+
+    _profilerValues = args.value<DebugTools::GLFrameProfiler::Values>("profile");
 
     #ifdef CORRADE_IS_DEBUG_BUILD
     if(args.isSet("tweakable")) _tweakable.enable();
@@ -531,7 +541,7 @@ subgroups using a slash.)")
         if(args.value("importer") != "AnySceneImporter" && !importer->object3DCount() && !importer->meshCount() && importer->image2DCount() >= 1)
             _player = createImagePlayer(*this, *_overlay->ui);
         else
-            _player = createScenePlayer(*this, *_overlay->ui);
+            _player = createScenePlayer(*this, *_overlay->ui, _profilerValues);
         _player->load(_file, *importer, _id);
         _importer = args.value("importer");
     } else if(args.value("importer") == "AnySceneImporter") {
@@ -552,7 +562,7 @@ subgroups using a slash.)")
         _manager.loadAndInstantiate("TinyGltfImporter");
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
-    _player = createScenePlayer(*this, *_overlay->ui);
+    _player = createScenePlayer(*this, *_overlay->ui, _profilerValues);
     _player->load({}, *importer, -1);
     #endif
 
@@ -642,7 +652,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
             return;
         }
 
-        _player = createScenePlayer(*this, *_overlay->ui);
+        _player = createScenePlayer(*this, *_overlay->ui, _profilerValues);
         _player->load(*gltfFile, *importer, -1);
 
     /* If there's just one non-glTF file, try to load it as an image instead */

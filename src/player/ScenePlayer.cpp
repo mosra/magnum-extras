@@ -41,7 +41,10 @@
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Animation/Player.h>
 #include <Magnum/DebugTools/ColorMap.h>
+#include <Magnum/DebugTools/FrameProfiler.h>
+#include <Magnum/GL/Context.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Extensions.h>
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/PixelFormat.h>
@@ -275,7 +278,7 @@ enum class Visualization: UnsignedByte {
 
 class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
     public:
-        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom);
+        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues);
 
     private:
         void drawEvent() override;
@@ -351,6 +354,11 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         GL::Mesh _fullscreenTriangle{NoCreate};
         DepthReinterpretShader _reinterpretShader{NoCreate};
         #endif
+
+        /* Profiling */
+        DebugTools::GLFrameProfiler _profiler;
+        Debug _profilerOut{Debug::Flag::NoNewlineAtTheEnd|
+            (Debug::isTty() ? Debug::Flags{} : Debug::Flag::DisableColors)};
 };
 
 class FlatDrawable: public SceneGraph::Drawable3D {
@@ -406,7 +414,7 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         const bool& _shadeless;
 };
 
-ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
+ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::GLFrameProfiler::Values profilerValues): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
     _colorMapTexture
         .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
         .setMagnificationFilter(SamplerFilter::Linear)
@@ -462,6 +470,38 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
     _fullscreenTriangle = GL::Mesh{};
     _fullscreenTriangle.setCount(3);
     #endif
+
+    #ifndef MAGNUM_TARGET_GLES
+    /* Set up the profiler, filter away unsupported values */
+    if(profilerValues & DebugTools::GLFrameProfiler::Value::GpuDuration && !GL::Context::current().isExtensionSupported<GL::Extensions::ARB::timer_query>()) {
+        Debug{} << "ARB_timer_query not supported, GPU time profiling will be unavailable";
+        profilerValues &= ~DebugTools::GLFrameProfiler::Value::GpuDuration;
+    }
+    if(profilerValues & (DebugTools::GLFrameProfiler::Value::VertexFetchRatio|DebugTools::GLFrameProfiler::Value::PrimitiveClipRatio) &&
+        !GL::Context::current().isExtensionSupported<GL::Extensions::ARB::pipeline_statistics_query>()
+    ) {
+        Debug{} << "ARB_pipeline_statistics_query not supported, GPU pipeline profiling will be unavailable";
+        profilerValues &= ~(DebugTools::GLFrameProfiler::Value::VertexFetchRatio|DebugTools::GLFrameProfiler::Value::PrimitiveClipRatio);
+    }
+    #elif !defined(MAGNUM_TARGET_WEBGL)
+    if(profilerValues & DebugTools::GLFrameProfiler::Value::GpuDuration &&
+        !GL::Context::current().isExtensionSupported<GL::Extensions::EXT::disjoint_timer_query>()
+    ) {
+        Debug{} << "EXT_disjoint_timer_query not supported, GPU time profiling will be unavailable";
+        profilerValues &= ~DebugTools::GLFrameProfiler::Value::GpuDuration;
+    }
+    #else
+    if(profilerValues & DebugTools::GLFrameProfiler::Value::GpuDuration &&
+        !GL::Context::current().isExtensionSupported<GL::Extensions::EXT::disjoint_timer_query_webgl2>()
+    ) {
+        Debug{} << "EXT_disjoint_timer_query_webgl2 not supported, GPU time profiling will be unavailable";
+        profilerValues &= ~DebugTools::GLFrameProfiler::Value::GpuDuration;
+    }
+    #endif
+
+    /* Disable profiler by default */
+    _profiler = DebugTools::GLFrameProfiler{profilerValues, 50};
+    _profiler.disable();
 }
 
 Shaders::Flat3D& ScenePlayer::flatShader(Shaders::Flat3D::Flags flags) {
@@ -1171,6 +1211,8 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
 }
 
 void ScenePlayer::drawEvent() {
+    _profiler.beginFrame();
+
     /* Another FB could be bound from a depth / object ID read (moreover with
        color output disabled), set it back to the default framebuffer */
     GL::defaultFramebuffer.bind(); /** @todo mapForDraw() should bind implicitly */
@@ -1221,6 +1263,10 @@ void ScenePlayer::drawEvent() {
         }
     }
 
+    /* Don't profile UI drawing */
+    _profiler.endFrame();
+    _profiler.printStatistics(_profilerOut, 10);
+
     /* Draw the UI. Disable the depth buffer and enable premultiplied alpha
        blending. */
     {
@@ -1233,9 +1279,10 @@ void ScenePlayer::drawEvent() {
         GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
     }
 
-    /* Schedule a redraw only if the player is playing to avoid hogging the
-       CPU */
-    if(_data && _data->player.state() == Animation::State::Playing) redraw();
+    /* Schedule a redraw only if profiling is enabled or the player is playing
+       to avoid hogging the CPU */
+    if(_profiler.isEnabled() || (_data && _data->player.state() == Animation::State::Playing))
+        redraw();
 
     #ifdef MAGNUM_TARGET_WEBGL
     /* The rendered depth buffer might get lost later, so resolve it to our
@@ -1399,6 +1446,10 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
                 0xffcccc_rgbf*_brightness,
                 0xccccff_rgbf*_brightness});
         }
+
+    /* Toggle profiling */
+    } else if(event.key() == KeyEvent::Key::P) {
+        _profiler.isEnabled() ? _profiler.disable() : _profiler.enable();
 
     } else return;
 
@@ -1612,8 +1663,8 @@ void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
 
 }
 
-Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom) {
-    return Containers::Pointer<ScenePlayer>{Containers::InPlaceInit, application, uiToStealFontFrom};
+Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues) {
+    return Containers::Pointer<ScenePlayer>{Containers::InPlaceInit, application, uiToStealFontFrom, profilerValues};
 }
 
 }}
