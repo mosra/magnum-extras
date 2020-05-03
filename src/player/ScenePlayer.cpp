@@ -1460,7 +1460,11 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
 
         const UnsignedInt selectedId = _selectionFramebuffer.read(area, {PixelFormat::R16UI}).pixels<UnsignedShort>()[0][0];
         /* If nothing is selected, reset the info text */
-        if(selectedId == 0xffff) {
+        if(selectedId >= _data->objects.size()) {
+            /* 0xffff is the background, but anything else is just wrong */
+            if(selectedId != 0xffff)
+                Warning{} << "Selected ID" << selectedId << "out of bounds for" << _data->objects.size() << "objects, ignoring";
+
             Ui::Widget::hide({
                 _baseUiPlane->objectInfo,
                 _baseUiPlane->visualization
