@@ -260,10 +260,12 @@ enum class Visualization: UnsignedByte {
     WireframeTbn,
     #endif
     WireframeObjectId,
+    WireframeVertexId,
     #ifndef MAGNUM_TARGET_GLES
     WireframePrimitiveId,
     #endif
     ObjectId,
+    VertexId,
     #ifndef MAGNUM_TARGET_GLES
     PrimitiveId,
     #endif
@@ -385,7 +387,7 @@ class PhongDrawable: public SceneGraph::Drawable3D {
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt primitiveCount, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _primitiveCount{primitiveCount} {}
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount, UnsignedInt primitiveCount, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount}, _primitiveCount{primitiveCount} {}
 
         Shaders::MeshVisualizer3D& shader() { return _shader; }
 
@@ -399,7 +401,7 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         Containers::Reference<Shaders::MeshVisualizer3D> _shader;
         GL::Mesh& _mesh;
         std::size_t _meshId;
-        UnsignedInt _objectIdCount, _primitiveCount;
+        UnsignedInt _objectIdCount, _vertexCount, _primitiveCount;
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
@@ -502,11 +504,12 @@ Shaders::MeshVisualizer3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisual
                 .setLineWidth(2.0f);
         #endif
 
-        if(flags & Shaders::MeshVisualizer3D::Flag::InstancedObjectId
+        if(flags & (Shaders::MeshVisualizer3D::Flag::InstancedObjectId|
+            Shaders::MeshVisualizer3D::Flag::VertexId
             #ifndef MAGNUM_TARGET_GLES
-            || flags & Shaders::MeshVisualizer3D::Flag::PrimitiveId
+            |Shaders::MeshVisualizer3D::Flag::PrimitiveId
             #endif
-        )
+        ))
             found->second
                 .setColor(0xffffffff_rgbaf*0.66667f)
                 .bindColorMapTexture(_colorMapTexture);
@@ -635,6 +638,11 @@ Shaders::MeshVisualizer3D::Flags ScenePlayer::setupVisualization(std::size_t mes
         return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::InstancedObjectId;
     }
 
+    if(_visualization == Visualization::WireframeVertexId) {
+        _baseUiPlane->visualization.setText("Wire + Vertex ID");
+        return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::VertexId;
+    }
+
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframePrimitiveId) {
         _baseUiPlane->visualization.setText("Wire + Prim ID");
@@ -645,6 +653,11 @@ Shaders::MeshVisualizer3D::Flags ScenePlayer::setupVisualization(std::size_t mes
     if(_visualization == Visualization::ObjectId) {
         _baseUiPlane->visualization.setText("Object ID");
         return Shaders::MeshVisualizer3D::Flag::InstancedObjectId;
+    }
+
+    if(_visualization == Visualization::VertexId) {
+        _baseUiPlane->visualization.setText("Vertex ID");
+        return Shaders::MeshVisualizer3D::Flag::VertexId;
     }
 
     #ifndef MAGNUM_TARGET_GLES
@@ -1136,6 +1149,8 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
 
     if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::InstancedObjectId)
         _shader->setColorMapTransformation(0.0f, 1.0f/_objectIdCount);
+    if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::VertexId)
+        _shader->setColorMapTransformation(0.0f, 1.0f/_vertexCount);
     #ifndef MAGNUM_TARGET_GLES
     if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::PrimitiveId)
         _shader->setColorMapTransformation(0.0f, 1.0f/_primitiveCount);
@@ -1466,7 +1481,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             _data->selectedObject = new MeshVisualizerDrawable{
                 *objectInfo.object, meshVisualizerShader(flags),
                 *meshInfo.mesh, _data->objects[selectedId].meshId,
-                meshInfo.objectIdCount, meshInfo.primitives,
+                meshInfo.objectIdCount, meshInfo.vertices, meshInfo.primitives,
                 _data->selectedObjectDrawables};
 
             /* Show object & mesh info */
