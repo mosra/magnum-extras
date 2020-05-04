@@ -387,7 +387,7 @@ class PhongDrawable: public SceneGraph::Drawable3D {
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount, UnsignedInt primitiveCount, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount}, _primitiveCount{primitiveCount} {}
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount, UnsignedInt primitiveCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount}, _primitiveCount{primitiveCount}, _shadeless(shadeless) {}
 
         Shaders::MeshVisualizer3D& shader() { return _shader; }
 
@@ -402,6 +402,7 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         GL::Mesh& _mesh;
         std::size_t _meshId;
         UnsignedInt _objectIdCount, _vertexCount, _primitiveCount;
+        const bool& _shadeless;
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
@@ -510,11 +511,7 @@ Shaders::MeshVisualizer3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisual
             |Shaders::MeshVisualizer3D::Flag::PrimitiveId
             #endif
         ))
-            found->second
-                .setColor(0xffffffff_rgbaf*0.66667f)
-                .bindColorMapTexture(_colorMapTexture);
-        else
-            found->second.setColor(0x2f83ccff_rgbaf*0.5f);
+            found->second.bindColorMapTexture(_colorMapTexture);
     }
     return found->second;
 }
@@ -1147,6 +1144,16 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
         _shader->setNormalMatrix(transformationMatrix.normalMatrix());
     #endif
 
+    if(_shader->flags() & (Shaders::MeshVisualizer3D::Flag::InstancedObjectId|
+        Shaders::MeshVisualizer3D::Flag::VertexId
+        #ifndef MAGNUM_TARGET_GLES
+        |Shaders::MeshVisualizer3D::Flag::PrimitiveId
+        #endif
+    ))
+        _shader->setColor(0xffffffff_rgbaf*(_shadeless ? 1.0f : 0.66667f));
+    else
+        _shader->setColor(0x2f83ccff_rgbaf*0.5f);
+
     if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::InstancedObjectId)
         _shader->setColorMapTransformation(0.0f, 1.0f/_objectIdCount);
     if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::VertexId)
@@ -1486,7 +1493,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                 *objectInfo.object, meshVisualizerShader(flags),
                 *meshInfo.mesh, _data->objects[selectedId].meshId,
                 meshInfo.objectIdCount, meshInfo.vertices, meshInfo.primitives,
-                _data->selectedObjectDrawables};
+                _shadeless, _data->selectedObjectDrawables};
 
             /* Show object & mesh info */
             _baseUiPlane->modelInfo.hide();
