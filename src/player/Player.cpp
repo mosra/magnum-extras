@@ -353,7 +353,7 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
         .addOption("msaa").setHelp("msaa", "MSAA level to use (if not set, defaults to 8x or 2x for HiDPI)", "N")
         .addOption("profile", "FrameTime CpuDuration GpuDuration").setHelp("profile", "profile the rendering", "VALUES")
         #ifdef CORRADE_IS_DEBUG_BUILD
-        .addBooleanOption("tweakable").setHelp("tweakable", "Enable live source tweakability")
+        .addBooleanOption("tweakable").setHelp("tweakable", "enable live source tweakability")
         #endif
         .addBooleanOption('v', "verbose").setHelp("verbose", "verbose output from importer plugins")
         .addSkippedPrefix("magnum", "engine-specific options")
