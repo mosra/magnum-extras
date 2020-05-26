@@ -103,6 +103,7 @@ Arguments:
     HiDPI)
 -   `--profile VALUES` --- profile the rendering (default:
     `FrameTime CpuDuration GpuDuration`)
+-   `-v`, `--verbose` --- verbose output from importer plugins
 -   `--magnum-...` --- engine-specific options (see
     @ref GL-Context-command-line for details)
 

@@ -34,9 +34,10 @@ namespace Magnum {
 
 @subsection changelog-extras-latest-changes Changes and improvements
 
--   @ref magnum-player "magnum-player" now accepts an `-i` /
-    `--importer-options` command-line argument similarly to
-    @ref magnum-imageconverter "magnum-imageconverter"
+-   @ref magnum-player "magnum-player" now accepts `-i` /
+    `--importer-options` and `-v` / `--verbose` command-line arguments
+    similarly to @ref magnum-imageconverter "magnum-imageconverter" and
+    @ref magnum-sceneconverter "magnum-sceneconverter"
 -   @ref magnum-player "magnum-player" can now visualize also point and line
     meshes, triangle strips and fans can now have their normals generated as
     well

@@ -204,6 +204,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         #ifdef CORRADE_IS_DEBUG_BUILD
         Utility::Tweakable _tweakable;
         #endif
+        Trade::ImporterFlags _importerFlags;
 };
 
 bool AbstractUiScreen::controlsVisible() const {
@@ -354,6 +355,7 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
         #ifdef CORRADE_IS_DEBUG_BUILD
         .addBooleanOption("tweakable").setHelp("tweakable", "Enable live source tweakability")
         #endif
+        .addBooleanOption('v', "verbose").setHelp("verbose", "verbose output from importer plugins")
         .addSkippedPrefix("magnum", "engine-specific options")
         .setGlobalHelp(R"(Displays a 3D scene file provided on command line.
 
@@ -394,6 +396,7 @@ PrimitiveClipRatio.)")
     #ifdef CORRADE_IS_DEBUG_BUILD
     if(args.isSet("tweakable")) _tweakable.enable();
     #endif
+    if(args.isSet("verbose")) _importerFlags |= Trade::ImporterFlag::Verbose;
 
     /* Setup renderer defaults */
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
@@ -493,6 +496,7 @@ PrimitiveClipRatio.)")
     /* Load a scene importer plugin */
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
+    if(importer) importer->setFlags(_importerFlags);
 
     /* Propagate user-defined options from the command line */
     if(importer) for(const std::string& option: Utility::String::splitWithoutEmptyParts(args.value("importer-options"), ',')) {
@@ -547,6 +551,7 @@ PrimitiveClipRatio.)")
     } else if(args.value("importer") == "AnySceneImporter") {
         Debug{} << "Opening as a scene failed, trying as an image...";
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
+        if(imageImporter) imageImporter->setFlags(_importerFlags);
         if(imageImporter && imageImporter->openFile(_file)) {
             if(!imageImporter->image2DCount()) {
                 Error{} << "No 2D images found in the file";
@@ -560,6 +565,7 @@ PrimitiveClipRatio.)")
     #else
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate("TinyGltfImporter");
+    importer->setFlags(_importerFlags);
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
     _player = createScenePlayer(*this, *_overlay->ui, _profilerValues);
