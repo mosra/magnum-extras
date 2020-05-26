@@ -65,7 +65,7 @@ struct BaseUiPlane: Ui::Plane {
 
 class ImagePlayer: public AbstractPlayer {
     public:
-        explicit ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom);
+        explicit ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi);
 
     private:
         void drawEvent() override;
@@ -87,6 +87,7 @@ class ImagePlayer: public AbstractPlayer {
         Shaders::Flat2D _coloredShader;
 
         /* UI */
+        bool& _drawUi;
         Containers::Optional<Ui::UserInterface> _ui;
         Containers::Optional<BaseUiPlane> _baseUiPlane;
         std::string _imageInfo;
@@ -99,7 +100,7 @@ class ImagePlayer: public AbstractPlayer {
         Matrix3 _projection;
 };
 
-ImagePlayer::ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
+ImagePlayer::ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
     /* Setup the UI, steal font etc. from the existing one to avoid having
        everything built twice */
     /** @todo this is extremely bad, there should be just one global UI (or
@@ -131,10 +132,12 @@ void ImagePlayer::drawEvent() {
     _shader.draw(_square);
 
     /* Draw the UI, this time with premultiplied alpha blending */
-    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-    _ui->draw();
+    if(_drawUi) {
+        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+        _ui->draw();
 
-    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
+        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
+    }
 
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
@@ -163,7 +166,7 @@ void ImagePlayer::keyPressEvent(KeyEvent& event) {
 }
 
 void ImagePlayer::mousePressEvent(MouseEvent& event) {
-    if(_ui->handlePressEvent(event.position())) {
+    if(_drawUi && _ui->handlePressEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -171,7 +174,7 @@ void ImagePlayer::mousePressEvent(MouseEvent& event) {
 }
 
 void ImagePlayer::mouseReleaseEvent(MouseEvent& event) {
-    if(_ui->handleReleaseEvent(event.position())) {
+    if(_drawUi && _ui->handleReleaseEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -192,7 +195,7 @@ Vector2 ImagePlayer::unprojectRelative(const Vector2i& relativeWindowPosition) c
 }
 
 void ImagePlayer::mouseMoveEvent(MouseMoveEvent& event) {
-    if(_ui->handleMoveEvent(event.position())) {
+    if(_drawUi && _ui->handleMoveEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -275,8 +278,8 @@ void ImagePlayer::initializeUi() {
 
 }
 
-Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom) {
-    return Containers::Pointer<ImagePlayer>{Containers::InPlaceInit, application, uiToStealFontFrom};
+Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi) {
+    return Containers::Pointer<ImagePlayer>{Containers::InPlaceInit, application, uiToStealFontFrom, drawUi};
 }
 
 }}

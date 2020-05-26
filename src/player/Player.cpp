@@ -121,7 +121,7 @@ struct OverlayUiPlane: Ui::Plane {
 
 struct Overlay: public AbstractUiScreen, public Interconnect::Receiver {
     public:
-        explicit Overlay(Platform::ScreenedApplication& application);
+        explicit Overlay(Platform::ScreenedApplication& application, bool& drawUi);
 
         /* Directly accessed from Player */
         Containers::Optional<Ui::UserInterface> ui;
@@ -134,9 +134,7 @@ struct Overlay: public AbstractUiScreen, public Interconnect::Receiver {
         void drawEvent() override;
         void viewportEvent(ViewportEvent& event) override;
 
-        #ifndef CORRADE_TARGET_EMSCRIPTEN
         void keyPressEvent(KeyEvent& event) override;
-        #endif
         void mousePressEvent(MouseEvent& event) override;
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
@@ -150,6 +148,7 @@ struct Overlay: public AbstractUiScreen, public Interconnect::Receiver {
 
         bool _isFullsize = false;
         #endif
+        bool& _drawUi;
 };
 
 }
@@ -199,6 +198,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
             false
             #endif
             ;
+        bool _drawUi = true;
 
         DebugTools::GLFrameProfiler::Values _profilerValues;
         #ifdef CORRADE_IS_DEBUG_BUILD
@@ -211,7 +211,7 @@ bool AbstractUiScreen::controlsVisible() const {
     return application<Player>().controlsVisible();
 }
 
-Overlay::Overlay(Platform::ScreenedApplication& application): AbstractUiScreen{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
+Overlay::Overlay(Platform::ScreenedApplication& application, bool& drawUi): AbstractUiScreen{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
     ui.emplace(Vector2(application.windowSize())/application.dpiScaling(), application.windowSize(), application.framebufferSize(), Ui::mcssDarkStyleConfiguration(), "«»");
     initializeUi();
 }
@@ -223,7 +223,7 @@ void Overlay::drawEvent() {
 
     /* Draw the UI. Disable the depth buffer and enable premultiplied alpha
        blending. */
-    {
+    if(_drawUi) {
         GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
         GL::Renderer::enable(GL::Renderer::Feature::Blending);
         GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
@@ -256,19 +256,23 @@ void Overlay::viewportEvent(ViewportEvent& event) {
     setControlsVisible(application<Player>().controlsVisible());
 }
 
-#ifndef CORRADE_TARGET_EMSCRIPTEN
 void Overlay::keyPressEvent(KeyEvent& event) {
+    #ifndef CORRADE_TARGET_EMSCRIPTEN
     if(event.key() == KeyEvent::Key::F5 && !(event.modifiers() & (KeyEvent::Modifier::Shift|KeyEvent::Modifier::Ctrl|KeyEvent::Modifier::Super|KeyEvent::Modifier::Alt|KeyEvent::Modifier::AltGr))) {
         application<Player>().reload();
+    } else
+    #endif
+    /* Toggle UI drawing (useful for screenshots) */
+    if(event.key() == KeyEvent::Key::Esc) {
+        _drawUi ^= true;
     } else return;
 
     redraw();
     event.setAccepted();
 }
-#endif
 
 void Overlay::mousePressEvent(MouseEvent& event) {
-    if(ui->handlePressEvent(event.position())) {
+    if(_drawUi && ui->handlePressEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -276,7 +280,7 @@ void Overlay::mousePressEvent(MouseEvent& event) {
 }
 
 void Overlay::mouseReleaseEvent(MouseEvent& event) {
-    if(ui->handleReleaseEvent(event.position())) {
+    if(_drawUi && ui->handleReleaseEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -284,7 +288,7 @@ void Overlay::mouseReleaseEvent(MouseEvent& event) {
 }
 
 void Overlay::mouseMoveEvent(MouseMoveEvent& event) {
-    if(ui->handleMoveEvent(event.position())) {
+    if(_drawUi && ui->handleMoveEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -485,7 +489,7 @@ PrimitiveClipRatio.)")
     }
 
     /* Set up the screens */
-    _overlay.emplace(*this);
+    _overlay.emplace(*this, _drawUi);
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     _file = args.value("file");
@@ -543,9 +547,9 @@ PrimitiveClipRatio.)")
            or a scene */
         /** @todo ugh the importer should have an API for that */
         if(args.value("importer") != "AnySceneImporter" && !importer->object3DCount() && !importer->meshCount() && importer->image2DCount() >= 1)
-            _player = createImagePlayer(*this, *_overlay->ui);
+            _player = createImagePlayer(*this, *_overlay->ui, _drawUi);
         else
-            _player = createScenePlayer(*this, *_overlay->ui, _profilerValues);
+            _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
         _player->load(_file, *importer, _id);
         _importer = args.value("importer");
     } else if(args.value("importer") == "AnySceneImporter") {
@@ -557,7 +561,7 @@ PrimitiveClipRatio.)")
                 Error{} << "No 2D images found in the file";
                 std::exit(3);
             }
-            _player = createImagePlayer(*this, *_overlay->ui);
+            _player = createImagePlayer(*this, *_overlay->ui, _drawUi);
             _player->load(_file, *imageImporter, _id);
             _importer = "AnyImageImporter";
         } else std::exit(2);
@@ -568,7 +572,7 @@ PrimitiveClipRatio.)")
     importer->setFlags(_importerFlags);
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
-    _player = createScenePlayer(*this, *_overlay->ui, _profilerValues);
+    _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
     _player->load({}, *importer, -1);
     #endif
 
@@ -658,14 +662,14 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
             return;
         }
 
-        _player = createScenePlayer(*this, *_overlay->ui, _profilerValues);
+        _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
         _player->load(*gltfFile, *importer, -1);
 
     /* If there's just one non-glTF file, try to load it as an image instead */
     } else if(_droppedFiles.size() == 1) {
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
         if(imageImporter->openData(_droppedFiles.begin()->second) && imageImporter->image2DCount()) {
-            _player = createImagePlayer(*this, *_overlay->ui);
+            _player = createImagePlayer(*this, *_overlay->ui, _drawUi);
             _player->load(_droppedFiles.begin()->first, *imageImporter, -1);
         } else {
             _overlay->importErrorUiPlane->what.setText("No recognizable file dropped.");

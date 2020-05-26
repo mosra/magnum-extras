@@ -278,7 +278,7 @@ enum class Visualization: UnsignedByte {
 
 class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
     public:
-        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues);
+        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi);
 
     private:
         void drawEvent() override;
@@ -330,6 +330,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         Containers::Optional<Data> _data;
 
         /* UI */
+        bool& _drawUi;
         Containers::Optional<Ui::UserInterface> _ui;
         Containers::Optional<BaseUiPlane> _baseUiPlane;
         const std::pair<Float, Int> _elapsedTimeAnimationData[2] {
@@ -414,7 +415,7 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         const bool& _shadeless;
 };
 
-ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::GLFrameProfiler::Values profilerValues): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input} {
+ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
     _colorMapTexture
         .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
         .setMagnificationFilter(SamplerFilter::Linear)
@@ -1269,7 +1270,7 @@ void ScenePlayer::drawEvent() {
 
     /* Draw the UI. Disable the depth buffer and enable premultiplied alpha
        blending. */
-    {
+    if(_drawUi) {
         GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
         GL::Renderer::enable(GL::Renderer::Feature::Blending);
         GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
@@ -1458,7 +1459,7 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
 }
 
 void ScenePlayer::mousePressEvent(MouseEvent& event) {
-    if(_ui->handlePressEvent(event.position())) {
+    if(_drawUi && _ui->handlePressEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -1587,7 +1588,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
 }
 
 void ScenePlayer::mouseReleaseEvent(MouseEvent& event) {
-    if(_ui->handleReleaseEvent(event.position())) {
+    if(_drawUi && _ui->handleReleaseEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -1606,7 +1607,7 @@ void ScenePlayer::mouseMoveEvent(MouseMoveEvent& event) {
     const Vector2i delta = event.position() - _lastPosition;
     _lastPosition = event.position();
 
-    if(_ui->handleMoveEvent(event.position())) {
+    if(_drawUi && _ui->handleMoveEvent(event.position())) {
         redraw();
         event.setAccepted();
         return;
@@ -1663,8 +1664,8 @@ void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
 
 }
 
-Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues) {
-    return Containers::Pointer<ScenePlayer>{Containers::InPlaceInit, application, uiToStealFontFrom, profilerValues};
+Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi) {
+    return Containers::Pointer<ScenePlayer>{Containers::InPlaceInit, application, uiToStealFontFrom, profilerValues, drawUi};
 }
 
 }}

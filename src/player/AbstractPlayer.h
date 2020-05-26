@@ -64,8 +64,8 @@ class AbstractPlayer: public AbstractUiScreen {
 };
 
 /* Extreme PIMPL. */
-Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues);
-Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom);
+Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi);
+Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi);
 
 }}
 

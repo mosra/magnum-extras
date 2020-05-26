@@ -49,6 +49,8 @@ namespace Magnum {
     @ref magnum-player "magnum-player", enable using the
     @m_class{m-label m-default} **P** key and configure with the `--profile`
     command-line option
+-   Ability to disable UI rendering in @ref magnum-player "magnum-player" using
+    the @m_class{m-label m-warning} **Esc** key
 
 @subsection changelog-extras-latest-buildsystem Build system
 

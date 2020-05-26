@@ -80,6 +80,7 @@ image file that can be opened with plugns derived from
     behavior)
 -   @m_class{m-label m-default} **P** toggles profiling output in the console
     (see also the `--profile` command-line option below)
+-   @m_class{m-label m-warning} **Esc** toggles UI rendering
 
 @section magnum-player-usage Usage
 
