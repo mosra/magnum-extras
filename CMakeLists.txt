@@ -83,8 +83,8 @@ endif()
 set(MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR share/cmake/MagnumExtras)
 
 # Library version
-set(MAGNUM_LIBRARY_VERSION 2.3)
-set(MAGNUM_LIBRARY_SOVERSION 2)
+set(MAGNUMEXTRAS_LIBRARY_VERSION 2.3)
+set(MAGNUMEXTRAS_LIBRARY_SOVERSION 2)
 
 # A single output location. After a decade of saying NO THIS IS A NON-SOLUTION
 # TO A NON-PROBLEM I reconsidered my views and enabled this, because:
