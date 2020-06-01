@@ -82,9 +82,12 @@ endif()
 
 set(MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR share/cmake/MagnumExtras)
 
-# Library version
+# Library version. MAGNUMEXTRAS_VERSION_YEAR/MONTH is used in
+# src/Magnum/CMakeLists.txt to generate the versionExtras.h header.
 set(MAGNUMEXTRAS_LIBRARY_VERSION 2.3)
 set(MAGNUMEXTRAS_LIBRARY_SOVERSION 2)
+set(MAGNUMEXTRAS_VERSION_YEAR 2019)
+set(MAGNUMEXTRAS_VERSION_MONTH 10)
 
 # A single output location. After a decade of saying NO THIS IS A NON-SOLUTION
 # TO A NON-PROBLEM I reconsidered my views and enabled this, because:
