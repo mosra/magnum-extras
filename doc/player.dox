@@ -75,6 +75,8 @@ image file that can be opened with plugns derived from
 -   @m_class{m-label m-default} **+** / @m_class{m-label m-default} **Num +**
     or @m_class{m-label m-default} **-** / @m_class{m-label m-default} **Num -**
     increases or decreases lighting brightness
+-   @m_class{m-label m-warning} **Ctrl** @m_class{m-label m-default} **mouse wheel**
+    adjusts length of TBN visualization lines
 -   @m_class{m-label m-default} **F5** re-imports currently loaded file
     (desktop version only, on the web drop a file again for equivalent
     behavior)

@@ -323,6 +323,9 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         GL::Texture2D _colorMapTexture;
 
         Float _brightness{0.8f};
+        #ifndef MAGNUM_TARGET_GLES
+        Float _lineLength = 0.3f;
+        #endif
         bool _shadeless = false;
         Visualization _visualization = Visualization::Wireframe;
 
@@ -543,7 +546,7 @@ Shaders::MeshVisualizer3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisual
         #ifndef MAGNUM_TARGET_GLES
         if(flags & Shaders::MeshVisualizer3D::Flag::NormalDirection)
             found->second
-                .setLineLength(0.3f)
+                .setLineLength(_lineLength)
                 .setLineWidth(2.0f);
         #endif
 
@@ -1647,6 +1650,17 @@ void ScenePlayer::mouseMoveEvent(MouseMoveEvent& event) {
 
 void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
     if(!_data || !event.offset().y()) return;
+
+    #ifndef MAGNUM_TARGET_GLES
+    /* Adjust TBN visualization length with Ctrl-scroll if it's currently shown */
+    if((event.modifiers() & MouseScrollEvent::Modifier::Ctrl) && _data->selectedObject && (_data->selectedObject->shader().flags() & Shaders::MeshVisualizer3D::Flag::NormalDirection)) {
+        _lineLength = Math::max(_lineLength *= (1.0f + event.offset().y()*0.1f), 0.0f);
+        _data->selectedObject->shader().setLineLength(_lineLength);
+        event.setAccepted();
+        redraw();
+        return;
+    }
+    #endif
 
     const Float currentDepth = depthAt(event.position());
     const Float depth = currentDepth == 1.0f ? _lastDepth : currentDepth;
