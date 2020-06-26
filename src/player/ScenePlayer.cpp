@@ -779,6 +779,10 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         }
 
         Containers::Optional<Trade::ImageData2D> imageData = importer.image2D(textureData->image());
+        if(!imageData) {
+            Warning{} << "Cannot load texture" << i << importer.image2DName(textureData->image());
+            continue;
+        }
 
         /* Configure the texture */
         GL::Texture2D texture;
