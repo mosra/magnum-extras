@@ -30,9 +30,14 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-@section changelog-extras-latest Changes since 2019.10
+@anchor changelog-extras-latest
 
-@subsection changelog-extras-latest-changes Changes and improvements
+@section changelog-extras-2020-06 2020.06
+
+Released 2020-06-27, tagged as
+[v2020.06](https://github.com/mosra/magnum-extras/releases/tag/v2020.06).
+
+@subsection changelog-extras-2020-06-changes Changes and improvements
 
 -   @ref magnum-player "magnum-player" now accepts `-i` /
     `--importer-options` and `-v` / `--verbose` command-line arguments
@@ -52,12 +57,12 @@ namespace Magnum {
 -   Ability to disable UI rendering in @ref magnum-player "magnum-player" using
     the @m_class{m-label m-warning} **Esc** key
 
-@subsection changelog-extras-latest-buildsystem Build system
+@subsection changelog-extras-2020-06-buildsystem Build system
 
 -   The library again compiles and tests cleanly with @ref CORRADE_NO_ASSERT
     enabled, and this setup is verified on the CI to avoid further regressions
 
-@subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
+@subsection changelog-extras-2020-06-compatibility Potential compatibility breakages, removed APIs
 
 -   Removed `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum
     set deprecated in 2018.02, use @ref Ui::PlaneFlag and @ref Ui::PlaneFlags
