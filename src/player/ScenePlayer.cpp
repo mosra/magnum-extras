@@ -1417,7 +1417,7 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
         /* Front/back */
         const Float multiplier = event.modifiers() & KeyEvent::Modifier::Ctrl ? -1.0f : 1.0f;
 
-        Quaternion rotation{Math::NoInit};
+        Quaternion rotation{NoInit};
         if(event.key() == KeyEvent::Key::NumSeven) /* Top/bottom */
             rotation = Quaternion::rotation(-90.0_degf*multiplier, Vector3::xAxis());
         else if(event.key() == KeyEvent::Key::NumOne) /* Front/back */
