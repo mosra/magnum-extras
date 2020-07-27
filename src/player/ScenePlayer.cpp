@@ -1576,11 +1576,6 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
         return;
     }
 
-    /* Due to compatibility reasons, scroll is also reported as a press event,
-       so filter that out */
-    if((event.button() != MouseEvent::Button::Left &&
-        event.button() != MouseEvent::Button::Middle) || !_data) return;
-
     _lastPosition = event.position();
 
     const Float currentDepth = depthAt(event.position());
