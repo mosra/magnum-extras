@@ -30,7 +30,12 @@ namespace Magnum {
 @tableofcontents
 @m_footernavigation
 
-@anchor changelog-extras-latest
+@section changelog-extras-latest Changes since 2020.06
+
+@subsection changelog-extras-latest-buildsystem Build system
+
+-   The `versionExtras.h` header now gets populated from Git correctly also
+    when inside a CMake subproject
 
 @section changelog-extras-2020-06 2020.06
 
