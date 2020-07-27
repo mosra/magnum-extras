@@ -175,29 +175,6 @@ UserInterface::UserInterface(const Vector2& size, const Vector2i& windowSize, co
     setStyleConfiguration(styleConfiguration);
 }
 
-#ifdef MAGNUM_BUILD_DEPRECATED
-UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font, const StyleConfiguration& styleConfiguration): UserInterface{NoCreate, size, screenSize, screenSize} {
-    /* Populate the state only for the glyph cache. Neither the manager nor
-       the font is used. */
-    _fontState.reset(new UserInterface::FontState{Vector2i{1024}});
-    _font = &font;
-    _glyphCache = &_fontState->glyphCache;
-
-    /* Prepare glyph cache */
-    _font->fillGlyphCache(*_glyphCache,
-        "abcdefghijklmnopqrstuvwxyz"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
-
-    /* Set desired style */
-    setStyleConfiguration(styleConfiguration);
-}
-
-CORRADE_IGNORE_DEPRECATED_PUSH
-UserInterface::UserInterface(const Vector2& size, const Vector2i& screenSize, Text::AbstractFont& font): UserInterface{size, screenSize, font, defaultStyleConfiguration()} {}
-CORRADE_IGNORE_DEPRECATED_POP
-#endif
-
 UserInterface::~UserInterface() = default;
 
 const Plane* UserInterface::activePlane() const {

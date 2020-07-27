@@ -37,6 +37,14 @@ namespace Magnum {
 -   The `versionExtras.h` header now gets populated from Git correctly also
     when inside a CMake subproject
 
+@subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
+
+-   Removed @ref Ui::UserInterface constructors taking a font without a
+    corresponding glyph cache instance that were deprecated in 2018.10, use
+    either @ref UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&)
+    or @ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
+    instead.
+
 @section changelog-extras-2020-06 2020.06
 
 Released 2020-06-27, tagged as
@@ -169,10 +177,18 @@ Released 2018-10-23, tagged as
     relation to requiring ES3 features (see
     [mosra/magnum-extras#4](https://github.com/mosra/magnum-extras/issues/4))
 
-@subsection changelog-extras-2018-10-bugfixed Bug fixes
+@subsection changelog-extras-2018-10-bugfixes Bug fixes
 
 -   @ref Ui::Button::setStyle() was mistakenly not returning a reference to
     self, breaking method chaining
+
+@subsection changelog-extras-2018-10-deprecated Deprecated APIs
+
+-   @ref Ui::UserInterface constructors taking a font without a corresponding
+    glyph cache instance are deprecated, use either
+    @ref UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&)
+    or @ref UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
+    instead.
 
 @section changelog-extras-2018-04 2018.04
 
