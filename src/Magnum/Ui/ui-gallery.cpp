@@ -297,7 +297,7 @@ Gallery::Gallery(const Arguments& arguments): Platform::Application{arguments, C
     .setSize({640, 480})
     #endif
     #ifdef CORRADE_TARGET_IOS
-    .setWindowFlags(Configuration::WindowFlag::Borderless|Configuration::WindowFlag::AllowHighDpi)
+    .setWindowFlags(Configuration::WindowFlag::Borderless)
     #endif
     }
 {
