@@ -805,13 +805,13 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     Debug{} << "Loading" << importer.materialCount() << "materials";
     Containers::Array<Containers::Optional<Trade::PhongMaterialData>> materials{importer.materialCount()};
     for(UnsignedInt i = 0; i != importer.materialCount(); ++i) {
-        Containers::Pointer<Trade::AbstractMaterialData> materialData = importer.material(i);
-        if(!materialData || materialData->type() != Trade::MaterialType::Phong) {
+        Containers::Optional<Trade::MaterialData> materialData = importer.material(i);
+        if(!materialData || !(materialData->types() & Trade::MaterialType::Phong) || (materialData->as<Trade::PhongMaterialData>().hasTextureTransformation() && !materialData->as<Trade::PhongMaterialData>().hasCommonTextureTransformation()) || materialData->as<Trade::PhongMaterialData>().hasTextureCoordinates()) {
             Warning{} << "Cannot load material" << i << importer.materialName(i);
             continue;
         }
 
-        materials[i] = std::move(static_cast<Trade::PhongMaterialData&>(*materialData));
+        materials[i] = std::move(*materialData).as<Trade::PhongMaterialData>();
     }
 
     /* Load all meshes. Meshes that fail to load will be NullOpt. Remember
@@ -1100,13 +1100,13 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                a default-colored material. */
             GL::Texture2D* diffuseTexture = nullptr;
             GL::Texture2D* normalTexture = nullptr;
-            if(material.flags() & Trade::PhongMaterialData::Flag::DiffuseTexture) {
+            if(material.hasAttribute(Trade::MaterialAttribute::DiffuseTexture)) {
                 Containers::Optional<GL::Texture2D>& texture = _data->textures[material.diffuseTexture()];
                 if(texture) {
                     diffuseTexture = &*texture;
                     flags |= Shaders::Phong::Flag::AmbientTexture|
                         Shaders::Phong::Flag::DiffuseTexture;
-                    if(material.flags() & Trade::PhongMaterialData::Flag::TextureTransformation)
+                    if(material.hasTextureTransformation())
                         flags |= Shaders::Phong::Flag::TextureTransformation;
                     if(material.alphaMode() == Trade::MaterialAlphaMode::Mask)
                         flags |= Shaders::Phong::Flag::AlphaMask;
@@ -1115,12 +1115,12 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
             /* Normal textured material. If the textures fail to load, again
                just use a default-colored material. */
-            if(material.flags() & Trade::PhongMaterialData::Flag::NormalTexture) {
+            if(material.hasAttribute(Trade::MaterialAttribute::NormalTexture)) {
                 Containers::Optional<GL::Texture2D>& texture = _data->textures[material.normalTexture()];
                 if(texture) {
                     normalTexture = &*texture;
                     flags |= Shaders::Phong::Flag::NormalTexture;
-                    if(material.flags() & Trade::PhongMaterialData::Flag::TextureTransformation)
+                    if(material.hasTextureTransformation())
                         flags |= Shaders::Phong::Flag::TextureTransformation;
                 }
             }
@@ -1128,7 +1128,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
             new PhongDrawable{*object, phongShader(flags),
                 mesh, i,
                 material.diffuseColor(), diffuseTexture, normalTexture,
-                material.alphaMask(), material.textureMatrix(), _shadeless,
+                material.alphaMask(), material.commonTextureMatrix(), _shadeless,
                 material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                     _data->transparentDrawables : _data->opaqueDrawables};
         }
