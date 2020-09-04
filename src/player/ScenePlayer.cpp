@@ -380,7 +380,7 @@ class FlatDrawable: public SceneGraph::Drawable3D {
 
 class PhongDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, GL::Texture2D* normalTexture, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _normalTexture{normalTexture}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
+        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, GL::Texture2D* normalTexture, Float normalTextureScale, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _normalTexture{normalTexture}, _normalTextureScale{normalTextureScale}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
 
         explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{nullptr}, _normalTexture{nullptr}, _alphaMask{0.5f}, _shadeless{shadeless} {}
 
@@ -393,6 +393,7 @@ class PhongDrawable: public SceneGraph::Drawable3D {
         Color4 _color;
         GL::Texture2D* _diffuseTexture;
         GL::Texture2D* _normalTexture;
+        Float _normalTextureScale;
         Float _alphaMask;
         Matrix3 _textureMatrix;
         const bool& _shadeless;
@@ -1100,6 +1101,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                a default-colored material. */
             GL::Texture2D* diffuseTexture = nullptr;
             GL::Texture2D* normalTexture = nullptr;
+            Float normalTextureScale = 1.0f;
             if(material.hasAttribute(Trade::MaterialAttribute::DiffuseTexture)) {
                 Containers::Optional<GL::Texture2D>& texture = _data->textures[material.diffuseTexture()];
                 if(texture) {
@@ -1119,6 +1121,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 Containers::Optional<GL::Texture2D>& texture = _data->textures[material.normalTexture()];
                 if(texture) {
                     normalTexture = &*texture;
+                    normalTextureScale = material.normalTextureScale();
                     flags |= Shaders::Phong::Flag::NormalTexture;
                     if(material.hasTextureTransformation())
                         flags |= Shaders::Phong::Flag::TextureTransformation;
@@ -1127,7 +1130,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
             new PhongDrawable{*object, phongShader(flags),
                 mesh, i,
-                material.diffuseColor(), diffuseTexture, normalTexture,
+                material.diffuseColor(), diffuseTexture, normalTexture, normalTextureScale,
                 material.alphaMask(), material.commonTextureMatrix(), _shadeless,
                 material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                     _data->transparentDrawables : _data->opaqueDrawables};
@@ -1163,7 +1166,8 @@ void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera
         .bindAmbientTexture(*_diffuseTexture)
         .bindDiffuseTexture(*_diffuseTexture);
     if(_normalTexture) _shader
-        .bindNormalTexture(*_normalTexture);
+        .bindNormalTexture(*_normalTexture)
+        .setNormalTextureScale(_normalTextureScale);
 
     if(_shadeless) _shader
         .setAmbientColor(_color)

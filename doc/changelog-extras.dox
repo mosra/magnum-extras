@@ -32,6 +32,12 @@ namespace Magnum {
 
 @section changelog-extras-latest Changes since 2020.06
 
+@subsection changelog-extras-latest-changes Changes and improvements
+
+-   @ref magnum-player "magnum-player" now makes use of the
+    @ref Trade::MaterialAttribute::NormalTextureScale material attribute, if
+    present
+
 @subsection changelog-extras-latest-buildsystem Build system
 
 -   The `versionExtras.h` header now gets populated from Git correctly also
