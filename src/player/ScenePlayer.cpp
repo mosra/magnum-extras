@@ -55,10 +55,17 @@
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/Math/CubicHermite.h>
 #include <Magnum/Math/FunctionsBatch.h>
+#include <Magnum/Math/Swizzle.h>
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/MeshTools/Duplicate.h>
 #include <Magnum/MeshTools/GenerateIndices.h>
+#include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Primitives/Axis.h>
+#include <Magnum/Primitives/Crosshair.h>
+#include <Magnum/Primitives/Cone.h>
+#include <Magnum/Primitives/Circle.h>
+#include <Magnum/Primitives/Line.h>
+#include <Magnum/Primitives/UVSphere.h>
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
@@ -71,6 +78,7 @@
 #include <Magnum/Trade/AnimationData.h>
 #include <Magnum/Trade/CameraData.h>
 #include <Magnum/Trade/ImageData.h>
+#include <Magnum/Trade/LightData.h>
 #include <Magnum/Trade/MeshData.h>
 #include <Magnum/Trade/MeshObjectData3D.h>
 #include <Magnum/Trade/PhongMaterialData.h>
@@ -223,11 +231,18 @@ struct MeshInfo {
     bool hasTangents, hasSeparateBitangents;
 };
 
+struct LightInfo {
+    Containers::Optional<Trade::LightData> light;
+    std::string name;
+    std::string type;
+};
+
 struct ObjectInfo {
     Object3D* object;
     std::string name;
     std::string type;
     UnsignedInt meshId{0xffffffffu};
+    UnsignedInt lightId{0xffffffffu};
     UnsignedInt childCount;
 };
 
@@ -235,6 +250,7 @@ class MeshVisualizerDrawable;
 
 struct Data {
     Containers::Array<MeshInfo> meshes;
+    Containers::Array<LightInfo> lights;
     Containers::Array<Containers::Optional<GL::Texture2D>> textures;
 
     Scene3D scene;
@@ -328,7 +344,9 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         std::unordered_map<Shaders::Phong::Flags, Shaders::Phong, EnumSetHash<Shaders::Phong::Flags>> _phongShaders;
         std::unordered_map<Shaders::MeshVisualizer3D::Flags, Shaders::MeshVisualizer3D, EnumSetHash<Shaders::MeshVisualizer3D::Flags>> _meshVisualizerShaders;
         GL::Texture2D _colorMapTexture;
-        GL::Mesh _axisMesh; /* Object visualization */
+        /* Object and light visualization */
+        GL::Mesh _lightCenterMesh, _lightInnerConeMesh, _lightOuterCircleMesh,
+            _lightSphereMesh, _lightDirectionMesh, _axisMesh;
 
         Float _brightness{0.8f};
         #ifndef MAGNUM_TARGET_GLES
@@ -375,7 +393,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
 class FlatDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit FlatDrawable(Object3D& object, Shaders::Flat3D& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color} {}
+        explicit FlatDrawable(Object3D& object, Shaders::Flat3D& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const Vector3& scale, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _scale{scale} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -384,6 +402,7 @@ class FlatDrawable: public SceneGraph::Drawable3D {
         GL::Mesh& _mesh;
         UnsignedInt _objectId;
         Color4 _color;
+        Vector3 _scale;
 };
 
 class PhongDrawable: public SceneGraph::Drawable3D {
@@ -428,14 +447,41 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
-    /* Visualizers and color maps */
+    /* Color maps */
     _colorMapTexture
         .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
         .setMagnificationFilter(SamplerFilter::Linear)
         .setWrapping(SamplerWrapping::Repeat)
         .setStorage(1, GL::TextureFormat::RGBA8, {256, 1})
         .setSubImage(0, {}, ImageView2D{PixelFormat::RGB8Unorm, {256, 1}, DebugTools::ColorMap::turbo()});
+
+    /* Object and light visualizers */
     _axisMesh = MeshTools::compile(Primitives::axis3D());
+    _lightCenterMesh = MeshTools::compile(Primitives::crosshair3D());
+    _lightSphereMesh = MeshTools::compile(Primitives::uvSphereWireframe(32, 64));
+
+    /* Directional light visualization is a line in the -Z direction, with a
+       tip at origin. */
+    _lightDirectionMesh = MeshTools::compile(Primitives::line3D({}, Vector3::zAxis(-1.0f)));
+
+    /* Make the spotlight visualization cone center at the tip, pointing in -Z
+       direction to match the spotlight defaults. The circle is visualizing the
+       outer angle, put it at the position of the cone cap so we can scale it
+       to the desired form as well. */
+    {
+        Trade::MeshData cone = Primitives::coneWireframe(32, 0.5f);
+        MeshTools::transformPointsInPlace(
+            Matrix4::rotationX(90.0_degf)*
+            Matrix4::translation(Vector3::yAxis(-0.5f)),
+            cone.mutableAttribute<Vector3>(Trade::MeshAttribute::Position));
+        _lightInnerConeMesh = MeshTools::compile(cone);
+
+        Trade::MeshData circle = Primitives::circle3DWireframe(32);
+        MeshTools::transformPointsInPlace(
+            Matrix4::translation(Vector3::zAxis(-1.0f)),
+            circle.mutableAttribute<Vector3>(Trade::MeshAttribute::Position));
+        _lightOuterCircleMesh = MeshTools::compile(circle);
+    }
 
     /* Setup the UI, steal font etc. from the existing one to avoid having
        everything built twice */
@@ -820,6 +866,36 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->textures[i] = std::move(texture);
     }
 
+    /* Load all lights. Lights that fail to load will be NullOpt, saving the
+       whole imported data so we can populate the selection info later. */
+    Debug{} << "Loading" << importer.lightCount() << "lights";
+    _data->lights = Containers::Array<LightInfo>{importer.lightCount()};
+    for(UnsignedInt i = 0; i != importer.lightCount(); ++i) {
+        _data->lights[i].name = importer.lightName(i);
+        if(_data->lights[i].name.empty())
+            _data->lights[i].name = Utility::formatString("#{}", i);
+
+        Containers::Optional<Trade::LightData> light = importer.light(i);
+        if(light) {
+            switch(light->type()) {
+                case Trade::LightData::Type::Ambient:
+                    _data->lights[i].type = "ambient light";
+                    break;
+                case Trade::LightData::Type::Directional:
+                    _data->lights[i].type = "directional light";
+                    break;
+                case Trade::LightData::Type::Point:
+                    _data->lights[i].type = "point light";
+                    break;
+                case Trade::LightData::Type::Spot:
+                    _data->lights[i].type = "spot light";
+                    break;
+            }
+
+            _data->lights[i].light = std::move(light);
+        }
+    }
+
     /* Load all materials. Materials that fail to load will be NullOpt. The
        data will be stored directly in objects later, so save them only
        temporarily. */
@@ -1094,10 +1170,8 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
         case Trade::ObjectInstanceType3D::Camera:
             _data->objects[i].type = "camera";
             break;
-        case Trade::ObjectInstanceType3D::Light:
-            _data->objects[i].type = "light";
-            break;
         /* these are never used, as they have their own info text */
+        case Trade::ObjectInstanceType3D::Light:
         case Trade::ObjectInstanceType3D::Mesh:
             break;
     }
@@ -1128,7 +1202,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                     mesh, i,
                     0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
             else
-                new FlatDrawable{*object, flatShader(hasVertexColors[objectData->instance()] ? Shaders::Flat3D::Flag::VertexColor : Shaders::Flat3D::Flags{}), mesh, i, 0xffffff_rgbf, _data->opaqueDrawables};
+                new FlatDrawable{*object, flatShader(hasVertexColors[objectData->instance()] ? Shaders::Flat3D::Flag::VertexColor : Shaders::Flat3D::Flags{}), mesh, i, 0xffffff_rgbf, Vector3{Constants::nan()}, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -1178,14 +1252,63 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                     _data->transparentDrawables : _data->opaqueDrawables};
         }
 
+    /* Light */
+    } else if(objectData->instanceType() == Trade::ObjectInstanceType3D::Light && objectData->instance() != -1 && _data->lights[objectData->instance()].light) {
+        /* Save the light pointer as well, so we know what to print for object
+           selection */
+        _data->objects[i].lightId = objectData->instance();
+
+        const Trade::LightData& light = *_data->lights[objectData->instance()].light;
+
+        /* Visualization of the center */
+        new FlatDrawable{*object, flatShader({}), _lightCenterMesh, i, light.color(), Vector3{0.25f}, _data->objectVisualizationDrawables};
+
+        /* If the range is infinite, display it at distance = 5. It's not
+           great as it's quite misleading, but better than nothing. */
+        /** @todo make this runtime-changeable like with TBN visualizers */
+        Float range;
+        if(light.range() != Constants::inf()) range = light.range();
+        else range = 5.0f;
+
+        /* Point light has a sphere around */
+        if(light.type() == Trade::LightData::Type::Point) {
+            new FlatDrawable{*object, flatShader({}), _lightSphereMesh, i, light.color(), Vector3{range}, _data->objectVisualizationDrawables};
+
+        /* Spotlight has a cone visualizing the inner angle and a circle at
+           the end visualizing the outer angle */
+        } else if(light.type() == Trade::LightData::Type::Spot) {
+            new FlatDrawable{*object, flatShader({}), _lightInnerConeMesh, i, light.color(),
+                Math::gather<'x', 'x', 'y'>(Vector2{
+                    range*Math::tan(light.innerConeAngle()), range
+                }), _data->objectVisualizationDrawables};
+            new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, i, light.color(),
+                Math::gather<'x', 'x', 'y'>(Vector2{
+                    range*Math::tan(light.outerConeAngle()), range
+                }), _data->objectVisualizationDrawables};
+
+        /* Directional has a circle and a line in its direction. The range is
+           always infinite, so the line has always a length of 15. */
+        } else if(light.type() == Trade::LightData::Type::Directional) {
+            new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, i, light.color(), Vector3{0.25f, 0.25f, 0.0f}, _data->objectVisualizationDrawables};
+            new FlatDrawable{*object, flatShader({}), _lightDirectionMesh, i, light.color(), Vector3{5.0f}, _data->objectVisualizationDrawables};
+
+        /* Ambient lights are defined just by the center */
+        } else if(light.type() == Trade::LightData::Type::Ambient) {
+
+        /** @todo handle area lights when those are implemented */
+        } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
     /* This is a node that holds the default camera -> assign the object to the
        global camera pointer */
     } else if(objectData->instanceType() == Trade::ObjectInstanceType3D::Camera && objectData->instance() == 0) {
         _data->cameraObject = object;
+
+        /** @todo visualize the camera, not just for the default but for all */
     }
 
-    /* Object orientation visualizers */
-    new FlatDrawable{*object, flatShader(Shaders::Flat3D::Flag::VertexColor), _axisMesh, i, 0xffffff_rgbf, _data->objectVisualizationDrawables};
+    /* Object orientation visualizers, except for lights, which have their own */
+    if(objectData->instanceType() != Trade::ObjectInstanceType3D::Light)
+        new FlatDrawable{*object, flatShader(Shaders::Flat3D::Flag::VertexColor), _axisMesh, i, 0xffffff_rgbf, Vector3{1.0f}, _data->objectVisualizationDrawables};
 
     /* Recursively add children */
     for(std::size_t id: objectData->children())
@@ -1193,9 +1316,16 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 }
 
 void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
+    /* Override the inherited scale, if requested */
+    Matrix4 transformation;
+    if(_scale == _scale) transformation =
+        Matrix4::from(transformationMatrix.rotationShear(), transformationMatrix.translation())*
+        Matrix4::scaling(Vector3{_scale});
+    else transformation = transformationMatrix;
+
     _shader
         .setColor(_color)
-        .setTransformationProjectionMatrix(camera.projectionMatrix()*transformationMatrix)
+        .setTransformationProjectionMatrix(camera.projectionMatrix()*transformation)
         .setObjectId(_objectId)
         .draw(_mesh);
 }
@@ -1637,7 +1767,20 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                     meshInfo.primitives,
                     meshInfo.size/1024.0f));
 
-            /* Something else is selected (from object visualization), display
+            /* A light is selected */
+            } else if(_data->objects[selectedId].lightId != 0xffffffffu) {
+                CORRADE_INTERNAL_ASSERT(_data->lights[_data->objects[selectedId].lightId].light);
+                LightInfo& lightInfo = _data->lights[_data->objects[selectedId].lightId];
+
+                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                    "{}: {} {}, range {}, intensity {}",
+                    objectInfo.name,
+                    lightInfo.type,
+                    lightInfo.name,
+                    lightInfo.light->range(),
+                    lightInfo.light->intensity()));
+
+            /* Something else is selected from object visualization, display
                just generic info */
             } else {
                 _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
