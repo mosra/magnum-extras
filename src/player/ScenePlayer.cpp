@@ -1190,6 +1190,8 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
         Shaders::Phong::Flags flags;
         if(hasVertexColors[objectData->instance()])
             flags |= Shaders::Phong::Flag::VertexColor;
+        if(_data->meshes[objectData->instance()].hasSeparateBitangents)
+            flags |= Shaders::Phong::Flag::Bitangent;
 
         /* Material not available / not loaded. If the mesh has vertex colors,
            use that, otherwise apply a default material; use a flat shader for
