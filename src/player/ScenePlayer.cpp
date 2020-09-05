@@ -217,7 +217,7 @@ struct MeshInfo {
     UnsignedInt objectIdCount;
     std::size_t size;
     std::string name;
-    bool hasSeparateBitangents;
+    bool hasTangents, hasSeparateBitangents;
 };
 
 struct ObjectInfo {
@@ -895,6 +895,10 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             _data->meshes[i].primitives = MeshTools::primitiveCount(meshData->primitive(), meshData->indexCount());
             _data->meshes[i].size += meshData->indexData().size();
         } else _data->meshes[i].primitives = MeshTools::primitiveCount(meshData->primitive(), meshData->vertexCount());
+        /* Needed for a warning when using a mesh with no tangents with a
+           normal map (as, unlike with normals, we have no builtin way to
+           generate tangents right now) */
+        _data->meshes[i].hasTangents = meshData->hasAttribute(Trade::MeshAttribute::Tangent);
         /* Needed to decide how to visualize tangent space */
         _data->meshes[i].hasSeparateBitangents = meshData->hasAttribute(Trade::MeshAttribute::Bitangent);
         if(meshData->hasAttribute(Trade::MeshAttribute::ObjectId)) {
@@ -1119,7 +1123,12 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                just use a default-colored material. */
             if(material.hasAttribute(Trade::MaterialAttribute::NormalTexture)) {
                 Containers::Optional<GL::Texture2D>& texture = _data->textures[material.normalTexture()];
-                if(texture) {
+                /* If there are no tangents, the mesh would render all black.
+                   Ignore the normal map in that case. */
+                /** @todo generate tangents instead once we have the algo */
+                if(!_data->meshes[objectData->instance()].hasTangents) {
+                    Warning{} << "Mesh" << _data->meshes[objectData->instance()].name << "doesn't have tangents and Magnum can't generate them yet, ignoring a normal map";
+                } else if(texture) {
                     normalTexture = &*texture;
                     normalTextureScale = material.normalTextureScale();
                     flags |= Shaders::Phong::Flag::NormalTexture;
