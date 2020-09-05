@@ -58,6 +58,7 @@
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/MeshTools/Duplicate.h>
 #include <Magnum/MeshTools/GenerateIndices.h>
+#include <Magnum/Primitives/Axis.h>
 #include <Magnum/SceneGraph/Camera.h>
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
@@ -160,7 +161,9 @@ struct BaseUiPlane: Ui::Plane {
                 *2.0f /* on Emscripten there's the fullscreen button as well */
                 #endif
             , ButtonSize)}, "Shadeless", Ui::Style::Default},
-        visualization{*this, {Ui::Snap::Bottom, shadeless, ButtonSize}, "Wireframe", 16},
+        objectVisualization{*this, {Ui::Snap::Bottom, shadeless, ButtonSize},
+            "Object centers"},
+        meshVisualization{*this, {Ui::Snap::Bottom, shadeless, ButtonSize}, "Wireframe", 16},
         backward{*this, {Ui::Snap::Bottom|Ui::Snap::Left, HalfControlSize}, "«"},
         play{*this, {Ui::Snap::Right, backward, ControlSize}, "Play", Ui::Style::Success},
         pause{*this, {Ui::Snap::Right, backward, ControlSize}, "Pause", Ui::Style::Warning},
@@ -183,7 +186,7 @@ struct BaseUiPlane: Ui::Plane {
 
         /* Hide everything that gets shown only on selection */
         Ui::Widget::hide({
-            visualization,
+            meshVisualization,
             objectInfo
         });
 
@@ -197,7 +200,7 @@ struct BaseUiPlane: Ui::Plane {
     }
 
     Ui::Button shadeless;
-    Ui::Button visualization;
+    Ui::Button objectVisualization, meshVisualization;
     Ui::Button
         backward,
         play,
@@ -223,7 +226,9 @@ struct MeshInfo {
 struct ObjectInfo {
     Object3D* object;
     std::string name;
+    std::string type;
     UnsignedInt meshId{0xffffffffu};
+    UnsignedInt childCount;
 };
 
 class MeshVisualizerDrawable;
@@ -235,10 +240,11 @@ struct Data {
     Scene3D scene;
     Object3D* cameraObject{};
     SceneGraph::Camera3D* camera;
-    SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables, selectedObjectDrawables;
+    SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables, selectedObjectDrawables, objectVisualizationDrawables;
     Vector3 previousPosition;
 
     Containers::Array<ObjectInfo> objects;
+    bool visualizeObjects = false;
     MeshVisualizerDrawable* selectedObject{};
 
     Containers::Array<char> animationData;
@@ -297,7 +303,8 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         void toggleShadeless();
 
-        void cycleVisualization();
+        void cycleObjectVisualization();
+        void cycleMeshVisualization();
         Shaders::MeshVisualizer3D::Flags setupVisualization(std::size_t meshId);
 
         void play();
@@ -321,6 +328,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         std::unordered_map<Shaders::Phong::Flags, Shaders::Phong, EnumSetHash<Shaders::Phong::Flags>> _phongShaders;
         std::unordered_map<Shaders::MeshVisualizer3D::Flags, Shaders::MeshVisualizer3D, EnumSetHash<Shaders::MeshVisualizer3D::Flags>> _meshVisualizerShaders;
         GL::Texture2D _colorMapTexture;
+        GL::Mesh _axisMesh; /* Object visualization */
 
         Float _brightness{0.8f};
         #ifndef MAGNUM_TARGET_GLES
@@ -420,12 +428,14 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
+    /* Visualizers and color maps */
     _colorMapTexture
         .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
         .setMagnificationFilter(SamplerFilter::Linear)
         .setWrapping(SamplerWrapping::Repeat)
         .setStorage(1, GL::TextureFormat::RGBA8, {256, 1})
         .setSubImage(0, {}, ImageView2D{PixelFormat::RGB8Unorm, {256, 1}, DebugTools::ColorMap::turbo()});
+    _axisMesh = MeshTools::compile(Primitives::axis3D());
 
     /* Setup the UI, steal font etc. from the existing one to avoid having
        everything built twice */
@@ -566,12 +576,17 @@ void ScenePlayer::initializeUi() {
     _baseUiPlane.emplace(*_ui);
 
     if(_shadeless) _baseUiPlane->shadeless.setStyle(Ui::Style::Success);
-    if(_data && _data->selectedObject)
-        setupVisualization(_data->selectedObject->meshId());
+    if(_data) {
+        if(_data->visualizeObjects)
+            _baseUiPlane->objectVisualization.setStyle(Ui::Style::Success);
+        if(_data->selectedObject)
+            setupVisualization(_data->selectedObject->meshId());
+    }
 
     Interconnect::connect(_baseUiPlane->shadeless, &Ui::Button::tapped, *this, &ScenePlayer::toggleShadeless);
+    Interconnect::connect(_baseUiPlane->objectVisualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleObjectVisualization);
     #ifndef MAGNUM_TARGET_GLES
-    Interconnect::connect(_baseUiPlane->visualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleVisualization);
+    Interconnect::connect(_baseUiPlane->meshVisualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleMeshVisualization);
     #endif
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &ScenePlayer::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &ScenePlayer::pause);
@@ -600,12 +615,12 @@ void ScenePlayer::setControlsVisible(bool visible) {
 
             _baseUiPlane->shadeless.show();
 
-            if(_data->selectedObject) {
-                Ui::Widget::show({
-                    _baseUiPlane->visualization,
-                    _baseUiPlane->objectInfo});
-                _baseUiPlane->modelInfo.hide();
-            } else _baseUiPlane->modelInfo.show();
+            Ui::Widget::setVisible(_data->selectedObject, {
+                _baseUiPlane->meshVisualization,
+                _baseUiPlane->objectInfo});
+            Ui::Widget::setVisible(!_data->selectedObject, {
+                _baseUiPlane->objectVisualization,
+                _baseUiPlane->modelInfo});
         }
 
     } else {
@@ -617,7 +632,8 @@ void ScenePlayer::setControlsVisible(bool visible) {
             _baseUiPlane->stop,
             _baseUiPlane->forward,
             _baseUiPlane->modelInfo,
-            _baseUiPlane->visualization,
+            _baseUiPlane->objectVisualization,
+            _baseUiPlane->meshVisualization,
             _baseUiPlane->objectInfo,
             _baseUiPlane->animationProgress});
     }
@@ -628,7 +644,11 @@ void ScenePlayer::toggleShadeless() {
     _baseUiPlane->shadeless.setStyle((_shadeless ^= true) ? Ui::Style::Success : Ui::Style::Default);
 }
 
-void ScenePlayer::cycleVisualization() {
+void ScenePlayer::cycleObjectVisualization() {
+    _baseUiPlane->objectVisualization.setStyle((_data->visualizeObjects ^= true) ? Ui::Style::Success : Ui::Style::Default);
+}
+
+void ScenePlayer::cycleMeshVisualization() {
     CORRADE_INTERNAL_ASSERT(_data->selectedObject);
 
     /* Advance through the options */
@@ -658,12 +678,12 @@ Shaders::MeshVisualizer3D::Flags ScenePlayer::setupVisualization(std::size_t mes
         _visualization = Visualization::Begin;
 
     if(_visualization == Visualization::Wireframe) {
-        _baseUiPlane->visualization.setText("Wireframe");
+        _baseUiPlane->meshVisualization.setText("Wireframe");
         return Shaders::MeshVisualizer3D::Flag::Wireframe;
     }
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframeTbn) {
-        _baseUiPlane->visualization.setText("Wire + TBN");
+        _baseUiPlane->meshVisualization.setText("Wire + TBN");
         Shaders::MeshVisualizer3D::Flags flags =
             Shaders::MeshVisualizer3D::Flag::Wireframe|
             Shaders::MeshVisualizer3D::Flag::TangentDirection|
@@ -677,35 +697,35 @@ Shaders::MeshVisualizer3D::Flags ScenePlayer::setupVisualization(std::size_t mes
     #endif
 
     if(_visualization == Visualization::WireframeObjectId) {
-        _baseUiPlane->visualization.setText("Wire + Object ID");
+        _baseUiPlane->meshVisualization.setText("Wire + Object ID");
         return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::InstancedObjectId;
     }
 
     if(_visualization == Visualization::WireframeVertexId) {
-        _baseUiPlane->visualization.setText("Wire + Vertex ID");
+        _baseUiPlane->meshVisualization.setText("Wire + Vertex ID");
         return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::VertexId;
     }
 
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframePrimitiveId) {
-        _baseUiPlane->visualization.setText("Wire + Prim ID");
+        _baseUiPlane->meshVisualization.setText("Wire + Prim ID");
         return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::PrimitiveId;
     }
     #endif
 
     if(_visualization == Visualization::ObjectId) {
-        _baseUiPlane->visualization.setText("Object ID");
+        _baseUiPlane->meshVisualization.setText("Object ID");
         return Shaders::MeshVisualizer3D::Flag::InstancedObjectId;
     }
 
     if(_visualization == Visualization::VertexId) {
-        _baseUiPlane->visualization.setText("Vertex ID");
+        _baseUiPlane->meshVisualization.setText("Vertex ID");
         return Shaders::MeshVisualizer3D::Flag::VertexId;
     }
 
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::PrimitiveId) {
-        _baseUiPlane->visualization.setText("Primitive ID");
+        _baseUiPlane->meshVisualization.setText("Primitive ID");
         return Shaders::MeshVisualizer3D::Flag::PrimitiveId;
     }
     #endif
@@ -829,7 +849,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         }
 
         std::string meshName = importer.meshName(i);
-        if(meshName.empty()) meshName = Utility::formatString("{}", i);
+        if(meshName.empty()) meshName = Utility::formatString("#{}", i);
 
         /* Disable warnings on custom attributes, as we printed them with
            actual string names below. Generate normals for triangle meshes
@@ -905,9 +925,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             _data->meshes[i].objectIdCount = Math::max(meshData->objectIdsAsArray());
         } else _data->meshes[i].objectIdCount = 0;
         _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
-        _data->meshes[i].name = importer.meshName(i);
-        if(_data->meshes[i].name.empty())
-            _data->meshes[i].name = Utility::formatString("mesh #{}", i);
+        _data->meshes[i].name = std::move(meshName);
     }
 
     /* Load the scene. Save the object pointers in an array for easier mapping
@@ -1064,8 +1082,26 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
     else object->setTransformation(objectData->transformation());
 
     /* Save it to the ID -> pointer mapping array for animation target and
-       object selection */
+       object selection, fill in object properties */
     _data->objects[i].object = object;
+    _data->objects[i].name = importer.object3DName(i);
+    if(_data->objects[i].name.empty())
+        _data->objects[i].name = Utility::formatString("object #{}", i);
+    switch(objectData->instanceType()) {
+        case Trade::ObjectInstanceType3D::Empty:
+            _data->objects[i].type = "empty";
+            break;
+        case Trade::ObjectInstanceType3D::Camera:
+            _data->objects[i].type = "camera";
+            break;
+        case Trade::ObjectInstanceType3D::Light:
+            _data->objects[i].type = "light";
+            break;
+        /* these are never used, as they have their own info text */
+        case Trade::ObjectInstanceType3D::Mesh:
+            break;
+    }
+    _data->objects[i].childCount = objectData->children().size();
 
     /* Add a drawable if the object has a mesh and the mesh is loaded */
     if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _data->meshes[objectData->instance()].mesh) {
@@ -1074,9 +1110,6 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
         /* Save the mesh pointer as well, so we know what to draw for object
            selection */
         _data->objects[i].meshId = objectData->instance();
-        _data->objects[i].name = importer.object3DName(i);
-        if(_data->objects[i].name.empty())
-            _data->objects[i].name = Utility::formatString("object #{}", i);
 
         GL::Mesh& mesh = *_data->meshes[objectData->instance()].mesh;
 
@@ -1150,6 +1183,9 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
     } else if(objectData->instanceType() == Trade::ObjectInstanceType3D::Camera && objectData->instance() == 0) {
         _data->cameraObject = object;
     }
+
+    /* Object orientation visualizers */
+    new FlatDrawable{*object, flatShader(Shaders::Flat3D::Flag::VertexColor), _axisMesh, i, 0xffffff_rgbf, _data->objectVisualizationDrawables};
 
     /* Recursively add children */
     for(std::size_t id: objectData->children())
@@ -1281,6 +1317,13 @@ void ScenePlayer::drawEvent() {
 
             GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
             GL::Renderer::disable(GL::Renderer::Feature::Blending);
+        }
+
+        /* Draw object visualization w/o a depth buffer */
+        if(_data->visualizeObjects) {
+            GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
+            _data->camera->draw(_data->objectVisualizationDrawables);
+            GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
         }
     }
 
@@ -1527,6 +1570,13 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             GL::Renderer::setDepthMask(true);
         }
 
+        /* Draw object visualization w/o a depth buffer */
+        if(_data->visualizeObjects) {
+            GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
+            _data->camera->draw(_data->objectVisualizationDrawables);
+            GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+        }
+
         /* Read the ID back */
         _selectionFramebuffer.mapForRead(GL::Framebuffer::ColorAttachment{1});
         CORRADE_INTERNAL_ASSERT(_selectionFramebuffer.checkStatus(GL::FramebufferTarget::Read) == GL::Framebuffer::Status::Complete);
@@ -1539,49 +1589,63 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
         const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1});
 
         const UnsignedInt selectedId = _selectionFramebuffer.read(area, {PixelFormat::R16UI}).pixels<UnsignedShort>()[0][0];
-        /* If nothing is selected, reset the info text */
+
+        /* Show either global or object-specific widgets */
+        Ui::Widget::setVisible(selectedId < _data->objects.size(), {
+            _baseUiPlane->objectInfo,
+            _baseUiPlane->meshVisualization
+        });
+        Ui::Widget::setVisible(selectedId >= _data->objects.size(), {
+            _baseUiPlane->modelInfo,
+            _baseUiPlane->objectVisualization
+        });
+
+        /* If nothing is selected, the global info is shown */
         if(selectedId >= _data->objects.size()) {
             /* 0xffff is the background, but anything else is just wrong */
             if(selectedId != 0xffff)
                 Warning{} << "Selected ID" << selectedId << "out of bounds for" << _data->objects.size() << "objects, ignoring";
 
-            Ui::Widget::hide({
-                _baseUiPlane->objectInfo,
-                _baseUiPlane->visualization
-            });
-            _baseUiPlane->modelInfo.show();
-
         /* Otherwise add a visualizer and update the info */
         } else {
             CORRADE_INTERNAL_ASSERT(!_data->selectedObject);
             CORRADE_INTERNAL_ASSERT(selectedId < _data->objects.size());
-            CORRADE_INTERNAL_ASSERT(_data->objects[selectedId].object && _data->objects[selectedId].meshId != 0xffffffffu && _data->meshes[_data->objects[selectedId].meshId].mesh);
+            CORRADE_INTERNAL_ASSERT(_data->objects[selectedId].object);
 
             ObjectInfo& objectInfo = _data->objects[selectedId];
-            MeshInfo& meshInfo = _data->meshes[_data->objects[selectedId].meshId];
 
-            /* Create a visualizer for the selected object */
-            const Shaders::MeshVisualizer3D::Flags flags = setupVisualization(_data->objects[selectedId].meshId);
-            _data->selectedObject = new MeshVisualizerDrawable{
-                *objectInfo.object, meshVisualizerShader(flags),
-                *meshInfo.mesh, _data->objects[selectedId].meshId,
-                meshInfo.objectIdCount, meshInfo.vertices, meshInfo.primitives,
-                _shadeless, _data->selectedObjectDrawables};
+            /* A mesh is selected */
+            if(_data->objects[selectedId].meshId != 0xffffffffu) {
+                CORRADE_INTERNAL_ASSERT(_data->meshes[_data->objects[selectedId].meshId].mesh);
+                MeshInfo& meshInfo = _data->meshes[_data->objects[selectedId].meshId];
 
-            /* Show object & mesh info */
-            _baseUiPlane->modelInfo.hide();
-            Ui::Widget::show({
-                _baseUiPlane->objectInfo,
-                _baseUiPlane->visualization
-            });
-            _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
-                "{}: {}, indexed, {} attribs, {} verts, {} prims, {:.1f} kB",
-                objectInfo.name,
-                meshInfo.name,
-                meshInfo.attributes,
-                meshInfo.vertices,
-                meshInfo.primitives,
-                meshInfo.size/1024.0f));
+                /* Create a visualizer for the selected object */
+                const Shaders::MeshVisualizer3D::Flags flags = setupVisualization(_data->objects[selectedId].meshId);
+                _data->selectedObject = new MeshVisualizerDrawable{
+                    *objectInfo.object, meshVisualizerShader(flags),
+                    *meshInfo.mesh, _data->objects[selectedId].meshId,
+                    meshInfo.objectIdCount, meshInfo.vertices, meshInfo.primitives,
+                    _shadeless, _data->selectedObjectDrawables};
+
+                /* Show mesh info */
+                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                    "{}: mesh {}, indexed, {} attribs, {} verts, {} prims, {:.1f} kB",
+                    objectInfo.name,
+                    meshInfo.name,
+                    meshInfo.attributes,
+                    meshInfo.vertices,
+                    meshInfo.primitives,
+                    meshInfo.size/1024.0f));
+
+            /* Something else is selected (from object visualization), display
+               just generic info */
+            } else {
+                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                    "{}: {}, {} children",
+                    objectInfo.name,
+                    objectInfo.type,
+                    objectInfo.childCount));
+            }
         }
 
         event.setAccepted();
