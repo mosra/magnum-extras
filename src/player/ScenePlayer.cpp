@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
@@ -256,7 +257,8 @@ struct Data {
     Scene3D scene;
     Object3D* cameraObject{};
     SceneGraph::Camera3D* camera;
-    SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables, selectedObjectDrawables, objectVisualizationDrawables;
+    SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables,
+        selectedObjectDrawables, objectVisualizationDrawables, lightDrawables;
     Vector3 previousPosition;
 
     Containers::Array<ObjectInfo> objects;
@@ -265,6 +267,10 @@ struct Data {
 
     Containers::Array<char> animationData;
     Animation::Player<std::chrono::nanoseconds, Float> player;
+
+    UnsignedInt lightCount{};
+    Containers::Array<Vector4> lightPositions;
+    Containers::Array<Color3> lightColors;
 
     Int elapsedTimeAnimationDestination = -1; /* So it gets updated with 0 as well */
 
@@ -329,11 +335,12 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         void backward();
         void forward();
         void updateAnimationTime(Int deciseconds);
+        void updateLightColorBrightness();
 
         Float depthAt(const Vector2i& windowPosition);
         Vector3 unproject(const Vector2i& windowPosition, Float depth) const;
 
-        void addObject(Trade::AbstractImporter& importer, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
+        void addObject(Containers::ArrayView<const Containers::Pointer<Trade::ObjectData3D>> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
 
         Shaders::Flat3D& flatShader(Shaders::Flat3D::Flags flags);
         Shaders::Phong& phongShader(Shaders::Phong::Flags flags);
@@ -444,6 +451,21 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         std::size_t _meshId;
         UnsignedInt _objectIdCount, _vertexCount, _primitiveCount;
         const bool& _shadeless;
+};
+
+class LightDrawable: public SceneGraph::Drawable3D {
+    public:
+        explicit LightDrawable(Object3D& object, bool directional, Containers::Array<Vector4>& positions, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _directional{directional}, _positions{positions} {}
+
+    private:
+        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D&) override {
+            arrayAppend(_positions, _directional ?
+                Vector4{transformationMatrix.backward(), 0.0f} :
+                Vector4{transformationMatrix.translation(), 1.0f});
+        }
+
+        bool _directional;
+        Containers::Array<Vector4>& _positions;
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
@@ -575,16 +597,11 @@ Shaders::Flat3D& ScenePlayer::flatShader(Shaders::Flat3D::Flags flags) {
 Shaders::Phong& ScenePlayer::phongShader(Shaders::Phong::Flags flags) {
     auto found = _phongShaders.find(flags);
     if(found == _phongShaders.end()) {
-        found = _phongShaders.emplace(flags, Shaders::Phong{Shaders::Phong::Flag::ObjectId|flags, 3}).first;
+        found = _phongShaders.emplace(flags, Shaders::Phong{
+            Shaders::Phong::Flag::ObjectId|flags,
+            _data->lightCount ? _data->lightCount : 3
+        }).first;
         found->second
-            .setLightPositions({
-                /** @todo make this configurable */
-                Vector3{10.0f, 10.0f, 10.0f}*100.0f,
-                Vector3{-5.0f, -5.0f, 10.0f}*100.0f,
-                Vector3{0.0f, 10.0f, -10.0f}*100.0f})
-            .setLightColors({0xffffff_rgbf*_brightness,
-                             0xffcccc_rgbf*_brightness,
-                             0xccccff_rgbf*_brightness})
             .setSpecularColor(0x11111100_rgbaf)
             .setShininess(80.0f);
     }
@@ -831,6 +848,14 @@ void ScenePlayer::updateAnimationTime(Int deciseconds) {
         duration/600, duration/10%60, duration%10));
 }
 
+void ScenePlayer::updateLightColorBrightness() {
+    Containers::Array<Color3> lightColorsBrightness{Containers::NoInit, _data->lightColors.size()};
+    for(UnsignedInt i = 0; i != lightColorsBrightness.size(); ++i)
+        lightColorsBrightness[i] = _data->lightColors[i]*_brightness;
+    for(auto& shader: _phongShaders)
+        shader.second.setLightColors(lightColorsBrightness);
+}
+
 void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& importer, Int id) {
     if(id >= 0 && UnsignedInt(id) >= importer.sceneCount()) {
         Fatal{} << "Cannot load a scene with ID" << id << "as there's only" << importer.sceneCount() << "scenes";
@@ -1017,10 +1042,40 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             return;
         }
 
-        /* Recursively add all children */
+        /* Import all objects and first count how many lights is there first so
+           we know which shaders to instantiate */
+        /** @todo ugh so much extra work ... better idea? */
         _data->objects = Containers::Array<ObjectInfo>{Containers::ValueInit, importer.object3DCount()};
+        Containers::Array<Containers::Pointer<Trade::ObjectData3D>> objects{importer.object3DCount()};
+        for(UnsignedInt i = 0; i != importer.object3DCount(); ++i) {
+            objects[i] = importer.object3D(i);
+            if(!objects[i]) {
+                Error{} << "Cannot import object" << i << importer.object3DName(i);
+                continue;
+            }
+            _data->objects[i].name = importer.object3DName(i);
+            if(_data->objects[i].name.empty())
+                _data->objects[i].name = Utility::formatString("object #{}", i);
+            switch(objects[i]->instanceType()) {
+                case Trade::ObjectInstanceType3D::Empty:
+                    _data->objects[i].type = "empty";
+                    break;
+                case Trade::ObjectInstanceType3D::Camera:
+                    _data->objects[i].type = "camera";
+                    break;
+                /* these have their own info text, so not setting the type */
+                case Trade::ObjectInstanceType3D::Light:
+                    ++_data->lightCount;
+                    break;
+                case Trade::ObjectInstanceType3D::Mesh:
+                    break;
+            }
+            _data->objects[i].childCount = objects[i]->children().size();
+        }
+
+        /* Recursively add all children */
         for(UnsignedInt objectId: sceneData->children3D())
-            addObject(importer, materials, hasVertexColors, _data->scene, objectId);
+            addObject(objects, materials, hasVertexColors, _data->scene, objectId);
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
@@ -1037,6 +1092,33 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->cameraObject = new Object3D{&_data->scene};
         _data->cameraObject->translate(Vector3::zAxis(5.0f));
     }
+
+    /* Create default camera-relative lights in case they weren't present in
+       the scene already. Don't add any visualization for those. */
+    if(_data->lightCount == 0) {
+        _data->lightCount = 3;
+
+        Object3D* first = new Object3D{_data->cameraObject};
+        first->translate({10.0f, 10.0f, 10.0f});
+        new LightDrawable{*first, true, _data->lightPositions, _data->lightDrawables};
+
+        Object3D* second = new Object3D{_data->cameraObject};
+        first->translate(Vector3{-5.0f, -5.0f, 10.0f}*100.0f);
+        new LightDrawable{*second, true, _data->lightPositions, _data->lightDrawables};
+
+        Object3D* third = new Object3D{_data->cameraObject};
+        third->translate(Vector3{0.0f, 10.0f, -10.0f}*100.0f);
+        new LightDrawable{*third, true, _data->lightPositions, _data->lightDrawables};
+
+        _data->lightColors = Containers::array({
+            0xffffff_rgbf,
+            0xffcccc_rgbf,
+            0xccccff_rgbf
+        });
+    }
+
+    /* Initialize light colors for all instantiated shaders */
+    updateLightColorBrightness();
 
     /* Basic camera setup */
     (*(_data->camera = new SceneGraph::Camera3D{*_data->cameraObject}))
@@ -1141,56 +1223,39 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     }
 }
 
-void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i) {
-    Containers::Pointer<Trade::ObjectData3D> objectData = importer.object3D(i);
-    if(!objectData) {
-        Error{} << "Cannot import object" << i << importer.object3DName(i);
-        return;
-    }
+void ScenePlayer::addObject(Containers::ArrayView<const Containers::Pointer<Trade::ObjectData3D>> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i) {
+    /* Object failed to import, skip */
+    if(!objects[i]) return;
+
+    const Trade::ObjectData3D& objectData = *objects[i];
 
     /* Add the object to the scene and set its transformation. If it has a
        separate TRS, use that to avoid precision issues. */
     auto* object = new Object3D{&parent};
-    if(objectData->flags() & Trade::ObjectFlag3D::HasTranslationRotationScaling)
-        (*object).setTranslation(objectData->translation())
-                 .setRotation(objectData->rotation())
-                 .setScaling(objectData->scaling());
-    else object->setTransformation(objectData->transformation());
+    if(objectData.flags() & Trade::ObjectFlag3D::HasTranslationRotationScaling)
+        (*object).setTranslation(objectData.translation())
+                 .setRotation(objectData.rotation())
+                 .setScaling(objectData.scaling());
+    else object->setTransformation(objectData.transformation());
 
     /* Save it to the ID -> pointer mapping array for animation target and
        object selection, fill in object properties */
     _data->objects[i].object = object;
-    _data->objects[i].name = importer.object3DName(i);
-    if(_data->objects[i].name.empty())
-        _data->objects[i].name = Utility::formatString("object #{}", i);
-    switch(objectData->instanceType()) {
-        case Trade::ObjectInstanceType3D::Empty:
-            _data->objects[i].type = "empty";
-            break;
-        case Trade::ObjectInstanceType3D::Camera:
-            _data->objects[i].type = "camera";
-            break;
-        /* these are never used, as they have their own info text */
-        case Trade::ObjectInstanceType3D::Light:
-        case Trade::ObjectInstanceType3D::Mesh:
-            break;
-    }
-    _data->objects[i].childCount = objectData->children().size();
 
     /* Add a drawable if the object has a mesh and the mesh is loaded */
-    if(objectData->instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData->instance() != -1 && _data->meshes[objectData->instance()].mesh) {
-        const Int materialId = static_cast<Trade::MeshObjectData3D*>(objectData.get())->material();
+    if(objectData.instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData.instance() != -1 && _data->meshes[objectData.instance()].mesh) {
+        const Int materialId = static_cast<const Trade::MeshObjectData3D&>(objectData).material();
 
         /* Save the mesh pointer as well, so we know what to draw for object
            selection */
-        _data->objects[i].meshId = objectData->instance();
+        _data->objects[i].meshId = objectData.instance();
 
-        GL::Mesh& mesh = *_data->meshes[objectData->instance()].mesh;
+        GL::Mesh& mesh = *_data->meshes[objectData.instance()].mesh;
 
         Shaders::Phong::Flags flags;
-        if(hasVertexColors[objectData->instance()])
+        if(hasVertexColors[objectData.instance()])
             flags |= Shaders::Phong::Flag::VertexColor;
-        if(_data->meshes[objectData->instance()].hasSeparateBitangents)
+        if(_data->meshes[objectData.instance()].hasSeparateBitangents)
             flags |= Shaders::Phong::Flag::Bitangent;
 
         /* Material not available / not loaded. If the mesh has vertex colors,
@@ -1204,7 +1269,7 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                     mesh, i,
                     0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
             else
-                new FlatDrawable{*object, flatShader(hasVertexColors[objectData->instance()] ? Shaders::Flat3D::Flag::VertexColor : Shaders::Flat3D::Flags{}), mesh, i, 0xffffff_rgbf, Vector3{Constants::nan()}, _data->opaqueDrawables};
+                new FlatDrawable{*object, flatShader(hasVertexColors[objectData.instance()] ? Shaders::Flat3D::Flag::VertexColor : Shaders::Flat3D::Flags{}), mesh, i, 0xffffff_rgbf, Vector3{Constants::nan()}, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -1235,8 +1300,8 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
                 /* If there are no tangents, the mesh would render all black.
                    Ignore the normal map in that case. */
                 /** @todo generate tangents instead once we have the algo */
-                if(!_data->meshes[objectData->instance()].hasTangents) {
-                    Warning{} << "Mesh" << _data->meshes[objectData->instance()].name << "doesn't have tangents and Magnum can't generate them yet, ignoring a normal map";
+                if(!_data->meshes[objectData.instance()].hasTangents) {
+                    Warning{} << "Mesh" << _data->meshes[objectData.instance()].name << "doesn't have tangents and Magnum can't generate them yet, ignoring a normal map";
                 } else if(texture) {
                     normalTexture = &*texture;
                     normalTextureScale = material.normalTextureScale();
@@ -1255,12 +1320,17 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
         }
 
     /* Light */
-    } else if(objectData->instanceType() == Trade::ObjectInstanceType3D::Light && objectData->instance() != -1 && _data->lights[objectData->instance()].light) {
+    } else if(objectData.instanceType() == Trade::ObjectInstanceType3D::Light && objectData.instance() != -1 && _data->lights[objectData.instance()].light) {
         /* Save the light pointer as well, so we know what to print for object
            selection */
-        _data->objects[i].lightId = objectData->instance();
+        _data->objects[i].lightId = objectData.instance();
 
-        const Trade::LightData& light = *_data->lights[objectData->instance()].light;
+        /* Add a light drawable, which puts correct camera-relative position
+           to _data->lightPositions. Light colors don't change so add that
+           directly. */
+        const Trade::LightData& light = *_data->lights[objectData.instance()].light;
+        new LightDrawable{*object, light.type() == Trade::LightData::Type::Directional ? true : false, _data->lightPositions, _data->lightDrawables};
+        arrayAppend(_data->lightColors, Containers::InPlaceInit, light.color()*light.intensity());
 
         /* Visualization of the center */
         new FlatDrawable{*object, flatShader({}), _lightCenterMesh, i, light.color(), Vector3{0.25f}, _data->objectVisualizationDrawables};
@@ -1281,11 +1351,11 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
         } else if(light.type() == Trade::LightData::Type::Spot) {
             new FlatDrawable{*object, flatShader({}), _lightInnerConeMesh, i, light.color(),
                 Math::gather<'x', 'x', 'y'>(Vector2{
-                    range*Math::tan(light.innerConeAngle()), range
+                    range*Math::tan(light.innerConeAngle()*0.5f), range
                 }), _data->objectVisualizationDrawables};
             new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, i, light.color(),
                 Math::gather<'x', 'x', 'y'>(Vector2{
-                    range*Math::tan(light.outerConeAngle()), range
+                    range*Math::tan(light.outerConeAngle()*0.5f), range
                 }), _data->objectVisualizationDrawables};
 
         /* Directional has a circle and a line in its direction. The range is
@@ -1302,19 +1372,19 @@ void ScenePlayer::addObject(Trade::AbstractImporter& importer, Containers::Array
 
     /* This is a node that holds the default camera -> assign the object to the
        global camera pointer */
-    } else if(objectData->instanceType() == Trade::ObjectInstanceType3D::Camera && objectData->instance() == 0) {
+    } else if(objectData.instanceType() == Trade::ObjectInstanceType3D::Camera && objectData.instance() == 0) {
         _data->cameraObject = object;
 
         /** @todo visualize the camera, not just for the default but for all */
     }
 
     /* Object orientation visualizers, except for lights, which have their own */
-    if(objectData->instanceType() != Trade::ObjectInstanceType3D::Light)
+    if(objectData.instanceType() != Trade::ObjectInstanceType3D::Light)
         new FlatDrawable{*object, flatShader(Shaders::Flat3D::Flag::VertexColor), _axisMesh, i, 0xffffff_rgbf, Vector3{1.0f}, _data->objectVisualizationDrawables};
 
     /* Recursively add children */
-    for(std::size_t id: objectData->children())
-        addObject(importer, materials, hasVertexColors, *object, id);
+    for(std::size_t id: objectData.children())
+        addObject(objects, materials, hasVertexColors, *object, id);
 }
 
 void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
@@ -1413,6 +1483,15 @@ void ScenePlayer::drawEvent() {
 
     if(_data) {
         _data->player.advance(std::chrono::system_clock::now().time_since_epoch());
+
+        /* Calculate light positions first, upload them to all shaders -- all
+           of them are there only if they are actually used, so it's not doing
+           any wasteful work */
+        arrayResize(_data->lightPositions, 0);
+        _data->camera->draw(_data->lightDrawables);
+        CORRADE_INTERNAL_ASSERT(_data->lightPositions.size() == _data->lightCount);
+        for(auto&& shader: _phongShaders)
+            shader.second.setLightPositions(_data->lightPositions);
 
         /* Draw opaque stuff as usual */
         _data->camera->draw(_data->opaqueDrawables);
@@ -1636,12 +1715,7 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
               event.key() == KeyEvent::Key::Minus) {
         _brightness *= (event.key() == KeyEvent::Key::NumAdd ||
                         event.key() == KeyEvent::Key::Plus) ? 1.1f : 1/1.1f;
-        for(auto& shader: _phongShaders) {
-            shader.second.setLightColors({
-                0xffffff_rgbf*_brightness,
-                0xffcccc_rgbf*_brightness,
-                0xccccff_rgbf*_brightness});
-        }
+        updateLightColorBrightness();
 
     /* Toggle profiling */
     } else if(event.key() == KeyEvent::Key::P) {
