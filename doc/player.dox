@@ -87,20 +87,23 @@ image file that can be opened with plugns derived from
 @section magnum-player-usage Usage
 
 @code{.sh}
-magnum-player [--magnum-...] [-h|--help] [--importer IMPORTER] \
-    [--no-merge-animations] [--msaa N] [--] file
+magnum-player [--magnum-...] [-h|--help] [-I|--importer IMPORTER]
+    [-i|--importer-options key=val,key2=val2,…] [--id ID]
+    [--no-merge-animations] [--msaa N] [--profile VALUES] [-v|--verbose] [--]
+    file
 @endcode
 
 Arguments:
 
 -   `file` --- file to load
 -   `-h`, `--help` --- display this help message and exit
--   `--importer IMPORTER` --- importer plugin to use (default:
+-   `-I`, `--importer IMPORTER` --- importer plugin to use (default:
     @ref Trade::AnySceneImporter "AnySceneImporter", with a fallback to
     @ref Trade::AnyImageImporter "AnyImageImporter" when an image file is
     supplied)
 -   `-i`, `--importer-options key=val,key2=val2,…` --- configuration options to
     pass to the importer
+-   `--id ID` --- image or scene ID to import
 -   `--no-merge-animations` --- don't merge glTF animations into a single clip
 -   `--msaa N` --- MSAA level to use (if not set, defaults to 8x or 2x for
     HiDPI)

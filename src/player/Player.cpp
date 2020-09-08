@@ -349,7 +349,7 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     Utility::Arguments args;
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     args.addArgument("file").setHelp("file", "file to load")
-        .addOption("importer", "AnySceneImporter").setHelp("importer", "importer plugin to use")
+        .addOption('I', "importer", "AnySceneImporter").setHelp("importer", "importer plugin to use")
         .addOption('i', "importer-options").setHelp("importer-options", "configuration options to pass to the importer", "key=val,key2=val2,…")
         .addOption("id").setHelp("id", "image or scene ID to import");
     #endif
