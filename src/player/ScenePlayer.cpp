@@ -455,7 +455,10 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
 
 class LightDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit LightDrawable(Object3D& object, bool directional, Containers::Array<Vector4>& positions, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _directional{directional}, _positions{positions} {}
+        explicit LightDrawable(Object3D& object, bool directional, Containers::Array<Vector4>& positions, SceneGraph::DrawableGroup3D& group):
+            SceneGraph::Drawable3D{object, &group}, _directional{directional},
+            /* GCC 4.8 can't handle {} here */
+            _positions(positions) {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D&) override {
