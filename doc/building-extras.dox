@@ -27,6 +27,8 @@ namespace Magnum {
 /** @page building-extras Downloading and building extras
 @brief Guide how to download and build extras for Magnum engine.
 
+@m_keyword{Building extras,,}
+
 @tableofcontents
 @m_footernavigation
 
