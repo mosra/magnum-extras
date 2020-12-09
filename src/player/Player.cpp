@@ -319,18 +319,18 @@ void Overlay::setControlsVisible(bool visible) {
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 void Overlay::toggleFullsize() {
+    /* Can't be inside the branch because then this cursed message happens:
+        Fatal: Unexpected arg0 type (select) in call to: emscripten_asm_const_int
+    */
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM_({Module['setFullsize']($0)}, !_isFullsize);
+    #pragma GCC diagnostic pop
+
     if(_isFullsize) {
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-        EM_ASM({Module['setFullsize'](false)});
-        #pragma GCC diagnostic pop
         _isFullsize = false;
         overlayUiPlane->fullsize.setStyle(Ui::Style::Default);
     } else {
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
-        EM_ASM({Module['setFullsize'](true)});
-        #pragma GCC diagnostic pop
         _isFullsize = true;
         overlayUiPlane->fullsize.setStyle(Ui::Style::Success);
     }
