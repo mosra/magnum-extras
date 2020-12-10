@@ -12,6 +12,7 @@ cmake .. \
     -DCMAKE_BUILD_TYPE=$CONFIGURATION \
     -DWITH_INTERCONNECT=ON \
     -DBUILD_DEPRECATED=$BUILD_DEPRECATED \
+    -DBUILD_STATIC=$BUILD_STATIC \
     -G Ninja
 ninja install
 cd ../..
@@ -39,6 +40,7 @@ cmake .. \
     -DWITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON \
     -DWITH_SDL2APPLICATION=$BUILD_APPLICATIONS \
     -DBUILD_DEPRECATED=$BUILD_DEPRECATED \
+    -DBUILD_STATIC=$BUILD_STATIC \
     -G Ninja
 ninja install
 cd ../..
@@ -55,6 +57,7 @@ cmake .. \
     -DWITH_UI_GALLERY=$BUILD_APPLICATIONS \
     -DBUILD_TESTS=ON \
     -DBUILD_GL_TESTS=ON \
+    -DBUILD_STATIC=$BUILD_STATIC \
     -G Ninja
 # Otherwise the job gets killed (probably because using too much memory)
 ninja -j4

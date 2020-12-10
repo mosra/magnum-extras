@@ -15,6 +15,11 @@ environment:
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     APPVEYOR_JOB_NAME: windows-msvc2019
   - TARGET: desktop
+    COMPILER: msvc
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+    APPVEYOR_JOB_NAME: windows-static-msvc2019
+    BUILD_STATIC: ON
+  - TARGET: desktop
     COMPILER: mingw
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     APPVEYOR_JOB_NAME: windows-mingw
@@ -64,6 +69,7 @@ install:
 - IF "%TARGET%" == "desktop" IF "%COMPILER%" == "mingw" pip install codecov
 - IF "%TARGET_GLES2%" == "ON" set TARGET_GLES3=OFF
 - IF "%TARGET_GLES2%" == "OFF" set TARGET_GLES3=ON
+- IF NOT "%BUILD_STATIC%" == "ON" set BUILD_STATIC=OFF
 
 # SDL2
 - IF NOT "%TARGET%" == "rt" IF "%COMPILER%" == "msvc" IF NOT EXIST %APPVEYOR_BUILD_FOLDER%\SDL2-devel-2.0.9-VC.zip appveyor DownloadFile http://www.libsdl.org/release/SDL2-devel-2.0.9-VC.zip

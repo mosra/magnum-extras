@@ -233,6 +233,25 @@ jobs:
         script: unix-desktop-gles.sh
     - lcov
 
+  linux-static:
+    executor: ubuntu-16_04
+    environment:
+      # STUPID yml interprets unquoted ON as a boolean
+      # https://stackoverflow.com/questions/53648244/specifying-the-string-value-yes-in-a-yaml-property
+      BUILD_STATIC: "ON"
+      CMAKE_CXX_FLAGS: --coverage
+      LCOV_EXTRA_OPTS: --gcov-tool /usr/bin/gcov-4.8
+      CONFIGURATION: Debug
+      PLATFORM_GL_API: GLX
+    steps:
+    - install-base-linux:
+        extra: libgl1-mesa-dev libsdl2-dev
+    - install-gcc-4_8
+    - install-cmake-3_4
+    - build:
+        script: unix-desktop.sh
+    - lcov
+
   linux-nondeprecated:
     executor: ubuntu-16_04
     environment:
@@ -280,6 +299,21 @@ jobs:
         script: unix-desktop.sh
     - lcov
 
+  macos-static:
+    executor: xcode-9_4
+    environment:
+      # STUPID yml interprets unquoted ON as a boolean
+      BUILD_STATIC: "ON"
+      CMAKE_CXX_FLAGS: --coverage
+      CONFIGURATION: Debug
+      PLATFORM_GL_API: CGL
+    steps:
+    - install-base-macos:
+        extra: sdl2
+    - build:
+        script: unix-desktop.sh
+    - lcov
+
   emscripten-webgl1:
     executor: emscripten
     environment:
@@ -308,8 +342,10 @@ workflows:
     - linux-gl
     #- linux-gles2
     - linux-gles3
+    - linux-static
     - linux-nondeprecated
     - linux-sanitizers
     - macos-gl
+    - macos-static
     #- emscripten-webgl1
     - emscripten-webgl2
