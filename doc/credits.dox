@@ -29,10 +29,12 @@ namespace Magnum {
 
 @section credits-contributors-extras Magnum Extras
 
--   **Nathan Ollerenshaw** ([\@matjam](https://github.com/matjam)) --- Ubuntu
-    package updates, a PPA repository for stable versions
 -   **Jonathan Hale** ([\@Squareys](https://github.com/Squareys)) --- porting
     to @ref Platform::EmscriptenApplication
+-   **Mathis Logemann** ([\@mathisloge](https://github.com/mathisloge)) ---
+    documentation updates
+-   **Nathan Ollerenshaw** ([\@matjam](https://github.com/matjam)) --- Ubuntu
+    package updates, a PPA repository for stable versions
 
 */
 
