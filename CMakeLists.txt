@@ -58,10 +58,6 @@ if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
     set(BUILD_STATIC ON)
 endif()
 
-if(CORRADE_TARGET_EMSCRIPTEN)
-    include(UseEmscripten)
-endif()
-
 if(BUILD_TESTS)
     find_package(Corrade REQUIRED TestSuite)
     if(CORRADE_TARGET_IOS)

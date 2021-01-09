@@ -42,6 +42,9 @@ namespace Magnum {
 
 -   The `versionExtras.h` header now gets populated from Git correctly also
     when inside a CMake subproject
+-   Linux, Emscripten and macOS builds were migrated from Travis to Circle CI
+-   `UseEmscripten` is no longer implicitly included on Emscripten as it's not
+    needed for anything (see [mosra/magnum#490](https://github.com/mosra/magnum/issues/490))
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
