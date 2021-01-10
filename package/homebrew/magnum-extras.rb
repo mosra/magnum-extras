@@ -13,8 +13,7 @@ class MagnumExtras < Formula
     system "mkdir build"
     cd "build" do
       system "cmake",
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DCMAKE_INSTALL_PREFIX=#{prefix}",
+        *std_cmake_args,
         "-DWITH_PLAYER=ON",
         "-DWITH_UI=ON",
         "-DWITH_UI_GALLERY=ON",
