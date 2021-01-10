@@ -45,6 +45,9 @@ namespace Magnum {
 -   Linux, Emscripten and macOS builds were migrated from Travis to Circle CI
 -   `UseEmscripten` is no longer implicitly included on Emscripten as it's not
     needed for anything (see [mosra/magnum#490](https://github.com/mosra/magnum/issues/490))
+-   The Homebrew package now uses `std_cmake_args` instead of hardcoded build
+    type and install prefix, which resolves certain build issues (see
+    [mosra/homebrew-magnum#6](https://github.com/mosra/homebrew-magnum/pull/6))
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
