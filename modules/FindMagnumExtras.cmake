@@ -96,6 +96,8 @@ mark_as_advanced(MAGNUMEXTRAS_INCLUDE_DIR)
 # components from other repositories)
 set(_MAGNUMEXTRAS_LIBRARY_COMPONENTS Ui)
 set(_MAGNUMEXTRAS_EXECUTABLE_COMPONENTS player ui-gallery)
+# Nothing is enabled by default right now
+set(_MAGNUMEXTRAS_IMPLICITLY_ENABLED_COMPONENTS )
 
 # Inter-component dependencies
 set(_MAGNUMEXTRAS_ui-gallery_DEPENDENCIES Ui)
@@ -114,6 +116,7 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
 endforeach()
 
 # Join the lists, remove duplicate components
+set(_MAGNUMEXTRAS_ORIGINAL_FIND_COMPONENTS ${MagnumExtras_FIND_COMPONENTS})
 if(_MAGNUMEXTRAS_ADDITIONAL_COMPONENTS)
     list(INSERT MagnumExtras_FIND_COMPONENTS 0 ${_MAGNUMEXTRAS_ADDITIONAL_COMPONENTS})
 endif()
@@ -154,10 +157,9 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
                 set_property(TARGET MagnumExtras::${_component} PROPERTY
                     IMPORTED_LOCATION_DEBUG ${MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG})
             endif()
-        endif()
 
         # Executables
-        if(_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS)
+        elseif(_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS)
             add_executable(MagnumExtras::${_component} IMPORTED)
 
             find_program(MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE magnum-${_component})
@@ -167,6 +169,10 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
                 set_property(TARGET MagnumExtras::${_component} PROPERTY
                     IMPORTED_LOCATION ${MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE})
             endif()
+
+        # Something unknown, skip. FPHSA will take care of handling this below.
+        else()
+            continue()
         endif()
 
         # No special setup required for Ui library
@@ -208,7 +214,41 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
     endif()
 endforeach()
 
+# For CMake 3.16+ with REASON_FAILURE_MESSAGE, provide additional potentially
+# useful info about the failed components.
+if(NOT CMAKE_VERSION VERSION_LESS 3.16)
+    set(_MAGNUMEXTRAS_REASON_FAILURE_MESSAGE )
+    # Go only through the originally specified find_package() components, not
+    # the dependencies added by us afterwards
+    foreach(_component ${_MAGNUMEXTRAS_ORIGINAL_FIND_COMPONENTS})
+        if(MagnumExtras_${_component}_FOUND)
+            continue()
+        endif()
+
+        # If it's not known at all, tell the user -- it might be a new library
+        # and an old Find module, or something platform-specific.
+        if(NOT _component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS AND NOT _component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS)
+            list(APPEND _MAGNUMEXTRAS_REASON_FAILURE_MESSAGE "${_component} is not a known component on this platform.")
+        # Otherwise, if it's not among implicitly built components, hint that
+        # the user may need to enable it
+        # TODO: currently, the _FOUND variable doesn't reflect if dependencies
+        #   were found. When it will, this needs to be updated to avoid
+        #   misleading messages.
+        elseif(NOT _component IN_LIST _MAGNUMEXTRAS_IMPLICITLY_ENABLED_COMPONENTS)
+            string(TOUPPER ${_component} _COMPONENT)
+            list(APPEND _MAGNUMEXTRAS_REASON_FAILURE_MESSAGE "${_component} is not built by default. Make sure you enabled WITH_${_COMPONENT} when building Magnum Extras.")
+        # Otherwise we have no idea. Better be silent than to print something
+        # misleading.
+        else()
+        endif()
+    endforeach()
+
+    string(REPLACE ";" " " _MAGNUMEXTRAS_REASON_FAILURE_MESSAGE "${_MAGNUMEXTRAS_REASON_FAILURE_MESSAGE}")
+    set(_MAGNUMEXTRAS_REASON_FAILURE_MESSAGE REASON_FAILURE_MESSAGE "${_MAGNUMEXTRAS_REASON_FAILURE_MESSAGE}")
+endif()
+
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(MagnumExtras
     REQUIRED_VARS MAGNUMEXTRAS_INCLUDE_DIR
-    HANDLE_COMPONENTS)
+    HANDLE_COMPONENTS
+    ${_MAGNUMEXTRAS_REASON_FAILURE_MESSAGE})
