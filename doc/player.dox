@@ -119,7 +119,7 @@ character is omitted, it's equivalent to saying `key=true`; you can specify
 configuration subgroups using a slash.
 
 The `--profile` option accepts a space-separated list of measured values.
-Available values correspond to @ref DebugTools::GLFrameProfiler::Value names.
+Available values correspond to @ref DebugTools::FrameProfilerGL::Value names.
 
 @section magnum-player-credits Credits
 

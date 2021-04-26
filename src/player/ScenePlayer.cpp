@@ -306,7 +306,7 @@ enum class Visualization: UnsignedByte {
 
 class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
     public:
-        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi);
+        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::FrameProfilerGL::Values profilerValues, bool& drawUi);
 
     private:
         void drawEvent() override;
@@ -393,7 +393,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         #endif
 
         /* Profiling */
-        DebugTools::GLFrameProfiler _profiler;
+        DebugTools::FrameProfilerGL _profiler;
         Debug _profilerOut{Debug::Flag::NoNewlineAtTheEnd|
             (Debug::isTty() ? Debug::Flags{} : Debug::Flag::DisableColors)};
 };
@@ -471,7 +471,7 @@ class LightDrawable: public SceneGraph::Drawable3D {
         Containers::Array<Vector4>& _positions;
 };
 
-ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
+ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::FrameProfilerGL::Values profilerValues, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
     /* Color maps */
     _colorMapTexture
         .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
@@ -559,34 +559,34 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
 
     #ifndef MAGNUM_TARGET_GLES
     /* Set up the profiler, filter away unsupported values */
-    if(profilerValues & DebugTools::GLFrameProfiler::Value::GpuDuration && !GL::Context::current().isExtensionSupported<GL::Extensions::ARB::timer_query>()) {
+    if(profilerValues & DebugTools::FrameProfilerGL::Value::GpuDuration && !GL::Context::current().isExtensionSupported<GL::Extensions::ARB::timer_query>()) {
         Debug{} << "ARB_timer_query not supported, GPU time profiling will be unavailable";
-        profilerValues &= ~DebugTools::GLFrameProfiler::Value::GpuDuration;
+        profilerValues &= ~DebugTools::FrameProfilerGL::Value::GpuDuration;
     }
-    if(profilerValues & (DebugTools::GLFrameProfiler::Value::VertexFetchRatio|DebugTools::GLFrameProfiler::Value::PrimitiveClipRatio) &&
+    if(profilerValues & (DebugTools::FrameProfilerGL::Value::VertexFetchRatio|DebugTools::FrameProfilerGL::Value::PrimitiveClipRatio) &&
         !GL::Context::current().isExtensionSupported<GL::Extensions::ARB::pipeline_statistics_query>()
     ) {
         Debug{} << "ARB_pipeline_statistics_query not supported, GPU pipeline profiling will be unavailable";
-        profilerValues &= ~(DebugTools::GLFrameProfiler::Value::VertexFetchRatio|DebugTools::GLFrameProfiler::Value::PrimitiveClipRatio);
+        profilerValues &= ~(DebugTools::FrameProfilerGL::Value::VertexFetchRatio|DebugTools::FrameProfilerGL::Value::PrimitiveClipRatio);
     }
     #elif !defined(MAGNUM_TARGET_WEBGL)
-    if(profilerValues & DebugTools::GLFrameProfiler::Value::GpuDuration &&
+    if(profilerValues & DebugTools::FrameProfilerGL::Value::GpuDuration &&
         !GL::Context::current().isExtensionSupported<GL::Extensions::EXT::disjoint_timer_query>()
     ) {
         Debug{} << "EXT_disjoint_timer_query not supported, GPU time profiling will be unavailable";
-        profilerValues &= ~DebugTools::GLFrameProfiler::Value::GpuDuration;
+        profilerValues &= ~DebugTools::FrameProfilerGL::Value::GpuDuration;
     }
     #else
-    if(profilerValues & DebugTools::GLFrameProfiler::Value::GpuDuration &&
+    if(profilerValues & DebugTools::FrameProfilerGL::Value::GpuDuration &&
         !GL::Context::current().isExtensionSupported<GL::Extensions::EXT::disjoint_timer_query_webgl2>()
     ) {
         Debug{} << "EXT_disjoint_timer_query_webgl2 not supported, GPU time profiling will be unavailable";
-        profilerValues &= ~DebugTools::GLFrameProfiler::Value::GpuDuration;
+        profilerValues &= ~DebugTools::FrameProfilerGL::Value::GpuDuration;
     }
     #endif
 
     /* Disable profiler by default */
-    _profiler = DebugTools::GLFrameProfiler{profilerValues, 50};
+    _profiler = DebugTools::FrameProfilerGL{profilerValues, 50};
     _profiler.disable();
 }
 
@@ -1976,7 +1976,7 @@ void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
 
 }
 
-Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi) {
+Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::FrameProfilerGL::Values profilerValues, bool& drawUi) {
     return Containers::Pointer<ScenePlayer>{InPlaceInit, application, uiToStealFontFrom, profilerValues, drawUi};
 }
 

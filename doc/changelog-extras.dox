@@ -82,7 +82,7 @@ Released 2020-06-27, tagged as
     transformation in materials
 -   Tangent space, object and primitive ID visualization in
     @ref magnum-player "magnum-player"
--   Integrated @ref DebugTools::GLFrameProfiler in
+-   Integrated @cpp DebugTools::GLFrameProfiler @ce in
     @ref magnum-player "magnum-player", enable using the
     @m_class{m-label m-default} **P** key and configure with the `--profile`
     command-line option

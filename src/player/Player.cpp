@@ -200,7 +200,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
             ;
         bool _drawUi = true;
 
-        DebugTools::GLFrameProfiler::Values _profilerValues;
+        DebugTools::FrameProfilerGL::Values _profilerValues;
         #ifdef CORRADE_IS_DEBUG_BUILD
         Utility::Tweakable _tweakable;
         #endif
@@ -395,7 +395,7 @@ PrimitiveClipRatio.)")
             create(conf, glConf.setSampleCount(0));
     }
 
-    _profilerValues = args.value<DebugTools::GLFrameProfiler::Values>("profile");
+    _profilerValues = args.value<DebugTools::FrameProfilerGL::Values>("profile");
 
     #ifdef CORRADE_IS_DEBUG_BUILD
     if(args.isSet("tweakable")) _tweakable.enable();
