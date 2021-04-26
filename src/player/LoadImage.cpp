@@ -37,7 +37,7 @@ namespace Magnum { namespace Player {
 void loadImage(GL::Texture2D& texture, Trade::ImageData2D& image) {
     if(!image.isCompressed()) {
         /* Whitelist only things we *can* display */
-        /** @todo signed formats, float formats */
+        /** @todo signed formats, exposure knob for float formats */
         GL::TextureFormat format;
         switch(image.format()) {
             case PixelFormat::R8Unorm:
@@ -48,6 +48,21 @@ void loadImage(GL::Texture2D& texture, Trade::ImageData2D& image) {
             case PixelFormat::RGB8Srgb:
             case PixelFormat::RGBA8Unorm:
             case PixelFormat::RGBA8Srgb:
+            /* I guess we can try using 16-bit formats even though our displays
+               won't be able to show all the detail */
+            case PixelFormat::R16Unorm:
+            case PixelFormat::RG16Unorm:
+            case PixelFormat::RGB16Unorm:
+            case PixelFormat::RGBA16Unorm:
+            /* Floating point is fine too */
+            case PixelFormat::R16F:
+            case PixelFormat::RG16F:
+            case PixelFormat::RGB16F:
+            case PixelFormat::RGBA16F:
+            case PixelFormat::R32F:
+            case PixelFormat::RG32F:
+            case PixelFormat::RGB32F:
+            case PixelFormat::RGBA32F:
                 format = GL::textureFormat(image.format());
                 break;
             default:
