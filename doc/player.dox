@@ -111,7 +111,7 @@ Arguments:
     `FrameTime CpuDuration GpuDuration`)
 -   `-v`, `--verbose` --- verbose output from importer plugins
 -   `--magnum-...` --- engine-specific options (see
-    @ref GL-Context-command-line for details)
+    @ref GL-Context-usage-command-line for details)
 
 The `-i` / `--importer-options` argument accepts a comma-separated list of
 key/value pairs to set in the importer plugin configuration. If the `=`

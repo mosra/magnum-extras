@@ -84,7 +84,7 @@ Arguments:
     -   `default` --- the default style
     -   `mcss-dark` --- dark [m.css](http://mcss.mosra.cz) theme
 -   `--magnum-...` --- engine-specific options (see
-    @ref GL-Context-command-line for details)
+    @ref GL-Context-usage-command-line for details)
 
 */
 
