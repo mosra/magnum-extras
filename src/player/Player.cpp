@@ -500,7 +500,7 @@ PrimitiveClipRatio.)")
     /* Load a scene importer plugin */
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate(args.value("importer"));
-    if(importer) importer->setFlags(_importerFlags);
+    if(importer) importer->addFlags(_importerFlags);
 
     /* Propagate user-defined options from the command line */
     if(importer) for(const std::string& option: Utility::String::splitWithoutEmptyParts(args.value("importer-options"), ',')) {
@@ -555,7 +555,7 @@ PrimitiveClipRatio.)")
     } else if(args.value("importer") == "AnySceneImporter") {
         Debug{} << "Opening as a scene failed, trying as an image...";
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
-        if(imageImporter) imageImporter->setFlags(_importerFlags);
+        if(imageImporter) imageImporter->addFlags(_importerFlags);
         if(imageImporter && imageImporter->openFile(_file)) {
             if(!imageImporter->image2DCount()) {
                 Error{} << "No 2D images found in the file";
@@ -569,7 +569,7 @@ PrimitiveClipRatio.)")
     #else
     Containers::Pointer<Trade::AbstractImporter> importer =
         _manager.loadAndInstantiate("TinyGltfImporter");
-    importer->setFlags(_importerFlags);
+    importer->addFlags(_importerFlags);
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
     _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
