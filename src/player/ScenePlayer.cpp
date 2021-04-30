@@ -852,7 +852,7 @@ void ScenePlayer::updateAnimationTime(Int deciseconds) {
 }
 
 void ScenePlayer::updateLightColorBrightness() {
-    Containers::Array<Color3> lightColorsBrightness{Containers::NoInit, _data->lightColors.size()};
+    Containers::Array<Color3> lightColorsBrightness{NoInit, _data->lightColors.size()};
     for(UnsignedInt i = 0; i != lightColorsBrightness.size(); ++i)
         lightColorsBrightness[i] = _data->lightColors[i]*_brightness;
     for(auto& shader: _phongShaders)
@@ -944,7 +944,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
        instead. */
     Debug{} << "Loading" << importer.meshCount() << "meshes";
     _data->meshes = Containers::Array<MeshInfo>{importer.meshCount()};
-    Containers::Array<bool> hasVertexColors{Containers::DirectInit, importer.meshCount(), false};
+    Containers::Array<bool> hasVertexColors{DirectInit, importer.meshCount(), false};
     for(UnsignedInt i = 0; i != importer.meshCount(); ++i) {
         Containers::Optional<Trade::MeshData> meshData = importer.mesh(i);
         if(!meshData) {
@@ -1048,7 +1048,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         /* Import all objects and first count how many lights is there first so
            we know which shaders to instantiate */
         /** @todo ugh so much extra work ... better idea? */
-        _data->objects = Containers::Array<ObjectInfo>{Containers::ValueInit, importer.object3DCount()};
+        _data->objects = Containers::Array<ObjectInfo>{ValueInit, importer.object3DCount()};
         Containers::Array<Containers::Pointer<Trade::ObjectData3D>> objects{importer.object3DCount()};
         for(UnsignedInt i = 0; i != importer.object3DCount(); ++i) {
             objects[i] = importer.object3D(i);
@@ -1083,7 +1083,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
     } else if(!_data->meshes.empty() && _data->meshes[0].mesh) {
-        _data->objects = Containers::Array<ObjectInfo>{Containers::ValueInit, 1};
+        _data->objects = Containers::Array<ObjectInfo>{ValueInit, 1};
         _data->objects[0].object = &_data->scene;
         _data->objects[0].meshId = 0;
         _data->objects[0].name = "object #0";
@@ -1333,7 +1333,7 @@ void ScenePlayer::addObject(Containers::ArrayView<const Containers::Pointer<Trad
            directly. */
         const Trade::LightData& light = *_data->lights[objectData.instance()].light;
         new LightDrawable{*object, light.type() == Trade::LightData::Type::Directional ? true : false, _data->lightPositions, _data->lightDrawables};
-        arrayAppend(_data->lightColors, Containers::InPlaceInit, light.color()*light.intensity());
+        arrayAppend(_data->lightColors, InPlaceInit, light.color()*light.intensity());
 
         /* Visualization of the center */
         new FlatDrawable{*object, flatShader({}), _lightCenterMesh, i, light.color(), Vector3{0.25f}, _data->objectVisualizationDrawables};
@@ -1977,7 +1977,7 @@ void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
 }
 
 Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::GLFrameProfiler::Values profilerValues, bool& drawUi) {
-    return Containers::Pointer<ScenePlayer>{Containers::InPlaceInit, application, uiToStealFontFrom, profilerValues, drawUi};
+    return Containers::Pointer<ScenePlayer>{InPlaceInit, application, uiToStealFontFrom, profilerValues, drawUi};
 }
 
 }}

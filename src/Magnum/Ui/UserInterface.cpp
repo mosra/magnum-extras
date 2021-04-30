@@ -68,7 +68,7 @@ UserInterface::UserInterface(NoCreateT, const Vector2& size, const Vector2i& win
     _quadVertices.setData(vertexData, GL::BufferUsage::StaticDraw);
 
     /* Prepare quad indices */
-    Containers::Array<UnsignedShort> data{Containers::NoInit, IndexCount*6};
+    Containers::Array<UnsignedShort> data{NoInit, IndexCount*6};
     for(std::size_t i = 0; i != IndexCount; ++i) {
         /* 0---2 0---2 5
            |   | |  / /|

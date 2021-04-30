@@ -44,7 +44,7 @@ template<class InstanceData> BasicInstancedLayer<InstanceData>::~BasicInstancedL
 template<class InstanceData> void BasicInstancedLayer<InstanceData>::reset(const std::size_t capacity) {
     /* Reallocate */
     if(capacity > _data.size())
-        _data = Containers::Array<InstanceData>{Containers::NoInit, capacity};
+        _data = Containers::Array<InstanceData>{NoInit, capacity};
 
     /* Reset state */
     _modified = {};

@@ -45,9 +45,9 @@ template<class VertexData> BasicLayer<VertexData>::~BasicLayer() = default;
 template<class VertexData> void BasicLayer<VertexData>::reset(const std::size_t elementCapacity, const std::size_t dataCapacity) {
     /* Reallocate, if needed */
     if(elementCapacity > _elementOffset.size())
-        _elementOffset = Containers::Array<std::size_t>{Containers::NoInit, elementCapacity};
+        _elementOffset = Containers::Array<std::size_t>{NoInit, elementCapacity};
     if(dataCapacity > capacity())
-        _data = Containers::Array<VertexData>{Containers::NoInit, dataCapacity};
+        _data = Containers::Array<VertexData>{NoInit, dataCapacity};
 
     /* Reset state */
     _modified = {};

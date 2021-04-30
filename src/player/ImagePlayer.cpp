@@ -279,7 +279,7 @@ void ImagePlayer::initializeUi() {
 }
 
 Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi) {
-    return Containers::Pointer<ImagePlayer>{Containers::InPlaceInit, application, uiToStealFontFrom, drawUi};
+    return Containers::Pointer<ImagePlayer>{InPlaceInit, application, uiToStealFontFrom, drawUi};
 }
 
 }}
