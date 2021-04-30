@@ -34,7 +34,7 @@
 #include <Magnum/GL/Texture.h>
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/Primitives/Square.h>
-#include <Magnum/Shaders/Flat.h>
+#include <Magnum/Shaders/FlatGL.h>
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/ImageData.h>
 #include <Magnum/Trade/MeshData.h>
@@ -84,7 +84,7 @@ class ImagePlayer: public AbstractPlayer {
         Vector2 unproject(const Vector2i& windowPosition) const;
         Vector2 unprojectRelative(const Vector2i& relativeWindowPosition) const;
 
-        Shaders::Flat2D _coloredShader;
+        Shaders::FlatGL2D _coloredShader;
 
         /* UI */
         bool& _drawUi;
@@ -94,7 +94,7 @@ class ImagePlayer: public AbstractPlayer {
 
         GL::Texture2D _texture{NoCreate};
         GL::Mesh _square;
-        Shaders::Flat2D _shader{Shaders::Flat2D::Flag::Textured};
+        Shaders::FlatGL2D _shader{Shaders::FlatGL2D::Flag::Textured};
         Vector2i _imageSize;
         Matrix3 _transformation;
         Matrix3 _projection;

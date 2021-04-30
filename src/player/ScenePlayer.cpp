@@ -71,9 +71,9 @@
 #include <Magnum/SceneGraph/Drawable.h>
 #include <Magnum/SceneGraph/TranslationRotationScalingTransformation3D.h>
 #include <Magnum/SceneGraph/Scene.h>
-#include <Magnum/Shaders/Flat.h>
-#include <Magnum/Shaders/Phong.h>
-#include <Magnum/Shaders/MeshVisualizer.h>
+#include <Magnum/Shaders/FlatGL.h>
+#include <Magnum/Shaders/PhongGL.h>
+#include <Magnum/Shaders/MeshVisualizerGL.h>
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/AnimationData.h>
@@ -327,7 +327,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         void cycleObjectVisualization();
         void cycleMeshVisualization();
-        Shaders::MeshVisualizer3D::Flags setupVisualization(std::size_t meshId);
+        Shaders::MeshVisualizerGL3D::Flags setupVisualization(std::size_t meshId);
 
         void play();
         void pause();
@@ -342,14 +342,14 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         void addObject(Containers::ArrayView<const Containers::Pointer<Trade::ObjectData3D>> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
 
-        Shaders::Flat3D& flatShader(Shaders::Flat3D::Flags flags);
-        Shaders::Phong& phongShader(Shaders::Phong::Flags flags);
-        Shaders::MeshVisualizer3D& meshVisualizerShader(Shaders::MeshVisualizer3D::Flags flags);
+        Shaders::FlatGL3D& flatShader(Shaders::FlatGL3D::Flags flags);
+        Shaders::PhongGL& phongShader(Shaders::PhongGL::Flags flags);
+        Shaders::MeshVisualizerGL3D& meshVisualizerShader(Shaders::MeshVisualizerGL3D::Flags flags);
 
         /* Global rendering stuff */
-        std::unordered_map<Shaders::Flat3D::Flags, Shaders::Flat3D, EnumSetHash<Shaders::Flat3D::Flags>> _flatShaders;
-        std::unordered_map<Shaders::Phong::Flags, Shaders::Phong, EnumSetHash<Shaders::Phong::Flags>> _phongShaders;
-        std::unordered_map<Shaders::MeshVisualizer3D::Flags, Shaders::MeshVisualizer3D, EnumSetHash<Shaders::MeshVisualizer3D::Flags>> _meshVisualizerShaders;
+        std::unordered_map<Shaders::FlatGL3D::Flags, Shaders::FlatGL3D, EnumSetHash<Shaders::FlatGL3D::Flags>> _flatShaders;
+        std::unordered_map<Shaders::PhongGL::Flags, Shaders::PhongGL, EnumSetHash<Shaders::PhongGL::Flags>> _phongShaders;
+        std::unordered_map<Shaders::MeshVisualizerGL3D::Flags, Shaders::MeshVisualizerGL3D, EnumSetHash<Shaders::MeshVisualizerGL3D::Flags>> _meshVisualizerShaders;
         GL::Texture2D _colorMapTexture;
         /* Object and light visualization */
         GL::Mesh _lightCenterMesh, _lightInnerConeMesh, _lightOuterCircleMesh,
@@ -400,12 +400,12 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
 class FlatDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit FlatDrawable(Object3D& object, Shaders::Flat3D& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const Vector3& scale, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _scale{scale} {}
+        explicit FlatDrawable(Object3D& object, Shaders::FlatGL3D& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const Vector3& scale, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _scale{scale} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
-        Shaders::Flat3D& _shader;
+        Shaders::FlatGL3D& _shader;
         GL::Mesh& _mesh;
         UnsignedInt _objectId;
         Color4 _color;
@@ -414,14 +414,14 @@ class FlatDrawable: public SceneGraph::Drawable3D {
 
 class PhongDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, GL::Texture2D* normalTexture, Float normalTextureScale, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _normalTexture{normalTexture}, _normalTextureScale{normalTextureScale}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
+        explicit PhongDrawable(Object3D& object, Shaders::PhongGL& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, GL::Texture2D* normalTexture, Float normalTextureScale, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _normalTexture{normalTexture}, _normalTextureScale{normalTextureScale}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
 
-        explicit PhongDrawable(Object3D& object, Shaders::Phong& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{nullptr}, _normalTexture{nullptr}, _alphaMask{0.5f}, _shadeless{shadeless} {}
+        explicit PhongDrawable(Object3D& object, Shaders::PhongGL& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{nullptr}, _normalTexture{nullptr}, _alphaMask{0.5f}, _shadeless{shadeless} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
-        Shaders::Phong& _shader;
+        Shaders::PhongGL& _shader;
         GL::Mesh& _mesh;
         UnsignedInt _objectId;
         Color4 _color;
@@ -435,18 +435,18 @@ class PhongDrawable: public SceneGraph::Drawable3D {
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizer3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount, UnsignedInt primitiveCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount}, _primitiveCount{primitiveCount}, _shadeless(shadeless) {}
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizerGL3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount, UnsignedInt primitiveCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount}, _primitiveCount{primitiveCount}, _shadeless(shadeless) {}
 
-        Shaders::MeshVisualizer3D& shader() { return _shader; }
+        Shaders::MeshVisualizerGL3D& shader() { return _shader; }
 
-        void setShader(Shaders::MeshVisualizer3D& shader) { _shader = shader; }
+        void setShader(Shaders::MeshVisualizerGL3D& shader) { _shader = shader; }
 
         std::size_t meshId() const { return _meshId; }
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
 
-        Containers::Reference<Shaders::MeshVisualizer3D> _shader;
+        Containers::Reference<Shaders::MeshVisualizerGL3D> _shader;
         GL::Mesh& _mesh;
         std::size_t _meshId;
         UnsignedInt _objectIdCount, _vertexCount, _primitiveCount;
@@ -523,8 +523,8 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
         .attachRenderbuffer(GL::Framebuffer::BufferAttachment::Depth, _selectionDepth)
         .attachRenderbuffer(GL::Framebuffer::ColorAttachment{1}, _selectionObjectId);
     _selectionFramebuffer.mapForDraw({
-        {Shaders::Generic3D::ColorOutput, GL::Framebuffer::DrawAttachment::None},
-        {Shaders::Generic3D::ObjectIdOutput, GL::Framebuffer::ColorAttachment{1}}});
+        {Shaders::GenericGL3D::ColorOutput, GL::Framebuffer::DrawAttachment::None},
+        {Shaders::GenericGL3D::ObjectIdOutput, GL::Framebuffer::ColorAttachment{1}}});
     CORRADE_INTERNAL_ASSERT(_selectionFramebuffer.checkStatus(GL::FramebufferTarget::Draw) == GL::Framebuffer::Status::Complete);
 
     /* Setup the depth aware mouse interaction -- on WebGL we can't just read
@@ -590,18 +590,18 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
     _profiler.disable();
 }
 
-Shaders::Flat3D& ScenePlayer::flatShader(Shaders::Flat3D::Flags flags) {
+Shaders::FlatGL3D& ScenePlayer::flatShader(Shaders::FlatGL3D::Flags flags) {
     auto found = _flatShaders.find(flags);
     if(found == _flatShaders.end())
-        found = _flatShaders.emplace(flags, Shaders::Flat3D{Shaders::Flat3D::Flag::ObjectId|flags}).first;
+        found = _flatShaders.emplace(flags, Shaders::FlatGL3D{Shaders::FlatGL3D::Flag::ObjectId|flags}).first;
     return found->second;
 }
 
-Shaders::Phong& ScenePlayer::phongShader(Shaders::Phong::Flags flags) {
+Shaders::PhongGL& ScenePlayer::phongShader(Shaders::PhongGL::Flags flags) {
     auto found = _phongShaders.find(flags);
     if(found == _phongShaders.end()) {
-        found = _phongShaders.emplace(flags, Shaders::Phong{
-            Shaders::Phong::Flag::ObjectId|flags,
+        found = _phongShaders.emplace(flags, Shaders::PhongGL{
+            Shaders::PhongGL::Flag::ObjectId|flags,
             _data->lightCount ? _data->lightCount : 3
         }).first;
         found->second
@@ -611,26 +611,26 @@ Shaders::Phong& ScenePlayer::phongShader(Shaders::Phong::Flags flags) {
     return found->second;
 }
 
-Shaders::MeshVisualizer3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisualizer3D::Flags flags) {
+Shaders::MeshVisualizerGL3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisualizerGL3D::Flags flags) {
     auto found = _meshVisualizerShaders.find(flags);
     if(found == _meshVisualizerShaders.end()) {
-        found = _meshVisualizerShaders.emplace(flags, Shaders::MeshVisualizer3D{flags}).first;
+        found = _meshVisualizerShaders.emplace(flags, Shaders::MeshVisualizerGL3D{flags}).first;
         found->second
             .setViewportSize(Vector2{application().framebufferSize()});
 
-        if(flags & Shaders::MeshVisualizer3D::Flag::Wireframe)
+        if(flags & Shaders::MeshVisualizerGL3D::Flag::Wireframe)
             found->second.setWireframeColor(_(0xdcdcdcff_rgbaf));
         #ifndef MAGNUM_TARGET_GLES
-        if(flags & Shaders::MeshVisualizer3D::Flag::NormalDirection)
+        if(flags & Shaders::MeshVisualizerGL3D::Flag::NormalDirection)
             found->second
                 .setLineLength(_lineLength)
                 .setLineWidth(2.0f);
         #endif
 
-        if(flags & (Shaders::MeshVisualizer3D::Flag::InstancedObjectId|
-            Shaders::MeshVisualizer3D::Flag::VertexId
+        if(flags & (Shaders::MeshVisualizerGL3D::Flag::InstancedObjectId|
+            Shaders::MeshVisualizerGL3D::Flag::VertexId
             #ifndef MAGNUM_TARGET_GLES
-            |Shaders::MeshVisualizer3D::Flag::PrimitiveId
+            |Shaders::MeshVisualizerGL3D::Flag::PrimitiveId
             #endif
         ))
             found->second.bindColorMapTexture(_colorMapTexture);
@@ -723,7 +723,7 @@ void ScenePlayer::cycleMeshVisualization() {
     _data->selectedObject->setShader(meshVisualizerShader(setupVisualization( _data->selectedObject->meshId())));
 }
 
-Shaders::MeshVisualizer3D::Flags ScenePlayer::setupVisualization(std::size_t meshId) {
+Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t meshId) {
     const MeshInfo& info = _data->meshes[meshId];
 
     #ifndef MAGNUM_TARGET_GLES
@@ -745,54 +745,54 @@ Shaders::MeshVisualizer3D::Flags ScenePlayer::setupVisualization(std::size_t mes
 
     if(_visualization == Visualization::Wireframe) {
         _baseUiPlane->meshVisualization.setText("Wireframe");
-        return Shaders::MeshVisualizer3D::Flag::Wireframe;
+        return Shaders::MeshVisualizerGL3D::Flag::Wireframe;
     }
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframeTbn) {
         _baseUiPlane->meshVisualization.setText("Wire + TBN");
-        Shaders::MeshVisualizer3D::Flags flags =
-            Shaders::MeshVisualizer3D::Flag::Wireframe|
-            Shaders::MeshVisualizer3D::Flag::TangentDirection|
-            Shaders::MeshVisualizer3D::Flag::NormalDirection;
+        Shaders::MeshVisualizerGL3D::Flags flags =
+            Shaders::MeshVisualizerGL3D::Flag::Wireframe|
+            Shaders::MeshVisualizerGL3D::Flag::TangentDirection|
+            Shaders::MeshVisualizerGL3D::Flag::NormalDirection;
         if(info.hasSeparateBitangents)
-            flags |= Shaders::MeshVisualizer3D::Flag::BitangentDirection;
+            flags |= Shaders::MeshVisualizerGL3D::Flag::BitangentDirection;
         else
-            flags |= Shaders::MeshVisualizer3D::Flag::BitangentFromTangentDirection;
+            flags |= Shaders::MeshVisualizerGL3D::Flag::BitangentFromTangentDirection;
         return flags;
     }
     #endif
 
     if(_visualization == Visualization::WireframeObjectId) {
         _baseUiPlane->meshVisualization.setText("Wire + Object ID");
-        return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::InstancedObjectId;
+        return Shaders::MeshVisualizerGL3D::Flag::Wireframe|Shaders::MeshVisualizerGL3D::Flag::InstancedObjectId;
     }
 
     if(_visualization == Visualization::WireframeVertexId) {
         _baseUiPlane->meshVisualization.setText("Wire + Vertex ID");
-        return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::VertexId;
+        return Shaders::MeshVisualizerGL3D::Flag::Wireframe|Shaders::MeshVisualizerGL3D::Flag::VertexId;
     }
 
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframePrimitiveId) {
         _baseUiPlane->meshVisualization.setText("Wire + Prim ID");
-        return Shaders::MeshVisualizer3D::Flag::Wireframe|Shaders::MeshVisualizer3D::Flag::PrimitiveId;
+        return Shaders::MeshVisualizerGL3D::Flag::Wireframe|Shaders::MeshVisualizerGL3D::Flag::PrimitiveId;
     }
     #endif
 
     if(_visualization == Visualization::ObjectId) {
         _baseUiPlane->meshVisualization.setText("Object ID");
-        return Shaders::MeshVisualizer3D::Flag::InstancedObjectId;
+        return Shaders::MeshVisualizerGL3D::Flag::InstancedObjectId;
     }
 
     if(_visualization == Visualization::VertexId) {
         _baseUiPlane->meshVisualization.setText("Vertex ID");
-        return Shaders::MeshVisualizer3D::Flag::VertexId;
+        return Shaders::MeshVisualizerGL3D::Flag::VertexId;
     }
 
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::PrimitiveId) {
         _baseUiPlane->meshVisualization.setText("Primitive ID");
-        return Shaders::MeshVisualizer3D::Flag::PrimitiveId;
+        return Shaders::MeshVisualizerGL3D::Flag::PrimitiveId;
     }
     #endif
 
@@ -1087,7 +1087,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->objects[0].object = &_data->scene;
         _data->objects[0].meshId = 0;
         _data->objects[0].name = "object #0";
-        new PhongDrawable{_data->scene, phongShader(hasVertexColors[0] ? Shaders::Phong::Flag::VertexColor : Shaders::Phong::Flags{}), *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
+        new PhongDrawable{_data->scene, phongShader(hasVertexColors[0] ? Shaders::PhongGL::Flag::VertexColor : Shaders::PhongGL::Flags{}), *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
     }
 
     /* Create a camera object in case it wasn't present in the scene already */
@@ -1255,11 +1255,11 @@ void ScenePlayer::addObject(Containers::ArrayView<const Containers::Pointer<Trad
 
         GL::Mesh& mesh = *_data->meshes[objectData.instance()].mesh;
 
-        Shaders::Phong::Flags flags;
+        Shaders::PhongGL::Flags flags;
         if(hasVertexColors[objectData.instance()])
-            flags |= Shaders::Phong::Flag::VertexColor;
+            flags |= Shaders::PhongGL::Flag::VertexColor;
         if(_data->meshes[objectData.instance()].hasSeparateBitangents)
-            flags |= Shaders::Phong::Flag::Bitangent;
+            flags |= Shaders::PhongGL::Flag::Bitangent;
 
         /* Material not available / not loaded. If the mesh has vertex colors,
            use that, otherwise apply a default material; use a flat shader for
@@ -1272,7 +1272,7 @@ void ScenePlayer::addObject(Containers::ArrayView<const Containers::Pointer<Trad
                     mesh, i,
                     0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
             else
-                new FlatDrawable{*object, flatShader(hasVertexColors[objectData.instance()] ? Shaders::Flat3D::Flag::VertexColor : Shaders::Flat3D::Flags{}), mesh, i, 0xffffff_rgbf, Vector3{Constants::nan()}, _data->opaqueDrawables};
+                new FlatDrawable{*object, flatShader(hasVertexColors[objectData.instance()] ? Shaders::FlatGL3D::Flag::VertexColor : Shaders::FlatGL3D::Flags{}), mesh, i, 0xffffff_rgbf, Vector3{Constants::nan()}, _data->opaqueDrawables};
 
         /* Material available */
         } else {
@@ -1287,12 +1287,12 @@ void ScenePlayer::addObject(Containers::ArrayView<const Containers::Pointer<Trad
                 Containers::Optional<GL::Texture2D>& texture = _data->textures[material.diffuseTexture()];
                 if(texture) {
                     diffuseTexture = &*texture;
-                    flags |= Shaders::Phong::Flag::AmbientTexture|
-                        Shaders::Phong::Flag::DiffuseTexture;
+                    flags |= Shaders::PhongGL::Flag::AmbientTexture|
+                        Shaders::PhongGL::Flag::DiffuseTexture;
                     if(material.hasTextureTransformation())
-                        flags |= Shaders::Phong::Flag::TextureTransformation;
+                        flags |= Shaders::PhongGL::Flag::TextureTransformation;
                     if(material.alphaMode() == Trade::MaterialAlphaMode::Mask)
-                        flags |= Shaders::Phong::Flag::AlphaMask;
+                        flags |= Shaders::PhongGL::Flag::AlphaMask;
                 }
             }
 
@@ -1308,9 +1308,9 @@ void ScenePlayer::addObject(Containers::ArrayView<const Containers::Pointer<Trad
                 } else if(texture) {
                     normalTexture = &*texture;
                     normalTextureScale = material.normalTextureScale();
-                    flags |= Shaders::Phong::Flag::NormalTexture;
+                    flags |= Shaders::PhongGL::Flag::NormalTexture;
                     if(material.hasTextureTransformation())
-                        flags |= Shaders::Phong::Flag::TextureTransformation;
+                        flags |= Shaders::PhongGL::Flag::TextureTransformation;
                 }
             }
 
@@ -1383,7 +1383,7 @@ void ScenePlayer::addObject(Containers::ArrayView<const Containers::Pointer<Trad
 
     /* Object orientation visualizers, except for lights, which have their own */
     if(objectData.instanceType() != Trade::ObjectInstanceType3D::Light)
-        new FlatDrawable{*object, flatShader(Shaders::Flat3D::Flag::VertexColor), _axisMesh, i, 0xffffff_rgbf, Vector3{1.0f}, _data->objectVisualizationDrawables};
+        new FlatDrawable{*object, flatShader(Shaders::FlatGL3D::Flag::VertexColor), _axisMesh, i, 0xffffff_rgbf, Vector3{1.0f}, _data->objectVisualizationDrawables};
 
     /* Recursively add children */
     for(std::size_t id: objectData.children())
@@ -1426,9 +1426,9 @@ void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera
         .setAmbientColor(_color*0.06f)
         .setDiffuseColor(_color);
 
-    if(_shader.flags() & Shaders::Phong::Flag::TextureTransformation)
+    if(_shader.flags() & Shaders::PhongGL::Flag::TextureTransformation)
         _shader.setTextureMatrix(_textureMatrix);
-    if(_shader.flags() & Shaders::Phong::Flag::AlphaMask)
+    if(_shader.flags() & Shaders::PhongGL::Flag::AlphaMask)
         _shader.setAlphaMask(_alphaMask);
 
     _shader.draw(_mesh);
@@ -1443,26 +1443,26 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
         .setTransformationMatrix(transformationMatrix);
 
     #ifndef MAGNUM_TARGET_GLES
-    if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::NormalDirection)
+    if(_shader->flags() & Shaders::MeshVisualizerGL3D::Flag::NormalDirection)
         _shader->setNormalMatrix(transformationMatrix.normalMatrix());
     #endif
 
-    if(_shader->flags() & (Shaders::MeshVisualizer3D::Flag::InstancedObjectId|
-        Shaders::MeshVisualizer3D::Flag::VertexId
+    if(_shader->flags() & (Shaders::MeshVisualizerGL3D::Flag::InstancedObjectId|
+        Shaders::MeshVisualizerGL3D::Flag::VertexId
         #ifndef MAGNUM_TARGET_GLES
-        |Shaders::MeshVisualizer3D::Flag::PrimitiveId
+        |Shaders::MeshVisualizerGL3D::Flag::PrimitiveId
         #endif
     ))
         _shader->setColor(0xffffffff_rgbaf*(_shadeless ? 1.0f : 0.66667f));
     else
         _shader->setColor(0x2f83ccff_rgbaf*0.5f);
 
-    if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::InstancedObjectId)
+    if(_shader->flags() & Shaders::MeshVisualizerGL3D::Flag::InstancedObjectId)
         _shader->setColorMapTransformation(0.0f, 1.0f/_objectIdCount);
-    if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::VertexId)
+    if(_shader->flags() & Shaders::MeshVisualizerGL3D::Flag::VertexId)
         _shader->setColorMapTransformation(0.0f, 1.0f/_vertexCount);
     #ifndef MAGNUM_TARGET_GLES
-    if(_shader->flags() & Shaders::MeshVisualizer3D::Flag::PrimitiveId)
+    if(_shader->flags() & Shaders::MeshVisualizerGL3D::Flag::PrimitiveId)
         _shader->setColorMapTransformation(0.0f, 1.0f/_primitiveCount);
     #endif
 
@@ -1479,7 +1479,7 @@ void ScenePlayer::drawEvent() {
        color output disabled), set it back to the default framebuffer */
     GL::defaultFramebuffer.bind(); /** @todo mapForDraw() should bind implicitly */
     GL::defaultFramebuffer
-        .mapForDraw({{Shaders::Phong::ColorOutput, GL::DefaultFramebuffer::DrawAttachment::Back}})
+        .mapForDraw({{Shaders::PhongGL::ColorOutput, GL::DefaultFramebuffer::DrawAttachment::Back}})
         .clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
 
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
@@ -1741,8 +1741,8 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
     if(event.button() == MouseEvent::Button::Right && _data) {
         _selectionFramebuffer.bind(); /** @todo mapForDraw() should bind implicitly */
         _selectionFramebuffer.mapForDraw({
-                {Shaders::Generic3D::ColorOutput, GL::Framebuffer::DrawAttachment::None},
-                {Shaders::Generic3D::ObjectIdOutput, GL::Framebuffer::ColorAttachment{1}}})
+                {Shaders::GenericGL3D::ColorOutput, GL::Framebuffer::DrawAttachment::None},
+                {Shaders::GenericGL3D::ObjectIdOutput, GL::Framebuffer::ColorAttachment{1}}})
             .clearDepth(1.0f)
             .clearColor(1, Vector4ui{0xffff});
         CORRADE_INTERNAL_ASSERT(_selectionFramebuffer.checkStatus(GL::FramebufferTarget::Draw) == GL::Framebuffer::Status::Complete);
@@ -1829,7 +1829,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                 MeshInfo& meshInfo = _data->meshes[_data->objects[selectedId].meshId];
 
                 /* Create a visualizer for the selected object */
-                const Shaders::MeshVisualizer3D::Flags flags = setupVisualization(_data->objects[selectedId].meshId);
+                const Shaders::MeshVisualizerGL3D::Flags flags = setupVisualization(_data->objects[selectedId].meshId);
                 _data->selectedObject = new MeshVisualizerDrawable{
                     *objectInfo.object, meshVisualizerShader(flags),
                     *meshInfo.mesh, _data->objects[selectedId].meshId,
@@ -1947,7 +1947,7 @@ void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
 
     #ifndef MAGNUM_TARGET_GLES
     /* Adjust TBN visualization length with Ctrl-scroll if it's currently shown */
-    if((event.modifiers() & MouseScrollEvent::Modifier::Ctrl) && _data->selectedObject && (_data->selectedObject->shader().flags() & Shaders::MeshVisualizer3D::Flag::NormalDirection)) {
+    if((event.modifiers() & MouseScrollEvent::Modifier::Ctrl) && _data->selectedObject && (_data->selectedObject->shader().flags() & Shaders::MeshVisualizerGL3D::Flag::NormalDirection)) {
         _lineLength = Math::max(_lineLength *= (1.0f + event.offset().y()*0.1f), 0.0f);
         _data->selectedObject->shader().setLineLength(_lineLength);
         event.setAccepted();
