@@ -34,7 +34,7 @@ ninja install
 cd ../..
 
 # Crosscompile Magnum
-git clone --depth 1 git://github.com/mosra/magnum.git
+git clone --depth 1 --branch next git://github.com/mosra/magnum.git
 cd magnum
 mkdir build-emscripten && cd build-emscripten
 cmake .. \
