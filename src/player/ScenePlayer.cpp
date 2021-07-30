@@ -871,7 +871,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     _data->textures = Containers::Array<Containers::Optional<GL::Texture2D>>{importer.textureCount()};
     for(UnsignedInt i = 0; i != importer.textureCount(); ++i) {
         Containers::Optional<Trade::TextureData> textureData = importer.texture(i);
-        if(!textureData || textureData->type() != Trade::TextureData::Type::Texture2D) {
+        if(!textureData || textureData->type() != Trade::TextureType::Texture2D) {
             Warning{} << "Cannot load texture" << i << importer.textureName(i);
             continue;
         }
