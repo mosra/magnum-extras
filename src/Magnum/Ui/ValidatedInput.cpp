@@ -39,7 +39,12 @@ bool ValidatedInput::allValid(std::initializer_list<Containers::Reference<const 
     return true;
 }
 
-ValidatedInput::ValidatedInput(Plane& plane, const Anchor& anchor, const std::regex& validator, std::string value, const std::size_t maxValueSize, const Style style): Input{plane, anchor, std::move(value), maxValueSize, style}, _validator{validator} {
+ValidatedInput::ValidatedInput(Plane& plane, const Anchor& anchor, const std::regex& validator, std::string value, const std::size_t maxValueSize, const Style style):
+    Input{plane, anchor, std::move(value), maxValueSize, style},
+    /* With {}, GCC 4.8 warns that "a temporary bound to '_validator' only
+       persists until the constructor exits" (?!) */
+    _validator(validator)
+{
     if(!isValid()) setStyle(Ui::Style::Warning);
     Interconnect::connect(*this, &Ui::Input::valueChanged, *this, &Ui::ValidatedInput::updateStyle);
 }
