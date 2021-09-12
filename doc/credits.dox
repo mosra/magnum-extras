@@ -29,6 +29,8 @@ namespace Magnum {
 
 @section credits-contributors-extras Magnum Extras
 
+-   **Hans Loeblich** ([\@thehans](https://github.com/thehans)) ---
+    improvements to Debian package building experience
 -   **John Laxson** ([\@jlaxson](https://github.com/jlaxson)) --- Homebrew
     package improvements
 -   **Jonathan Hale** ([\@Squareys](https://github.com/Squareys)) --- porting

@@ -50,6 +50,9 @@ namespace Magnum {
     [mosra/homebrew-magnum#6](https://github.com/mosra/homebrew-magnum/pull/6))
 -   On CMake 3.16 and newer, `FindMagnumExtras.cmake` can provide additional
     details if some component is not found
+-   Updated Debian build instructions to pass `--no-sign` to
+    `dpkg-buildpackage`, avoiding a confusing error message that might lead
+    people to think the packaging failed (see [mosra/magnum-plugins#105](https://github.com/mosra/magnum-plugins/issues/105))
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
