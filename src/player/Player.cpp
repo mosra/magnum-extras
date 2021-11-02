@@ -189,6 +189,9 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
 
         #ifndef CORRADE_TARGET_EMSCRIPTEN
         std::string _importer, _file;
+        #if defined(CORRADE_TARGET_UNIX) || (defined(CORRADE_TARGET_WINDOWS) && !defined(CORRADE_TARGET_WINDOWS_RT))
+        Containers::Array<const char, Utility::Directory::MapDeleter> mapped;
+        #endif
         Int _id{-1};
         #endif
         bool _controlsVisible =
@@ -351,6 +354,9 @@ Player::Player(const Arguments& arguments): Platform::ScreenedApplication{argume
     args.addArgument("file").setHelp("file", "file to load")
         .addOption('I', "importer", "AnySceneImporter").setHelp("importer", "importer plugin to use")
         .addOption('i', "importer-options").setHelp("importer-options", "configuration options to pass to the importer", "key=val,key2=val2,…")
+        #if defined(CORRADE_TARGET_UNIX) || (defined(CORRADE_TARGET_WINDOWS) && !defined(CORRADE_TARGET_WINDOWS_RT))
+        .addBooleanOption("map").setHelp("map", "memory-map the input for zero-copy import (works only for standalone files)")
+        #endif
         .addOption("id").setHelp("id", "image or scene ID to import");
     #endif
     args.addBooleanOption("no-merge-animations").setHelp("no-merge-animations", "don't merge glTF animations into a single clip")
@@ -542,7 +548,13 @@ PrimitiveClipRatio.)")
     /* Load file. If fails and this was not a custom importer, try loading it
        as an image instead */
     /** @todo redo once canOpen*() is implemented */
-    if(importer && importer->openFile(_file)) {
+    bool success;
+    if(args.isSet("map")) {
+        success = importer && (mapped = Utility::Directory::mapRead(args.value("file"))) && importer->openMemory(mapped);
+    } else {
+        success = importer && importer->openFile(_file);
+    }
+    if(success) {
         /* If we passed a custom importer, try to figure out if it's an image
            or a scene */
         /** @todo ugh the importer should have an API for that */

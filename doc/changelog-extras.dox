@@ -37,6 +37,9 @@ namespace Magnum {
 -   @ref magnum-player "magnum-player" now makes use of the
     @ref Trade::MaterialAttribute::NormalTextureScale material attribute, if
     present
+-   Added a `--map` option to @ref magnum-player "magnum-player", similarly to
+    an option of the same name in @ref magnum-sceneconverter "magnum-sceneconverter"
+    it memory-maps the file for faster loading
 
 @subsection changelog-extras-latest-buildsystem Build system
 
