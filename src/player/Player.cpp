@@ -558,7 +558,7 @@ PrimitiveClipRatio.)")
         /* If we passed a custom importer, try to figure out if it's an image
            or a scene */
         /** @todo ugh the importer should have an API for that */
-        if(args.value("importer") != "AnySceneImporter" && !importer->object3DCount() && !importer->meshCount() && importer->image2DCount() >= 1)
+        if(args.value("importer") != "AnySceneImporter" && !importer->objectCount() && !importer->meshCount() && importer->image2DCount() >= 1)
             _player = createImagePlayer(*this, *_overlay->ui, _drawUi);
         else
             _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);

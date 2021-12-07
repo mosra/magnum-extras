@@ -27,8 +27,10 @@
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/Pair.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/Triple.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
@@ -81,7 +83,6 @@
 #include <Magnum/Trade/ImageData.h>
 #include <Magnum/Trade/LightData.h>
 #include <Magnum/Trade/MeshData.h>
-#include <Magnum/Trade/MeshObjectData3D.h>
 #include <Magnum/Trade/PhongMaterialData.h>
 #include <Magnum/Trade/SceneData.h>
 #include <Magnum/Trade/TextureData.h>
@@ -339,8 +340,6 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         Float depthAt(const Vector2i& windowPosition);
         Vector3 unproject(const Vector2i& windowPosition, Float depth) const;
-
-        void addObject(Containers::ArrayView<const Containers::Pointer<Trade::ObjectData3D>> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i);
 
         Shaders::FlatGL3D& flatShader(Shaders::FlatGL3D::Flags flags);
         Shaders::PhongGL& phongShader(Shaders::PhongGL::Flags flags);
@@ -1034,55 +1033,221 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
     /* Load the scene. Save the object pointers in an array for easier mapping
        of animations later. */
-    Debug{} << "Loading" << importer.object3DCount() << "objects";
     if((id < 0 && importer.defaultScene() != -1) || id >= 0) {
         if(id < 0) id = importer.defaultScene();
         Debug{} << "Loading scene" << id << importer.sceneName(id);
 
-        Containers::Optional<Trade::SceneData> sceneData = importer.scene(id);
-        if(!sceneData) {
+        Containers::Optional<Trade::SceneData> scene = importer.scene(id);
+        if(!scene ||
+           !scene->is3D() ||
+           !scene->hasField(Trade::SceneField::Parent)) {
             Error{} << "Cannot load the scene, aborting";
             return;
         }
 
-        /* Import all objects and first count how many lights is there first so
-           we know which shaders to instantiate */
-        /** @todo ugh so much extra work ... better idea? */
-        _data->objects = Containers::Array<ObjectInfo>{ValueInit, importer.object3DCount()};
-        Containers::Array<Containers::Pointer<Trade::ObjectData3D>> objects{importer.object3DCount()};
-        for(UnsignedInt i = 0; i != importer.object3DCount(); ++i) {
-            objects[i] = importer.object3D(i);
-            if(!objects[i]) {
-                Error{} << "Cannot import object" << i << importer.object3DName(i);
-                continue;
-            }
-            _data->objects[i].name = importer.object3DName(i);
-            if(_data->objects[i].name.empty())
-                _data->objects[i].name = Utility::formatString("object #{}", i);
-            switch(objects[i]->instanceType()) {
-                case Trade::ObjectInstanceType3D::Empty:
-                    _data->objects[i].type = "empty";
-                    break;
-                case Trade::ObjectInstanceType3D::Camera:
-                    _data->objects[i].type = "camera";
-                    break;
-                /* these have their own info text, so not setting the type */
-                case Trade::ObjectInstanceType3D::Light:
-                    ++_data->lightCount;
-                    break;
-                case Trade::ObjectInstanceType3D::Mesh:
-                    break;
-            }
-            _data->objects[i].childCount = objects[i]->children().size();
+        /* Allocate objects that are part of the hierarchy and fill their
+           implicit info */
+        _data->objects = Containers::Array<ObjectInfo>{ValueInit, std::size_t(scene->mappingBound())};
+        const Containers::Array<Containers::Pair<UnsignedInt, Int>> parents = scene->parentsAsArray();
+        for(const Containers::Pair<UnsignedInt, Int>& parent: parents) {
+            const UnsignedInt objectId = parent.first();
+
+            _data->objects[objectId].object = new Object3D{};
+            _data->objects[objectId].type = "empty";
+            _data->objects[objectId].name = importer.objectName(objectId);
+            if(_data->objects[objectId].name.empty())
+                _data->objects[objectId].name = Utility::formatString("object #{}", objectId);
         }
 
-        /* Recursively add all children */
-        for(UnsignedInt objectId: sceneData->children3D())
-            addObject(objects, materials, hasVertexColors, _data->scene, objectId);
+        /* Assign parent references, separately because there's no guarantee
+           that a parent was allocated already when it's referenced */
+        for(const Containers::Pair<UnsignedInt, Int>& parent: parents) {
+            const UnsignedInt objectId = parent.first();
+            _data->objects[objectId].object->setParent(parent.second() == -1 ? &_data->scene : _data->objects[parent.second()].object);
+
+            if(parent.second() != -1)
+                ++_data->objects[parent.second()].childCount;
+        }
+
+        /* Set transformations. Objects that are not part of the hierarchy are
+           ignored, objects that have no transformation entry retain an
+           identity transformation. */
+        for(const Containers::Pair<UnsignedInt, Matrix4>& transformation: scene->transformations3DAsArray())
+            if(Object3D* object = _data->objects[transformation.first()].object)
+                object->setTransformation(transformation.second());
+
+        /* Import all lights so we know which shaders to instantiate */
+        if(scene->hasField(Trade::SceneField::Light)) for(const Containers::Pair<UnsignedInt, UnsignedInt>& lightReference: scene->lightsAsArray()) {
+            const UnsignedInt objectId = lightReference.first();
+            const UnsignedInt lightId = lightReference.second();
+            Object3D* const object = _data->objects[objectId].object;
+            if(!object) continue;
+
+            ++_data->lightCount;
+
+            /* Save the light pointer as well, so we know what to print for
+               object selection. Lights have their own info text, so not
+               setting the type. */
+            /** @todo this doesn't handle multi-light objects */
+            _data->objects[objectId].lightId = lightId;
+
+            /* Add a light drawable, which puts correct camera-relative
+               position to _data->lightPositions. Light colors don't change so
+               add that directly. */
+            const Trade::LightData& light = *_data->lights[lightId].light;
+            new LightDrawable{*object, light.type() == Trade::LightData::Type::Directional ? true : false, _data->lightPositions, _data->lightDrawables};
+            arrayAppend(_data->lightColors, InPlaceInit, light.color()*light.intensity());
+
+            /* Visualization of the center */
+            new FlatDrawable{*object, flatShader({}), _lightCenterMesh, objectId, light.color(), Vector3{0.25f}, _data->objectVisualizationDrawables};
+
+            /* If the range is infinite, display it at distance = 5. It's not
+               great as it's quite misleading, but better than nothing. */
+            /** @todo make this runtime-changeable like with TBN visualizers */
+            Float range;
+            if(light.range() != Constants::inf()) range = light.range();
+            else range = 5.0f;
+
+            /* Point light has a sphere around */
+            if(light.type() == Trade::LightData::Type::Point) {
+                new FlatDrawable{*object, flatShader({}), _lightSphereMesh, objectId, light.color(), Vector3{range}, _data->objectVisualizationDrawables};
+
+            /* Spotlight has a cone visualizing the inner angle and a circle at
+               the end visualizing the outer angle */
+            } else if(light.type() == Trade::LightData::Type::Spot) {
+                new FlatDrawable{*object, flatShader({}), _lightInnerConeMesh, objectId, light.color(),
+                    Math::gather<'x', 'x', 'y'>(Vector2{
+                        range*Math::tan(light.innerConeAngle()*0.5f), range
+                    }), _data->objectVisualizationDrawables};
+                new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light.color(),
+                    Math::gather<'x', 'x', 'y'>(Vector2{
+                        range*Math::tan(light.outerConeAngle()*0.5f), range
+                    }), _data->objectVisualizationDrawables};
+
+            /* Directional has a circle and a line in its direction. The range
+               is always infinite, so the line has always a length of 15. */
+            } else if(light.type() == Trade::LightData::Type::Directional) {
+                new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light.color(), Vector3{0.25f, 0.25f, 0.0f}, _data->objectVisualizationDrawables};
+                new FlatDrawable{*object, flatShader({}), _lightDirectionMesh, objectId, light.color(), Vector3{5.0f}, _data->objectVisualizationDrawables};
+
+            /* Ambient lights are defined just by the center */
+            } else if(light.type() == Trade::LightData::Type::Ambient) {
+
+            /** @todo handle area lights when those are implemented */
+            } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+
+        /* Import cameras, the first camera will be treated as the default one */
+        if(scene->hasField(Trade::SceneField::Camera)) for(const Containers::Pair<UnsignedInt, UnsignedInt>& cameraReference: scene->camerasAsArray()) {
+            const UnsignedInt objectId = cameraReference.first();
+            Object3D* const object = _data->objects[objectId].object;
+            if(!object) continue;
+
+            /** @todo this doesn't handle objects with multiple
+                camera/mesh/light/... assignments correctly */
+            _data->objects[objectId].type = "camera";
+
+            if(cameraReference.second() == 0) _data->cameraObject = object;
+
+            /** @todo visualize the camera, not just for the default but for all */
+        }
+
+        /* Object orientation visualizers, except for lights, which have their own */
+        for(std::size_t i = 0; i != _data->objects.size(); ++i) {
+            Object3D* const object = _data->objects[i].object;
+            if(!object) continue;
+
+            if(_data->objects[i].lightId != 0xffffffffu) continue;
+
+            new FlatDrawable{*object, flatShader(Shaders::FlatGL3D::Flag::VertexColor), _axisMesh, UnsignedInt(i), 0xffffff_rgbf, Vector3{1.0f}, _data->objectVisualizationDrawables};
+        }
+
+        /* Add drawables for objects that have a mesh, again ignoring objects
+           that are not part of the hierarchy. There can be multiple mesh
+           assignments for one object, simply add one drawable for each. */
+        if(scene->hasField(Trade::SceneField::Mesh)) for(const Containers::Pair<UnsignedInt, Containers::Pair<UnsignedInt, Int>>& meshMaterial: scene->meshesMaterialsAsArray()) {
+            const UnsignedInt objectId = meshMaterial.first();
+            Object3D* const object = _data->objects[objectId].object;
+            const UnsignedInt meshId = meshMaterial.second().first();
+            const Int materialId = meshMaterial.second().second();
+            Containers::Optional<GL::Mesh>& mesh = _data->meshes[meshId].mesh;
+            if(!object || !mesh) continue;
+
+            /* Save the mesh pointer as well, so we know what to draw for object
+               selection */
+            _data->objects[objectId].meshId = meshId;
+
+            Shaders::PhongGL::Flags flags;
+            if(hasVertexColors[meshId])
+                flags |= Shaders::PhongGL::Flag::VertexColor;
+            if(_data->meshes[meshId].hasSeparateBitangents)
+                flags |= Shaders::PhongGL::Flag::Bitangent;
+
+            /* Material not available / not loaded. If the mesh has vertex
+               colors, use that, otherwise apply a default material; use a flat
+               shader for lines / points */
+            if(materialId == -1 || !materials[materialId]) {
+                if(mesh->primitive() == GL::MeshPrimitive::Triangles ||
+                   mesh->primitive() == GL::MeshPrimitive::TriangleStrip ||
+                   mesh->primitive() == GL::MeshPrimitive::TriangleFan)
+                    new PhongDrawable{*object, phongShader(flags), *mesh, objectId, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
+                else
+                    new FlatDrawable{*object, flatShader(hasVertexColors[meshId] ? Shaders::FlatGL3D::Flag::VertexColor : Shaders::FlatGL3D::Flags{}), *mesh, objectId, 0xffffff_rgbf, Vector3{Constants::nan()}, _data->opaqueDrawables};
+
+            /* Material available */
+            } else {
+                const Trade::PhongMaterialData& material = *materials[materialId];
+
+                /* Textured material. If the texture failed to load, again just
+                   use a default-colored material. */
+                GL::Texture2D* diffuseTexture = nullptr;
+                GL::Texture2D* normalTexture = nullptr;
+                Float normalTextureScale = 1.0f;
+                if(material.hasAttribute(Trade::MaterialAttribute::DiffuseTexture)) {
+                    Containers::Optional<GL::Texture2D>& texture = _data->textures[material.diffuseTexture()];
+                    if(texture) {
+                        diffuseTexture = &*texture;
+                        flags |= Shaders::PhongGL::Flag::AmbientTexture|
+                                 Shaders::PhongGL::Flag::DiffuseTexture;
+                        if(material.hasTextureTransformation())
+                            flags |= Shaders::PhongGL::Flag::TextureTransformation;
+                        if(material.alphaMode() == Trade::MaterialAlphaMode::Mask)
+                            flags |= Shaders::PhongGL::Flag::AlphaMask;
+                    }
+                }
+
+                /* Normal textured material. If the textures fail to load,
+                   again just use a default-colored material. */
+                if(material.hasAttribute(Trade::MaterialAttribute::NormalTexture)) {
+                    Containers::Optional<GL::Texture2D>& texture = _data->textures[material.normalTexture()];
+                    /* If there are no tangents, the mesh would render all
+                       black. Ignore the normal map in that case. */
+                    /** @todo generate tangents instead once we have the algo */
+                    if(!_data->meshes[meshId].hasTangents) {
+                        Warning{} << "Mesh" << _data->meshes[meshId].name << "doesn't have tangents and Magnum can't generate them yet, ignoring a normal map";
+                    } else if(texture) {
+                        normalTexture = &*texture;
+                        normalTextureScale = material.normalTextureScale();
+                        flags |= Shaders::PhongGL::Flag::NormalTexture;
+                        if(material.hasTextureTransformation())
+                            flags |= Shaders::PhongGL::Flag::TextureTransformation;
+                    }
+                }
+
+                new PhongDrawable{*object, phongShader(flags),
+                    *mesh, objectId,
+                    material.diffuseColor(), diffuseTexture, normalTexture, normalTextureScale,
+                    material.alphaMask(), material.commonTextureMatrix(), _shadeless,
+                    material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
+                        _data->transparentDrawables : _data->opaqueDrawables};
+            }
+        }
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
     } else if(!_data->meshes.empty() && _data->meshes[0].mesh) {
+        Debug{} << "No scene, loading the first mesh";
+
         _data->objects = Containers::Array<ObjectInfo>{ValueInit, 1};
         _data->objects[0].object = &_data->scene;
         _data->objects[0].meshId = 0;
@@ -1200,7 +1365,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     _baseUiPlane->modelInfo.setText(_data->modelInfo = Utility::formatString(
         "{}: {} objs, {} cams, {} meshes, {} mats, {}/{} texs, {} anims",
         Utility::Directory::filename(filename).substr(0, 32),
-        importer.object3DCount(),
+        importer.objectCount(),
         importer.cameraCount(),
         importer.meshCount(),
         importer.materialCount(),
@@ -1224,170 +1389,6 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->player.setPlayCount(0);
         setControlsVisible(true);
     }
-}
-
-void ScenePlayer::addObject(Containers::ArrayView<const Containers::Pointer<Trade::ObjectData3D>> objects, Containers::ArrayView<const Containers::Optional<Trade::PhongMaterialData>> materials, Containers::ArrayView<const bool> hasVertexColors, Object3D& parent, UnsignedInt i) {
-    /* Object failed to import, skip */
-    if(!objects[i]) return;
-
-    const Trade::ObjectData3D& objectData = *objects[i];
-
-    /* Add the object to the scene and set its transformation. If it has a
-       separate TRS, use that to avoid precision issues. */
-    auto* object = new Object3D{&parent};
-    if(objectData.flags() & Trade::ObjectFlag3D::HasTranslationRotationScaling)
-        (*object).setTranslation(objectData.translation())
-                 .setRotation(objectData.rotation())
-                 .setScaling(objectData.scaling());
-    else object->setTransformation(objectData.transformation());
-
-    /* Save it to the ID -> pointer mapping array for animation target and
-       object selection, fill in object properties */
-    _data->objects[i].object = object;
-
-    /* Add a drawable if the object has a mesh and the mesh is loaded */
-    if(objectData.instanceType() == Trade::ObjectInstanceType3D::Mesh && objectData.instance() != -1 && _data->meshes[objectData.instance()].mesh) {
-        const Int materialId = static_cast<const Trade::MeshObjectData3D&>(objectData).material();
-
-        /* Save the mesh pointer as well, so we know what to draw for object
-           selection */
-        _data->objects[i].meshId = objectData.instance();
-
-        GL::Mesh& mesh = *_data->meshes[objectData.instance()].mesh;
-
-        Shaders::PhongGL::Flags flags;
-        if(hasVertexColors[objectData.instance()])
-            flags |= Shaders::PhongGL::Flag::VertexColor;
-        if(_data->meshes[objectData.instance()].hasSeparateBitangents)
-            flags |= Shaders::PhongGL::Flag::Bitangent;
-
-        /* Material not available / not loaded. If the mesh has vertex colors,
-           use that, otherwise apply a default material; use a flat shader for
-           lines / points */
-        if(materialId == -1 || !materials[materialId]) {
-            if(mesh.primitive() == GL::MeshPrimitive::Triangles ||
-               mesh.primitive() == GL::MeshPrimitive::TriangleStrip ||
-               mesh.primitive() == GL::MeshPrimitive::TriangleFan)
-                new PhongDrawable{*object, phongShader(flags),
-                    mesh, i,
-                    0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
-            else
-                new FlatDrawable{*object, flatShader(hasVertexColors[objectData.instance()] ? Shaders::FlatGL3D::Flag::VertexColor : Shaders::FlatGL3D::Flags{}), mesh, i, 0xffffff_rgbf, Vector3{Constants::nan()}, _data->opaqueDrawables};
-
-        /* Material available */
-        } else {
-            const Trade::PhongMaterialData& material = *materials[materialId];
-
-            /* Textured material. If the texture failed to load, again just use
-               a default-colored material. */
-            GL::Texture2D* diffuseTexture = nullptr;
-            GL::Texture2D* normalTexture = nullptr;
-            Float normalTextureScale = 1.0f;
-            if(material.hasAttribute(Trade::MaterialAttribute::DiffuseTexture)) {
-                Containers::Optional<GL::Texture2D>& texture = _data->textures[material.diffuseTexture()];
-                if(texture) {
-                    diffuseTexture = &*texture;
-                    flags |= Shaders::PhongGL::Flag::AmbientTexture|
-                        Shaders::PhongGL::Flag::DiffuseTexture;
-                    if(material.hasTextureTransformation())
-                        flags |= Shaders::PhongGL::Flag::TextureTransformation;
-                    if(material.alphaMode() == Trade::MaterialAlphaMode::Mask)
-                        flags |= Shaders::PhongGL::Flag::AlphaMask;
-                }
-            }
-
-            /* Normal textured material. If the textures fail to load, again
-               just use a default-colored material. */
-            if(material.hasAttribute(Trade::MaterialAttribute::NormalTexture)) {
-                Containers::Optional<GL::Texture2D>& texture = _data->textures[material.normalTexture()];
-                /* If there are no tangents, the mesh would render all black.
-                   Ignore the normal map in that case. */
-                /** @todo generate tangents instead once we have the algo */
-                if(!_data->meshes[objectData.instance()].hasTangents) {
-                    Warning{} << "Mesh" << _data->meshes[objectData.instance()].name << "doesn't have tangents and Magnum can't generate them yet, ignoring a normal map";
-                } else if(texture) {
-                    normalTexture = &*texture;
-                    normalTextureScale = material.normalTextureScale();
-                    flags |= Shaders::PhongGL::Flag::NormalTexture;
-                    if(material.hasTextureTransformation())
-                        flags |= Shaders::PhongGL::Flag::TextureTransformation;
-                }
-            }
-
-            new PhongDrawable{*object, phongShader(flags),
-                mesh, i,
-                material.diffuseColor(), diffuseTexture, normalTexture, normalTextureScale,
-                material.alphaMask(), material.commonTextureMatrix(), _shadeless,
-                material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
-                    _data->transparentDrawables : _data->opaqueDrawables};
-        }
-
-    /* Light */
-    } else if(objectData.instanceType() == Trade::ObjectInstanceType3D::Light && objectData.instance() != -1 && _data->lights[objectData.instance()].light) {
-        /* Save the light pointer as well, so we know what to print for object
-           selection */
-        _data->objects[i].lightId = objectData.instance();
-
-        /* Add a light drawable, which puts correct camera-relative position
-           to _data->lightPositions. Light colors don't change so add that
-           directly. */
-        const Trade::LightData& light = *_data->lights[objectData.instance()].light;
-        new LightDrawable{*object, light.type() == Trade::LightData::Type::Directional ? true : false, _data->lightPositions, _data->lightDrawables};
-        arrayAppend(_data->lightColors, InPlaceInit, light.color()*light.intensity());
-
-        /* Visualization of the center */
-        new FlatDrawable{*object, flatShader({}), _lightCenterMesh, i, light.color(), Vector3{0.25f}, _data->objectVisualizationDrawables};
-
-        /* If the range is infinite, display it at distance = 5. It's not
-           great as it's quite misleading, but better than nothing. */
-        /** @todo make this runtime-changeable like with TBN visualizers */
-        Float range;
-        if(light.range() != Constants::inf()) range = light.range();
-        else range = 5.0f;
-
-        /* Point light has a sphere around */
-        if(light.type() == Trade::LightData::Type::Point) {
-            new FlatDrawable{*object, flatShader({}), _lightSphereMesh, i, light.color(), Vector3{range}, _data->objectVisualizationDrawables};
-
-        /* Spotlight has a cone visualizing the inner angle and a circle at
-           the end visualizing the outer angle */
-        } else if(light.type() == Trade::LightData::Type::Spot) {
-            new FlatDrawable{*object, flatShader({}), _lightInnerConeMesh, i, light.color(),
-                Math::gather<'x', 'x', 'y'>(Vector2{
-                    range*Math::tan(light.innerConeAngle()*0.5f), range
-                }), _data->objectVisualizationDrawables};
-            new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, i, light.color(),
-                Math::gather<'x', 'x', 'y'>(Vector2{
-                    range*Math::tan(light.outerConeAngle()*0.5f), range
-                }), _data->objectVisualizationDrawables};
-
-        /* Directional has a circle and a line in its direction. The range is
-           always infinite, so the line has always a length of 15. */
-        } else if(light.type() == Trade::LightData::Type::Directional) {
-            new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, i, light.color(), Vector3{0.25f, 0.25f, 0.0f}, _data->objectVisualizationDrawables};
-            new FlatDrawable{*object, flatShader({}), _lightDirectionMesh, i, light.color(), Vector3{5.0f}, _data->objectVisualizationDrawables};
-
-        /* Ambient lights are defined just by the center */
-        } else if(light.type() == Trade::LightData::Type::Ambient) {
-
-        /** @todo handle area lights when those are implemented */
-        } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-
-    /* This is a node that holds the default camera -> assign the object to the
-       global camera pointer */
-    } else if(objectData.instanceType() == Trade::ObjectInstanceType3D::Camera && objectData.instance() == 0) {
-        _data->cameraObject = object;
-
-        /** @todo visualize the camera, not just for the default but for all */
-    }
-
-    /* Object orientation visualizers, except for lights, which have their own */
-    if(objectData.instanceType() != Trade::ObjectInstanceType3D::Light)
-        new FlatDrawable{*object, flatShader(Shaders::FlatGL3D::Flag::VertexColor), _axisMesh, i, 0xffffff_rgbf, Vector3{1.0f}, _data->objectVisualizationDrawables};
-
-    /* Recursively add children */
-    for(std::size_t id: objectData.children())
-        addObject(objects, materials, hasVertexColors, *object, id);
 }
 
 void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
