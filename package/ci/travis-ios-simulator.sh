@@ -4,7 +4,7 @@ set -ev
 git submodule update --init
 
 # Corrade
-git clone --depth 1 git://github.com/mosra/corrade.git
+git clone --depth 1 https://github.com/mosra/corrade.git
 cd corrade
 
 # Build native corrade-rc
@@ -36,7 +36,7 @@ set -o pipefail && cmake --build . --config Release --target install | xcpretty
 cd ../..
 
 # Crosscompile Magnum
-git clone --depth 1 git://github.com/mosra/magnum.git
+git clone --depth 1 https://github.com/mosra/magnum.git
 cd magnum
 mkdir build-ios && cd build-ios
 cmake .. \
@@ -66,7 +66,7 @@ set -o pipefail && cmake --build . --config Release --target install | xcpretty
 cd ../..
 
 # Crosscompile Magnum Plugins
-git clone --depth 1 git://github.com/mosra/magnum-plugins.git
+git clone --depth 1 https://github.com/mosra/magnum-plugins.git
 cd magnum-plugins
 mkdir build-ios && cd build-ios
 cmake .. \
