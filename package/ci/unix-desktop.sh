@@ -63,3 +63,6 @@ cmake .. \
 ninja $NINJA_JOBS
 
 ASAN_OPTIONS="color=always" LSAN_OPTIONS="color=always" CORRADE_TEST_COLOR=ON ctest -V -E GLTest
+
+# Test install, after running the tests as for them it shouldn't be needed
+ninja install
