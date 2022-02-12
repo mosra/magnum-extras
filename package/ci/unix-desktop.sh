@@ -60,6 +60,6 @@ cmake .. \
     -DBUILD_GL_TESTS=ON \
     -DBUILD_STATIC=$BUILD_STATIC \
     -G Ninja
-# Otherwise the job gets killed (probably because using too much memory)
-ninja -j4
+ninja $NINJA_JOBS
+
 ASAN_OPTIONS="color=always" LSAN_OPTIONS="color=always" CORRADE_TEST_COLOR=ON ctest -V -E GLTest

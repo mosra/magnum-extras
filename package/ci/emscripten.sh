@@ -98,8 +98,7 @@ cmake .. \
     -DWITH_UI_GALLERY=$TARGET_GLES3 \
     -DBUILD_TESTS=ON \
     -G Ninja
-# Otherwise the job gets killed (probably because using too much memory)
-ninja -j4
+ninja $NINJA_JOBS
 
 # Test
 CORRADE_TEST_COLOR=ON ctest -V
