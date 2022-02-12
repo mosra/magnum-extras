@@ -1,7 +1,15 @@
+if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2022" call "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat" x64 || exit /b
 if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2019" call "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build/vcvarsall.bat" x64 || exit /b
 if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2017" call "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Auxiliary/Build/vcvarsall.bat" x64 || exit /b
 if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2015" call "C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/vcvarsall.bat" x64 || exit /b
 set PATH=%APPVEYOR_BUILD_FOLDER%\deps\bin;%PATH%
+
+rem need to explicitly specify a 64-bit target, otherwise CMake+Ninja can't
+rem figure that out -- https://gitlab.kitware.com/cmake/cmake/issues/16259
+rem for TestSuite we need to enable exceptions explicitly with /EH as these are
+rem currently disabled -- https://github.com/catchorg/Catch2/issues/1113
+if "%COMPILER%" == "msvc-clang" if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2022" set COMPILER_EXTRA=-DCMAKE_CXX_COMPILER="C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/bin/clang-cl.exe" -DCMAKE_LINKER="C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/bin/lld-link.exe" -DCMAKE_CXX_FLAGS="-m64 /EHsc"
+if "%COMPILER%" == "msvc-clang" if "%APPVEYOR_BUILD_WORKER_IMAGE%" == "Visual Studio 2019" set COMPILER_EXTRA=-DCMAKE_CXX_COMPILER="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/bin/clang-cl.exe" -DCMAKE_LINKER="C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/Llvm/bin/lld-link.exe" -DCMAKE_CXX_FLAGS="-m64 /EHsc"
 
 rem Build Corrade
 git clone --depth 1 https://github.com/mosra/corrade.git || exit /b
@@ -13,7 +21,7 @@ cmake .. ^
     -DWITH_INTERCONNECT=ON ^
     -DUTILITY_USE_ANSI_COLORS=ON ^
     -DBUILD_STATIC=%BUILD_STATIC% ^
-    -G Ninja || exit /b
+    %COMPILER_EXTRA% -G Ninja || exit /b
 cmake --build . || exit /b
 cmake --build . --target install || exit /b
 cd .. && cd ..
@@ -40,7 +48,7 @@ cmake .. ^
     -DWITH_WINDOWLESSWGLAPPLICATION=ON ^
     -DWITH_SDL2APPLICATION=ON ^
     -DBUILD_STATIC=%BUILD_STATIC% ^
-    -G Ninja || exit /b
+    %COMPILER_EXTRA% -G Ninja || exit /b
 cmake --build . || exit /b
 cmake --build . --target install || exit /b
 cd .. && cd ..
@@ -57,7 +65,7 @@ cmake .. ^
     -DBUILD_TESTS=ON ^
     -DBUILD_GL_TESTS=ON ^
     -DBUILD_STATIC=%BUILD_STATIC% ^
-    -G Ninja || exit /b
+    %COMPILER_EXTRA% -G Ninja || exit /b
 cmake --build . || exit /b
 
 rem Test
