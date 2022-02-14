@@ -76,6 +76,7 @@ environment:
     TARGET_GLES2: OFF
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     APPVEYOR_JOB_NAME: windows-rt-gles3-msvc2017
+    COMPILER: msvc
 
 install:
 # Ninja. `cinst ninja` started 503ing in late November 2019 and wasn't really
