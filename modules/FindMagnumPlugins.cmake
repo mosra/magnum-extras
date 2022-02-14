@@ -15,6 +15,7 @@
 #  AssimpImporter               - Assimp importer
 #  BasisImageConverter          - Basis image converter
 #  BasisImporter                - Basis importer
+#  CgltfImporter                - GLTF importer using cgltf
 #  DdsImporter                  - DDS importer
 #  DevIlImageImporter           - Image importer using DevIL
 #  DrFlacAudioImporter          - FLAC audio importer using dr_flac
@@ -27,6 +28,8 @@
 #  IcoImporter                  - ICO importer
 #  JpegImageConverter           - JPEG image converter
 #  JpegImporter                 - JPEG importer
+#  KtxImageConverter            - KTX image converter
+#  KtxImporter                  - KTX importer
 #  MeshOptimizerSceneConverter  - MeshOptimizer scene converter
 #  MiniExrImageConverter        - OpenEXR image converter using miniexr
 #  OpenGexImporter              - OpenGEX importer
@@ -36,6 +39,7 @@
 #  SpirvToolsShaderConverter    - SPIR-V Tools shader converter
 #  StanfordImporter             - Stanford PLY importer
 #  StanfordSceneConverter       - Stanford PLY converter
+#  StbDxtImageConverter         - BC1/BC3 image compressor using stb_dxt
 #  StbImageConverter            - Image converter using stb_image_write
 #  StbImageImporter             - Image importer using stb_image
 #  StbTrueTypeFont              - TrueType font using stb_truetype
@@ -77,7 +81,7 @@
 #   This file is part of Magnum.
 #
 #   Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
-#               2020, 2021 Vladimír Vondruš <mosra@centrum.cz>
+#               2020, 2021, 2022 Vladimír Vondruš <mosra@centrum.cz>
 #   Copyright © 2019 Jonathan Hale <squareys@googlemail.com>
 #
 #   Permission is hereby granted, free of charge, to any person obtaining a
@@ -112,6 +116,8 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
 
     if(_component STREQUAL AssimpImporter)
         list(APPEND _MAGNUMPLUGINS_${_component}_MAGNUM_DEPENDENCIES AnyImageImporter)
+    elseif(_component STREQUAL CgltfImporter)
+        list(APPEND _MAGNUMPLUGINS_${_component}_MAGNUM_DEPENDENCIES AnyImageImporter)
     elseif(_component STREQUAL MeshOptimizerSceneConverter)
         list(APPEND _MAGNUMPLUGINS_${_component}_MAGNUM_DEPENDENCIES MeshTools)
     elseif(_component STREQUAL OpenGexImporter)
@@ -139,14 +145,17 @@ mark_as_advanced(MAGNUMPLUGINS_INCLUDE_DIR)
 # components from other repositories)
 set(_MAGNUMPLUGINS_LIBRARY_COMPONENTS OpenDdl)
 set(_MAGNUMPLUGINS_PLUGIN_COMPONENTS
-    AssimpImporter BasisImageConverter BasisImporter DdsImporter
+    AssimpImporter BasisImageConverter BasisImporter CgltfImporter DdsImporter
     DevIlImageImporter DrFlacAudioImporter DrMp3AudioImporter
     DrWavAudioImporter Faad2AudioImporter FreeTypeFont GlslangShaderConverter
     HarfBuzzFont IcoImporter JpegImageConverter JpegImporter
-    MeshOptimizerSceneConverter MiniExrImageConverter OpenGexImporter
-    PngImageConverter PngImporter PrimitiveImporter SpirvToolsShaderConverter
-    StanfordImporter StanfordSceneConverter StbImageConverter StbImageImporter
-    StbTrueTypeFont StbVorbisAudioImporter StlImporter TinyGltfImporter)
+    KtxImageConverter KtxImporter MeshOptimizerSceneConverter
+    MiniExrImageConverter OpenExrImageConverter OpenExrImporter
+    OpenGexImporter PngImageConverter PngImporter PrimitiveImporter
+    SpirvToolsShaderConverter StanfordImporter StanfordSceneConverter
+    StbDxtImageConverter StbImageConverter StbImageImporter
+    StbTrueTypeFont StbVorbisAudioImporter StlImporter
+    TinyGltfImporter)
 # Nothing is enabled by default right now
 set(_MAGNUMPLUGINS_IMPLICITLY_ENABLED_COMPONENTS )
 
@@ -310,6 +319,7 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
                     INTERFACE_LINK_LIBRARIES basisu_transcoder)
             endif()
 
+        # CgltfImporter has no dependencies
         # DdsImporter has no dependencies
 
         # DevIlImageImporter plugin dependencies
@@ -381,6 +391,9 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
                     INTERFACE_LINK_LIBRARIES ${JPEG_LIBRARIES})
             endif()
 
+        # KtxImageConverter has no dependencies
+        # KtxImporter has no dependencies
+
         # MeshOptimizerSceneConverter plugin dependencies
         elseif(_component STREQUAL MeshOptimizerSceneConverter)
             if(NOT TARGET meshoptimizer)
@@ -393,6 +406,15 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
             endif()
 
         # MiniExrImageConverter has no dependencies
+
+        # OpenExrImporter / OpenExrImageConverter plugin dependencies
+        elseif(_component STREQUAL OpenExrImporter OR _component STREQUAL OpenExrImageConverter)
+            # Force our own FindOpenEXR module, which then delegates to the
+            # config if appropriate
+            find_package(OpenEXR REQUIRED MODULE)
+            set_property(TARGET MagnumPlugins::${_component} APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES OpenEXR::IlmImf)
+
         # No special setup for the OpenDdl library
         # OpenGexImporter has no dependencies
 
@@ -424,6 +446,7 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
 
         # StanfordImporter has no dependencies
         # StanfordSceneConverter has no dependencies
+        # StbDxtImageConverter has no dependencies
         # StbImageConverter has no dependencies
         # StbImageImporter has no dependencies
         # StbTrueTypeFont has no dependencies
