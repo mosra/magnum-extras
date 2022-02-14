@@ -11,6 +11,10 @@ executors:
     macos:
       # Since 2021-09-15, images older than 10.3 are dropped by CircleCI.
       xcode: 10.3.0
+  xcode-11_4:
+    macos:
+      # xcbeautify (for the iOS build) requires Xcode 11.4
+      xcode: 11.4.1
   emscripten:
     docker:
     # 1.39.0 is the oldest on Docker. Anything before 1.39.2 is useless as emar
@@ -431,6 +435,17 @@ jobs:
     - build:
         script: android-x86-gles.sh
 
+  ios-gles3:
+    executor: xcode-11_4
+    environment:
+      # STUPID yml interprets unquoted ON as a boolean
+      TARGET_GLES2: "OFF"
+    steps:
+    - install-base-macos:
+        extra: xcbeautify
+    - build:
+        script: ios-simulator-gles.sh
+
 workflows:
   version: 2
   build:
@@ -449,3 +464,4 @@ workflows:
     - emscripten-webgl2
     #- android-x86-gles2
     - android-x86-gles3
+    - ios-gles3
