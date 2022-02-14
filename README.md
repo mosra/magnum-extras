@@ -5,7 +5,6 @@ functionality.
 
 [![Join the chat at https://gitter.im/mosra/magnum](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/mosra/magnum?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://circleci.com/gh/mosra/magnum-extras.svg?style=shield)](https://circleci.com/gh/mosra/magnum-extras)
-[![Build Status](https://travis-ci.com/mosra/magnum-extras.svg?branch=master)](https://travis-ci.com/mosra/magnum-extras)
 [![Build status](https://ci.appveyor.com/api/projects/status/f75u5eow2qiso7m5/branch/master?svg=true)](https://ci.appveyor.com/project/mosra/magnum-extras/branch/master)
 [![Coverage Status](https://codecov.io/gh/mosra/magnum-extras/branch/master/graph/badge.svg)](https://codecov.io/gh/mosra/magnum-extras)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
