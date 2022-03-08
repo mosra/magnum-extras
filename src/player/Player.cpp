@@ -30,8 +30,8 @@
 #include <Corrade/Utility/Arguments.h>
 #include <Corrade/Utility/Configuration.h>
 #include <Corrade/Utility/DebugStl.h>
-#include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/FormatStl.h>
+#include <Corrade/Utility/Path.h>
 #include <Corrade/Utility/Resource.h>
 #include <Corrade/Utility/String.h>
 #include <Magnum/DebugTools/FrameProfiler.h>
@@ -55,6 +55,7 @@
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 #include <emscripten/emscripten.h>
+#include <Corrade/Containers/Pair.h>
 #include <Magnum/Text/Alignment.h>
 
 #include "Magnum/Ui/Modal.h"
@@ -190,7 +191,7 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         #ifndef CORRADE_TARGET_EMSCRIPTEN
         std::string _importer, _file;
         #if defined(CORRADE_TARGET_UNIX) || (defined(CORRADE_TARGET_WINDOWS) && !defined(CORRADE_TARGET_WINDOWS_RT))
-        Containers::Array<const char, Utility::Directory::MapDeleter> mapped;
+        Containers::Array<const char, Utility::Path::MapDeleter> mapped;
         #endif
         Int _id{-1};
         #endif
@@ -550,7 +551,9 @@ PrimitiveClipRatio.)")
     /** @todo redo once canOpen*() is implemented */
     bool success;
     if(args.isSet("map")) {
-        success = importer && (mapped = Utility::Directory::mapRead(args.value("file"))) && importer->openMemory(mapped);
+        Containers::Optional<Containers::Array<const char, Utility::Path::MapDeleter>> maybeMapped;
+        success = importer && (maybeMapped = Utility::Path::mapRead(args.value("file"))) && importer->openMemory(*maybeMapped);
+        mapped = *std::move(maybeMapped);
     } else {
         success = importer && importer->openFile(_file);
     }
@@ -654,7 +657,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
                 /* Not found: maybe it's referencing something from a subdirectory,
                 try just the filename */
                 if(found == player._droppedFiles.end()) {
-                    const std::string relative = Utility::Directory::filename(filename);
+                    const Containers::StringView relative = Utility::Path::split(filename).second();
                     found = player._droppedFiles.find(relative);
                     if(found == player._droppedFiles.end()) return {};
 

@@ -25,9 +25,11 @@
 
 #include <sstream>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/Pair.h>
+#include <Corrade/Containers/StringStl.h>
 #include <Corrade/Utility/DebugStl.h>
-#include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/FormatStl.h>
+#include <Corrade/Utility/Path.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
@@ -263,7 +265,10 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         Debug{&out, Debug::Flag::NoNewlineAtTheEnd} << image->compressedFormat();
     _baseUiPlane->imageInfo.setText(_imageInfo = Utility::formatString(
         "{}: {}x{}, {}",
-        Utility::Directory::filename(filename).substr(0, 32),
+        /* Apparently STL doesn't fail if substr count is past the end, so
+           abuse that to shorten overly long names */
+        /** @todo trash fire!! this whole thing is a trash fire */
+        std::string{Utility::Path::split(filename).second()}.substr(0, 32),
         image->size().x(), image->size().y(),
         out.str()));
 }

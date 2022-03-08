@@ -36,8 +36,8 @@
 #include <Corrade/Utility/Arguments.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
 #include <Corrade/Utility/DebugStl.h>
-#include <Corrade/Utility/Directory.h>
 #include <Corrade/Utility/FormatStl.h>
+#include <Corrade/Utility/Path.h>
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/Mesh.h>
@@ -1364,7 +1364,10 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     /* Populate the model info */
     _baseUiPlane->modelInfo.setText(_data->modelInfo = Utility::formatString(
         "{}: {} objs, {} cams, {} meshes, {} mats, {}/{} texs, {} anims",
-        Utility::Directory::filename(filename).substr(0, 32),
+        /* Apparently STL doesn't fail if substr count is past the end, so
+           abuse that to shorten overly long names */
+        /** @todo trash fire!! this whole thing is a trash fire */
+        std::string{Utility::Path::split(filename).second()}.substr(0, 32),
         importer.objectCount(),
         importer.cameraCount(),
         importer.meshCount(),
