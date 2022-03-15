@@ -23,6 +23,10 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
+# IDE folder in VS, Xcode etc. CMake 3.12+, older versions have only the FOLDER
+# property that would have to be set on each target separately.
+set(CMAKE_FOLDER "Magnum/Ui")
+
 find_package(Corrade REQUIRED Interconnect)
 find_package(Magnum REQUIRED GL Text)
 
@@ -82,7 +86,6 @@ set(MagnumUi_HEADERS
     ValidatedInput.h)
 
 corrade_add_resource(MagnumUi_RESOURCES resources.conf)
-set_target_properties(MagnumUi_RESOURCES-dependencies PROPERTIES FOLDER "Magnum/Ui")
 
 # Ui library
 add_library(MagnumUi ${SHARED_OR_STATIC}
@@ -92,9 +95,7 @@ add_library(MagnumUi ${SHARED_OR_STATIC}
 target_include_directories(MagnumUi PUBLIC
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_BINARY_DIR}/src)
-set_target_properties(MagnumUi PROPERTIES
-    DEBUG_POSTFIX "-d"
-    FOLDER "Magnum/Ui")
+set_target_properties(MagnumUi PROPERTIES DEBUG_POSTFIX "-d")
 if(NOT BUILD_STATIC)
     set_target_properties(MagnumUi PROPERTIES VERSION ${MAGNUMEXTRAS_LIBRARY_VERSION} SOVERSION ${MAGNUMEXTRAS_LIBRARY_SOVERSION})
 elseif(BUILD_STATIC_PIC)
@@ -140,7 +141,6 @@ if(WITH_UI_GALLERY)
     else()
         add_library(magnum-ui-gallery SHARED ui-gallery.cpp)
     endif()
-    set_target_properties(magnum-ui-gallery PROPERTIES FOLDER "Magnum/Ui")
     target_link_libraries(magnum-ui-gallery PRIVATE
         MagnumUi
         Magnum::Application)

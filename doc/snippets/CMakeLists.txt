@@ -23,6 +23,10 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
+# IDE folder in VS, Xcode etc. CMake 3.12+, older versions have only the FOLDER
+# property that would have to be set on each target separately.
+set(CMAKE_FOLDER "Magnum/doc/snippets")
+
 # On MSVC remove /W3, as we are replacing it with /W4
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
     string(REPLACE "/W3" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -43,5 +47,4 @@ find_package(Magnum COMPONENTS Sdl2Application)
 if(WITH_UI AND Magnum_Sdl2Application_FOUND)
     add_library(snippets-Ui STATIC Ui-sdl2.cpp)
     target_link_libraries(snippets-Ui PRIVATE MagnumUi Magnum::Sdl2Application)
-    set_target_properties(snippets-Ui PROPERTIES FOLDER "Magnum/doc/snippets")
 endif()

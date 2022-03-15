@@ -23,18 +23,13 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
+# IDE folder in VS, Xcode etc. CMake 3.12+, older versions have only the FOLDER
+# property that would have to be set on each target separately.
+set(CMAKE_FOLDER "Magnum/Ui/Test")
+
 corrade_add_test(UiAnchorTest AnchorTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiBasicInstancedLayerTest BasicInstancedLayerTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiBasicLayerTest BasicLayerTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiBasicPlaneTest BasicPlaneTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiWidgetTest WidgetTest.cpp LIBRARIES MagnumUi)
 corrade_add_test(UiStyleTest StyleTest.cpp LIBRARIES MagnumUi)
-
-set_target_properties(
-    UiAnchorTest
-    UiBasicInstancedLayerTest
-    UiBasicLayerTest
-    UiBasicPlaneTest
-    UiWidgetTest
-    UiStyleTest
-    PROPERTIES FOLDER "Magnum/Ui/Test")
