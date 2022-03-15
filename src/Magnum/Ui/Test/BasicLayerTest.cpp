@@ -66,7 +66,7 @@ void BasicLayerTest::construct() {
     CORRADE_COMPARE(layer.size(), 0);
     CORRADE_COMPARE(layer.elementCount(), 0);
     CORRADE_COMPARE(layer.indexCount(), 0);
-    CORRADE_VERIFY(layer.data().empty());
+    CORRADE_VERIFY(layer.data().isEmpty());
     CORRADE_VERIFY(!layer.modified().size());
 }
 
@@ -141,7 +141,7 @@ void BasicLayerTest::reset() {
     CORRADE_COMPARE(layer.size(), 0);
     CORRADE_COMPARE(layer.elementCount(), 0);
     CORRADE_COMPARE(layer.indexCount(), 0);
-    CORRADE_VERIFY(layer.data().empty());
+    CORRADE_VERIFY(layer.data().isEmpty());
     CORRADE_VERIFY(!layer.modified().size());
 
     /* First element after reset should be zero again */
@@ -168,7 +168,7 @@ void BasicLayerTest::resetNoReallocData() {
     CORRADE_COMPARE(layer.size(), 0);
     CORRADE_COMPARE(layer.elementCount(), 0);
     CORRADE_COMPARE(layer.indexCount(), 0);
-    CORRADE_VERIFY(layer.data().empty());
+    CORRADE_VERIFY(layer.data().isEmpty());
     CORRADE_VERIFY(!layer.modified().size());
 }
 
@@ -191,7 +191,7 @@ void BasicLayerTest::resetNoReallocElementData() {
     CORRADE_COMPARE(layer.size(), 0);
     CORRADE_COMPARE(layer.elementCount(), 0);
     CORRADE_COMPARE(layer.indexCount(), 0);
-    CORRADE_VERIFY(layer.data().empty());
+    CORRADE_VERIFY(layer.data().isEmpty());
     CORRADE_VERIFY(!layer.modified().size());
 }
 

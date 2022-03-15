@@ -61,7 +61,7 @@ void BasicInstancedLayerTest::construct() {
 
     CORRADE_COMPARE(layer.capacity(), 0);
     CORRADE_COMPARE(layer.size(), 0);
-    CORRADE_VERIFY(layer.data().empty());
+    CORRADE_VERIFY(layer.data().isEmpty());
     CORRADE_VERIFY(!layer.modified().size());
 }
 
@@ -110,7 +110,7 @@ void BasicInstancedLayerTest::reset() {
     /* The sizes and ranges should be back to zero after reset */
     CORRADE_COMPARE(layer.capacity(), 13);
     CORRADE_COMPARE(layer.size(), 0);
-    CORRADE_VERIFY(layer.data().empty());
+    CORRADE_VERIFY(layer.data().isEmpty());
     CORRADE_VERIFY(!layer.modified().size());
 
     /* First element after reset should be zero again */
@@ -130,7 +130,7 @@ void BasicInstancedLayerTest::resetNoRealloc() {
     /* The capacity stays the same if it was larger before */
     CORRADE_COMPARE(layer.capacity(), 10);
     CORRADE_COMPARE(layer.size(), 0);
-    CORRADE_VERIFY(layer.data().empty());
+    CORRADE_VERIFY(layer.data().isEmpty());
     CORRADE_VERIFY(!layer.modified().size());
 }
 

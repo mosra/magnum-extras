@@ -26,6 +26,8 @@
 #include "Style.h"
 
 #include <Corrade/Containers/Reference.h>
+#include <Corrade/Containers/StringView.h>
+#include <Corrade/Containers/StringStl.h> /** @todo remove once GL::Shader is <string>-free */
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/Shader.h>
@@ -975,8 +977,8 @@ BackgroundShader::BackgroundShader() {
         GL::Shader::Type::Fragment};
     vert.addSource("#define BACKGROUND_COLOR_COUNT " + std::to_string(Implementation::BackgroundColorCount) + "\n");
     frag.addSource("#define BACKGROUND_COLOR_COUNT " + std::to_string(Implementation::BackgroundColorCount) + "\n");
-    vert.addSource(rs.get("BackgroundShader.vert"));
-    frag.addSource(rs.get("BackgroundShader.frag"));
+    vert.addSource(rs.getString("BackgroundShader.vert"));
+    frag.addSource(rs.getString("BackgroundShader.frag"));
 
     CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
     attachShaders({vert, frag});
@@ -1017,8 +1019,8 @@ ForegroundShader::ForegroundShader() {
         GL::Shader::Type::Fragment};
     vert.addSource("#define FOREGROUND_COLOR_COUNT " + std::to_string(Implementation::ForegroundColorCount) + "\n");
     frag.addSource("#define FOREGROUND_COLOR_COUNT " + std::to_string(Implementation::ForegroundColorCount) + "\n");
-    vert.addSource(rs.get("ForegroundShader.vert"));
-    frag.addSource(rs.get("ForegroundShader.frag"));
+    vert.addSource(rs.getString("ForegroundShader.vert"));
+    frag.addSource(rs.getString("ForegroundShader.frag"));
 
     CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
     attachShaders({vert, frag});
@@ -1057,9 +1059,9 @@ TextShader::TextShader() {
         GL::Version::GLES300,
         #endif
         GL::Shader::Type::Fragment};
-    vert.addSource(rs.get("TextShader.vert"));
+    vert.addSource(rs.getString("TextShader.vert"));
     frag.addSource("#define TEXT_COLOR_COUNT " + std::to_string(Implementation::TextColorCount) + "\n");
-    frag.addSource(rs.get("TextShader.frag"));
+    frag.addSource(rs.getString("TextShader.frag"));
 
     CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
     attachShaders({vert, frag});

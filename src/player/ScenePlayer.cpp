@@ -1245,7 +1245,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
     /* The format has no scene support, display just the first loaded mesh with
        a default material and be done with it */
-    } else if(!_data->meshes.empty() && _data->meshes[0].mesh) {
+    } else if(!_data->meshes.isEmpty() && _data->meshes[0].mesh) {
         Debug{} << "No scene, loading the first mesh";
 
         _data->objects = Containers::Array<ObjectInfo>{ValueInit, 1};
