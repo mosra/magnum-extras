@@ -963,8 +963,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             meshData->primitive() == MeshPrimitive::TriangleStrip ||
             meshData->primitive() == MeshPrimitive::TriangleFan) &&
            !meshData->attributeCount(Trade::MeshAttribute::Normal) &&
+            meshData->hasAttribute(Trade::MeshAttribute::Position) &&
             meshData->attributeFormat(Trade::MeshAttribute::Position) == VertexFormat::Vector3) {
-
             /* If the mesh is a triangle strip/fan, convert to an indexed one
                first. The tool additionally expects the mesh to be non-indexed,
                so duplicate if necessary. Generating smooth normals for those
