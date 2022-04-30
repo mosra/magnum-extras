@@ -31,7 +31,7 @@
 #include "Magnum/Ui/BasicPlane.h"
 #include "Magnum/Ui/Anchor.h"
 
-#ifdef _MSC_VER
+#ifdef CORRADE_TARGET_MSVC
 #include "Magnum/Ui/BasicUserInterface.h" /* Why? */
 #endif
 

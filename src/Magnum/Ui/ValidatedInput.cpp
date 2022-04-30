@@ -27,7 +27,7 @@
 
 #include <Corrade/Containers/Reference.h>
 
-#ifdef _MSC_VER
+#ifdef CORRADE_TARGET_MSVC
 #include "Magnum/Ui/BasicUserInterface.h"  /* Why? */
 #include "Magnum/Ui/Plane.h"
 #endif
