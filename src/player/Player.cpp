@@ -412,17 +412,14 @@ PrimitiveClipRatio.)")
     /* Setup renderer defaults */
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
 
-    /* Prefer TinyGltfImporter (otherwise AssimpImporter would get selected
-       first), however for OBJ AssimpImporter is better than magnum's builtin
+    /* For OBJ AssimpImporter is currently better than Magnum's builtin
        ObjImporter */
-    if(_manager.loadState("GltfImporter") != PluginManager::LoadState::NotFound)
-        _manager.setPreferredPlugins("GltfImporter", {"TinyGltfImporter"});
     if(_manager.loadState("ObjImporter") != PluginManager::LoadState::NotFound)
         _manager.setPreferredPlugins("ObjImporter", {"AssimpImporter"});
 
     /* Set up plugin defaults */
     {
-        PluginManager::PluginMetadata* const metadata = _manager.metadata("TinyGltfImporter");
+        PluginManager::PluginMetadata* const metadata = _manager.metadata("GltfImporter");
         if(metadata) metadata->configuration().setValue("mergeAnimationClips",
             !args.isSet("no-merge-animations"));
     }
@@ -583,7 +580,7 @@ PrimitiveClipRatio.)")
     } else std::exit(1);
     #else
     Containers::Pointer<Trade::AbstractImporter> importer =
-        _manager.loadAndInstantiate("TinyGltfImporter");
+        _manager.loadAndInstantiate("GltfImporter");
     importer->addFlags(_importerFlags);
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
@@ -644,7 +641,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     /* There's a glTF file, load it */
     if(gltfFile) {
         Containers::Pointer<Trade::AbstractImporter> importer =
-            _manager.loadAndInstantiate("TinyGltfImporter");
+            _manager.loadAndInstantiate("GltfImporter");
         if(!importer) std::exit(1);
 
         /* Make the extra files available to the importer */
