@@ -142,8 +142,8 @@ DepthReinterpretShader::DepthReinterpretShader() {
     GL::Shader frag{GL::Version::GLES300, GL::Shader::Type::Fragment};
 
     Utility::Resource rs{"data"};
-    vert.addSource(rs.get("DepthReinterpretShader.vert"));
-    frag.addSource(rs.get("DepthReinterpretShader.frag"));
+    vert.addSource(rs.getString("DepthReinterpretShader.vert"));
+    frag.addSource(rs.getString("DepthReinterpretShader.frag"));
 
     CORRADE_INTERNAL_ASSERT_OUTPUT(GL::Shader::compile({vert, frag}));
 
