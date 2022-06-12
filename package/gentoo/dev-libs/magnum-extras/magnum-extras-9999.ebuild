@@ -22,9 +22,9 @@ src_configure() {
 	local mycmakeargs=(
 		-DCMAKE_INSTALL_PREFIX="${EPREFIX}/usr"
 		-DCMAKE_BUILD_TYPE=Release
-		-DWITH_PLAYER=ON
-		-DWITH_UI=ON
-		-DWITH_UI_GALLERY=ON
+		-DMAGNUM_WITH_PLAYER=ON
+		-DMAGNUM_WITH_UI=ON
+		-DMAGNUM_WITH_UI_GALLERY=ON
 	)
 	cmake-utils_src_configure
 }

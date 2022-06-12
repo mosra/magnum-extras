@@ -82,10 +82,10 @@ cmake .. ^
     -DOPENGLES2_INCLUDE_DIR=%APPVEYOR_BUILD_FOLDER%/angle/include ^
     -DOPENGLES3_LIBRARY=%APPVEYOR_BUILD_FOLDER%/angle/winrt/10/src/Release_x64/lib/libGLESv2.lib ^
     -DOPENGLES3_INCLUDE_DIR=%APPVEYOR_BUILD_FOLDER%/angle/include ^
-    -DBUILD_STATIC=ON ^
-    -DWITH_PLAYER=OFF ^
-    -DWITH_UI=%TARGET_GLES3% ^
-    -DWITH_UI_GALLERY=OFF ^
+    -DMAGNUM_BUILD_STATIC=ON ^
+    -DMAGNUM_WITH_PLAYER=OFF ^
+    -DMAGNUM_WITH_UI=%TARGET_GLES3% ^
+    -DMAGNUM_WITH_UI_GALLERY=OFF ^
     -G "%GENERATOR%" -A x64 || exit /b
 cmake --build . --config Release -- /m /v:m || exit /b
 

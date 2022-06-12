@@ -102,12 +102,12 @@ cmake .. \
     -DCMAKE_PREFIX_PATH=$HOME/deps \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
-    -DBUILD_STATIC=ON \
-    -DWITH_PLAYER=$TARGET_GLES3 \
-    -DWITH_UI=$TARGET_GLES3 \
-    -DWITH_UI_GALLERY=$TARGET_GLES3 \
-    -DBUILD_TESTS=ON \
-    -DBUILD_GL_TESTS=ON \
+    -DMAGNUM_BUILD_STATIC=ON \
+    -DMAGNUM_WITH_PLAYER=$TARGET_GLES3 \
+    -DMAGNUM_WITH_UI=$TARGET_GLES3 \
+    -DMAGNUM_WITH_UI_GALLERY=$TARGET_GLES3 \
+    -DMAGNUM_BUILD_TESTS=ON \
+    -DMAGNUM_BUILD_GL_TESTS=ON \
     -G Xcode
 set -o pipefail && cmake --build . --config Release | xcbeautify
 # TODO: find a better way to avoid

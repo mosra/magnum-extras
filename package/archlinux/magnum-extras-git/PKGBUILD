@@ -25,8 +25,8 @@ build() {
     cmake "$srcdir/${pkgname%-git}" \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
-        -DWITH_UI=ON \
-        -DWITH_UI_GALLERY=ON \
+        -DMAGNUM_WITH_UI=ON \
+        -DMAGNUM_WITH_UI_GALLERY=ON \
         -G Ninja
     ninja
 }

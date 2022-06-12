@@ -20,10 +20,10 @@ build() {
         -DCMAKE_TOOLCHAIN_FILE=../toolchains/archlinux/basic-mingw-w64-32.cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/i686-w64-mingw32 \
-        -DBUILD_TESTS=ON \
-        -DBUILD_GL_TESTS=ON \
-        -DWITH_UI=ON \
-        -DWITH_UI_GALLERY=ON \
+        -DMAGNUM_BUILD_TESTS=ON \
+        -DMAGNUM_BUILD_GL_TESTS=ON \
+        -DMAGNUM_WITH_UI=ON \
+        -DMAGNUM_WITH_UI_GALLERY=ON \
         -G Ninja
     ninja
 
@@ -34,11 +34,11 @@ build() {
         -DCMAKE_TOOLCHAIN_FILE=../toolchains/archlinux/basic-mingw-w64-64.cmake \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr/x86_64-w64-mingw32 \
-        -DBUILD_TESTS=ON \
-        -DBUILD_GL_TESTS=ON \
-        -DWITH_PLAYER=ON \
-        -DWITH_UI=ON \
-        -DWITH_UI_GALLERY=ON \
+        -DMAGNUM_BUILD_TESTS=ON \
+        -DMAGNUM_BUILD_GL_TESTS=ON \
+        -DMAGNUM_WITH_PLAYER=ON \
+        -DMAGNUM_WITH_UI=ON \
+        -DMAGNUM_WITH_UI_GALLERY=ON \
         -G Ninja
     ninja
 }
