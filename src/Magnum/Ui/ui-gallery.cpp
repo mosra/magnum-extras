@@ -60,9 +60,9 @@ namespace Magnum {
 
 @m_div{m-button m-primary} <a href="https://magnum.graphics/showcase/magnum-ui-gallery/">@m_div{m-big}Live web version @m_enddiv @m_div{m-small} uses WebAssembly & WebGL 2 @m_enddiv </a> @m_enddiv
 
-This app is built if both `WITH_UI` and `WITH_UI_GALLERY` is enabled when
-building Magnum Extras. To use this app with CMake, you need to request the
-`ui-gallery` component of the `MagnumExtras` package and use the
+This app is built if both `MAGNUM_WITH_UI` and `MAGNUM_WITH_UI_GALLERY` is
+enabled when building Magnum Extras. To use this app with CMake, you need to
+request the `ui-gallery` component of the `MagnumExtras` package and use the
 `MagnumExtras::ui-gallery` target for example in a custom command:
 
 @code{.cmake}

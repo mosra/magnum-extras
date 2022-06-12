@@ -35,8 +35,9 @@
 
 Widgets for efficient and simple user interfaces.
 
-This library is built if `WITH_UI` is enabled when building Magnum Extras. To
-use this library with CMake, put [FindMagnumExtras.cmake](https://github.com/mosra/magnum-extras/blob/master/modules/FindMagnumExtras.cmake)
+This library is built if `MAGNUM_WITH_UI` is enabled when building Magnum
+Extras. To use this library with CMake, put
+[FindMagnumExtras.cmake](https://github.com/mosra/magnum-extras/blob/master/modules/FindMagnumExtras.cmake)
 into your `modules/` directory, request the `Ui` component of the `MagnumExtras`
 package and link to the `MagnumExtras::Ui` target:
 
@@ -52,7 +53,7 @@ Additionally, if you're using Magnum as a CMake subproject, bundle the
 following *before* calling @cmake find_package() @ce:
 
 @code{.cmake}
-set(WITH_UI ON CACHE BOOL "" FORCE)
+set(MAGNUM_WITH_UI ON CACHE BOOL "" FORCE)
 add_subdirectory(magnum-extras EXCLUDE_FROM_ALL)
 @endcode
 

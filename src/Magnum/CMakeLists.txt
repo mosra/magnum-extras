@@ -65,10 +65,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/versionExtras.h.cmake
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/versionExtras.h DESTINATION ${MAGNUM_INCLUDE_INSTALL_DIR})
 
-if(WITH_UI)
+if(MAGNUM_WITH_UI)
     add_subdirectory(Ui)
 endif()
 
-if(BUILD_TESTS)
+if(MAGNUM_BUILD_TESTS)
     add_subdirectory(Test)
 endif()

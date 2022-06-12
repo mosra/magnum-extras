@@ -35,10 +35,10 @@ namespace Magnum {
 
 @m_div{m-button m-primary} <a href="https://magnum.graphics/showcase/player/">@m_div{m-big}Live web version @m_enddiv @m_div{m-small} uses WebAssembly & WebGL @m_enddiv </a> @m_enddiv
 
-This app is built if `WITH_PLAYER` is enabled when building Magnum Extras. To
-use this app with CMake, you need to request the `player` component of the
-`MagnumExtras` package and use the `MagnumExtras::player` target for example in
-a custom command:
+This app is built if `MAGNUM_WITH_PLAYER` is enabled when building Magnum
+Extras. To use this app with CMake, you need to request the `player` component
+of the `MagnumExtras` package and use the `MagnumExtras::player` target for
+example in a custom command:
 
 @code{.cmake}
 find_package(MagnumExtras REQUIRED player)

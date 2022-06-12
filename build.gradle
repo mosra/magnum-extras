@@ -18,7 +18,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments '-DANDROID_STL=c++_static', '-DWITH_UI=ON', '-DWITH_UI_GALLERY=ON'
+                arguments '-DANDROID_STL=c++_static', '-DMAGNUM_WITH_UI=ON', '-DMAGNUM_WITH_UI_GALLERY=ON'
             }
         }
         ndk {

@@ -41,7 +41,7 @@ endif()
 
 add_subdirectory(Magnum)
 
-if(WITH_PLAYER)
+if(MAGNUM_WITH_PLAYER)
     add_subdirectory(player)
 endif()
 

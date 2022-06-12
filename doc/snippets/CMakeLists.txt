@@ -44,7 +44,7 @@ endif()
 
 find_package(Magnum COMPONENTS Sdl2Application)
 
-if(WITH_UI AND Magnum_Sdl2Application_FOUND)
+if(MAGNUM_WITH_UI AND Magnum_Sdl2Application_FOUND)
     add_library(snippets-Ui STATIC Ui-sdl2.cpp)
     target_link_libraries(snippets-Ui PRIVATE MagnumUi Magnum::Sdl2Application)
 endif()

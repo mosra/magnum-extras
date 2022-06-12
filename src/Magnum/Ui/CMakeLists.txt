@@ -34,7 +34,7 @@ if(MAGNUM_TARGET_GLES2)
     message(FATAL_ERROR "Magnum::Ui doesn't work on OpenGL ES 2.0 or WebGL 1.0 builds at the moment. Switch to ES 3 or WebGL 2 if you want to use it.")
 endif()
 
-if(BUILD_STATIC)
+if(MAGNUM_BUILD_STATIC)
     set(MAGNUM_UI_BUILD_STATIC 1)
 endif()
 
@@ -96,9 +96,9 @@ target_include_directories(MagnumUi PUBLIC
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_BINARY_DIR}/src)
 set_target_properties(MagnumUi PROPERTIES DEBUG_POSTFIX "-d")
-if(NOT BUILD_STATIC)
+if(NOT MAGNUM_BUILD_STATIC)
     set_target_properties(MagnumUi PROPERTIES VERSION ${MAGNUMEXTRAS_LIBRARY_VERSION} SOVERSION ${MAGNUMEXTRAS_LIBRARY_SOVERSION})
-elseif(BUILD_STATIC_PIC)
+elseif(MAGNUM_BUILD_STATIC_PIC)
     set_target_properties(MagnumUi PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 target_link_libraries(MagnumUi
@@ -117,7 +117,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/configure.h DESTINATION ${MAGNUM_INCLU
 # Magnum Ui target alias for superprojects
 add_library(MagnumExtras::Ui ALIAS MagnumUi)
 
-if(WITH_UI_GALLERY)
+if(MAGNUM_WITH_UI_GALLERY)
     if(CORRADE_TARGET_ANDROID)
         find_package(Magnum REQUIRED AndroidApplication)
     elseif(CORRADE_TARGET_EMSCRIPTEN)
@@ -168,6 +168,6 @@ if(WITH_UI_GALLERY)
     endif()
 endif()
 
-if(BUILD_TESTS)
+if(MAGNUM_BUILD_TESTS)
     add_subdirectory(Test)
 endif()

@@ -34,7 +34,8 @@ endif()
 if(POLICY CMP0071)
     cmake_policy(SET CMP0071 NEW)
 endif()
-# Superprojects can use just set(WITH_BLAH ON) without FORCE CACHE on 3.13+
+# Superprojects can use just set(MAGNUM_WITH_BLAH ON) without FORCE CACHE on
+# 3.13+
 if(POLICY CMP0077)
     cmake_policy(SET CMP0077 NEW)
 endif()
@@ -49,10 +50,37 @@ find_package(Magnum REQUIRED)
 
 include(CMakeDependentOption)
 
-option(BUILD_TESTS "Build unit tests" OFF)
-cmake_dependent_option(BUILD_GL_TESTS "Build unit tests for OpenGL code" OFF "BUILD_TESTS" OFF)
+# Options that used to be unprefixed. New options shouldn't be added to this
+# list.
+set(_MAGNUMEXTRAS_DEPRECATED_UNPREFIXED_OPTIONS
+    WITH_PLAYER
+    WITH_UI
+    WITH_UI_GALLERY
+    BUILD_STATIC
+    BUILD_STATIC_PIC
+    BUILD_TESTS
+    BUILD_GL_TESTS)
+# If during the first run (i.e., when the variable isn't in cache yet), check
+# if any of the prefixed options are already set, except for BUILD_STATIC which
+# may already be coming from Magnum's configure.h. If so, we assume the user is
+# already switched to the prefixed options and won't accept the deprecated
+# unprefixed options for backwards compatibility. This way it's possible for
+# projects to reuse these variables for other purposes without affecting
+# Corrade in any way.
+if(NOT DEFINED _MAGNUMEXTRAS_ACCEPT_DEPRECATED_UNPREFIXED_OPTIONS)
+    set(_MAGNUMEXTRAS_ACCEPT_DEPRECATED_UNPREFIXED_OPTIONS ON CACHE INTERNAL "")
+    foreach(option ${_MAGNUMEXTRAS_DEPRECATED_UNPREFIXED_OPTIONS})
+        if(NOT "${option}" STREQUAL "BUILD_STATIC" AND DEFINED MAGNUM_${option})
+            set(_MAGNUMEXTRAS_ACCEPT_DEPRECATED_UNPREFIXED_OPTIONS OFF CACHE INTERNAL "")
+            break()
+        endif()
+    endforeach()
+endif()
 
-option(BUILD_STATIC "Build static libraries (default are dynamic)" OFF)
+option(MAGNUM_BUILD_TESTS "Build unit tests" OFF)
+cmake_dependent_option(MAGNUM_BUILD_GL_TESTS "Build unit tests for OpenGL code" OFF "MAGNUM_BUILD_TESTS" OFF)
+
+option(MAGNUM_BUILD_STATIC "Build static libraries (default are dynamic)" OFF)
 # Disable PIC on Emscripten by default (but still allow it to be enabled
 # explicitly if one so desires). Currently causes linker errors related to
 # __memory_base etc.: https://github.com/emscripten-core/emscripten/issues/8761
@@ -61,18 +89,86 @@ if(CORRADE_TARGET_EMSCRIPTEN)
 else()
     set(ON_EXCEPT_EMSCRIPTEN ON)
 endif()
-cmake_dependent_option(BUILD_STATIC_PIC "Build static libraries with position-independent code" ${ON_EXCEPT_EMSCRIPTEN} "BUILD_STATIC" OFF)
+cmake_dependent_option(MAGNUM_BUILD_STATIC_PIC "Build static libraries with position-independent code" ${ON_EXCEPT_EMSCRIPTEN} "MAGNUM_BUILD_STATIC" OFF)
 
-option(WITH_PLAYER "Build the magnum-player application" OFF)
-cmake_dependent_option(WITH_UI "Build Ui library" OFF "NOT WITH_PLAYER" ON)
-cmake_dependent_option(WITH_UI_GALLERY "Build magnum-ui-gallery executable" OFF "WITH_UI" OFF)
+option(MAGNUM_WITH_PLAYER "Build the magnum-player application" OFF)
+cmake_dependent_option(MAGNUM_WITH_UI "Build Ui library" OFF "NOT MAGNUM_WITH_PLAYER" ON)
+cmake_dependent_option(MAGNUM_WITH_UI_GALLERY "Build magnum-ui-gallery executable" OFF "MAGNUM_WITH_UI" OFF)
+
+# Backwards compatibility for unprefixed CMake options. If the user isn't
+# explicitly using prefixed options in the first run already, accept the
+# unprefixed options, and remember this decision for subsequent runs
+if(NOT DEFINED _MAGNUMEXTRAS_ACCEPT_DEPRECATED_UNPREFIXED_OPTIONS)
+    set(_MAGNUMEXTRAS_ACCEPT_DEPRECATED_UNPREFIXED_OPTIONS ON CACHE INTERNAL "")
+endif()
+# If the user wasn't explicitly using prefixed options in the first run and the
+# MAGNUM_BUILD_DEPRECATED option is not currently disabled (which can get
+# changed subsequently), accept the unprefixed options and print a warning if
+# they're different from the prefixed ones.
+if(_MAGNUMEXTRAS_ACCEPT_DEPRECATED_UNPREFIXED_OPTIONS AND MAGNUM_BUILD_DEPRECATED)
+    # The following variables need extra care -- mirroring what's done in
+    # cmake_dependent_option(), but only the cases that enable a dependency
+    # that is off by default, not cases that hide an option from the GUI when
+    # it's needed by something else. In other words, if the original user flag
+    # setup didn't make sense before but the option dependency fixed it, it'll
+    # be broken now, but if it made sense, it should keep working.
+    #
+    # Doing this before propagating the unprefixed options to avoid a
+    # false-positive warning when e.g. MAGNUM_BUILD_STATIC_PIC is implicitly ON
+    # but BUILD_STATIC_PIC not yet.
+    if(BUILD_STATIC)
+        if(NOT CORRADE_TARGET_EMSCRIPTEN AND NOT DEFINED BUILD_STATIC_PIC)
+            set(BUILD_STATIC_PIC ON)
+        endif()
+    endif()
+    if(WITH_PLAYER OR WITH_UI_GALLERY)
+        if(NOT DEFINED WITH_UI)
+            set(WITH_UI ON)
+        endif()
+    endif()
+
+    set(_MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION )
+    foreach(option ${_MAGNUMEXTRAS_DEPRECATED_UNPREFIXED_OPTIONS})
+        if(DEFINED ${option})
+            # CMake has no comparison of boolean values (EQUAL returns false if
+            # comparing ON and 1 or OFF and FALSE, STREQUAL also), so we have
+            # to do it this way. Also warn only on the first encountered
+            # variable so people can fix it, reconfigure and go to the next one
+            # that warns.
+            if((${option} AND NOT MAGNUM_${option}) OR
+               (NOT ${option} AND MAGNUM_${option}) AND NOT _MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION)
+                set(_MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION ${option})
+            endif()
+            set(MAGNUM_${option} ${${option}})
+            # If variables specified on the command line don't match any
+            # options, they're kept in cache but set as UNINITIALIZED, meaning
+            # they don't appear in cmake-gui or ccmake, so there's no way to
+            # fix the warning apart from hand-enditing the CMakeCache.txt or
+            # recreating the build dir. Update their cached type to be BOOL to
+            # make them appear.
+            set(${option} ${${option}} CACHE BOOL "Deprecated, use MAGNUM_${option} instead" FORCE)
+        endif()
+    endforeach()
+
+    if(_MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION)
+        # CMake 3.5+ has deprecation warnings enabled by default (which makes
+        # sense), 3.4 not. Use a warning there instead.
+        # TODO: drop when 3.4 is not supported anymore
+        if(CMAKE_VERSION VERSION_LESS 3.5)
+            set(DEPRECATION_OR_WARNING WARNING)
+        else()
+            set(DEPRECATION_OR_WARNING DEPRECATION)
+        endif()
+        message(${DEPRECATION_OR_WARNING} "Unprefixed options such as ${_MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION} are deprecated, use MAGNUM_${_MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION} instead. Delete the unprefixed variable from CMake cache or set both to the same value to silence this warning.")
+    endif()
+endif()
 
 # Dynamic linking is meaningless on Emscripten and too inconvenient on Android
 if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
-    set(BUILD_STATIC ON)
+    set(MAGNUM_BUILD_STATIC ON)
 endif()
 
-if(BUILD_TESTS)
+if(MAGNUM_BUILD_TESTS)
     find_package(Corrade REQUIRED TestSuite)
     if(CORRADE_TARGET_IOS)
         set(CORRADE_TESTSUITE_BUNDLE_IDENTIFIER_PREFIX "cz.mosra.magnum-extras")
@@ -80,11 +176,11 @@ if(BUILD_TESTS)
     enable_testing()
 endif()
 
-if(BUILD_GL_TESTS)
+if(MAGNUM_BUILD_GL_TESTS)
     find_package(Magnum REQUIRED OpenGLTester)
 endif()
 
-if(NOT BUILD_STATIC)
+if(NOT MAGNUM_BUILD_STATIC)
     set(SHARED_OR_STATIC SHARED)
 else()
     set(SHARED_OR_STATIC STATIC)
@@ -134,6 +230,6 @@ add_subdirectory(modules)
 add_subdirectory(src)
 
 # Build snippets as part of testing
-if(BUILD_TESTS)
+if(MAGNUM_BUILD_TESTS)
     add_subdirectory(doc/snippets)
 endif()
