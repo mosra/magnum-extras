@@ -13,6 +13,7 @@
 # This command will not try to find any actual plugin. The plugins are:
 #
 #  AssimpImporter               - Assimp importer
+#  AstcImporter                 - ASTC importer
 #  BasisImageConverter          - Basis image converter
 #  BasisImporter                - Basis importer
 #  DdsImporter                  - DDS importer
@@ -45,6 +46,7 @@
 #  StbTrueTypeFont              - TrueType font using stb_truetype
 #  StbVorbisAudioImporter       - OGG audio importer using stb_vorbis
 #  StlImporter                  - STL importer
+#  WebPImporter                 - WebP importer
 #
 # If Magnum is built with MAGNUM_BUILD_DEPRECATED enabled, these additional
 # plugins are available for backwards compatibility purposes:
@@ -154,16 +156,16 @@ mark_as_advanced(MAGNUMPLUGINS_INCLUDE_DIR)
 # components from other repositories)
 set(_MAGNUMPLUGINS_LIBRARY_COMPONENTS OpenDdl)
 set(_MAGNUMPLUGINS_PLUGIN_COMPONENTS
-    AssimpImporter BasisImageConverter BasisImporter DdsImporter
+    AssimpImporter AstcImporter BasisImageConverter BasisImporter DdsImporter
     DevIlImageImporter DrFlacAudioImporter DrMp3AudioImporter
     DrWavAudioImporter Faad2AudioImporter FreeTypeFont GlslangShaderConverter
-    GltfImporter GltfSceneConverter HarfBuzzFont IcoImporter JpegImageConverter
-    JpegImporter KtxImageConverter KtxImporter MeshOptimizerSceneConverter
+    GltfImporter HarfBuzzFont IcoImporter JpegImageConverter JpegImporter
+    KtxImageConverter KtxImporter MeshOptimizerSceneConverter
     MiniExrImageConverter OpenExrImageConverter OpenExrImporter
     OpenGexImporter PngImageConverter PngImporter PrimitiveImporter
     SpirvToolsShaderConverter StanfordImporter StanfordSceneConverter
     StbDxtImageConverter StbImageConverter StbImageImporter
-    StbTrueTypeFont StbVorbisAudioImporter StlImporter)
+    StbTrueTypeFont StbVorbisAudioImporter StlImporter WebPImporter)
 # Nothing is enabled by default right now
 set(_MAGNUMPLUGINS_IMPLICITLY_ENABLED_COMPONENTS )
 
@@ -313,6 +315,8 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
             find_package(Assimp)
             set_property(TARGET MagnumPlugins::${_component} APPEND PROPERTY
                 INTERFACE_LINK_LIBRARIES Assimp::Assimp)
+
+        # AstcImporter has no dependencies
 
         # BasisImageConverter / BasisImporter has only compiled-in
         # dependencies, except in case of vcpkg, then we need to link to a
@@ -470,6 +474,12 @@ foreach(_component ${MagnumPlugins_FIND_COMPONENTS})
         # StlImporter has no dependencies
         # TinyGltfImporter has no dependencies
 
+        # WebPImporter plugin dependencies
+        elseif(_component STREQUAL WebPImporter)
+            find_package(WebP REQUIRED)
+            set_property(TARGET MagnumPlugins::${_component} APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES WebP::WebP)
+
         endif()
 
         # Find plugin/library includes
@@ -537,7 +547,7 @@ if(NOT CMAKE_VERSION VERSION_LESS 3.16)
         #   misleading messages.
         elseif(NOT _component IN_LIST _MAGNUMPLUGINS_IMPLICITLY_ENABLED_COMPONENTS)
             string(TOUPPER ${_component} _COMPONENT)
-            list(APPEND _MAGNUMPLUGINS_REASON_FAILURE_MESSAGE "${_component} is not built by default. Make sure you enabled WITH_${_COMPONENT} when building Magnum Plugins.")
+            list(APPEND _MAGNUMPLUGINS_REASON_FAILURE_MESSAGE "${_component} is not built by default. Make sure you enabled MAGNUM_WITH_${_COMPONENT} when building Magnum Plugins.")
         # Otherwise we have no idea. Better be silent than to print something
         # misleading.
         else()
