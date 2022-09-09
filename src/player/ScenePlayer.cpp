@@ -1848,7 +1848,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                     meshInfo.attributes,
                     meshInfo.vertices,
                     meshInfo.primitives,
-                    meshInfo.size/1024.0f));
+                    meshInfo.size/1024.0f).substr(0, 128) /** @todo fix in the Ui library */);
 
             /* A light is selected */
             } else if(_data->objects[selectedId].lightId != 0xffffffffu) {
@@ -1861,7 +1861,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                     lightInfo.type,
                     lightInfo.name,
                     lightInfo.light->range(),
-                    lightInfo.light->intensity()));
+                    lightInfo.light->intensity()).substr(0, 128) /** @todo fix in the Ui library */);
 
             /* Something else is selected from object visualization, display
                just generic info */
@@ -1870,7 +1870,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                     "{}: {}, {} children",
                     objectInfo.name,
                     objectInfo.type,
-                    objectInfo.childCount));
+                    objectInfo.childCount).substr(0, 128) /** @todo fix in the Ui library */);
             }
         }
 
