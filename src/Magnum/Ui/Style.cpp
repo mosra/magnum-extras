@@ -25,7 +25,7 @@
 
 #include "Style.h"
 
-#include <Corrade/Containers/Reference.h>
+#include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/StringView.h>
 #include <Corrade/Containers/StringStl.h> /** @todo remove once GL::Shader is <string>-free */
 #include <Corrade/Utility/Resource.h>
@@ -980,7 +980,7 @@ BackgroundShader::BackgroundShader() {
     vert.addSource(rs.getString("BackgroundShader.vert"));
     frag.addSource(rs.getString("BackgroundShader.frag"));
 
-    CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
+    CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
@@ -1022,7 +1022,7 @@ ForegroundShader::ForegroundShader() {
     vert.addSource(rs.getString("ForegroundShader.vert"));
     frag.addSource(rs.getString("ForegroundShader.frag"));
 
-    CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
+    CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
@@ -1063,7 +1063,7 @@ TextShader::TextShader() {
     frag.addSource("#define TEXT_COLOR_COUNT " + std::to_string(Implementation::TextColorCount) + "\n");
     frag.addSource(rs.getString("TextShader.frag"));
 
-    CORRADE_INTERNAL_ASSERT(GL::Shader::compile({vert, frag}));
+    CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
