@@ -18,23 +18,36 @@ build() {
     cd "$_rootdir/build"
 
     cmake .. \
-        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_CONFIGURATION_TYPES="Debug;Release" \
+        -DCMAKE_CROSS_CONFIGS=all \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DMAGNUM_BUILD_TESTS=ON \
         -DMAGNUM_BUILD_GL_TESTS=ON \
         -DMAGNUM_WITH_PLAYER=ON \
         -DMAGNUM_WITH_UI=ON \
         -DMAGNUM_WITH_UI_GALLERY=ON \
-        -G Ninja
-    ninja
+        -G "Ninja Multi-Config"
+    ninja all:all
 }
 
 check() {
     cd "$_rootdir/build"
-    ctest --output-on-failure
+    export CORRADE_TEST_SKIP_BENCHMARKS=ON
+    export CORRADE_TEST_COLOR=ON
+
+    for config in Debug Release; do
+        ctest -C $config --output-on-failure -j
+    done
 }
 
 package() {
     cd "$_rootdir/build"
-    DESTDIR="$pkgdir/" ninja install
+    DESTDIR="$pkgdir/" ninja install:Debug
+
+    # Prevent the Release build from overwriting Debug binaries
+    for i in $(ls $pkgdir/usr/bin/magnum-*); do
+        mv ${i}{,d}
+    done
+
+    DESTDIR="$pkgdir/" ninja install/strip:Release
 }
