@@ -39,6 +39,8 @@ namespace Magnum {
     documentation updates
 -   **Nathan Ollerenshaw** ([\@matjam](https://github.com/matjam)) --- Ubuntu
     package updates, a PPA repository for stable versions
+-   **Stanislaw Halik** ([\@sthalik](https://github.com/sthalik)) --- build
+    fixes
 
 */
 
