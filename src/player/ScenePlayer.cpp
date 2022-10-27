@@ -1033,8 +1033,10 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
     /* Load the scene. Save the object pointers in an array for easier mapping
        of animations later. */
-    if((id < 0 && importer.defaultScene() != -1) || id >= 0) {
-        if(id < 0) id = importer.defaultScene();
+    if((id < 0 && importer.sceneCount()) || id >= 0) {
+        /* If there's no default scene, load the first one */
+        if(id < 0)
+            id = importer.defaultScene() == -1 ? 0 : importer.defaultScene();
         Debug{} << "Loading scene" << id << importer.sceneName(id);
 
         Containers::Optional<Trade::SceneData> scene = importer.scene(id);
