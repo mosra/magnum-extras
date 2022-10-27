@@ -1427,10 +1427,12 @@ void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera
 
     if(_shadeless) _shader
         .setAmbientColor(_color)
-        .setDiffuseColor(0x00000000_rgbaf);
+        .setDiffuseColor(0x00000000_rgbaf)
+        .setSpecularColor(0x00000000_rgbaf);
     else _shader
         .setAmbientColor(_color*0.06f)
-        .setDiffuseColor(_color);
+        .setDiffuseColor(_color)
+        .setSpecularColor(0x11111100_rgbaf);
 
     if(_shader.flags() & Shaders::PhongGL::Flag::TextureTransformation)
         _shader.setTextureMatrix(_textureMatrix);
