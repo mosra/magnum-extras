@@ -354,7 +354,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         GL::Mesh _lightCenterMesh, _lightInnerConeMesh, _lightOuterCircleMesh,
             _lightSphereMesh, _lightDirectionMesh, _axisMesh;
 
-        Float _brightness{0.8f};
+        Float _brightness{0.5f};
         #ifndef MAGNUM_TARGET_GLES
         Float _lineLength = 0.3f;
         #endif
