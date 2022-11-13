@@ -24,6 +24,7 @@
 */
 
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/StringIterable.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
