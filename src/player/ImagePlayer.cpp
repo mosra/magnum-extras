@@ -96,7 +96,8 @@ class ImagePlayer: public AbstractPlayer {
 
         GL::Texture2D _texture{NoCreate};
         GL::Mesh _square;
-        Shaders::FlatGL2D _shader{Shaders::FlatGL2D::Flag::Textured};
+        Shaders::FlatGL2D _shader{Shaders::FlatGL2D::Configuration{}
+            .setFlags(Shaders::FlatGL2D::Flag::Textured)};
         Vector2i _imageSize;
         Matrix3 _transformation;
         Matrix3 _projection;

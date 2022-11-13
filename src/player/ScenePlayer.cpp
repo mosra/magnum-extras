@@ -592,16 +592,19 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
 Shaders::FlatGL3D& ScenePlayer::flatShader(Shaders::FlatGL3D::Flags flags) {
     auto found = _flatShaders.find(flags);
     if(found == _flatShaders.end())
-        found = _flatShaders.emplace(flags, Shaders::FlatGL3D{Shaders::FlatGL3D::Flag::ObjectId|flags}).first;
+        found = _flatShaders.emplace(flags,
+            Shaders::FlatGL3D{Shaders::FlatGL3D::Configuration{}
+                .setFlags(Shaders::FlatGL3D::Flag::ObjectId|flags)}).first;
     return found->second;
 }
 
 Shaders::PhongGL& ScenePlayer::phongShader(Shaders::PhongGL::Flags flags) {
     auto found = _phongShaders.find(flags);
     if(found == _phongShaders.end()) {
-        found = _phongShaders.emplace(flags, Shaders::PhongGL{
-            Shaders::PhongGL::Flag::ObjectId|flags,
-            _data->lightCount ? _data->lightCount : 3
+        found = _phongShaders.emplace(flags,
+            Shaders::PhongGL{Shaders::PhongGL::Configuration{}
+                .setFlags(Shaders::PhongGL::Flag::ObjectId|flags)
+                .setLightCount(_data->lightCount ? _data->lightCount : 3)
         }).first;
         found->second
             .setSpecularColor(0x11111100_rgbaf)
@@ -613,7 +616,9 @@ Shaders::PhongGL& ScenePlayer::phongShader(Shaders::PhongGL::Flags flags) {
 Shaders::MeshVisualizerGL3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisualizerGL3D::Flags flags) {
     auto found = _meshVisualizerShaders.find(flags);
     if(found == _meshVisualizerShaders.end()) {
-        found = _meshVisualizerShaders.emplace(flags, Shaders::MeshVisualizerGL3D{flags}).first;
+        found = _meshVisualizerShaders.emplace(flags,
+            Shaders::MeshVisualizerGL3D{Shaders::MeshVisualizerGL3D::Configuration{}
+                .setFlags(flags)}).first;
         found->second
             .setViewportSize(Vector2{application().framebufferSize()});
 
