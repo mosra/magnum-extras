@@ -436,22 +436,27 @@ workflows:
     # if they pass, the rest of the jobs gets gradually executed, with further
     # dependencies especially for the macOS jobs that take the most credits.
     - linux-gl
+    - linux-nondeprecated
     - linux-arm64:
         requires:
         - linux-gl
+        - linux-nondeprecated
     # - linux-gles2:
     #     requires:
     #     - linux
+    #     - linux-nondeprecated
     - linux-gles3:
         requires:
         - linux-gl
+        - linux-nondeprecated
     - linux-static:
         requires:
         - linux-gl
-    - linux-nondeprecated
+        - linux-nondeprecated
     - linux-sanitizers:
         requires:
         - linux-gl
+        - linux-nondeprecated
     - macos-gl:
         requires:
         - linux-gl
