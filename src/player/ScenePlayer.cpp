@@ -908,24 +908,27 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             _data->lights[i].name = Utility::formatString("#{}", i);
 
         Containers::Optional<Trade::LightData> light = importer.light(i);
-        if(light) {
-            switch(light->type()) {
-                case Trade::LightData::Type::Ambient:
-                    _data->lights[i].type = "ambient light";
-                    break;
-                case Trade::LightData::Type::Directional:
-                    _data->lights[i].type = "directional light";
-                    break;
-                case Trade::LightData::Type::Point:
-                    _data->lights[i].type = "point light";
-                    break;
-                case Trade::LightData::Type::Spot:
-                    _data->lights[i].type = "spot light";
-                    break;
-            }
-
-            _data->lights[i].light = std::move(light);
+        if(!light) {
+            Warning{} << "Cannot load light" << i << importer.lightName(i);
+            continue;
         }
+
+        switch(light->type()) {
+            case Trade::LightData::Type::Ambient:
+                _data->lights[i].type = "ambient light";
+                break;
+            case Trade::LightData::Type::Directional:
+                _data->lights[i].type = "directional light";
+                break;
+            case Trade::LightData::Type::Point:
+                _data->lights[i].type = "point light";
+                break;
+            case Trade::LightData::Type::Spot:
+                _data->lights[i].type = "spot light";
+                break;
+        }
+
+        _data->lights[i].light = std::move(light);
     }
 
     /* Load all materials. Materials that fail to load will be NullOpt. The
@@ -1088,7 +1091,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             const UnsignedInt objectId = lightReference.first();
             const UnsignedInt lightId = lightReference.second();
             Object3D* const object = _data->objects[objectId].object;
-            if(!object) continue;
+            const Containers::Optional<Trade::LightData>& light = _data->lights[lightId].light;
+            if(!object || !light) continue;
 
             ++_data->lightCount;
 
@@ -1101,44 +1105,43 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             /* Add a light drawable, which puts correct camera-relative
                position to _data->lightPositions. Light colors don't change so
                add that directly. */
-            const Trade::LightData& light = *_data->lights[lightId].light;
-            new LightDrawable{*object, light.type() == Trade::LightData::Type::Directional ? true : false, _data->lightPositions, _data->lightDrawables};
-            arrayAppend(_data->lightColors, InPlaceInit, light.color()*light.intensity());
+            new LightDrawable{*object, light->type() == Trade::LightData::Type::Directional ? true : false, _data->lightPositions, _data->lightDrawables};
+            arrayAppend(_data->lightColors, InPlaceInit, light->color()*light->intensity());
 
             /* Visualization of the center */
-            new FlatDrawable{*object, flatShader({}), _lightCenterMesh, objectId, light.color(), Vector3{0.25f}, _data->objectVisualizationDrawables};
+            new FlatDrawable{*object, flatShader({}), _lightCenterMesh, objectId, light->color(), Vector3{0.25f}, _data->objectVisualizationDrawables};
 
             /* If the range is infinite, display it at distance = 5. It's not
                great as it's quite misleading, but better than nothing. */
             /** @todo make this runtime-changeable like with TBN visualizers */
             Float range;
-            if(light.range() != Constants::inf()) range = light.range();
+            if(light->range() != Constants::inf()) range = light->range();
             else range = 5.0f;
 
             /* Point light has a sphere around */
-            if(light.type() == Trade::LightData::Type::Point) {
-                new FlatDrawable{*object, flatShader({}), _lightSphereMesh, objectId, light.color(), Vector3{range}, _data->objectVisualizationDrawables};
+            if(light->type() == Trade::LightData::Type::Point) {
+                new FlatDrawable{*object, flatShader({}), _lightSphereMesh, objectId, light->color(), Vector3{range}, _data->objectVisualizationDrawables};
 
             /* Spotlight has a cone visualizing the inner angle and a circle at
                the end visualizing the outer angle */
-            } else if(light.type() == Trade::LightData::Type::Spot) {
-                new FlatDrawable{*object, flatShader({}), _lightInnerConeMesh, objectId, light.color(),
+            } else if(light->type() == Trade::LightData::Type::Spot) {
+                new FlatDrawable{*object, flatShader({}), _lightInnerConeMesh, objectId, light->color(),
                     Math::gather<'x', 'x', 'y'>(Vector2{
-                        range*Math::tan(light.innerConeAngle()*0.5f), range
+                        range*Math::tan(light->innerConeAngle()*0.5f), range
                     }), _data->objectVisualizationDrawables};
-                new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light.color(),
+                new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light->color(),
                     Math::gather<'x', 'x', 'y'>(Vector2{
-                        range*Math::tan(light.outerConeAngle()*0.5f), range
+                        range*Math::tan(light->outerConeAngle()*0.5f), range
                     }), _data->objectVisualizationDrawables};
 
             /* Directional has a circle and a line in its direction. The range
                is always infinite, so the line has always a length of 15. */
-            } else if(light.type() == Trade::LightData::Type::Directional) {
-                new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light.color(), Vector3{0.25f, 0.25f, 0.0f}, _data->objectVisualizationDrawables};
-                new FlatDrawable{*object, flatShader({}), _lightDirectionMesh, objectId, light.color(), Vector3{5.0f}, _data->objectVisualizationDrawables};
+            } else if(light->type() == Trade::LightData::Type::Directional) {
+                new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light->color(), Vector3{0.25f, 0.25f, 0.0f}, _data->objectVisualizationDrawables};
+                new FlatDrawable{*object, flatShader({}), _lightDirectionMesh, objectId, light->color(), Vector3{5.0f}, _data->objectVisualizationDrawables};
 
             /* Ambient lights are defined just by the center */
-            } else if(light.type() == Trade::LightData::Type::Ambient) {
+            } else if(light->type() == Trade::LightData::Type::Ambient) {
 
             /** @todo handle area lights when those are implemented */
             } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
