@@ -23,6 +23,8 @@
 #   DEALINGS IN THE SOFTWARE.
 #
 
+find_package(Corrade REQUIRED Main)
+
 find_package(Magnum REQUIRED
     DebugTools
     GL
@@ -59,7 +61,7 @@ if(MAGNUM_TARGET_WEBGL)
     list(APPEND Player_SRCS ${Player_RESOURCES})
 endif()
 
-add_executable(magnum-player ${Player_SRCS})
+add_executable(magnum-player WIN32 ${Player_SRCS})
 if(CORRADE_TARGET_WINDOWS AND NOT CORRADE_TARGET_WINDOWS_RT)
     if(MSVC)
         target_sources(magnum-player PRIVATE WindowsHiDPI.manifest)
@@ -68,6 +70,7 @@ if(CORRADE_TARGET_WINDOWS AND NOT CORRADE_TARGET_WINDOWS_RT)
     endif()
 endif()
 target_link_libraries(magnum-player PRIVATE
+    Corrade::Main
     Magnum::Application
     Magnum::DebugTools
     Magnum::GL
