@@ -25,6 +25,7 @@
 
 #include <algorithm> /* std::sort() */
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Pair.h>
@@ -1081,10 +1082,25 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
         /* Set transformations. Objects that are not part of the hierarchy are
            ignored, objects that have no transformation entry retain an
-           identity transformation. */
-        for(const Containers::Pair<UnsignedInt, Matrix4>& transformation: scene->transformations3DAsArray())
-            if(Object3D* object = _data->objects[transformation.first()].object)
-                object->setTransformation(transformation.second());
+           identity transformation. Assign TRS first, if available, and then
+           fall back to matrices for the rest. */
+        {
+            Containers::BitArray hasTrs{ValueInit, std::size_t(scene->mappingBound())};
+            for(const Containers::Pair<UnsignedInt, Containers::Triple<Vector3, Quaternion, Vector3>>& trs: scene->translationsRotationsScalings3DAsArray()) {
+                hasTrs.set(trs.first());
+                if(Object3D* object = _data->objects[trs.first()].object)
+                    (*object)
+                        .setTranslation(trs.second().first())
+                        .setRotation(trs.second().second())
+                        .setScaling(trs.second().third());
+            }
+            for(const Containers::Pair<UnsignedInt, Matrix4>& transformation: scene->transformations3DAsArray()) {
+                if(hasTrs[transformation.first()])
+                    continue;
+                if(Object3D* object = _data->objects[transformation.first()].object)
+                    object->setTransformation(transformation.second());
+            }
+        }
 
         /* Import all lights so we know which shaders to instantiate */
         if(scene->hasField(Trade::SceneField::Light)) for(const Containers::Pair<UnsignedInt, UnsignedInt>& lightReference: scene->lightsAsArray()) {
