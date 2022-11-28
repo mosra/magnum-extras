@@ -952,7 +952,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
        instead. */
     Debug{} << "Loading" << importer.meshCount() << "meshes";
     _data->meshes = Containers::Array<MeshInfo>{importer.meshCount()};
-    Containers::Array<bool> hasVertexColors{DirectInit, importer.meshCount(), false};
+    Containers::BitArray hasVertexColors{ValueInit, importer.meshCount()};
     for(UnsignedInt i = 0; i != importer.meshCount(); ++i) {
         Containers::Optional<Trade::MeshData> meshData = importer.mesh(i);
         if(!meshData) {
@@ -1017,7 +1017,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         if(meshLevels > 1)
             Warning{} << "Mesh" << meshName << "has" << meshLevels - 1 << "additional mesh levels, ignoring";
 
-        hasVertexColors[i] = meshData->hasAttribute(Trade::MeshAttribute::Color);
+        hasVertexColors.set(i, meshData->hasAttribute(Trade::MeshAttribute::Color));
 
         /* Save metadata, compile the mesh */
         _data->meshes[i].attributes = meshData->attributeCount();
