@@ -1850,18 +1850,18 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             CORRADE_INTERNAL_ASSERT(selectedId < _data->objects.size());
             CORRADE_INTERNAL_ASSERT(_data->objects[selectedId].object);
 
-            ObjectInfo& objectInfo = _data->objects[selectedId];
+            const ObjectInfo& objectInfo = _data->objects[selectedId];
 
             /* A mesh is selected */
-            if(_data->objects[selectedId].meshId != 0xffffffffu) {
-                CORRADE_INTERNAL_ASSERT(_data->meshes[_data->objects[selectedId].meshId].mesh);
-                MeshInfo& meshInfo = _data->meshes[_data->objects[selectedId].meshId];
+            if(objectInfo.meshId != 0xffffffffu) {
+                CORRADE_INTERNAL_ASSERT(_data->meshes[objectInfo.meshId].mesh);
+                MeshInfo& meshInfo = _data->meshes[objectInfo.meshId];
 
                 /* Create a visualizer for the selected object */
-                const Shaders::MeshVisualizerGL3D::Flags flags = setupVisualization(_data->objects[selectedId].meshId);
+                const Shaders::MeshVisualizerGL3D::Flags flags = setupVisualization(objectInfo.meshId);
                 _data->selectedObject = new MeshVisualizerDrawable{
                     *objectInfo.object, meshVisualizerShader(flags),
-                    *meshInfo.mesh, _data->objects[selectedId].meshId,
+                    *meshInfo.mesh, objectInfo.meshId,
                     meshInfo.objectIdCount, meshInfo.vertices, meshInfo.primitives,
                     _shadeless, _data->selectedObjectDrawables};
 
