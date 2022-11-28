@@ -281,12 +281,6 @@ struct Data {
     std::string modelInfo, objectInfo;
 };
 
-template<class T> struct EnumSetHash: std::hash<typename std::underlying_type<typename T::Type>::type> {
-    std::size_t operator()(const T& value) const {
-        return std::hash<typename std::underlying_type<typename T::Type>::type>::operator()(Containers::enumCastUnderlyingType(value));
-    }
-};
-
 enum class Visualization: UnsignedByte {
     Begin = 0,
     Wireframe = 0,
@@ -347,9 +341,12 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         Shaders::MeshVisualizerGL3D& meshVisualizerShader(Shaders::MeshVisualizerGL3D::Flags flags);
 
         /* Global rendering stuff */
-        std::unordered_map<Shaders::FlatGL3D::Flags, Shaders::FlatGL3D, EnumSetHash<Shaders::FlatGL3D::Flags>> _flatShaders;
-        std::unordered_map<Shaders::PhongGL::Flags, Shaders::PhongGL, EnumSetHash<Shaders::PhongGL::Flags>> _phongShaders;
-        std::unordered_map<Shaders::MeshVisualizerGL3D::Flags, Shaders::MeshVisualizerGL3D, EnumSetHash<Shaders::MeshVisualizerGL3D::Flags>> _meshVisualizerShaders;
+        /* Indexed by Shaders::FlatGL3D::Flags, PhongGL::Flags or
+           MeshVisualizerGL3D::Flags but cast to an UnsignedInt because I
+           refuse to deal with the std::hash crap. */
+        std::unordered_map<UnsignedInt, Shaders::FlatGL3D> _flatShaders;
+        std::unordered_map<UnsignedInt, Shaders::PhongGL> _phongShaders;
+        std::unordered_map<UnsignedInt, Shaders::MeshVisualizerGL3D> _meshVisualizerShaders;
         GL::Texture2D _colorMapTexture;
         /* Object and light visualization */
         GL::Mesh _lightCenterMesh, _lightInnerConeMesh, _lightOuterCircleMesh,
@@ -591,18 +588,18 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
 }
 
 Shaders::FlatGL3D& ScenePlayer::flatShader(Shaders::FlatGL3D::Flags flags) {
-    auto found = _flatShaders.find(flags);
+    auto found = _flatShaders.find(enumCastUnderlyingType(flags));
     if(found == _flatShaders.end())
-        found = _flatShaders.emplace(flags,
+        found = _flatShaders.emplace(enumCastUnderlyingType(flags),
             Shaders::FlatGL3D{Shaders::FlatGL3D::Configuration{}
                 .setFlags(Shaders::FlatGL3D::Flag::ObjectId|flags)}).first;
     return found->second;
 }
 
 Shaders::PhongGL& ScenePlayer::phongShader(Shaders::PhongGL::Flags flags) {
-    auto found = _phongShaders.find(flags);
+    auto found = _phongShaders.find(enumCastUnderlyingType(flags));
     if(found == _phongShaders.end()) {
-        found = _phongShaders.emplace(flags,
+        found = _phongShaders.emplace(enumCastUnderlyingType(flags),
             Shaders::PhongGL{Shaders::PhongGL::Configuration{}
                 .setFlags(Shaders::PhongGL::Flag::ObjectId|flags)
                 .setLightCount(_data->lightCount ? _data->lightCount : 3)
@@ -615,9 +612,9 @@ Shaders::PhongGL& ScenePlayer::phongShader(Shaders::PhongGL::Flags flags) {
 }
 
 Shaders::MeshVisualizerGL3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisualizerGL3D::Flags flags) {
-    auto found = _meshVisualizerShaders.find(flags);
+    auto found = _meshVisualizerShaders.find(enumCastUnderlyingType(flags));
     if(found == _meshVisualizerShaders.end()) {
-        found = _meshVisualizerShaders.emplace(flags,
+        found = _meshVisualizerShaders.emplace(enumCastUnderlyingType(flags),
             Shaders::MeshVisualizerGL3D{Shaders::MeshVisualizerGL3D::Configuration{}
                 .setFlags(flags)}).first;
         found->second
