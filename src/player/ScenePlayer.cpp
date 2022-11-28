@@ -1083,13 +1083,17 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
            fall back to matrices for the rest. */
         {
             Containers::BitArray hasTrs{ValueInit, std::size_t(scene->mappingBound())};
-            for(const Containers::Pair<UnsignedInt, Containers::Triple<Vector3, Quaternion, Vector3>>& trs: scene->translationsRotationsScalings3DAsArray()) {
-                hasTrs.set(trs.first());
-                if(Object3D* object = _data->objects[trs.first()].object)
-                    (*object)
-                        .setTranslation(trs.second().first())
-                        .setRotation(trs.second().second())
-                        .setScaling(trs.second().third());
+            if(scene->hasField(Trade::SceneField::Translation) ||
+               scene->hasField(Trade::SceneField::Rotation) ||
+               scene->hasField(Trade::SceneField::Scaling)) {
+                for(const Containers::Pair<UnsignedInt, Containers::Triple<Vector3, Quaternion, Vector3>>& trs: scene->translationsRotationsScalings3DAsArray()) {
+                    hasTrs.set(trs.first());
+                    if(Object3D* object = _data->objects[trs.first()].object)
+                        (*object)
+                            .setTranslation(trs.second().first())
+                            .setRotation(trs.second().second())
+                            .setScaling(trs.second().third());
+                }
             }
             for(const Containers::Pair<UnsignedInt, Matrix4>& transformation: scene->transformations3DAsArray()) {
                 if(hasTrs[transformation.first()])
