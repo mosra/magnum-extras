@@ -419,9 +419,12 @@ PrimitiveClipRatio.)")
         _manager.setPreferredPlugins("ObjImporter", {"AssimpImporter"});
 
     /* Set up plugin defaults */
-    {
-        PluginManager::PluginMetadata* const metadata = _manager.metadata("GltfImporter");
-        if(metadata) metadata->configuration().setValue("mergeAnimationClips",
+    if(PluginManager::PluginMetadata* const metadata = _manager.metadata("AssimpImporter")) {
+        metadata->configuration().setValue("compatibilitySkinningAttributes", false);
+    }
+    if(PluginManager::PluginMetadata* const metadata = _manager.metadata("GltfImporter")) {
+        metadata->configuration().setValue("compatibilitySkinningAttributes", false);
+        metadata->configuration().setValue("mergeAnimationClips",
             !args.isSet("no-merge-animations"));
     }
 

@@ -86,6 +86,7 @@
 #include <Magnum/Trade/MeshData.h>
 #include <Magnum/Trade/PhongMaterialData.h>
 #include <Magnum/Trade/SceneData.h>
+#include <Magnum/Trade/SkinData.h>
 #include <Magnum/Trade/TextureData.h>
 
 #include "Magnum/Ui/Anchor.h"
@@ -229,6 +230,7 @@ struct MeshInfo {
     UnsignedInt vertices;
     UnsignedInt primitives;
     UnsignedInt objectIdCount;
+    UnsignedInt perVertexJointCount, secondaryPerVertexJointCount;
     std::size_t size;
     std::string name;
     bool hasTangents, hasSeparateBitangents;
@@ -247,6 +249,7 @@ struct ObjectInfo {
     UnsignedInt meshId{0xffffffffu};
     UnsignedInt lightId{0xffffffffu};
     UnsignedInt childCount;
+    Containers::ArrayView<const Matrix4> skinJointMatrices;
 };
 
 class MeshVisualizerDrawable;
@@ -259,8 +262,13 @@ struct Data {
     Scene3D scene;
     Object3D* cameraObject{};
     SceneGraph::Camera3D* camera;
+    /* Untransformed camera placed at scene root, for calculating absolute
+       joint transformations via JointDrawable */
+    Object3D* rootCameraObject{};
+    SceneGraph::Camera3D* rootCamera;
     SceneGraph::DrawableGroup3D opaqueDrawables, transparentDrawables,
-        selectedObjectDrawables, objectVisualizationDrawables, lightDrawables;
+        selectedObjectDrawables, objectVisualizationDrawables, lightDrawables,
+        jointDrawables;
     Vector3 previousPosition;
 
     Containers::Array<ObjectInfo> objects;
@@ -271,8 +279,11 @@ struct Data {
     Animation::Player<std::chrono::nanoseconds, Float> player;
 
     UnsignedInt lightCount{};
+    UnsignedInt maxJointCount{};
     Containers::Array<Vector4> lightPositions;
     Containers::Array<Color3> lightColors;
+
+    Containers::Array<Matrix4> skinJointMatrices;
 
     Int elapsedTimeAnimationDestination = -1; /* So it gets updated with 0 as well */
 
@@ -397,7 +408,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
 class FlatDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit FlatDrawable(Object3D& object, Shaders::FlatGL3D& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const Vector3& scale, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _scale{scale} {}
+        explicit FlatDrawable(Object3D& object, Shaders::FlatGL3D& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const Vector3& scale, Containers::ArrayView<const Matrix4> jointMatrices, UnsignedInt perVertexJointCount, UnsignedInt secondaryPerVertexJointCount, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _scale{scale}, _jointMatrices{jointMatrices}, _perVertexJointCount{perVertexJointCount}, _secondaryPerVertexJointCount{secondaryPerVertexJointCount} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -407,13 +418,15 @@ class FlatDrawable: public SceneGraph::Drawable3D {
         UnsignedInt _objectId;
         Color4 _color;
         Vector3 _scale;
+        Containers::ArrayView<const Matrix4> _jointMatrices;
+        UnsignedInt _perVertexJointCount, _secondaryPerVertexJointCount;
 };
 
 class PhongDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit PhongDrawable(Object3D& object, Shaders::PhongGL& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, GL::Texture2D* normalTexture, Float normalTextureScale, Float alphaMask, Matrix3 textureMatrix, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _normalTexture{normalTexture}, _normalTextureScale{normalTextureScale}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _shadeless(shadeless) {}
+        explicit PhongDrawable(Object3D& object, Shaders::PhongGL& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, GL::Texture2D* diffuseTexture, GL::Texture2D* normalTexture, Float normalTextureScale, Float alphaMask, const Matrix3& textureMatrix, Containers::ArrayView<const Matrix4> jointMatrices, UnsignedInt perVertexJointCount, UnsignedInt secondaryPerVertexJointCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{diffuseTexture}, _normalTexture{normalTexture}, _normalTextureScale{normalTextureScale}, _alphaMask{alphaMask}, _textureMatrix{textureMatrix}, _jointMatrices{jointMatrices}, _perVertexJointCount{perVertexJointCount}, _secondaryPerVertexJointCount{secondaryPerVertexJointCount}, _shadeless(shadeless) {}
 
-        explicit PhongDrawable(Object3D& object, Shaders::PhongGL& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{nullptr}, _normalTexture{nullptr}, _alphaMask{0.5f}, _shadeless{shadeless} {}
+        explicit PhongDrawable(Object3D& object, Shaders::PhongGL& shader, GL::Mesh& mesh, UnsignedInt objectId, const Color4& color, Containers::ArrayView<const Matrix4> jointMatrices, UnsignedInt perVertexJointCount, UnsignedInt secondaryPerVertexJointCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _objectId{objectId}, _color{color}, _diffuseTexture{nullptr}, _normalTexture{nullptr}, _alphaMask{0.5f}, _jointMatrices{jointMatrices}, _perVertexJointCount{perVertexJointCount}, _secondaryPerVertexJointCount{secondaryPerVertexJointCount}, _shadeless{shadeless} {}
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -427,18 +440,21 @@ class PhongDrawable: public SceneGraph::Drawable3D {
         Float _normalTextureScale;
         Float _alphaMask;
         Matrix3 _textureMatrix;
+        Containers::ArrayView<const Matrix4> _jointMatrices;
+        UnsignedInt _perVertexJointCount, _secondaryPerVertexJointCount;
         const bool& _shadeless;
 };
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizerGL3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount, UnsignedInt primitiveCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount}, _primitiveCount{primitiveCount}, _shadeless(shadeless) {}
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizerGL3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount, UnsignedInt primitiveCount, Containers::ArrayView<const Matrix4> jointMatrices, UnsignedInt perVertexJointCount, UnsignedInt secondaryPerVertexJointCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount}, _primitiveCount{primitiveCount}, _jointMatrices{jointMatrices}, _perVertexJointCount{perVertexJointCount}, _secondaryPerVertexJointCount{secondaryPerVertexJointCount}, _shadeless(shadeless) {}
 
         Shaders::MeshVisualizerGL3D& shader() { return _shader; }
 
         void setShader(Shaders::MeshVisualizerGL3D& shader) { _shader = shader; }
 
         std::size_t meshId() const { return _meshId; }
+        std::size_t jointCount() const { return _jointMatrices.size(); }
 
     private:
         void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) override;
@@ -447,6 +463,8 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         GL::Mesh& _mesh;
         std::size_t _meshId;
         UnsignedInt _objectIdCount, _vertexCount, _primitiveCount;
+        Containers::ArrayView<const Matrix4> _jointMatrices;
+        UnsignedInt _perVertexJointCount, _secondaryPerVertexJointCount;
         const bool& _shadeless;
 };
 
@@ -466,6 +484,23 @@ class LightDrawable: public SceneGraph::Drawable3D {
 
         bool _directional;
         Containers::Array<Vector4>& _positions;
+};
+
+class JointDrawable: public SceneGraph::Drawable3D {
+    public:
+        explicit JointDrawable(Object3D& object, const Matrix4& inverseBindMatrix, Matrix4& jointMatrix, SceneGraph::DrawableGroup3D& group):
+            SceneGraph::Drawable3D{object, &group},
+            _inverseBindMatrix{inverseBindMatrix},
+            /* GCC 4.8 can't handle {} here */
+            _jointMatrix(jointMatrix) {}
+
+    private:
+        void draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D&) override {
+            _jointMatrix = transformationMatrix*_inverseBindMatrix;
+        }
+
+        Matrix4 _inverseBindMatrix;
+        Matrix4& _jointMatrix;
 };
 
 ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::FrameProfilerGL::Values profilerValues, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
@@ -589,21 +624,40 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
 
 Shaders::FlatGL3D& ScenePlayer::flatShader(Shaders::FlatGL3D::Flags flags) {
     auto found = _flatShaders.find(enumCastUnderlyingType(flags));
-    if(found == _flatShaders.end())
+    if(found == _flatShaders.end()) {
+        Shaders::FlatGL3D::Configuration configuration;
+        configuration
+            .setFlags(Shaders::FlatGL3D::Flag::ObjectId|flags);
+        /* To avoid too many variants there's just one skinned version of the
+           shader with the static joint and per-vertex joint count as high as
+           needed, and only a subset is used for each draw. The code requests a
+           skinned version of the shader with the DynamicPerVertexJointCount
+           flag. */
+        if(flags & Shaders::FlatGL3D::Flag::DynamicPerVertexJointCount)
+            configuration.setJointCount(_data->maxJointCount, 4, 4);
         found = _flatShaders.emplace(enumCastUnderlyingType(flags),
-            Shaders::FlatGL3D{Shaders::FlatGL3D::Configuration{}
-                .setFlags(Shaders::FlatGL3D::Flag::ObjectId|flags)}).first;
+            Shaders::FlatGL3D{configuration}).first;
+    }
     return found->second;
 }
 
 Shaders::PhongGL& ScenePlayer::phongShader(Shaders::PhongGL::Flags flags) {
     auto found = _phongShaders.find(enumCastUnderlyingType(flags));
     if(found == _phongShaders.end()) {
+        Shaders::PhongGL::Configuration configuration;
+        configuration
+            .setFlags(Shaders::PhongGL::Flag::ObjectId|flags)
+            .setLightCount(_data->lightCount ? _data->lightCount : 3);
+        /* To avoid too many variants there's just one skinned version of the
+           shader with the static joint and per-vertex joint count as high as
+           needed, and only a subset is used for each draw. The code requests a
+           skinned version of the shader with the DynamicPerVertexJointCount
+           flag. */
+        if(flags & Shaders::PhongGL::Flag::DynamicPerVertexJointCount)
+            configuration.setJointCount(_data->maxJointCount, 4, 4);
         found = _phongShaders.emplace(enumCastUnderlyingType(flags),
-            Shaders::PhongGL{Shaders::PhongGL::Configuration{}
-                .setFlags(Shaders::PhongGL::Flag::ObjectId|flags)
-                .setLightCount(_data->lightCount ? _data->lightCount : 3)
-        }).first;
+            Shaders::PhongGL{configuration}).first;
+
         found->second
             .setSpecularColor(0x11111100_rgbaf)
             .setShininess(80.0f);
@@ -614,12 +668,21 @@ Shaders::PhongGL& ScenePlayer::phongShader(Shaders::PhongGL::Flags flags) {
 Shaders::MeshVisualizerGL3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisualizerGL3D::Flags flags) {
     auto found = _meshVisualizerShaders.find(enumCastUnderlyingType(flags));
     if(found == _meshVisualizerShaders.end()) {
+        Shaders::MeshVisualizerGL3D::Configuration configuration;
+        configuration
+            .setFlags(flags);
+        /* To avoid too many variants there's just one skinned version of the
+           shader with the static joint and per-vertex joint count as high as
+           needed, and only a subset is used for each draw. The code requests a
+           skinned version of the shader with the DynamicPerVertexJointCount
+           flag. */
+        if(flags & Shaders::MeshVisualizerGL3D::Flag::DynamicPerVertexJointCount)
+            configuration.setJointCount(_data->maxJointCount, 4, 4);
         found = _meshVisualizerShaders.emplace(enumCastUnderlyingType(flags),
-            Shaders::MeshVisualizerGL3D{Shaders::MeshVisualizerGL3D::Configuration{}
-                .setFlags(flags)}).first;
+            Shaders::MeshVisualizerGL3D{configuration}).first;
+
         found->second
             .setViewportSize(Vector2{application().framebufferSize()});
-
         if(flags & Shaders::MeshVisualizerGL3D::Flag::Wireframe)
             found->second.setWireframeColor(_(0xdcdcdcff_rgbaf));
         #ifndef MAGNUM_TARGET_GLES
@@ -722,7 +785,7 @@ void ScenePlayer::cycleMeshVisualization() {
     /* Advance through the options */
     _visualization = Visualization(UnsignedByte(_visualization) + 1);
 
-    _data->selectedObject->setShader(meshVisualizerShader(setupVisualization( _data->selectedObject->meshId())));
+    _data->selectedObject->setShader(meshVisualizerShader(setupVisualization( _data->selectedObject->meshId())|(_data->selectedObject->jointCount() ? Shaders::MeshVisualizerGL3D::Flag::DynamicPerVertexJointCount : Shaders::MeshVisualizerGL3D::Flags{})));
 }
 
 Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t meshId) {
@@ -929,6 +992,32 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->lights[i].light = std::move(light);
     }
 
+    /* Load all skins. Skins that fail to load will be NullOpt. The data will
+       be stored directly in objects later, so save them only temporarily. */
+    struct SkinInfo {
+        std::size_t offset;
+        Containers::Optional<Trade::SkinData3D> skin;
+    };
+    Containers::Array<SkinInfo> skins{importer.skin3DCount()};
+    std::size_t totalJointCount = 0;
+    for(UnsignedInt i = 0; i != importer.skin3DCount(); ++i) {
+        Containers::Optional<Trade::SkinData3D> skinData = importer.skin3D(i);
+        if(!skinData) {
+            Warning{} << "Cannot load 3D skin" << i << importer.skin3DName(i);
+            continue;
+        }
+
+        _data->maxJointCount = Math::max(UnsignedInt(skinData->joints().size()), _data->maxJointCount);
+
+        skins[i].offset = totalJointCount;
+        totalJointCount += skinData->joints().size();
+        skins[i].skin = std::move(skinData);
+    }
+    Debug{} << "Loaded" << importer.skin3DCount() << "skins with" << totalJointCount << "joints in total and at most" << _data->maxJointCount << "joints per skin";
+
+    /* Allocate an array where absolute joint matrices will be stored */
+    _data->skinJointMatrices = Containers::Array<Matrix4>{NoInit, totalJointCount};
+
     /* Load all materials. Materials that fail to load will be NullOpt. The
        data will be stored directly in objects later, so save them only
        temporarily. */
@@ -1015,6 +1104,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             Warning{} << "Mesh" << meshName << "has" << meshLevels - 1 << "additional mesh levels, ignoring";
 
         hasVertexColors.set(i, meshData->hasAttribute(Trade::MeshAttribute::Color));
+        Containers::Pair<UnsignedInt, UnsignedInt> perVertexJointCount = MeshTools::compiledPerVertexJointCount(*meshData);
 
         /* Save metadata, compile the mesh */
         _data->meshes[i].attributes = meshData->attributeCount();
@@ -1033,6 +1123,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         if(meshData->hasAttribute(Trade::MeshAttribute::ObjectId)) {
             _data->meshes[i].objectIdCount = Math::max(meshData->objectIdsAsArray());
         } else _data->meshes[i].objectIdCount = 0;
+        _data->meshes[i].perVertexJointCount = perVertexJointCount.first();
+        _data->meshes[i].secondaryPerVertexJointCount = perVertexJointCount.second();
         _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
         _data->meshes[i].name = std::move(meshName);
     }
@@ -1126,7 +1218,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             arrayAppend(_data->lightColors, InPlaceInit, light->color()*light->intensity());
 
             /* Visualization of the center */
-            new FlatDrawable{*object, flatShader({}), _lightCenterMesh, objectId, light->color(), Vector3{0.25f}, _data->objectVisualizationDrawables};
+            new FlatDrawable{*object, flatShader({}), _lightCenterMesh, objectId, light->color(), Vector3{0.25f}, nullptr, 0, 0, _data->objectVisualizationDrawables};
 
             /* If the range is infinite, display it at distance = 5. It's not
                great as it's quite misleading, but better than nothing. */
@@ -1137,7 +1229,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
             /* Point light has a sphere around */
             if(light->type() == Trade::LightData::Type::Point) {
-                new FlatDrawable{*object, flatShader({}), _lightSphereMesh, objectId, light->color(), Vector3{range}, _data->objectVisualizationDrawables};
+                new FlatDrawable{*object, flatShader({}), _lightSphereMesh, objectId, light->color(), Vector3{range}, nullptr, 0, 0, _data->objectVisualizationDrawables};
 
             /* Spotlight has a cone visualizing the inner angle and a circle at
                the end visualizing the outer angle */
@@ -1145,23 +1237,35 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
                 new FlatDrawable{*object, flatShader({}), _lightInnerConeMesh, objectId, light->color(),
                     Math::gather<'x', 'x', 'y'>(Vector2{
                         range*Math::tan(light->innerConeAngle()*0.5f), range
-                    }), _data->objectVisualizationDrawables};
+                    }), nullptr, 0, 0, _data->objectVisualizationDrawables};
                 new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light->color(),
                     Math::gather<'x', 'x', 'y'>(Vector2{
                         range*Math::tan(light->outerConeAngle()*0.5f), range
-                    }), _data->objectVisualizationDrawables};
+                    }), nullptr, 0, 0, _data->objectVisualizationDrawables};
 
             /* Directional has a circle and a line in its direction. The range
                is always infinite, so the line has always a length of 15. */
             } else if(light->type() == Trade::LightData::Type::Directional) {
-                new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light->color(), Vector3{0.25f, 0.25f, 0.0f}, _data->objectVisualizationDrawables};
-                new FlatDrawable{*object, flatShader({}), _lightDirectionMesh, objectId, light->color(), Vector3{5.0f}, _data->objectVisualizationDrawables};
+                new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light->color(), Vector3{0.25f, 0.25f, 0.0f}, nullptr, 0, 0, _data->objectVisualizationDrawables};
+                new FlatDrawable{*object, flatShader({}), _lightDirectionMesh, objectId, light->color(), Vector3{5.0f}, nullptr, 0, 0, _data->objectVisualizationDrawables};
 
             /* Ambient lights are defined just by the center */
             } else if(light->type() == Trade::LightData::Type::Ambient) {
 
             /** @todo handle area lights when those are implemented */
             } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+
+        /* Import skin references; convert them to pointers to loaded SkinData
+           instances */
+        if(scene->hasField(Trade::SceneField::Skin)) for(const Containers::Pair<UnsignedInt, UnsignedInt>& skinReference: scene->skinsAsArray()) {
+            const UnsignedInt objectId = skinReference.first();
+            const UnsignedInt skinId = skinReference.second();
+            Object3D* const object = _data->objects[objectId].object;
+            const SkinInfo& skin = skins[skinId];
+            if(!object || !skin.skin) continue;
+
+            _data->objects[objectId].skinJointMatrices = _data->skinJointMatrices.sliceSize(skin.offset, skin.skin->joints().size());
         }
 
         /* Import camera references, the first camera will be treated as the
@@ -1188,7 +1292,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
             if(_data->objects[i].lightId != 0xffffffffu) continue;
 
-            new FlatDrawable{*object, flatShader(Shaders::FlatGL3D::Flag::VertexColor), _axisMesh, UnsignedInt(i), 0xffffff_rgbf, Vector3{1.0f}, _data->objectVisualizationDrawables};
+            new FlatDrawable{*object, flatShader(Shaders::FlatGL3D::Flag::VertexColor), _axisMesh, UnsignedInt(i), 0xffffff_rgbf, Vector3{1.0f}, nullptr, 0, 0, _data->objectVisualizationDrawables};
         }
 
         /* Add drawables for objects that have a mesh, again ignoring objects
@@ -1206,6 +1310,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
                selection */
             _data->objects[objectId].meshId = meshId;
 
+            Containers::ArrayView<const Matrix4> skinJointMatrices = _data->objects[objectId].skinJointMatrices;
+
             Shaders::PhongGL::Flags flags;
             if(hasVertexColors[meshId])
                 flags |= Shaders::PhongGL::Flag::VertexColor;
@@ -1219,9 +1325,9 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
                 if(mesh->primitive() == GL::MeshPrimitive::Triangles ||
                    mesh->primitive() == GL::MeshPrimitive::TriangleStrip ||
                    mesh->primitive() == GL::MeshPrimitive::TriangleFan)
-                    new PhongDrawable{*object, phongShader(flags), *mesh, objectId, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
+                    new PhongDrawable{*object, phongShader(flags|(skinJointMatrices.isEmpty() ? Shaders::PhongGL::Flags{} : Shaders::PhongGL::Flag::DynamicPerVertexJointCount)), *mesh, objectId, 0xffffff_rgbf, skinJointMatrices, _data->meshes[meshId].perVertexJointCount, _data->meshes[meshId].secondaryPerVertexJointCount,  _shadeless, _data->opaqueDrawables};
                 else
-                    new FlatDrawable{*object, flatShader(hasVertexColors[meshId] ? Shaders::FlatGL3D::Flag::VertexColor : Shaders::FlatGL3D::Flags{}), *mesh, objectId, 0xffffff_rgbf, Vector3{Constants::nan()}, _data->opaqueDrawables};
+                    new FlatDrawable{*object, flatShader((hasVertexColors[meshId] ? Shaders::FlatGL3D::Flag::VertexColor : Shaders::FlatGL3D::Flags{})|(skinJointMatrices.isEmpty() ? Shaders::FlatGL3D::Flags{} : Shaders::FlatGL3D::Flag::DynamicPerVertexJointCount)), *mesh, objectId, 0xffffff_rgbf, Vector3{Constants::nan()}, skinJointMatrices, _data->meshes[meshId].perVertexJointCount, _data->meshes[meshId].secondaryPerVertexJointCount, _data->opaqueDrawables};
 
             /* Material available */
             } else {
@@ -1263,10 +1369,10 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
                     }
                 }
 
-                new PhongDrawable{*object, phongShader(flags),
+                new PhongDrawable{*object, phongShader(flags|(skinJointMatrices.isEmpty() ? Shaders::PhongGL::Flags{} : Shaders::PhongGL::Flag::DynamicPerVertexJointCount)),
                     *mesh, objectId,
                     material.diffuseColor(), diffuseTexture, normalTexture, normalTextureScale,
-                    material.alphaMask(), material.commonTextureMatrix(), _shadeless,
+                    material.alphaMask(), material.commonTextureMatrix(), skinJointMatrices, _data->meshes[meshId].perVertexJointCount, _data->meshes[meshId].secondaryPerVertexJointCount, _shadeless,
                     material.alphaMode() == Trade::MaterialAlphaMode::Blend ?
                         _data->transparentDrawables : _data->opaqueDrawables};
             }
@@ -1281,7 +1387,25 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         _data->objects[0].object = &_data->scene;
         _data->objects[0].meshId = 0;
         _data->objects[0].name = "object #0";
-        new PhongDrawable{_data->scene, phongShader(hasVertexColors[0] ? Shaders::PhongGL::Flag::VertexColor : Shaders::PhongGL::Flags{}), *_data->meshes[0].mesh, 0, 0xffffff_rgbf, _shadeless, _data->opaqueDrawables};
+        new PhongDrawable{_data->scene, phongShader(hasVertexColors[0] ? Shaders::PhongGL::Flag::VertexColor : Shaders::PhongGL::Flags{}), *_data->meshes[0].mesh, 0, 0xffffff_rgbf, nullptr, 0, 0, _shadeless, _data->opaqueDrawables};
+    }
+
+    /* Add joint drawables for all skins to fill the skinJointMatrices array */
+    for(std::size_t i = 0; i != skins.size(); ++i) {
+        if(!skins[i].skin) continue;
+
+        const SkinInfo& skinInfo = skins[i];
+
+        for(std::size_t j = 0; j != skinInfo.skin->joints().size(); ++j) {
+            const UnsignedInt objectId = skinInfo.skin->joints()[j];
+            const ObjectInfo& objectInfo = _data->objects[objectId];
+            if(!objectInfo.object) {
+                Warning{} << "Skin" << i << "references object" << objectId << "which is not part of the hierarchy, animation may be broken";
+                continue;
+            }
+
+            new JointDrawable{*objectInfo.object, skinInfo.skin->inverseBindMatrices()[j], _data->skinJointMatrices[skinInfo.offset + j], _data->jointDrawables};
+        }
     }
 
     /* Create a camera object in case it wasn't present in the scene already */
@@ -1322,6 +1446,12 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         .setAspectRatioPolicy(SceneGraph::AspectRatioPolicy::Extend)
         .setProjectionMatrix(Matrix4::perspectiveProjection(75.0_degf, 1.0f, 0.01f, 1000.0f))
         .setViewport(GL::defaultFramebuffer.viewport().size());
+
+    /* A second camera, positioned in the root, for "drawing" joint positions
+       that have to be relative to scene root */
+    /** @todo eugh, drop the whole scenegraph instead */
+    _data->rootCameraObject = new Object3D{&_data->scene};
+    _data->rootCamera = new SceneGraph::Camera3D{*_data->rootCameraObject};
 
     /* Use the settings with parameters of the camera in the model, if any,
        otherwise just used the hardcoded setup from above */
@@ -1434,8 +1564,13 @@ void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3
     _shader
         .setColor(_color)
         .setTransformationProjectionMatrix(camera.projectionMatrix()*transformation)
-        .setObjectId(_objectId)
-        .draw(_mesh);
+        .setObjectId(_objectId);
+
+    if(_jointMatrices) _shader
+        .setJointMatrices(_jointMatrices)
+        .setPerVertexJointCount(_perVertexJointCount, _secondaryPerVertexJointCount);
+
+    _shader.draw(_mesh);
 }
 
 void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
@@ -1444,6 +1579,10 @@ void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera
         .setNormalMatrix(transformationMatrix.normalMatrix())
         .setProjectionMatrix(camera.projectionMatrix())
         .setObjectId(_objectId);
+
+    if(_jointMatrices) _shader
+        .setJointMatrices(_jointMatrices)
+        .setPerVertexJointCount(_perVertexJointCount, _secondaryPerVertexJointCount);
 
     if(_diffuseTexture) _shader
         .bindAmbientTexture(*_diffuseTexture)
@@ -1501,6 +1640,10 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
         _shader->setColorMapTransformation(0.0f, 1.0f/_primitiveCount);
     #endif
 
+    if(_jointMatrices) (*_shader)
+        .setJointMatrices(_jointMatrices)
+        .setPerVertexJointCount(_perVertexJointCount, _secondaryPerVertexJointCount);
+
     _shader->draw(_mesh);
 
     GL::Renderer::setPolygonOffset(0.0f, 0.0f);
@@ -1530,6 +1673,12 @@ void ScenePlayer::drawEvent() {
         CORRADE_INTERNAL_ASSERT(_data->lightPositions.size() == _data->lightCount);
         for(auto&& shader: _phongShaders)
             shader.second.setLightPositions(_data->lightPositions);
+
+        /* Calculate animated joint positions, filling the
+           _data->skinJointMatrices with them, which is then referenced by
+           skinned meshes. These should be relative to scene root so it's drawn
+           with a camera that has an identity transformation. */
+        _data->rootCamera->draw(_data->jointDrawables);
 
         /* Draw opaque stuff as usual */
         _data->camera->draw(_data->opaqueDrawables);
@@ -1866,9 +2015,9 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                 /* Create a visualizer for the selected object */
                 const Shaders::MeshVisualizerGL3D::Flags flags = setupVisualization(objectInfo.meshId);
                 _data->selectedObject = new MeshVisualizerDrawable{
-                    *objectInfo.object, meshVisualizerShader(flags),
+                    *objectInfo.object, meshVisualizerShader(flags|(objectInfo.skinJointMatrices.isEmpty() ? Shaders::MeshVisualizerGL3D::Flags{} : Shaders::MeshVisualizerGL3D::Flag::DynamicPerVertexJointCount)),
                     *meshInfo.mesh, objectInfo.meshId,
-                    meshInfo.objectIdCount, meshInfo.vertices, meshInfo.primitives,
+                    meshInfo.objectIdCount, meshInfo.vertices, meshInfo.primitives, objectInfo.skinJointMatrices, meshInfo.perVertexJointCount, meshInfo.secondaryPerVertexJointCount,
                     _shadeless, _data->selectedObjectDrawables};
 
                 /* Show mesh info */
