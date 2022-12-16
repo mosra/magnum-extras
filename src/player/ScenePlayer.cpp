@@ -1164,7 +1164,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
 
-        /* Import cameras, the first camera will be treated as the default one */
+        /* Import camera references, the first camera will be treated as the
+           default one */
         if(scene->hasField(Trade::SceneField::Camera)) for(const Containers::Pair<UnsignedInt, UnsignedInt>& cameraReference: scene->camerasAsArray()) {
             const UnsignedInt objectId = cameraReference.first();
             Object3D* const object = _data->objects[objectId].object;
@@ -1179,7 +1180,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             /** @todo visualize the camera, not just for the default but for all */
         }
 
-        /* Object orientation visualizers, except for lights, which have their own */
+        /* Object orientation visualizers, except for lights, which have their
+           own */
         for(std::size_t i = 0; i != _data->objects.size(); ++i) {
             Object3D* const object = _data->objects[i].object;
             if(!object) continue;
@@ -1871,6 +1873,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
 
                 /* Show mesh info */
                 _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                    /** @todo wait, what about non-indexed? */
                     "{}: mesh {}, indexed, {} attribs, {} verts, {} prims, {:.1f} kB",
                     objectInfo.name,
                     meshInfo.name,
