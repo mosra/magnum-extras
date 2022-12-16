@@ -17,4 +17,4 @@ Exec=magnum-player %f
 # TODO: DevIlImageImporter knows probably all image formats in existence, list
 # TODO: OBJ/MTL is text/plain?! https://stackoverflow.com/a/19304383
 # TODO: gltf mimetype?
-MimeType=image/bmp;image/gif;image/jpeg;image/png;image/tiff;image/vnd.adobe.photoshop;image/vnd.microsoft.icon;image/vnd.radiance;image/x-dds;image/x-exr;image/x-hdr;image/x-ico;image/x-portable-bitmap;image/x-portable-floatmap;image/x-portable-graymap;image/x-portable-pixmap;image/x-psd;image/x-r16;image/x-rgb;image/x-targa;image/x-tga;model/gltf-binary;model/gltf+json;model/stl;model/vnd.collada+xml;model/vnd.opengex;text/plain
+MimeType=image/bmp;image/gif;image/jpeg;image/ktx2;image/png;image/tiff;image/vnd.adobe.photoshop;image/vnd.microsoft.icon;image/vnd.radiance;image/x-dds;image/x-exr;image/x-hdr;image/x-ico;image/x-portable-bitmap;image/x-portable-floatmap;image/x-portable-graymap;image/x-portable-pixmap;image/x-psd;image/x-r16;image/x-rgb;image/x-targa;image/x-tga;model/gltf-binary;model/gltf+json;model/stl;model/vnd.collada+xml;model/vnd.opengex;text/plain
