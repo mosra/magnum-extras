@@ -413,10 +413,12 @@ PrimitiveClipRatio.)")
     /* Setup renderer defaults */
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
 
-    /* For OBJ AssimpImporter is currently better than Magnum's builtin
-       ObjImporter */
+    /* For OBJ and FBX UfbxImporter is better than Magnum's builtin ObjImporter
+       or Assimp */
+    if(_manager.loadState("FbxImporter") != PluginManager::LoadState::NotFound)
+        _manager.setPreferredPlugins("FbxImporter", {"UfbxImporter"});
     if(_manager.loadState("ObjImporter") != PluginManager::LoadState::NotFound)
-        _manager.setPreferredPlugins("ObjImporter", {"AssimpImporter"});
+        _manager.setPreferredPlugins("ObjImporter", {"UfbxImporter"});
 
     /* Set up plugin defaults */
     if(PluginManager::PluginMetadata* const metadata = _manager.metadata("AssimpImporter")) {
