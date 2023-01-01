@@ -29,6 +29,8 @@
  * @brief Class @ref Magnum::Ui::Button
  */
 
+#include <string> /** @todo clean this up */
+#include <Corrade/Containers/ArrayView.h> /** @todo this is also unneeded */
 #include <Corrade/Interconnect/Emitter.h>
 
 #include "Magnum/Ui/Widget.h"

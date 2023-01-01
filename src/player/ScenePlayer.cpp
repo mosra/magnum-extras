@@ -31,6 +31,7 @@
 #include <Corrade/Containers/Pair.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/StringStl.h> /** @todo remove once GL::Shader is <string>-free */
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
@@ -120,9 +121,10 @@
 
 namespace Magnum { namespace Player {
 
-namespace {
-
+using namespace Containers::Literals;
 using namespace Math::Literals;
+
+namespace {
 
 typedef SceneGraph::Object<SceneGraph::TranslationRotationScalingTransformation3D> Object3D;
 typedef SceneGraph::Scene<SceneGraph::TranslationRotationScalingTransformation3D> Scene3D;
@@ -143,9 +145,9 @@ DepthReinterpretShader::DepthReinterpretShader() {
     GL::Shader vert{GL::Version::GLES300, GL::Shader::Type::Vertex};
     GL::Shader frag{GL::Version::GLES300, GL::Shader::Type::Fragment};
 
-    Utility::Resource rs{"data"};
-    vert.addSource(rs.getString("DepthReinterpretShader.vert"));
-    frag.addSource(rs.getString("DepthReinterpretShader.frag"));
+    Utility::Resource rs{"data"_s};
+    vert.addSource(rs.getString("DepthReinterpretShader.vert"_s));
+    frag.addSource(rs.getString("DepthReinterpretShader.frag"_s));
 
     CORRADE_INTERNAL_ASSERT_OUTPUT(GL::Shader::compile({vert, frag}));
 

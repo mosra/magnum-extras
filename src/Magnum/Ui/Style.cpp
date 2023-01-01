@@ -26,8 +26,9 @@
 #include "Style.h"
 
 #include <Corrade/Containers/Iterable.h>
-#include <Corrade/Containers/StringView.h>
+#include <Corrade/Containers/String.h>
 #include <Corrade/Containers/StringStl.h> /** @todo remove once GL::Shader is <string>-free */
+#include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/Shader.h>
@@ -43,6 +44,8 @@ static void importShaderResources() {
 #endif
 
 namespace Magnum { namespace Ui {
+
+using namespace Containers::Literals;
 
 namespace Implementation {
 
@@ -955,11 +958,11 @@ AbstractQuadShader& AbstractQuadShader::bindCornerTexture(GL::Texture2D& texture
 
 BackgroundShader::BackgroundShader() {
     #ifdef MAGNUM_BUILD_STATIC
-    if(!Utility::Resource::hasGroup("MagnumUi"))
+    if(!Utility::Resource::hasGroup("MagnumUi"_s))
         importShaderResources();
     #endif
 
-    Utility::Resource rs{"MagnumUi"};
+    Utility::Resource rs{"MagnumUi"_s};
 
     GL::Shader vert{
         #ifndef MAGNUM_TARGET_GLES
@@ -975,19 +978,19 @@ BackgroundShader::BackgroundShader() {
         GL::Version::GLES300,
         #endif
         GL::Shader::Type::Fragment};
-    vert.addSource("#define BACKGROUND_COLOR_COUNT " + std::to_string(Implementation::BackgroundColorCount) + "\n");
-    frag.addSource("#define BACKGROUND_COLOR_COUNT " + std::to_string(Implementation::BackgroundColorCount) + "\n");
-    vert.addSource(rs.getString("BackgroundShader.vert"));
-    frag.addSource(rs.getString("BackgroundShader.frag"));
+    vert.addSource(Utility::format("#define BACKGROUND_COLOR_COUNT {}\n", Implementation::BackgroundColorCount))
+        .addSource(rs.getString("BackgroundShader.vert"_s));
+    frag.addSource(Utility::format("#define BACKGROUND_COLOR_COUNT {}\n", Implementation::BackgroundColorCount))
+        .addSource(rs.getString("BackgroundShader.frag"_s));
 
     CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
 
-    setUniform(uniformLocation("cornerTextureData"), 0);
-    setUniformBlockBinding(uniformBlockIndex("Style"), 0);
-    _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix");
+    setUniform(uniformLocation("cornerTextureData"_s), 0);
+    setUniformBlockBinding(uniformBlockIndex("Style"_s), 0);
+    _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix"_s);
 }
 
 BackgroundShader& BackgroundShader::bindStyleBuffer(GL::Buffer& buffer) {
@@ -1017,19 +1020,19 @@ ForegroundShader::ForegroundShader() {
         GL::Version::GLES300,
         #endif
         GL::Shader::Type::Fragment};
-    vert.addSource("#define FOREGROUND_COLOR_COUNT " + std::to_string(Implementation::ForegroundColorCount) + "\n");
-    frag.addSource("#define FOREGROUND_COLOR_COUNT " + std::to_string(Implementation::ForegroundColorCount) + "\n");
-    vert.addSource(rs.getString("ForegroundShader.vert"));
-    frag.addSource(rs.getString("ForegroundShader.frag"));
+    vert.addSource(Utility::format("#define FOREGROUND_COLOR_COUNT {}\n", Implementation::ForegroundColorCount))
+        .addSource(rs.getString("ForegroundShader.vert"_s));
+    frag.addSource(Utility::format("#define FOREGROUND_COLOR_COUNT {}\n", Implementation::ForegroundColorCount))
+        .addSource(rs.getString("ForegroundShader.frag"_s));
 
     CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
 
-    setUniform(uniformLocation("cornerTextureData"), 0);
-    setUniformBlockBinding(uniformBlockIndex("Style"), 1);
-    _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix");
+    setUniform(uniformLocation("cornerTextureData"_s), 0);
+    setUniformBlockBinding(uniformBlockIndex("Style"_s), 1);
+    _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix"_s);
 }
 
 ForegroundShader& ForegroundShader::bindStyleBuffer(GL::Buffer& buffer) {
@@ -1039,11 +1042,11 @@ ForegroundShader& ForegroundShader::bindStyleBuffer(GL::Buffer& buffer) {
 
 TextShader::TextShader() {
     #ifdef MAGNUM_BUILD_STATIC
-    if(!Utility::Resource::hasGroup("MagnumUi"))
+    if(!Utility::Resource::hasGroup("MagnumUi"_s))
         importShaderResources();
     #endif
 
-    Utility::Resource rs{"MagnumUi"};
+    Utility::Resource rs{"MagnumUi"_s};
 
     GL::Shader vert{
         #ifndef MAGNUM_TARGET_GLES
@@ -1059,18 +1062,18 @@ TextShader::TextShader() {
         GL::Version::GLES300,
         #endif
         GL::Shader::Type::Fragment};
-    vert.addSource(rs.getString("TextShader.vert"));
-    frag.addSource("#define TEXT_COLOR_COUNT " + std::to_string(Implementation::TextColorCount) + "\n");
-    frag.addSource(rs.getString("TextShader.frag"));
+    vert.addSource(rs.getString("TextShader.vert"_s));
+    frag.addSource(Utility::format("#define TEXT_COLOR_COUNT {}\n", Implementation::TextColorCount))
+        .addSource(rs.getString("TextShader.frag"_s));
 
     CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
     attachShaders({vert, frag});
 
     CORRADE_INTERNAL_ASSERT(link());
 
-    setUniformBlockBinding(uniformBlockIndex("Style"), 2);
-    _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix");
-    setUniform(uniformLocation("textureData"), 1);
+    setUniformBlockBinding(uniformBlockIndex("Style"_s), 2);
+    _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix"_s);
+    setUniform(uniformLocation("textureData"_s), 1);
 }
 
 TextShader& TextShader::bindGlyphCacheTexture(GL::Texture2D& texture) {

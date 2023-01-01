@@ -29,6 +29,7 @@
  * @brief Class @ref Magnum::Ui::Input
  */
 
+#include <string> /** @todo clean this up */
 #include <Corrade/Interconnect/Emitter.h>
 #include <Corrade/Utility/Unicode.h>
 #include <Magnum/Text/Text.h>

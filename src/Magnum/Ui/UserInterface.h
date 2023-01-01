@@ -29,6 +29,7 @@
  * @brief Class @ref Magnum::Ui::UserInterface
  */
 
+#include <string> /** @todo clean this up */
 #include <Corrade/Containers/Pointer.h>
 #include <Corrade/Interconnect/Emitter.h>
 #include <Corrade/PluginManager/PluginManager.h>

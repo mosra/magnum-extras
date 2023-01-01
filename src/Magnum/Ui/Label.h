@@ -29,6 +29,8 @@
  * @brief Class @ref Magnum::Ui::Label
  */
 
+#include <string> /** @todo clean this up */
+#include <Corrade/Containers/ArrayView.h> /** @todo this is also unneeded */
 #include <Magnum/Text/Text.h>
 
 #include "Magnum/Ui/Widget.h"
