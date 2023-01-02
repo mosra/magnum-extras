@@ -31,7 +31,6 @@
 #include <Corrade/Containers/Pair.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once GL::Shader is <string>-free */
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>

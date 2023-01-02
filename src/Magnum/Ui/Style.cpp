@@ -27,7 +27,6 @@
 
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/String.h>
-#include <Corrade/Containers/StringStl.h> /** @todo remove once GL::Shader is <string>-free */
 #include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/GL/Buffer.h>
