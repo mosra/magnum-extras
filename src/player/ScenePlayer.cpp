@@ -1575,9 +1575,21 @@ void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3
 }
 
 void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
+    /* If the mesh is skinned, its root-relative transformation is coming fully
+       from the joint transforms alone, thus we only need the camera-relative
+       transform here. Transformation of the object is used only for
+       non-skinned meshes, if there are any. Which means we can't really
+       "patch" this on the object itself as it could have both skinned and
+       non-skinned meshes attached -- it has to be handled per-drawable. */
+    Matrix4 usedTransformationMatrix{NoInit};
+    if(_jointMatrices)
+        usedTransformationMatrix = camera.cameraMatrix();
+    else
+        usedTransformationMatrix = transformationMatrix;
+
     _shader
-        .setTransformationMatrix(transformationMatrix)
-        .setNormalMatrix(transformationMatrix.normalMatrix())
+        .setTransformationMatrix(usedTransformationMatrix)
+        .setNormalMatrix(usedTransformationMatrix.normalMatrix())
         .setProjectionMatrix(camera.projectionMatrix())
         .setObjectId(_objectId);
 
@@ -1613,13 +1625,25 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
     GL::Renderer::enable(GL::Renderer::Feature::PolygonOffsetFill);
     GL::Renderer::setPolygonOffset(_(-5.0f), _(-5.0f));
 
+    /* If the mesh is skinned, its root-relative transformation is coming fully
+       from the joint transforms alone, thus we only need the camera-relative
+       transform here. Transformation of the object is used only for
+       non-skinned meshes, if there are any. Which means we can't really
+       "patch" this on the object itself as it could have both skinned and
+       non-skinned meshes attached -- it has to be handled per-drawable. */
+    Matrix4 usedTransformationMatrix{NoInit};
+    if(_jointMatrices)
+        usedTransformationMatrix = camera.cameraMatrix();
+    else
+        usedTransformationMatrix = transformationMatrix;
+
     (*_shader)
         .setProjectionMatrix(camera.projectionMatrix())
-        .setTransformationMatrix(transformationMatrix);
+        .setTransformationMatrix(usedTransformationMatrix);
 
     #ifndef MAGNUM_TARGET_GLES
     if(_shader->flags() & Shaders::MeshVisualizerGL3D::Flag::NormalDirection)
-        _shader->setNormalMatrix(transformationMatrix.normalMatrix());
+        _shader->setNormalMatrix(usedTransformationMatrix.normalMatrix());
     #endif
 
     if(_shader->flags() & (Shaders::MeshVisualizerGL3D::Flag::InstancedObjectId|
