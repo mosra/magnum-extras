@@ -1477,7 +1477,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
             Object3D& animatedObject = *_data->objects[animation->trackTarget(j)].object;
 
-            if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Translation3D) {
+            if(animation->trackTargetName(j) == Trade::AnimationTrackTarget::Translation3D) {
                 const auto callback = [](Float, const Vector3& translation, Object3D& object) {
                     object.setTranslation(translation);
                 };
@@ -1489,7 +1489,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
                     _data->player.addWithCallback(animation->track<Vector3>(j),
                         callback, animatedObject);
                 }
-            } else if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Rotation3D) {
+            } else if(animation->trackTargetName(j) == Trade::AnimationTrackTarget::Rotation3D) {
                 const auto callback = [](Float, const Quaternion& rotation, Object3D& object) {
                     object.setRotation(rotation);
                 };
@@ -1501,7 +1501,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
                     _data->player.addWithCallback(animation->track<Quaternion>(j),
                         callback, animatedObject);
                 }
-            } else if(animation->trackTargetType(j) == Trade::AnimationTrackTargetType::Scaling3D) {
+            } else if(animation->trackTargetName(j) == Trade::AnimationTrackTarget::Scaling3D) {
                 const auto callback = [](Float, const Vector3& scaling, Object3D& object) {
                     object.setScaling(scaling);
                 };
