@@ -1334,6 +1334,9 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             } else {
                 const Trade::PhongMaterialData& material = *materials[materialId];
 
+                if(material.isDoubleSided())
+                    flags |= Shaders::PhongGL::Flag::DoubleSided;
+
                 /* Textured material. If the texture failed to load, again just
                    use a default-colored material. */
                 GL::Texture2D* diffuseTexture = nullptr;
@@ -1617,8 +1620,13 @@ void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera
         _shader.setTextureMatrix(_textureMatrix);
     if(_shader.flags() & Shaders::PhongGL::Flag::AlphaMask)
         _shader.setAlphaMask(_alphaMask);
+    if(_shader.flags() & Shaders::PhongGL::Flag::DoubleSided)
+        GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
 
     _shader.draw(_mesh);
+
+    if(_shader.flags() & Shaders::PhongGL::Flag::DoubleSided)
+        GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
 }
 
 void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3D& camera) {
