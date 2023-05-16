@@ -976,16 +976,16 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         }
 
         switch(light->type()) {
-            case Trade::LightData::Type::Ambient:
+            case Trade::LightType::Ambient:
                 _data->lights[i].type = "ambient light";
                 break;
-            case Trade::LightData::Type::Directional:
+            case Trade::LightType::Directional:
                 _data->lights[i].type = "directional light";
                 break;
-            case Trade::LightData::Type::Point:
+            case Trade::LightType::Point:
                 _data->lights[i].type = "point light";
                 break;
-            case Trade::LightData::Type::Spot:
+            case Trade::LightType::Spot:
                 _data->lights[i].type = "spot light";
                 break;
         }
@@ -1215,7 +1215,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             /* Add a light drawable, which puts correct camera-relative
                position to _data->lightPositions. Light colors don't change so
                add that directly. */
-            new LightDrawable{*object, light->type() == Trade::LightData::Type::Directional ? true : false, _data->lightPositions, _data->lightDrawables};
+            new LightDrawable{*object, light->type() == Trade::LightType::Directional ? true : false, _data->lightPositions, _data->lightDrawables};
             arrayAppend(_data->lightColors, InPlaceInit, light->color()*light->intensity());
 
             /* Visualization of the center */
@@ -1229,12 +1229,12 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             else range = 5.0f;
 
             /* Point light has a sphere around */
-            if(light->type() == Trade::LightData::Type::Point) {
+            if(light->type() == Trade::LightType::Point) {
                 new FlatDrawable{*object, flatShader({}), _lightSphereMesh, objectId, light->color(), Vector3{range}, nullptr, 0, 0, _data->objectVisualizationDrawables};
 
             /* Spotlight has a cone visualizing the inner angle and a circle at
                the end visualizing the outer angle */
-            } else if(light->type() == Trade::LightData::Type::Spot) {
+            } else if(light->type() == Trade::LightType::Spot) {
                 new FlatDrawable{*object, flatShader({}), _lightInnerConeMesh, objectId, light->color(),
                     Math::gather<'x', 'x', 'y'>(Vector2{
                         range*Math::tan(light->innerConeAngle()*0.5f), range
@@ -1246,12 +1246,12 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
             /* Directional has a circle and a line in its direction. The range
                is always infinite, so the line has always a length of 15. */
-            } else if(light->type() == Trade::LightData::Type::Directional) {
+            } else if(light->type() == Trade::LightType::Directional) {
                 new FlatDrawable{*object, flatShader({}), _lightOuterCircleMesh, objectId, light->color(), Vector3{0.25f, 0.25f, 0.0f}, nullptr, 0, 0, _data->objectVisualizationDrawables};
                 new FlatDrawable{*object, flatShader({}), _lightDirectionMesh, objectId, light->color(), Vector3{5.0f}, nullptr, 0, 0, _data->objectVisualizationDrawables};
 
             /* Ambient lights are defined just by the center */
-            } else if(light->type() == Trade::LightData::Type::Ambient) {
+            } else if(light->type() == Trade::LightType::Ambient) {
 
             /** @todo handle area lights when those are implemented */
             } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
