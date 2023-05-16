@@ -30,7 +30,7 @@
 
 namespace Magnum { namespace Player {
 
-void loadImage(GL::Texture2D& texture, Trade::ImageData2D& image);
+void loadImage(GL::Texture2D& texture, const Trade::ImageData2D& image);
 
 }}
 

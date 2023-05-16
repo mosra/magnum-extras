@@ -34,7 +34,7 @@
 
 namespace Magnum { namespace Player {
 
-void loadImage(GL::Texture2D& texture, Trade::ImageData2D& image) {
+void loadImage(GL::Texture2D& texture, const Trade::ImageData2D& image) {
     if(!image.isCompressed()) {
         /* Whitelist only things we *can* display */
         /** @todo signed formats, exposure knob for float formats */
