@@ -61,7 +61,6 @@
 #include <Magnum/Math/FunctionsBatch.h>
 #include <Magnum/Math/Swizzle.h>
 #include <Magnum/MeshTools/Compile.h>
-#include <Magnum/MeshTools/Duplicate.h>
 #include <Magnum/MeshTools/GenerateIndices.h>
 #include <Magnum/MeshTools/Transform.h>
 #include <Magnum/Primitives/Axis.h>
@@ -1061,17 +1060,22 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
            !meshData->attributeCount(Trade::MeshAttribute::Normal) &&
             meshData->hasAttribute(Trade::MeshAttribute::Position) &&
             meshData->attributeFormat(Trade::MeshAttribute::Position) == VertexFormat::Vector3) {
-            /* If the mesh is a triangle strip/fan, convert to an indexed one
-               first. The tool additionally expects the mesh to be non-indexed,
-               so duplicate if necessary. Generating smooth normals for those
-               will most probably cause weird artifacts, so  */
+            /* If the mesh is a triangle strip/fan, convert to indexed
+               triangles first. If the strip/fan is indexed, we can attempt to
+               generate smooth normals. If it's not, generate flat ones as
+               otherwise the smoothing would be only along the strip and not at
+               the seams, looking weird. */
             if(meshData->primitive() == MeshPrimitive::TriangleStrip ||
                meshData->primitive() == MeshPrimitive::TriangleFan) {
-                Debug{} << "Mesh" << meshName << "doesn't have normals, generating flat ones for a" << meshData->primitive();
-                if(meshData->isIndexed())
-                    meshData = MeshTools::duplicate(*std::move(meshData));
+                if(meshData->isIndexed()) {
+                    Debug{} << "Mesh" << meshName << "doesn't have normals, generating smooth ones using information from the index buffer for a" << meshData->primitive();
+                    flags |= MeshTools::CompileFlag::GenerateSmoothNormals;
+                } else {
+                    Debug{} << "Mesh" << meshName << "doesn't have normals, generating flat ones for a" << meshData->primitive();
+                    flags |= MeshTools::CompileFlag::GenerateFlatNormals;
+                }
+
                 meshData = MeshTools::generateIndices(*std::move(meshData));
-                flags |= MeshTools::CompileFlag::GenerateFlatNormals;
 
             /* Otherwise prefer smooth normals, if we have an index buffer
                telling us neighboring faces */
