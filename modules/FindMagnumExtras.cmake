@@ -79,7 +79,8 @@ find_package(Corrade REQUIRED ${_MAGNUMEXTRAS_CORRADE_DEPENDENCIES})
 # Magnum library dependencies
 set(_MAGNUMEXTRAS_MAGNUM_DEPENDENCIES )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
-    if(_component STREQUAL Ui)
+    # TODO remove once Whee replaces Ui
+    if(_component STREQUAL Ui OR _component STREQUAL Whee)
         set(_MAGNUMEXTRAS_${_component}_MAGNUM_DEPENDENCIES Text GL)
     endif()
 
@@ -99,7 +100,8 @@ mark_as_advanced(MAGNUMEXTRAS_INCLUDE_DIR)
 
 # Component distinction (listing them explicitly to avoid mistakes with finding
 # components from other repositories)
-set(_MAGNUMEXTRAS_LIBRARY_COMPONENTS Ui)
+# TODO remove once Whee replaces Ui
+set(_MAGNUMEXTRAS_LIBRARY_COMPONENTS Ui Whee)
 set(_MAGNUMEXTRAS_EXECUTABLE_COMPONENTS player ui-gallery)
 # Nothing is enabled by default right now
 set(_MAGNUMEXTRAS_IMPLICITLY_ENABLED_COMPONENTS )
