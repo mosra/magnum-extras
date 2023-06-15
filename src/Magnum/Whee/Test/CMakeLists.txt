@@ -1,0 +1,67 @@
+#
+#   This file is part of Magnum.
+#
+#   Copyright © 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019,
+#               2020, 2021, 2022, 2023 Vladimír Vondruš <mosra@centrum.cz>
+#
+#   Permission is hereby granted, free of charge, to any person obtaining a
+#   copy of this software and associated documentation files (the "Software"),
+#   to deal in the Software without restriction, including without limitation
+#   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+#   and/or sell copies of the Software, and to permit persons to whom the
+#   Software is furnished to do so, subject to the following conditions:
+#
+#   The above copyright notice and this permission notice shall be included
+#   in all copies or substantial portions of the Software.
+#
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+#   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+#   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+#   DEALINGS IN THE SOFTWARE.
+#
+
+# IDE folder in VS, Xcode etc. CMake 3.12+, older versions have only the FOLDER
+# property that would have to be set on each target separately.
+set(CMAKE_FOLDER "Magnum/Whee/Test")
+
+corrade_add_test(WheeAbstractLayerTest AbstractLayerTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeAbstractUserInterfaceTest AbstractUserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
+corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
+if(CORRADE_TARGET_EMSCRIPTEN)
+    if(CMAKE_VERSION VERSION_LESS 3.13)
+        message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
+    endif()
+    # It allocates 1M data / nodes to test boundary conditions, needs more
+    # memory
+    target_link_options(WheeAbstractLayerTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+    target_link_options(WheeAbstractUserInterfaceTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+endif()
+
+# Deliberately doesn't link to MagnumWhee in order to be able to iterate on the
+# implementation details in an isolated way without having to update the whole
+# library as well
+corrade_add_test(WheeAbstractUserI___ImplementationTest
+        AbstractUserInterfaceImplementationTest.cpp
+        ../Handle.cpp # for handle debug output
+    LIBRARIES
+        Magnum::Magnum)
+target_include_directories(WheeAbstractUserI___ImplementationTest PRIVATE $<TARGET_PROPERTY:MagnumWhee,INTERFACE_INCLUDE_DIRECTORIES>)
+# So the debug output operators in Handle.cpp are not attempted to be
+# dllimported on Windows
+target_compile_definitions(WheeAbstractUserI___ImplementationTest PRIVATE "MagnumWhee_EXPORTS")
+# MSVC creates *.lib and *.exp files even for an exe if there's any dllexport.
+# Don't want these. /NOIMPLIB will stop creating the *.lib in all versions, and
+# *.exp as well with MSVC 2019+. MSVC 2015 however skips creating the *.lib but
+# then attempts to create an *.exp out of it, dying.
+# https://developercommunity.visualstudio.com/t/when-using-def-and-noimplib-with-linkexe-it-create/1495047
+if(CORRADE_TARGET_MSVC AND NOT CORRADE_TARGET_CLANG_CL AND NOT CORRADE_MSVC2015_COMPATIBILITY AND NOT CMAKE_VERSION VERSION_LESS 3.13)
+    target_link_options(WheeAbstractUserI___ImplementationTest PRIVATE /NOIMPLIB)
+endif()
+
+set_property(TARGET
+    WheeHandleTest
+    APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
