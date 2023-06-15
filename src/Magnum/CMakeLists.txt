@@ -67,6 +67,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/versionExtras.h DESTINATION ${MAGNUM_I
 
 if(MAGNUM_WITH_UI)
     add_subdirectory(Ui)
+    add_subdirectory(Whee)
 endif()
 
 if(MAGNUM_BUILD_TESTS)

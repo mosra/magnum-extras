@@ -27,6 +27,16 @@
  * @brief Namespace @ref Magnum (part of @ref building-extras "Magnum Extras library")
  */
 
+/** @dir Magnum/Whee
+ * @brief Namespace @ref Magnum::Whee
+ */
+/** @namespace Magnum::Whee
+@brief UI library
+@m_since_latest
+
+@todoc remove these namespace + dir docs once merged back to @ref Magnum::Ui
+*/
+
 /** @dir Magnum/Ui
  * @brief Namespace @ref Magnum::Ui
  */
