@@ -101,7 +101,7 @@ if(NOT MAGNUM_BUILD_STATIC)
 elseif(MAGNUM_BUILD_STATIC_PIC)
     set_target_properties(MagnumUi PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
-target_link_libraries(MagnumUi
+target_link_libraries(MagnumUi PUBLIC
     Corrade::Interconnect
     Magnum::GL
     Magnum::Magnum
