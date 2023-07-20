@@ -179,6 +179,70 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/configure.h DESTINATION ${MAGNUM_INCLU
 # Magnum Whee target alias for superprojects
 add_library(MagnumExtras::Whee ALIAS MagnumWhee)
 
+if(MAGNUM_WITH_UI_GALLERY)
+    find_package(Magnum REQUIRED DebugTools)
+    if(CORRADE_TARGET_EMSCRIPTEN)
+        find_package(Magnum REQUIRED
+            AnyImageImporter
+            EmscriptenApplication)
+        find_package(MagnumPlugins REQUIRED
+            StbImageImporter
+            StbTrueTypeFont)
+    else()
+        find_package(Magnum REQUIRED Sdl2Application)
+    endif()
+
+    add_executable(magnum-whee-gallery
+        whee-gallery.cpp)
+    if(CORRADE_TARGET_WINDOWS AND NOT CORRADE_TARGET_WINDOWS_RT)
+        if(MSVC)
+            target_sources(magnum-ui-gallery PRIVATE WindowsHiDPI.manifest)
+        elseif(MINGW)
+            target_sources(magnum-ui-gallery PRIVATE WindowsHiDPI.rc)
+        endif()
+    endif()
+    target_link_libraries(magnum-whee-gallery PRIVATE
+        MagnumWhee
+        Magnum::Application
+        Magnum::DebugTools)
+    if(CORRADE_TARGET_IOS)
+        set_target_properties(magnum-ui-gallery PROPERTIES
+            MACOSX_BUNDLE ON
+            MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in
+            XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES")
+    elseif(CORRADE_TARGET_EMSCRIPTEN)
+        target_link_libraries(magnum-whee-gallery PRIVATE
+            Magnum::AnyImageImporter
+            MagnumPlugins::StbImageImporter
+            MagnumPlugins::StbTrueTypeFont)
+        if(CMAKE_VERSION VERSION_LESS 3.13)
+            message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
+        endif()
+        target_link_options(magnum-whee-gallery PRIVATE
+            "SHELL:$<$<CONFIG:Release>:--closure 1>")
+        add_custom_command(TARGET magnum-whee-gallery POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${MAGNUM_WEBAPPLICATION_CSS}
+                ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+                $<TARGET_FILE_DIR:magnum-whee-gallery>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/whee-gallery.html"
+                "$<TARGET_FILE_DIR:magnum-whee-gallery>/magnum-whee-gallery.html")
+        install(FILES whee-gallery.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-whee-gallery RENAME index.html)
+        install(TARGETS magnum-whee-gallery DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-whee-gallery)
+        install(FILES
+            $<TARGET_FILE_DIR:magnum-whee-gallery>/magnum-whee-gallery.js.mem
+            $<TARGET_FILE_DIR:magnum-whee-gallery>/magnum-whee-gallery.wasm
+            DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-whee-gallery OPTIONAL)
+        install(FILES
+            ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+            ${MAGNUM_WEBAPPLICATION_CSS}
+            DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-whee-gallery)
+    else()
+        install(TARGETS magnum-whee-gallery DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
+    endif()
+endif()
+
 if(MAGNUM_BUILD_TESTS)
     # Library with graceful assert for testing
     add_library(MagnumWheeTestLib ${SHARED_OR_STATIC} ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
