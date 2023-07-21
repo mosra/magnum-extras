@@ -421,6 +421,38 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         Containers::stridedArrayView(dataLayerIdsDataOffsetsSizesToDraw).slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::second),
         Containers::stridedArrayView(dataLayerIdsDataOffsetsSizesToDraw).slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::third));
 
+    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeDataOffsets), Containers::arrayView<UnsignedInt>({
+        0,  /* Node 3, three data */
+        3,  /* Node 13 */
+        3,  /* Node 9 */
+        3,  /* Node 1 */
+        3,  /* Node 4, one data */
+        4,  /* Node 2, three data */
+        7,  /* Node 7, two data */
+        9,  /* Node 11 */
+        9,  /* Node 10 */
+        9, /* Node 12, one data */
+        10
+    }), TestSuite::Compare::Container);
+
+    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeData).prefix(visibleNodeDataOffsets[Containers::arraySize(visibleNodeDataOffsets) - 1]), Containers::arrayView<DataHandle>({
+        /* Node 3 */
+        dataHandle(layer2, 376, 0xded),
+        dataHandle(layer5, 1777, 0xfff),
+        dataHandle(layer5, 1776, 0xfff),
+        /* Node 4 */
+        dataHandle(layer2, 22, 0x0b0),
+        /* Node 2 */
+        dataHandle(layer2, 87878, 0x999),
+        dataHandle(layer1, 333, 0xaaa),
+        dataHandle(layer3, 3675, 0xaba),
+        /* Node 7 */
+        dataHandle(layer3, 226622, 0xbbb),
+        dataHandle(layer1, 22777, 0x000),
+        /* Node 12 */
+        dataHandle(layer2, 79, 0xcec)
+    }), TestSuite::Compare::Container);
+
     CORRADE_COMPARE_AS(Containers::arrayView(dataToUpdateLayerOffsets), Containers::arrayView<UnsignedInt>({
         0,
         0,  /* Layer 0 has nothing */

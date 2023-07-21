@@ -243,7 +243,12 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
     return offset;
 }
 
-/* The `dataToUpdateLayerOffsets`, `dataToUpdateIds` and `dataToUpdateNodeIds`
+/* The `visibleNodeDataOffsets` and `visibleNodeData` arrays get filled with
+   data handles for visible nodes, with `visibleNodeDataOffsets[i]` to
+   `visibleNodeDataOffsets[i + 1]` being the range of data in
+   `visibleNodeData` corresponding to visible node at index `i`.
+
+   The `dataToUpdateLayerOffsets`, `dataToUpdateIds` and `dataToUpdateNodeIds`
    arrays get filled with data and node IDs in the desired draw order,
    clustered by layer ID, with `dataToUpdateLayerOffsets[i]` to
    `dataToUpdateLayerOffsets[i + 1]` being the range of data in
@@ -254,13 +259,9 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
    `dataToDrawLayerIds[j]`, with their total count being the return value of
    this function.
 
-   The `nodeIdsToVisibleNodes`, `visibleNodeDataOffsets`,
-   `visibleNodeData` and `previousDataToUpdateLayerOffsets` arrays are
-   temporary storage. The `visibleNodeDataOffsets` and
-   `dataToUpdateLayerOffsets` arrays are expected to be zero-initialized.
-
-   The `visibleNodeDataOffsets` array should be large enough to fit all layer
-   IDs from `data` plus one more item. */
+   The `nodeIdsToVisibleNodes` and `previousDataToUpdateLayerOffsets` arrays
+   are temporary storage. The `visibleNodeDataOffsets` and
+   `dataToUpdateLayerOffsets` arrays are expected to be zero-initialized. */
 UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::StridedArrayView1D<const DataHandle>& data, const Containers::StridedArrayView1D<const LayerHandle>& layersNext, const LayerHandle firstLayer, const Containers::StridedArrayView1D<const LayerFeatures>& layerFeatures, const Containers::ArrayView<UnsignedInt> nodeIdsToVisibleNodes, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<DataHandle> visibleNodeData, const Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets, const Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateNodeIds, const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
     CORRADE_INTERNAL_ASSERT(
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
