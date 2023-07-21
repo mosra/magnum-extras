@@ -53,11 +53,12 @@ enum class UserInterfaceState: UnsignedByte {
     /**
      * @ref AbstractUserInterface::update() needs to be called to recalculate
      * or reupload data attached to visible node hierarchy after they've been
-     * changed. Set implicitly if any of the layers have
-     * @ref LayerState::NeedsUpdate set, is implicitly reset once they no
-     * longer have it set, which happens next time
+     * changed. Set implicitly after every
+     * @ref AbstractUserInterface::setNodeSize() call and if any of the layers
+     * have @ref LayerState::NeedsUpdate set, is reset next time
      * @ref AbstractUserInterface::update() is called. Implied by
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
+     * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate},
      * @relativeref{UserInterfaceState,NeedsDataClean} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
@@ -75,6 +76,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref UserInterfaceState::NeedsDataClean was set, is reset next time
      * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate},
      * @relativeref{UserInterfaceState,NeedsDataClean} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
@@ -84,20 +86,34 @@ enum class UserInterfaceState: UnsignedByte {
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
+     * visible node hierarchy layout after node sizes or offsets changed. Set
+     * implicitly after every @ref AbstractUserInterface::setNodeOffset() call,
+     * is reset next time @ref AbstractUserInterface::update() is called.
+     * Implies @ref UserInterfaceState::NeedsDataUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate},
+     * @relativeref{UserInterfaceState,NeedsDataClean} and
+     * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
+     * everything that sets those flags.
+     */
+    NeedsNodeLayoutUpdate = NeedsDataUpdate|(1 << 2),
+
+    /**
+     * @ref AbstractUserInterface::update() needs to be called to refresh the
      * visible node hierarchy and data attached to it after nodes were added or
-     * removed, the top-level node order changed or node layout changed. Set
-     * implicitly after every @ref AbstractUserInterface::createNode(),
+     * removed or the top-level node order changed. Set implicitly after every
+     * @ref AbstractUserInterface::createNode(),
      * @relativeref{AbstractUserInterface,setNodeFlags()},
      * @relativeref{AbstractUserInterface,addNodeFlags()},
      * @relativeref{AbstractUserInterface,clearNodeFlags()},
      * @relativeref{AbstractUserInterface,setNodeOrder()} and
      * @relativeref{AbstractUserInterface,clearNodeOrder()} call, is reset next
      * time @ref AbstractUserInterface::update() is called. Implies
-     * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
+     * @ref UserInterfaceState::NeedsDataAttachmentUpdate and
+     * @ref UserInterfaceState::NeedsNodeLayoutUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsNodeUpdate = NeedsDataAttachmentUpdate|(1 << 2),
+    NeedsNodeUpdate = NeedsDataAttachmentUpdate|NeedsNodeLayoutUpdate|(1 << 3),
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune
@@ -110,7 +126,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsDataClean = NeedsDataAttachmentUpdate|(1 << 3),
+    NeedsDataClean = NeedsDataAttachmentUpdate|(1 << 4),
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
@@ -121,7 +137,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref UserInterfaceState::NeedsNodeUpdate and
      * @ref UserInterfaceState::NeedsDataClean.
      */
-    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 4),
+    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 5),
 };
 
 /**
@@ -539,12 +555,34 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         Vector2 nodeOffset(NodeHandle handle) const;
 
         /**
+         * @brief Set node offset relative to its parent
+         *
+         * Expects that @p handle is valid.
+         *
+         * Calling this function causes
+         * @ref UserInterfaceState::NeedsNodeLayoutUpdate to be set.
+         * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent()
+         */
+        void setNodeOffset(NodeHandle handle, const Vector2& offset);
+
+        /**
          * @brief Node size
          *
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(NodeHandle) const
          */
         Vector2 nodeSize(NodeHandle handle) const;
+
+        /**
+         * @brief Set node size
+         *
+         * Expects that @p handle is valid.
+         *
+         * Calling this function causes
+         * @ref UserInterfaceState::NeedsDataUpdate to be set.
+         * @see @ref isHandleValid(NodeHandle) const
+         */
+        void setNodeSize(NodeHandle handle, const Vector2& size);
 
         /**
          * @brief Node flags
@@ -757,7 +795,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Implicitly calls @ref clean(); called implicitly from @ref draw()
          * and all event processing functions. If @ref state() contains none of
          * @ref UserInterfaceState::NeedsDataUpdate,
-         * @ref UserInterfaceState::NeedsDataAttachmentUpdate or
+         * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
+         * @ref UserInterfaceState::NeedsNodeLayoutUpdate or
          * @ref UserInterfaceState::NeedsNodeUpdate, this function is a no-op,
          * otherwise it performs a subset of the following depending on the
          * state:
