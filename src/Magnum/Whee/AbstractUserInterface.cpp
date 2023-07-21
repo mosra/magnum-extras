@@ -53,6 +53,7 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         #define _c(value) case UserInterfaceState::value: return debug << "::" #value;
         _c(NeedsDataUpdate)
         _c(NeedsDataAttachmentUpdate)
+        _c(NeedsNodeLayoutUpdate)
         _c(NeedsNodeUpdate)
         _c(NeedsDataClean)
         _c(NeedsNodeClean)
@@ -76,8 +77,11 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsNodeUpdate,
         /* Implied by NeedsNodeUpdate, has to be after */
+        UserInterfaceState::NeedsNodeLayoutUpdate,
+        /* Implied by NeedsNodeUpdate, has to be after */
         UserInterfaceState::NeedsDataAttachmentUpdate,
-        /* Implied by NeedsDataAttachmentUpdate, has to be after */
+        /* Implied by NeedsDataAttachmentUpdate and NeedsNodeLayoutUpdate, has
+           to be after */
         UserInterfaceState::NeedsDataUpdate
     });
 }
@@ -717,10 +721,30 @@ Vector2 AbstractUserInterface::nodeOffset(const NodeHandle handle) const {
     return _state->nodes[nodeHandleId(handle)].used.offset;
 }
 
+void AbstractUserInterface::setNodeOffset(const NodeHandle handle, const Vector2& offset) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::setNodeOffset(): invalid handle" << handle, );
+    State& state = *_state;
+    state.nodes[nodeHandleId(handle)].used.offset = offset;
+
+    /* Mark the UI as needing an update() call to refresh node layout state */
+    state.state |= UserInterfaceState::NeedsNodeLayoutUpdate;
+}
+
 Vector2 AbstractUserInterface::nodeSize(const NodeHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::nodeSize(): invalid handle" << handle, {});
     return _state->nodes[nodeHandleId(handle)].used.size;
+}
+
+void AbstractUserInterface::setNodeSize(const NodeHandle handle, const Vector2& size) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::setNodeSize(): invalid handle" << handle, );
+    State& state = *_state;
+    state.nodes[nodeHandleId(handle)].used.size = size;
+
+    /* Mark the UI as needing an update() call to refresh data state */
+    state.state |= UserInterfaceState::NeedsDataUpdate;
 }
 
 NodeFlags AbstractUserInterface::nodeFlags(const NodeHandle handle) const {
@@ -1212,7 +1236,11 @@ AbstractUserInterface& AbstractUserInterface::update() {
             const std::size_t count = Implementation::visibleTopLevelNodeIndicesInto(state.visibleNodeChildrenCounts, state.visibleFrontToBackTopLevelNodeIndices.flipped<0>());
             state.visibleFrontToBackTopLevelNodeIndices = state.visibleFrontToBackTopLevelNodeIndices.exceptPrefix(state.visibleFrontToBackTopLevelNodeIndices.size() - count);
         }
+    }
 
+    /* If no layout update is needed, the `state.absoluteNodeOffsets` are all
+       up-to-date */
+    if(states >= UserInterfaceState::NeedsNodeLayoutUpdate) {
         /* 3. Calculate absolute offsets and clip rects for visible nodes. */
         for(const UnsignedInt id: state.visibleNodeIds) {
             const Node& node = state.nodes[id];
