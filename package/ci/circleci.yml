@@ -142,17 +142,27 @@ commands:
           ls -l /usr/bin/llvm-symbolizer-6.0
           ln -s /usr/bin/llvm-symbolizer{-6.0,}
 
-  install-cmake-3_4:
+  install-cmake:
+    parameters:
+      version:
+        type: string
+      sudo:
+        type: string
+        default: ""
     steps:
     - run:
-        name: Install CMake 3.4
+        name: Install CMake << parameters.version >>
         command: |
-          apt install -y wget
+          version_short=<< parameters.version >>
+          version_short="${version_short%.*}"
+          << parameters.sudo >> apt install -y wget
           mkdir -p $HOME/cmake && cd $HOME/cmake
-          wget -nc --no-check-certificate https://cmake.org/files/v3.4/cmake-3.4.3-Linux-x86_64.tar.gz
-          tar --strip-components=1 -xzf cmake-3.4.3-Linux-x86_64.tar.gz
+          wget -nc --no-check-certificate https://cmake.org/files/v$version_short/cmake-<< parameters.version >>-Linux-x86_64.tar.gz
+          tar --strip-components=1 -xzf cmake-<< parameters.version >>-Linux-x86_64.tar.gz
           echo 'export PATH=$HOME/cmake/bin:$PATH' >> $BASH_ENV
-          source $BASH_ENV && cmake --version | grep 3.4
+          source $BASH_ENV
+          cmake --version | grep << parameters.version >>
+          ctest --version | grep << parameters.version >>
 
   install-swiftshader-gles:
     parameters:
@@ -242,7 +252,8 @@ jobs:
     - install-base-linux:
         extra: libgl1-mesa-dev libsdl2-dev
     - install-gcc-4_8
-    - install-cmake-3_4
+    - install-cmake:
+        version: "3.5.2"
     - build:
         script: unix-desktop.sh
     - lcov
@@ -275,7 +286,8 @@ jobs:
     - install-base-linux:
         extra: libsdl2-dev wget unzip
     - install-gcc-4_8
-    - install-cmake-3_4
+    - install-cmake:
+        version: "3.5.2"
     - install-swiftshader-gles:
         build: ubuntu-16.04
     - build:
@@ -295,7 +307,8 @@ jobs:
     - install-base-linux:
         extra: libsdl2-dev wget unzip
     - install-gcc-4_8
-    - install-cmake-3_4
+    - install-cmake:
+        version: "3.5.2"
     - install-swiftshader-gles:
         build: ubuntu-16.04
     - build:
@@ -316,7 +329,8 @@ jobs:
     - install-base-linux:
         extra: libgl1-mesa-dev libsdl2-dev
     - install-gcc-4_8
-    - install-cmake-3_4
+    - install-cmake:
+        version: "3.5.2"
     - build:
         script: unix-desktop.sh
     - lcov
@@ -333,7 +347,8 @@ jobs:
     - install-base-linux:
         extra: libgl1-mesa-dev libsdl2-dev
     - install-gcc-4_8
-    - install-cmake-3_4
+    - install-cmake:
+        version: "3.5.2"
     - build:
         script: unix-desktop.sh
 
@@ -351,7 +366,8 @@ jobs:
     - install-base-linux:
         extra: libgl1-mesa-dev libsdl2-dev
     - install-clang
-    - install-cmake-3_4
+    - install-cmake:
+        version: "3.5.2"
     - build:
         script: unix-desktop.sh
 
