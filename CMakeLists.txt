@@ -90,7 +90,14 @@ endif()
 option(MAGNUM_BUILD_TESTS "Build unit tests" OFF)
 cmake_dependent_option(MAGNUM_BUILD_GL_TESTS "Build unit tests for OpenGL code" OFF "MAGNUM_BUILD_TESTS" OFF)
 
-option(MAGNUM_BUILD_STATIC "Build static libraries (default are dynamic)" OFF)
+# It's inconvenient to manually load all shared libs using Android / JNI,
+# similarly on Emscripten, so there default to static.
+if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
+    set(OFF_EXCEPT_ANDROID_EMSCRIPTEN ON)
+else()
+    set(OFF_EXCEPT_ANDROID_EMSCRIPTEN OFF)
+endif()
+option(MAGNUM_BUILD_STATIC "Build static libraries" ${OFF_EXCEPT_ANDROID_EMSCRIPTEN})
 # Disable PIC on Emscripten by default (but still allow it to be enabled
 # explicitly if one so desires). Currently causes linker errors related to
 # __memory_base etc.: https://github.com/emscripten-core/emscripten/issues/8761
@@ -163,11 +170,6 @@ if(_MAGNUMEXTRAS_ACCEPT_DEPRECATED_UNPREFIXED_OPTIONS AND MAGNUM_BUILD_DEPRECATE
     if(_MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION)
         message(DEPRECATION "Unprefixed options such as ${_MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION} are deprecated, use MAGNUM_${_MAGNUMEXTRAS_WARN_DEPRECATED_UNPREFIXED_OPTION} instead. Delete the unprefixed variable from CMake cache or set both to the same value to silence this warning.")
     endif()
-endif()
-
-# Dynamic linking is meaningless on Emscripten and too inconvenient on Android
-if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
-    set(MAGNUM_BUILD_STATIC ON)
 endif()
 
 if(MAGNUM_BUILD_TESTS)
