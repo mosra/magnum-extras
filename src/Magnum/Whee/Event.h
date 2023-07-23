@@ -33,6 +33,7 @@
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Magnum.h>
 
+#include "Magnum/Whee/Whee.h"
 #include "Magnum/Whee/visibility.h"
 
 namespace Magnum { namespace Whee {
@@ -89,17 +90,6 @@ class PointerEvent {
         Vector2 position() const { return _position; }
 
         /**
-         * @brief Set event position
-         *
-         * Used internally from @ref AbstractUserInterface event handlers.
-         * Exposed just for testing purposes, there should be no need to call
-         * this function directly.
-         */
-        void setPosition(const Vector2& position) {
-            _position = position;
-        }
-
-        /**
          * @brief Whether the event is accepted
          *
          * Implicitly @cpp false @ce.
@@ -116,6 +106,8 @@ class PointerEvent {
         }
 
     private:
+        friend AbstractUserInterface;
+
         Vector2 _position;
         Pointer _type;
         bool _accepted = false;
