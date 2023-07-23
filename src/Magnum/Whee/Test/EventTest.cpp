@@ -57,9 +57,6 @@ void EventTest::pointer() {
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_VERIFY(!event.isAccepted());
 
-    event.setPosition({1.0f, 2.0f});
-    CORRADE_COMPARE(event.position(), (Vector2{1.0f, 2.0f}));
-
     event.setAccepted();
     CORRADE_VERIFY(event.isAccepted());
 

@@ -863,12 +863,12 @@ void AbstractLayerTest::pointerEvent() {
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
-            CORRADE_COMPARE(event.position(), (Vector2{1.0f, 2.0f}));
+            CORRADE_COMPARE(event.type(), Pointer::MouseLeft);
             called *= 2;
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 2);
-            CORRADE_COMPARE(event.position(), (Vector2{3.0f, 4.0f}));
+            CORRADE_COMPARE(event.type(), Pointer::MouseRight);
             called *= 3;
         }
 
@@ -883,11 +883,9 @@ void AbstractLayerTest::pointerEvent() {
     layer.create();
     {
         PointerEvent event{Pointer::MouseLeft};
-        event.setPosition({1.0f, 2.0f});
         layer.pointerPressEvent(1, event);
     } {
-        PointerEvent event{Pointer::MouseLeft};
-        event.setPosition({3.0f, 4.0f});
+        PointerEvent event{Pointer::MouseRight};
         layer.pointerReleaseEvent(2, event);
     }
     CORRADE_COMPARE(layer.called, 2*3);
