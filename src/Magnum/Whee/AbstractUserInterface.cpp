@@ -1398,7 +1398,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
     const Vector2 position = globalPosition - nodeOffset;
     for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
         const DataHandle data = state.visibleNodeEventData[j];
-        event.setPosition(position);
+        event._position = position;
         ((*state.layers[dataHandleLayerId(data)].used.instance).*function)(dataHandleId(data), event);
         if(event.isAccepted())
             return true;
