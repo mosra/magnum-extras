@@ -329,6 +329,12 @@ struct AbstractUserInterface::State {
         further design considerations */
     DataHandle pointerEventCaptureData = DataHandle::Null;
 
+    /* Position of the previous pointer event. NullOpt if there was no pointer
+       event yet. */
+    /** @todo maintain previous position per pointer type? i.e., mouse, pen and
+        finger independently? */
+    Containers::Optional<Vector2> pointerEventPreviousGlobalPosition;
+
     /* Data for updates, event handling and drawing, repopulated by clean() and
        update() */
     Containers::ArrayTuple nodeStateStorage;
@@ -1413,6 +1419,9 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Conta
 
     /* If the position is inside, recurse into *direct* children. If the event
        is handled there, we're done. */
+    /** @todo maintain some info about how many actual event handlers is in
+        particular subtrees, to not have to do complex hit testing when there's
+        nothing to call anyway? especially for move events and such */
     for(UnsignedInt i = 1, iMax = state.visibleNodeChildrenCounts[visibleNodeIndex] + 1; i != iMax; i += state.visibleNodeChildrenCounts[visibleNodeIndex + i] + 1) {
         const Containers::Pair<NodeHandle, DataHandle> called = callEvent<Event, function>(globalPosition, visibleNodeIndex + i, event);
         if(called.first() != NodeHandle::Null)
@@ -1450,6 +1459,8 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     CORRADE_ASSERT(!event._accepted,
         "Whee::AbstractUserInterface::pointerPressEvent(): event already accepted", {});
 
+    State& state = *_state;
+
     /* Press event has isCaptured() set always */
     event._captured = true;
 
@@ -1460,10 +1471,12 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     if(event._accepted && event._captured) {
         CORRADE_INTERNAL_ASSERT(called.first() != NodeHandle::Null &&
                                 called.second() != DataHandle::Null);
-        State& state = *_state;
         state.pointerEventCaptureNode = called.first();
         state.pointerEventCaptureData = called.second();
     }
+
+    /* Update the last relative position with this one */
+    state.pointerEventPreviousGlobalPosition = globalPosition;
 
     return event._accepted;
 }
@@ -1502,11 +1515,73 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
     /* After a release, there should be no captured node anymore */
     state.pointerEventCaptureNode = NodeHandle::Null;
     state.pointerEventCaptureData = DataHandle::Null;
+
+    /* Update the last relative position with this one */
+    state.pointerEventPreviousGlobalPosition = globalPosition;
+
     return event._accepted;
 }
 
 NodeHandle AbstractUserInterface::pointerEventCapturedNode() const {
     return _state->pointerEventCaptureNode;
+}
+
+bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, PointerMoveEvent& event) {
+    CORRADE_ASSERT(!event._accepted,
+        "Whee::AbstractUserInterface::pointerMoveEvent(): event already accepted", {});
+
+    /* Update so we don't have stale pointerEventCapture{Node,Data}. Otherwise
+       the update() gets called only later in callEvent(). */
+    update();
+
+    /* Fill in position relative to the previous event, if there was any. Since
+       the value is event-relative and not node-relative, it doesn't need any
+       further updates in the callEvent() code. */
+    State& state = *_state;
+    event._relativePosition = state.pointerEventPreviousGlobalPosition ?
+        globalPosition - *state.pointerEventPreviousGlobalPosition : Vector2{};
+
+    /* If there's a node capturing pointer events, call the event on it
+       directly. Given that update() was called, these should be both either
+       null or both valid. */
+    if(state.pointerEventCaptureNode != NodeHandle::Null) {
+        CORRADE_INTERNAL_ASSERT(isHandleValid(state.pointerEventCaptureNode) &&
+                                isHandleValid(state.pointerEventCaptureData));
+
+        /* Called on a captured node, so isCaptured() should be true */
+        event._captured = true;
+
+        const Vector2 position = globalPosition - state.absoluteNodeOffsets[nodeHandleId(state.pointerEventCaptureNode)];
+        event._position = position;
+        state.layers[dataHandleLayerId(state.pointerEventCaptureData)].used.instance->pointerMoveEvent(dataHandleId(state.pointerEventCaptureData), event);
+
+        /* If pointer capture isn't desired anymore, clear it */
+        if(!event._captured) {
+            state.pointerEventCaptureNode = NodeHandle::Null;
+            state.pointerEventCaptureData = DataHandle::Null;
+        }
+
+    /* Otherwise the usual hit testing etc. */
+    } else {
+        /* Not called on a captured node, isCaptured() should be false */
+        event._captured = false;
+
+        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(globalPosition, event);
+
+        /* If the event was accepted and capture is desired, remember the
+           concrete node and data it got called on */
+        if(event._accepted && event._captured) {
+            CORRADE_INTERNAL_ASSERT(called.first() != NodeHandle::Null &&
+                                    called.second() != DataHandle::Null);
+            state.pointerEventCaptureNode = called.first();
+            state.pointerEventCaptureData = called.second();
+        }
+    }
+
+    /* Update the last relative position with this one */
+    state.pointerEventPreviousGlobalPosition = globalPosition;
+
+    return event._accepted;
 }
 
 }}
