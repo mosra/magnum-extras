@@ -1378,7 +1378,7 @@ AbstractUserInterface& AbstractUserInterface::draw() {
 }
 
 template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEvent(const Vector2& globalPosition, UnsignedInt visibleNodeIndex, Event& event) {
-    CORRADE_INTERNAL_ASSERT(!event.isAccepted());
+    CORRADE_INTERNAL_ASSERT(!event._accepted);
     State& state = *_state;
     const UnsignedInt nodeId = state.visibleNodeIds[visibleNodeIndex];
 
@@ -1400,7 +1400,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
         const DataHandle data = state.visibleNodeEventData[j];
         event._position = position;
         ((*state.layers[dataHandleLayerId(data)].used.instance).*function)(dataHandleId(data), event);
-        if(event.isAccepted())
+        if(event._accepted)
             return true;
     }
 
@@ -1420,14 +1420,14 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
 }
 
 bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, PointerEvent& event) {
-    CORRADE_ASSERT(!event.isAccepted(),
+    CORRADE_ASSERT(!event._accepted,
         "Whee::AbstractUserInterface::pointerPressEvent(): event already accepted", {});
 
     return callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPosition, event);
 }
 
 bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event) {
-    CORRADE_ASSERT(!event.isAccepted(),
+    CORRADE_ASSERT(!event._accepted,
         "Whee::AbstractUserInterface::pointerReleaseEvent(): event already accepted", {});
 
     return callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPosition, event);
