@@ -24,6 +24,7 @@
 */
 
 #include <sstream>
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/Utility/DebugStl.h>
 
@@ -35,20 +36,32 @@ struct EventTest: TestSuite::Tester {
     explicit EventTest();
 
     void debugPointer();
+    void debugPointers();
 
     void pointer();
+    void pointerMove();
+    void pointerMoveNoPointer();
 };
 
 EventTest::EventTest() {
     addTests({&EventTest::debugPointer,
+              &EventTest::debugPointers,
 
-              &EventTest::pointer});
+              &EventTest::pointer,
+              &EventTest::pointerMove,
+              &EventTest::pointerMoveNoPointer});
 }
 
 void EventTest::debugPointer() {
     std::ostringstream out;
     Debug{&out} << Pointer::MouseMiddle << Pointer(0xde);
     CORRADE_COMPARE(out.str(), "Whee::Pointer::MouseMiddle Whee::Pointer(0xde)\n");
+}
+
+void EventTest::debugPointers() {
+    std::ostringstream out;
+    Debug{&out} << (Pointer::MouseLeft|Pointer::Finger|Pointer(0x80)) << Pointers{};
+    CORRADE_COMPARE(out.str(), "Whee::Pointer::MouseLeft|Whee::Pointer::Finger|Whee::Pointer(0x80) Whee::Pointers{}\n");
 }
 
 void EventTest::pointer() {
@@ -65,6 +78,34 @@ void EventTest::pointer() {
     CORRADE_VERIFY(event.isAccepted());
 
     event.setAccepted(false);
+    CORRADE_VERIFY(!event.isAccepted());
+}
+
+void EventTest::pointerMove() {
+    PointerMoveEvent event{Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger};
+    CORRADE_COMPARE(event.type(), Pointer::MouseRight);
+    CORRADE_COMPARE(event.types(), Pointer::MouseLeft|Pointer::Finger);
+    CORRADE_COMPARE(event.position(), Vector2{});
+    CORRADE_COMPARE(event.relativePosition(), Vector2{});
+    CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isAccepted());
+
+    event.setCaptured(true);
+    CORRADE_VERIFY(event.isCaptured());
+
+    event.setAccepted();
+    CORRADE_VERIFY(event.isAccepted());
+
+    event.setAccepted(false);
+    CORRADE_VERIFY(!event.isAccepted());
+}
+
+void EventTest::pointerMoveNoPointer() {
+    PointerMoveEvent event{{}, Pointer::MouseLeft|Pointer::Finger};
+    CORRADE_COMPARE(event.type(), Containers::NullOpt);
+    CORRADE_COMPARE(event.position(), Vector2{});
+    CORRADE_COMPARE(event.relativePosition(), Vector2{});
+    CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isAccepted());
 }
 

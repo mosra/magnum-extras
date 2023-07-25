@@ -50,8 +50,9 @@ enum class LayerFeature: UnsignedByte {
     Draw = 1 << 0,
 
     /**
-     * Event handling using @ref AbstractLayer::pointerPressEvent() and
-     * @ref AbstractLayer::pointerReleaseEvent().
+     * Event handling using @ref AbstractLayer::pointerPressEvent(),
+     * @relativeref{AbstractLayer,pointerReleaseEvent()} and
+     * @relativeref{AbstractLayer,pointerMoveEvent()}.
      */
     Event = 1 << 1
 };
@@ -365,6 +366,20 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          */
         void pointerReleaseEvent(UnsignedInt dataId, PointerEvent& event);
 
+        /**
+         * @brief Handle a pointer move event
+         *
+         * Used internally from @ref AbstractUserInterface::pointerMoveEvent().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data and
+         * @ref PointerMoveEvent::position() is relative to the node to which
+         * the data is attached. Delegates to @ref doPointerMoveEvent(), see
+         * its documentation for more information.
+         */
+        void pointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
     private:
         /** @brief Implementation for @ref features() */
         virtual LayerFeatures doFeatures() const = 0;
@@ -488,6 +503,31 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * implicitly propagated further.
          */
         virtual void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event);
+
+        /**
+         * @brief Handle a pointer move event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data, with
+         *      @ref PointerMoveEvent::position() relative to the node to which
+         *      the data is attached. If pointer event capture is active, the
+         *      position can be outside of the area of the node.
+         *
+         * Implementation for @ref pointerMoveEvent(), which is called from
+         * @ref AbstractUserInterface::pointerMoveEvent(). See its
+         * documentation for more information about pointer event behavior,
+         * especially event capture. It's guaranteed that @ref doUpdate() was
+         * called before this function with up-to-date data for @p dataId.
+         *
+         * If the implementation handles the event, it's expected to call
+         * @ref PointerEvent::setAccepted() on it to prevent it from being
+         * propagated further. Pointer capture behavior for remaining pointer
+         * events can be changed using @ref PointerMoveEvent::setCaptured().
+         *
+         * Default implementation does nothing, i.e. the @p event gets
+         * implicitly propagated further.
+         */
+        virtual void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
         /* Common implementation for remove(DataHandle) and
            remove(LayerDataHandle) */

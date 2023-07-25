@@ -332,4 +332,14 @@ void AbstractLayer::pointerReleaseEvent(const UnsignedInt dataId, PointerEvent& 
 
 void AbstractLayer::doPointerReleaseEvent(UnsignedInt, PointerEvent&) {}
 
+void AbstractLayer::pointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::pointerMoveEvent(): feature not supported", );
+    CORRADE_ASSERT(dataId < _state->data.size(),
+        "Whee::AbstractLayer::pointerMoveEvent(): index" << dataId << "out of range for" << _state->data.size() << "data", );
+    return doPointerMoveEvent(dataId, event);
+}
+
+void AbstractLayer::doPointerMoveEvent(UnsignedInt, PointerMoveEvent&) {}
+
 }}
