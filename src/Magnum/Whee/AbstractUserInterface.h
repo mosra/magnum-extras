@@ -842,7 +842,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * pointer events until and including a @ref pointerReleaseEvent() even
          * if they happen outside of its area, unless
          * @ref PointerEvent::setCaptured() is called by the implementation to
-         * disable this behavior. Any node that was already captured when
+         * disable this behavior. The capture can be also removed from a later
+         * @ref pointerMoveEvent(). Any node that was already captured when
          * calling this function is ignored.
          *
          * Expects that the event is not accepted yet.
@@ -857,16 +858,16 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * Implicitly calls @ref update() and @ref clean().
          *
-         * If a node was captured by a previous @ref pointerPressEvent(),
-         * @ref pointerReleaseEvent() wasn't called yet and the node wasn't
-         * removed since, calls @ref AbstractLayer::pointerReleaseEvent() on
-         * that node even if it happens outside of its area, with the event
-         * position made relative to the node. Returns @cpp true @ce if the
-         * event was accepted by the captured node, @cpp false @ce if it wasn't
-         * and thus the event should be propagated further. The capture is
-         * implicitly released after calling this function independently of
-         * whether @ref PointerEvent::setCaptured() was set by the
-         * implementation.
+         * If a node was captured by a previous @ref pointerPressEvent() or
+         * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
+         * yet and the node wasn't removed since, calls
+         * @ref AbstractLayer::pointerReleaseEvent() on that node even if it
+         * happens outside of its area, with the event position made relative
+         * to the node. Returns @cpp true @ce if the event was accepted by the
+         * captured node, @cpp false @ce if it wasn't and thus the event should
+         * be propagated further. The capture is implicitly released after
+         * calling this function independently of whether
+         * @ref PointerEvent::setCaptured() was set by the implementation.
          *
          * Otherwise, if a node wasn't captured, finds the front-most nodes
          * under @p globalPosition and then backtracks to parent nodes. For
@@ -887,21 +888,61 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         bool pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event);
 
         /**
+         * @brief Handle a pointer move event
+         *
+         * Implicitly calls @ref update() and @ref clean().
+         *
+         * If a node was captured by a previous @ref pointerPressEvent() or
+         * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
+         * yet and the node wasn't removed since, calls
+         * @ref AbstractLayer::pointerMoveEvent() on that node even if it
+         * happens outside of its area, with the event position made relative
+         * to the node. Returns @cpp true @ce if the event was accepted by the
+         * captured node, @cpp false @ce if it wasn't and thus the event should
+         * be propagated further. If the implementation called
+         * @ref PointerEvent::setCaptured() with @cpp false @ce, the capture is
+         * released after this function, otherwise it stays unchanged.
+         *
+         * Otherwise, if a node wasn't captured, finds the front-most nodes
+         * under @p globalPosition and then backtracks to parent nodes. For
+         * each such node calls @ref AbstractLayer::pointerMoveEvent() on all
+         * data belonging to layers that support @ref LayerFeature::Event until
+         * one of them accepts the event. For each call the event position is
+         * made relative to the node to which the data is attached. Returns
+         * @cpp true @ce if the event was accepted, @cpp false @ce if it wasn't
+         * or there wasn't any visible event handling node at given position
+         * and thus the event should be propagated further. If the event was
+         * accepted and the implementation called
+         * @ref PointerEvent::setCaptured() with @cpp true @ce, the node that
+         * accepted the event implicitly captures all further pointer events
+         * until and including a @ref pointerReleaseEvent() even if they happen
+         * outside of its area, or until the capture is released in a
+         * @ref pointerMoveEvent() again.
+         *
+         * Expects that the event is not accepted yet.
+         * @see @ref PointerEvent::isAccepted(),
+         *      @ref PointerEvent::setAccepted(),
+         *      @ref pointerEventCapturedNode()
+         */
+        bool pointerMoveEvent(const Vector2& globalPosition, PointerMoveEvent& event);
+
+        /**
          * @brief Node captured by last pointer event
          *
          * Returns handle of a node that captured the last
-         * @ref pointerPressEvent(). The captured node then receives all
-         * following pointer events until and including a
-         * @ref pointerReleaseEvent(), which implicitly releases the capture
+         * @ref pointerPressEvent() or @ref pointerMoveEvent(). The captured
+         * node then receives all following pointer events until and including
+         * a @ref pointerReleaseEvent() even if they happen outside of its
+         * area, or until the capture is released in a @ref pointerMoveEvent()
          * again.
          *
          * If no pointer press event was called yet, if the event wasn't
-         * accepted by any node, if the capture was disabled with
-         * @ref PointerEvent::setCaptured() or if a @ref pointerReleaseEvent()
-         * was called since, returns @ref NodeHandle::Null. It also becomes
-         * @ref NodeHandle::Null if the node, any of its parents or data
-         * attached to the node were removed or hidden and @ref update() was
-         * called since.
+         * accepted by any node, if the capture was disabled or subsequently
+         * released with @ref PointerEvent::setCaptured() or if a
+         * @ref pointerReleaseEvent() was called since, returns
+         * @ref NodeHandle::Null. It also becomes @ref NodeHandle::Null if the
+         * node, any of its parents or data attached to the node were removed
+         * or hidden and @ref update() was called since.
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref update() wasn't called since.
