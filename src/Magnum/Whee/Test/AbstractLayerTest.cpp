@@ -25,6 +25,7 @@
 
 #include <sstream>
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
@@ -871,6 +872,11 @@ void AbstractLayerTest::pointerEvent() {
             CORRADE_COMPARE(event.type(), Pointer::MouseRight);
             called *= 3;
         }
+        void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            CORRADE_COMPARE(dataId, 3);
+            CORRADE_COMPARE(event.type(), Pointer::Finger);
+            called *= 5;
+        }
 
         int called = 1;
     } layer{layerHandle(0, 1)};
@@ -881,14 +887,18 @@ void AbstractLayerTest::pointerEvent() {
     layer.create();
     layer.create();
     layer.create();
+    layer.create();
     {
         PointerEvent event{Pointer::MouseLeft};
         layer.pointerPressEvent(1, event);
     } {
         PointerEvent event{Pointer::MouseRight};
         layer.pointerReleaseEvent(2, event);
+    } {
+        PointerMoveEvent event{Pointer::Finger, {}};
+        layer.pointerMoveEvent(3, event);
     }
-    CORRADE_COMPARE(layer.called, 2*3);
+    CORRADE_COMPARE(layer.called, 2*3*5);
 }
 
 void AbstractLayerTest::pointerEventNotSupported() {
@@ -903,11 +913,14 @@ void AbstractLayerTest::pointerEventNotSupported() {
     std::ostringstream out;
     Error redirectError{&out};
     PointerEvent event{Pointer::MouseMiddle};
+    PointerMoveEvent moveEvent{{}, {}};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
+    layer.pointerMoveEvent(0, moveEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): feature not supported\n"
-        "Whee::AbstractLayer::pointerReleaseEvent(): feature not supported\n");
+        "Whee::AbstractLayer::pointerReleaseEvent(): feature not supported\n"
+        "Whee::AbstractLayer::pointerMoveEvent(): feature not supported\n");
 }
 
 void AbstractLayerTest::pointerEventNotImplemented() {
@@ -922,8 +935,10 @@ void AbstractLayerTest::pointerEventNotImplemented() {
     layer.create();
 
     PointerEvent event{Pointer::MouseMiddle};
+    PointerMoveEvent moveEvent{{}, {}};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
+    layer.pointerMoveEvent(0, moveEvent);
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
@@ -946,11 +961,14 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     std::ostringstream out;
     Error redirectError{&out};
     PointerEvent event{Pointer::MouseMiddle};
+    PointerMoveEvent moveEvent{{}, {}};
     layer.pointerPressEvent(2, event);
     layer.pointerReleaseEvent(2, event);
+    layer.pointerMoveEvent(2, moveEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): index 2 out of range for 2 data\n"
-        "Whee::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n");
+        "Whee::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n"
+        "Whee::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n");
 }
 
 }}}}
