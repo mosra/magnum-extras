@@ -29,7 +29,7 @@
  * @brief Forward declarations for the @ref Magnum::Whee namespace
  */
 
-#include "Magnum/Types.h"
+#include "Magnum/Magnum.h"
 
 namespace Magnum { namespace Whee {
 
@@ -43,7 +43,9 @@ class AbstractLayer;
 class AbstractUserInterface;
 
 enum class Pointer: UnsignedByte;
+typedef Containers::EnumSet<Pointer> Pointers;
 class PointerEvent;
+class PointerMoveEvent;
 #endif
 
 }}

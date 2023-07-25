@@ -25,6 +25,8 @@
 
 #include "Event.h"
 
+#include <Corrade/Containers/EnumSet.hpp>
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Utility/Debug.h>
 
 namespace Magnum { namespace Whee {
@@ -46,6 +48,23 @@ Debug& operator<<(Debug& debug, const Pointer value) {
     }
 
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const Pointers value) {
+    return Containers::enumSetDebugOutput(debug, value, "Whee::Pointers{}", {
+        Pointer::MouseLeft,
+        Pointer::MouseMiddle,
+        Pointer::MouseRight,
+        Pointer::Finger,
+        Pointer::Pen,
+        Pointer::Eraser
+    });
+}
+
+PointerMoveEvent::PointerMoveEvent(const Containers::Optional<Pointer> type, const Pointers types): _type{type ? *type : Pointer{}}, _types{types} {}
+
+Containers::Optional<Pointer> PointerMoveEvent::type() const {
+    return _type == Pointer{} ? Containers::NullOpt : Containers::optional(_type);
 }
 
 }}

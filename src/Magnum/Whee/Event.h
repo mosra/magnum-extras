@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::PointerEvent, enum @ref Magnum::Whee::Pointer
+ * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, enum @ref Magnum::Whee::Pointer, enum set @ref Magnum::Whee::Pointers
  * @m_since_latest
  */
 
@@ -41,15 +41,18 @@ namespace Magnum { namespace Whee {
 @brief Pointer type
 @m_since_latest
 
-@see @ref PointerEvent
+@see @ref PointerEvent, @ref PointerMoveEvent
 */
 enum class Pointer: UnsignedByte {
-    MouseLeft,      /**< Left mouse button */
-    MouseMiddle,    /**< Middle mouse button */
-    MouseRight,     /**< Right mouse button */
-    Finger,         /**< Finger */
-    Pen,            /**< Pen */
-    Eraser          /**< Eraser */
+    /* Zero value is reserved for an unknown pointer. All other values are
+       mutually exclusive bits to be used in the Pointers set. */
+
+    MouseLeft = 1 << 0,     /**< Left mouse button */
+    MouseMiddle = 1 << 1,   /**< Middle mouse button */
+    MouseRight = 1 << 2,    /**< Right mouse button */
+    Finger = 1 << 3,        /**< Finger */
+    Pen = 1 << 4,           /**< Pen */
+    Eraser = 1 << 5         /**< Eraser */
 };
 
 /**
@@ -59,7 +62,23 @@ enum class Pointer: UnsignedByte {
 MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, Pointer value);
 
 /**
-@brief Pointer event
+@brief Pointer types
+@m_since_latest
+
+@see @ref PointerMoveEvent
+*/
+typedef Containers::EnumSet<Pointer> Pointers;
+
+/**
+@debugoperatorenum{Pointers}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, Pointers value);
+
+CORRADE_ENUMSET_OPERATORS(Pointers)
+
+/**
+@brief Pointer press or release event
 @m_since_latest
 
 @see @ref AbstractUserInterface::pointerPressEvent(),
@@ -136,6 +155,111 @@ class PointerEvent {
 
         Vector2 _position;
         Pointer _type;
+        bool _accepted = false;
+        bool _captured = false;
+};
+
+/**
+@brief Pointer move event
+@m_since_latest
+
+@see @ref AbstractUserInterface::pointerMoveEvent(),
+    @ref AbstractLayer::pointerMoveEvent()
+*/
+class MAGNUM_WHEE_EXPORT PointerMoveEvent {
+    public:
+        /**
+         * @brief Constructor
+         * @param type      Pointer type that changed in this event or
+         *      @ref Containers::NullOpt
+         * @param types     Pointer types pressed in this event
+         *
+         * The position is set from @ref AbstractUserInterface event handler
+         * internals.
+         */
+        explicit PointerMoveEvent(Containers::Optional<Pointer> type, Pointers types);
+
+        /**
+         * @brief Pointer type that changed in this event
+         *
+         * If no pointer changed in this event (i.e., all pointers that were
+         * pressed before are still pressed), returns @ref Containers::NullOpt.
+         * Use @ref types() to check what all pointers are pressed in this
+         * event. If @ref type() is not empty and @ref types() contain
+         * @ref type(), it means given pointer type was pressed, if they don't,
+         * it means it was released.
+         */
+        Containers::Optional<Pointer> type() const;
+
+        /**
+         * @brief Pointer types pressed in this event
+         *
+         * Returns an empty set if no pointers are pressed, which happens for
+         * example when a mouse is just moved around.
+         */
+        Pointers types() const { return _types; }
+
+        /**
+         * @brief Event position
+         *
+         * Relative to the containing node.
+         */
+        Vector2 position() const { return _position; }
+
+        /**
+         * @brief Position relative to previous pointer event
+         *
+         * Relative to the previous pointer event. If no pointer event happened
+         * before, is a zero vector.
+         */
+        Vector2 relativePosition() const { return _relativePosition; }
+
+        /**
+         * @brief Whether the event is captured on a node
+         *
+         * Is implicitly @cpp true @ce if the event happens on a captured node,
+         * @cpp false @ce otherwise.
+         */
+        bool isCaptured() const { return _captured; }
+
+        /**
+         * @brief Set whether to capture the event on a node
+         *
+         * By default, after a pointer press event, a node captures all
+         * following pointer events until and including a pointer release, even
+         * if they happen outside of the node area. If capture is disabled, the
+         * events are always sent to the actual node under the pointer.
+         *
+         * The capture can be both disabled and enabled again for all move
+         * events, each time it's enabled again it'll capture the actual node
+         * under the pointer.
+         */
+        void setCaptured(bool captured) {
+            _captured = captured;
+        }
+
+        /**
+         * @brief Whether the event is accepted
+         *
+         * Implicitly @cpp false @ce.
+         */
+        bool isAccepted() const { return _accepted; }
+
+        /**
+         * @brief Set the event as accepted
+         *
+         * Once an event is accepted, it doesn't propagate further.
+         */
+        void setAccepted(bool accepted = true) {
+            _accepted = accepted;
+        }
+
+    private:
+        friend AbstractUserInterface;
+
+        Vector2 _position, _relativePosition;
+        Pointer _type; /* NullOpt encoded as Pointer{} to avoid an include */
+        Pointers _types;
         bool _accepted = false;
         bool _captured = false;
 };
