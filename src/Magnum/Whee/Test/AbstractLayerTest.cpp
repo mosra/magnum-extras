@@ -82,6 +82,7 @@ struct AbstractLayerTest: TestSuite::Tester {
     void pointerEventNotSupported();
     void pointerEventNotImplemented();
     void pointerEventOutOfRange();
+    void pointerEventAlreadyAccepted();
 };
 
 AbstractLayerTest::AbstractLayerTest() {
@@ -122,7 +123,8 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::pointerEvent,
               &AbstractLayerTest::pointerEventNotSupported,
               &AbstractLayerTest::pointerEventNotImplemented,
-              &AbstractLayerTest::pointerEventOutOfRange});
+              &AbstractLayerTest::pointerEventOutOfRange,
+              &AbstractLayerTest::pointerEventAlreadyAccepted});
 }
 
 void AbstractLayerTest::debugFeature() {
@@ -969,6 +971,34 @@ void AbstractLayerTest::pointerEventOutOfRange() {
         "Whee::AbstractLayer::pointerPressEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n");
+}
+
+void AbstractLayerTest::pointerEventAlreadyAccepted() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    PointerEvent event{Pointer::MouseMiddle};
+    event.setAccepted();
+    PointerMoveEvent moveEvent{{}, {}};
+    moveEvent.setAccepted();
+    layer.pointerPressEvent(0, event);
+    layer.pointerReleaseEvent(0, event);
+    layer.pointerMoveEvent(0, moveEvent);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::pointerPressEvent(): event already accepted\n"
+        "Whee::AbstractLayer::pointerReleaseEvent(): event already accepted\n"
+        "Whee::AbstractLayer::pointerMoveEvent(): event already accepted\n");
 }
 
 }}}}
