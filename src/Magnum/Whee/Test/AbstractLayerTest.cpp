@@ -879,6 +879,16 @@ void AbstractLayerTest::pointerEvent() {
             CORRADE_COMPARE(event.type(), Pointer::Finger);
             called *= 5;
         }
+        void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            CORRADE_COMPARE(dataId, 4);
+            CORRADE_COMPARE(event.type(), Pointer::Finger);
+            called *= 7;
+        }
+        void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            CORRADE_COMPARE(dataId, 5);
+            CORRADE_COMPARE(event.type(), Pointer::Finger);
+            called *= 11;
+        }
 
         int called = 1;
     } layer{layerHandle(0, 1)};
@@ -886,6 +896,8 @@ void AbstractLayerTest::pointerEvent() {
     /* Capture correct test case name */
     CORRADE_VERIFY(true);
 
+    layer.create();
+    layer.create();
     layer.create();
     layer.create();
     layer.create();
@@ -899,8 +911,14 @@ void AbstractLayerTest::pointerEvent() {
     } {
         PointerMoveEvent event{Pointer::Finger, {}};
         layer.pointerMoveEvent(3, event);
+    } {
+        PointerMoveEvent event{Pointer::Finger, {}};
+        layer.pointerEnterEvent(4, event);
+    } {
+        PointerMoveEvent event{Pointer::Finger, {}};
+        layer.pointerLeaveEvent(5, event);
     }
-    CORRADE_COMPARE(layer.called, 2*3*5);
+    CORRADE_COMPARE(layer.called, 2*3*5*7*11);
 }
 
 void AbstractLayerTest::pointerEventNotSupported() {
@@ -919,10 +937,14 @@ void AbstractLayerTest::pointerEventNotSupported() {
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
+    layer.pointerEnterEvent(0, moveEvent);
+    layer.pointerLeaveEvent(0, moveEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): feature not supported\n"
-        "Whee::AbstractLayer::pointerMoveEvent(): feature not supported\n");
+        "Whee::AbstractLayer::pointerMoveEvent(): feature not supported\n"
+        "Whee::AbstractLayer::pointerEnterEvent(): feature not supported\n"
+        "Whee::AbstractLayer::pointerLeaveEvent(): feature not supported\n");
 }
 
 void AbstractLayerTest::pointerEventNotImplemented() {
@@ -941,6 +963,8 @@ void AbstractLayerTest::pointerEventNotImplemented() {
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
+    layer.pointerEnterEvent(0, moveEvent);
+    layer.pointerLeaveEvent(0, moveEvent);
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
@@ -967,10 +991,14 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     layer.pointerPressEvent(2, event);
     layer.pointerReleaseEvent(2, event);
     layer.pointerMoveEvent(2, moveEvent);
+    layer.pointerEnterEvent(2, moveEvent);
+    layer.pointerLeaveEvent(2, moveEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n"
-        "Whee::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n");
+        "Whee::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n"
+        "Whee::AbstractLayer::pointerEnterEvent(): index 2 out of range for 2 data\n"
+        "Whee::AbstractLayer::pointerLeaveEvent(): index 2 out of range for 2 data\n");
 }
 
 void AbstractLayerTest::pointerEventAlreadyAccepted() {
@@ -995,10 +1023,14 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
+    layer.pointerEnterEvent(0, moveEvent);
+    layer.pointerLeaveEvent(0, moveEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): event already accepted\n"
-        "Whee::AbstractLayer::pointerMoveEvent(): event already accepted\n");
+        "Whee::AbstractLayer::pointerMoveEvent(): event already accepted\n"
+        "Whee::AbstractLayer::pointerEnterEvent(): event already accepted\n"
+        "Whee::AbstractLayer::pointerLeaveEvent(): event already accepted\n");
 }
 
 }}}}
