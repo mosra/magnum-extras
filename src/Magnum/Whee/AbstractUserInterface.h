@@ -807,8 +807,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Partitions node data attachments by the layer and then by draw
          *      order
          * -    Calls @ref AbstractLayer::update() with the partitioned data
-         * -    Resets @ref pointerEventCapturedNode() if the node no longer
-         *      exists or is not visible
+         * -    Resets @ref pointerEventCapturedNode() or
+         *      @ref pointerEventHoveredNode() if the nodes no longer exist or
+         *      are not visible
          *
          * After calling this function, @ref state() is empty.
          */
@@ -897,32 +898,52 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * yet and the node wasn't removed since, calls
          * @ref AbstractLayer::pointerMoveEvent() on that node even if it
          * happens outside of its area, with the event position made relative
-         * to the node. Returns @cpp true @ce if the event was accepted by the
-         * captured node, @cpp false @ce if it wasn't and thus the event should
-         * be propagated further. If the implementation called
-         * @ref PointerEvent::setCaptured() with @cpp false @ce, the capture is
-         * released after this function, otherwise it stays unchanged.
+         * to the node. If the move event happened inside the node area and is
+         * accepted, the node is treated as hovered, otherwise as not hovered.
+         * An @ref AbstractLayer::pointerEnterEvent() or
+         * @relativeref{AbstractLayer,pointerLeaveEvent()} is then called for
+         * the node if the node hover status changed with the same @p event
+         * except for @ref PointerMoveEvent::relativePosition() which is reset
+         * to a zero vector. No corresponding leave / enter event is called for
+         * any other node in this case. Returns @cpp true @ce if the move event
+         * was accepted by the captured node, @cpp false @ce if it wasn't and
+         * thus the event should be propagated further; accept status of the
+         * enter and leave events is ignored. If the move, enter or leave event
+         * implementations called @ref PointerMoveEvent::setCaptured()
+         * resulting in it being @cpp false @ce, the capture is released after
+         * this function, otherwise it stays unchanged.
          *
          * Otherwise, if a node wasn't captured, finds the front-most nodes
          * under @p globalPosition and then backtracks to parent nodes. For
          * each such node calls @ref AbstractLayer::pointerMoveEvent() on all
          * data belonging to layers that support @ref LayerFeature::Event until
-         * one of them accepts the event. For each call the event position is
-         * made relative to the node to which the data is attached. Returns
-         * @cpp true @ce if the event was accepted, @cpp false @ce if it wasn't
-         * or there wasn't any visible event handling node at given position
-         * and thus the event should be propagated further. If the event was
-         * accepted and the implementation called
-         * @ref PointerEvent::setCaptured() with @cpp true @ce, the node that
-         * accepted the event implicitly captures all further pointer events
-         * until and including a @ref pointerReleaseEvent() even if they happen
-         * outside of its area, or until the capture is released in a
-         * @ref pointerMoveEvent() again.
+         * one of them accepts the event, in which case given node is then
+         * treated as hovered; if no nodes accept the event, there's no hovered
+         * node. For each call the event position is made relative to the node
+         * to which the data is attached. If the currently hovered node
+         * changed, an @ref AbstractLayer::pointerLeaveEvent() is called for a
+         * previously hovered node if it exists, and then a corresponding
+         * @ref AbstractLayer::pointerEnterEvent() is called on the current
+         * node if it exists, in both cases with the same @p event except for
+         * @ref PointerMoveEvent::relativePosition() which is reset to a zero
+         * vector. Returns @cpp true @ce if the move event was accepted by any
+         * node, @cpp false @ce if it wasn't or there wasn't any visible event
+         * handling node at given position and thus the event should be
+         * propagated further; accept status of the enter and leave events is
+         * ignored. If the accepted move event or the enter event called
+         * @ref PointerMoveEvent::setCaptured() resulting in it being
+         * @cpp true @ce, the containing node implicitly captures all further
+         * pointer events until and including a @ref pointerReleaseEvent() even
+         * if they happen outside of its area, or until the capture is released
+         * in a @ref pointerMoveEvent() again. Calling
+         * @ref PointerMoveEvent::setCaptured() in the leave event has no
+         * effect in this case.
          *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(),
-         *      @ref pointerEventCapturedNode()
+         *      @ref pointerEventCapturedNode(),
+         *      @ref pointerEventHoveredNode()
          */
         bool pointerMoveEvent(const Vector2& globalPosition, PointerMoveEvent& event);
 
@@ -948,6 +969,24 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * were removed and @ref update() wasn't called since.
          */
         NodeHandle pointerEventCapturedNode() const;
+
+        /**
+         * @brief Node hovered by last pointer event
+         *
+         * Returns handle of a node that was under the pointer for the last
+         * @ref pointerMoveEvent(). Such node already received a
+         * @ref AbstractLayer::pointerEnterEvent(). Once a
+         * @ref pointerMoveEvent() leaves its area, it will receive a
+         * @ref AbstractLayer::pointerLeaveEvent(), and this becomes
+         * @ref NodeHandle::Null. It's also @ref NodeHandle::Null if no pointer
+         * move event was called yet or if the node, any of its parents or data
+         * attached to the node were removed or hidden and @ref update() was
+         * called since.
+         *
+         * The returned handle may be invalid if the node or any of its parents
+         * were removed and @ref update() wasn't called since.
+         */
+        NodeHandle pointerEventHoveredNode() const;
 
     private:
         /* Used by removeNode() and clean() */

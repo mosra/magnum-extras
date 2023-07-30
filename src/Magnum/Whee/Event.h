@@ -164,7 +164,9 @@ class PointerEvent {
 @m_since_latest
 
 @see @ref AbstractUserInterface::pointerMoveEvent(),
-    @ref AbstractLayer::pointerMoveEvent()
+    @ref AbstractLayer::pointerMoveEvent(),
+    @ref AbstractLayer::pointerEnterEvent(),
+    @ref AbstractLayer::pointerLeaveEvent()
 */
 class MAGNUM_WHEE_EXPORT PointerMoveEvent {
     public:
@@ -210,7 +212,8 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
          * @brief Position relative to previous pointer event
          *
          * Relative to the previous pointer event. If no pointer event happened
-         * before, is a zero vector.
+         * before, is a zero vector. For pointer enter and leave events it's a
+         * zero vector always, as they happen immediately after another event.
          */
         Vector2 relativePosition() const { return _relativePosition; }
 
@@ -230,9 +233,10 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
          * if they happen outside of the node area. If capture is disabled, the
          * events are always sent to the actual node under the pointer.
          *
-         * The capture can be both disabled and enabled again for all move
-         * events, each time it's enabled again it'll capture the actual node
-         * under the pointer.
+         * The capture can be both disabled and enabled again for all pointer
+         * move, enter and leave events, each time it's enabled again it'll
+         * capture the actual node under the pointer. Calling this function has
+         * no effect on a pointer leave event that isn't captured.
          */
         void setCaptured(bool captured) {
             _captured = captured;
