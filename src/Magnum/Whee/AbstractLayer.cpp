@@ -364,4 +364,40 @@ void AbstractLayer::pointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent&
 
 void AbstractLayer::doPointerMoveEvent(UnsignedInt, PointerMoveEvent&) {}
 
+void AbstractLayer::pointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::pointerEnterEvent(): feature not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
+    #endif
+    CORRADE_ASSERT(dataId < state.data.size(),
+        "Whee::AbstractLayer::pointerEnterEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::pointerEnterEvent(): event already accepted", );
+    /* This isn't triggerable from public code so can be an internal assert,
+       verifying just that the UserInterface internals don't mess up */
+    CORRADE_INTERNAL_ASSERT(event.relativePosition().isZero());
+    return doPointerEnterEvent(dataId, event);
+}
+
+void AbstractLayer::doPointerEnterEvent(UnsignedInt, PointerMoveEvent&) {}
+
+void AbstractLayer::pointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::pointerLeaveEvent(): feature not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
+    #endif
+    CORRADE_ASSERT(dataId < state.data.size(),
+        "Whee::AbstractLayer::pointerLeaveEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::pointerLeaveEvent(): event already accepted", );
+    /* This isn't triggerable from public code so can be an internal assert,
+       verifying just that the UserInterface internals don't mess up */
+    CORRADE_INTERNAL_ASSERT(event.relativePosition().isZero());
+    return doPointerLeaveEvent(dataId, event);
+}
+
+void AbstractLayer::doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) {}
+
 }}

@@ -389,6 +389,44 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          */
         void pointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
+        /**
+         * @brief Handle a pointer enter event
+         *
+         * Used internally from @ref AbstractUserInterface::pointerMoveEvent().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data and
+         * @ref PointerMoveEvent::position() is relative to the node to which
+         * the data is attached, and @ref PointerMoveEvent::relativePosition()
+         * is a zero vector, given that the event is meant to happen right
+         * after another event. The event is expected to not be accepted yet.
+         * Delegates to @ref doPointerEnterEvent(), see its documentation for
+         * more information.
+         * @see @ref PointerMoveEvent::isAccepted(),
+         *      @ref PointerMoveEvent::setAccepted()
+         */
+        void pointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
+        /**
+         * @brief Handle a pointer leave event
+         *
+         * Used internally from @ref AbstractUserInterface::pointerMoveEvent().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data and
+         * @ref PointerMoveEvent::position() is relative to the node to which
+         * the data is attached, and @ref PointerMoveEvent::relativePosition()
+         * is a zero vector, given that the event is meant to happen right
+         * after another event. The event is expected to not be accepted yet.
+         * Delegates to @ref doPointerLeaveEvent(), see its documentation for
+         * more information.
+         * @see @ref PointerMoveEvent::isAccepted(),
+         *      @ref PointerMoveEvent::setAccepted()
+         */
+        void pointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
     private:
         /** @brief Implementation for @ref features() */
         virtual LayerFeatures doFeatures() const = 0;
@@ -525,8 +563,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Implementation for @ref pointerMoveEvent(), which is called from
          * @ref AbstractUserInterface::pointerMoveEvent(). See its
          * documentation for more information about pointer event behavior,
-         * especially event capture. It's guaranteed that @ref doUpdate() was
-         * called before this function with up-to-date data for @p dataId.
+         * especially event capture, hover and relation to
+         * @ref doPointerEnterEvent() and @ref doPointerLeaveEvent(). It's
+         * guaranteed that @ref doUpdate() was called before this function with
+         * up-to-date data for @p dataId.
          *
          * If the implementation handles the event, it's expected to call
          * @ref PointerEvent::setAccepted() on it to prevent it from being
@@ -534,9 +574,66 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * events can be changed using @ref PointerMoveEvent::setCaptured().
          *
          * Default implementation does nothing, i.e. the @p event gets
-         * implicitly propagated further.
+         * implicitly propagated further. That also implies the node is never
+         * marked as hovered and enter / leave events are not emitted for it.
          */
         virtual void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
+        /**
+         * @brief Handle a pointer enter event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data, with
+         *      @ref PointerMoveEvent::position() relative to the node to which
+         *      the data is attached. If pointer event capture is active, the
+         *      position can be outside of the area of the node.
+         *
+         * Implementation for @ref pointerEnterEvent(), which is called from
+         * @ref AbstractUserInterface::pointerMoveEvent() if the currently
+         * hovered node changed to one containing @p dataId. See its
+         * documentation for more information about relation of pointer
+         * enter/leave events to @ref doPointerMoveEvent(). It's guaranteed
+         * that @ref doUpdate() was called before this function with up-to-date
+         * data for @p dataId.
+         *
+         * Unlike @ref doPointerMoveEvent(), the accept status is ignored for
+         * enter and leave events, as the event isn't propagated anywhere if
+         * it's not handled. Thus calling @ref PointerEvent::setAccepted() has
+         * no effect here. On the other hand, pointer capture behavior for
+         * remaining pointer events can be changed using
+         * @ref PointerMoveEvent::setCaptured() here as well.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
+        /**
+         * @brief Handle a pointer leave event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data, with
+         *      @ref PointerMoveEvent::position() relative to the node to which
+         *      the data is attached. If pointer event capture is active, the
+         *      position can be outside of the area of the node.
+         *
+         * Implementation for @ref pointerEnterEvent(), which is called from
+         * @ref AbstractUserInterface::pointerMoveEvent() if the currently
+         * hovered node changed away from one containing @p dataId. See its
+         * documentation for more information about relation of pointer
+         * enter/leave events to @ref doPointerMoveEvent(). It's guaranteed
+         * that @ref doUpdate() was called before this function with up-to-date
+         * data for @p dataId.
+         *
+         * Unlike @ref doPointerMoveEvent(), the accept status is ignored for
+         * enter and leave events, as the event isn't propagated anywhere if
+         * it's not handled. Thus calling @ref PointerEvent::setAccepted() has
+         * no effect here. On the other hand, pointer capture behavior for
+         * remaining pointer events can be changed using
+         * @ref PointerMoveEvent::setCaptured() here as well.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
         /* Common implementation for remove(DataHandle) and
            remove(LayerDataHandle) */
