@@ -267,12 +267,14 @@ void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& a
         const UnsignedInt nodeId = visibleNodeIds[i];
 
         /* Calculate node clip rect min and max */
+        const Vector2 size = nodeSizes[nodeId];
         const Vector2 min = absoluteNodeOffsets[nodeId];
-        const Vector2 max = min + nodeSizes[nodeId];
+        const Vector2 max = min + size;
 
         bool visible;
         /* If the rect has an empty area, skip it altogether */
-        if(Math::equal(min, max).any()) {
+        if(size.x() < Math::TypeTraits<Float>::epsilon() ||
+           size.y() < Math::TypeTraits<Float>::epsilon()) {
             visible = false;
 
         /* If we're at a top-level node, save its clip rect for use by
