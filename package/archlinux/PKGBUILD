@@ -13,18 +13,25 @@ provides=('magnum-extras-git')
 
 _rootdir=$startdir/../../
 
+_buildtype=Release
+# _buildtype=RelWithDebInfo
+
 build() {
     mkdir -p "$_rootdir/build"
     cd "$_rootdir/build"
 
+    # RelWithDebInfo is enabled but not built -- it's meant for profiling from
+    # within the build dir.
+    #
     # Colored output is enabled implicitly. If Ninja detects it's outputting to
     # a pipe, it strips it away from the output, alternatively you can set the
     # GCC_COLORS= (empty) env variable to temporarily disable colors. The
     # inverse, i.e. preserving colors when Ninja outputs to a pipe can be done
     # with CLICOLOR_FORCE=1: https://github.com/ninja-build/ninja/issues/2196
     cmake .. \
-        -DCMAKE_CONFIGURATION_TYPES="Debug;Release" \
+        -DCMAKE_CONFIGURATION_TYPES="Debug;Release;RelWithDebInfo" \
         -DCMAKE_CROSS_CONFIGS=all \
+        -DCMAKE_CXX_FLAGS_RELWITHDEBINFO="-O2 -g -DNDEBUG -fno-omit-frame-pointer" \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_COLOR_DIAGNOSTICS=ON \
         -DMAGNUM_BUILD_TESTS=ON \
@@ -33,7 +40,7 @@ build() {
         -DMAGNUM_WITH_UI=ON \
         -DMAGNUM_WITH_UI_GALLERY=ON \
         -G "Ninja Multi-Config"
-    ninja all:all
+    ninja all:Debug all:$_buildtype
 }
 
 check() {
@@ -41,7 +48,7 @@ check() {
     export CORRADE_TEST_SKIP_BENCHMARKS=ON
     export CORRADE_TEST_COLOR=ON
 
-    for config in Debug Release; do
+    for config in Debug $_buildtype; do
         ctest -C $config --output-on-failure -j
     done
 }
@@ -55,5 +62,9 @@ package() {
         mv ${i}{,d}
     done
 
-    DESTDIR="$pkgdir/" ninja install/strip:Release
+    if [ "$_buildtype" = RelWithDebInfo ]; then
+        DESTDIR="$pkgdir/" ninja install:$_buildtype
+    else
+        DESTDIR="$pkgdir/" ninja install/strip:$_buildtype
+    fi
 }
