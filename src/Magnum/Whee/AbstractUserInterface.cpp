@@ -593,16 +593,16 @@ LayerHandle AbstractUserInterface::createLayer(const LayerHandle before) {
     return handle;
 }
 
-void AbstractUserInterface::setLayerInstance(Containers::Pointer<AbstractLayer>&& instance) {
+AbstractLayer& AbstractUserInterface::setLayerInstance(Containers::Pointer<AbstractLayer>&& instance) {
+    State& state = *_state;
     CORRADE_ASSERT(instance,
-        "Whee::AbstractUserInterface::setLayerInstance(): instance is null", );
+        "Whee::AbstractUserInterface::setLayerInstance(): instance is null", *state.layers[0].used.instance);
     const LayerHandle handle = instance->handle();
     CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::AbstractUserInterface::setLayerInstance(): invalid handle" << handle, );
-    State& state = *_state;
+        "Whee::AbstractUserInterface::setLayerInstance(): invalid handle" << handle, *state.layers[0].used.instance);
     const UnsignedInt id = layerHandleId(handle);
     CORRADE_ASSERT(!state.layers[id].used.instance,
-        "Whee::AbstractUserInterface::setLayerInstance(): instance for" << handle << "already set", );
+        "Whee::AbstractUserInterface::setLayerInstance(): instance for" << handle << "already set", *state.layers[0].used.instance);
     Layer& layer = state.layers[id];
     layer.used.features = instance->features();
     layer.used.instance = Utility::move(instance);
@@ -611,6 +611,8 @@ void AbstractUserInterface::setLayerInstance(Containers::Pointer<AbstractLayer>&
        isn't, it gets done during the next setSize() call. */
     if(!state.size.isZero() && layer.used.features & LayerFeature::Draw)
         layer.used.instance->setSize(state.size, state.framebufferSize);
+
+    return *layer.used.instance;
 }
 
 const AbstractLayer& AbstractUserInterface::layer(const LayerHandle handle) const {
