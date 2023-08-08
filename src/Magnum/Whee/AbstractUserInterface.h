@@ -509,6 +509,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
 
         /**
          * @brief Set a layer instance
+         * @return Reference to @p instance
          *
          * Expects that @p instance was created with a @ref LayerHandle
          * returned from @ref createLayer() earlier, the handle is valid and
@@ -520,7 +521,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @see @ref AbstractLayer::handle(),
          *      @ref isHandleValid(LayerHandle) const
          */
-        void setLayerInstance(Containers::Pointer<AbstractLayer>&& instance);
+        AbstractLayer& setLayerInstance(Containers::Pointer<AbstractLayer>&& instance);
+        /** @overload */
+        template<class T> T& setLayerInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setLayerInstance(Containers::Pointer<AbstractLayer>{Utility::move(instance)}));
+        }
 
         /**
          * @brief Layer instance

@@ -820,10 +820,12 @@ void AbstractUserInterfaceTest::layerSetInstance() {
         Layer* firstInstancePointer = firstInstance.get();
         Layer* secondInstancePointer = secondInstance.get();
         /* Add them in different order, shouldn't matter */
-        ui.setLayerInstance(Utility::move(secondInstance));
-        ui.setLayerInstance(Utility::move(firstInstance));
+        Layer& secondInstanceReference = ui.setLayerInstance(Utility::move(secondInstance));
+        Layer& firstInstanceReference = ui.setLayerInstance(Utility::move(firstInstance));
         CORRADE_COMPARE(ui.layerCapacity(), 3);
         CORRADE_COMPARE(ui.layerUsedCount(), 3);
+        CORRADE_COMPARE(&firstInstanceReference, firstInstancePointer);
+        CORRADE_COMPARE(&secondInstanceReference, secondInstancePointer);
         CORRADE_COMPARE(&ui.layer(first), firstInstancePointer);
         CORRADE_COMPARE(&ui.layer(second), secondInstancePointer);
         CORRADE_COMPARE(&ui.layer<Layer>(first), firstInstancePointer);
