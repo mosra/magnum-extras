@@ -65,3 +65,33 @@ endif()
 set_property(TARGET
     WheeHandleTest
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
+
+if(MAGNUM_TARGET_GL AND NOT CORRADE_TARGET_ANDROID)
+    find_package(Magnum REQUIRED DebugTools Shaders)
+    if(CORRADE_TARGET_EMSCRIPTEN)
+        find_package(Magnum REQUIRED EmscriptenApplication)
+    else()
+        find_package(Magnum REQUIRED Sdl2Application)
+    endif()
+
+    add_executable(WheeStressTest StressTest.cpp)
+    target_link_libraries(WheeStressTest PRIVATE
+        MagnumWhee
+        Magnum::Application
+        Magnum::DebugTools
+        Magnum::Shaders)
+    if(CORRADE_TARGET_EMSCRIPTEN)
+        if(CMAKE_VERSION VERSION_LESS 3.12)
+            message(FATAL_ERROR "CMake 3.12+ is required in order to specify Emscripten linker options")
+        endif()
+        target_link_options(WheeStressTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+        add_custom_command(TARGET WheeStressTest POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${MAGNUM_WEBAPPLICATION_CSS}
+                ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+                $<TARGET_FILE_DIR:WheeStressTest>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/StressTest.html"
+                "$<TARGET_FILE_DIR:WheeStressTest>/WheeStressTest.html")
+    endif()
+endif()
