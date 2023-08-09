@@ -35,6 +35,7 @@
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Utility/Format.h>
 #include <Magnum/Math/Vector4.h>
 
 #include "Magnum/Whee/AbstractLayer.h"
@@ -2254,7 +2255,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op, not calling anything in the layer */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2265,7 +2266,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() should be a no-op, not calling anything in the layer */
     if(data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2283,7 +2284,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2294,7 +2295,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() should be a no-op too */
     if(data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.update();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2312,7 +2313,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -2323,7 +2324,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() rebuilds internal state, calls doUpdate() on the layer,
        and resets the flag. */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
             {dataHandleId(data1), nodeHandleId(nested)},
@@ -2349,7 +2350,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
@@ -2361,7 +2362,7 @@ void AbstractUserInterfaceTest::state() {
        internally shouldn't do any other state rebuild. Nothing observable to
        verify that with, tho. */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
             {dataHandleId(data1), nodeHandleId(nested)},
@@ -2389,7 +2390,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
@@ -2400,7 +2401,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() reuploads the data with a single size changed and
        resets the flag, but internally shouldn't do any other state rebuild */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
             {dataHandleId(data1), nodeHandleId(nested)},
@@ -2427,7 +2428,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeLayoutUpdate);
@@ -2438,7 +2439,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() recalculates absoute offsets, uploads the new data and
        resets the flag */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
             {dataHandleId(data1), nodeHandleId(nested)},
@@ -2464,7 +2465,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -2474,7 +2475,7 @@ void AbstractUserInterfaceTest::state() {
 
     /* Calling update() rebuilds internal state without the hidden hierarchy */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data3), nodeHandleId(another)}
         };
@@ -2503,7 +2504,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -2514,7 +2515,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() reuploads the original data again and resets the
        flag */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
             {dataHandleId(data1), nodeHandleId(nested)},
@@ -2545,7 +2546,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -2555,7 +2556,7 @@ void AbstractUserInterfaceTest::state() {
 
     /* Calling update() uploads data in new order and resets the flag */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
             {dataHandleId(data1), nodeHandleId(nested)}
@@ -2585,7 +2586,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -2595,7 +2596,7 @@ void AbstractUserInterfaceTest::state() {
 
     /* Calling update() uploads data in new order and resets the flag */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data3), nodeHandleId(another)},
             {dataHandleId(data2), nodeHandleId(node)},
@@ -2624,7 +2625,7 @@ void AbstractUserInterfaceTest::state() {
        to not require clean() anymore */
     if(data.clean) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             bool expectedDataIdsToRemove[]{
                 false, false, false /* data2 already removed, so not set */
             };
@@ -2640,7 +2641,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() then uploads remaining data and resets the remaining
        state flag; also calls clean() if wasn't done above already */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         bool expectedDataIdsToRemove[]{
             false, false, false /* data2 already removed, so not set */
         };
@@ -2675,7 +2676,7 @@ void AbstractUserInterfaceTest::state() {
        resets the state to not require clean() anymore */
     if(data.clean) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             bool expectedDataIdsToRemove[]{
                 /* data1 was attached to `nested`, which got orphaned after
                    removing its parent, `node` */
@@ -2694,7 +2695,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() then uploads remaining data and resets the remaining
        state flag */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         bool expectedDataIdsToRemove[]{
             /* data1 was attached to `nested`, which got orphaned after
                 removing its parent, `node` */
@@ -2732,7 +2733,7 @@ void AbstractUserInterfaceTest::state() {
     /* Calling clean() removes the remaining attachment and resets the state */
     if(data.clean) {
         {
-            CORRADE_ITERATION(__LINE__);
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             /* The `layer` is no more, so nothing to check there. The
                `anotherLayer` gets called with an empty view because it has no
                data. */
@@ -2749,7 +2750,7 @@ void AbstractUserInterfaceTest::state() {
        anymore, but it's still called to let the layer refresh its internal
        state. */
     {
-        CORRADE_ITERATION(__LINE__);
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {},
             {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
