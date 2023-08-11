@@ -25,6 +25,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <cstring> /* std::memset() */
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/Triple.h>
@@ -523,8 +524,11 @@ void orderNodeDataForEventHandling(const Containers::ArrayView<const UnsignedInt
         /* First calculate how much data there is for each layer order index,
            skipping data in layers without LayerFeature::Event. The array is
            sized for the max layer count but only `layerCount + 1` elements get
-           filled.  */
-        UnsignedInt dataOffsets[(1 << Implementation::LayerHandleIdBits) + 1]{};
+           filled. Also only those get zero-initialized -- compared to a {} it
+           makes a significant difference when there's just a few layers but
+           a ton of nodes. */
+        UnsignedInt dataOffsets[(1 << Implementation::LayerHandleIdBits) + 1];
+        std::memset(dataOffsets, 0, (layerCount + 1)*sizeof(UnsignedInt));
         for(std::size_t j = visibleNodeDataOffsets[i]; j != visibleNodeDataOffsets[i + 1]; ++j) {
             const UnsignedInt layerId = dataHandleLayerId(visibleNodeData[j]);
             /* Might possbily be faster to do this just once for every layer
