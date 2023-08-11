@@ -200,6 +200,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
         .addBooleanOption("node-clip-update").setHelp("node-clip-update", "trigger NeedsNodeClipUpdate update every frame")
         .addBooleanOption("node-layout-update").setHelp("node-layout-update", "trigger NeedsNodeLayoutUpdate update every frame")
         .addBooleanOption("node-update").setHelp("node-update", "trigger NeedsNodeUpdate every frame")
+        .addOption("clip", "1.0").setHelp("clip", "clip to only a part of the view", "RATIO")
         /** @todo other triggers */
         .addOption("size", "1000 1000").setHelp("size", "node grid size")
         .parse(arguments.argc, arguments.argv);
@@ -223,7 +224,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
         DebugTools::FrameProfilerGL::Value::GpuDuration|
         DebugTools::FrameProfilerGL::Value::CpuDuration, 50};
 
-    _ui.setSize(Vector2{size}, Vector2{windowSize()}, framebufferSize());
+    _ui.setSize(Vector2{size}*args.value<Float>("clip"), Vector2{windowSize()}, framebufferSize());
 
     _layer1 = _ui.createLayer();
     _layer2 = _ui.createLayer();
