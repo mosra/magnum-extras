@@ -66,7 +66,6 @@ void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeH
     for(const NodeHandle parentOrOrder: nodeParentOrOrder) {
         if(nodeHandleGeneration(parentOrOrder) != 0) {
             const UnsignedInt parentIndex = nodeHandleId(parentOrOrder);
-            CORRADE_INTERNAL_DEBUG_ASSERT(parentIndex < nodeParentOrOrder.size());
             ++childrenOffsets[parentIndex + 2];
         } else ++childrenOffsets[1];
     }
@@ -151,7 +150,6 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
             continue;
 
         const UnsignedInt parentIndex = nodeHandleId(parentOrOrder);
-        CORRADE_INTERNAL_DEBUG_ASSERT(parentIndex < nodeParentOrOrder.size());
         ++childrenOffsets[parentIndex + 1];
     }
 
