@@ -523,6 +523,9 @@ void orderNodeDataForEventHandling(const Containers::ArrayView<const UnsignedInt
     UnsignedInt offset = 0;
     visibleNodeEventDataOffsets[0] = 0;
     for(std::size_t i = 0; i != visibleNodeDataOffsets.size() - 1; ++i) {
+        const std::size_t nodeDataBegin = visibleNodeDataOffsets[i];
+        const std::size_t nodeDataEnd = visibleNodeDataOffsets[i + 1];
+
         /* First calculate how much data there is for each layer order index,
            skipping data in layers without LayerFeature::Event. The array is
            sized for the max layer count but only `layerCount + 1` elements get
@@ -531,7 +534,7 @@ void orderNodeDataForEventHandling(const Containers::ArrayView<const UnsignedInt
            a ton of nodes. */
         UnsignedInt dataOffsets[(1 << Implementation::LayerHandleIdBits) + 1];
         std::memset(dataOffsets, 0, (layerCount + 1)*sizeof(UnsignedInt));
-        for(std::size_t j = visibleNodeDataOffsets[i]; j != visibleNodeDataOffsets[i + 1]; ++j) {
+        for(std::size_t j = nodeDataBegin; j != nodeDataEnd; ++j) {
             const UnsignedInt layerId = dataHandleLayerId(visibleNodeData[j]);
             /* Might possbily be faster to do this just once for every layer
                than for every data, but as we're going node-by-node here that's
@@ -564,7 +567,7 @@ void orderNodeDataForEventHandling(const Containers::ArrayView<const UnsignedInt
            Populate in reverse order so we're consistent (data get drawn in the
            order they were added, first being at the bottom, so the events
            should get processed in the other direction). */
-        for(std::size_t j = visibleNodeDataOffsets[i + 1], jMin = visibleNodeDataOffsets[i]; j != jMin; --j) {
+        for(std::size_t j = nodeDataEnd; j != nodeDataBegin; --j) {
             const DataHandle data = visibleNodeData[j - 1];
             const UnsignedInt layerId = dataHandleLayerId(data);
             if(!(layerFeatures[layerId] >= LayerFeature::Event))
