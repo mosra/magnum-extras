@@ -645,21 +645,21 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
     LayerHandle layer4 = layerHandle(4, 0xde);
     LayerHandle layer5 = layerHandle(5, 0xad);
     const Containers::Pair<NodeHandle, DataHandle> data[]{
-        {nodeHandle(3, 0xfef),  dataHandle(layer2, 376, 0xded)},
-        {nodeHandle(4, 0xbab),  dataHandle(layer2, 22, 0x0b0)},
-        {nodeHandle(3, 0xc0c),  dataHandle(layer5, 1777, 0xfff)},
+        {nodeHandle(3, 0xfef),  dataHandle(layer2, 3, 0xded)},
+        {nodeHandle(4, 0xbab),  dataHandle(layer2, 2, 0x0b0)},
+        {nodeHandle(3, 0xc0c),  dataHandle(layer5, 2, 0xfff)},
         /* Nodes 0 and 8 aren't in the visible hierarchy so the assignments
            get ignored */
-        {nodeHandle(0, 0xefe),  dataHandle(layer4, 2020, 0x777)},
-        {nodeHandle(8, 0xbbb),  dataHandle(layer5, 191836, 0xccc)},
-        {nodeHandle(7, 0xf0f),  dataHandle(layer3, 226622, 0xbbb)},
-        {nodeHandle(3, 0xc0c),  dataHandle(layer5, 1776, 0xfff)},
-        {nodeHandle(7, 0xeee),  dataHandle(layer1, 22777, 0x000)},
-        {nodeHandle(12, 0xccc), dataHandle(layer2, 79, 0xcec)},
-        {nodeHandle(2, 0xddd),  dataHandle(layer2, 87878, 0x999)},
-        {nodeHandle(2, 0xaba),  dataHandle(layer1, 333, 0xaaa)},
+        {nodeHandle(0, 0xefe),  dataHandle(layer4, 17, 0x777)},
+        {nodeHandle(8, 0xbbb),  dataHandle(layer5, 4, 0xccc)},
+        {nodeHandle(7, 0xf0f),  dataHandle(layer3, 2, 0xbbb)},
+        {nodeHandle(3, 0xc0c),  dataHandle(layer5, 1, 0xfff)},
+        {nodeHandle(7, 0xeee),  dataHandle(layer1, 0, 0x000)},
+        {nodeHandle(12, 0xccc), dataHandle(layer2, 4, 0xcec)},
+        {nodeHandle(2, 0xddd),  dataHandle(layer2, 6, 0x999)},
+        {nodeHandle(2, 0xaba),  dataHandle(layer1, 1, 0xaaa)},
         /* Nodes 5, 6 aren't present anywhere */
-        {nodeHandle(2, 0xefe),  dataHandle(layer3, 3675, 0xaba)},
+        {nodeHandle(2, 0xefe),  dataHandle(layer3, 0, 0xaba)},
     };
 
     /* The layers are in order 4, 2, 3, 1, 5. Handle generation isn't used or
@@ -731,20 +731,20 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
 
     CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeData).prefix(visibleNodeDataOffsets[Containers::arraySize(visibleNodeDataOffsets) - 1]), Containers::arrayView<DataHandle>({
         /* Node 2 */
-        dataHandle(layer2, 87878, 0x999),
-        dataHandle(layer1, 333, 0xaaa),
-        dataHandle(layer3, 3675, 0xaba),
+        dataHandle(layer2, 6, 0x999),
+        dataHandle(layer1, 1, 0xaaa),
+        dataHandle(layer3, 0, 0xaba),
         /* Node 3 */
-        dataHandle(layer2, 376, 0xded),
-        dataHandle(layer5, 1777, 0xfff),
-        dataHandle(layer5, 1776, 0xfff),
+        dataHandle(layer2, 3, 0xded),
+        dataHandle(layer5, 2, 0xfff),
+        dataHandle(layer5, 1, 0xfff),
         /* Node 4 */
-        dataHandle(layer2, 22, 0x0b0),
+        dataHandle(layer2, 2, 0x0b0),
         /* Node 7 */
-        dataHandle(layer3, 226622, 0xbbb),
-        dataHandle(layer1, 22777, 0x000),
+        dataHandle(layer3, 2, 0xbbb),
+        dataHandle(layer1, 0, 0x000),
         /* Node 12 */
-        dataHandle(layer2, 79, 0xcec)
+        dataHandle(layer2, 4, 0xcec)
     }), TestSuite::Compare::Container);
 
     CORRADE_COMPARE_AS(Containers::arrayView(dataToUpdateLayerOffsets), Containers::arrayView<UnsignedInt>({
@@ -766,20 +766,20 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             .prefix(Containers::arrayView(dataToUpdateLayerOffsets).back()),
         (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
             /* Layer 1 */
-            {333, 2},
-            {22777, 7},
+            {1, 2},
+            {0, 7},
             /* Layer 2 */
-            {376, 3},
-            {22, 4},
-            {87878, 2},
-            {79, 12},
+            {3, 3},
+            {2, 4},
+            {6, 2},
+            {4, 12},
             /* Layer 3, but those aren't included in the draws below */
-            {3675, 2},
-            {226622, 7},
+            {0, 2},
+            {2, 7},
             /* Layer 4 has nothing */
             /* Layer 5, same node, order in which the assignments were found */
-            {1777, 3},
-            {1776, 3},
+            {2, 3},
+            {1, 3},
         })),
         TestSuite::Compare::Container);
 
@@ -790,16 +790,16 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         Containers::arrayView(dataLayerIdsDataOffsetsSizesToDraw)
             .prefix(drawCount),
         (Containers::arrayView<Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>>({
-            /* For top-level node 3 offset 2 from layer 2 and offset 8, 9
-               from layer 5 is drawn */
+            /* For top-level node 3 offset 2 from layer 2 (data 3) and offset
+               8, 9 from layer 5 (data 2, 1) is drawn */
             {2, 2, 1},
             {5, 8, 2},
-            /* For top-level node 13 draws offset 3, 4 from layer 2 and
-               offset 0, 1 from layer 1 is drawn */
+            /* For top-level node 13 draws offset 3, 4 from layer 2 (data 2, 6)
+               and offset 0, 1 from layer 1 (data 1, 0) is drawn */
             {2, 3, 2},
             {1, 0, 2},
             /* For top-level node 11 nothing is drawn */
-            /* Top-level node 12 draws offset 5 from layer 2 */
+            /* Top-level node 12 draws offset 5 from layer 2 (data 4) */
             {2, 5, 1}
     })), TestSuite::Compare::Container);
 
