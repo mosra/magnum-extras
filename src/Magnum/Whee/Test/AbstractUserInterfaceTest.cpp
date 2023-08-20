@@ -150,6 +150,19 @@ const struct {
     const char* name;
     bool clean;
     bool update;
+    bool reorderLayers;
+} DrawData[]{
+    {"clean + update before", true, true, false},
+    {"clean before", true, false, false},
+    {"update before", false, true, false},
+    {"", false, false, false},
+    {"non-implicit layer order", false, false, true},
+};
+
+const struct {
+    const char* name;
+    bool clean;
+    bool update;
 } CleanUpdateData[]{
     {"clean + update before", true, true},
     {"clean before", true, false},
@@ -323,9 +336,13 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addTests({&AbstractUserInterfaceTest::statePropagateFromLayers});
 
-    addInstancedTests({&AbstractUserInterfaceTest::drawEmpty,
-                       &AbstractUserInterfaceTest::draw,
-                       &AbstractUserInterfaceTest::eventEmpty},
+    addInstancedTests({&AbstractUserInterfaceTest::drawEmpty},
+        Containers::arraySize(CleanUpdateData));
+
+    addInstancedTests({&AbstractUserInterfaceTest::draw},
+        Containers::arraySize(DrawData));
+
+    addInstancedTests({&AbstractUserInterfaceTest::eventEmpty},
         Containers::arraySize(CleanUpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventAlreadyAccepted});
@@ -2988,7 +3005,7 @@ void AbstractUserInterfaceTest::drawEmpty() {
 }
 
 void AbstractUserInterfaceTest::draw() {
-    auto&& data = CleanUpdateData[testCaseInstanceId()];
+    auto&& data = DrawData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* windowSize isn't used for anything here */
@@ -3110,13 +3127,27 @@ void AbstractUserInterfaceTest::draw() {
     /* Layer without an instance, to verify those get skipped during updates */
     /*LayerHandle layerWithoutInstance =*/ ui.createLayer();
 
-    LayerHandle layer1 = ui.createLayer();
+    LayerHandle layer1, layer2, layerRemoved, layer3;
+    if(!data.reorderLayers) {
+        layer1 = ui.createLayer();
+        layer2 = ui.createLayer();
+        layerRemoved = ui.createLayer();
+        layer3 = ui.createLayer();
+    } else {
+        layer3 = ui.createLayer();
+        layer2 = ui.createLayer(layer3);
+        layerRemoved = ui.createLayer();
+        layer1 = ui.createLayer(layer2);
+    }
+
+    /* Layer that's subsequently removed, to verify it also gets skipped during
+       updates */
+    ui.removeLayer(layerRemoved);
+
     Containers::Pointer<Layer> layer1Instance{InPlaceInit, layer1, LayerFeature::Draw};
 
-    LayerHandle layer2 = ui.createLayer();
     Containers::Pointer<Layer> layer2Instance{InPlaceInit, layer2, LayerFeature::Draw|LayerFeature::Event};
 
-    LayerHandle layer3 = ui.createLayer();
     Containers::Pointer<Layer> layer3Instance{InPlaceInit, layer3, LayerFeature::Event};
 
     DataHandle leftData2 = layer1Instance->create();
