@@ -3077,17 +3077,19 @@ void AbstractUserInterfaceTest::draw() {
        6 | | left | | +-------|          | order  |
        7 | +------+ | | nested|  another +--------+
        8 |          +-+-------| top level  |
-       9 +--------------------|            |
-      10   +----------+       +------------+
-           |  culled  |
-      11   +----------+                             */
+       9 +------------+-------|          +--------+
+      10   +--------+ |layer1 +----------| layer2 |
+           | culled | |  only   |        |  only  |
+      11   +--------+ +---------+        +--------+ */
     NodeHandle topLevel = ui.createNode({1.0f, 3.0f}, {7.0f, 6.0f});
     NodeHandle left = ui.createNode(topLevel, {1.0f, 2.0f}, {1.0f, 2.0f}, NodeFlag::Clip);
     NodeHandle right = ui.createNode(topLevel, {3.0f, 1.0f}, {3.0f, 4.0f});
+    NodeHandle layer1Only = ui.createNode({5.0f, 9.0f}, {2.0f, 2.0f});
     NodeHandle anotherTopLevel = ui.createNode({6.0f, 5.0f}, {4.0f, 5.0f});
+    NodeHandle layer2Only = ui.createNode({9.0f, 9.0f}, {2.0f, 2.0f});
     NodeHandle topLevelNotInOrder = ui.createNode({9.0f, 4.0f}, {2.0f, 3.0f});
     NodeHandle removed = ui.createNode(right, {}, {});
-    NodeHandle culled = ui.createNode(left, {0.0f, 5.0f}, {3.0f, 1.0f});
+    NodeHandle culled = ui.createNode(left, {0.0f, 5.0f}, {2.0f, 1.0f});
     NodeHandle nested = ui.createNode(right, {1.0f, 2.0f}, {2.0f, 2.0f});
 
     /* These follow the node handle IDs, nodes that are not part of the
@@ -3096,7 +3098,9 @@ void AbstractUserInterfaceTest::draw() {
         {{1.0f, 3.0f}, {7.0f, 6.0f}}, /* topLevel */
         {{2.0f, 5.0f}, {1.0f, 2.0f}}, /* left */
         {{4.0f, 4.0f}, {3.0f, 4.0f}}, /* right */
+        {{5.0f, 9.0f}, {2.0f, 2.0f}}, /* layer1Only */
         {{6.0f, 5.0f}, {4.0f, 5.0f}}, /* anotherTopLevel */
+        {{9.0f, 9.0f}, {2.0f, 2.0f}}, /* layer2Only */
         {},                           /* removed */
         {},                           /* not in order */
         {},                           /* culled */
@@ -3129,6 +3133,8 @@ void AbstractUserInterfaceTest::draw() {
     DataHandle removedData = layer1Instance->create();
     DataHandle rightData1 = layer3Instance->create();
     DataHandle rightData2 = layer2Instance->create();
+    DataHandle layer1OnlyData = layer1Instance->create();
+    DataHandle layer2OnlyData = layer2Instance->create();
 
     /* These follow the node nesting order and then the order in which the
        data get attached below */
@@ -3139,6 +3145,7 @@ void AbstractUserInterfaceTest::draw() {
         {dataHandleId(leftData2), nodeHandleId(left)},
         {dataHandleId(leftData3), nodeHandleId(left)},
         /* removedData not here as the containing node is removed */
+        {dataHandleId(layer1OnlyData), nodeHandleId(layer1Only)},
     };
     Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer2Data[]{
         /* anotherTopLevel */
@@ -3150,6 +3157,7 @@ void AbstractUserInterfaceTest::draw() {
         {dataHandleId(nestedData), nodeHandleId(nested)},
         /* Nothing for topLevelNotInOrderData and culledData as they're not
            visible */
+        {dataHandleId(layer2OnlyData), nodeHandleId(layer2Only)},
     };
     Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer3Data[]{
         /* anotherTopLevel */
@@ -3193,11 +3201,13 @@ void AbstractUserInterfaceTest::draw() {
     ui.attachData(left, leftData3);
     ui.attachData(culled, culledData);
     ui.attachData(right, rightData2);
+    ui.attachData(layer1Only, layer1OnlyData);
+    ui.attachData(layer2Only, layer2OnlyData);
 
     ui.setNodeOrder(anotherTopLevel, topLevel);
     ui.clearNodeOrder(topLevelNotInOrder);
     ui.removeNode(removed);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 14);
+    CORRADE_COMPARE(ui.dataAttachmentCount(), 16);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
     CORRADE_COMPARE(layer1UpdateCallCount, 0);
     CORRADE_COMPARE(layer2UpdateCallCount, 0);
@@ -3205,7 +3215,7 @@ void AbstractUserInterfaceTest::draw() {
 
     if(data.clean) {
         ui.clean();
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 13);
+        CORRADE_COMPARE(ui.dataAttachmentCount(), 15);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(layer1UpdateCallCount, 0);
         CORRADE_COMPARE(layer2UpdateCallCount, 0);
@@ -3215,7 +3225,7 @@ void AbstractUserInterfaceTest::draw() {
     /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 13);
+        CORRADE_COMPARE(ui.dataAttachmentCount(), 15);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE(layer1UpdateCallCount, 1);
         CORRADE_COMPARE(layer2UpdateCallCount, 1);
@@ -3224,7 +3234,7 @@ void AbstractUserInterfaceTest::draw() {
 
     /* draw() should call update() and clean() only if needed */
     ui.draw();
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 13);
+    CORRADE_COMPARE(ui.dataAttachmentCount(), 15);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(layer1UpdateCallCount, 1);
     CORRADE_COMPARE(layer2UpdateCallCount, 1);
@@ -3239,7 +3249,11 @@ void AbstractUserInterfaceTest::draw() {
             /* remaining data from expectedLayer1Data */
             {layer1, 1, 2},
             /* and then remaining data from expectedLayer2Data */
-            {layer2, 2, 3}
+            {layer2, 2, 3},
+        /* then layer1Only, with only data from layer 1 */
+            {layer1, 3, 1},
+        /* then layer2Only, with only data from layer 2 */
+            {layer2, 5, 1},
         /* layer 3 doesn't have LayerFeature::Draw, so draw() shouldn't be
            called with anything for it */
     })), TestSuite::Compare::Container);
