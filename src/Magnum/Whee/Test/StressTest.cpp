@@ -251,7 +251,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
         }
     }
 
-    Debug{} << _ui.nodeCapacity() << "nodes total," << _ui.dataAttachmentCount() << "data attachments";
+    Debug{} << _ui.nodeCapacity() << "nodes total," << layer1.capacity() + layer2.capacity() << "data attachments";
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     setSwapInterval(0);
