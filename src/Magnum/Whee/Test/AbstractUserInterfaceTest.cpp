@@ -93,8 +93,6 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
 
     void cleanEmpty();
     void cleanNoOp();
-    void cleanRemoveInvalidData();
-    void cleanRemoveDataInvalidLayer();
     void cleanRemoveAttachedData();
     void cleanRemoveNestedNodes();
     void cleanRemoveNestedNodesAlreadyRemoved();
@@ -285,8 +283,6 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
               &AbstractUserInterfaceTest::cleanEmpty,
               &AbstractUserInterfaceTest::cleanNoOp,
-              &AbstractUserInterfaceTest::cleanRemoveInvalidData,
-              &AbstractUserInterfaceTest::cleanRemoveDataInvalidLayer,
               &AbstractUserInterfaceTest::cleanRemoveAttachedData,
               &AbstractUserInterfaceTest::cleanRemoveNestedNodes,
               &AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemoved,
@@ -405,13 +401,6 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Debug{&out} << (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsNodeLayoutUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeUpdate\n");
 
-    /* NeedsDataClean is a superset of NeedsDataAttachmentUpdate, so only one
-       should be printed */
-    } {
-        std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsDataClean |UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsDataClean\n");
-
     /* NeedsNodeClean is a superset of NeedsNodeUpdate, so only one should be
        printed */
     } {
@@ -425,13 +414,6 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         std::ostringstream out;
         Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsDataClean);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean\n");
-
-    /* NeedsNodeClipUpdate and NeedsDataClean are both supersets of
-       NeedsDataAttachmentUpdate, so only the two should be printed */
-    } {
-        std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataClean);
-        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClipUpdate|Whee::UserInterfaceState::NeedsDataClean\n");
 
     /* NeedsNodeClean is a superset of all others, so it should be printed
        alone */
@@ -465,7 +447,6 @@ void AbstractUserInterfaceTest::constructNoCreate() {
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 0);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 0);
 
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
     CORRADE_VERIFY(!ui.isHandleValid(DataHandle::Null));
     CORRADE_VERIFY(!ui.isHandleValid(dataHandle(LayerHandle(0xffff), LayerDataHandle::Null)));
     CORRADE_VERIFY(!ui.isHandleValid(dataHandle(LayerHandle::Null, LayerDataHandle(0xffffffff))));
@@ -515,7 +496,6 @@ void AbstractUserInterfaceTest::constructMove() {
     CORRADE_COMPARE(b.layerUsedCount(), 1);
     CORRADE_COMPARE(b.nodeCapacity(), 0);
     CORRADE_COMPARE(b.nodeUsedCount(), 0);
-    CORRADE_COMPARE(b.dataAttachmentCount(), 0);
 
     AbstractUserInterface c{{10, 10}};
     c.createNode(NodeHandle::Null, {}, {}, {});
@@ -527,7 +507,6 @@ void AbstractUserInterfaceTest::constructMove() {
     CORRADE_COMPARE(c.layerUsedCount(), 1);
     CORRADE_COMPARE(c.nodeCapacity(), 0);
     CORRADE_COMPARE(c.nodeUsedCount(), 0);
-    CORRADE_COMPARE(c.dataAttachmentCount(), 0);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<AbstractUserInterface>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<AbstractUserInterface>::value);
@@ -1550,7 +1529,6 @@ void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
 void AbstractUserInterfaceTest::data() {
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
 
     LayerHandle layerHandle = ui.createLayer();
 
@@ -1598,15 +1576,19 @@ void AbstractUserInterfaceTest::dataAttach() {
     ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
 
     DataHandle handle = ui.layer(layerHandle).create();
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
+    CORRADE_COMPARE(ui.layer(layerHandle).node(handle), NodeHandle::Null);
 
     ui.attachData(node, handle);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
+    CORRADE_COMPARE(ui.layer(layerHandle).node(handle), node);
 
     /* The data attachments aren't removed immediately, only during next
-       clean() -- tested in cleanRemoveData() below */
+       clean() -- tested in cleanRemoveAttachedData() below */
     ui.removeNode(node);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
+    CORRADE_COMPARE(ui.layer(layerHandle).node(handle), node);
+
+    /* Attaching to a null node should work also, it resets the attachment */
+    ui.attachData(NodeHandle::Null, handle);
+    CORRADE_COMPARE(ui.layer(layerHandle).node(handle), NodeHandle::Null);
 }
 
 void AbstractUserInterfaceTest::dataAttachInvalid() {
@@ -1617,12 +1599,10 @@ void AbstractUserInterfaceTest::dataAttachInvalid() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    ui.attachData(NodeHandle::Null, DataHandle::Null);
     ui.attachData(NodeHandle(0x123abcde), DataHandle::Null);
     ui.attachData(node, DataHandle::Null);
     ui.attachData(node, DataHandle(0x12abcde34567));
     CORRADE_COMPARE(out.str(),
-        "Whee::AbstractUserInterface::attachData(): invalid handle Whee::NodeHandle::Null\n"
         "Whee::AbstractUserInterface::attachData(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
         "Whee::AbstractUserInterface::attachData(): invalid handle Whee::DataHandle::Null\n"
         "Whee::AbstractUserInterface::attachData(): invalid handle Whee::DataHandle({0xab, 0x12}, {0x34567, 0xcde})\n");
@@ -1776,11 +1756,9 @@ void AbstractUserInterfaceTest::setSizeNotCalledBeforeUpdate() {
 void AbstractUserInterfaceTest::cleanEmpty() {
     AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.nodeUsedCount(), 0);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
 
     ui.clean();
     CORRADE_COMPARE(ui.nodeUsedCount(), 0);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
 }
 
 void AbstractUserInterfaceTest::cleanNoOp() {
@@ -1806,103 +1784,14 @@ void AbstractUserInterfaceTest::cleanNoOp() {
     /* Remove the nested node to create some "dirtiness" */
     ui.removeNode(nested);
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
+    CORRADE_COMPARE(ui.layer(layerHandle).node(data), root);
 
     /* Clean should make no change as there's nothing dangling to remove */
     ui.clean();
     CORRADE_VERIFY(ui.isHandleValid(root));
     CORRADE_VERIFY(ui.isHandleValid(data));
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
-}
-
-void AbstractUserInterfaceTest::cleanRemoveInvalidData() {
-    /* Event/framebuffer scaling doesn't affect these tests */
-    AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle1 = ui.createLayer();
-    LayerHandle layerHandle2 = ui.createLayer();
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle1));
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle2));
-
-    /* Root and a nested node */
-    NodeHandle root = ui.createNode({}, {});
-    NodeHandle nested = ui.createNode(root, {}, {});
-
-    /* Data attached to both, from both layers, in random order */
-    DataHandle data1 = ui.layer(layerHandle1).create();
-    DataHandle data2 = ui.layer(layerHandle2).create();
-    DataHandle data3 = ui.layer(layerHandle1).create();
-    DataHandle data4 = ui.layer(layerHandle2).create();
-    ui.attachData(root, data2);
-    ui.attachData(nested, data1);
-    ui.attachData(nested, data4);
-    ui.attachData(root, data3);
-
-    /* Remove some data. They're now invalid but still attached. */
-    ui.layer(layerHandle1).remove(data1);
-    ui.layer(layerHandle2).remove(data4);
-    CORRADE_VERIFY(!ui.isHandleValid(data1));
-    CORRADE_VERIFY(ui.isHandleValid(data2));
-    CORRADE_VERIFY(ui.isHandleValid(data3));
-    CORRADE_VERIFY(!ui.isHandleValid(data4));
-    CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 4);
-
-    /* Clean should remove the data attachments */
-    ui.clean();
-    CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 2);
-}
-
-void AbstractUserInterfaceTest::cleanRemoveDataInvalidLayer() {
-    /* Event/framebuffer scaling doesn't affect these tests */
-    AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle1 = ui.createLayer();
-    LayerHandle layerHandle2 = ui.createLayer();
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle1));
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle2));
-
-    /* Root and a nested node */
-    NodeHandle root = ui.createNode({}, {});
-    NodeHandle nested = ui.createNode(root, {}, {});
-
-    /* Data attached to both, from both layers, in random order */
-    DataHandle data1 = ui.layer(layerHandle1).create();
-    DataHandle data2 = ui.layer(layerHandle2).create();
-    DataHandle data3 = ui.layer(layerHandle1).create();
-    DataHandle data4 = ui.layer(layerHandle2).create();
-    ui.attachData(root, data2);
-    ui.attachData(nested, data1);
-    ui.attachData(nested, data4);
-    ui.attachData(root, data3);
-
-    /* Remove the whole layer. The data from it are now invalid but still
-       attached. */
-    ui.removeLayer(layerHandle2);
-    CORRADE_VERIFY(ui.isHandleValid(data1));
-    CORRADE_VERIFY(!ui.isHandleValid(data2));
-    CORRADE_VERIFY(ui.isHandleValid(data3));
-    CORRADE_VERIFY(!ui.isHandleValid(data4));
-    CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 4);
-
-    /* Clean should remove the data attachments that belong to the now-invalid
-       layer */
-    ui.clean();
-    CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 2);
+    CORRADE_COMPARE(ui.layer(layerHandle).node(data), root);
 }
 
 void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
@@ -1936,15 +1825,12 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
     /* Remove the nested node */
     ui.removeNode(nested);
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 4);
     CORRADE_COMPARE(ui.layer(layerHandle1).usedCount(), 2);
     CORRADE_COMPARE(ui.layer(layerHandle2).usedCount(), 2);
 
-    /* Clean removes the nested node data attachments and removes them from
-       layers as well */
+    /* Clean removes the nested node data */
     ui.clean();
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 2);
     CORRADE_COMPARE(ui.layer(layerHandle1).usedCount(), 1);
     CORRADE_COMPARE(ui.layer(layerHandle2).usedCount(), 1);
     CORRADE_VERIFY(ui.isHandleValid(root));
@@ -1984,13 +1870,11 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
     /* Remove the subtree */
     ui.removeNode(first1);
     CORRADE_COMPARE(ui.nodeUsedCount(), 4);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
 
     /* Clean removes the nested nodes and subsequently the data attached to
        them */
     ui.clean();
     CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
     CORRADE_VERIFY(ui.isHandleValid(root));
     CORRADE_VERIFY(!ui.isHandleValid(first1));
     CORRADE_VERIFY(ui.isHandleValid(first2));
@@ -2068,13 +1952,11 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
     NodeHandle first2 = ui.createNode(root, {}, {});
     CORRADE_COMPARE(nodeHandleId(first2), nodeHandleId(first));
     CORRADE_COMPARE(ui.nodeUsedCount(), 3);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
 
     /* Clean should still remove the subtree attached to the first handle, even
        though there's a new valid node in the same slot */
     ui.clean();
     CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
     CORRADE_VERIFY(ui.isHandleValid(root));
     CORRADE_VERIFY(!ui.isHandleValid(first));
     CORRADE_VERIFY(ui.isHandleValid(first2));
@@ -2111,11 +1993,9 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
     NodeHandle first2 = ui.createNode(second, {}, {});
     CORRADE_COMPARE(nodeHandleId(first2), nodeHandleId(first));
     CORRADE_COMPARE(ui.nodeUsedCount(), 4);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
 
     ui.clean();
     CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
     CORRADE_VERIFY(ui.isHandleValid(root));
     CORRADE_VERIFY(!ui.isHandleValid(first));
     CORRADE_VERIFY(ui.isHandleValid(first2));
@@ -2150,12 +2030,12 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
     /* Removing the top-level node */
     ui.removeNode(root);
     CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 2);
+    CORRADE_COMPARE(ui.layer(layerHandle).usedCount(), 2);
 
     /* Clean should remove everything */
     ui.clean();
     CORRADE_COMPARE(ui.nodeUsedCount(), 0);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
+    CORRADE_COMPARE(ui.layer(layerHandle).usedCount(), 0);
 }
 
 void AbstractUserInterfaceTest::state() {
@@ -2265,6 +2145,7 @@ void AbstractUserInterfaceTest::state() {
     DataHandle data2 = ui.layer(layer).create();
     DataHandle data3 = ui.layer(layer).create();
     DataHandle data4 = ui.layer(layer).create();
+    DataHandle data5 = ui.layer(layer).create();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
 
@@ -2290,10 +2171,10 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
     }
 
-    /* Attaching the data sets flags. Shuffled order to have non-trivial
-       results. */
+    /* Attaching the data sets flags. Order doesn't matter, as internally it's
+       always ordered by the data ID. */
     ui.attachData(node, data2);
-    ui.attachData(nested1, data4);
+    ui.attachData(nested1, data5);
     ui.attachData(nested2, data1);
     ui.attachData(another, data3);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
@@ -2315,7 +2196,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data5), nodeHandleId(nested1)},
             {dataHandleId(data1), nodeHandleId(nested2)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
@@ -2355,7 +2236,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data5), nodeHandleId(nested1)},
             {dataHandleId(data1), nodeHandleId(nested2)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
@@ -2405,7 +2286,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data5), nodeHandleId(nested1)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
@@ -2453,7 +2334,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data5), nodeHandleId(nested1)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
@@ -2531,7 +2412,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data5), nodeHandleId(nested1)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
@@ -2579,7 +2460,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data5), nodeHandleId(nested1)},
             {dataHandleId(data1), nodeHandleId(nested2)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
@@ -2623,7 +2504,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data5), nodeHandleId(nested1)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
@@ -2660,7 +2541,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data5), nodeHandleId(nested1)},
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2702,7 +2583,7 @@ void AbstractUserInterfaceTest::state() {
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data3), nodeHandleId(another)},
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data4), nodeHandleId(nested1)}
+            {dataHandleId(data5), nodeHandleId(nested1)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2718,11 +2599,49 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
 
+    /* Removing a non-attached data marks the layer with NeedsClean, which is
+       then propagated to the UI-wide state */
+    ui.layer(layer).remove(data4);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
+    CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
+
+    /* Calling clean() resets the states to not require clean() anymore */
+    if(data.clean) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            bool expectedDataIdsToRemove[]{
+                /* data4 already removed, so not set */
+                false, false, false, false, false
+            };
+            ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+    }
+
+    /* Calling update() calls clean() if wasn't done above already but
+       otherwise it's a no-op */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool expectedDataIdsToRemove[]{
+            /* data4 already removed, so not set */
+            false, false, false, false, false
+        };
+        ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+
     /* Removing data marks the layer with NeedsClean, which is then propagated
        to the UI-wide state */
     ui.layer(layer).remove(data2);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 4);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
+    CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
 
     /* Calling clean() removes the now-invalid attachment and resets the states
        to not require clean() anymore */
@@ -2730,15 +2649,16 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             bool expectedDataIdsToRemove[]{
-                false, false, false, false /* data2 already removed, so not set */
+                /* data2 already removed, so not set */
+                false, false, false, false, false
             };
             ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
+        CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 2);
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
     }
 
     /* Calling update() then uploads remaining data and resets the remaining
@@ -2746,11 +2666,12 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         bool expectedDataIdsToRemove[]{
-            false, false, false, false /* data2 already removed, so not set */
+            /* data2 already removed, so not set */
+            false, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data3), nodeHandleId(another)},
-            {dataHandleId(data4), nodeHandleId(nested1)}
+            {dataHandleId(data5), nodeHandleId(nested1)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2764,17 +2685,17 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
+    CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
     /* doClean() should only be called either in the branch above or from
        update(), never both */
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 2);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
 
     /* Removing a node sets a state flag */
     ui.removeNode(node);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
     CORRADE_COMPARE(ui.nodeUsedCount(), 3);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
+    CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
 
     /* Calling clean() removes the child nodes, the now-invalid attachment and
        resets the state to not require clean() anymore */
@@ -2782,18 +2703,18 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             bool expectedDataIdsToRemove[]{
-                /* data1 and data4 was attached to nested2 and nested1, which
+                /* data1 and data5 was attached to nested2 and nested1, which
                    got orphaned after removing its parent, `node` */
-                true, false, false, true
+                true, false, false, false, true
             };
             ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 2);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
         CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
+        CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 3);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
     }
 
     /* Calling update() then uploads remaining data and resets the remaining
@@ -2801,9 +2722,9 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         bool expectedDataIdsToRemove[]{
-            /* data1 and data4 was attached to nested2 and nested1, which got
+            /* data1 and data5 was attached to nested2 and nested1, which got
                orphaned after removing its parent, `node` */
-            true, false, false, true
+            true, false, false, false, true
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data3), nodeHandleId(another)},
@@ -2821,8 +2742,8 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 2);
+    CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 3);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
 
     /* Add one more layer to check layer removal behavior, should set no state
@@ -2833,25 +2754,20 @@ void AbstractUserInterfaceTest::state() {
 
     /* Removing a layer sets a state flag */
     ui.removeLayer(layer);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
-    /* Calling clean() removes the remaining attachment and resets the state */
-    if(data.clean) {
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-            /* The `layer` is no more, so nothing to check there. The
-               `anotherLayer` gets called with an empty view because it has no
-               data. */
-            ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
     }
 
-    /* Calling update() then resets the remaining state flag, There's no data
+    /* Calling update() then resets the remaining state flag. There's no data
        anymore, but it's still called to let the layer refresh its internal
        state. */
     {
@@ -2868,8 +2784,8 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
+    CORRADE_COMPARE(ui.layer(anotherLayer).usedCount(), 0);
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
 }
 
@@ -2900,35 +2816,48 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     ui.update();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
-    /* LayerState::NeedsUpdate on a removed layer isn't considered, and the
-       layer without an instance is skipped */
+    /* LayerState::NeedsUpdate on a removed layer isn't considered (well,
+       because the instance is gone), and the layer without an instance is
+       skipped. The "works correctly" aspect can't really be observed, we can
+       only check that it doesn't crash. */
     ui.layer(layerRemoved).setNeedsUpdate();
     ui.removeLayer(layerRemoved);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     ui.update();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* It also shouldn't stop at those, states after those get checked as well */
     ui.layer(layer1).setNeedsUpdate();
+    CORRADE_COMPARE(ui.layer(layer1).state(), LayerState::NeedsUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
     /* And updating should reset all of them again */
     ui.update();
+    CORRADE_COMPARE(ui.layer(layer2).state(), LayerStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
-    /* Creating a data doesn't result in any NeedsUpdate on the layer, but
-       attaching results in NeedsDataAttachmentUpdate being set on the UI directly */
-    DataHandle data = ui.layer(layer2).create();
-    ui.attachData(node, data);
-    CORRADE_COMPARE(ui.layer(layer2).state(), LayerStates{});
+    /* Creating a data doesn't result in any NeedsUpdate on the layer */
+    DataHandle data1 = ui.layer(layer1).create();
+    DataHandle data2 = ui.layer(layer2).create();
+    CORRADE_COMPARE(ui.layer(layer1).state(), LayerStates{});
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Attaching results in NeedsAttachmentUpdate */
+    ui.layer(layer1).attach(data1, node);
+    CORRADE_COMPARE(ui.layer(layer1).state(), LayerState::NeedsAttachmentUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
-    /* Having the UI marked with NeedsDataUpdate shouldn't prevent the
+    /* Hiding a node will set a UI-wide NeedsNodeUpdate flag */
+    ui.addNodeFlags(node, NodeFlag::Hidden);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+
+    /* Having the UI marked with NeedsNodeUpdate shouldn't prevent the
        NeedsClean from a later layer from being propagated to the UI-wide
        state */
-    ui.layer(layer2).remove(data);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
+    ui.layer(layer2).remove(data2);
+    CORRADE_COMPARE(ui.layer(layer2).state(), LayerState::NeedsClean);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataClean);
 }
 
 void AbstractUserInterfaceTest::drawEmpty() {
@@ -3054,6 +2983,7 @@ void AbstractUserInterfaceTest::draw() {
     NodeHandle layer2Only = ui.createNode({9.0f, 9.0f}, {2.0f, 2.0f});
     NodeHandle topLevelNotInOrder = ui.createNode({9.0f, 4.0f}, {2.0f, 3.0f});
     NodeHandle removed = ui.createNode(right, {}, {});
+    NodeHandle topLevelHidden = ui.createNode({}, {}, NodeFlag::Hidden);
     NodeHandle culled = ui.createNode(left, {0.0f, 5.0f}, {2.0f, 1.0f});
     NodeHandle nested = ui.createNode(right, {1.0f, 2.0f}, {2.0f, 2.0f});
 
@@ -3067,6 +2997,7 @@ void AbstractUserInterfaceTest::draw() {
         {{6.0f, 5.0f}, {4.0f, 5.0f}}, /* anotherTopLevel */
         {{9.0f, 9.0f}, {2.0f, 2.0f}}, /* layer2Only */
         {},                           /* removed */
+        {},                           /* topLevelHidden */
         {},                           /* not in order */
         {},                           /* culled */
         {{5.0f, 6.0f}, {2.0f, 2.0f}}, /* nested */
@@ -3110,6 +3041,7 @@ void AbstractUserInterfaceTest::draw() {
     DataHandle nestedData = layer2Instance->create();
     DataHandle topLevelNotInOrderData = layer2Instance->create();
     DataHandle removedData = layer1Instance->create();
+    DataHandle topLevelHiddenData = layer2Instance->create();
     DataHandle rightData1 = layer3Instance->create();
     DataHandle rightData2 = layer2Instance->create();
     DataHandle layer1OnlyData = layer1Instance->create();
@@ -3175,6 +3107,7 @@ void AbstractUserInterfaceTest::draw() {
     ui.attachData(left, leftData2);
     ui.attachData(topLevelNotInOrder, topLevelNotInOrderData);
     ui.attachData(removed, removedData);
+    ui.attachData(topLevelHidden, topLevelHiddenData);
     ui.attachData(topLevel, topLevelData);
     ui.attachData(right, rightData1);
     ui.attachData(left, leftData3);
@@ -3186,7 +3119,9 @@ void AbstractUserInterfaceTest::draw() {
     ui.setNodeOrder(anotherTopLevel, topLevel);
     ui.clearNodeOrder(topLevelNotInOrder);
     ui.removeNode(removed);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 16);
+    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 5);
+    CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
+    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
     CORRADE_COMPARE(layer1UpdateCallCount, 0);
     CORRADE_COMPARE(layer2UpdateCallCount, 0);
@@ -3194,7 +3129,9 @@ void AbstractUserInterfaceTest::draw() {
 
     if(data.clean) {
         ui.clean();
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 15);
+        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
+        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(layer1UpdateCallCount, 0);
         CORRADE_COMPARE(layer2UpdateCallCount, 0);
@@ -3204,7 +3141,9 @@ void AbstractUserInterfaceTest::draw() {
     /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 15);
+        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
+        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE(layer1UpdateCallCount, 1);
         CORRADE_COMPARE(layer2UpdateCallCount, 1);
@@ -3213,7 +3152,9 @@ void AbstractUserInterfaceTest::draw() {
 
     /* draw() should call update() and clean() only if needed */
     ui.draw();
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 15);
+    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
+    CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
+    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(layer1UpdateCallCount, 1);
     CORRADE_COMPARE(layer2UpdateCallCount, 1);
@@ -3381,19 +3322,25 @@ void AbstractUserInterfaceTest::event() {
 
     ui.clearNodeOrder(notInOrder);
     ui.removeNode(removed);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 10);
+    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 3);
+    CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
+    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 5);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
 
     if(data.clean) {
         ui.clean();
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 9);
+        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 3);
+        CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
+        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 4);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
     }
 
     /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 9);
+        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 3);
+        CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
+        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 4);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
@@ -3467,7 +3414,8 @@ void AbstractUserInterfaceTest::event() {
             {bottomData1, {90.0f, 40.0f}, true}
         })), TestSuite::Compare::Container);
 
-    /* On a nested node, last added data get picked first */
+    /* On a nested node. Multiple data attached, the one with highest ID gets
+       picked first. Order in which they were attached doesn't matter. */
     } {
         layer1Accept = layer2Accept = layer3Accept = true;
         eventCalls = {};
@@ -3479,8 +3427,8 @@ void AbstractUserInterfaceTest::event() {
             {topNestedData3, {5.0f, 5.0f}, true},
         })), TestSuite::Compare::Container);
 
-    /* On a nested node, if the first doesn't accept the event, falls back to
-       the next added data, and then to the next layer in order */
+    /* On a nested node. If the first doesn't accept the event, falls back to
+       the data with lower ID, and then to the next layer in order */
     } {
         layer1Accept = layer2Accept = true;
         layer3Accept = false;
@@ -4394,7 +4342,7 @@ void AbstractUserInterfaceTest::eventPointerMoveDataRemoved() {
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
     ui.layer<Layer>(layer).remove(nodeData);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
 
     if(data.clean) {
         ui.clean();
@@ -4956,21 +4904,21 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Press|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
-            if((accept1 && dataId <= 1) || (accept2 && dataId == 2))
+            if((accept2 && dataId % 2 == 0) || (accept1 && dataId == 1))
                 event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Release|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
-            if((accept1 && dataId <= 1) || (accept2 && dataId == 2))
+            if((accept2 && dataId % 2 == 0) || (accept1 && dataId == 1))
                 event.setAccepted();
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Move|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
-            if((accept1 && dataId <= 1) || (accept2 && dataId == 2))
+            if((accept2 && dataId % 2 == 0) || (accept1 && dataId == 1))
                 event.setAccepted();
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
@@ -4984,8 +4932,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
             arrayAppend(eventCalls, InPlaceInit, Leave|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
         }
 
-        bool accept1 = true,
-            accept2 = true;
+        bool accept2 = true,
+            accept1 = true;
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
@@ -4999,8 +4947,10 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
     DataHandle rightData1 = ui.layer<Layer>(layer).create();
     DataHandle rightData2 = ui.layer<Layer>(layer).create();
     ui.attachData(left, leftData1);
-    ui.attachData(right, rightData2);
+    /* Attachment order doesn't matter, it'll always pick rightData2 first
+       because it has higher ID */
     ui.attachData(right, rightData1);
+    ui.attachData(right, rightData2);
 
     /* If the press event isn't accepted, no capture should happen, so the
        release happens on the actual node that is under */
@@ -5015,8 +4965,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so the
@@ -5027,7 +4977,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* The release event isn't happening on a captured node, so
                isCaptured() is false for it */
-            {Release, rightData1, {10.0f, 10.0f}},
+            {Release, rightData2, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
 
     /* Same, but move instead of release */
@@ -5042,8 +4992,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove{{}, {}};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
@@ -5052,8 +5002,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* The move event isn't happening on a captured node, so
                isCaptured() is false for it */
-            {Move, rightData1, {10.0f, 10.0f}},
-            {Enter, rightData1, {10.0f, 10.0f}}
+            {Move, rightData2, {10.0f, 10.0f}},
+            {Enter, rightData2, {10.0f, 10.0f}}
         })), TestSuite::Compare::Container);
 
     /* If the release event isn't accepted, the capture should still get
@@ -5071,8 +5021,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
@@ -5096,8 +5046,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
@@ -5123,8 +5073,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
@@ -5139,8 +5089,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, {}};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
@@ -5168,15 +5118,15 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        ui.layer<Layer>(layer).accept1 = true;
+        ui.layer<Layer>(layer).accept2 = false;
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({50.0f, 10.0f}, eventPress));
         /* Capture is rightData1 */
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
@@ -5184,21 +5134,21 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         PointerMoveEvent eventMove2{{}, {}};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         /* The hovered node should now be rightData1 */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, rightData1, {10.0f, 10.0f}}, /* not accepted */
-            {Move, rightData2, {10.0f, 10.0f}},
-            {Enter, rightData2, {10.0f, 10.0f}},
-            {Press|Captured, rightData1, {10.0f, 10.0f}},
-            {Move|Captured, rightData1, {15.0f, 15.0f}},
-            {Leave, rightData2, {15.0f, 15.0f}},
-            {Enter|Captured, rightData1, {15.0f, 15.0f}},
+            {Move, rightData2, {10.0f, 10.0f}}, /* not accepted */
+            {Move, rightData1, {10.0f, 10.0f}},
+            {Enter, rightData1, {10.0f, 10.0f}},
+            {Press|Captured, rightData2, {10.0f, 10.0f}},
+            {Move|Captured, rightData2, {15.0f, 15.0f}},
+            {Leave, rightData1, {15.0f, 15.0f}},
+            {Enter|Captured, rightData2, {15.0f, 15.0f}},
         })), TestSuite::Compare::Container);
 
     /* Capturing on a hovered node but with different data hovered should cause
@@ -5216,15 +5166,15 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
+        ui.layer<Layer>(layer).accept1 = true;
+        ui.layer<Layer>(layer).accept2 = false;
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({50.0f, 10.0f}, eventPress));
         /* Capture is rightData1 */
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
@@ -5232,19 +5182,19 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         PointerMoveEvent eventMove2{{}, {}};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
+        ui.layer<Layer>(layer).accept1 = false;
+        ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({100.0f, 100.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, rightData1, {10.0f, 10.0f}}, /* not accepted */
-            {Move, rightData2, {10.0f, 10.0f}},
-            {Enter, rightData2, {10.0f, 10.0f}},
-            {Press|Captured, rightData1, {10.0f, 10.0f}},
-            {Move|Captured, rightData1, {60.0f, 100.0f}},
-            {Leave, rightData2, {60.0f, 100.0f}},
+            {Move, rightData2, {10.0f, 10.0f}}, /* not accepted */
+            {Move, rightData1, {10.0f, 10.0f}},
+            {Enter, rightData1, {10.0f, 10.0f}},
+            {Press|Captured, rightData2, {10.0f, 10.0f}},
+            {Move|Captured, rightData2, {60.0f, 100.0f}},
+            {Leave, rightData1, {60.0f, 100.0f}},
         })), TestSuite::Compare::Container);
     }
 }
@@ -6098,7 +6048,7 @@ void AbstractUserInterfaceTest::eventCaptureDataRemoved() {
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
 
     ui.layer<Layer>(layer).remove(leftData);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
 
     if(data.clean) {
         ui.clean();
