@@ -684,7 +684,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
     UnsignedInt visibleNodeDataOffsets[15]{};
     UnsignedInt visibleNodeEventDataCounts[14]{};
     UnsignedInt visibleNodeDataIds[18];
-    Containers::Pair<UnsignedInt, UnsignedInt> dataIdsNodeIdsToUpdate[18];
+    UnsignedInt dataToUpdateIds[18];
     Containers::Pair<UnsignedInt, UnsignedInt> dataOffsetsSizesToDraw[Containers::arraySize(layers)*4];
 
     /* This is similar to the process done by UserInterface::update(), except
@@ -702,10 +702,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             visibleNodeDataOffsets,
             visibleNodeEventDataCounts,
             Containers::arrayView(visibleNodeDataIds).prefix(layer.first().size()),
-            Containers::stridedArrayView(dataIdsNodeIdsToUpdate)
-                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
-            Containers::stridedArrayView(dataIdsNodeIdsToUpdate)
-                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+            dataToUpdateIds,
             offset,
             Containers::stridedArrayView(dataOffsetsSizesToDraw)
                 .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first)
@@ -750,27 +747,27 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
 
     /* Order inside layers is matching visible node order */
     CORRADE_COMPARE_AS(
-        Containers::arrayView(dataIdsNodeIdsToUpdate)
+        Containers::arrayView(dataToUpdateIds)
             /* The last element is the total filled size of the output array */
             .prefix(Containers::arrayView(dataToUpdateLayerOffsets).back()),
-        (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
+        Containers::arrayView<UnsignedInt>({
             /* Layer 4 has nothing */
             /* Layer 2 */
-            {3, 3},
-            {2, 4},
-            {6, 2},
-            {4, 12},
+            3,
+            2,
+            6,
+            4,
             /* Layer 3, but those aren't included in the draws below */
-            {0, 2},
-            {2, 7},
+            0,
+            2,
             /* Layer 1 */
-            {1, 2},
-            {0, 7},
+            1,
+            0,
             /* Layer 5, same node. Order matches the data ID order, not the
                order in which they were created or attached. */
-            {1, 3},
-            {2, 3},
-        })),
+            1,
+            2,
+        }),
         TestSuite::Compare::Container);
 
     /* The draws are filled in for the whole layer across all top-level
