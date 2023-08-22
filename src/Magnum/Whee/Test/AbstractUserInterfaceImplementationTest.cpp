@@ -49,14 +49,163 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
 
     void visibleTopLevelNodeIndices();
 
+    void cullVisibleNodesClipRects();
     void cullVisibleNodesEdges();
     void cullVisibleNodes();
+    void cullVisibleNodesNoTopLevelNodes();
 
     void orderVisibleNodeData();
+    void orderVisibleNodeDataNoTopLevelNodes();
 
     void orderNodeDataForEventHandling();
 
     void compactDraws();
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> nodeIdsChildrenCount;
+    Containers::Array<Containers::Triple<Vector2, Vector2, NodeFlags>> nodeOffsetsSizesFlags;
+    Containers::Array<bool> expectedVisible;
+    Containers::Array<Containers::Triple<Vector2, Vector2, UnsignedInt>> expectedClipRects;
+} CullVisibleNodesClipRectsData[]{
+    {"single non-clipping node", {InPlaceInit, {
+            {0, 0},
+        }}, {InPlaceInit, {
+            {{3.0f, 4.0f}, {5.0f, 6.0f}, {}},
+        }}, {InPlaceInit, {
+            true
+        }}, {InPlaceInit, {
+            /* Verifies that no OOB access happens internally */
+            {{}, {}, 1}
+        }}},
+    {"single clipping node", {InPlaceInit, {
+            {0, 0},
+        }}, {InPlaceInit, {
+            {{3.0f, 4.0f}, {5.0f, 6.0f}, NodeFlag::Clip},
+        }}, {InPlaceInit, {
+            true
+        }}, {InPlaceInit, {
+            /* Verifies that no OOB access happens internally here as well */
+            {{3.0f, 4.0f}, {5.0f, 6.0f}, 1}
+        }}},
+    {"multiple non-clipping top-level nodes", {InPlaceInit, {
+            {0, 0},
+            {2, 0},
+            {3, 0}, /* clips */
+            {1, 0},
+            {4, 0},
+        }}, {InPlaceInit, {
+            {{0.0f, 1.0f}, {2.0f, 3.0f}, {}},
+            {{3.0f, 4.0f}, {5.0f, 6.0f}, {}},
+            {{6.0f, 7.0f}, {8.0f, 9.0f}, {}},
+            {{0.0f, 1.0f}, {2.0f, 3.0f}, NodeFlag::Clip},
+            {{3.0f, 4.0f}, {5.0f, 6.0f}, {}},
+        }}, {InPlaceInit, {
+            true, true, true, true, true
+        }}, {InPlaceInit, {
+            /* These shouldn't get merged together as they are separate draw
+               calls as well */
+            {{}, {}, 1},
+            {{}, {}, 1},
+            {{0.0f, 1.0f}, {2.0f, 3.0f}, 1},
+            {{}, {}, 1},
+            {{}, {}, 1}
+        }}},
+    {"skip a fully culled clipping node including children", {InPlaceInit, {
+            {2, 3},         /* clips */
+                {3, 2},     /* culled, clips */
+                    {0, 0}, /* culled */
+                    {1, 0}, /* culled */
+        }}, {InPlaceInit, {
+            /*  1   2 3 4   5 6   7 8
+              1       +-------------+
+              2 +---+ | +---+ +---+ |
+                | 2 | | | 0 | | 1 | |
+              3 +---+ | +---+ +---+ |
+              4       +-------------+ */
+            {{4.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 0 */
+            {{6.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 1 */
+            {{1.0f, 2.0f}, {1.0f, 1.0f}, NodeFlag::Clip}, /* 2 */
+            {{3.0f, 1.0f}, {5.0f, 3.0f}, NodeFlag::Clip}, /* 3 */
+        }}, {InPlaceInit, {
+            false, false, true, false
+        }}, {InPlaceInit, {
+            {{1.0f, 2.0f}, {1.0f, 1.0f}, 4},
+        }}},
+    {"return to parent clip rect", {InPlaceInit, {
+            {2, 3},     /* clips */
+                {3, 0},
+                {0, 0}, /* clips */
+                {1, 0},
+        }}, {InPlaceInit, {
+            /*  1 2   3 4   5 6   7 8
+              1 +-------------------+
+              2 | +---+ +---+ +---+ |
+                | | 3 | | 0 | | 1 | |
+              3 | +---+ +---+ +---+ |
+              4 +-------------------+ */
+            {{4.0f, 2.0f}, {1.0f, 1.0f}, NodeFlag::Clip}, /* 0 */
+            {{6.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 1 */
+            {{1.0f, 1.0f}, {7.0f, 3.0f}, NodeFlag::Clip}, /* 2 */
+            {{2.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 3 */
+        }}, {InPlaceInit, {
+            true, true, true, true
+        }}, {InPlaceInit, {
+            {{1.0f, 1.0f}, {7.0f, 3.0f}, 2},
+            {{4.0f, 2.0f}, {1.0f, 1.0f}, 1},
+            /* Same as the first clip rect */
+            {{1.0f, 1.0f}, {7.0f, 3.0f}, 1},
+        }}},
+    {"return to parent clip rect, invisible node", {InPlaceInit, {
+            {2, 3},     /* clips */
+                {3, 0},
+                {0, 0}, /* clips */
+                {1, 0}, /* culled */
+            {4, 0}
+        }}, {InPlaceInit, {
+            /*  1 2   3 4   5 6   7 8   9
+              1 +------------+
+              2 | +---+ +---+|+---+ +---+
+                | | 3 | | 0 ||| 1 | | 4 |
+              3 | +---+ +---+|+---+ +---+
+              4 +------------+            */
+            {{4.0f, 2.0f}, {1.0f, 1.0f}, NodeFlag::Clip}, /* 0 */
+            {{6.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 1 */
+            {{1.0f, 1.0f}, {4.5f, 3.0f}, NodeFlag::Clip}, /* 2 */
+            {{2.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 3 */
+            {{8.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 4 */
+        }}, {InPlaceInit, {
+            true, false, true, true, true
+        }}, {InPlaceInit, {
+            {{1.0f, 1.0f}, {4.5f, 3.0f}, 2},
+            {{4.0f, 2.0f}, {1.0f, 1.0f}, 1},
+            {{1.0f, 1.0f}, {4.5f, 3.0f}, 1}, /* node 1 is invisible */
+            {{}, {}, 1}
+        }}},
+    {"return to parent clip rect, invisible node at the end", {InPlaceInit, {
+            {2, 3},     /* clips */
+                {3, 0},
+                {0, 0}, /* clips */
+                {1, 0}, /* culled */
+        }}, {InPlaceInit, {
+            /*  1 2   3 4   5 6   7
+              1 +------------+
+              2 | +---+ +---+|+---+
+                | | 3 | | 0 ||| 1 |
+              3 | +---+ +---+|+---+
+              4 +------------+      */
+            {{4.0f, 2.0f}, {1.0f, 1.0f}, NodeFlag::Clip}, /* 0 */
+            {{6.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 1 */
+            {{1.0f, 1.0f}, {4.5f, 3.0f}, NodeFlag::Clip}, /* 2 */
+            {{2.0f, 2.0f}, {1.0f, 1.0f}, {}},             /* 3 */
+        }}, {InPlaceInit, {
+            true, false, true, true
+        }}, {InPlaceInit, {
+            {{1.0f, 1.0f}, {4.5f, 3.0f}, 2},
+            {{4.0f, 2.0f}, {1.0f, 1.0f}, 1},
+            {{1.0f, 1.0f}, {4.5f, 3.0f}, 1}, /* node 1 is invisible */
+        }}},
 };
 
 const struct {
@@ -74,6 +223,7 @@ const struct {
     const char* name;
     NodeFlags flags[15];
     bool visible[15];
+    Containers::Array<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipRects;
 } CullVisibleNodesData[]{
     {"all clipping", {
         NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 0-3 */
@@ -96,7 +246,18 @@ const struct {
         false, /* 12, hidden because it has zero height */
         false, /* 13, hidden because it has zero width */
         false, /* 14, hidden because it's a child of a zero-size rect */
-    }},
+    }, {InPlaceInit, {
+        {{ 0.0f, 0.0f}, { 1.0f, 2.0f}, 1}, /* Node 3 (top-level) */
+        {{ 2.0f, 0.0f}, {11.0f, 5.0f}, 5}, /* Node 7 (top-level), including
+                                              hidden 11, 14, 13, 12 */
+        {{ 3.0f, 2.0f}, { 5.0f, 3.0f}, 3}, /* Node 2 intersecting 7, including
+                                              hidden 0, 6 */
+        {{ 5.0f, 2.0f}, { 2.0f, 2.0f}, 1}, /* Node 10 intersecing 2 + 7 */
+        {{ 3.0f, 2.0f}, { 5.0f, 3.0f}, 2}, /* Node 2 intersecting 7 remaining,
+                                              hidden children 1, 4 */
+        {{14.0f, 1.0f}, { 1.0f, 3.0f}, 3}, /* Node 5 (top-level), including
+                                              hidden 9, 8 */
+    }}},
     {"no clipping", {
         {},             {},             {},             {},             /* 0-3 */
         {},             {},             {},             {},             /* 4-7 */
@@ -105,7 +266,11 @@ const struct {
     }, {
         true, true, true, true, true, true, true, true, true, true, true, true,
         true, true, true,
-    }},
+    }, {InPlaceInit, {
+        {{}, {}, 1},  /* Top-level node 3 */
+        {{}, {}, 11}, /* Top-level node 7 */
+        {{}, {}, 3},  /* Top-level node 5 */
+    }}},
     {"special cases", {
         {},             {},             {},             {},             /* 0-3 */
         {},             {},             {},             NodeFlag::Clip, /* 4-7 */
@@ -130,7 +295,16 @@ const struct {
         false, /* 13, hidden because it clips and has zero width */
         true,  /* 14, shown even though it's a child of a zero-size rect, it
                       clips its children but not itself against the parent */
-    }},
+    }, {InPlaceInit, {
+        {{}, {}, 1},                       /* Node 3, not clipping */
+        {{ 2.0f, 0.0f}, {11.0f, 5.0f}, 2}, /* Node 7 plus 11 */
+        {{12.0f, 2.0f}, { 1.0f, 1.0f}, 1}, /* Node 14 intersecting 7 */
+        {{ 2.0f, 0.0f}, {11.0f, 5.0f}, 8}, /* Node 7 remaining, hidden 13, 12,
+                                              clipped 2, hidden 0, clipped 6,
+                                              10, 1, 4 */
+        {{}, {}, 2},                       /* Node 5 plus 9, not clipping */
+        {{16.0f, 3.0f}, { 1.0f, 2.0f}, 1}, /* Node 8 */
+    }}},
 };
 
 AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest() {
@@ -142,13 +316,19 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
 
               &AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices});
 
+    addInstancedTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodesClipRects},
+        Containers::arraySize(CullVisibleNodesClipRectsData));
+
     addInstancedTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges},
         Containers::arraySize(CullVisibleNodesEdgesData));
 
     addInstancedTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodes},
         Containers::arraySize(CullVisibleNodesData));
 
-    addTests({&AbstractUserInterfaceImplementationTest::orderVisibleNodeData,
+    addTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodesNoTopLevelNodes,
+
+              &AbstractUserInterfaceImplementationTest::orderVisibleNodeData,
+              &AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoTopLevelNodes,
 
               &AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling,
 
@@ -400,6 +580,50 @@ void AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices() {
     }), TestSuite::Compare::Container);
 }
 
+void AbstractUserInterfaceImplementationTest::cullVisibleNodesClipRects() {
+    auto&& data = CullVisibleNodesClipRectsData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    UnsignedByte visibleNodeMaskStorage[1];
+    Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, data.nodeIdsChildrenCount.size()};
+
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[8];
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipRects[8];
+    UnsignedInt count = Implementation::cullVisibleNodesInto(
+        stridedArrayView(data.nodeOffsetsSizesFlags).slice(&Containers::Triple<Vector2, Vector2, NodeFlags>::first),
+        stridedArrayView(data.nodeOffsetsSizesFlags).slice(&Containers::Triple<Vector2, Vector2, NodeFlags>::second),
+        stridedArrayView(data.nodeOffsetsSizesFlags).slice(&Containers::Triple<Vector2, Vector2, NodeFlags>::third),
+        Containers::arrayView(clipStack).prefix(data.nodeIdsChildrenCount.size()),
+        stridedArrayView(data.nodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+        stridedArrayView(data.nodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+        visibleNodeMask,
+        Containers::stridedArrayView(clipRects)
+            .prefix(data.nodeIdsChildrenCount.size())
+            .slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::first),
+        Containers::stridedArrayView(clipRects)
+            .prefix(data.nodeIdsChildrenCount.size())
+            .slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::second),
+        Containers::stridedArrayView(clipRects)
+            .prefix(data.nodeIdsChildrenCount.size())
+            .slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::third));
+    CORRADE_COMPARE_AS(visibleNodeMask,
+        stridedArrayView(data.expectedVisible).sliceBit(0),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(count,
+        data.nodeIdsChildrenCount.size(),
+        TestSuite::Compare::LessOrEqual);
+    CORRADE_COMPARE_AS(Containers::arrayView(clipRects).prefix(count),
+        arrayView(data.expectedClipRects),
+        TestSuite::Compare::Container);
+
+    /* The total count of all clip rects should be equal to the total node
+       count, including hidden nodes */
+    UnsignedInt clipRectCount = 0;
+    for(const auto& i: Containers::arrayView(clipRects).prefix(count))
+        clipRectCount += i.third();
+    CORRADE_COMPARE(clipRectCount, data.nodeOffsetsSizesFlags.size());
+}
+
 void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
     auto&& data = CullVisibleNodesEdgesData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -487,14 +711,19 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
     Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, Containers::arraySize(nodeOffsetsSizesFlags)};
 
     Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[Containers::arraySize(nodeOffsetsSizesFlags)];
-    Implementation::cullVisibleNodesInto(
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipRects[Containers::arraySize(nodeOffsetsSizesFlags)];
+    UnsignedInt count = Implementation::cullVisibleNodesInto(
         Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::offset),
         Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::size),
         Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::flags),
         clipStack,
         Containers::stridedArrayView(nodeIdsChildrenCount).slice(&Children::id),
         Containers::stridedArrayView(nodeIdsChildrenCount).slice(&Children::count),
-        visibleNodeMask);
+        visibleNodeMask,
+        Containers::stridedArrayView(clipRects).slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::first),
+        Containers::stridedArrayView(clipRects).slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::second),
+        Containers::stridedArrayView(clipRects).slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::third));
+
     if(data.allVisible) CORRADE_COMPARE_AS(visibleNodeMask,
         Containers::stridedArrayView({
             /* All 35 is visible */
@@ -517,6 +746,14 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
             /* The last one should be visible as it's the root one */
             1,
         }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* There's just one clip rect covering all. The count is always the same as
+       it includes hidden nodes as well. */
+    CORRADE_COMPARE_AS(count, Containers::arraySize(clipRects),
+        TestSuite::Compare::LessOrEqual);
+    CORRADE_COMPARE_AS(Containers::arrayView(clipRects).prefix(count), (Containers::arrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>>({
+        {data.offset, data.size, 35u}
+    })), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
@@ -590,17 +827,59 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
     Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, Containers::arraySize(nodeOffsetsSizes)};
 
     Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[Containers::arraySize(nodeOffsetsSizes)];
-    Implementation::cullVisibleNodesInto(
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipRects[Containers::arraySize(nodeOffsetsSizes)];
+    UnsignedInt count = Implementation::cullVisibleNodesInto(
         Containers::stridedArrayView(nodeOffsetsSizes).slice(&Node::offset),
         Containers::stridedArrayView(nodeOffsetsSizes).slice(&Node::size),
         Containers::arrayView(data.flags),
         clipStack,
         Containers::stridedArrayView(nodeIdsChildrenCount).slice(&Children::id),
         Containers::stridedArrayView(nodeIdsChildrenCount).slice(&Children::count),
-        visibleNodeMask);
+        visibleNodeMask,
+        Containers::stridedArrayView(clipRects).slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::first),
+        Containers::stridedArrayView(clipRects).slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::second),
+        Containers::stridedArrayView(clipRects).slice(&Containers::Triple<Vector2, Vector2, UnsignedInt>::third));
     CORRADE_COMPARE_AS(visibleNodeMask,
         Containers::stridedArrayView(data.visible).sliceBit(0),
         TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(count, Containers::arraySize(clipRects),
+        TestSuite::Compare::LessOrEqual);
+    CORRADE_COMPARE_AS(Containers::arrayView(clipRects).prefix(count),
+        Containers::arrayView(data.clipRects),
+        TestSuite::Compare::Container);
+
+    /* The total count of all clip rects should be equal to the total node
+       count, including hidden nodes */
+    UnsignedInt clipRectCount = 0;
+    for(const auto& i: Containers::arrayView(clipRects).prefix(count))
+        clipRectCount += i.third();
+    CORRADE_COMPARE(clipRectCount, Containers::arraySize(nodeOffsetsSizes));
+}
+
+void AbstractUserInterfaceImplementationTest::cullVisibleNodesNoTopLevelNodes() {
+    Vector2 absoluteNodeOffsets[3];
+    Vector2 nodeSizes[3];
+    NodeFlags nodeFlags[3];
+    UnsignedByte visibleNodeMaskData[1]{0xff};
+    Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskData, 0, 3};
+    UnsignedInt count = Implementation::cullVisibleNodesInto(
+        absoluteNodeOffsets,
+        nodeSizes,
+        nodeFlags,
+        nullptr,
+        nullptr,
+        nullptr,
+        visibleNodeMask,
+        nullptr,
+        nullptr,
+        nullptr);
+
+    /* To not crash on OOB it should return early but should still clear the
+       visibility bits for all visible nodes */
+    CORRADE_COMPARE(count, 0);
+    CORRADE_COMPARE_AS(visibleNodeMask, Containers::stridedArrayView({
+        false, false, false
+    }).sliceBit(0), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
@@ -614,7 +893,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             {9, 3},
                 {1, 1},
                     {4, 0}, /* One data attached from layer 2 */
-                {2, 0}, /* One data attached from layer 1, one from layer 2,
+                {2, 0}, /* One data attached from layer 1, two from layer 2,
                            one from layer 3 not for drawing */
             {6, 1}, /* Marked as invisible, one data attached from layer 2 */
                 {5, 0}, /* Marked as invisible, one data from layer 3 */
@@ -643,6 +922,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         nodeHandle(12, 0xccc), /* 4 */
         NodeHandle{},          /* 5 */
         nodeHandle(2, 0xddd),  /* 6 */
+        nodeHandle(2, 0x000),  /* 7 */
     };
     const NodeHandle layer3NodeAttachments[]{
         nodeHandle(2, 0xefe),  /* 0 */
@@ -673,6 +953,24 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
        order) and nodes 5 and 6 (which are culled) is visible */
     UnsignedShort visibleNodeMask[]{0xffff & ~(1 << 0) & ~(1 << 8) & ~(1 << 5) & ~(1 << 6)};
 
+    /* Node counts for each clip rect used. A sum of these should be the total
+       amount of visible nodes, i.e. arraySize(visibleNodeIdsChildrenCount). */
+    UnsignedInt clipRectNodeCounts[]{
+        /* Top level node 3 has one clip rect */
+        1,
+        /* Top-level node 13 has one clip rect for itself and node 9 */
+        2,
+            /* Then node 1 and 4 have another */
+            2,
+            /* Then node 2, invisible 6 and 5, and 7 fall back to the previous
+               again */
+            4,
+        /* Top-level node 11 a clip rect for itself and node 10 */
+        2,
+        /* Top-level node 12 has one clip rect */
+        1,
+    };
+
     /* The layers are in order 4, 2, 3, 1, 5. Layer 0 doesn't have any data
        referenced, layer 3 doesn't have a Draw feature, layer 4 is referenced
        only by a node that isn't in the visible hierarchy. */
@@ -688,25 +986,34 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
     UnsignedInt visibleNodeEventDataCounts[14]{};
     UnsignedInt visibleNodeDataIds[18];
     UnsignedInt dataToUpdateIds[18];
+    Containers::Pair<UnsignedInt, UnsignedInt> dataToUpdateClipRectIdsDataCounts[Containers::arraySize(layers)*Containers::arraySize(clipRectNodeCounts)];
     Containers::Pair<UnsignedInt, UnsignedInt> dataOffsetsSizesToDraw[Containers::arraySize(layers)*4];
+    Containers::Pair<UnsignedInt, UnsignedInt> dataClipRectOffsetsSizesToDraw[Containers::arraySize(layers)*4];
 
     /* This is similar to the process done by UserInterface::update(), except
        that here the layers aren't in a circular linked list */
-    Containers::Array<UnsignedInt> dataToUpdateLayerOffsets{InPlaceInit, {0}};
+    Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> dataToUpdateLayerOffsets{InPlaceInit, {{0, 0}}};
     UnsignedInt offset = 0;
+    UnsignedInt clipRectOffset = 0;
     for(const auto& layer: layers) {
         CORRADE_ITERATION(dataToUpdateLayerOffsets.size() - 1);
-        offset = Implementation::orderVisibleNodeDataInto(
+        auto out = Implementation::orderVisibleNodeDataInto(
             Containers::stridedArrayView(visibleNodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
             Containers::stridedArrayView(visibleNodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
             layer.first(),
             layer.second(),
             Containers::BitArrayView{visibleNodeMask, 0, 14},
+            clipRectNodeCounts,
             visibleNodeDataOffsets,
             visibleNodeEventDataCounts,
             Containers::arrayView(visibleNodeDataIds).prefix(layer.first().size()),
             dataToUpdateIds,
+            Containers::stridedArrayView(dataToUpdateClipRectIdsDataCounts)
+                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+            Containers::stridedArrayView(dataToUpdateClipRectIdsDataCounts)
+                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
             offset,
+            clipRectOffset,
             Containers::stridedArrayView(dataOffsetsSizesToDraw)
                 .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first)
                 .exceptPrefix(dataToUpdateLayerOffsets.size() - 1)
@@ -714,14 +1021,24 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             Containers::stridedArrayView(dataOffsetsSizesToDraw)
                 .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second)
                 .exceptPrefix(dataToUpdateLayerOffsets.size() - 1)
+                .every(Containers::arraySize(layers)),
+            Containers::stridedArrayView(dataClipRectOffsetsSizesToDraw)
+                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first)
+                .exceptPrefix(dataToUpdateLayerOffsets.size() - 1)
+                .every(Containers::arraySize(layers)),
+            Containers::stridedArrayView(dataClipRectOffsetsSizesToDraw)
+                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second)
+                .exceptPrefix(dataToUpdateLayerOffsets.size() - 1)
                 .every(Containers::arraySize(layers)));
-        arrayAppend(dataToUpdateLayerOffsets, offset);
+        offset = out.first();
+        clipRectOffset = out.second();
+        arrayAppend(dataToUpdateLayerOffsets, InPlaceInit, offset, clipRectOffset);
     }
 
     CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataCounts), Containers::arrayView<UnsignedInt>({
         0,  /* Node 0, not part of the top-level hierarchy */
         0,  /* Node 1 */
-        2,  /* Node 2, layers 2 and 3 */
+        3,  /* Node 2, layers 2 and 3 */
         3,  /* Node 3, layer 2 and 5 */
         1,  /* Node 4, layer 2 */
         0,  /* Node 5, layer 3, but marked as invisible */
@@ -737,41 +1054,56 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
 
     /* This is the offset filled in by the test itself above, in the order in
        which layers are processed */
-    CORRADE_COMPARE_AS(dataToUpdateLayerOffsets, Containers::arrayView<UnsignedInt>({
-        0,
-        0,  /* Layer 4 has one item that isn't in the hierarchy, so nothing */
-        4,  /* Layer 2 has 4 items */
-        6,  /* Layer 3 has two items but doesn't have a Draw feature, so
-               these are then excluded from the draw call list */
-        8,  /* Layer 1 has 2 items */
-        10, /* Layer 5 has 2 items plus one that isn't in the hierarchy, so
-               nothing */
-    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(dataToUpdateLayerOffsets, (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
+        {0, 0},
+        {0, 0}, /* Layer 4 has one item that isn't in the hierarchy, so
+                   nothing */
+        {5, 4}, /* Layer 2 has 5 items, and 4 clip rects */
+        {7, 5}, /* Layer 3 has two items and one rect but doesn't have a Draw
+                   feature, so these are then excluded from the draw call
+                   list */
+        {9, 6}, /* Layer 1 has 2 items and 1 clip rect */
+        {11, 7} /* Layer 5 has 2 items and 1 clip rects plus one that isn't in
+                   the hierarchy, so nothing */
+    })), TestSuite::Compare::Container);
 
     /* Order inside layers is matching visible node order */
     CORRADE_COMPARE_AS(
         Containers::arrayView(dataToUpdateIds)
             /* The last element is the total filled size of the output array */
-            .prefix(Containers::arrayView(dataToUpdateLayerOffsets).back()),
+            .prefix(Containers::arrayView(dataToUpdateLayerOffsets).back().first()),
         Containers::arrayView<UnsignedInt>({
             /* Layer 4 has nothing */
             /* Layer 2 */
-            3,
-            2,
-            6,
-            4,
+            3, 2, 6, 7, 4,
             /* Layer 3, but those aren't included in the draws below */
-            0,
-            2,
+            0, 2,
             /* Layer 1 */
-            1,
-            0,
+            1, 0,
             /* Layer 5, same node. Order matches the data ID order, not the
                order in which they were created or attached. */
-            1,
-            2,
+            1, 2,
         }),
         TestSuite::Compare::Container);
+
+    /* Each layer has a contiguous subsequence here, with the sum of it being
+       the total count of data drawn there */
+    CORRADE_COMPARE_AS(Containers::arrayView(dataToUpdateClipRectIdsDataCounts).prefix(clipRectOffset), (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
+        /* Layer 4 has nothing */
+        /* Layer 2 */
+        {0, 1}, /* Node 3 */
+        {2, 1}, /* Node 1, 4 */
+        {3, 2}, /* Node 2, 7 */
+        {5, 1}, /* Node 12 */
+        /* Layer 3 but those aren't included in the draws below */
+        {3, 2}, /* Node 2, 7 */
+        /* Layer 1 */
+        {3, 2}, /* Node 2, 7 */
+        /* Layer 5 */
+        {0, 2}, /* Node 3 */
+        /* Nodes (13, 9) and (11, 10) have nothing attached so the
+           corrresponding clip rects 1 and 4 are unused */
+    })), TestSuite::Compare::Container);
 
     /* The draws are filled in for the whole layer across all top-level
        widgets, thus to be correctly ordered they have to be interleaved. If
@@ -785,13 +1117,13 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             {0, 1}, /* 2 */
             {},     /* 3 */
             {},     /* 1 */
-            {8, 2}, /* 5 */
-            /* For top-level node 13 draws offset 1, 2 from layer 2 (data 2, 6)
-               and offset 0, 1 from layer 1 (data 1, 0) is drawn */
+            {9, 2}, /* 5 */
+            /* For top-level node 13 offset 1, 2, 3 from layer 2 (data 2, 6, 7)
+               and offset 6, 7 from layer 1 (data 1, 0) is drawn */
             {},     /* 4 */
-            {1, 2}, /* 2 */
+            {1, 3}, /* 2 */
             {},     /* 3 */
-            {6, 2}, /* 1 */
+            {7, 2}, /* 1 */
             {},     /* 5 */
             /* For top-level node 11 nothing is drawn */
             {},     /* 4 */
@@ -801,14 +1133,44 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             {},     /* 5 */
             /* Top-level node 12 draws offset 5 from layer 2 (data 4) */
             {},     /* 4 */
+            {4, 1}, /* 2 */
+            {},     /* 3 */
+            {},     /* 1 */
+            {}      /* 5 */
+    })), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(dataClipRectOffsetsSizesToDraw),
+        (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
+            /* For top-level node 3 offset 0 from layer 2 (rect 0) and offset
+               6 from layer 5 (rect 0) is drawn */
+            {},     /* 4 */
+            {0, 1}, /* 2 */
+            {},     /* 3 */
+            {},     /* 1 */
+            {6, 1}, /* 5 */
+            /* For top-level node 13 offset 1 from layer 2 (rect 2) and offset
+               5 from layer 1 (rect 3) is drawn */
+            {},     /* 4 */
+            {1, 2}, /* 2 */
+            {},     /* 3 */
+            {5, 1}, /* 1 */
+            {},     /* 5 */
+            /* For top-level node 11 nothing is drawn */
+            {},     /* 4 */
+            {},     /* 2 */
+            {},     /* 3 */
+            {},     /* 1 */
+            {},     /* 5 */
+            /* Top-level node 12 has offset 3 from layer 2 (rect 5) drawn */
+            {},     /* 4 */
             {3, 1}, /* 2 */
             {},     /* 3 */
             {},     /* 1 */
             {}      /* 5 */
     })), TestSuite::Compare::Container);
 
-    /* Each index in the draw data should appear exactly once */
-    Containers::BitArray dataDrawn{DirectInit, Containers::arrayView(dataToUpdateLayerOffsets).back(), false};
+    /* Each index in the draw data should appear exactly once. Rects can
+       appaear multiple times. */
+    Containers::BitArray dataDrawn{DirectInit, Containers::arrayView(dataToUpdateLayerOffsets).back().first(), false};
     for(const Containers::Pair<UnsignedInt, UnsignedInt>& i: dataOffsetsSizesToDraw) {
         CORRADE_ITERATION(i);
         for(UnsignedInt j = 0; j != i.second(); ++j) {
@@ -820,7 +1182,38 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
 
     /* Two items from layer 3 that doesn't have LayerFeature::Draw should not
        be present */
-    CORRADE_COMPARE(dataDrawn.count(), Containers::arrayView(dataToUpdateLayerOffsets).back() - 2);
+    CORRADE_COMPARE(dataDrawn.count(), Containers::arrayView(dataToUpdateLayerOffsets).back().first() - 2);
+}
+
+void AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoTopLevelNodes() {
+    NodeHandle dataNodes[3];
+    UnsignedByte visibleNodeMaskData[1];
+    Containers::BitArrayView visibleNodeMask{visibleNodeMaskData, 0, 3};
+    UnsignedInt visibleNodeDataOffsets[4];
+    UnsignedInt visibleNodeEventDataCounts[3];
+    UnsignedInt visibleNodeDataIds[3];
+    Containers::Pair<UnsignedInt, UnsignedInt> count = Implementation::orderVisibleNodeDataInto(
+        nullptr,
+        nullptr,
+        dataNodes,
+        {},
+        visibleNodeMask,
+        nullptr,
+        visibleNodeDataOffsets,
+        visibleNodeEventDataCounts,
+        visibleNodeDataIds,
+        nullptr,
+        nullptr,
+        nullptr,
+        0, 0,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr);
+
+    /* To avoid an OOB access it should return early */
+    CORRADE_COMPARE(count.first(), 0);
+    CORRADE_COMPARE(count.second(), 0);
 }
 
 void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
@@ -933,35 +1326,43 @@ void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
 }
 
 void AbstractUserInterfaceImplementationTest::compactDraws() {
-    Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt> draws[]{
-        {8, 15, 3},
-        {3, 226, 762},
-        {4, 0, 0},
-        {7, 287628, 0},
-        {8, 18, 2},
-        {3, 0, 226},
-        {4, 0, 6777},
-        {4, 0, 0},
-        {4, 6777, 2}
+    Containers::Triple<UnsignedByte, Containers::Pair<UnsignedInt, UnsignedInt>, Containers::Pair<UnsignedInt, UnsignedInt>> draws[]{
+        {8, {15, 3}, {1, 2}},
+        {3, {226, 762}, {27, 46}},
+        {4, {0, 0}, {2657, 0}},
+        {7, {287628, 0}, {12, 0}},
+        {8, {18, 2}, {1, 33}},
+        {3, {0, 226}, {26, 78}},
+        {4, {0, 6777}, {1, 233}},
+        {4, {0, 0}, {0, 0}},
+        {4, {6777, 2}, {233, 16}}
     };
 
     UnsignedInt count = Implementation::compactDrawsInPlace(
         Containers::stridedArrayView(draws)
-            .slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::first),
+            .slice(&Containers::Triple<UnsignedByte, Containers::Pair<UnsignedInt, UnsignedInt>, Containers::Pair<UnsignedInt, UnsignedInt>>::first),
         Containers::stridedArrayView(draws)
-            .slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::second),
+            .slice(&Containers::Triple<UnsignedByte, Containers::Pair<UnsignedInt, UnsignedInt>, Containers::Pair<UnsignedInt, UnsignedInt>>::second)
+            .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
         Containers::stridedArrayView(draws)
-            .slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::third));
+            .slice(&Containers::Triple<UnsignedByte, Containers::Pair<UnsignedInt, UnsignedInt>, Containers::Pair<UnsignedInt, UnsignedInt>>::second)
+            .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+        Containers::stridedArrayView(draws)
+            .slice(&Containers::Triple<UnsignedByte, Containers::Pair<UnsignedInt, UnsignedInt>, Containers::Pair<UnsignedInt, UnsignedInt>>::third)
+            .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+        Containers::stridedArrayView(draws)
+            .slice(&Containers::Triple<UnsignedByte, Containers::Pair<UnsignedInt, UnsignedInt>, Containers::Pair<UnsignedInt, UnsignedInt>>::third)
+            .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second));
     CORRADE_COMPARE_AS(count, Containers::arraySize(draws),
         TestSuite::Compare::LessOrEqual);
-    CORRADE_COMPARE_AS(Containers::arrayView(draws).prefix(count), (Containers::arrayView<Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>>({
-        {8, 15, 3},
-        {3, 226, 762},
-        {8, 18, 2},
-        {3, 0, 226},
+    CORRADE_COMPARE_AS(Containers::arrayView(draws).prefix(count), (Containers::arrayView<Containers::Triple<UnsignedByte, Containers::Pair<UnsignedInt, UnsignedInt>, Containers::Pair<UnsignedInt, UnsignedInt>>>({
+        {8, {15, 3}, {1, 2}},
+        {3, {226, 762}, {27, 46}},
+        {8, {18, 2}, {1, 33}},
+        {3, {0, 226}, {26, 78}},
         /* These two *could* get merged together eventually. So far aren't. */
-        {4, 0, 6777},
-        {4, 6777, 2}
+        {4, {0, 6777}, {1, 233}},
+        {4, {6777, 2}, {233, 16}}
     })), TestSuite::Compare::Container);
 }
 
