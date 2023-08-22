@@ -420,11 +420,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * just for testing purposes, there should be no need to call this
          * function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave. Expects that
-         * the @p dataIds and @p dataNodeIds views have the same size and the
-         * @p nodeOffsets and @p nodeSizes have the same size. The
+         * the @p nodeOffsets and @p nodeSizes have the same size. The
          * @p nodeOffsets and @p nodeSizes views should be large enough to
-         * contain any ID from @p dataNodeIds. Delegates to @ref doUpdate(),
-         * see its documentation for more information about the arguments.
+         * contain any valid node ID. Delegates to @ref doUpdate(), see its
+         * documentation for more information about the arguments.
          *
          * Calling this function resets @ref LayerState::NeedsUpdate and
          * @ref LayerState::NeedsAttachmentUpdate, however note that behavior
@@ -434,7 +433,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @p dataIds contain only IDs that aren't scheduled for removal, the
          * two states are independent.
          */
-        void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& nodeIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
+        void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
 
         /**
          * @brief Draw a sub-range of visible layer data
@@ -442,15 +441,14 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Used internally from @ref AbstractUserInterface::draw(). Exposed
          * just for testing purposes, there should be no need to call this
          * function directly. Expects that the layer supports
-         * @ref LayerFeature::Draw, the @p dataIds and @p dataNodeIds views
-         * have the same size, @p offset and @p count fits into their size, and
-         * that the @p nodeOffsets and @p nodeSizes view have the same size.
-         * The @p nodeOffsets and @p nodeSizes views should be large enough to
-         * contain any ID from @p dataNodeIds. Delegates to @ref doDraw(), see
+         * @ref LayerFeature::Draw, @p offset and @p count fits into @p dataIds
+         * size, and that the @p nodeOffsets and @p nodeSizes view have the
+         * same size. The @p nodeOffsets and @p nodeSizes views should be large
+         * enough to contain any valid node ID. Delegates to @ref doDraw(), see
          * its documentation for more information about the arguments.
          * @see @ref features()
          */
-        void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& nodeIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
+        void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
 
         /**
          * @brief Handle a pointer press event
@@ -584,19 +582,23 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @brief Update visible layer data to given offsets and positions
          * @param dataIds           Data IDs to update, in order that matches
          *      the draw order
-         * @param dataNodeIds       Node IDs to which the data are attached
-         * @param nodeOffsets       Absolute node offsets
-         * @param nodeSizes         Node sizes
+         * @param nodeOffsets       Absolute node offsets indexed by node ID
+         * @param nodeSizes         Node sizes indexed by node ID
          *
          * Implementation for @ref update(), which is called from
-         * @ref AbstractUserInterface::update(). The @p dataIds and
-         * @p dataNodeIds views have the same size, the node IDs then index
-         * into the @p nodeOffsets and @p nodeSizes views. The @p nodeOffsets
-         * and @p nodeSizes have the same size and are guaranteed to be large
-         * enough to contain any ID from @p dataNodeIds. Note that, however,
-         * the arrays may contain random or uninitialized values for nodes not
-         * referenced from @p dataNodeIds, such as for nodes that are not
-         * currently visible or freed node handles.
+         * @ref AbstractUserInterface::update(). Node handles corresponding to
+         * @p dataIds are available in @ref nodes(), node IDs can be then
+         * extracted from the handles using @ref nodeHandleId(). The node IDs
+         * then index into the @p nodeOffsets and @p nodeSizes views. The
+         * @p nodeOffsets and @p nodeSizes have the same size and are
+         * guaranteed to be large enough to contain any valid node ID.
+         *
+         * All @ref nodes() at indices corresponding to @p dataIds are
+         * guaranteed to not be @ref NodeHandle::Null at the time this function
+         * is called. The @p nodeOffsets and @p nodeSizes arrays may contain
+         * random or uninitialized values for nodes different than those
+         * referenced from @p dataIds, such as for nodes that are not currently
+         * visible or freed node handles.
          *
          * Default implementation does nothing. Data passed to this function
          * are subsequently passed to @ref doDraw() calls as well, the only
@@ -604,18 +606,15 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * data to update, while @ref doDraw() is called several times with
          * different sub-ranges of the data based on desired draw order.
          */
-        virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
+        virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
 
         /**
          * @brief Draw a sub-range of visible layer data
          * @param dataIds           Data IDs to update, in order that matches
          *      the draw order. Same as the view passed to @ref doUpdate()
          *      earlier.
-         * @param dataNodeIds       Node IDs to which the data handles are
-         *      attached. Same as the view passed to @ref doUpdate() earlier.
-         * @param offset            Offset into @p dataIds and @p dataNodeIds
-         * @param count             Count of @p dataIds and @p dataNodeIds to
-         *      draw
+         * @param offset            Offset into @p dataIds
+         * @param count             Count of @p dataIds to draw
          * @param nodeOffsets       Absolute node offsets. Same as the view
          *      passed to @ref doUpdate() earlier.
          * @param nodeSizes         Node sizes. Same as the view passed to
@@ -625,15 +624,15 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref AbstractUserInterface::draw(). Called only if
          * @ref LayerFeature::Draw is supported, it's guaranteed that
          * @ref doUpdate() was called at some point before this function with
-         * the exact same views passed to @p dataIds, @p dataNodeIds,
-         * @p nodeOffsets and @p nodeSizes, see its documentation for their
-         * relations and constraints.
+         * the exact same views passed to @p dataIds, @p nodeOffsets and
+         * @p nodeSizes, see its documentation for their relations and
+         * constraints.
          *
          * This function usually gets called several times with the same views
          * but different @p offset and @p count values in order to interleave
          * the draws for a correct back-to-front order.
          */
-        virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
+        virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
 
         /**
          * @brief Handle a pointer press event

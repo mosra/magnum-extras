@@ -759,14 +759,11 @@ void AbstractLayerTest::update() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& data, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
             ++called;
-            CORRADE_COMPARE_AS(data, Containers::arrayView({
+            CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
                 0xabcdeu,
                 0x45678u
-            }), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(dataNodeIds, Containers::arrayView<UnsignedInt>({
-                3, 15
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeOffsets, Containers::arrayView<Vector2>({
                 {1.0f, 2.0f},
@@ -791,9 +788,6 @@ void AbstractLayerTest::update() {
             0xabcdeu,
             0x45678u,
         }),
-        Containers::arrayView<UnsignedInt>({
-            3, 15
-        }),
         Containers::arrayView<Vector2>({
             {1.0f, 2.0f},
             {3.0f, 4.0f},
@@ -814,7 +808,7 @@ void AbstractLayerTest::updateEmpty() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             ++called;
         }
 
@@ -822,7 +816,7 @@ void AbstractLayerTest::updateEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.update({}, {}, {}, {});
+    layer.update({}, {}, {});
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -834,10 +828,6 @@ void AbstractLayerTest::updateNotImplemented() {
     } layer{layerHandle(0, 1)};
 
     layer.update(
-        Containers::arrayView({
-            0u,
-            0u
-        }),
         Containers::arrayView({
             0u,
             0u
@@ -870,17 +860,7 @@ void AbstractLayerTest::updateInvalidSizes() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.update(
-        Containers::arrayView({
-            0u,
-            0u
-        }),
-        Containers::arrayView({
-            0u
-        }),
-        {}, {}
-    );
-    layer.update(
-        {}, {},
+        {},
         Containers::arrayView<Vector2>({
             {},
             {}
@@ -892,7 +872,6 @@ void AbstractLayerTest::updateInvalidSizes() {
         })
     );
     CORRADE_COMPARE(out.str(),
-        "Whee::AbstractLayer::update(): expected data and node ID views to have the same size but got 2 and 1\n"
         "Whee::AbstractLayer::update(): expected node offset and size views to have the same size but got 2 and 3\n");
 }
 
@@ -918,7 +897,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 
     /* update() then resets it */
-    layer.update({}, {}, {}, {});
+    layer.update({}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching to a node sets a state flag */
@@ -928,7 +907,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets it */
-    layer.update({}, {}, {}, {});
+    layer.update({}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Detaching sets a state flag as well (even if the data originally weren't
@@ -937,7 +916,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets it */
-    layer.update({}, {}, {}, {});
+    layer.update({}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* remove() adds NeedClean */
@@ -954,7 +933,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets one */
-    layer.update({}, {}, {}, {});
+    layer.update({}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
 
     /* cleanNodes() the other */
@@ -966,7 +945,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() and cleanNodes() then reset it */
-    layer.update({}, {}, {}, {});
+    layer.update({}, {}, {});
     layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
@@ -988,15 +967,12 @@ void AbstractLayerTest::draw() {
             return LayerFeature::Draw;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& data, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& data, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
             ++called;
             CORRADE_COMPARE_AS(data, Containers::arrayView({
                 0xabcdeu,
                 0u,
                 0x45678u,
-            }), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(dataNodeIds, Containers::arrayView<UnsignedInt>({
-                3, 2, 15
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(offset, 1);
             CORRADE_COMPARE(count, 2);
@@ -1022,9 +998,6 @@ void AbstractLayerTest::draw() {
             0u,
             0x45678u
         }),
-        Containers::arrayView<UnsignedInt>({
-            3, 2, 15
-        }),
         1, 2,
         Containers::arrayView<Vector2>({
             {1.0f, 2.0f},
@@ -1046,7 +1019,7 @@ void AbstractLayerTest::drawEmpty() {
             return LayerFeature::Draw;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             ++called;
         }
 
@@ -1054,7 +1027,7 @@ void AbstractLayerTest::drawEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.draw({}, {}, 0, 0, {}, {});
+    layer.draw({}, 0, 0, {}, {});
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -1069,7 +1042,7 @@ void AbstractLayerTest::drawNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, {}, 0, 0, {}, {});
+    layer.draw({}, 0, 0, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::draw(): feature not supported\n");
 }
 
@@ -1086,7 +1059,7 @@ void AbstractLayerTest::drawNotImplemented() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, {}, 0, 0, {}, {});
+    layer.draw({}, 0, 0, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::draw(): feature advertised but not implemented\n");
 }
 
@@ -1104,18 +1077,7 @@ void AbstractLayerTest::drawInvalidSizes() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.draw(
-        Containers::arrayView({
-            0u,
-            0u
-        }),
-        Containers::arrayView({
-            0u
-        }),
-        0, 0,
-        {}, {}
-    );
-    layer.draw(
-        {}, {},
+        {},
         0, 0,
         Containers::arrayView<Vector2>({
             {},
@@ -1132,10 +1094,6 @@ void AbstractLayerTest::drawInvalidSizes() {
             0u,
             0u
         }),
-        Containers::arrayView({
-            0u,
-            0u
-        }),
         3, 0,
         {}, {}
     );
@@ -1144,15 +1102,10 @@ void AbstractLayerTest::drawInvalidSizes() {
             0u,
             0u
         }),
-        Containers::arrayView({
-            0u,
-            0u
-        }),
         2, 1,
         {}, {}
     );
     CORRADE_COMPARE(out.str(),
-        "Whee::AbstractLayer::draw(): expected data and node ID views to have the same size but got 2 and 1\n"
         "Whee::AbstractLayer::draw(): expected node offset and size views to have the same size but got 2 and 3\n"
         "Whee::AbstractLayer::draw(): offset 3 and count 0 out of range for 2 items\n"
         "Whee::AbstractLayer::draw(): offset 2 and count 1 out of range for 2 items\n");

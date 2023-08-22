@@ -388,30 +388,26 @@ void AbstractLayer::cleanNodes(const Containers::StridedArrayView1D<const Unsign
 
 void AbstractLayer::doClean(Containers::BitArrayView) {}
 
-void AbstractLayer::update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) {
-    CORRADE_ASSERT(dataIds.size() == dataNodeIds.size(),
-        "Whee::AbstractLayer::update(): expected data and node ID views to have the same size but got" << dataIds.size() << "and" << dataNodeIds.size(), );
+void AbstractLayer::update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) {
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size(),
         "Whee::AbstractLayer::update(): expected node offset and size views to have the same size but got" << nodeOffsets.size() << "and" << nodeSizes.size(), );
-    doUpdate(dataIds, dataNodeIds, nodeOffsets, nodeSizes);
+    doUpdate(dataIds, nodeOffsets, nodeSizes);
     _state->state &= ~LayerState::NeedsAttachmentUpdate;
 }
 
-void AbstractLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
+void AbstractLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
 
-void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) {
+void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) {
     CORRADE_ASSERT(features() & LayerFeature::Draw,
         "Whee::AbstractLayer::draw(): feature not supported", );
-    CORRADE_ASSERT(dataIds.size() == dataNodeIds.size(),
-        "Whee::AbstractLayer::draw(): expected data and node ID views to have the same size but got" << dataIds.size() << "and" << dataNodeIds.size(), );
     CORRADE_ASSERT(offset + count <= dataIds.size(),
         "Whee::AbstractLayer::draw(): offset" << offset << "and count" << count << "out of range for" << dataIds.size() << "items", );
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size(),
         "Whee::AbstractLayer::draw(): expected node offset and size views to have the same size but got" << nodeOffsets.size() << "and" << nodeSizes.size(), );
-    doDraw(dataIds, dataNodeIds, offset, count, nodeOffsets, nodeSizes);
+    doDraw(dataIds, offset, count, nodeOffsets, nodeSizes);
 }
 
-void AbstractLayer::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void AbstractLayer::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractLayer::draw(): feature advertised but not implemented", );
 }
 
