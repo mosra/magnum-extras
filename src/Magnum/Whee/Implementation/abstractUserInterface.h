@@ -245,25 +245,40 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
 }
 
 /* The `visibleNodeMask` has bits set for nodes in `visibleNodeIds` that are
-   at least partially visible in the parent clip rects.
+   at least partially visible in the parent clip rects, the `clipRects` is then
+   a list of clip rects and count of nodes affected by them.
 
    The `clipStack` array is temporary storage. */
-void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& absoluteNodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::MutableBitArrayView visibleNodeMask) {
+UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& absoluteNodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::MutableBitArrayView visibleNodeMask, const Containers::StridedArrayView1D<Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<Vector2>& clipRectSizes, const Containers::StridedArrayView1D<UnsignedInt>& clipRectNodeCounts) {
     CORRADE_INTERNAL_ASSERT(
         nodeSizes.size() == absoluteNodeOffsets.size() &&
         nodeFlags.size() == absoluteNodeOffsets.size() &&
         clipStack.size() == visibleNodeIds.size() &&
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
-        visibleNodeMask.size() == absoluteNodeOffsets.size());
+        visibleNodeMask.size() == absoluteNodeOffsets.size() &&
+        clipRectSizes.size() == clipRectOffsets.size() &&
+        clipRectNodeCounts.size() == clipRectOffsets.size());
 
     /* Clear the visibility mask, individual bits will be set only if they're
        visible */
     visibleNodeMask.resetAll();
 
+    /* If there's no visible nodes to go through, bail. Otherwise it'd attempt
+       to access out-of-bounds visibleNodeChildrenCounts etc below. */
+    if(visibleNodeIds.isEmpty())
+        return 0;
+
+    /* Initially there's no clip rect */
+    clipRectOffsets[0] = {};
+    clipRectSizes[0] = {};
+    clipRectNodeCounts[0] = 0;
+
     /* Filter the visible node list and keep only nodes that are at least
        partially visible in the intersection of all parent clip rects */
     std::size_t i = 0;
     std::size_t clipStackDepth = 0;
+    std::size_t clipRectsOffset = 0;
+    std::size_t topLevelNodeEnd = visibleNodeChildrenCounts[0] + 1;
     while(i != visibleNodeIds.size()) {
         const UnsignedInt nodeId = visibleNodeIds[i];
 
@@ -324,6 +339,20 @@ void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& a
                     #endif
                 }
 
+                /* If the previous clip rect affected no nodes, replace it,
+                   otherwise move to the next one. */
+                if(clipRectNodeCounts[clipRectsOffset])
+                    ++clipRectsOffset;
+
+                /* Save the final clip rect to the output. Initially it affects
+                   just the clipping node itself. */
+                clipRectOffsets[clipRectsOffset] =
+                    clipStack[clipStackDepth].first();
+                clipRectSizes[clipRectsOffset] =
+                    clipStack[clipStackDepth].second() -
+                    clipStack[clipStackDepth].first();
+                clipRectNodeCounts[clipRectsOffset] = 1;
+
                 /* Remember offset after all children of its node so we know
                    when to pop this clip rect off the stack */
                 clipStack[clipStackDepth].third() = i + visibleNodeChildrenCounts[i] + 1;
@@ -332,20 +361,72 @@ void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& a
 
             /* For an invisible node there's no point in testing any children
                as they'd be clipped away too */
-            } else i += visibleNodeChildrenCounts[i] + 1;
+            } else {
+                const UnsignedInt nodePlusChildrenCount = visibleNodeChildrenCounts[i] + 1;
+                i += nodePlusChildrenCount;
+                clipRectNodeCounts[clipRectsOffset] += nodePlusChildrenCount;
+            }
 
         /* If the node isn't a clipping node, just continue to the next one
            after */
-        } else ++i;
+        } else {
+            ++i;
+            ++clipRectNodeCounts[clipRectsOffset];
+        }
 
         /* Save the visibility status */
         if(visible)
             visibleNodeMask.set(nodeId);
 
         /* Pop the clip stack items for which all children were processed */
-        while(clipStackDepth && clipStack[clipStackDepth - 1].third() == i)
+        bool clipStackChanged = false;
+        while(clipStackDepth && clipStack[clipStackDepth - 1].third() == i) {
             --clipStackDepth;
+            clipStackChanged = true;
+        }
+
+        /* If we're at another top level node, it's a new draw, which means we
+           need to start a new clip rect as well */
+        if(i == topLevelNodeEnd && i != visibleNodeIds.size()) {
+            topLevelNodeEnd = i + visibleNodeChildrenCounts[i] + 1;
+            clipStackChanged = true;
+        }
+
+        /* If the clip stack changed, decide about the clip rect to use for the
+           next items. Unless we're at the end of the node list, at which point
+           there may not be any space for any more clip rects. */
+        if(clipStackChanged && i != visibleNodeIds.size()) {
+            /* Each iteration of the loop either increases the last
+               clipRectNodeCounts or moves to the next element and sets it to
+               1, so it's never 0 */
+            CORRADE_INTERNAL_DEBUG_ASSERT(clipRectNodeCounts[clipRectsOffset]);
+            ++clipRectsOffset;
+
+            /* If there's no clip rect available, use the "none" rect */
+            if(!clipStackDepth) {
+                clipRectOffsets[clipRectsOffset] = {};
+                clipRectSizes[clipRectsOffset] = {};
+
+            /* Otherwise go back to the parent clip rect */
+            } else {
+                clipRectOffsets[clipRectsOffset] =
+                    clipStack[clipStackDepth - 1].first();
+                clipRectSizes[clipRectsOffset] =
+                    clipStack[clipStackDepth - 1].second() -
+                    clipStack[clipStackDepth - 1].first();
+            }
+
+            /* There's no nodes to consume this clip rect yet */
+            clipRectNodeCounts[clipRectsOffset] = 0;
+        }
     }
+
+    /* Expect the top-level node range were correctly matched. There shouldn't
+       be any empty clip rect at the end, as an empty one is only added when
+       `i` isn't at the end. */
+    CORRADE_INTERNAL_ASSERT(i == topLevelNodeEnd && clipRectNodeCounts[clipRectsOffset]);
+
+    return clipRectsOffset + 1;
 }
 
 /* The `visibleNodeEventDataCounts` array gets the visible per-node data counts
@@ -361,20 +442,40 @@ void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& a
 
    The `dataToDrawOffsets[j]` and `dataToDrawSizes[j]` is then a range in
    `dataToUpdateIds` that should be drawn with layer `dataToDrawLayerIds[j]`,
-   with their total count being the return value of this function.
+   with their total count being the first return value of this function.
+
+   The `dataToDrawClipRectOffsets[k]` and `dataToDrawClipRectSizes[k]` is a
+   range in `dataToUpdateClipRectIds` that should be passed together with the
+   draw data, with their total count being the second return value of this
+   function.
 
    The `visibleNodeDataOffsets` and `visibleNodeDataIds` arrays are temporary
    storage -- they get filled with data IDs for visible nodes, with  `visibleNodeDataOffsets[i]` to
    `visibleNodeDataOffsets[i + 1]` being the range of data in
    `visibleNodeDataIds` corresponding to visible node at index `i`. */
-UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, LayerFeatures layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, UnsignedInt offset, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
+Containers::Pair<UnsignedInt, UnsignedInt> orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, LayerFeatures layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectNodeCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateClipRectIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateClipRectDataCounts, UnsignedInt offset, UnsignedInt clipRectOffset, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawClipRectOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawClipRectSizes) {
     CORRADE_INTERNAL_ASSERT(
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
         visibleNodeDataOffsets.size() == visibleNodeMask.size() + 1 &&
         visibleNodeEventDataCounts.size() == visibleNodeMask.size() &&
         visibleNodeDataIds.size() == dataNodes.size() &&
+        offset <= dataToUpdateIds.size() &&
+        dataToUpdateClipRectDataCounts.size() == dataToUpdateClipRectIds.size()  &&
+        clipRectOffset <= dataToUpdateClipRectIds.size() &&
         /* These should have the size matching the top-level node count */
-        dataToDrawSizes.size() == dataToDrawOffsets.size());
+        dataToDrawSizes.size() == dataToDrawOffsets.size() &&
+        dataToDrawClipRectOffsets.size() == dataToDrawOffsets.size() &&
+        dataToDrawClipRectSizes.size() == dataToDrawOffsets.size());
+
+    /* If there's no visible nodes to go through, bail. Otherwise it'd attempt
+       to access out-of-bounds dataToUpdateClipRectIds etc below. */
+    if(visibleNodeIds.isEmpty()) {
+        CORRADE_INTERNAL_ASSERT(
+            offset == 0 &&
+            clipRectNodeCounts.isEmpty() &&
+            clipRectOffset == 0);
+        return {};
+    }
 
     /* Zero out the visibleNodeDataOffsets array */
     std::memset(visibleNodeDataOffsets.data(), 0, visibleNodeDataOffsets.size()*sizeof(UnsignedInt));
@@ -435,10 +536,14 @@ UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const 
 
        First go through each visible top-level node... */
     UnsignedInt drawOffset = 0;
+    UnsignedInt clipRectInputOffset = 0;
+    dataToUpdateClipRectIds[clipRectOffset] = 0;
+    dataToUpdateClipRectDataCounts[clipRectOffset] = 0;
     for(UnsignedInt visibleTopLevelNodeIndex = 0; visibleTopLevelNodeIndex != visibleNodeChildrenCounts.size(); visibleTopLevelNodeIndex += visibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1) {
         /* Remember how much data was drawn for the previous node so we can
            figure out the range to draw for this one... */
         const UnsignedInt previousOffset = offset;
+        const UnsignedInt previousClipRectOutputOffset = clipRectOffset;
 
         /* Go through all (direct and nested) children of the top-level node
            and then all data of each, and copy their IDs to the output range */
@@ -451,23 +556,61 @@ UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const 
             }
         }
 
+        /* Convert the "clip rect affects N next visible nodes" counts to
+           "clip rect affects N next data attached to visible nodes" counts */
+        UnsignedInt clipRectNodeCount = 0;
+        for(UnsignedInt i = 0, iMax = visibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1; i != iMax; ++i) {
+            const UnsignedInt visibleNodeId = visibleNodeIds[visibleTopLevelNodeIndex + i];
+
+            /* For each node, add the count of data attached to that node to
+               the output. Which, on the other hand, *can* be zero. */
+            dataToUpdateClipRectDataCounts[clipRectOffset] += visibleNodeDataOffsets[visibleNodeId + 1] - visibleNodeDataOffsets[visibleNodeId];
+            ++clipRectNodeCount;
+
+            /* If we exhausted all nodes for this clip rect, move to the next
+               one. In order for this to work, it assumes all input counts are
+               non-zero. */
+            CORRADE_INTERNAL_DEBUG_ASSERT(clipRectNodeCounts[clipRectInputOffset]);
+            if(clipRectNodeCount == clipRectNodeCounts[clipRectInputOffset]) {
+                ++clipRectInputOffset;
+                if(dataToUpdateClipRectDataCounts[clipRectOffset])
+                    ++clipRectOffset;
+                /* If we're at the end of the input, the dataToUpdateClipRect*
+                   may not have any space left for the rest. Don't attempt to
+                   write there in that case. */
+                if(clipRectInputOffset != clipRectNodeCounts.size()) {
+                    dataToUpdateClipRectIds[clipRectOffset] = clipRectInputOffset;
+                    dataToUpdateClipRectDataCounts[clipRectOffset] = 0;
+                }
+                clipRectNodeCount = 0;
+            }
+        }
+
         /* If this layer is a drawing layer and there's any data to be drawn
            added by the above loop, save a range to the `dataToUpdateIds` and
-           `dataToUpdateNodeIds` arrays. If there's no data to be drawn, put
-           zeros there. */
+           `dataToUpdateNodeIds` arrays, and a corresponding clip rect range as
+           well. If there's no data to be drawn, put zeros there. */
         if(layerFeatures >= LayerFeature::Draw) {
             if(const UnsignedInt size = offset - previousOffset) {
                 dataToDrawOffsets[drawOffset] = previousOffset;
                 dataToDrawSizes[drawOffset] = offset - previousOffset;
+                dataToDrawClipRectOffsets[drawOffset] = previousClipRectOutputOffset;
+                dataToDrawClipRectSizes[drawOffset] = clipRectOffset - previousClipRectOutputOffset;
             } else {
                 dataToDrawOffsets[drawOffset] = 0;
                 dataToDrawSizes[drawOffset] = 0;
+                dataToDrawClipRectOffsets[drawOffset] = 0;
+                dataToDrawClipRectSizes[drawOffset] = 0;
             }
             ++drawOffset;
         }
     }
 
-    return offset;
+    /* After all top-level nodes we should have the clip rect array fully
+       exhausted */
+    CORRADE_INTERNAL_ASSERT(clipRectInputOffset == clipRectNodeCounts.size());
+
+    return {offset, clipRectOffset};
 }
 
 /* The `dataNodes` array is expected to be the same as passed into
@@ -506,21 +649,26 @@ void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers
 
 /* Reduces the three arrays by throwing away items where size is 0. Returns the
    resulting size. */
-UnsignedInt compactDrawsInPlace(const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
+UnsignedInt compactDrawsInPlace(const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawClipRectOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawClipRectSizes) {
     CORRADE_INTERNAL_ASSERT(
         dataToDrawOffsets.size() == dataToDrawLayerIds.size() &&
-        dataToDrawSizes.size() == dataToDrawLayerIds.size());
+        dataToDrawSizes.size() == dataToDrawLayerIds.size() &&
+        dataToDrawClipRectSizes.size() == dataToDrawClipRectOffsets.size());
 
     std::size_t offset = 0;
     for(std::size_t i = 0, iMax = dataToDrawLayerIds.size(); i != iMax; ++i) {
-        if(!dataToDrawSizes[i])
+        if(!dataToDrawSizes[i]) {
+            CORRADE_INTERNAL_DEBUG_ASSERT(!dataToDrawClipRectSizes[i]);
             continue;
+        }
 
         /* Don't copy to itself */
         if(i != offset) {
             dataToDrawLayerIds[offset] = dataToDrawLayerIds[i];
             dataToDrawOffsets[offset] = dataToDrawOffsets[i];
             dataToDrawSizes[offset] = dataToDrawSizes[i];
+            dataToDrawClipRectOffsets[offset] = dataToDrawClipRectOffsets[i];
+            dataToDrawClipRectSizes[offset] = dataToDrawClipRectSizes[i];
         }
 
         ++offset;
