@@ -762,11 +762,27 @@ void AbstractLayerTest::update() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             ++called;
             CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
                 0xabcdeu,
                 0x45678u
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectIds, Containers::arrayView({
+                /* These should be small enough to index into clipRectOffsets
+                   and clipRectSizes but nobody cares here */
+                3u,
+                16u,
+                27u,
+                2u
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectDataCounts, Containers::arrayView({
+                /* The sum should be equal to dataIds.size(), yes, nobody cares
+                   here */
+                265u,
+                1u,
+                13u,
+                7u
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeOffsets, Containers::arrayView<Vector2>({
                 {1.0f, 2.0f},
@@ -777,6 +793,12 @@ void AbstractLayerTest::update() {
                 {0.1f, 0.2f},
                 {0.3f, 0.4f},
                 {0.5f, 0.6f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectOffsets, Containers::arrayView<Vector2>({
+                {6.5f, 7.5f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectSizes, Containers::arrayView<Vector2>({
+                {8.5f, 9.5f},
             }), TestSuite::Compare::Container);
         }
 
@@ -791,6 +813,18 @@ void AbstractLayerTest::update() {
             0xabcdeu,
             0x45678u,
         }),
+        Containers::arrayView({
+            3u,
+            16u,
+            27u,
+            2u
+        }),
+        Containers::arrayView({
+            265u,
+            1u,
+            13u,
+            7u
+        }),
         Containers::arrayView<Vector2>({
             {1.0f, 2.0f},
             {3.0f, 4.0f},
@@ -800,6 +834,12 @@ void AbstractLayerTest::update() {
             {0.1f, 0.2f},
             {0.3f, 0.4f},
             {0.5f, 0.6f}
+        }),
+        Containers::arrayView<Vector2>({
+            {6.5f, 7.5f},
+        }),
+        Containers::arrayView<Vector2>({
+            {8.5f, 9.5f},
         })
     );
     CORRADE_COMPARE(layer.called, 1);
@@ -811,7 +851,7 @@ void AbstractLayerTest::updateEmpty() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             ++called;
         }
 
@@ -819,7 +859,7 @@ void AbstractLayerTest::updateEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.update({}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -835,6 +875,18 @@ void AbstractLayerTest::updateNotImplemented() {
             0u,
             0u
         }),
+        Containers::arrayView({
+            0u,
+            0u,
+            0u,
+            0u
+        }),
+        Containers::arrayView({
+            0u,
+            0u,
+            0u,
+            0u
+        }),
         Containers::arrayView<Vector2>({
             {},
             {},
@@ -843,6 +895,12 @@ void AbstractLayerTest::updateNotImplemented() {
         Containers::arrayView<Vector2>({
             {},
             {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {}
+        }),
+        Containers::arrayView<Vector2>({
             {}
         })
     );
@@ -864,6 +922,20 @@ void AbstractLayerTest::updateInvalidSizes() {
     Error redirectError{&out};
     layer.update(
         {},
+        Containers::arrayView({
+            0u,
+            0u,
+            0u
+        }),
+        Containers::arrayView({
+            0u,
+            0u
+        }),
+        {}, {},
+        {}, {}
+    );
+    layer.update(
+        {}, {}, {},
         Containers::arrayView<Vector2>({
             {},
             {}
@@ -872,10 +944,26 @@ void AbstractLayerTest::updateInvalidSizes() {
             {},
             {},
             {}
+        }),
+        {}, {}
+    );
+    layer.update(
+        {}, {}, {},
+        {}, {},
+        Containers::arrayView<Vector2>({
+            {},
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {},
+            {}
         })
     );
     CORRADE_COMPARE(out.str(),
-        "Whee::AbstractLayer::update(): expected node offset and size views to have the same size but got 2 and 3\n");
+        "Whee::AbstractLayer::update(): expected clip rect ID and data count views to have the same size but got 3 and 2\n"
+        "Whee::AbstractLayer::update(): expected node offset and size views to have the same size but got 2 and 3\n"
+        "Whee::AbstractLayer::update(): expected clip rect offset and size views to have the same size but got 3 and 2\n");
 }
 
 void AbstractLayerTest::state() {
@@ -900,7 +988,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 
     /* update() then resets it */
-    layer.update({}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching to a node sets a state flag */
@@ -910,7 +998,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets it */
-    layer.update({}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Detaching sets a state flag as well (even if the data originally weren't
@@ -919,7 +1007,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets it */
-    layer.update({}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* remove() adds NeedClean */
@@ -936,7 +1024,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets one */
-    layer.update({}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
 
     /* cleanNodes() the other */
@@ -948,7 +1036,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() and cleanNodes() then reset it */
-    layer.update({}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {});
     layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
@@ -970,15 +1058,35 @@ void AbstractLayerTest::draw() {
             return LayerFeature::Draw;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& data, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             ++called;
-            CORRADE_COMPARE_AS(data, Containers::arrayView({
+            CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
                 0xabcdeu,
                 0u,
                 0x45678u,
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(offset, 1);
             CORRADE_COMPARE(count, 2);
+            CORRADE_COMPARE_AS(clipRectIds, Containers::arrayView({
+                /* These should be small enough to index into clipRectOffsets
+                   and clipRectSizes but nobody cares here */
+                3u,
+                16u,
+                0u,
+                27u,
+                2u
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectDataCounts, Containers::arrayView({
+                /* The sum should be equal to dataIds.size(), yes, nobody cares
+                   here */
+                265u,
+                1u,
+                0u,
+                13u,
+                7u
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE(clipRectOffset, 2);
+            CORRADE_COMPARE(clipRectCount, 3);
             CORRADE_COMPARE_AS(nodeOffsets, Containers::arrayView<Vector2>({
                 {1.0f, 2.0f},
                 {3.0f, 4.0f}
@@ -986,6 +1094,12 @@ void AbstractLayerTest::draw() {
             CORRADE_COMPARE_AS(nodeSizes, Containers::arrayView<Vector2>({
                 {0.1f, 0.2f},
                 {0.3f, 0.4f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectOffsets, Containers::arrayView<Vector2>({
+                {6.5f, 7.5f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectSizes, Containers::arrayView<Vector2>({
+                {8.5f, 9.5f},
             }), TestSuite::Compare::Container);
         }
 
@@ -1002,6 +1116,21 @@ void AbstractLayerTest::draw() {
             0x45678u
         }),
         1, 2,
+        Containers::arrayView({
+            3u,
+            16u,
+            0u,
+            27u,
+            2u
+        }),
+        Containers::arrayView({
+            265u,
+            1u,
+            0u,
+            13u,
+            7u
+        }),
+        2, 3,
         Containers::arrayView<Vector2>({
             {1.0f, 2.0f},
             {3.0f, 4.0f}
@@ -1009,6 +1138,12 @@ void AbstractLayerTest::draw() {
         Containers::arrayView<Vector2>({
             {0.1f, 0.2f},
             {0.3f, 0.4f}
+        }),
+        Containers::arrayView<Vector2>({
+            {6.5f, 7.5f},
+        }),
+        Containers::arrayView<Vector2>({
+            {8.5f, 9.5f},
         })
     );
     CORRADE_COMPARE(layer.called, 1);
@@ -1022,7 +1157,7 @@ void AbstractLayerTest::drawEmpty() {
             return LayerFeature::Draw;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             ++called;
         }
 
@@ -1030,7 +1165,7 @@ void AbstractLayerTest::drawEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.draw({}, 0, 0, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {});
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -1045,7 +1180,7 @@ void AbstractLayerTest::drawNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::draw(): feature not supported\n");
 }
 
@@ -1062,7 +1197,7 @@ void AbstractLayerTest::drawNotImplemented() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::draw(): feature advertised but not implemented\n");
 }
 
@@ -1082,12 +1217,47 @@ void AbstractLayerTest::drawInvalidSizes() {
     layer.draw(
         {},
         0, 0,
+        Containers::arrayView({
+            0u,
+            0u,
+            0u
+        }),
+        Containers::arrayView({
+            0u,
+            0u
+        }),
+        0, 0,
+        {}, {},
+        {}, {}
+    );
+    layer.draw(
+        {},
+        0, 0,
+        {}, {},
+        0, 0,
         Containers::arrayView<Vector2>({
             {},
             {}
         }),
         Containers::arrayView<Vector2>({
             {},
+            {},
+            {}
+        }),
+        {}, {}
+    );
+    layer.draw(
+        {},
+        0, 0,
+        {}, {},
+        0, 0,
+        {}, {},
+        Containers::arrayView<Vector2>({
+            {},
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
             {},
             {}
         })
@@ -1098,6 +1268,9 @@ void AbstractLayerTest::drawInvalidSizes() {
             0u
         }),
         3, 0,
+        {}, {},
+        0, 0,
+        {}, {},
         {}, {}
     );
     layer.draw(
@@ -1106,12 +1279,54 @@ void AbstractLayerTest::drawInvalidSizes() {
             0u
         }),
         2, 1,
+        {}, {},
+        0, 0,
+        {}, {},
         {}, {}
     );
-    CORRADE_COMPARE(out.str(),
+    layer.draw(
+        {},
+        0, 0,
+        Containers::arrayView({
+            0u,
+            0u,
+            0u
+        }),
+        Containers::arrayView({
+            0u,
+            0u,
+            0u
+        }),
+        4, 0,
+        {}, {},
+        {}, {}
+    );
+    layer.draw(
+        {},
+        0, 0,
+        Containers::arrayView({
+            0u,
+            0u,
+            0u
+        }),
+        Containers::arrayView({
+            0u,
+            0u,
+            0u
+        }),
+        1, 3,
+        {}, {},
+        {}, {}
+    );
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::draw(): expected clip rect ID and data count views to have the same size but got 3 and 2\n"
         "Whee::AbstractLayer::draw(): expected node offset and size views to have the same size but got 2 and 3\n"
+        "Whee::AbstractLayer::draw(): expected clip rect offset and size views to have the same size but got 3 and 2\n"
         "Whee::AbstractLayer::draw(): offset 3 and count 0 out of range for 2 items\n"
-        "Whee::AbstractLayer::draw(): offset 2 and count 1 out of range for 2 items\n");
+        "Whee::AbstractLayer::draw(): offset 2 and count 1 out of range for 2 items\n"
+        "Whee::AbstractLayer::draw(): clip rect offset 4 and count 0 out of range for 3 items\n"
+        "Whee::AbstractLayer::draw(): clip rect offset 1 and count 3 out of range for 3 items\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::pointerEvent() {
