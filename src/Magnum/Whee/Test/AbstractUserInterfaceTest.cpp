@@ -2139,9 +2139,15 @@ void AbstractUserInterfaceTest::state() {
             ++cleanCallCount;
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_COMPARE_AS(dataIds,
                 expectedDataIds,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectIds,
+                expectedClipRectIdsDataCounts.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectDataCounts,
+                expectedClipRectIdsDataCounts.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
                 TestSuite::Compare::Container);
             CORRADE_COMPARE(nodeOffsets.size(), expectedNodeOffsetsSizes.size());
             for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
@@ -2152,12 +2158,20 @@ void AbstractUserInterfaceTest::state() {
                     continue;
                 CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
             }
+            CORRADE_COMPARE_AS(clipRectOffsets,
+                expectedClipRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::first),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectSizes,
+                expectedClipRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::second),
+                TestSuite::Compare::Container);
             ++updateCallCount;
         }
 
         Containers::StridedArrayView1D<const bool> expectedDataIdsToRemove;
         Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
+        Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedClipRectIdsDataCounts;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
+        Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedClipRectOffsetsSizes;
         Int cleanCallCount = 0;
         Int updateCallCount = 0;
     };
@@ -2255,8 +2269,18 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 3}, /* node and all children */
+            {1, 1}  /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{2.0f, 1.0f}, {3.0f, 5.0f}},
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2295,8 +2319,18 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 3}, /* node and all children */
+            {1, 1}  /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{2.0f, 1.0f}, {3.0f, 5.0f}},
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2344,8 +2378,18 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and remaining child */
+            {1, 1}  /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{2.0f, 1.0f}, {2.0f, 4.0f}},
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2392,8 +2436,18 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and remaining child */
+            {1, 1}  /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2427,8 +2481,16 @@ void AbstractUserInterfaceTest::state() {
             {},
             {}
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 1}  /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2470,8 +2532,18 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and remaining child */
+            {1, 1}  /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2519,8 +2591,18 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{5.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 3}, /* node and all children */
+            {1, 1}  /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{}, {}},
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2562,8 +2644,18 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and remaining child */
+            {1, 1}  /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2598,8 +2690,16 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {}
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and remaining child */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2640,8 +2740,18 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 1}, /* another, unclipped */
+            {1, 2}  /* node and remaining child */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{}, {}},
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2728,9 +2838,19 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 1}, /* another, unclipped */
+            {1, 1}  /* remaining node child */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{}, {}},
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}
+        };
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2784,9 +2904,17 @@ void AbstractUserInterfaceTest::state() {
             {},
             {},
         };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 1}, /* another, unclipped */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{}, {}}
+        };
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2816,9 +2944,9 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
     }
 
-    /* Calling update() then resets the remaining state flag. There's no data
-       anymore, but it's still called to let the layer refresh its internal
-       state. */
+    /* Calling update() then resets the remaining state flag-> There's no data
+       anymore, only the remaining "another" node for which offset/size and
+       a corresponding clip rect offset/size is passed. */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
@@ -2827,9 +2955,14 @@ void AbstractUserInterfaceTest::state() {
             {},
             {}
         };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{}, {}}
+        };
         ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
         ui.layer<Layer>(anotherLayer).expectedDataIds = {};
         ui.layer<Layer>(anotherLayer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(anotherLayer).expectedClipRectIdsDataCounts = {};
+        ui.layer<Layer>(anotherLayer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2949,13 +3082,19 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(framebufferSize, (Vector2i{400, 500}));
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_ITERATION(handle());
             /* doSetSize() should have been called exactly once at this point
                if this layer draws, and not at all if it doesn't */
             CORRADE_COMPARE(setSizeCallCount, features & LayerFeature::Draw ? 1 : 0);
             CORRADE_COMPARE_AS(dataIds,
                 expectedDataIds,
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectIds,
+                expectedClipRectIdsDataCounts.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectDataCounts,
+                expectedClipRectIdsDataCounts.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
                 TestSuite::Compare::Container);
             CORRADE_COMPARE(nodeOffsets.size(), expectedNodeOffsetsSizes.size());
             for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
@@ -2966,13 +3105,23 @@ void AbstractUserInterfaceTest::draw() {
                     continue;
                 CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
             }
+            CORRADE_COMPARE_AS(clipRectOffsets,
+                expectedClipRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::first),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectSizes,
+                expectedClipRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::second),
+                TestSuite::Compare::Container);
             actualDataIds = dataIds;
+            actualClipRectIds = clipRectIds;
+            actualClipRectDataCounts = clipRectDataCounts;
             actualNodeOffsets = nodeOffsets;
             actualNodeSizes = nodeSizes;
+            actualClipRectOffsets = clipRectOffsets;
+            actualClipRectSizes = clipRectSizes;
             ++*updateCallCount;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_ITERATION(handle());
             /* doSetSize() should have been called exactly once at this point */
             CORRADE_COMPARE(setSizeCallCount, 1);
@@ -2980,25 +3129,47 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(dataIds.data(), actualDataIds.data());
             CORRADE_COMPARE(dataIds.size(), actualDataIds.size());
             CORRADE_COMPARE(dataIds.stride(), actualDataIds.stride());
+            CORRADE_COMPARE(clipRectIds.data(), actualClipRectIds.data());
+            CORRADE_COMPARE(clipRectIds.size(), actualClipRectIds.size());
+            CORRADE_COMPARE(clipRectIds.stride(), actualClipRectIds.stride());
+            CORRADE_COMPARE(clipRectDataCounts.data(), actualClipRectDataCounts.data());
+            CORRADE_COMPARE(clipRectDataCounts.size(), actualClipRectDataCounts.size());
+            CORRADE_COMPARE(clipRectDataCounts.stride(), actualClipRectDataCounts.stride());
             CORRADE_COMPARE(nodeOffsets.data(), actualNodeOffsets.data());
             CORRADE_COMPARE(nodeOffsets.size(), actualNodeOffsets.size());
             CORRADE_COMPARE(nodeOffsets.stride(), actualNodeOffsets.stride());
             CORRADE_COMPARE(nodeSizes.data(), actualNodeSizes.data());
             CORRADE_COMPARE(nodeSizes.size(), actualNodeSizes.size());
             CORRADE_COMPARE(nodeSizes.stride(), actualNodeSizes.stride());
-            arrayAppend(*drawCalls, InPlaceInit, handle(), offset, count);
+            CORRADE_COMPARE(clipRectOffsets.data(), actualClipRectOffsets.data());
+            CORRADE_COMPARE(clipRectOffsets.size(), actualClipRectOffsets.size());
+            CORRADE_COMPARE(clipRectOffsets.stride(), actualClipRectOffsets.stride());
+            CORRADE_COMPARE(clipRectSizes.data(), actualClipRectSizes.data());
+            CORRADE_COMPARE(clipRectSizes.size(), actualClipRectSizes.size());
+            CORRADE_COMPARE(clipRectSizes.stride(), actualClipRectSizes.stride());
+            arrayAppend(*drawCalls, InPlaceInit, handle(),
+                Containers::pair(offset, count),
+                Containers::pair(clipRectOffset, clipRectCount));
         }
 
         LayerFeatures features;
         Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
+        Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedClipRectIdsDataCounts;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
+        Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedClipRectOffsetsSizes;
         Int* updateCallCount;
         Int setSizeCallCount = 0;
-        Containers::Array<Containers::Triple<LayerHandle, std::size_t, std::size_t>>* drawCalls;
+        Containers::Array<Containers::Triple<LayerHandle,
+            Containers::Pair<std::size_t, std::size_t>,
+            Containers::Pair<std::size_t, std::size_t>>>* drawCalls;
 
         Containers::StridedArrayView1D<const UnsignedInt> actualDataIds;
+        Containers::StridedArrayView1D<const UnsignedInt> actualClipRectIds;
+        Containers::StridedArrayView1D<const UnsignedInt> actualClipRectDataCounts;
         Containers::StridedArrayView1D<const Vector2> actualNodeOffsets;
         Containers::StridedArrayView1D<const Vector2> actualNodeSizes;
+        Containers::StridedArrayView1D<const Vector2> actualClipRectOffsets;
+        Containers::StridedArrayView1D<const Vector2> actualClipRectSizes;
     };
 
     /* Capture correct function name */
@@ -3011,14 +3182,14 @@ void AbstractUserInterfaceTest::draw() {
        5 | +------+ |  right  +----------| not in |
        6 | | left | | +-------|          | order  |
        7 | +------+ | | nested|  another +--------+
-       8 |          +-+-------| top level  |
+       8 |          +-|       | top level  |
        9 +------------+-------|          +--------+
       10   +--------+ |layer1 +----------| layer2 |
            | culled | |  only   |        |  only  |
       11   +--------+ +---------+        +--------+ */
     NodeHandle topLevel = ui.createNode({1.0f, 3.0f}, {7.0f, 6.0f});
     NodeHandle left = ui.createNode(topLevel, {1.0f, 2.0f}, {1.0f, 2.0f}, NodeFlag::Clip);
-    NodeHandle right = ui.createNode(topLevel, {3.0f, 1.0f}, {3.0f, 4.0f});
+    NodeHandle right = ui.createNode(topLevel, {3.0f, 1.0f}, {3.0f, 4.0f}, NodeFlag::Clip);
     NodeHandle layer1Only = ui.createNode({5.0f, 9.0f}, {2.0f, 2.0f});
     NodeHandle anotherTopLevel = ui.createNode({6.0f, 5.0f}, {4.0f, 5.0f});
     NodeHandle layer2Only = ui.createNode({9.0f, 9.0f}, {2.0f, 2.0f});
@@ -3026,7 +3197,8 @@ void AbstractUserInterfaceTest::draw() {
     NodeHandle removed = ui.createNode(right, {}, {});
     NodeHandle topLevelHidden = ui.createNode({}, {}, NodeFlag::Hidden);
     NodeHandle culled = ui.createNode(left, {0.0f, 5.0f}, {2.0f, 1.0f});
-    NodeHandle nested = ui.createNode(right, {1.0f, 2.0f}, {2.0f, 2.0f});
+    /* Overflows right, is clipped; is also clipping itself */
+    NodeHandle nested = ui.createNode(right, {1.0f, 2.0f}, {3.0f, 3.0f}, NodeFlag::Clip);
 
     /* These follow the node handle IDs, nodes that are not part of the
        visible hierarchy have the data undefined */
@@ -3041,7 +3213,7 @@ void AbstractUserInterfaceTest::draw() {
         {},                           /* topLevelHidden */
         {},                           /* not in order */
         {},                           /* culled */
-        {{5.0f, 6.0f}, {2.0f, 2.0f}}, /* nested */
+        {{5.0f, 6.0f}, {3.0f, 3.0f}}, /* nested */
     };
 
     /* Layer without an instance, to verify those get skipped during updates */
@@ -3118,6 +3290,52 @@ void AbstractUserInterfaceTest::draw() {
         dataHandleId(topLevelData),
         dataHandleId(rightData1),
     };
+    Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+        /* anotherTopLevel */
+        {{}, {}},                               /* clip rect ID 0 */
+        /* topLevel */
+        {{}, {}},                               /* clip rect ID 1 */
+            /* left */
+            {{2.0f, 5.0f}, {1.0f, 2.0f}},       /* clip rect ID 2 */
+            /* right */
+            {{4.0f, 4.0f}, {3.0f, 4.0f}},       /* clip rect ID 3 */
+                /* nested */
+                {{5.0f, 6.0f}, {2.0f, 2.0f}},   /* clip rect ID 4 */
+        /* layer1Only */
+        {{}, {}},                               /* clip rect ID 5 */
+        /* layer2Only */
+        {{}, {}},                               /* clip rect ID 6 */
+    };
+    /* In each of these, the total count should match the size of the
+       expectedLayer*DataIds arrays */
+    Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer1ClipRectIdsDataCounts[]{
+        /* anotherTopLevel */
+        {0, 1},
+        /* left */
+        {2, 2},
+        /* layer1Only */
+        {5, 1}
+    };
+    Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer2ClipRectIdsDataCounts[]{
+        /* anotherTopLevel */
+        {0, 2},
+        /* left */
+        {2, 1},
+        /* right */
+        {3, 1},
+        /* nested */
+        {4, 1},
+        /* layer2Only */
+        {6, 1},
+    };
+    Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer3ClipRectIdsDataCounts[]{
+        /* anotherTopLevel */
+        {0, 1},
+        /* topLevel */
+        {1, 1},
+        /* right */
+        {3, 1}
+    };
 
     layer1Instance->expectedDataIds = expectedLayer1DataIds;
     layer2Instance->expectedDataIds = expectedLayer2DataIds;
@@ -3125,13 +3343,21 @@ void AbstractUserInterfaceTest::draw() {
     layer1Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
     layer2Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
     layer3Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+    layer1Instance->expectedClipRectIdsDataCounts = expectedLayer1ClipRectIdsDataCounts;
+    layer2Instance->expectedClipRectIdsDataCounts = expectedLayer2ClipRectIdsDataCounts;
+    layer3Instance->expectedClipRectIdsDataCounts = expectedLayer3ClipRectIdsDataCounts;
+    layer1Instance->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+    layer2Instance->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+    layer3Instance->expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
     Int layer1UpdateCallCount = 0;
     Int layer2UpdateCallCount = 0;
     Int layer3UpdateCallCount = 0;
     layer1Instance->updateCallCount = &layer1UpdateCallCount;
     layer2Instance->updateCallCount = &layer2UpdateCallCount;
     layer3Instance->updateCallCount = &layer3UpdateCallCount;
-    Containers::Array<Containers::Triple<LayerHandle, std::size_t, std::size_t>> drawCalls;
+    Containers::Array<Containers::Triple<LayerHandle,
+            Containers::Pair<std::size_t, std::size_t>,
+            Containers::Pair<std::size_t, std::size_t>>> drawCalls;
     layer1Instance->drawCalls = &drawCalls;
     layer2Instance->drawCalls = &drawCalls;
     layer3Instance->drawCalls = &drawCalls;
@@ -3200,21 +3426,29 @@ void AbstractUserInterfaceTest::draw() {
     CORRADE_COMPARE(layer1UpdateCallCount, 1);
     CORRADE_COMPARE(layer2UpdateCallCount, 1);
     CORRADE_COMPARE(layer3UpdateCallCount, 1);
-    CORRADE_COMPARE_AS(drawCalls, (Containers::arrayView<Containers::Triple<LayerHandle, std::size_t, std::size_t>>({
+    CORRADE_COMPARE_AS(drawCalls, (Containers::arrayView<Containers::Triple<LayerHandle,
+            Containers::Pair<std::size_t, std::size_t>,
+            Containers::Pair<std::size_t, std::size_t>>>({
         /* anotherTopLevel rendered first */
-            /* first data from expectedLayer1Data */
-            {layer1, 0, 1},
-            /* first two data from expectedLayer2Data */
-            {layer2, 0, 2},
+            /* first data from expectedLayer1Data, first rect from
+               expectedLayer1ClipRectIdsDataCounts */
+            {layer1, {0, 1}, {0, 1}},
+            /* first two data from expectedLayer2Data, first rect from
+               expectedLayer2ClipRectIdsDataCounts */
+            {layer2, {0, 2}, {0, 1}},
         /* then topLevel */
-            /* remaining data from expectedLayer1Data */
-            {layer1, 1, 2},
-            /* and then remaining data from expectedLayer2Data */
-            {layer2, 2, 3},
-        /* then layer1Only, with only data from layer 1 */
-            {layer1, 3, 1},
-        /* then layer2Only, with only data from layer 2 */
-            {layer2, 5, 1},
+            /* next two data from expectedLayer1Data, second rect from
+               expectedLayer1ClipRectIdsDataCounts */
+            {layer1, {1, 2}, {1, 1}},
+            /* and then next three data from expectedLayer2Data, second, third
+               and fourth rect from expectedLayer2ClipRectIdsDataCounts */
+            {layer2, {2, 3}, {1, 3}},
+        /* then layer1Only, with only data from layer 1 and last rect from
+           expectedLayer1ClipRectIdsDataCounts */
+            {layer1, {3, 1}, {2, 1}},
+        /* then layer2Only, with only data from layer 2 and last rect from
+           expectedLayer2ClipRectIdsDataCounts */
+            {layer2, {5, 1}, {4, 1}},
         /* layer 3 doesn't have LayerFeature::Draw, so draw() shouldn't be
            called with anything for it */
     })), TestSuite::Compare::Container);

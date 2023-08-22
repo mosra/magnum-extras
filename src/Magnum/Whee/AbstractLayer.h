@@ -420,7 +420,9 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * just for testing purposes, there should be no need to call this
          * function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave. Expects that
-         * the @p nodeOffsets and @p nodeSizes have the same size. The
+         * the @p clipRectIds and @p clipRectDataCounts views have the same
+         * size, @p nodeOffsets and @p nodeSizes have the same size and
+         * @p clipRectOffsets and @p clipRectOffset have the same size. The
          * @p nodeOffsets and @p nodeSizes views should be large enough to
          * contain any valid node ID. Delegates to @ref doUpdate(), see its
          * documentation for more information about the arguments.
@@ -433,7 +435,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @p dataIds contain only IDs that aren't scheduled for removal, the
          * two states are independent.
          */
-        void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
+        void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Draw a sub-range of visible layer data
@@ -442,13 +444,15 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * just for testing purposes, there should be no need to call this
          * function directly. Expects that the layer supports
          * @ref LayerFeature::Draw, @p offset and @p count fits into @p dataIds
-         * size, and that the @p nodeOffsets and @p nodeSizes view have the
-         * same size. The @p nodeOffsets and @p nodeSizes views should be large
-         * enough to contain any valid node ID. Delegates to @ref doDraw(), see
-         * its documentation for more information about the arguments.
+         * size, that the @p clipRectIds and @p clipRectDataCounts views have
+         * the same size, @p nodeOffsets and @p nodeSizes have the same size
+         * and @p clipRectOffsets and @p clipRectOffset have the same size. The
+         * @p nodeOffsets and @p nodeSizes views should be large enough to
+         * contain any valid node ID. Delegates to @ref doDraw(), see its
+         * documentation for more information about the arguments.
          * @see @ref features()
          */
-        void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
+        void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Handle a pointer press event
@@ -582,8 +586,15 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @brief Update visible layer data to given offsets and positions
          * @param dataIds           Data IDs to update, in order that matches
          *      the draw order
+         * @param clipRectIds       IDs of clip rects to use for @p dataIds
+         * @param clipRectDataCounts  Counts of @p dataIds to use for each
+         *      clip rect from @p clipRectIds
          * @param nodeOffsets       Absolute node offsets indexed by node ID
          * @param nodeSizes         Node sizes indexed by node ID
+         * @param clipRectOffsets   Absolute clip rect offsets referenced by
+         *      @p clipRectIds
+         * @param clipRectSizes     Clip rect sizes referenced by
+         *      @p clipRectIds
          *
          * Implementation for @ref update(), which is called from
          * @ref AbstractUserInterface::update(). Node handles corresponding to
@@ -600,13 +611,29 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * referenced from @p dataIds, such as for nodes that are not currently
          * visible or freed node handles.
          *
+         * The node data are meant to be clipped by rects defined in
+         * @p clipRectOffsets and @p clipRectSizes. The @p clipRectIds and
+         * @p clipRectDataCounts have the same size and specify which of these
+         * rects is used for which data. For example, a sequence of
+         * @cpp {3, 2}, {0, 4}, {1, 7} @ce means clipping the first two data
+         * with clip rect 3, then the next four data with clip rect 0 and then
+         * the next seven data with clip rect 1. The sum of all
+         * @p clipRectDataCounts is equal to the size of the @p dataIds array.
+         * The @p clipRectOffsets and @p clipRectSizes have the same size and
+         * are guaranteed to be large enough to contain any ID from
+         * @p clipRectIds. They're in the same coordinate system as
+         * @p nodeOffsets and @p nodeSizes, a zero offset and a zero size
+         * denotes that no clipping is needed. Tt's up to the implementation
+         * whether it clips the actual data directly or whether it performs
+         * clipping at draw time.
+         *
          * Default implementation does nothing. Data passed to this function
          * are subsequently passed to @ref doDraw() calls as well, the only
          * difference is that @ref doUpdate() gets called just once with all
          * data to update, while @ref doDraw() is called several times with
          * different sub-ranges of the data based on desired draw order.
          */
-        virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
+        virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Draw a sub-range of visible layer data
@@ -615,24 +642,49 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *      earlier.
          * @param offset            Offset into @p dataIds
          * @param count             Count of @p dataIds to draw
+         * @param clipRectIds       IDs of clip rects to use for @p dataIds.
+         *      Same as the view passed to @ref doUpdate() earlier.
+         * @param clipRectDataCounts  Counts of @p dataIds to use for each
+         *      clip rect from @p clipRectIds. Same as the view passed to
+         *      @ref doUpdate() earlier.
+         * @param clipRectOffset    Offset into @p clipRectIds and
+         *      @p clipRectDataCounts
+         * @param clipRectCount     Count of @p clipRectIds and
+         *      @p clipRectDataCounts to use
          * @param nodeOffsets       Absolute node offsets. Same as the view
          *      passed to @ref doUpdate() earlier.
          * @param nodeSizes         Node sizes. Same as the view passed to
+         *      @ref doUpdate() earlier.
+         * @param clipRectOffsets   Absolute clip rect offsets. Same as the
+         *      view passed to @ref doUpdate() earlier.
+         * @param clipRectSizes     Clip rect sizes. Same as the view passed to
          *      @ref doUpdate() earlier.
          *
          * Implementation for @ref draw(), which is called from
          * @ref AbstractUserInterface::draw(). Called only if
          * @ref LayerFeature::Draw is supported, it's guaranteed that
          * @ref doUpdate() was called at some point before this function with
-         * the exact same views passed to @p dataIds, @p nodeOffsets and
-         * @p nodeSizes, see its documentation for their relations and
-         * constraints.
+         * the exact same views passed to @p dataIds, @p clipRectIds,
+         * @p clipRectDataCounts, @p nodeOffsets, @p nodeSizes,
+         * @p clipRectOffsets and @p clipRectSizes, see its documentation for
+         * their relations and constraints.
+         *
+         * Like with @ref doUpdate(), the @p clipRectOffsets and
+         * @p clipRectSizes are in the same coordinate system as @p nodeOffsets
+         * and @p nodeSizes. If performing the clipping at draw time (instead
+         * of clipping the actual data directly in @p doDraw()), the
+         * implementation may need to scale these to match actual framebuffer
+         * pixels, i.e. by multiplying them with
+         * @cpp Vector2{framebufferSize}/size @ce inside @ref doSetSize().
          *
          * This function usually gets called several times with the same views
-         * but different @p offset and @p count values in order to interleave
-         * the draws for a correct back-to-front order.
+         * but different @p offset, @p count, @p clipRectOffset and
+         * @p clipRectCount values in order to interleave the draws for a
+         * correct back-to-front order. In each call, the sum of all
+         * @p clipRectDataCounts in the range given by @p clipRectOffset and
+         * @p clipRectCount is equal to @p count.
          */
-        virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
+        virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Handle a pointer press event

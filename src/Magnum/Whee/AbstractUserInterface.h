@@ -970,7 +970,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Orders visible nodes back-to-front for drawing and
          *      front-to-back for event processing
          * -    Calculates absolute offsets for visible nodes
-         * -    Culls invisible nodes
+         * -    Culls invisible nodes, calculates clip rectangles
          * -    Orders data attachments in each layer by draw order
          * -    Calls @ref AbstractLayer::update() with the ordered data
          * -    Resets @ref pointerEventCapturedNode() or
