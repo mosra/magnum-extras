@@ -2136,12 +2136,9 @@ void AbstractUserInterfaceTest::state() {
             ++cleanCallCount;
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
             CORRADE_COMPARE_AS(dataIds,
-                expectedData.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(dataNodeIds,
-                expectedData.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+                expectedDataIds,
                 TestSuite::Compare::Container);
             CORRADE_COMPARE(nodeOffsets.size(), expectedNodeOffsetsSizes.size());
             for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
@@ -2156,7 +2153,7 @@ void AbstractUserInterfaceTest::state() {
         }
 
         Containers::StridedArrayView1D<const bool> expectedDataIdsToRemove;
-        Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedData;
+        Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
         Int cleanCallCount = 0;
         Int updateCallCount = 0;
@@ -2190,11 +2187,11 @@ void AbstractUserInterfaceTest::state() {
     }
 
     /* Creating a data in a layer sets no state flags */
-    DataHandle data1 = ui.layer(layer).create();
-    DataHandle data2 = ui.layer(layer).create();
-    DataHandle data3 = ui.layer(layer).create();
-    DataHandle data4 = ui.layer(layer).create();
-    DataHandle data5 = ui.layer(layer).create();
+    DataHandle dataNested2 = ui.layer(layer).create();
+    DataHandle dataNode = ui.layer(layer).create();
+    DataHandle dataAnother = ui.layer(layer).create();
+    DataHandle dataNotAttached = ui.layer(layer).create();
+    DataHandle dataNested1 = ui.layer(layer).create();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
 
@@ -2222,10 +2219,10 @@ void AbstractUserInterfaceTest::state() {
 
     /* Attaching the data sets flags. Order doesn't matter, as internally it's
        always ordered by the data ID. */
-    ui.attachData(node, data2);
-    ui.attachData(nested1, data5);
-    ui.attachData(nested2, data1);
-    ui.attachData(another, data3);
+    ui.attachData(node, dataNode);
+    ui.attachData(nested1, dataNested1);
+    ui.attachData(nested2, dataNested2);
+    ui.attachData(another, dataAnother);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     /* Calling clean() should be a no-op */
@@ -2243,11 +2240,11 @@ void AbstractUserInterfaceTest::state() {
        and resets the flag. */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)},
-            {dataHandleId(data1), nodeHandleId(nested2)},
-            {dataHandleId(data3), nodeHandleId(another)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataNested2),
+            dataHandleId(dataAnother),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* node */
@@ -2255,7 +2252,7 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2283,11 +2280,11 @@ void AbstractUserInterfaceTest::state() {
        verify that with, tho. */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)},
-            {dataHandleId(data1), nodeHandleId(nested2)},
-            {dataHandleId(data3), nodeHandleId(another)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataNested2),
+            dataHandleId(dataAnother),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* node */
@@ -2295,7 +2292,7 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2333,10 +2330,10 @@ void AbstractUserInterfaceTest::state() {
        any other state rebuild */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)},
-            {dataHandleId(data3), nodeHandleId(another)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataAnother),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{2.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2344,7 +2341,7 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2381,10 +2378,10 @@ void AbstractUserInterfaceTest::state() {
        resets the flag */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)},
-            {dataHandleId(data3), nodeHandleId(another)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataAnother),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2392,7 +2389,7 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2418,8 +2415,8 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() rebuilds internal state without the hidden hierarchy */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data3), nodeHandleId(another)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataAnother),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {},
@@ -2427,7 +2424,7 @@ void AbstractUserInterfaceTest::state() {
             {},
             {}
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2459,10 +2456,10 @@ void AbstractUserInterfaceTest::state() {
        flag */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)},
-            {dataHandleId(data3), nodeHandleId(another)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataAnother),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2470,7 +2467,7 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2507,11 +2504,11 @@ void AbstractUserInterfaceTest::state() {
        nodes */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)},
-            {dataHandleId(data1), nodeHandleId(nested2)},
-            {dataHandleId(data3), nodeHandleId(another)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataNested2),
+            dataHandleId(dataAnother),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2519,7 +2516,7 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{5.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2551,10 +2548,10 @@ void AbstractUserInterfaceTest::state() {
        flag */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)},
-            {dataHandleId(data3), nodeHandleId(another)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataAnother),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2562,7 +2559,7 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2588,9 +2585,9 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() uploads data in new order and resets the flag */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)},
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2598,7 +2595,7 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {}
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2629,10 +2626,10 @@ void AbstractUserInterfaceTest::state() {
     /* Calling update() uploads data in new order and resets the flag */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data3), nodeHandleId(another)},
-            {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data5), nodeHandleId(nested1)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataAnother),
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2640,7 +2637,7 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
         };
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2650,7 +2647,7 @@ void AbstractUserInterfaceTest::state() {
 
     /* Removing a non-attached data marks the layer with NeedsClean, which is
        then propagated to the UI-wide state */
-    ui.layer(layer).remove(data4);
+    ui.layer(layer).remove(dataNotAttached);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
 
@@ -2688,7 +2685,7 @@ void AbstractUserInterfaceTest::state() {
 
     /* Removing data marks the layer with NeedsClean, which is then propagated
        to the UI-wide state */
-    ui.layer(layer).remove(data2);
+    ui.layer(layer).remove(dataNode);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
 
@@ -2718,9 +2715,9 @@ void AbstractUserInterfaceTest::state() {
             /* data2 already removed, so not set */
             false, false, false, false, false
         };
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data3), nodeHandleId(another)},
-            {dataHandleId(data5), nodeHandleId(nested1)}
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataAnother),
+            dataHandleId(dataNested1)
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
@@ -2729,7 +2726,7 @@ void AbstractUserInterfaceTest::state() {
             {},
         };
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2775,8 +2772,8 @@ void AbstractUserInterfaceTest::state() {
                orphaned after removing its parent, `node` */
             true, false, false, false, true
         };
-        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
-            {dataHandleId(data3), nodeHandleId(another)},
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataAnother)
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {},
@@ -2785,7 +2782,7 @@ void AbstractUserInterfaceTest::state() {
             {},
         };
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
-        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2828,7 +2825,7 @@ void AbstractUserInterfaceTest::state() {
             {}
         };
         ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
-        ui.layer<Layer>(anotherLayer).expectedData = {};
+        ui.layer<Layer>(anotherLayer).expectedDataIds = {};
         ui.layer<Layer>(anotherLayer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.update();
     }
@@ -2949,16 +2946,13 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(framebufferSize, (Vector2i{400, 500}));
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
             CORRADE_ITERATION(handle());
             /* doSetSize() should have been called exactly once at this point
                if this layer draws, and not at all if it doesn't */
             CORRADE_COMPARE(setSizeCallCount, features & LayerFeature::Draw ? 1 : 0);
             CORRADE_COMPARE_AS(dataIds,
-                expectedData.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
-                TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(dataNodeIds,
-                expectedData.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+                expectedDataIds,
                 TestSuite::Compare::Container);
             CORRADE_COMPARE(nodeOffsets.size(), expectedNodeOffsetsSizes.size());
             for(std::size_t i = 0; i != nodeOffsets.size(); ++i) {
@@ -2970,13 +2964,12 @@ void AbstractUserInterfaceTest::draw() {
                 CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
             }
             actualDataIds = dataIds;
-            actualDataNodeIds = dataNodeIds;
             actualNodeOffsets = nodeOffsets;
             actualNodeSizes = nodeSizes;
             ++*updateCallCount;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
             CORRADE_ITERATION(handle());
             /* doSetSize() should have been called exactly once at this point */
             CORRADE_COMPARE(setSizeCallCount, 1);
@@ -2984,9 +2977,6 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(dataIds.data(), actualDataIds.data());
             CORRADE_COMPARE(dataIds.size(), actualDataIds.size());
             CORRADE_COMPARE(dataIds.stride(), actualDataIds.stride());
-            CORRADE_COMPARE(dataNodeIds.data(), actualDataNodeIds.data());
-            CORRADE_COMPARE(dataNodeIds.size(), actualDataNodeIds.size());
-            CORRADE_COMPARE(dataNodeIds.stride(), actualDataNodeIds.stride());
             CORRADE_COMPARE(nodeOffsets.data(), actualNodeOffsets.data());
             CORRADE_COMPARE(nodeOffsets.size(), actualNodeOffsets.size());
             CORRADE_COMPARE(nodeOffsets.stride(), actualNodeOffsets.stride());
@@ -2997,14 +2987,13 @@ void AbstractUserInterfaceTest::draw() {
         }
 
         LayerFeatures features;
-        Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedData;
+        Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
         Int* updateCallCount;
         Int setSizeCallCount = 0;
         Containers::Array<Containers::Triple<LayerHandle, std::size_t, std::size_t>>* drawCalls;
 
         Containers::StridedArrayView1D<const UnsignedInt> actualDataIds;
-        Containers::StridedArrayView1D<const UnsignedInt> actualDataNodeIds;
         Containers::StridedArrayView1D<const Vector2> actualNodeOffsets;
         Containers::StridedArrayView1D<const Vector2> actualNodeSizes;
     };
@@ -3098,38 +3087,38 @@ void AbstractUserInterfaceTest::draw() {
 
     /* These follow the node nesting order and then the order in which the
        data get attached below */
-    Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer1Data[]{
+    UnsignedInt expectedLayer1DataIds[]{
         /* anotherTopLevel is reordered as first */
-        {dataHandleId(anotherTopLevelData1), nodeHandleId(anotherTopLevel)},
+        dataHandleId(anotherTopLevelData1),
         /* Data belonging to topLevel are after it */
-        {dataHandleId(leftData2), nodeHandleId(left)},
-        {dataHandleId(leftData3), nodeHandleId(left)},
+        dataHandleId(leftData2),
+        dataHandleId(leftData3),
         /* removedData not here as the containing node is removed */
-        {dataHandleId(layer1OnlyData), nodeHandleId(layer1Only)},
+        dataHandleId(layer1OnlyData),
     };
-    Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer2Data[]{
+    UnsignedInt expectedLayer2DataIds[]{
         /* anotherTopLevel */
-        {dataHandleId(anotherTopLevelData2), nodeHandleId(anotherTopLevel)},
-        {dataHandleId(anotherTopLevelData4), nodeHandleId(anotherTopLevel)},
+        dataHandleId(anotherTopLevelData2),
+        dataHandleId(anotherTopLevelData4),
         /* topLevel */
-        {dataHandleId(leftData1), nodeHandleId(left)},
-        {dataHandleId(rightData2), nodeHandleId(right)},
-        {dataHandleId(nestedData), nodeHandleId(nested)},
+        dataHandleId(leftData1),
+        dataHandleId(rightData2),
+        dataHandleId(nestedData),
         /* Nothing for topLevelNotInOrderData and culledData as they're not
            visible */
-        {dataHandleId(layer2OnlyData), nodeHandleId(layer2Only)},
+        dataHandleId(layer2OnlyData),
     };
-    Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer3Data[]{
+    UnsignedInt expectedLayer3DataIds[]{
         /* anotherTopLevel */
-        {dataHandleId(anotherTopLevelData3), nodeHandleId(anotherTopLevel)},
+        dataHandleId(anotherTopLevelData3),
         /* topLevel */
-        {dataHandleId(topLevelData), nodeHandleId(topLevel)},
-        {dataHandleId(rightData1), nodeHandleId(right)},
+        dataHandleId(topLevelData),
+        dataHandleId(rightData1),
     };
 
-    layer1Instance->expectedData = expectedLayer1Data;
-    layer2Instance->expectedData = expectedLayer2Data;
-    layer3Instance->expectedData = expectedLayer3Data;
+    layer1Instance->expectedDataIds = expectedLayer1DataIds;
+    layer2Instance->expectedDataIds = expectedLayer2DataIds;
+    layer3Instance->expectedDataIds = expectedLayer3DataIds;
     layer1Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
     layer2Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
     layer3Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
