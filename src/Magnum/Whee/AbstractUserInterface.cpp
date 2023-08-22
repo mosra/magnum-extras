@@ -338,17 +338,24 @@ struct AbstractUserInterface::State {
     Containers::StridedArrayView1D<UnsignedInt> visibleFrontToBackTopLevelNodeIndices;
     Containers::ArrayView<Vector2> absoluteNodeOffsets;
     Containers::MutableBitArrayView visibleNodeMask;
+    Containers::ArrayView<Vector2> clipRectOffsets;
+    Containers::ArrayView<Vector2> clipRectSizes;
+    Containers::ArrayView<UnsignedInt> clipRectNodeCounts;
     Containers::ArrayTuple dataStateStorage;
-    Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets;
+    Containers::ArrayView<Containers::Pair<UnsignedInt, UnsignedInt>> dataToUpdateLayerOffsets;
     Containers::ArrayView<UnsignedInt> dataToUpdateIds;
+    Containers::ArrayView<UnsignedInt> dataToUpdateClipRectIds;
+    Containers::ArrayView<UnsignedInt> dataToUpdateClipRectDataCounts;
     Containers::ArrayView<UnsignedByte> dataToDrawLayerIds;
     Containers::ArrayView<UnsignedInt> dataToDrawOffsets;
     Containers::ArrayView<UnsignedInt> dataToDrawSizes;
+    Containers::ArrayView<UnsignedInt> dataToDrawClipRectOffsets;
+    Containers::ArrayView<UnsignedInt> dataToDrawClipRectSizes;
     /* Indexed by node ID in order to make it possible to look up node data by
        node ID, however contains data only for visible nodes */
     Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets;
     Containers::ArrayView<DataHandle> visibleNodeEventData;
-    UnsignedInt drawCount = 0;
+    UnsignedInt drawCount = 0, clipRectCount = 0;
 };
 
 AbstractUserInterface::AbstractUserInterface(NoCreateT): _state{InPlaceInit} {}
@@ -1261,6 +1268,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.nodeOrder.size(), state.visibleFrontToBackTopLevelNodeIndices},
             {NoInit, state.nodes.size(), state.absoluteNodeOffsets},
             {NoInit, state.nodes.size(), state.visibleNodeMask},
+            {NoInit, state.nodes.size(), state.clipRectOffsets},
+            {NoInit, state.nodes.size(), state.clipRectSizes},
+            {NoInit, state.nodes.size(), state.clipRectNodeCounts},
         };
 
         /* 1. Order the visible node hierarchy. */
@@ -1299,14 +1309,17 @@ AbstractUserInterface& AbstractUserInterface::update() {
        up-to-date */
     if(states >= UserInterfaceState::NeedsNodeClipUpdate) {
         /* 4. Cull / clip the visible nodes based on their clip rects */
-        Implementation::cullVisibleNodesInto(
+        state.clipRectCount = Implementation::cullVisibleNodesInto(
             state.absoluteNodeOffsets,
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size),
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
             clipStack.prefix(state.visibleNodeIds.size()),
             state.visibleNodeIds,
             state.visibleNodeChildrenCounts,
-            state.visibleNodeMask);
+            state.visibleNodeMask,
+            state.clipRectOffsets,
+            state.clipRectSizes,
+            state.clipRectNodeCounts);
 
         /** @todo might want also a layer-specific cull / clip implementation
             that gets called after the "upload" step, for line art, text runs
@@ -1336,15 +1349,23 @@ AbstractUserInterface& AbstractUserInterface::update() {
                so it doesn't need to be zero-initialized. */
             {NoInit, state.layers.size() + 1, state.dataToUpdateLayerOffsets},
             {NoInit, dataCount, state.dataToUpdateIds},
+            /* The orderVisibleNodeDataInto() algorithm assumes there can be
+               a dedicated clip rect for every visible node. It's being run for
+               all layers, so in order to fit it has to have layer count times
+               visible node count elements. */
+            {NoInit, state.visibleNodeIds.size()*state.layers.size(), state.dataToUpdateClipRectIds},
+            {NoInit, state.visibleNodeIds.size()*state.layers.size(), state.dataToUpdateClipRectDataCounts},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawLayerIds},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawOffsets},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawSizes},
+            {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawClipRectOffsets},
+            {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawClipRectSizes},
             /* Running data offset (+1) for each item */
             {ValueInit, state.nodes.size() + 1, state.visibleNodeEventDataOffsets},
             {NoInit, dataCount, state.visibleNodeEventData},
         };
 
-        state.dataToUpdateLayerOffsets[0] = 0;
+        state.dataToUpdateLayerOffsets[0] = {0, 0};
         if(state.firstLayer != LayerHandle::Null) {
             /* 5. Go through the layer draw order and order data of each layer
                that are assigned to visible nodes into a contiguous range,
@@ -1369,23 +1390,28 @@ AbstractUserInterface& AbstractUserInterface::update() {
                event data count arrays. The data order matches the visible node
                hierarchy order from above. */
             UnsignedInt offset = 0;
+            UnsignedInt clipRectOffset = 0;
             for(UnsignedInt i = 0; i != state.layers.size(); ++i) {
                 const Layer& layerItem = state.layers[i];
 
                 if(const AbstractLayer* const instance = layerItem.used.instance.get()) {
                     const bool isDrawing = layerItem.used.features >= LayerFeature::Draw;
 
-                    offset = Implementation::orderVisibleNodeDataInto(
+                    const Containers::Pair<UnsignedInt, UnsignedInt> out = Implementation::orderVisibleNodeDataInto(
                         state.visibleNodeIds,
                         state.visibleNodeChildrenCounts,
                         instance->nodes(),
                         layerItem.used.features,
                         state.visibleNodeMask,
+                        state.clipRectNodeCounts.prefix(state.clipRectCount),
                         visibleNodeDataOffsets,
                         state.visibleNodeEventDataOffsets.exceptPrefix(1),
                         visibleNodeDataIds.prefix(instance->capacity()),
                         state.dataToUpdateIds,
+                        state.dataToUpdateClipRectIds,
+                        state.dataToUpdateClipRectDataCounts,
                         offset,
+                        clipRectOffset,
                         /* If the layer has LayerFeature::Draw, it also
                            populates the draw call list for all top-level
                            nodes. This has to be interleaved with other layers
@@ -1397,7 +1423,15 @@ AbstractUserInterface& AbstractUserInterface::update() {
                             .every(drawLayerCount) : nullptr,
                         isDrawing ? stridedArrayView(state.dataToDrawSizes)
                             .exceptPrefix(drawLayerOrder[i])
+                            .every(drawLayerCount) : nullptr,
+                        isDrawing ? stridedArrayView(state.dataToDrawClipRectOffsets)
+                            .exceptPrefix(drawLayerOrder[i])
+                            .every(drawLayerCount) : nullptr,
+                        isDrawing ? stridedArrayView(state.dataToDrawClipRectSizes)
+                            .exceptPrefix(drawLayerOrder[i])
                             .every(drawLayerCount) : nullptr);
+                    offset = out.first();
+                    clipRectOffset = out.second();
 
                     /* If the layer has LayerFeature::Draw, increment to the
                        next interleaved position for the next. Also save the
@@ -1412,7 +1446,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     }
                 }
 
-                state.dataToUpdateLayerOffsets[i + 1] = offset;
+                state.dataToUpdateLayerOffsets[i + 1] = {offset, clipRectOffset};
             }
 
             /* 6. Take the count of event data per visible node, turn that into
@@ -1468,7 +1502,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
         state.drawCount = Implementation::compactDrawsInPlace(
             state.dataToDrawLayerIds,
             state.dataToDrawOffsets,
-            state.dataToDrawSizes);
+            state.dataToDrawSizes,
+            state.dataToDrawClipRectOffsets,
+            state.dataToDrawClipRectSizes);
     }
 
     /* 9. For each layer submit an update of visible data across all visible
@@ -1489,12 +1525,20 @@ AbstractUserInterface& AbstractUserInterface::update() {
             changed */
         instance->update(
             state.dataToUpdateIds.slice(
-                state.dataToUpdateLayerOffsets[i],
-                state.dataToUpdateLayerOffsets[i + 1]),
+                state.dataToUpdateLayerOffsets[i].first(),
+                state.dataToUpdateLayerOffsets[i + 1].first()),
+            state.dataToUpdateClipRectIds.slice(
+                state.dataToUpdateLayerOffsets[i].second(),
+                state.dataToUpdateLayerOffsets[i + 1].second()),
+            state.dataToUpdateClipRectDataCounts.slice(
+                state.dataToUpdateLayerOffsets[i].second(),
+                state.dataToUpdateLayerOffsets[i + 1].second()),
             /** @todo some layer implementations may eventually want relative
                 offsets, not absolute, provide both? */
             state.absoluteNodeOffsets,
-            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size));
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size),
+            state.clipRectOffsets.prefix(state.clipRectCount),
+            state.clipRectSizes.prefix(state.clipRectCount));
     }
 
     /** @todo layer-specific cull/clip step? */
@@ -1540,13 +1584,25 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             /* The views should be exactly the same as passed to update()
                before ... */
             state.dataToUpdateIds.slice(
-                state.dataToUpdateLayerOffsets[layerId],
-                state.dataToUpdateLayerOffsets[layerId + 1]),
+                state.dataToUpdateLayerOffsets[layerId].first(),
+                state.dataToUpdateLayerOffsets[layerId + 1].first()),
             /* ... and the draw offset then being relative to those */
-            state.dataToDrawOffsets[i] - state.dataToUpdateLayerOffsets[layerId],
+            state.dataToDrawOffsets[i] - state.dataToUpdateLayerOffsets[layerId].first(),
             state.dataToDrawSizes[i],
+            /* Same for clip rects ... */
+            state.dataToUpdateClipRectIds.slice(
+                state.dataToUpdateLayerOffsets[layerId].second(),
+                state.dataToUpdateLayerOffsets[layerId + 1].second()),
+            state.dataToUpdateClipRectDataCounts.slice(
+                state.dataToUpdateLayerOffsets[layerId].second(),
+                state.dataToUpdateLayerOffsets[layerId + 1].second()),
+            /* ... and the clip rect offset then being relative to those */
+            state.dataToDrawClipRectOffsets[i] - state.dataToUpdateLayerOffsets[layerId].second(),
+            state.dataToDrawClipRectSizes[i],
             state.absoluteNodeOffsets,
-            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size));
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size),
+            state.clipRectOffsets.prefix(state.clipRectCount),
+            state.clipRectSizes.prefix(state.clipRectCount));
     }
 
     return *this;

@@ -388,26 +388,36 @@ void AbstractLayer::cleanNodes(const Containers::StridedArrayView1D<const Unsign
 
 void AbstractLayer::doClean(Containers::BitArrayView) {}
 
-void AbstractLayer::update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) {
+void AbstractLayer::update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
+    CORRADE_ASSERT(clipRectIds.size() == clipRectDataCounts.size(),
+        "Whee::AbstractLayer::update(): expected clip rect ID and data count views to have the same size but got" << clipRectIds.size() << "and" << clipRectDataCounts.size(), );
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size(),
         "Whee::AbstractLayer::update(): expected node offset and size views to have the same size but got" << nodeOffsets.size() << "and" << nodeSizes.size(), );
-    doUpdate(dataIds, nodeOffsets, nodeSizes);
+    CORRADE_ASSERT(clipRectOffsets.size() == clipRectSizes.size(),
+        "Whee::AbstractLayer::update(): expected clip rect offset and size views to have the same size but got" << clipRectOffsets.size() << "and" << clipRectSizes.size(), );
+    doUpdate(dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, clipRectOffsets, clipRectSizes);
     _state->state &= ~LayerState::NeedsAttachmentUpdate;
 }
 
-void AbstractLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
+void AbstractLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
 
-void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) {
+void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const std::size_t clipRectOffset, const std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     CORRADE_ASSERT(features() & LayerFeature::Draw,
         "Whee::AbstractLayer::draw(): feature not supported", );
     CORRADE_ASSERT(offset + count <= dataIds.size(),
         "Whee::AbstractLayer::draw(): offset" << offset << "and count" << count << "out of range for" << dataIds.size() << "items", );
+    CORRADE_ASSERT(clipRectIds.size() == clipRectDataCounts.size(),
+        "Whee::AbstractLayer::draw(): expected clip rect ID and data count views to have the same size but got" << clipRectIds.size() << "and" << clipRectDataCounts.size(), );
+    CORRADE_ASSERT(clipRectOffset + clipRectCount <= clipRectIds.size(),
+        "Whee::AbstractLayer::draw(): clip rect offset" << clipRectOffset << "and count" << clipRectCount << "out of range for" << clipRectIds.size() << "items", );
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size(),
         "Whee::AbstractLayer::draw(): expected node offset and size views to have the same size but got" << nodeOffsets.size() << "and" << nodeSizes.size(), );
-    doDraw(dataIds, offset, count, nodeOffsets, nodeSizes);
+    CORRADE_ASSERT(clipRectOffsets.size() == clipRectSizes.size(),
+        "Whee::AbstractLayer::draw(): expected clip rect offset and size views to have the same size but got" << clipRectOffsets.size() << "and" << clipRectSizes.size(), );
+    doDraw(dataIds, offset, count, clipRectIds, clipRectDataCounts, clipRectOffset, clipRectCount, nodeOffsets, nodeSizes, clipRectOffsets, clipRectSizes);
 }
 
-void AbstractLayer::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void AbstractLayer::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractLayer::draw(): feature advertised but not implemented", );
 }
 
