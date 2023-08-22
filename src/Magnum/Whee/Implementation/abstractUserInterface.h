@@ -354,28 +354,25 @@ void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& a
    `visibleNodeEventDataOffsets.exceptPrefix(1)` that's then passed to
    `orderNodeDataForEventHandling()` below.
 
-   The `dataToUpdateLayerOffsets`, `dataToUpdateIds` and `dataToUpdateNodeIds`
-   arrays get filled with data and node IDs in the desired draw order,
-   clustered by layer ID, with `dataToUpdateLayerOffsets[i]` to
-   `dataToUpdateLayerOffsets[i + 1]` being the range of data in
-   `dataToUpdateIds` and `dataToUpdateNodeIds` corresponding to layer `i`.
+   The `dataToUpdateLayerOffsets` and `dataToUpdateIds` arrays get filled with
+   data and node IDs in the desired draw order, clustered by layer ID, with
+   `dataToUpdateLayerOffsets[i]` to `dataToUpdateLayerOffsets[i + 1]` being the
+   range of data in `dataToUpdateIds` corresponding to layer `i`.
 
    The `dataToDrawOffsets[j]` and `dataToDrawSizes[j]` is then a range in
-   `dataToUpdateIds` and `dataToUpdateNodeIds` that should be drawn with layer
-   `dataToDrawLayerIds[j]`, with their total count being the return value of
-   this function.
+   `dataToUpdateIds` that should be drawn with layer `dataToDrawLayerIds[j]`,
+   with their total count being the return value of this function.
 
    The `visibleNodeDataOffsets` and `visibleNodeDataIds` arrays are temporary
    storage -- they get filled with data IDs for visible nodes, with  `visibleNodeDataOffsets[i]` to
    `visibleNodeDataOffsets[i + 1]` being the range of data in
    `visibleNodeDataIds` corresponding to visible node at index `i`. */
-UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, LayerFeatures layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateNodeIds, UnsignedInt offset, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
+UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, LayerFeatures layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, UnsignedInt offset, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
     CORRADE_INTERNAL_ASSERT(
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
         visibleNodeDataOffsets.size() == visibleNodeMask.size() + 1 &&
         visibleNodeEventDataCounts.size() == visibleNodeMask.size() &&
         visibleNodeDataIds.size() == dataNodes.size() &&
-        dataToUpdateIds.size() == dataToUpdateNodeIds.size() &&
         /* These should have the size matching the top-level node count */
         dataToDrawSizes.size() == dataToDrawOffsets.size());
 
@@ -450,7 +447,6 @@ UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const 
 
             for(UnsignedInt j = visibleNodeDataOffsets[visibleNodeId], jMax = visibleNodeDataOffsets[visibleNodeId + 1]; j != jMax; ++j) {
                 dataToUpdateIds[offset] = visibleNodeDataIds[j];
-                dataToUpdateNodeIds[offset] = visibleNodeId;
                 ++offset;
             }
         }
