@@ -338,7 +338,6 @@ struct AbstractUserInterface::State {
     Containers::ArrayTuple dataStateStorage;
     Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets;
     Containers::ArrayView<UnsignedInt> dataToUpdateIds;
-    Containers::ArrayView<UnsignedInt> dataToUpdateNodeIds;
     Containers::ArrayView<UnsignedByte> dataToDrawLayerIds;
     Containers::ArrayView<UnsignedInt> dataToDrawOffsets;
     Containers::ArrayView<UnsignedInt> dataToDrawSizes;
@@ -1327,7 +1326,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
                so it doesn't need to be zero-initialized. */
             {NoInit, state.layers.size() + 1, state.dataToUpdateLayerOffsets},
             {NoInit, dataCount, state.dataToUpdateIds},
-            {NoInit, dataCount, state.dataToUpdateNodeIds},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawLayerIds},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawOffsets},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawSizes},
@@ -1377,7 +1375,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         state.visibleNodeEventDataOffsets.exceptPrefix(1),
                         visibleNodeDataIds.prefix(instance->capacity()),
                         state.dataToUpdateIds,
-                        state.dataToUpdateNodeIds,
                         offset,
                         /* If the layer has LayerFeature::Draw, it also
                            populates the draw call list for all top-level
@@ -1484,9 +1481,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.dataToUpdateIds.slice(
                 state.dataToUpdateLayerOffsets[i],
                 state.dataToUpdateLayerOffsets[i + 1]),
-            state.dataToUpdateNodeIds.slice(
-                state.dataToUpdateLayerOffsets[i],
-                state.dataToUpdateLayerOffsets[i + 1]),
             /** @todo some layer implementations may eventually want relative
                 offsets, not absolute, provide both? */
             state.absoluteNodeOffsets,
@@ -1536,9 +1530,6 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             /* The views should be exactly the same as passed to update()
                before ... */
             state.dataToUpdateIds.slice(
-                state.dataToUpdateLayerOffsets[layerId],
-                state.dataToUpdateLayerOffsets[layerId + 1]),
-            state.dataToUpdateNodeIds.slice(
                 state.dataToUpdateLayerOffsets[layerId],
                 state.dataToUpdateLayerOffsets[layerId + 1]),
             /* ... and the draw offset then being relative to those */
