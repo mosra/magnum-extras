@@ -610,12 +610,14 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         {3, 0},
 
         /* Several nested children */
-        {13, 5},
+        {13, 7},
             {9, 3},
                 {1, 1},
                     {4, 0}, /* One data attached from layer 2 */
                 {2, 0}, /* One data attached from layer 1, one from layer 2,
                            one from layer 3 not for drawing */
+            {6, 1}, /* Marked as invisible, one data attached from layer 2 */
+                {5, 0}, /* Marked as invisible, one data from layer 3 */
             {7, 0}, /* One data attached from layer 1, one from layer 3 not for
                        drawing */
 
@@ -634,7 +636,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         nodeHandle(2, 0xaba),  /* data handle ID 1 */
     };
     const NodeHandle layer2NodeAttachments[]{
-        NodeHandle{},          /* 0 */
+        nodeHandle(6, 0xece),  /* 0, but node 6 is not visible so ignored */
         NodeHandle{},          /* 1 */
         nodeHandle(4, 0xbab),  /* 2 */
         nodeHandle(3, 0xfef),  /* 3 */
@@ -644,7 +646,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
     };
     const NodeHandle layer3NodeAttachments[]{
         nodeHandle(2, 0xefe),  /* 0 */
-        NodeHandle{},          /* 1 */
+        nodeHandle(5, 0xcec),  /* 1, but node 5 is not visible so ignored */
         nodeHandle(7, 0xf0f),  /* 2 */
     };
     const NodeHandle layer4NodeAttachments[]{
@@ -667,8 +669,9 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
     };
     /* Nodes 5, 6 aren't present anywhere */
 
-    /* Everything except nodes 0 and 8 is visible */
-    UnsignedShort visibleNodeMask[]{0xffff & ~(1 << 0) & ~(1 << 8)};
+    /* Everything except nodes 0 and 8 (which are not part of the top-level
+       order) and nodes 5 and 6 (which are culled) is visible */
+    UnsignedShort visibleNodeMask[]{0xffff & ~(1 << 0) & ~(1 << 8) & ~(1 << 5) & ~(1 << 6)};
 
     /* The layers are in order 4, 2, 3, 1, 5. Layer 0 doesn't have any data
        referenced, layer 3 doesn't have a Draw feature, layer 4 is referenced
@@ -716,20 +719,20 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
     }
 
     CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataCounts), Containers::arrayView<UnsignedInt>({
-        0,  /* Node 0 */
+        0,  /* Node 0, not part of the top-level hierarchy */
         0,  /* Node 1 */
         2,  /* Node 2, layers 2 and 3 */
         3,  /* Node 3, layer 2 and 5 */
         1,  /* Node 4, layer 2 */
-        0,  /* Node 5 */
-        0,  /* Node 6 */
+        0,  /* Node 5, layer 3, but marked as invisible */
+        0,  /* Node 6, layer 2, but marked as invisible */
         1,  /* Node 7, layer 3 */
-        0,  /* Node 8, layer 5, but node 8 is invisible */
+        0,  /* Node 8, layer 5, but not part of the top-level hierarchy */
         0,  /* Node 9 */
         0,  /* Node 10 */
         0,  /* Node 11 */
         1,  /* Node 12, layer 2 */
-        0   /* Node 13 */
+        0,  /* Node 13 */
     }), TestSuite::Compare::Container);
 
     /* This is the offset filled in by the test itself above, in the order in
