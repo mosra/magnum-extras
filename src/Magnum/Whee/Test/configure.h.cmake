@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,36 +23,4 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for the @ref Magnum::Whee namespace
- */
-
-#include "Magnum/Magnum.h"
-
-namespace Magnum { namespace Whee {
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
-
-class AbstractLayer;
-class AbstractUserInterface;
-
-class BaseLayer;
-struct BaseLayerStyleCommon;
-struct BaseLayerStyleItem;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
-#endif
-
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
-
-}}
-
-#endif
+#define WHEE_TEST_DIR "${WHEE_TEST_DIR}"

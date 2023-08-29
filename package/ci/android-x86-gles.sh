@@ -48,6 +48,7 @@ cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
+    -DMAGNUM_TARGET_GLES2=$TARGET_GLES2 \
     -DMAGNUM_WITH_AUDIO=OFF \
     -DMAGNUM_WITH_DEBUGTOOLS=$TARGET_GLES3 \
     -DMAGNUM_WITH_MATERIALTOOLS=OFF \
@@ -61,7 +62,27 @@ cmake .. \
     -DMAGNUM_WITH_TEXTURETOOLS=$TARGET_GLES3 \
     -DMAGNUM_WITH_SDL2APPLICATION=OFF \
     -DMAGNUM_WITH_OPENGLTESTER=$TARGET_GLES3 \
-    -DMAGNUM_TARGET_GLES2=$TARGET_GLES2 \
+    -DMAGNUM_WITH_ANYIMAGEIMPORTER=$TARGET_GLES3 \
+    -G Ninja
+ninja install
+cd ../..
+
+# Crosscompile Magnum Plugins
+git clone --depth 1 https://github.com/mosra/magnum-plugins.git
+cd magnum-plugins
+mkdir build-android-x86 && cd build-android-x86
+cmake .. \
+    -DCMAKE_SYSTEM_NAME=Android \
+    -DCMAKE_SYSTEM_VERSION=29 \
+    -DCMAKE_ANDROID_ARCH_ABI=x86 \
+    -DCMAKE_ANDROID_NDK_TOOLCHAIN_VERSION=clang \
+    -DCMAKE_ANDROID_STL_TYPE=c++_static \
+    -DCMAKE_FIND_ROOT_PATH="/opt/android/sdk/ndk/21.4.7075529/toolchains/llvm/prebuilt/linux-x86_64/sysroot;$HOME/deps" \
+    -DCMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX=/i686-linux-android/29 \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=$HOME/deps \
+    -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
+    -DMAGNUM_WITH_STBIMAGEIMPORTER=$TARGET_GLES3 \
     -G Ninja
 ninja install
 cd ../..

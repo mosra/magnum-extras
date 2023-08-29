@@ -40,7 +40,7 @@ cmake .. \
     -DMAGNUM_WITH_TEXTURETOOLS=ON \
     -DMAGNUM_WITH_OPENGLTESTER=ON \
     -DMAGNUM_WITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON \
-    `# Sdl2Application is needed for WheeStressTest, built as part of tests` \
+    `# Sdl2Application needed by WheeStressTest, built as part of tests` \
     -DMAGNUM_WITH_SDL2APPLICATION=ON \
     -DMAGNUM_BUILD_DEPRECATED=$BUILD_DEPRECATED \
     -DMAGNUM_BUILD_STATIC=$BUILD_STATIC \

@@ -41,6 +41,21 @@ cmake .. \
     -DMAGNUM_WITH_OPENGLTESTER=$TARGET_GLES3 \
     -DMAGNUM_WITH_WINDOWLESS${PLATFORM_GL_API}APPLICATION=ON \
     -DMAGNUM_WITH_SDL2APPLICATION=$TARGET_GLES3 \
+    -DMAGNUM_WITH_ANYIMAGEIMPORTER=$TARGET_GLES3 \
+    -G Ninja
+ninja install
+cd ../..
+
+# Magnum Plugins
+git clone --depth 1 https://github.com/mosra/magnum-plugins.git
+cd magnum-plugins
+mkdir build && cd build
+cmake .. \
+    -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" \
+    -DCMAKE_INSTALL_PREFIX=$HOME/deps \
+    -DCMAKE_INSTALL_RPATH=$HOME/deps/lib \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DMAGNUM_WITH_STBIMAGEIMPORTER=$TARGET_GLES3 \
     -G Ninja
 ninja install
 cd ../..

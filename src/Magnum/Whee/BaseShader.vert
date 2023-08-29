@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,36 +23,29 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for the @ref Magnum::Whee namespace
- */
-
-#include "Magnum/Magnum.h"
-
-namespace Magnum { namespace Whee {
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
-
-class AbstractLayer;
-class AbstractUserInterface;
-
-class BaseLayer;
-struct BaseLayerStyleCommon;
-struct BaseLayerStyleItem;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
+#ifdef EXPLICIT_UNIFORM_LOCATION
+layout(location = 0)
 #endif
+uniform highp mat3 transformationProjectionMatrix;
 
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
+layout(location = 0) in highp vec2 position;
+layout(location = 1) in mediump vec2 centerDistance;
+layout(location = 2) in mediump vec4 outlineWidth;
+layout(location = 3) in lowp vec4 color;
+layout(location = 4) in mediump uint style;
 
-}}
+flat out mediump uint interpolatedStyle;
+flat out mediump vec2 halfQuadSize;
+flat out mediump vec4 interpolatedOutlineWidth;
+out lowp vec4 interpolatedColor;
+out mediump vec2 normalizedQuadPosition;
 
-#endif
+void main() {
+    interpolatedStyle = style;
+    halfQuadSize = abs(centerDistance);
+    interpolatedOutlineWidth = outlineWidth;
+    interpolatedColor = color;
+    normalizedQuadPosition = sign(centerDistance);
+
+    gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
+}

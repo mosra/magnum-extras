@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,36 +23,41 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for the @ref Magnum::Whee namespace
- */
+#include <Magnum/GL/Renderer.h>
 
-#include "Magnum/Magnum.h"
+#include "Magnum/Whee/BaseLayerGL.h"
 
-namespace Magnum { namespace Whee {
+#define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
+#define DOXYGEN_IGNORE(...) __VA_ARGS__
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
+using namespace Magnum;
 
-class AbstractLayer;
-class AbstractUserInterface;
+/* Make sure the name doesn't conflict with any other snippets to avoid linker
+   warnings, unlike with `int main()` there now has to be a declaration to
+   avoid -Wmisssing-prototypes */
+void mainWheeGL();
+void mainWheeGL() {
+{
+/* [BaseLayerGL-renderer] */
+GL::Renderer::enable(GL::Renderer::Feature::Blending);
+GL::Renderer::setBlendFunction(
+    GL::Renderer::BlendFunction::One,
+    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+/* [BaseLayerGL-renderer] */
+}
 
-class BaseLayer;
-struct BaseLayerStyleCommon;
-struct BaseLayerStyleItem;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
-#endif
+{
+/* [BaseLayerGL-setStyle] */
+struct {
+    Whee::BaseLayerStyleCommon common;
+    Whee::BaseLayerStyleItem dialogBackground;
+    Whee::BaseLayerStyleItem button;
+    Whee::BaseLayerStyleItem progressBar;
+} style;
+DOXYGEN_ELLIPSIS()
 
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
-
-}}
-
-#endif
+Whee::BaseLayerGL::Shared baseLayer{3};
+baseLayer.setStyle(style);
+/* [BaseLayerGL-setStyle] */
+}
+}

@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,36 +23,22 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for the @ref Magnum::Whee namespace
- */
+/* Subset of Magnum/Shaders/compatibility.glsl with just things relevant for
+   GLSL 3.30+ and GLSL ES 3.00+ */
 
-#include "Magnum/Magnum.h"
-
-namespace Magnum { namespace Whee {
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
-
-class AbstractLayer;
-class AbstractUserInterface;
-
-class BaseLayer;
-struct BaseLayerStyleCommon;
-struct BaseLayerStyleItem;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
+#if !defined(GL_ES) && defined(GL_ARB_shading_language_420pack) && !defined(MAGNUM_DISABLE_GL_ARB_shading_language_420pack)
+    #extension GL_ARB_shading_language_420pack: enable
+    #define EXPLICIT_BINDING
 #endif
 
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
+#if !defined(GL_ES) && defined(GL_ARB_explicit_uniform_location) && !defined(MAGNUM_DISABLE_GL_ARB_explicit_uniform_location)
+    #extension GL_ARB_explicit_uniform_location: enable
+    #define EXPLICIT_UNIFORM_LOCATION
 #endif
 
-}}
-
+#ifdef GL_ES
+    #if __VERSION__ >= 310 || (defined(MAGNUM_GLSL_VERSION) && MAGNUM_GLSL_VERSION >= 310)
+        #define EXPLICIT_BINDING
+        #define EXPLICIT_UNIFORM_LOCATION
+    #endif
 #endif
