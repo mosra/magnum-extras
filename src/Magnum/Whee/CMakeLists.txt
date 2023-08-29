@@ -28,6 +28,9 @@
 set(CMAKE_FOLDER "Magnum/Whee")
 
 find_package(Magnum REQUIRED)
+if(MAGNUM_TARGET_GL)
+    find_package(Magnum REQUIRED GL)
+endif()
 
 if(MAGNUM_BUILD_STATIC)
     set(MAGNUM_WHEE_BUILD_STATIC 1)
@@ -42,18 +45,31 @@ set(MagnumWhee_SRCS
 
 set(MagnumWhee_GracefulAssert_SRCS
     AbstractLayer.cpp
-    AbstractUserInterface.cpp)
+    AbstractUserInterface.cpp
+    BaseLayer.cpp)
 
 set(MagnumWhee_HEADERS
     AbstractLayer.h
     AbstractUserInterface.h
+    BaseLayer.h
     Event.h
     Handle.h
     Whee.h
     visibility.h)
 
 set(MagnumWhee_PRIVATE_HEADERS
-    Implementation/abstractUserInterface.h)
+    Implementation/abstractUserInterface.h
+    Implementation/baseLayerState.h)
+
+if(MAGNUM_TARGET_GL)
+    corrade_add_resource(MagnumWhee_RESOURCES resources.conf)
+    list(APPEND MagnumWhee_SRCS
+        ${MagnumWhee_RESOURCES})
+    list(APPEND MagnumWhee_GracefulAssert_SRCS
+        BaseLayerGL.cpp)
+    list(APPEND MagnumWhee_HEADERS
+        BaseLayerGL.h)
+endif()
 
 # Objects shared between main and test library
 add_library(MagnumWheeObjects OBJECT
@@ -87,6 +103,9 @@ elseif(MAGNUM_BUILD_STATIC_PIC)
 endif()
 target_link_libraries(MagnumWhee PUBLIC
     Magnum::Magnum)
+if(MAGNUM_TARGET_GL)
+    target_link_libraries(MagnumWhee PUBLIC Magnum::GL)
+endif()
 
 install(TARGETS MagnumWhee
     RUNTIME DESTINATION ${MAGNUM_BINARY_INSTALL_DIR}
@@ -114,6 +133,9 @@ if(MAGNUM_BUILD_TESTS)
     endif()
     target_link_libraries(MagnumWheeTestLib PUBLIC
         Magnum::Magnum)
+    if(MAGNUM_TARGET_GL)
+        target_link_libraries(MagnumWheeTestLib PUBLIC Magnum::GL)
+    endif()
 
     add_subdirectory(Test ${EXCLUDE_FROM_ALL_IF_TEST_TARGET})
 endif()

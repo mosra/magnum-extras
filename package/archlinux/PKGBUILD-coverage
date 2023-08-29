@@ -38,7 +38,8 @@ build() {
 
 check() {
     cd "$_rootdir/build-coverage"
-    CORRADE_TEST_COLOR=ON ctest --output-on-failure || true
+    CORRADE_TEST_COLOR=ON ctest --output-on-failure -j9 || true
+    CORRADE_TEST_COLOR=ON MAGNUM_DISABLE_EXTENSIONS="GL_ARB_shading_language_420pack GL_ARB_explicit_uniform_location" ctest --output-on-failure -j9 -R GLTest || true
 
     rm -rf coverage
     mkdir coverage
