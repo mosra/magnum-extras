@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,32 +23,47 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Magnum/Magnum.h"
+#include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/TestSuite/Tester.h>
+#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
-namespace Magnum { namespace Whee {
+#include "Magnum/Whee/BaseLayerGL.h"
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
+namespace Magnum { namespace Whee { namespace Test { namespace {
 
-class AbstractLayer;
-class AbstractUserInterface;
+struct BaseLayerGL_Test: TestSuite::Tester {
+    explicit BaseLayerGL_Test();
 
-class BaseLayer;
-struct BaseLayerStyleCommon;
-struct BaseLayerStyleItem;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
-#endif
+    void sharedConstructNoCreate();
+    void sharedConstructZeroStyleCount();
+};
 
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
+using namespace Math::Literals;
 
-}}
+BaseLayerGL_Test::BaseLayerGL_Test() {
+    addTests({&BaseLayerGL_Test::sharedConstructNoCreate,
+              &BaseLayerGL_Test::sharedConstructZeroStyleCount});
+}
 
-#endif
+void BaseLayerGL_Test::sharedConstructNoCreate() {
+    BaseLayerGL::Shared shared{NoCreate};
+
+    /* Shouldn't crash or try to acces GL */
+    CORRADE_VERIFY(true);
+
+    /* Implicit construction is not allowed */
+    CORRADE_VERIFY(!std::is_convertible<NoCreateT, BaseLayerGL::Shared>::value);
+}
+
+void BaseLayerGL_Test::sharedConstructZeroStyleCount() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    BaseLayerGL::Shared{0};
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayerGL::Shared: expected non-zero style count\n");
+}
+
+}}}}
+
+CORRADE_TEST_MAIN(Magnum::Whee::Test::BaseLayerGL_Test)
