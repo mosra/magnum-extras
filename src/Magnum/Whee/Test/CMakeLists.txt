@@ -29,6 +29,7 @@ set(CMAKE_FOLDER "Magnum/Whee/Test")
 
 corrade_add_test(WheeAbstractLayerTest AbstractLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractUserInterfaceTest AbstractUserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
 if(CORRADE_TARGET_EMSCRIPTEN)
@@ -66,32 +67,83 @@ set_property(TARGET
     WheeHandleTest
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
 
-if(MAGNUM_TARGET_GL AND NOT CORRADE_TARGET_ANDROID)
-    find_package(Magnum REQUIRED DebugTools Shaders)
-    if(CORRADE_TARGET_EMSCRIPTEN)
-        find_package(Magnum REQUIRED EmscriptenApplication)
-    else()
-        find_package(Magnum REQUIRED Sdl2Application)
+if(MAGNUM_TARGET_GL)
+    find_package(Magnum REQUIRED DebugTools)
+
+    corrade_add_test(WheeBaseLayerGL_Test BaseLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
+
+    if(NOT CORRADE_TARGET_ANDROID)
+        find_package(Magnum REQUIRED Shaders)
+        if(CORRADE_TARGET_EMSCRIPTEN)
+            find_package(Magnum REQUIRED EmscriptenApplication)
+        else()
+            find_package(Magnum REQUIRED Sdl2Application)
+        endif()
+
+        add_executable(WheeStressTest StressTest.cpp)
+        target_link_libraries(WheeStressTest PRIVATE
+            MagnumWhee
+            Magnum::Application
+            Magnum::DebugTools
+            Magnum::Shaders)
+        if(CORRADE_TARGET_EMSCRIPTEN)
+            if(CMAKE_VERSION VERSION_LESS 3.12)
+                message(FATAL_ERROR "CMake 3.12+ is required in order to specify Emscripten linker options")
+            endif()
+            target_link_options(WheeStressTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+            add_custom_command(TARGET WheeStressTest POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${MAGNUM_WEBAPPLICATION_CSS}
+                    ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+                    $<TARGET_FILE_DIR:WheeStressTest>
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_CURRENT_SOURCE_DIR}/StressTest.html"
+                    "$<TARGET_FILE_DIR:WheeStressTest>/WheeStressTest.html")
+        endif()
+    endif()
+endif()
+
+if(MAGNUM_BUILD_GL_TESTS)
+    find_package(Magnum REQUIRED OpenGLTester)
+    if(MAGNUM_BUILD_STATIC)
+        find_package(Magnum COMPONENTS AnyImageImporter)
+        find_package(MagnumPlugins COMPONENTS StbImageImporter)
     endif()
 
-    add_executable(WheeStressTest StressTest.cpp)
-    target_link_libraries(WheeStressTest PRIVATE
-        MagnumWhee
-        Magnum::Application
-        Magnum::DebugTools
-        Magnum::Shaders)
-    if(CORRADE_TARGET_EMSCRIPTEN)
-        if(CMAKE_VERSION VERSION_LESS 3.12)
-            message(FATAL_ERROR "CMake 3.12+ is required in order to specify Emscripten linker options")
+    if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
+        set(WHEE_TEST_DIR .)
+    else()
+        set(WHEE_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    endif()
+
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
+                   ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
+
+    corrade_add_test(WheeBaseLayerGLTest BaseLayerGLTest.cpp
+        LIBRARIES
+            MagnumWheeTestLib
+            Magnum::DebugTools
+            Magnum::OpenGLTester
+        FILES
+            BaseLayerTestFiles/default.png
+            BaseLayerTestFiles/draw-order.png
+            BaseLayerTestFiles/gradient.png
+            BaseLayerTestFiles/outline-different.png
+            BaseLayerTestFiles/outline-gradient.png
+            BaseLayerTestFiles/outline-rounded-corners-both-different.png
+            BaseLayerTestFiles/outline-rounded-corners-different-smoothness.png
+            BaseLayerTestFiles/outline-rounded-corners-inside.png
+            BaseLayerTestFiles/outline-same.png
+            BaseLayerTestFiles/rounded-corners-different.png
+            BaseLayerTestFiles/rounded-corners-same-hard.png
+            BaseLayerTestFiles/rounded-corners-same.png)
+    target_include_directories(WheeBaseLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    if(MAGNUM_BUILD_STATIC)
+        if(Magnum_AnyImageImporter_FOUND)
+            target_link_libraries(WheeBaseLayerGLTest PRIVATE Magnum::AnyImageImporter)
         endif()
-        target_link_options(WheeStressTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
-        add_custom_command(TARGET WheeStressTest POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${MAGNUM_WEBAPPLICATION_CSS}
-                ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
-                $<TARGET_FILE_DIR:WheeStressTest>
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_CURRENT_SOURCE_DIR}/StressTest.html"
-                "$<TARGET_FILE_DIR:WheeStressTest>/WheeStressTest.html")
+        if(MagnumPlugins_StbImageImporter_FOUND)
+            target_link_libraries(WheeBaseLayerGLTest PRIVATE MagnumPlugins::StbImageImporter)
+        endif()
     endif()
 endif()
