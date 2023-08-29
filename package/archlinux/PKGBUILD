@@ -50,7 +50,8 @@ check() {
     export CORRADE_TEST_COLOR=ON
 
     for config in Debug $_buildtype; do
-        ctest -C $config --output-on-failure -j
+        ctest -C $config --output-on-failure -j9
+        MAGNUM_DISABLE_EXTENSIONS="GL_ARB_shading_language_420pack GL_ARB_explicit_uniform_location" ctest -C $config --output-on-failure -j9 -R GLTest
     done
 }
 
