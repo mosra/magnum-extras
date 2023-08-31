@@ -447,7 +447,15 @@ class PhongDrawable: public SceneGraph::Drawable3D {
 
 class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
     public:
-        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizerGL3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount, UnsignedInt primitiveCount, Containers::ArrayView<const Matrix4> jointMatrices, UnsignedInt perVertexJointCount, UnsignedInt secondaryPerVertexJointCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount}, _primitiveCount{primitiveCount}, _jointMatrices{jointMatrices}, _perVertexJointCount{perVertexJointCount}, _secondaryPerVertexJointCount{secondaryPerVertexJointCount}, _shadeless(shadeless) {}
+        explicit MeshVisualizerDrawable(Object3D& object, Shaders::MeshVisualizerGL3D& shader, GL::Mesh& mesh, std::size_t meshId, UnsignedInt objectIdCount, UnsignedInt vertexCount,
+            #ifndef MAGNUM_TARGET_GLES
+            UnsignedInt primitiveCount,
+            #endif
+        Containers::ArrayView<const Matrix4> jointMatrices, UnsignedInt perVertexJointCount, UnsignedInt secondaryPerVertexJointCount, const bool& shadeless, SceneGraph::DrawableGroup3D& group): SceneGraph::Drawable3D{object, &group}, _shader(shader), _mesh(mesh), _meshId{meshId}, _objectIdCount{objectIdCount}, _vertexCount{vertexCount},
+            #ifndef MAGNUM_TARGET_GLES
+            _primitiveCount{primitiveCount},
+            #endif
+        _jointMatrices{jointMatrices}, _perVertexJointCount{perVertexJointCount}, _secondaryPerVertexJointCount{secondaryPerVertexJointCount}, _shadeless(shadeless) {}
 
         Shaders::MeshVisualizerGL3D& shader() { return _shader; }
 
@@ -462,7 +470,10 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         Containers::Reference<Shaders::MeshVisualizerGL3D> _shader;
         GL::Mesh& _mesh;
         std::size_t _meshId;
-        UnsignedInt _objectIdCount, _vertexCount, _primitiveCount;
+        UnsignedInt _objectIdCount, _vertexCount;
+        #ifndef MAGNUM_TARGET_GLES
+        UnsignedInt _primitiveCount;
+        #endif
         Containers::ArrayView<const Matrix4> _jointMatrices;
         UnsignedInt _perVertexJointCount, _secondaryPerVertexJointCount;
         const bool& _shadeless;
@@ -789,7 +800,9 @@ void ScenePlayer::cycleMeshVisualization() {
 }
 
 Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t meshId) {
+    #ifndef MAGNUM_TARGET_GLES
     const MeshInfo& info = _data->meshes[meshId];
+    #endif
 
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframeTbn && info.primitives >= 100000) {
@@ -2054,7 +2067,11 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                 _data->selectedObject = new MeshVisualizerDrawable{
                     *objectInfo.object, meshVisualizerShader(flags|(objectInfo.skinJointMatrices.isEmpty() ? Shaders::MeshVisualizerGL3D::Flags{} : Shaders::MeshVisualizerGL3D::Flag::DynamicPerVertexJointCount)),
                     *meshInfo.mesh, objectInfo.meshId,
-                    meshInfo.objectIdCount, meshInfo.vertices, meshInfo.primitives, objectInfo.skinJointMatrices, meshInfo.perVertexJointCount, meshInfo.secondaryPerVertexJointCount,
+                    meshInfo.objectIdCount, meshInfo.vertices,
+                    #ifndef MAGNUM_TARGET_GLES
+                    meshInfo.primitives,
+                    #endif
+                    objectInfo.skinJointMatrices, meshInfo.perVertexJointCount, meshInfo.secondaryPerVertexJointCount,
                     _shadeless, _data->selectedObjectDrawables};
 
                 /* Show mesh info */
