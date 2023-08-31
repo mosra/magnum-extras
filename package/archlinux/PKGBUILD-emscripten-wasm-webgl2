@@ -41,6 +41,7 @@ build() {
         -DMAGNUM_WITH_UI=ON \
         -DMAGNUM_WITH_UI_GALLERY=ON \
         -DMAGNUM_BUILD_TESTS=ON \
+        -DMAGNUM_BUILD_GL_TESTS=ON \
         -DCORRADE_TESTSUITE_TEST_TARGET=build-tests
     ninja
 }
@@ -50,7 +51,7 @@ check() {
 
     ninja build-tests
 
-    CORRADE_TEST_COLOR=ON ctest --output-on-failure
+    CORRADE_TEST_COLOR=ON ctest --output-on-failure -E GLTest
 }
 
 package() {
