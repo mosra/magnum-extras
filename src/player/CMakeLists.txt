@@ -90,8 +90,10 @@ if(CORRADE_TARGET_EMSCRIPTEN)
 endif()
 
 if(CORRADE_TARGET_EMSCRIPTEN)
-    # globals yay :/
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s 'EXTRA_EXPORTED_RUNTIME_METHODS=[\"ccall\"]' -s ALLOW_MEMORY_GROWTH=1")
+    if(CMAKE_VERSION VERSION_LESS 3.12)
+        message(FATAL_ERROR "CMake 3.12+ is required in order to specify Emscripten linker options")
+    endif()
+    target_link_options(magnum-player PRIVATE "SHELL:-s EXTRA_EXPORTED_RUNTIME_METHODS=[\"ccall\"]" "SHELL:-s ALLOW_MEMORY_GROWTH=1")
 
     install(FILES player.html DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player RENAME index.html)
     install(TARGETS magnum-player DESTINATION ${MAGNUM_DEPLOY_PREFIX}/magnum-player)
