@@ -90,8 +90,8 @@ if(CORRADE_TARGET_EMSCRIPTEN)
 endif()
 
 if(CORRADE_TARGET_EMSCRIPTEN)
-    if(CMAKE_VERSION VERSION_LESS 3.12)
-        message(FATAL_ERROR "CMake 3.12+ is required in order to specify Emscripten linker options")
+    if(CMAKE_VERSION VERSION_LESS 3.13)
+        message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
     endif()
     target_link_options(magnum-player PRIVATE "SHELL:-s EXTRA_EXPORTED_RUNTIME_METHODS=[\"ccall\"]" "SHELL:-s ALLOW_MEMORY_GROWTH=1")
 
