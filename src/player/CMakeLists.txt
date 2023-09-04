@@ -93,7 +93,14 @@ if(CORRADE_TARGET_EMSCRIPTEN)
     if(CMAKE_VERSION VERSION_LESS 3.13)
         message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
     endif()
-    target_link_options(magnum-player PRIVATE "SHELL:-s EXTRA_EXPORTED_RUNTIME_METHODS=[\"ccall\"]" "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+    # EXTRA_EXPORTED_RUNTIME_METHODS got renamed to EXPORTED_RUNTIME_METHODS in
+    # Emscripten 2.0.18
+    if(EMSCRIPTEN_VERSION VERSION_LESS 2.0.18)
+        target_link_options(magnum-player PRIVATE "SHELL:-s EXTRA_EXPORTED_RUNTIME_METHODS=[\"ccall\"]")
+    else()
+        target_link_options(magnum-player PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=[\"ccall\"]")
+    endif()
+    target_link_options(magnum-player PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
     add_custom_command(TARGET magnum-player POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
