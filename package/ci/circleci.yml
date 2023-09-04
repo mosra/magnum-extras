@@ -179,16 +179,6 @@ commands:
           wget https://ci.magnum.graphics/swiftshader-gles-r5464.a6940c8e6e-<< parameters.build >>.zip
           unzip swiftshader-gles-r5464.a6940c8e6e-<< parameters.build >>.zip
 
-  install-basis:
-    steps:
-    - run:
-        name: Install Basis Universal
-        command: |
-          export BASIS_VERSION=v1_15_update2
-          mkdir -p $HOME/basis_universal && cd $HOME/basis_universal
-          wget -nc https://github.com/BinomialLLC/basis_universal/archive/$BASIS_VERSION.tar.gz
-          tar --strip-components 1 -xzf $BASIS_VERSION.tar.gz
-
   build:
     parameters:
       script:
@@ -433,7 +423,6 @@ jobs:
       TARGET_GLES2: "OFF"
     steps:
     - install-base-linux
-    - install-basis
     - build:
         script: emscripten.sh
 
