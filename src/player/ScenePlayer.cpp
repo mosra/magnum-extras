@@ -207,6 +207,7 @@ struct BaseUiPlane: Ui::Plane {
            first */
         Ui::Widget::hide({
             shadeless,
+            objectVisualization,
             modelInfo});
         #endif
     }
