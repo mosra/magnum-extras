@@ -727,9 +727,7 @@ void ScenePlayer::initializeUi() {
 
     Interconnect::connect(_baseUiPlane->shadeless, &Ui::Button::tapped, *this, &ScenePlayer::toggleShadeless);
     Interconnect::connect(_baseUiPlane->objectVisualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleObjectVisualization);
-    #ifndef MAGNUM_TARGET_GLES
     Interconnect::connect(_baseUiPlane->meshVisualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleMeshVisualization);
-    #endif
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &ScenePlayer::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &ScenePlayer::pause);
     Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &ScenePlayer::stop);
@@ -800,9 +798,7 @@ void ScenePlayer::cycleMeshVisualization() {
 }
 
 Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t meshId) {
-    #ifndef MAGNUM_TARGET_GLES
     const MeshInfo& info = _data->meshes[meshId];
-    #endif
 
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframeTbn && info.primitives >= 100000) {
@@ -813,8 +809,7 @@ Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t m
 
     /* If visualizing object ID, make sure the object actually has that */
     if((_visualization == Visualization::ObjectId ||
-        _visualization == Visualization::WireframeObjectId) &&
-        !_data->meshes[_data->selectedObject->meshId()].objectIdCount)
+        _visualization == Visualization::WireframeObjectId) && !info.objectIdCount)
         _visualization = Visualization(UnsignedByte(_visualization) + 1);
 
     /* Wrap around */
