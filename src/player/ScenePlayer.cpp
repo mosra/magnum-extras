@@ -2088,7 +2088,15 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
         const Vector2i fbPosition{position.x(), _selectionFramebuffer.viewport().sizeY() - position.y() - 1};
         const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1});
 
-        const UnsignedInt selectedId = _selectionFramebuffer.read(area, {PixelFormat::R16UI}).pixels<UnsignedShort>()[0][0];
+        const UnsignedInt selectedId =
+            /* WebGL requires the read format to be RGBA and UNSIGNED_INT.
+               Okay, sure, but it feels extremely silly to do on all other
+               platforms. */
+            #ifndef MAGNUM_TARGET_WEBGL
+            _selectionFramebuffer.read(area, {PixelFormat::R16UI}).pixels<UnsignedShort>()[0][0];
+            #else
+            _selectionFramebuffer.read(area, {PixelFormat::RGBA32UI}).pixels<Vector4ui>()[0][0][0];
+            #endif
 
         /* Show either global or object-specific widgets */
         Ui::Widget::setVisible(selectedId < _data->objects.size(), {
