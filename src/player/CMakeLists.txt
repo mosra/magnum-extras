@@ -100,7 +100,9 @@ if(CORRADE_TARGET_EMSCRIPTEN)
     else()
         target_link_options(magnum-player PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=[\"ccall\"]")
     endif()
-    target_link_options(magnum-player PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+    target_link_options(magnum-player PRIVATE
+        "SHELL:-s ALLOW_MEMORY_GROWTH=1"
+        "SHELL:-s EXPORTED_FUNCTIONS=[\"_main\",\"_malloc\"]")
     add_custom_command(TARGET magnum-player POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
