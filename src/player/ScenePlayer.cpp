@@ -520,7 +520,7 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
         .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
         .setMagnificationFilter(SamplerFilter::Linear)
         .setWrapping(SamplerWrapping::Repeat)
-        .setStorage(1, GL::TextureFormat::RGBA8, {256, 1})
+        .setStorage(1, GL::TextureFormat::RGB8, {256, 1})
         .setSubImage(0, {}, ImageView2D{PixelFormat::RGB8Unorm, {256, 1}, DebugTools::ColorMap::turbo()});
 
     /* Object and light visualizers */
