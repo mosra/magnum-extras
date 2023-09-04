@@ -420,7 +420,11 @@ class FlatDrawable: public SceneGraph::Drawable3D {
         Color4 _color;
         Vector3 _scale;
         Containers::ArrayView<const Matrix4> _jointMatrices;
-        UnsignedInt _perVertexJointCount, _secondaryPerVertexJointCount;
+        UnsignedInt _perVertexJointCount,
+            #ifdef MAGNUM_TARGET_WEBGL
+            CORRADE_UNUSED /* See ScenePlayer::flatShader() for details */
+            #endif
+            _secondaryPerVertexJointCount;
 };
 
 class PhongDrawable: public SceneGraph::Drawable3D {
@@ -442,7 +446,11 @@ class PhongDrawable: public SceneGraph::Drawable3D {
         Float _alphaMask;
         Matrix3 _textureMatrix;
         Containers::ArrayView<const Matrix4> _jointMatrices;
-        UnsignedInt _perVertexJointCount, _secondaryPerVertexJointCount;
+        UnsignedInt _perVertexJointCount,
+            #ifdef MAGNUM_TARGET_WEBGL
+            CORRADE_UNUSED /* See ScenePlayer::flatShader() for details */
+            #endif
+            _secondaryPerVertexJointCount;
         const bool& _shadeless;
 };
 
@@ -476,7 +484,11 @@ class MeshVisualizerDrawable: public SceneGraph::Drawable3D {
         UnsignedInt _primitiveCount;
         #endif
         Containers::ArrayView<const Matrix4> _jointMatrices;
-        UnsignedInt _perVertexJointCount, _secondaryPerVertexJointCount;
+        UnsignedInt _perVertexJointCount,
+            #ifdef MAGNUM_TARGET_WEBGL
+            CORRADE_UNUSED /* See ScenePlayer::flatShader() for details */
+            #endif
+            _secondaryPerVertexJointCount;
         const bool& _shadeless;
 };
 
@@ -646,7 +658,21 @@ Shaders::FlatGL3D& ScenePlayer::flatShader(Shaders::FlatGL3D::Flags flags) {
            skinned version of the shader with the DynamicPerVertexJointCount
            flag. */
         if(flags & Shaders::FlatGL3D::Flag::DynamicPerVertexJointCount)
-            configuration.setJointCount(_data->maxJointCount, 4, 4);
+            configuration.setJointCount(_data->maxJointCount, 4,
+                /* On WebGL, attributes that aren't used by the mesh default to
+                   a float type. If the shader then defaults to an integer type
+                   (like is the case with attribute 10 for secondary joint
+                   IDs), it causes a type mismatch. Disabling secondary
+                   skinning attributes on WebGL until a solution is found.
+                   https://registry.khronos.org/webgl/specs/latest/2.0/#5.31 */
+                /** @todo call some glVertexAttribI4ui() on the mesh to fix
+                    this? Or maybe this is an ANGLE bug, after all? */
+                #ifndef MAGNUM_TARGET_WEBGL
+                4
+                #else
+                0
+                #endif
+            );
         found = _flatShaders.emplace(enumCastUnderlyingType(flags),
             Shaders::FlatGL3D{configuration}).first;
     }
@@ -666,7 +692,14 @@ Shaders::PhongGL& ScenePlayer::phongShader(Shaders::PhongGL::Flags flags) {
            skinned version of the shader with the DynamicPerVertexJointCount
            flag. */
         if(flags & Shaders::PhongGL::Flag::DynamicPerVertexJointCount)
-            configuration.setJointCount(_data->maxJointCount, 4, 4);
+            configuration.setJointCount(_data->maxJointCount, 4,
+                /* See flatShader() above for details */
+                #ifndef MAGNUM_TARGET_WEBGL
+                4
+                #else
+                0
+                #endif
+            );
         found = _phongShaders.emplace(enumCastUnderlyingType(flags),
             Shaders::PhongGL{configuration}).first;
 
@@ -689,7 +722,14 @@ Shaders::MeshVisualizerGL3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisu
            skinned version of the shader with the DynamicPerVertexJointCount
            flag. */
         if(flags & Shaders::MeshVisualizerGL3D::Flag::DynamicPerVertexJointCount)
-            configuration.setJointCount(_data->maxJointCount, 4, 4);
+            configuration.setJointCount(_data->maxJointCount, 4,
+                /* See flatShader() above for details */
+                #ifndef MAGNUM_TARGET_WEBGL
+                4
+                #else
+                0
+                #endif
+            );
         found = _meshVisualizerShaders.emplace(enumCastUnderlyingType(flags),
             Shaders::MeshVisualizerGL3D{configuration}).first;
 
@@ -1585,7 +1625,14 @@ void FlatDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera3
 
     if(_jointMatrices) _shader
         .setJointMatrices(_jointMatrices)
-        .setPerVertexJointCount(_perVertexJointCount, _secondaryPerVertexJointCount);
+        .setPerVertexJointCount(_perVertexJointCount,
+            /* see ScenePlayer::flatShader() above for details */
+            #ifndef MAGNUM_TARGET_WEBGL
+            _secondaryPerVertexJointCount
+            #else
+            0
+            #endif
+        );
 
     _shader.draw(_mesh);
 }
@@ -1611,7 +1658,14 @@ void PhongDrawable::draw(const Matrix4& transformationMatrix, SceneGraph::Camera
 
     if(_jointMatrices) _shader
         .setJointMatrices(_jointMatrices)
-        .setPerVertexJointCount(_perVertexJointCount, _secondaryPerVertexJointCount);
+        .setPerVertexJointCount(_perVertexJointCount,
+            /* see ScenePlayer::flatShader() above for details */
+            #ifndef MAGNUM_TARGET_WEBGL
+            _secondaryPerVertexJointCount
+            #else
+            0
+            #endif
+        );
 
     if(_diffuseTexture) _shader
         .bindAmbientTexture(*_diffuseTexture)
@@ -1688,7 +1742,14 @@ void MeshVisualizerDrawable::draw(const Matrix4& transformationMatrix, SceneGrap
 
     if(_jointMatrices) (*_shader)
         .setJointMatrices(_jointMatrices)
-        .setPerVertexJointCount(_perVertexJointCount, _secondaryPerVertexJointCount);
+        .setPerVertexJointCount(_perVertexJointCount,
+            /* see ScenePlayer::flatShader() above for details */
+            #ifndef MAGNUM_TARGET_WEBGL
+            _secondaryPerVertexJointCount
+            #else
+            0
+            #endif
+        );
 
     _shader->draw(_mesh);
 
