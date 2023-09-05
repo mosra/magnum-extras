@@ -26,9 +26,8 @@
 #include <sstream>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Pair.h>
-#include <Corrade/Containers/StringStl.h>
-#include <Corrade/Utility/DebugStl.h>
-#include <Corrade/Utility/FormatStl.h>
+#include <Corrade/Containers/StringStl.h> /** @todo drop once Debug is stream-free */
+#include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Path.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
@@ -79,7 +78,7 @@ class ImagePlayer: public AbstractPlayer {
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
-        void load(const std::string& filename, Trade::AbstractImporter& importer, Int id) override;
+        void load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) override;
         void setControlsVisible(bool visible) override;
 
         void initializeUi();
@@ -92,7 +91,7 @@ class ImagePlayer: public AbstractPlayer {
         bool& _drawUi;
         Containers::Optional<Ui::UserInterface> _ui;
         Containers::Optional<BaseUiPlane> _baseUiPlane;
-        std::string _imageInfo;
+        Containers::String _imageInfo;
 
         GL::Texture2D _texture{NoCreate};
         GL::Mesh _square;
@@ -152,7 +151,8 @@ void ImagePlayer::viewportEvent(ViewportEvent& event) {
     initializeUi();
 
     setControlsVisible(controlsVisible());
-    _baseUiPlane->imageInfo.setText(_imageInfo);
+    /** @todo drop the ArrayView cast once the Ui library is STL-free */
+    _baseUiPlane->imageInfo.setText(Containers::ArrayView<const char>{_imageInfo});
     _projection = Matrix3::projection(Vector2{event.framebufferSize()});
 }
 
@@ -228,7 +228,7 @@ void ImagePlayer::mouseScrollEvent(MouseScrollEvent& event) {
     redraw();
 }
 
-void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& importer, Int id) {
+void ImagePlayer::load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) {
     if(id < 0) id = 0;
     else if(UnsignedInt(id) >= importer.image2DCount()) {
         Fatal{} << "Cannot load an image with ID" << id << "as there's only" << importer.image2DCount() << "images";
@@ -264,14 +264,14 @@ void ImagePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         Debug{&out, Debug::Flag::NoNewlineAtTheEnd} << image->format();
     else
         Debug{&out, Debug::Flag::NoNewlineAtTheEnd} << image->compressedFormat();
-    _baseUiPlane->imageInfo.setText(_imageInfo = Utility::formatString(
+
+    const Containers::StringView basename = Utility::Path::split(filename).second();
+    /** @todo drop the ArrayView cast once the Ui library is STL-free */
+    _baseUiPlane->imageInfo.setText(Containers::ArrayView<const char>{_imageInfo = Utility::format(
         "{}: {}x{}, {}",
-        /* Apparently STL doesn't fail if substr count is past the end, so
-           abuse that to shorten overly long names */
-        /** @todo trash fire!! this whole thing is a trash fire */
-        std::string{Utility::Path::split(filename).second()}.substr(0, 32),
+        basename.prefix(Math::min(std::size_t{32}, basename.size())),
         image->size().x(), image->size().y(),
-        out.str()));
+        Containers::StringView{out.str()})});
 }
 
 void ImagePlayer::setControlsVisible(bool visible) {

@@ -25,16 +25,15 @@
 
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StringIterable.h>
+#include <Corrade/Containers/StringStlHash.h>
 #include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/Utility/Arguments.h>
 #include <Corrade/Utility/Configuration.h>
-#include <Corrade/Utility/DebugStl.h>
-#include <Corrade/Utility/FormatStl.h>
+#include <Corrade/Utility/DebugStl.h> /** @todo remove once file callbacks are STL-free */
 #include <Corrade/Utility/Path.h>
 #include <Corrade/Utility/Resource.h>
-#include <Corrade/Utility/String.h>
 #include <Magnum/DebugTools/FrameProfiler.h>
 #include <Magnum/GL/Context.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
@@ -65,6 +64,8 @@
 #include "AbstractPlayer.h"
 
 namespace Magnum { namespace Player {
+
+using namespace Containers::Literals;
 
 namespace {
 
@@ -186,11 +187,11 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         Containers::Pointer<AbstractPlayer> _player;
 
         #ifdef CORRADE_TARGET_EMSCRIPTEN
-        std::unordered_map<std::string, Containers::Array<char>> _droppedFiles;
+        std::unordered_map<Containers::String, Containers::Array<char>> _droppedFiles;
         #endif
 
         #ifndef CORRADE_TARGET_EMSCRIPTEN
-        std::string _importer, _file;
+        Containers::String _importer, _file;
         #if defined(CORRADE_TARGET_UNIX) || (defined(CORRADE_TARGET_WINDOWS) && !defined(CORRADE_TARGET_WINDOWS_RT))
         Containers::Array<const char, Utility::Path::MapDeleter> mapped;
         #endif
@@ -433,7 +434,7 @@ PrimitiveClipRatio.)")
     /* Set Basis target format, but only if it wasn't forced on command line
        (which isn't possible on the web) */
     #ifndef CORRADE_TARGET_EMSCRIPTEN
-    if(!Utility::String::beginsWith(args.value("importer"), "BasisImporter"))
+    if(!args.value<Containers::StringView>("importer").hasPrefix("BasisImporter"_s))
     #endif
     {
         if(PluginManager::PluginMetadata* const metadata = _manager.metadata("BasisImporter")) {
@@ -513,13 +514,16 @@ PrimitiveClipRatio.)")
     if(importer) importer->addFlags(_importerFlags);
 
     /* Propagate user-defined options from the command line */
-    if(importer) for(const std::string& option: Utility::String::splitWithoutEmptyParts(args.value("importer-options"), ',')) {
-        auto keyValue = Utility::String::partition(option, '=');
-        Utility::String::trimInPlace(keyValue[0]);
-        Utility::String::trimInPlace(keyValue[2]);
+    /** @todo publish Implementation/converterUtilities.h from Magnum and use
+        it here, there it also allows adding subgroups, multiple values and
+        such */
+    if(importer) for(const Containers::StringView option: args.value<Containers::StringView>("importer-options").splitWithoutEmptyParts(',')) {
+        auto keyValue = option.partition('=');
+        keyValue[0] = keyValue[0].trimmed();
+        keyValue[2] = keyValue[2].trimmed();
 
-        std::vector<std::string> keyParts = Utility::String::split(keyValue[0], '/');
-        CORRADE_INTERNAL_ASSERT(!keyParts.empty());
+        const Containers::Array<Containers::StringView> keyParts = keyValue[0].split('/');
+        CORRADE_INTERNAL_ASSERT(!keyParts.isEmpty());
         Utility::ConfigurationGroup* group = &importer->configuration();
         bool groupNotRecognized = false;
         for(std::size_t i = 0; i != keyParts.size() - 1; ++i) {
@@ -541,7 +545,7 @@ PrimitiveClipRatio.)")
         /* If the option doesn't have an =, treat it as a boolean flag that's
            set to true. While there's no similar way to do an inverse, it's
            still nicer than causing a fatal error with those. */
-        if(keyValue[1].empty())
+        if(keyValue[1].isEmpty())
             group->setValue(keyParts.back(), true);
         else
             group->setValue(keyParts.back(), keyValue[2]);
@@ -628,10 +632,10 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     if(_droppedFiles.size() != totalCount) return;
 
     /* We have everything, find the top-level file */
-    const std::string* gltfFile = nullptr;
+    Containers::StringView gltfFile;
     for(const auto& file: _droppedFiles) {
-        if(Utility::String::endsWith(file.first, ".gltf") ||
-           Utility::String::endsWith(file.first, ".glb")) {
+        if(file.first.hasSuffix(".gltf"_s) ||
+           file.first.hasSuffix(".glb"_s)) {
             if(gltfFile) {
                 _overlay->importErrorUiPlane->what.setText("More than one glTF file dropped.");
                 _overlay->importErrorUiPlane->activate();
@@ -640,7 +644,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
                 return;
             }
 
-            gltfFile = &file.first;
+            gltfFile = file.first;
         }
     }
 
@@ -669,10 +673,10 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
                 return Containers::ArrayView<const char>{found->second};
             }, *this);
 
-        Debug{} << "Loading glTF file" << *gltfFile;
+        Debug{} << "Loading glTF file" << gltfFile;
 
         /* Load file */
-        if(!importer->openFile(*gltfFile)) {
+        if(!importer->openFile(gltfFile)) {
             _overlay->importErrorUiPlane->what.setText("File import failed :(");
             _overlay->importErrorUiPlane->activate();
             _droppedFiles.clear();
@@ -681,7 +685,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
         }
 
         _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
-        _player->load(*gltfFile, *importer, -1);
+        _player->load(gltfFile, *importer, -1);
 
     /* If there's just one non-glTF file, try to load it as an image instead */
     } else if(_droppedFiles.size() == 1) {

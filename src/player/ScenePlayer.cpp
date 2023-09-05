@@ -36,8 +36,7 @@
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
-#include <Corrade/Utility/DebugStl.h>
-#include <Corrade/Utility/FormatStl.h>
+#include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Path.h>
 #include <Magnum/Image.h>
 #include <Magnum/ImageView.h>
@@ -233,20 +232,20 @@ struct MeshInfo {
     UnsignedInt objectIdCount;
     UnsignedInt perVertexJointCount, secondaryPerVertexJointCount;
     std::size_t size;
-    std::string name;
+    Containers::String name;
     bool hasTangents, hasSeparateBitangents;
 };
 
 struct LightInfo {
     Containers::Optional<Trade::LightData> light;
-    std::string name;
-    std::string type;
+    Containers::String name;
+    Containers::StringView type;
 };
 
 struct ObjectInfo {
     Object3D* object;
-    std::string name;
-    std::string type;
+    Containers::String name;
+    Containers::StringView type;
     UnsignedInt meshId{0xffffffffu};
     UnsignedInt lightId{0xffffffffu};
     UnsignedInt childCount;
@@ -290,7 +289,7 @@ struct Data {
 
     /* UI is recreated on window resize and we need to repopulate the info */
     /** @todo remove once the UI has relayouting */
-    std::string modelInfo, objectInfo;
+    Containers::String modelInfo, objectInfo;
 };
 
 enum class Visualization: UnsignedByte {
@@ -326,7 +325,7 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
-        void load(const std::string& filename, Trade::AbstractImporter& importer, Int id) override;
+        void load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) override;
         void setControlsVisible(bool visible) override;
 
         void initializeUi();
@@ -959,10 +958,11 @@ void ScenePlayer::updateAnimationTime(Int deciseconds) {
         return;
 
     const Int duration = _data->player.duration().size()*10;
-    _baseUiPlane->animationProgress.setText(Utility::formatString(
+    /** @todo drop the ArrayView cast once the Ui library is STL-free */
+    _baseUiPlane->animationProgress.setText(Containers::ArrayView<const char>{Utility::format(
         "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1}",
         deciseconds/600, deciseconds/10%60, deciseconds%10,
-        duration/600, duration/10%60, duration%10));
+        duration/600, duration/10%60, duration%10)});
 }
 
 void ScenePlayer::updateLightColorBrightness() {
@@ -973,7 +973,7 @@ void ScenePlayer::updateLightColorBrightness() {
         shader.second.setLightColors(lightColorsBrightness);
 }
 
-void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& importer, Int id) {
+void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) {
     if(id >= 0 && UnsignedInt(id) >= importer.sceneCount()) {
         Fatal{} << "Cannot load a scene with ID" << id << "as there's only" << importer.sceneCount() << "scenes";
     }
@@ -1014,8 +1014,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     _data->lights = Containers::Array<LightInfo>{importer.lightCount()};
     for(UnsignedInt i = 0; i != importer.lightCount(); ++i) {
         _data->lights[i].name = importer.lightName(i);
-        if(_data->lights[i].name.empty())
-            _data->lights[i].name = Utility::formatString("#{}", i);
+        if(!_data->lights[i].name)
+            _data->lights[i].name = Utility::format("#{}", i);
 
         Containers::Optional<Trade::LightData> light = importer.light(i);
         if(!light) {
@@ -1025,16 +1025,16 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
         switch(light->type()) {
             case Trade::LightType::Ambient:
-                _data->lights[i].type = "ambient light";
+                _data->lights[i].type = "ambient light"_s;
                 break;
             case Trade::LightType::Directional:
-                _data->lights[i].type = "directional light";
+                _data->lights[i].type = "directional light"_s;
                 break;
             case Trade::LightType::Point:
-                _data->lights[i].type = "point light";
+                _data->lights[i].type = "point light"_s;
                 break;
             case Trade::LightType::Spot:
-                _data->lights[i].type = "spot light";
+                _data->lights[i].type = "spot light"_s;
                 break;
         }
 
@@ -1095,8 +1095,8 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             continue;
         }
 
-        std::string meshName = importer.meshName(i);
-        if(meshName.empty()) meshName = Utility::formatString("#{}", i);
+        Containers::String meshName = importer.meshName(i);
+        if(!meshName) meshName = Utility::format("#{}", i);
 
         /* Disable warnings on custom attributes, as we printed them with
            actual string names below. Generate normals for triangle meshes
@@ -1141,8 +1141,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
         for(UnsignedInt i = 0; i != meshData->attributeCount(); ++i) {
             const Trade::MeshAttribute name = meshData->attributeName(i);
             if(Trade::isMeshAttributeCustom(name)) {
-                const std::string stringName = importer.meshAttributeName(name);
-                if(!stringName.empty())
+                if(const Containers::String stringName = importer.meshAttributeName(name))
                     Warning{} << "Mesh" << meshName << "has a custom mesh attribute" << stringName << Debug::nospace << ", ignoring";
                 else
                     Warning{} << "Mesh" << meshName << "has a custom mesh attribute" << name << Debug::nospace << ", ignoring";
@@ -1207,10 +1206,10 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
             const UnsignedInt objectId = parent.first();
 
             _data->objects[objectId].object = new Object3D{};
-            _data->objects[objectId].type = "empty";
+            _data->objects[objectId].type = "empty"_s;
             _data->objects[objectId].name = importer.objectName(objectId);
-            if(_data->objects[objectId].name.empty())
-                _data->objects[objectId].name = Utility::formatString("object #{}", objectId);
+            if(!_data->objects[objectId].name)
+                _data->objects[objectId].name = Utility::format("object #{}", objectId);
         }
 
         /* Assign parent references, separately because there's no guarantee
@@ -1331,7 +1330,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
             /** @todo this doesn't handle objects with multiple
                 camera/mesh/light/... assignments correctly */
-            _data->objects[objectId].type = "camera";
+            _data->objects[objectId].type = "camera"_s;
 
             if(cameraReference.second() == 0) _data->cameraObject = object;
 
@@ -1578,19 +1577,18 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
     }
 
     /* Populate the model info */
-    _baseUiPlane->modelInfo.setText(_data->modelInfo = Utility::formatString(
+    const Containers::StringView basename = Utility::Path::split(filename).second();
+    /** @todo drop the ArrayView cast once the Ui library is STL-free */
+    _baseUiPlane->modelInfo.setText(Containers::ArrayView<const char>{_data->modelInfo = Utility::format(
         "{}: {} objs, {} cams, {} meshes, {} mats, {}/{} texs, {} anims",
-        /* Apparently STL doesn't fail if substr count is past the end, so
-           abuse that to shorten overly long names */
-        /** @todo trash fire!! this whole thing is a trash fire */
-        std::string{Utility::Path::split(filename).second()}.substr(0, 32),
+        basename.prefix(Math::min(std::size_t{32}, basename.size())),
         importer.objectCount(),
         importer.cameraCount(),
         importer.meshCount(),
         importer.materialCount(),
         importer.textureCount(),
         importer.image2DCount(),
-        importer.animationCount()));
+        importer.animationCount())});
 
     if(!_data->player.isEmpty()) {
         /* Animate the elapsed time -- trigger update every 1/10th a second */
@@ -1604,7 +1602,7 @@ void ScenePlayer::load(const std::string& filename, Trade::AbstractImporter& imp
 
     /* If this is not the initial animation, make it repeat indefinitely and
        show the controls. Otherwise just play it once and without controls. */
-    if(!filename.empty()) {
+    if(filename) {
         _data->player.setPlayCount(0);
         setControlsVisible(true);
     }
@@ -1871,8 +1869,9 @@ void ScenePlayer::viewportEvent(ViewportEvent& event) {
         setControlsVisible(controlsVisible());
 
         _data->camera->setViewport(event.framebufferSize());
-        _baseUiPlane->modelInfo.setText(_data->modelInfo);
-        _baseUiPlane->objectInfo.setText(_data->objectInfo);
+        /** @todo drop the ArrayView casts once the Ui library is STL-free */
+        _baseUiPlane->modelInfo.setText(Containers::ArrayView<const char>{_data->modelInfo});
+        _baseUiPlane->objectInfo.setText(Containers::ArrayView<const char>{_data->objectInfo.prefix(Math::min(_data->objectInfo.size(), std::size_t{128}) /** @todo fix in the Ui library */)});
         updateAnimationTime(_data->elapsedTimeAnimationDestination);
     }
 
@@ -2140,7 +2139,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                     _shadeless, _data->selectedObjectDrawables};
 
                 /* Show mesh info */
-                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                _data->objectInfo = Utility::format(
                     /** @todo wait, what about non-indexed? */
                     "{}: mesh {}, indexed, {} attribs, {} verts, {} prims, {:.1f} kB",
                     objectInfo.name,
@@ -2148,30 +2147,33 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                     meshInfo.attributes,
                     meshInfo.vertices,
                     meshInfo.primitives,
-                    meshInfo.size/1024.0f).substr(0, 128) /** @todo fix in the Ui library */);
+                    meshInfo.size/1024.0f);
 
             /* A light is selected */
             } else if(_data->objects[selectedId].lightId != 0xffffffffu) {
                 CORRADE_INTERNAL_ASSERT(_data->lights[_data->objects[selectedId].lightId].light);
                 LightInfo& lightInfo = _data->lights[_data->objects[selectedId].lightId];
 
-                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                _data->objectInfo = Utility::format(
                     "{}: {} {}, range {}, intensity {}",
                     objectInfo.name,
                     lightInfo.type,
                     lightInfo.name,
                     lightInfo.light->range(),
-                    lightInfo.light->intensity()).substr(0, 128) /** @todo fix in the Ui library */);
+                    lightInfo.light->intensity());
 
             /* Something else is selected from object visualization, display
                just generic info */
             } else {
-                _baseUiPlane->objectInfo.setText(_data->objectInfo = Utility::formatString(
+                _data->objectInfo = Utility::format(
                     "{}: {}, {} children",
                     objectInfo.name,
                     objectInfo.type,
-                    objectInfo.childCount).substr(0, 128) /** @todo fix in the Ui library */);
+                    objectInfo.childCount);
             }
+
+            /** @todo drop the ArrayView cast once the Ui library is STL-free */
+            _baseUiPlane->objectInfo.setText(Containers::ArrayView<const char>{_data->objectInfo.prefix(Math::min(_data->objectInfo.size(), std::size_t{128}) /** @todo fix in the Ui library */)});
         }
 
         event.setAccepted();

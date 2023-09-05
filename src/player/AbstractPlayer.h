@@ -60,7 +60,7 @@ class AbstractPlayer: public AbstractUiScreen {
     private:
         friend Player;
 
-        virtual void load(const std::string& filename, Trade::AbstractImporter& importer, Int id) = 0;
+        virtual void load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) = 0;
 };
 
 /* Extreme PIMPL. */
