@@ -262,6 +262,17 @@ default:
 -   `MAGNUM_WITH_UI_GALLERY` --- Build the
     @ref magnum-ui-gallery "magnum-ui-gallery" executable
 
+Options controlling the build:
+
+-   `MAGNUM_PLAYER_STATIC_PLUGINS` --- Static plugins to find and link to the
+    @ref magnum-player "magnum-player" executable. Intended for use in
+    scenarios where both Magnum and plugins are built as static, in which case
+    the executable doesn't have a possibility to load dynamic plugins from a
+    filesystem. Expects a semicolon-separated list of existing CMake targets,
+    for example `Magnum::AnyImageImporter;MagnumPlugins::StbImageImporter`, for
+    each of those a corresponding @cmake find_package() @ce and
+    @cmake target_link_libraries() @ce is called.
+
 Note that each [namespace](namespaces.html) documentation contains more
 detailed information about its dependencies, availability on particular
 platforms and also a guide how to enable given library for building and how to

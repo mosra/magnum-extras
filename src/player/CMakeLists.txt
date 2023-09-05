@@ -25,6 +25,24 @@
 
 find_package(Corrade REQUIRED Main)
 
+set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
+
+set(Magnum_EXTRA_COMPONENTS )
+set(MagnumPlugins_EXTRA_COMPONENTS )
+foreach(plugin ${MAGNUM_PLAYER_STATIC_PLUGINS})
+    string(REGEX MATCH "(Magnum|MagnumPlugins)::(.+)" _plugin_match ${plugin})
+    if(NOT _plugin_match)
+        message(SEND_ERROR "Unrecognized plugin ${plugin} in MAGNUM_PLAYER_EXTRA_STATIC_PLUGINS")
+    endif()
+    if(CMAKE_MATCH_1 STREQUAL Magnum)
+        list(APPEND Magnum_EXTRA_COMPONENTS ${CMAKE_MATCH_2})
+    elseif(CMAKE_MATCH_1 STREQUAL MagnumPlugins)
+        list(APPEND MagnumPlugins_EXTRA_COMPONENTS ${CMAKE_MATCH_2})
+    else()
+        message(FATAL_ERROR)
+    endif()
+endforeach()
+
 find_package(Magnum REQUIRED
     DebugTools
     GL
@@ -32,21 +50,21 @@ find_package(Magnum REQUIRED
     Primitives
     Shaders
     SceneGraph
-    Trade)
+    Trade
+    ${Magnum_EXTRA_COMPONENTS})
 
 if(CORRADE_TARGET_EMSCRIPTEN)
     find_package(Magnum REQUIRED EmscriptenApplication)
-else()
-    find_package(Magnum REQUIRED Sdl2Application)
-endif()
-
-set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
-
-if(CORRADE_TARGET_EMSCRIPTEN)
     find_package(MagnumPlugins REQUIRED
         GltfImporter
         StbTrueTypeFont
-        StbImageImporter)
+        StbImageImporter
+        ${MagnumPlugins_EXTRA_COMPONENTS})
+else()
+    find_package(Magnum REQUIRED Sdl2Application)
+    if(MagnumPlugins_EXTRA_COMPONENTS)
+        find_package(MagnumPlugins REQUIRED ${MagnumPlugins_EXTRA_COMPONENTS})
+    endif()
 endif()
 
 set(Player_SRCS
@@ -79,7 +97,8 @@ target_link_libraries(magnum-player PRIVATE
     Magnum::SceneGraph
     Magnum::Shaders
     Magnum::Trade
-    MagnumUi)
+    MagnumUi
+    ${MAGNUM_PLAYER_STATIC_PLUGINS})
 if(CORRADE_TARGET_EMSCRIPTEN)
     target_link_libraries(magnum-player PRIVATE
         MagnumPlugins::GltfImporter

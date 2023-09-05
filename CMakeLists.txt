@@ -109,6 +109,10 @@ endif()
 cmake_dependent_option(MAGNUM_BUILD_STATIC_PIC "Build static libraries with position-independent code" ${ON_EXCEPT_EMSCRIPTEN} "MAGNUM_BUILD_STATIC" OFF)
 
 option(MAGNUM_WITH_PLAYER "Build the magnum-player application" OFF)
+if(MAGNUM_WITH_PLAYER AND MAGNUM_BUILD_STATIC)
+    set(MAGNUM_PLAYER_STATIC_PLUGINS "" CACHE STRING "Static plugins to link to the magnum-player application")
+endif()
+
 cmake_dependent_option(MAGNUM_WITH_UI "Build Ui library" OFF "NOT MAGNUM_WITH_PLAYER" ON)
 cmake_dependent_option(MAGNUM_WITH_UI_GALLERY "Build magnum-ui-gallery executable" OFF "MAGNUM_WITH_UI" OFF)
 
