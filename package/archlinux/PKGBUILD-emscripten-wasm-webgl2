@@ -55,7 +55,10 @@ build() {
         -DMAGNUM_WITH_UI_GALLERY=ON \
         -DMAGNUM_BUILD_TESTS=ON \
         -DMAGNUM_BUILD_GL_TESTS=ON \
-        -DCORRADE_TESTSUITE_TEST_TARGET=build-tests
+        -DCORRADE_TESTSUITE_TEST_TARGET=build-tests \
+        `# TODO IcoImporter once magic detection is done, OpenExrImporter once` \
+        `#  it builds for Emscripten, WebPImporter` \
+        -DMAGNUM_PLAYER_STATIC_PLUGINS="Magnum::TgaImporter;MagnumPlugins::AstcImporter;MagnumPlugins::BasisImporter;MagnumPlugins::DdsImporter;MagnumPlugins::KtxImporter;MagnumPlugins::StanfordImporter;MagnumPlugins::StlImporter;MagnumPlugins::UfbxImporter"
     ninja
 }
 
