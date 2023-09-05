@@ -153,6 +153,11 @@ if(MAGNUM_WITH_UI_GALLERY)
             MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/MacOSXBundleInfo.plist.in
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "YES")
     elseif(CORRADE_TARGET_EMSCRIPTEN)
+        if(CMAKE_VERSION VERSION_LESS 3.13)
+            message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
+        endif()
+        target_link_options(magnum-ui-gallery PRIVATE
+            "SHELL:$<$<CONFIG:Release>:--closure 1>")
         add_custom_command(TARGET magnum-ui-gallery POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${MAGNUM_EMSCRIPTENAPPLICATION_JS}

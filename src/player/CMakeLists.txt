@@ -119,6 +119,7 @@ if(CORRADE_TARGET_EMSCRIPTEN)
         target_link_options(magnum-player PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=[\"ccall\"]")
     endif()
     target_link_options(magnum-player PRIVATE
+        "SHELL:$<$<CONFIG:Release>:--closure 1>"
         "SHELL:-s ALLOW_MEMORY_GROWTH=1"
         "SHELL:-s EXPORTED_FUNCTIONS=[\"_main\",\"_malloc\"]")
     add_custom_command(TARGET magnum-player POST_BUILD
