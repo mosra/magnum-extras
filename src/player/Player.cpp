@@ -34,6 +34,7 @@
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once file callbacks are STL-free */
 #include <Corrade/Utility/Path.h>
 #include <Corrade/Utility/Resource.h>
+#include <Corrade/Utility/String.h>
 #include <Magnum/DebugTools/FrameProfiler.h>
 #include <Magnum/GL/Context.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
@@ -101,7 +102,7 @@ struct OverlayUiPlane: Ui::Plane {
         ,
         fullsize{*this, {Ui::Snap::Bottom, controls, ButtonSize}, "Full size"},
         dropHintBackground{*this, {{}, {540, 140}}, Ui::Style::Info},
-        dropHint{*this, {{}, {Vector2::yAxis(30.0f), {}}}, "Drag&drop a glTF file and everything it references here to play it.", Text::Alignment::LineCenter, Ui::Style::Info},
+        dropHint{*this, {{}, {Vector2::yAxis(30.0f), {}}}, "Drag&drop a file and everything it references here to play it.", Text::Alignment::LineCenter, Ui::Style::Info},
         disclaimer{*this, {{}, {Vector2::yAxis(-10.0f), {}}}, "All data are processed and viewed locally in your\nweb browser. Nothing is uploaded to the server.", Text::Alignment::LineCenter, Ui::Style::Dim}
         #endif
     {
@@ -632,26 +633,32 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     if(_droppedFiles.size() != totalCount) return;
 
     /* We have everything, find the top-level file */
-    Containers::StringView gltfFile;
+    Containers::StringView topLevelFile;
     for(const auto& file: _droppedFiles) {
-        if(file.first.hasSuffix(".gltf"_s) ||
-           file.first.hasSuffix(".glb"_s)) {
-            if(gltfFile) {
-                _overlay->importErrorUiPlane->what.setText("More than one glTF file dropped.");
+        const Containers::String normalizedExtension = Utility::String::lowercase(Utility::Path::splitExtension(file.first).second());
+        if(normalizedExtension.hasSuffix(".gltf"_s) ||
+           normalizedExtension.hasSuffix(".glb"_s) ||
+           normalizedExtension.hasSuffix(".fbx"_s) ||
+           normalizedExtension.hasSuffix(".obj"_s) ||
+           normalizedExtension.hasSuffix(".ply"_s) ||
+           normalizedExtension.hasSuffix(".stl"_s))
+        {
+            if(topLevelFile) {
+                _overlay->importErrorUiPlane->what.setText("More than one glTF / FBX / OBJ / PLY / STL file dropped.");
                 _overlay->importErrorUiPlane->activate();
                 _droppedFiles.clear();
                 redraw();
                 return;
             }
 
-            gltfFile = file.first;
+            topLevelFile = file.first;
         }
     }
 
-    /* There's a glTF file, load it */
-    if(gltfFile) {
+    /* There's a top-level file, load it */
+    if(topLevelFile) {
         Containers::Pointer<Trade::AbstractImporter> importer =
-            _manager.loadAndInstantiate("GltfImporter");
+            _manager.loadAndInstantiate("AnySceneImporter");
         if(!importer) std::exit(1);
 
         /* Make the extra files available to the importer */
@@ -673,10 +680,10 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
                 return Containers::ArrayView<const char>{found->second};
             }, *this);
 
-        Debug{} << "Loading glTF file" << gltfFile;
+        Debug{} << "Loading top-level file" << topLevelFile;
 
         /* Load file */
-        if(!importer->openFile(gltfFile)) {
+        if(!importer->openFile(topLevelFile)) {
             _overlay->importErrorUiPlane->what.setText("File import failed :(");
             _overlay->importErrorUiPlane->activate();
             _droppedFiles.clear();
@@ -685,9 +692,9 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
         }
 
         _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
-        _player->load(gltfFile, *importer, -1);
+        _player->load(topLevelFile, *importer, -1);
 
-    /* If there's just one non-glTF file, try to load it as an image instead */
+    /* If there's just one non-recognized file, try to load it as an image instead */
     } else if(_droppedFiles.size() == 1) {
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
         if(imageImporter->openData(_droppedFiles.begin()->second) && imageImporter->image2DCount()) {

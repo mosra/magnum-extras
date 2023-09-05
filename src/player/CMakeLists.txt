@@ -54,7 +54,7 @@ find_package(Magnum REQUIRED
     ${Magnum_EXTRA_COMPONENTS})
 
 if(CORRADE_TARGET_EMSCRIPTEN)
-    find_package(Magnum REQUIRED EmscriptenApplication)
+    find_package(Magnum REQUIRED EmscriptenApplication AnySceneImporter)
     find_package(MagnumPlugins REQUIRED
         GltfImporter
         StbTrueTypeFont
@@ -101,6 +101,7 @@ target_link_libraries(magnum-player PRIVATE
     ${MAGNUM_PLAYER_STATIC_PLUGINS})
 if(CORRADE_TARGET_EMSCRIPTEN)
     target_link_libraries(magnum-player PRIVATE
+        Magnum::AnySceneImporter
         MagnumPlugins::GltfImporter
         MagnumPlugins::StbTrueTypeFont
         MagnumPlugins::StbImageImporter)
