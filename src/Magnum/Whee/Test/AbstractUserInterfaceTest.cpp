@@ -5994,12 +5994,10 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Move|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
-            if((accept0 && dataId == 0) || (accept1 && dataId == 1))
+            if(accept & dataId)
                 event.setAccepted();
-            if(capture0 && dataId == 0)
-                event.setCaptured(*capture0);
-            if(capture1 && dataId == 1)
-                event.setCaptured(*capture1);
+            if(capture && capture->second() & dataId)
+                event.setCaptured(capture->first());
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
@@ -6012,9 +6010,10 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
             arrayAppend(eventCalls, InPlaceInit, Leave|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
         }
 
-        bool accept0 = false,
-            accept1 = false;
-        Containers::Optional<bool> capture0, capture1;
+        /* It's a mask, not ID to be able to select more than one data for
+           which the accept/capture should be set. */
+        Int accept;
+        Containers::Optional<Containers::Pair<bool, Int>> capture;
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
@@ -6022,12 +6021,14 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
 
     /* Two nodes on top of each other, node 1 above */
-    NodeHandle node0 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle node1 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle data0 = ui.layer<Layer>(layer).create();
+    NodeHandle node2 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
+    /* Two data, using ID 1 and 2 for easier masking */
+    /*DataHandle data0 =*/ ui.layer<Layer>(layer).create();
     DataHandle data1 = ui.layer<Layer>(layer).create();
-    ui.attachData(node0, data0);
+    DataHandle data2 = ui.layer<Layer>(layer).create();
     ui.attachData(node1, data1);
+    ui.attachData(node2, data2);
 
     /* Setting capture in events that don't get accepted should do nothing to
        subsequent events and nothing to the end result also */
@@ -6035,19 +6036,17 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent eventMove{{}, {}};
-        ui.layer<Layer>(layer).accept0 = true;
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).capture0 = {};
-        ui.layer<Layer>(layer).capture1 = true;
+        ui.layer<Layer>(layer).accept = 1;
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 2);
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
-        /* Node 1 captures in a non-accepted event, which should be ignored */
+        /* Node 2 captures in a non-accepted event, which should be ignored */
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node0);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node1);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, data1, {10.0f, 10.0f}}, /* capturing but not accepted */
-            {Move, data0, {10.0f, 10.0f}}, /* shouldn't capture */
-            {Enter, data0, {10.0f, 10.0f}}, /* neither this */
+            {Move, data2, {10.0f, 10.0f}}, /* capturing but not accepted */
+            {Move, data1, {10.0f, 10.0f}}, /* shouldn't capture */
+            {Enter, data1, {10.0f, 10.0f}}, /* neither this */
         })), TestSuite::Compare::Container);
 
     /* Cancelling capture in a non-accepted captured move event (i.e., outside
@@ -6067,24 +6066,22 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
         /* The press event accepts and captures unconditionally */
         PointerEvent eventPress{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node1);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node2);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove{{}, {}};
-        ui.layer<Layer>(layer).accept0 = false;
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).capture0 = {};
-        ui.layer<Layer>(layer).capture1 = false;
+        ui.layer<Layer>(layer).accept = 0;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, eventMove));
         /* The capture should be reset even though the move wasn't accepted */
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Press|Captured, data1, {10.0f, 10.0f}},
-            {Move|Captured, data1, {80.0f, 100.0f}}, /* cancels the capture */
+            {Press|Captured, data2, {10.0f, 10.0f}},
+            {Move|Captured, data2, {80.0f, 100.0f}}, /* cancels the capture */
             /* There should be nothing else after */
         })), TestSuite::Compare::Container);
     }
