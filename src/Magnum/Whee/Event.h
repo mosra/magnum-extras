@@ -92,8 +92,8 @@ class PointerEvent {
          * @brief Constructor
          * @param type      Pointer type that got pressed or released
          *
-         * The position is set from @ref AbstractUserInterface event handler
-         * internals.
+         * The position, capture and hover properties are set from
+         * @ref AbstractUserInterface event handler internals.
          */
         explicit PointerEvent(Pointer type): _type{type} {}
 
@@ -112,6 +112,7 @@ class PointerEvent {
          *
          * On a press event is always implicitly @cpp true @ce, on a release
          * event is @cpp true @ce only if the event happens on a captured node.
+         * @see @ref isHovering()
          */
         bool isCaptured() const { return _captured; }
 
@@ -133,6 +134,25 @@ class PointerEvent {
         void setCaptured(bool captured) {
             _captured = captured;
         }
+
+        /**
+         * @brief Whether the event is called on a node that's currently hovered
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::pointerEventHoveredNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise. In particular, is @cpp false @ce for a press or release
+         * event that happened without a preceding move on given node, is also
+         * @cpp false @ce if a release event happens outside of a captured
+         * node.
+         *
+         * Note that even if this function returns @cpp true @ce, the event
+         * handler still controls whether the pointer is actually treated as
+         * being in an active area of the node by either accepting the event or
+         * not accepting it and letting it potentially fall through to other
+         * nodes.
+         * @see @ref isCaptured(), @ref setAccepted()
+         */
+        bool isHovering() const { return _hovering; }
 
         /**
          * @brief Whether the event is accepted
@@ -157,6 +177,7 @@ class PointerEvent {
         Pointer _type;
         bool _accepted = false;
         bool _captured = false;
+        bool _hovering = false;
 };
 
 /**
@@ -176,8 +197,8 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
          *      @ref Containers::NullOpt
          * @param types     Pointer types pressed in this event
          *
-         * The position is set from @ref AbstractUserInterface event handler
-         * internals.
+         * The position, capture and hover properties are set from
+         * @ref AbstractUserInterface event handler internals.
          */
         explicit PointerMoveEvent(Containers::Optional<Pointer> type, Pointers types);
 
@@ -222,6 +243,7 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
          *
          * Is implicitly @cpp true @ce if the event happens on a captured node,
          * @cpp false @ce otherwise.
+         * @see @ref isHovering()
          */
         bool isCaptured() const { return _captured; }
 
@@ -241,6 +263,29 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
         void setCaptured(bool captured) {
             _captured = captured;
         }
+
+        /**
+         * @brief Whether the event is called on a node that's currently hovered
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::pointerEventHoveredNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise. In particular, is @cpp false @ce for the first move event
+         * happening on a node, @cpp true @ce for the enter event and all
+         * subsequent accepted move events on the same node, @cpp false @ce for
+         * the leave event. On a captured move event returns @cpp false @ce for
+         * if the pointer was moved outside of the node area.
+         *
+         * Note that even if this function returns @cpp true @ce, the event
+         * handler still controls whether the node actually appears in
+         * @ref AbstractUserInterface::pointerEventHoveredNode() afterwards.
+         * Accepting the event makes the node appear there. Not accepting it
+         * makes the event potentially fall through to other nodes which may
+         * then become hovered, if there are none then the hovered node becomes
+         * null and subsequent move events called on this node will be called
+         * with this function returning @cpp false @ce.
+         * @see @ref isCaptured(), @ref setAccepted()
+         */
+        bool isHovering() const { return _hovering; }
 
         /**
          * @brief Whether the event is accepted
@@ -266,6 +311,7 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
         Pointers _types;
         bool _accepted = false;
         bool _captured = false;
+        bool _hovering = false;
 };
 
 }}
