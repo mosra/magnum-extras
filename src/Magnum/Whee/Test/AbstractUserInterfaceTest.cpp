@@ -3511,6 +3511,9 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         /* doClean() / doUpdate() tested thoroughly enough in draw() above */
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
+            /* The hover state is always false as there was no preceding move
+               event that would mark the node as hovered */
+            CORRADE_VERIFY(!event.isHovering());
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(*eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position(), *accept);
@@ -3941,6 +3944,9 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
             CORRADE_FAIL("This function shouldn't be called.");
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
+            /* The hover state is always false as there was no preceding move
+               event that would mark the node as hovered */
+            CORRADE_VERIFY(!event.isHovering());
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position());
@@ -4009,6 +4015,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
     AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     enum Event {
+        Hovering = true,
         Move = 2,
         Enter = 4,
         Leave = 6
@@ -4027,18 +4034,22 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Move, dataHandle(handle(), dataId, 1), Vector4{event.position().x(), event.position().y(), event.relativePosition().x(), event.relativePosition().y()});
+            arrayAppend(eventCalls, InPlaceInit, Move|event.isHovering(), dataHandle(handle(), dataId, 1), Vector4{event.position().x(), event.position().y(), event.relativePosition().x(), event.relativePosition().y()});
             event.setAccepted();
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            /* All enter events are hovering by definition */
+            CORRADE_VERIFY(event.isHovering());
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Enter, dataHandle(handle(), dataId, 1), Vector4{event.position().x(), event.position().y(), event.relativePosition().x(), event.relativePosition().y()});
+            arrayAppend(eventCalls, InPlaceInit, Enter|event.isHovering(), dataHandle(handle(), dataId, 1), Vector4{event.position().x(), event.position().y(), event.relativePosition().x(), event.relativePosition().y()});
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            /* All leave events are not hovering by definition */
+            CORRADE_VERIFY(!event.isHovering());
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Leave, dataHandle(handle(), dataId, 1), Vector4{event.position().x(), event.position().y(), event.relativePosition().x(), event.relativePosition().y()});
+            arrayAppend(eventCalls, InPlaceInit, Leave|event.isHovering(), dataHandle(handle(), dataId, 1), Vector4{event.position().x(), event.position().y(), event.relativePosition().x(), event.relativePosition().y()});
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector4>> eventCalls;
@@ -4090,15 +4101,20 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
-            /* There's nothing to receive a Leave event */
+            /* There's nothing to receive a Leave event. The events also
+               don't have Hovering set yet, as current hovered node is null at
+               that point. */
             {Move, leftData2, {10.0f, 11.0f, 20.0f, 1.0f}},
             {Move, leftData1, {10.0f, 11.0f, 20.0f, 1.0f}},
             /* It has to first execute the Move to discover a node that accepts
-               the event, thus Enter can't be before the Move */
-            {Enter, leftData2, {10.0f, 11.0f, 0.0f, 0.0f}},
-            {Enter, leftData1, {10.0f, 11.0f, 0.0f, 0.0f}},
-            {Move, leftData2, {15.0f, 10.0f, 5.0f, -1.0f}},
-            {Move, leftData1, {15.0f, 10.0f, 5.0f, -1.0f}},
+               the event, thus Enter can't be before the Move. It has the
+               Hovering set, as that has to be there by definition. */
+            {Enter|Hovering, leftData2, {10.0f, 11.0f, 0.0f, 0.0f}},
+            {Enter|Hovering, leftData1, {10.0f, 11.0f, 0.0f, 0.0f}},
+            /* Second move then has Hovering set, as the current hovered node
+               matches the node on which the move is called */
+            {Move|Hovering, leftData2, {15.0f, 10.0f, 5.0f, -1.0f}},
+            {Move|Hovering, leftData1, {15.0f, 10.0f, 5.0f, -1.0f}},
             /* It stays on the same node, so no further Enter or Leave */
         })), TestSuite::Compare::Container);
 
@@ -4120,8 +4136,10 @@ void AbstractUserInterfaceTest::eventPointerMove() {
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* It stays on the same node, so no further Enter or Leave */
-            {Move, leftData2, {10.0f, 11.0f, -5.0f, 1.0f}},
-            {Move, leftData1, {10.0f, 11.0f, -5.0f, 1.0f}},
+            {Move|Hovering, leftData2, {10.0f, 11.0f, -5.0f, 1.0f}},
+            {Move|Hovering, leftData1, {10.0f, 11.0f, -5.0f, 1.0f}},
+            /* Move onto the right node has no Hovering set initially as the
+               current hovered node is still different at that point */
             {Move, rightData, {15.0f, 10.0f, 25.0f, -1.0f}},
             /* It has to first execute the Move to discover the next node that
                accepts the event, thus Leave can't be before the Move either
@@ -4129,7 +4147,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
                eventPointerMoveNotAccepted() below. */
             {Leave, leftData2, {35.0f, 10.0f, 0.0f, 0.0f}},
             {Leave, leftData1, {35.0f, 10.0f, 0.0f, 0.0f}},
-            {Enter, rightData, {15.0f, 10.0f, 0.0f, 0.0f}},
+            {Enter|Hovering, rightData, {15.0f, 10.0f, 0.0f, 0.0f}},
         })), TestSuite::Compare::Container);
 
     /* Out of the item, again relative to what happened last */
@@ -4162,7 +4180,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
             /* Is relative to the {-30, 11} that was above, without considering
                the 10x / 100x scale in any way */
             {Move, rightData, {15.0f, 10.0f, 45.0f, -1.0f}},
-            {Enter, rightData, {15.0f, 10.0f, 0.0f, 0.0f}},
+            {Enter|Hovering, rightData, {15.0f, 10.0f, 0.0f, 0.0f}},
         })), TestSuite::Compare::Container);
     }
 
@@ -4274,10 +4292,12 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
     AbstractUserInterface ui{{100, 100}};
 
     enum Event {
-        Accepted = true,
-        Move = 2,
-        Enter = 4,
-        Leave = 6
+        Accepted = 1,
+        Hovering = 2,
+        /* All below have to be multiples of 4 to not clash with the above */
+        Move = 4,
+        Enter = 8,
+        Leave = 12
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -4289,17 +4309,24 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
                 event.setAccepted();
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Move|event.isAccepted(), dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isAccepted() ? Accepted : 0)|
+                (event.isHovering() ? Hovering : 0)|Move,
+                dataHandle(handle(), dataId, 1), event.position());
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Enter, dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|Enter,
+                dataHandle(handle(), dataId, 1), event.position());
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Leave, dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|Leave,
+                dataHandle(handle(), dataId, 1), event.position());
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -4339,13 +4366,16 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data10, {5.0f, 10.0f}},
-            {Enter, data10, {5.0f, 10.0f}},
-            {Move, data10, {15.0f, 15.0f}}, /* not accepted */
+            {Enter|Hovering, data10, {5.0f, 10.0f}},
+            /* The move is happening on the same node as was hovered before, so
+               Hovering is set, however it's not accepted and so the next move
+               (happening on a different node) won't have it set anymore */
+            {Move|Hovering, data10, {15.0f, 15.0f}}, /* not accepted */
             {Move|Accepted, data01, {5.0f, 15.0f}},
             {Move|Accepted, data00, {5.0f, 15.0f}},
             {Leave, data10, {15.0f, 15.0f}},
-            {Enter, data01, {5.0f, 15.0f}},
-            {Enter, data00, {5.0f, 15.0f}}
+            {Enter|Hovering, data01, {5.0f, 15.0f}},
+            {Enter|Hovering, data00, {5.0f, 15.0f}}
         })), TestSuite::Compare::Container);
 
     /* Move from node 0 to node 1, but the second move doesn't get accepted and
@@ -4372,11 +4402,13 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data01, {15.0f, 10.0f}},
             {Move|Accepted, data00, {15.0f, 10.0f}},
-            {Enter, data01, {15.0f, 10.0f}},
-            {Enter, data00, {15.0f, 10.0f}},
+            {Enter|Hovering, data01, {15.0f, 10.0f}},
+            {Enter|Hovering, data00, {15.0f, 10.0f}},
             {Move, data10, {15.0f, 15.0f}}, /* not accepted */
-            {Move|Accepted, data01, {5.0f, 15.0f}},
-            {Move|Accepted, data00, {5.0f, 15.0f}},
+            /* The move is happening on the same node as was hovered before, so
+               Hovering is set */
+            {Move|Accepted|Hovering, data01, {5.0f, 15.0f}},
+            {Move|Accepted|Hovering, data00, {5.0f, 15.0f}},
             /* No Enter/Leave as we ended up staying on the same node */
         })), TestSuite::Compare::Container);
 
@@ -4404,10 +4436,10 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data01, {15.0f, 10.0f}},
             {Move|Accepted, data00, {15.0f, 10.0f}},
-            {Enter, data01, {15.0f, 10.0f}},
-            {Enter, data00, {15.0f, 10.0f}},
-            {Move, data01, {13.0f, 15.0f}}, /* not accepted */
-            {Move|Accepted, data00, {13.0f, 15.0f}},
+            {Enter|Hovering, data01, {15.0f, 10.0f}},
+            {Enter|Hovering, data00, {15.0f, 10.0f}},
+            {Move|Hovering, data01, {13.0f, 15.0f}}, /* not accepted */
+            {Move|Accepted|Hovering, data00, {13.0f, 15.0f}},
         })), TestSuite::Compare::Container);
     }
 }
@@ -4774,12 +4806,14 @@ void AbstractUserInterfaceTest::eventCapture() {
     AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     enum Event {
-        Captured = true,
-        Press = 2,
-        Release = 4,
-        Move = 6,
-        Enter = 8,
-        Leave = 10
+        Captured = 1,
+        Hovering = 2,
+        /* All below have to be multiples of 4 to not clash with the above */
+        Press = 4,
+        Release = 8,
+        Move = 12,
+        Enter = 16,
+        Leave = 20
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -4789,30 +4823,44 @@ void AbstractUserInterfaceTest::eventCapture() {
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Press|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isHovering() ? Hovering : 0)|Press,
+                dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Release|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isHovering() ? Hovering : 0)|Release,
+                dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Move|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isHovering() ? Hovering : 0)|Move,
+                dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Enter|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isHovering() ? Hovering : 0)|Enter, dataHandle(handle(), dataId, 1), event.position());
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Leave|event.isCaptured(), dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isHovering() ? Hovering : 0)|Leave,
+                dataHandle(handle(), dataId, 1), event.position());
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -4853,6 +4901,7 @@ void AbstractUserInterfaceTest::eventCapture() {
            hovered node either */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Hovering is not set as there's no currently hovered node */
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
@@ -4880,6 +4929,7 @@ void AbstractUserInterfaceTest::eventCapture() {
            hovered node either */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Hovering is not set on any as there's no currently hovered node */
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
@@ -4907,6 +4957,7 @@ void AbstractUserInterfaceTest::eventCapture() {
            hovered node either */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Hovering is not set on any as there's no currently hovered node */
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, rightData, {10.0f, 10.0f}},
             /* No Enter/Leave events synthesized from Press and Release at the
@@ -4949,34 +5000,44 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            /* A move that happens before a press isn't captured */
+            /* A move that happens before a press isn't captured. Hovering not
+               set yet as current hovered node is null at the point move event
+               is called. */
             {Move, rightData, {10.0f, 15.0f}},
             /* Neither is the Enter synthesized from it */
-            {Enter, rightData, {10.0f, 15.0f}},
+            {Enter|Hovering, rightData, {10.0f, 15.0f}},
+            /* The right node is hovered at the moment, so Press doesn't get
+               Hovering set */
             {Press|Captured, leftData2, {10.0f, 10.0f}},
             {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* No Enter/Leave event synthesized from Press at the moment. If
                they would, neither would be captured. */
             /* A move that happens during a press is captured. Since no
                Enter/Leave events were synthesized from the Press, they get emitted here. The Leave event isn't captured, the Enter is, in
-               order to allow a capture reset in its handler. */
+               order to allow a capture reset in its handler. The Move is the
+               first happening on the left node, so it doesn't have Hovering
+               set. */
             {Move|Captured, leftData2, {15.0f, 15.0f}},
             {Move|Captured, leftData1, {15.0f, 15.0f}},
             {Leave, rightData, {-5.0f, 15.0f}},
-            {Enter|Captured, leftData2, {15.0f, 15.0f}},
-            {Enter|Captured, leftData1, {15.0f, 15.0f}},
-            {Release|Captured, leftData2, {30.0f, 10.0f}}, /* actually on rightData */
-            {Release|Captured, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
+            {Enter|Captured|Hovering, leftData2, {15.0f, 15.0f}},
+            {Enter|Captured|Hovering, leftData1, {15.0f, 15.0f}},
+            /* These actually happen on rightData. Hovering isn't set as the
+               event happens outside of the hovered node rectangle. */
+            {Release|Captured, leftData2, {30.0f, 10.0f}},
+            {Release|Captured, leftData1, {30.0f, 10.0f}},
             /* Again, no Leave event for leftData synthesized from Release at
                the moment. If it would, it *would* be captured. */
             /* A move that happens after a release isn't captured again,
                together with a matching Enter/Leave as we're on a different
                node again. The Enter/Leave is not captured either as it didn't
-               happen during a capture, but after it was released. */
+               happen during a capture, but after it was released. Hovering
+               isn't set as the Move is the first happening on the right
+               node. */
             {Move, rightData, {15.0f, 15.0f}},
             {Leave, leftData2, {35.0f, 15.0f}},
             {Leave, leftData1, {35.0f, 15.0f}},
-            {Enter, rightData, {15.0f, 15.0f}}
+            {Enter|Hovering, rightData, {15.0f, 15.0f}}
         })), TestSuite::Compare::Container);
 
     /* Captured moves synthesize a Leave when leaving and Enter when returning
@@ -5019,24 +5080,35 @@ void AbstractUserInterfaceTest::eventCapture() {
         /* Moving back on the `right` node makes it hovered again */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
+        PointerEvent eventRelease{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({500.0f, 1000.0f}, eventRelease));
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        /* This isn't affected by the release */
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
+
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Captured, rightData, {10.0f, 10.0f}},
-            /* A captured move on the same node */
+            /* A captured move on the same node. The node isn't hovered at that
+               point yet so it isn't marked as such. */
             {Move|Captured, rightData, {15.0f, 15.0f}},
             /* Which synthesizes an Enter event, as before this node wasn't
                hovered. It's captured in order to allow a capture reset in its
                handler. */
-            {Enter|Captured, rightData, {15.0f, 15.0f}},
+            {Enter|Captured|Hovering, rightData, {15.0f, 15.0f}},
             /* A captured move outside of the node */
             {Move|Captured, rightData, {-5.0f, 10.0f}},
             /* Which synthesizes a (captured) Leave event, but no matching
                Enter event for any other node underneath */
             {Leave|Captured, rightData, {-5.0f, 10.0f}},
-            /* A capture move back again */
+            /* A capture move back again. The node again isn't hovered at that
+               point yet so it isn't marked as such. */
             {Move|Captured, rightData, {5.0f, 5.0f}},
             /* Which synthesizes a (captured) Enter event again, but no
                matcing Leave for any other node underneath */
-            {Enter|Captured, rightData, {5.0f, 5.0f}},
+            {Enter|Captured|Hovering, rightData, {5.0f, 5.0f}},
+            /* A release after a move back to the node area gets the Hovering
+               flag too */
+            {Release|Captured|Hovering, rightData, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
 
     /* Capture on the right node, then capture again on the left one. In
@@ -5084,13 +5156,17 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
     AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     /* Like eventEdges(), but testing the special case with event capture where
-       it's used to fire Enter and Leave events */
+       it's used to fire Enter and Leave events and setting isHovering() to a
+       correct value */
 
     enum Event {
-        Press = 0,
-        Move = 1,
-        Enter = 2,
-        Leave = 3
+        Hovering = true,
+        /* All below have to be multiplies of 2 to not clash with the above */
+        Press = 2,
+        Release = 4,
+        Move = 8,
+        Enter = 10,
+        Leave = 12
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -5101,27 +5177,37 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
             CORRADE_COMPARE(dataId, 1);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Press, event.position());
+            arrayAppend(eventCalls, InPlaceInit, Press|event.isHovering(), event.position());
+            event.setAccepted();
+        }
+        void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
+            CORRADE_COMPARE(dataId, 1);
+            /* The release should always happen on a captured node as that's
+               the codepath that's being tested */
+            CORRADE_VERIFY(event.isCaptured());
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Release|event.isHovering(), event.position());
             event.setAccepted();
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Move, event.position());
+            arrayAppend(eventCalls, InPlaceInit, Move|event.isHovering(), event.position());
             event.setAccepted();
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Enter, event.position());
+            arrayAppend(eventCalls, InPlaceInit, Enter|event.isHovering(), event.position());
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Leave, event.position());
+            arrayAppend(eventCalls, InPlaceInit, Leave|event.isHovering(), event.position());
         }
 
         Containers::Array<Containers::Pair<Int, Vector2>> eventCalls;
@@ -5144,25 +5230,45 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
     {
         ui.layer<Layer>(layer).eventCalls = {};
 
-        PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
+        PointerEvent eventPress1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Move outside isn't hovering */
         PointerMoveEvent eventMove1{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({199.0f, 990.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Move inside isn't hovering, but emits an Enter that is */
         PointerMoveEvent eventMove2{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 1000.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Another move inside is now hovering */
+        PointerMoveEvent eventMove3{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 1000.0f}, eventMove3));
+
+        /* The first release should be hovering, second not */
+        PointerEvent eventRelease1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({200.0f, 1000.0f}, eventRelease1));
+
+        PointerEvent eventPress2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress2));
+
+        PointerEvent eventRelease2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({199.0f, 990.0f}, eventRelease2));
+
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
-            {Press, {10.0f, 15.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
             {Move, {-0.1f, -0.1f}},
             {Leave, {-0.1f, -0.1f}},
             {Move, {0.0f, 0.0f}},
-            {Enter, {0.0f, 0.0f}}
+            {Enter|Hovering, {0.0f, 0.0f}},
+            {Move|Hovering, {0.0f, 0.0f}},
+            {Release|Hovering, {0.0f, 0.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
+            {Release, {-0.1f, -0.1f}},
         })), TestSuite::Compare::Container);
 
     /* Top edge */
@@ -5174,20 +5280,40 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Move outside isn't hovering */
         PointerMoveEvent eventMove1{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 990.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Move inside isn't hovering, but emits an Enter that is */
         PointerMoveEvent eventMove2{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1000.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Another move inside is now hovering */
+        PointerMoveEvent eventMove3{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1000.0f}, eventMove3));
+
+        /* The first release should be hovering, second not */
+        PointerEvent eventRelease1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({300.0f, 1000.0f}, eventRelease1));
+
+        PointerEvent eventPress2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress2));
+
+        PointerEvent eventRelease2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({300.0f, 990.0f}, eventRelease2));
+
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
-            {Press, {10.0f, 15.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
             {Move, {10.0f, -0.1f}},
             {Leave, {10.0f, -0.1f}},
             {Move, {10.0f, 0.0f}},
-            {Enter, {10.0f, 0.0f}}
+            {Enter|Hovering, {10.0f, 0.0f}},
+            {Move|Hovering, {10.0f, 0.0f}},
+            {Release|Hovering, {10.0f, 0.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
+            {Release, {10.0f, -0.1f}},
         })), TestSuite::Compare::Container);
 
     /* Left edge */
@@ -5199,20 +5325,40 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Move outside isn't hovering */
         PointerMoveEvent eventMove1{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({199.0f, 2500.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Move inside isn't hovering, but emits an Enter that is */
         PointerMoveEvent eventMove2{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 2500.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Another move inside is now hovering */
+        PointerMoveEvent eventMove3{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 2500.0f}, eventMove3));
+
+        /* The first release should be hovering, second not */
+        PointerEvent eventRelease1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({200.0f, 2500.0f}, eventRelease1));
+
+        PointerEvent eventPress2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress2));
+
+        PointerEvent eventRelease2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({199.0f, 2500.0f}, eventRelease2));
+
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
-            {Press, {10.0f, 15.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
             {Move, {-0.1f, 15.0f}},
             {Leave, {-0.1f, 15.0f}},
             {Move, {0.0f, 15.0f}},
-            {Enter, {0.0f, 15.0f}}
+            {Enter|Hovering, {0.0f, 15.0f}},
+            {Move|Hovering, {0.0f, 15.0f}},
+            {Release|Hovering, {0.0f, 15.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
+            {Release, {-0.1f, 15.0f}},
         })), TestSuite::Compare::Container);
 
     /* Bottom right corner */
@@ -5224,20 +5370,40 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Move outside isn't hovering */
         PointerMoveEvent eventMove1{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({400.0f, 3000.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Move inside isn't hovering, but emits an Enter that is */
         PointerMoveEvent eventMove2{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({399.0f, 2990.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Another move inside is now hovering */
+        PointerMoveEvent eventMove3{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({399.0f, 2990.0f}, eventMove3));
+
+        /* The first release should be hovering, second not */
+        PointerEvent eventRelease1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({399.0f, 2990.0f}, eventRelease1));
+
+        PointerEvent eventPress2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress2));
+
+        PointerEvent eventRelease2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({400.0f, 3000.0f}, eventRelease2));
+
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
-            {Press, {10.0f, 15.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
             {Move, {20.0f, 20.0f}},
             {Leave, {20.0f, 20.0f}},
             {Move, {19.9f, 19.9f}},
-            {Enter, {19.9f, 19.9f}}
+            {Enter|Hovering, {19.9f, 19.9f}},
+            {Move|Hovering, {19.9f, 19.9f}},
+            {Release|Hovering, {19.9f, 19.9f}},
+            {Press|Hovering, {10.0f, 15.0f}},
+            {Release, {20.0f, 20.0f}},
         })), TestSuite::Compare::Container);
 
     /* Bottom edge */
@@ -5249,20 +5415,40 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Move outside isn't hovering */
         PointerMoveEvent eventMove1{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 3000.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Move inside isn't hovering, but emits an Enter that is */
         PointerMoveEvent eventMove2{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 2990.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Another move inside is now hovering */
+        PointerMoveEvent eventMove3{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 2990.0f}, eventMove3));
+
+        /* The first release should be hovering, second not */
+        PointerEvent eventRelease1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({300.0f, 2990.0f}, eventRelease1));
+
+        PointerEvent eventPress2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress2));
+
+        PointerEvent eventRelease2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({300.0f, 3000.0f}, eventRelease2));
+
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
-            {Press, {10.0f, 15.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
             {Move, {10.0f, 20.0f}},
             {Leave, {10.0f, 20.0f}},
             {Move, {10.0f, 19.9f}},
-            {Enter, {10.0f, 19.9f}}
+            {Enter|Hovering, {10.0f, 19.9f}},
+            {Move|Hovering, {10.0f, 19.9f}},
+            {Release|Hovering, {10.0f, 19.9f}},
+            {Press|Hovering, {10.0f, 15.0f}},
+            {Release, {10.0f, 20.0f}},
         })), TestSuite::Compare::Container);
 
     /* Right edge */
@@ -5282,12 +5468,30 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         CORRADE_VERIFY(ui.pointerMoveEvent({399.0f, 2500.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
+        /* Another move inside is now hovering */
+        PointerMoveEvent eventMove3{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({399.0f, 2500.0f}, eventMove3));
+
+        /* The first release should be hovering, second not */
+        PointerEvent eventRelease1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({399.0f, 2500.0f}, eventRelease1));
+
+        PointerEvent eventPress2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress2));
+
+        PointerEvent eventRelease2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({400.0f, 2500.0f}, eventRelease2));
+
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
-            {Press, {10.0f, 15.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
             {Move, {20.0f, 15.0f}},
             {Leave, {20.0f, 15.0f}},
             {Move, {19.9f, 15.0f}},
-            {Enter, {19.9f, 15.0f}}
+            {Enter|Hovering, {19.9f, 15.0f}},
+            {Move|Hovering, {19.9f, 15.0f}},
+            {Release|Hovering, {19.9f, 15.0f}},
+            {Press|Hovering, {10.0f, 15.0f}},
+            {Release, {20.0f, 15.0f}},
         })), TestSuite::Compare::Container);
     }
 }
@@ -6257,6 +6461,8 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_VERIFY(event.isCaptured());
+            /* Release / move happens outside of the node */
+            CORRADE_VERIFY(!event.isHovering());
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position());
@@ -6264,6 +6470,8 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_VERIFY(event.isCaptured());
+            /* Release / move happens outside of the node */
+            CORRADE_VERIFY(!event.isHovering());
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position());
