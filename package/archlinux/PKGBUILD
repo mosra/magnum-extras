@@ -8,7 +8,7 @@ url="https://magnum.graphics"
 license=('MIT')
 depends=('magnum')
 makedepends=('cmake' 'ninja')
-options=(!strip)
+options=('!strip' '!buildflags')
 provides=('magnum-extras-git')
 
 _rootdir=$startdir/../../
