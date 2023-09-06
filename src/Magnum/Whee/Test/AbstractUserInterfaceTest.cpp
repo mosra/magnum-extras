@@ -120,7 +120,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventPointerMoveNodePositionUpdated();
     void eventPointerMoveNodeBecomesHidden();
     void eventPointerMoveNodeRemoved();
-    void eventPointerMoveDataRemoved();
+    void eventPointerMoveAllDataRemoved();
 
     void eventCapture();
     void eventCaptureEdges();
@@ -130,7 +130,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventCaptureNodePositionUpdated();
     void eventCaptureNodeBecomesHidden();
     void eventCaptureNodeRemoved();
-    void eventCaptureDataRemoved();
+    void eventCaptureAllDataRemoved();
 };
 
 const struct {
@@ -367,7 +367,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveNodeRemoved},
         Containers::arraySize(EventNodeRemovedData));
 
-    addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveDataRemoved},
+    addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved},
         Containers::arraySize(CleanUpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventCapture,
@@ -385,7 +385,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::eventCaptureNodeRemoved},
         Containers::arraySize(EventCaptureNodeRemovedData));
 
-    addInstancedTests({&AbstractUserInterfaceTest::eventCaptureDataRemoved},
+    addInstancedTests({&AbstractUserInterfaceTest::eventCaptureAllDataRemoved},
         Containers::arraySize(EventCaptureCleanUpdateData));
 }
 
@@ -3694,9 +3694,12 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         })), TestSuite::Compare::Container);
 
     /* On a nested node. Multiple data attached, the one with highest ID gets
-       picked first. Order in which they were attached doesn't matter. */
+       picked first. Order in which they were attached doesn't matter. Goes
+       through all attached nodes and returns true if any of them was
+       accepted. */
     } {
-        layer1Accept = layer2Accept = layer3Accept = true;
+        layer2Accept = layer3Accept = true;
+        layer1Accept = false;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({400.0f, 6000.0f}, event));
@@ -3704,10 +3707,12 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
             /* There's removedData covering this same position but weren't
                considered as they belong to a removed node */
             {topNestedData3, {5.0f, 5.0f}, true},
+            {topNestedData1, {5.0f, 5.0f}, true},
+            {topNestedData2, {5.0f, 5.0f}, false},
         })), TestSuite::Compare::Container);
 
-    /* On a nested node. If the first doesn't accept the event, falls back to
-       the data with lower ID, and then to the next layer in order */
+    /* It also continues going through the remaining after a not accepted
+       one. */
     } {
         layer1Accept = layer2Accept = true;
         layer3Accept = false;
@@ -3720,7 +3725,8 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
             {topNestedData2, {5.0f, 5.0f}, true},
         })), TestSuite::Compare::Container);
 
-    /* Fall through everything */
+    /* If neither of the data accepted, falls through everything and then to
+       parent nodes */
     } {
         layer1Accept = layer2Accept = layer3Accept = false;
         eventCalls = {};
@@ -3868,9 +3874,9 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
-            CORRADE_COMPARE(dataId, 1);
-            CORRADE_COMPARE(event.position(), (Vector2{10.0f, 5.0f}));
-            ++acceptedCount;
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
@@ -3886,7 +3892,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
             CORRADE_FAIL("This function shouldn't be called.");
         }
 
-        Int acceptedCount = 0;
+        Containers::Array<Containers::Pair<DataHandle, Vector2>> eventCalls;
     };
 
     NodeHandle node = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f});
@@ -3895,7 +3901,9 @@ void AbstractUserInterfaceTest::eventPointerPress() {
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
     /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
     DataHandle data2 = ui.layer<Layer>(layer).create();
+    DataHandle data3 = ui.layer<Layer>(layer).create();
     ui.attachData(node, data2);
+    ui.attachData(node, data3);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
     if(data.update) {
@@ -3909,7 +3917,8 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_VERIFY(!ui.pointerPressEvent({1000.0f, 10000.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).acceptedCount, 0);
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        })), TestSuite::Compare::Container);
 
     /* Inside, hit */
     } {
@@ -3917,7 +3926,10 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).acceptedCount, 1);
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+            {data3, {10.0f, 5.0f}},
+            {data2, {10.0f, 5.0f}}
+        })), TestSuite::Compare::Container);
     }
 
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -3940,9 +3952,9 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
             CORRADE_FAIL("This function shouldn't be called.");
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
-            CORRADE_COMPARE(dataId, 1);
-            CORRADE_COMPARE(event.position(), (Vector2{10.0f, 5.0f}));
-            ++acceptedCount;
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
         void doPointerMoveEvent(UnsignedInt, PointerMoveEvent&) override {
@@ -3955,7 +3967,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
             CORRADE_FAIL("This function shouldn't be called.");
         }
 
-        Int acceptedCount = 0;
+        Containers::Array<Containers::Pair<DataHandle, Vector2>> eventCalls;
     };
 
     NodeHandle node = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f});
@@ -3964,7 +3976,9 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
     /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
     DataHandle data2 = ui.layer<Layer>(layer).create();
+    DataHandle data3 = ui.layer<Layer>(layer).create();
     ui.attachData(node, data2);
+    ui.attachData(node, data3);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
     if(data.update) {
@@ -3978,15 +3992,20 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_VERIFY(!ui.pointerReleaseEvent({1000.0f, 10000.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).acceptedCount, 0);
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        })), TestSuite::Compare::Container);
 
-    /* Inside, hit */
+    /* Inside, hit, going through all data attachments. Highest ID gets picked
+       first. */
     } {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({200.0f, 2500.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).acceptedCount, 1);
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+            {data3, {10.0f, 5.0f}},
+            {data2, {10.0f, 5.0f}}
+        })), TestSuite::Compare::Container);
     }
 
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -4042,9 +4061,11 @@ void AbstractUserInterfaceTest::eventPointerMove() {
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData = ui.layer<Layer>(layer).create();
+    DataHandle leftData1 = ui.layer<Layer>(layer).create();
+    DataHandle leftData2 = ui.layer<Layer>(layer).create();
     DataHandle rightData = ui.layer<Layer>(layer).create();
-    ui.attachData(left, leftData);
+    ui.attachData(left, leftData1);
+    ui.attachData(left, leftData2);
     ui.attachData(right, rightData);
 
     if(data.update) {
@@ -4063,7 +4084,8 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
         })), TestSuite::Compare::Container);
 
-    /* Inside a node. Relative to previous move event even though it didn't hit
+    /* Inside a node, going through all data attachments. Highest ID gets
+       picked first. Relative to previous move event even though it didn't hit
        anything, the hovered node gets set to given node. */
     } {
         ui.layer<Layer>(layer).eventCalls = {};
@@ -4080,11 +4102,14 @@ void AbstractUserInterfaceTest::eventPointerMove() {
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* There's nothing to receive a Leave event */
-            {Move, leftData, {10.0f, 11.0f, 20.0f, 1.0f}},
+            {Move, leftData2, {10.0f, 11.0f, 20.0f, 1.0f}},
+            {Move, leftData1, {10.0f, 11.0f, 20.0f, 1.0f}},
             /* It has to first execute the Move to discover a node that accepts
                the event, thus Enter can't be before the Move */
-            {Enter, leftData, {10.0f, 11.0f, 0.0f, 0.0f}},
-            {Move, leftData, {15.0f, 10.0f, 5.0f, -1.0f}},
+            {Enter, leftData2, {10.0f, 11.0f, 0.0f, 0.0f}},
+            {Enter, leftData1, {10.0f, 11.0f, 0.0f, 0.0f}},
+            {Move, leftData2, {15.0f, 10.0f, 5.0f, -1.0f}},
+            {Move, leftData1, {15.0f, 10.0f, 5.0f, -1.0f}},
             /* It stays on the same node, so no further Enter or Leave */
         })), TestSuite::Compare::Container);
 
@@ -4106,13 +4131,15 @@ void AbstractUserInterfaceTest::eventPointerMove() {
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             /* It stays on the same node, so no further Enter or Leave */
-            {Move, leftData, {10.0f, 11.0f, -5.0f, 1.0f}},
+            {Move, leftData2, {10.0f, 11.0f, -5.0f, 1.0f}},
+            {Move, leftData1, {10.0f, 11.0f, -5.0f, 1.0f}},
             {Move, rightData, {15.0f, 10.0f, 25.0f, -1.0f}},
             /* It has to first execute the Move to discover the next node that
                accepts the event, thus Leave can't be before the Move either
                because it could end up at the same node. Tested thoroughly in
                eventPointerMoveNotAccepted() below. */
-            {Leave, leftData, {35.0f, 10.0f, 0.0f, 0.0f}},
+            {Leave, leftData2, {35.0f, 10.0f, 0.0f, 0.0f}},
+            {Leave, leftData1, {35.0f, 10.0f, 0.0f, 0.0f}},
             {Enter, rightData, {15.0f, 10.0f, 0.0f, 0.0f}},
         })), TestSuite::Compare::Container);
 
@@ -4326,8 +4353,10 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
             {Enter, data10, {5.0f, 10.0f}},
             {Move, data10, {15.0f, 15.0f}}, /* not accepted */
             {Move|Accepted, data01, {5.0f, 15.0f}},
+            {Move|Accepted, data00, {5.0f, 15.0f}},
             {Leave, data10, {15.0f, 15.0f}},
-            {Enter, data01, {5.0f, 15.0f}}
+            {Enter, data01, {5.0f, 15.0f}},
+            {Enter, data00, {5.0f, 15.0f}}
         })), TestSuite::Compare::Container);
 
     /* Move from node 0 to node 1, but the second move doesn't get accepted and
@@ -4353,15 +4382,17 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data01, {15.0f, 10.0f}},
+            {Move|Accepted, data00, {15.0f, 10.0f}},
             {Enter, data01, {15.0f, 10.0f}},
+            {Enter, data00, {15.0f, 10.0f}},
             {Move, data10, {15.0f, 15.0f}}, /* not accepted */
             {Move|Accepted, data01, {5.0f, 15.0f}},
+            {Move|Accepted, data00, {5.0f, 15.0f}},
             /* No Enter/Leave as we ended up staying on the same node */
         })), TestSuite::Compare::Container);
 
-    /* Move on node 0, but the second move on data 01 doesn't get accepted and
-       falls back to data00, generating Leave and Enter events as appropriate
-       even though on the same node */
+    /* Move on node 0, data01 doesn't accept while data00 does. Given it's all
+       happening on the same node, no Enter/Leave should be generated. */
     } {
         /* Just to reset everything */
         /** @todo have a pointerCancelEvent() for this */
@@ -4383,11 +4414,11 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move|Accepted, data01, {15.0f, 10.0f}},
+            {Move|Accepted, data00, {15.0f, 10.0f}},
             {Enter, data01, {15.0f, 10.0f}},
+            {Enter, data00, {15.0f, 10.0f}},
             {Move, data01, {13.0f, 15.0f}}, /* not accepted */
             {Move|Accepted, data00, {13.0f, 15.0f}},
-            {Leave, data01, {13.0f, 15.0f}},
-            {Enter, data00, {13.0f, 15.0f}}
         })), TestSuite::Compare::Container);
     }
 }
@@ -4656,7 +4687,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 }
 
-void AbstractUserInterfaceTest::eventPointerMoveDataRemoved() {
+void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
     auto&& data = CleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
@@ -4710,20 +4741,27 @@ void AbstractUserInterfaceTest::eventPointerMoveDataRemoved() {
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
     ui.layer<Layer>(layer).remove(nodeData);
+    /* The node stays hovered until an actual move event discovers there's no
+       data anymore. This is consistent for example with a case where the data
+       would change the area where they're active for events -- also something
+       that the clean() / update() can't discover on its own, only actually
+       firing the event can. */
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
 
     if(data.clean) {
         ui.clean();
 
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        /* Same as above, the node stays hovered */
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     }
 
     if(data.update) {
         ui.update();
 
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        /* Same as above, the node stays hovered */
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
@@ -4797,15 +4835,18 @@ void AbstractUserInterfaceTest::eventCapture() {
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData = ui.layer<Layer>(layer).create();
+    DataHandle leftData1 = ui.layer<Layer>(layer).create();
+    DataHandle leftData2 = ui.layer<Layer>(layer).create();
     DataHandle rightData = ui.layer<Layer>(layer).create();
-    ui.attachData(left, leftData);
+    ui.attachData(left, leftData1);
+    ui.attachData(left, leftData2);
     ui.attachData(right, rightData);
 
     /* Nothing captured initially */
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
 
-    /* Capture on the left node, release on it again */
+    /* Capture on the left node, release on it again. Going through all data
+       attachments, highest ID gets picked first. */
     {
         ui.layer<Layer>(layer).eventCalls = {};
 
@@ -4824,10 +4865,12 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Press|Captured, leftData, {10.0f, 10.0f}},
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* No Enter/Leave events synthesized from Press and Release at the
                moment */
-            {Release|Captured, leftData, {12.0f, 10.0f}},
+            {Release|Captured, leftData2, {12.0f, 10.0f}},
+            {Release|Captured, leftData1, {12.0f, 10.0f}},
         })), TestSuite::Compare::Container);
 
     /* Capture on the left node, release on the right one */
@@ -4849,10 +4892,12 @@ void AbstractUserInterfaceTest::eventCapture() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Press|Captured, leftData, {10.0f, 10.0f}},
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* No Enter/Leave events synthesized from Press and Release at the
                moment */
-            {Release|Captured, leftData, {30.0f, 10.0f}}, /* actually on rightData */
+            {Release|Captured, leftData2, {30.0f, 10.0f}}, /* actually on rightData */
+            {Release|Captured, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
         })), TestSuite::Compare::Container);
 
     /* Capture on the right node, release on the left one */
@@ -4919,16 +4964,20 @@ void AbstractUserInterfaceTest::eventCapture() {
             {Move, rightData, {10.0f, 15.0f}},
             /* Neither is the Enter synthesized from it */
             {Enter, rightData, {10.0f, 15.0f}},
-            {Press|Captured, leftData, {10.0f, 10.0f}},
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press|Captured, leftData1, {10.0f, 10.0f}},
             /* No Enter/Leave event synthesized from Press at the moment. If
                they would, neither would be captured. */
             /* A move that happens during a press is captured. Since no
                Enter/Leave events were synthesized from the Press, they get emitted here. The Leave event isn't captured, the Enter is, in
                order to allow a capture reset in its handler. */
-            {Move|Captured, leftData, {15.0f, 15.0f}},
+            {Move|Captured, leftData2, {15.0f, 15.0f}},
+            {Move|Captured, leftData1, {15.0f, 15.0f}},
             {Leave, rightData, {-5.0f, 15.0f}},
-            {Enter|Captured, leftData, {15.0f, 15.0f}},
-            {Release|Captured, leftData, {30.0f, 10.0f}}, /* actually on rightData */
+            {Enter|Captured, leftData2, {15.0f, 15.0f}},
+            {Enter|Captured, leftData1, {15.0f, 15.0f}},
+            {Release|Captured, leftData2, {30.0f, 10.0f}}, /* actually on rightData */
+            {Release|Captured, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
             /* Again, no Leave event for leftData synthesized from Release at
                the moment. If it would, it *would* be captured. */
             /* A move that happens after a release isn't captured again,
@@ -4936,7 +4985,8 @@ void AbstractUserInterfaceTest::eventCapture() {
                node again. The Enter/Leave is not captured either as it didn't
                happen during a capture, but after it was released. */
             {Move, rightData, {15.0f, 15.0f}},
-            {Leave, leftData, {35.0f, 15.0f}},
+            {Leave, leftData2, {35.0f, 15.0f}},
+            {Leave, leftData1, {35.0f, 15.0f}},
             {Enter, rightData, {15.0f, 15.0f}}
         })), TestSuite::Compare::Container);
 
@@ -5033,7 +5083,8 @@ void AbstractUserInterfaceTest::eventCapture() {
             {Press|Captured, rightData, {10.0f, 10.0f}},
             /* No Enter/Leave events synthesized from Press and Release at the
                moment */
-            {Press|Captured, leftData, {10.0f, 10.0f}},
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press|Captured, leftData1, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
     }
 }
@@ -5347,6 +5398,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
             /* The release event isn't happening on a captured node, so
                isCaptured() is false for it */
             {Release, rightData2, {10.0f, 10.0f}},
+            {Release, rightData1, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
 
     /* Same, but move instead of release */
@@ -5372,7 +5424,9 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
             /* The move event isn't happening on a captured node, so
                isCaptured() is false for it */
             {Move, rightData2, {10.0f, 10.0f}},
-            {Enter, rightData2, {10.0f, 10.0f}}
+            {Move, rightData1, {10.0f, 10.0f}},
+            {Enter, rightData2, {10.0f, 10.0f}},
+            {Enter, rightData1, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
 
     /* If the release event isn't accepted, the capture should still get
@@ -5472,8 +5526,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
             {Enter|Captured, leftData1, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
 
-    /* Moving on the same node but capturing on a different data should cause
-       Enter / Leave to be generated as well */
+    /* Moving on the same node but capturing on a different data should *not*
+       cause Enter / Leave to be generated */
     } {
         /* Just to reset everything */
         /** @todo have a pointerCancelEvent() for this */
@@ -5513,57 +5567,12 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Move, rightData2, {10.0f, 10.0f}}, /* not accepted */
             {Move, rightData1, {10.0f, 10.0f}},
+            {Enter, rightData2, {10.0f, 10.0f}},
             {Enter, rightData1, {10.0f, 10.0f}},
             {Press|Captured, rightData2, {10.0f, 10.0f}},
+            {Press|Captured, rightData1, {10.0f, 10.0f}},
             {Move|Captured, rightData2, {15.0f, 15.0f}},
-            {Leave, rightData1, {15.0f, 15.0f}},
-            {Enter|Captured, rightData2, {15.0f, 15.0f}},
-        })), TestSuite::Compare::Container);
-
-    /* Capturing on a hovered node but with different data hovered should cause
-       Leave to be generated for the original data, not the captured */
-    } {
-        /* Just to reset everything */
-        /** @todo have a pointerCancelEvent() for this */
-        PointerEvent eventReleaseReset{Pointer::MouseLeft};
-        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
-        PointerMoveEvent eventMoveReset{{}, {}};
-        ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-
-        ui.layer<Layer>(layer).eventCalls = {};
-
-        PointerMoveEvent eventMove1{{}, {}};
-        ui.layer<Layer>(layer).accept1 = true;
-        ui.layer<Layer>(layer).accept2 = false;
-        CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
-
-        PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
-        CORRADE_VERIFY(ui.pointerPressEvent({50.0f, 10.0f}, eventPress));
-        /* Capture is rightData1 */
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
-        /* Hover stays from the previous move, rightData2 */
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
-
-        PointerMoveEvent eventMove2{{}, {}};
-        ui.layer<Layer>(layer).accept1 = false;
-        ui.layer<Layer>(layer).accept2 = true;
-        CORRADE_VERIFY(ui.pointerMoveEvent({100.0f, 100.0f}, eventMove2));
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, rightData2, {10.0f, 10.0f}}, /* not accepted */
-            {Move, rightData1, {10.0f, 10.0f}},
-            {Enter, rightData1, {10.0f, 10.0f}},
-            {Press|Captured, rightData2, {10.0f, 10.0f}},
-            {Move|Captured, rightData2, {60.0f, 100.0f}},
-            {Leave, rightData1, {60.0f, 100.0f}},
+            {Move|Captured, rightData1, {15.0f, 15.0f}},
         })), TestSuite::Compare::Container);
     }
 }
@@ -5589,44 +5598,46 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Press|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
-            if(capture)
-                event.setCaptured(*capture);
+            if(capture && capture->second() & dataId)
+                event.setCaptured(capture->first());
             event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Release|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
-            if(capture)
-                event.setCaptured(*capture);
+            if(capture && capture->second() & dataId)
+                event.setCaptured(capture->first());
             event.setAccepted();
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Move|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
-            if(capture)
-                event.setCaptured(*capture);
+            if(capture && capture->second() & dataId)
+                event.setCaptured(capture->first());
             event.setAccepted();
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Enter|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
-            if(captureEnter)
-                event.setCaptured(*captureEnter);
+            if(captureEnter && captureEnter->second() & dataId)
+                event.setCaptured(captureEnter->first());
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Leave|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
-            if(captureLeave)
-                event.setCaptured(*captureLeave);
+            if(captureLeave && captureLeave->second() & dataId)
+                event.setCaptured(captureLeave->first());
         }
 
-        Containers::Optional<bool> capture;
-        Containers::Optional<bool> captureEnter;
-        Containers::Optional<bool> captureLeave;
+        /* Second member is a mask, not ID to be able to select more than one
+           data for which the capture should be set. */
+        Containers::Optional<Containers::Pair<bool, Int>> capture;
+        Containers::Optional<Containers::Pair<bool, Int>> captureEnter;
+        Containers::Optional<Containers::Pair<bool, Int>> captureLeave;
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
@@ -5636,18 +5647,27 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData = ui.layer<Layer>(layer).create();
-    DataHandle rightData = ui.layer<Layer>(layer).create();
-    ui.attachData(left, leftData);
-    ui.attachData(right, rightData);
+    /* Three data, using ID 1, 2 and 4 for easier masking */
+    /*DataHandle data0 =*/ ui.layer<Layer>(layer).create();
+    DataHandle leftData1 = ui.layer<Layer>(layer).create();
+    DataHandle leftData2 = ui.layer<Layer>(layer).create();
+    /*DataHandle data3 =*/ ui.layer<Layer>(layer).create();
+    DataHandle rightData4 = ui.layer<Layer>(layer).create();
+    ui.attachData(left, leftData1);
+    ui.attachData(left, leftData2);
+    ui.attachData(right, rightData4);
 
     /* If capture is disabled on press, the release happens on the actual node
-       that is under */
+       that is under. The capture status is preserved across calls, so if
+       it gets disabled for one data, the second data get it disabled
+       already. */
     {
         ui.layer<Layer>(layer).eventCalls = {};
 
+        /* The leftData2 resets the capture already, so the second only passes
+           it through */
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).capture = false;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
@@ -5664,18 +5684,44 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Press|Captured, leftData, {10.0f, 10.0f}},
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press, leftData1, {10.0f, 10.0f}},
             /* The release event isn't happening on a captured node, so
                isCaptured() is false for it */
-            {Release, rightData, {10.0f, 10.0f}},
+            {Release, rightData4, {10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Like above, but with leftData1 resetting the capture instead */
+    } {
+        ui.layer<Layer>(layer).eventCalls = {};
+
+        PointerEvent eventPress{Pointer::MouseLeft};
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 1);
+        ui.layer<Layer>(layer).captureEnter = {};
+        ui.layer<Layer>(layer).captureLeave = {};
+        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+
+        PointerEvent eventRelease{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press|Captured, leftData1, {10.0f, 10.0f}},
+            {Release, rightData4, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
 
     /* Same for move */
     } {
         ui.layer<Layer>(layer).eventCalls = {};
 
+        /* The leftData2 resets the capture already, so the second only passes
+           it through */
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).capture = false;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
@@ -5690,14 +5736,15 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Press|Captured, leftData, {10.0f, 10.0f}},
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press, leftData1, {10.0f, 10.0f}},
             /* The move event isn't happening on a captured node, so
                isCaptured() is false for it */
-            {Move, rightData, {10.0f, 10.0f}},
-            {Enter, rightData, {10.0f, 10.0f}}
+            {Move, rightData4, {10.0f, 10.0f}},
+            {Enter, rightData4, {10.0f, 10.0f}}
         })), TestSuite::Compare::Container);
 
-    /* If capture is disabled on release, it doesn't affect anything */
+    /* Like above, but with leftData1 resetting the capture instead */
     } {
         /* Just to reset everything */
         /** @todo have a pointerCancelEvent() for this */
@@ -5711,7 +5758,42 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).capture = true;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 1);
+        ui.layer<Layer>(layer).captureEnter = {};
+        ui.layer<Layer>(layer).captureLeave = {};
+        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+
+        PointerMoveEvent eventMove{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
+
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press|Captured, leftData1, {10.0f, 10.0f}},
+            {Move, rightData4, {10.0f, 10.0f}},
+            {Enter, rightData4, {10.0f, 10.0f}}
+        })), TestSuite::Compare::Container);
+
+    /* If capture is disabled on release, it doesn't affect anything, except
+       for the isCaptured() bit being false for subsequent data */
+    } {
+        /* Just to reset everything */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerEvent eventReleaseReset{Pointer::MouseLeft};
+        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
+        PointerMoveEvent eventMoveReset{{}, {}};
+        ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+
+        ui.layer<Layer>(layer).eventCalls = {};
+
+        /* Captures implicitly */
+        PointerEvent eventPress{Pointer::MouseLeft};
+        ui.layer<Layer>(layer).capture = {};
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
@@ -5720,8 +5802,9 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* Releases on leftData2 already */
         PointerEvent eventRelease{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).capture = false;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 7);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
@@ -5731,8 +5814,11 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Press|Captured, leftData, {10.0f, 10.0f}},
-            {Release|Captured, leftData, {30.0f, 10.0f}}, /* actually on rightData */
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press|Captured, leftData1, {10.0f, 10.0f}},
+            {Release|Captured, leftData2, {30.0f, 10.0f}}, /* actually on rightData */
+            /** @todo or have the isCaptured() bit reset back for all releases? */
+            {Release, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
         })), TestSuite::Compare::Container);
 
     /* For a move the capture can be disabled and re-enabled again. The next
@@ -5741,8 +5827,10 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
     } {
         ui.layer<Layer>(layer).eventCalls = {};
 
+        /* Capture is implicit on a press, so this is the same as
+           capture = {} */
         PointerEvent eventPress{Pointer::MouseLeft};
-        ui.layer<Layer>(layer).capture = true;
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 7);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
@@ -5751,8 +5839,10 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* leftData2 move will reset the capture, leftData1 move will pass it
+           through unchanged */
         PointerMoveEvent eventMove1{{}, {}};
-        ui.layer<Layer>(layer).capture = false;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
@@ -5762,16 +5852,18 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
            again */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
+        /* This happens on (uncaptured) rightData4, which will capture it */
         PointerMoveEvent eventMove2{{}, {}};
-        ui.layer<Layer>(layer).capture = true;
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
+        /* rightData4 will reset the capture here */
         PointerMoveEvent eventMove3{{}, {}};
-        ui.layer<Layer>(layer).capture = false;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove3));
@@ -5781,15 +5873,17 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Press|Captured, leftData, {10.0f, 10.0f}},
-            {Move|Captured, leftData, {30.0f, 10.0f}}, /* actually on rightData */
+            {Press|Captured, leftData2, {10.0f, 10.0f}},
+            {Press|Captured, leftData1, {10.0f, 10.0f}},
+            {Move|Captured, leftData2, {30.0f, 10.0f}}, /* actually on rightData */
+            {Move, leftData1, {30.0f, 10.0f}}, /* actually on rightData */
             /* No Enter/Leave as the hovered node stays null */
-            {Move, rightData, {15.0f, 15.0f}},
+            {Move, rightData4, {15.0f, 15.0f}},
             /* Enter is captured as the move captured it */
-            {Enter|Captured, rightData, {15.0f, 15.0f}},
-            {Move|Captured, rightData, {-10.0f, 10.0f}}, /* actually on leftData */
+            {Enter|Captured, rightData4, {15.0f, 15.0f}},
+            {Move|Captured, rightData4, {-10.0f, 10.0f}}, /* actually on leftData */
             /* Leave not captured anymore as the move released it */
-            {Leave, rightData, {-10.0f, 10.0f}}
+            {Leave, rightData4, {-10.0f, 10.0f}}
         })), TestSuite::Compare::Container);
 
     /* Capturing should also be possible on an uncaptured Enter event */
@@ -5804,20 +5898,24 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
+        /* Capture happens on leftData2, leftData1 will pass it through
+           unchanged */
         PointerMoveEvent eventMove2{{}, {}};
         ui.layer<Layer>(layer).capture = {};
-        ui.layer<Layer>(layer).captureEnter = true;
+        ui.layer<Layer>(layer).captureEnter = Containers::pair(true, 2);
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, rightData, {10.0f, 10.0f}},
-            {Enter, rightData, {10.0f, 10.0f}},
-            {Move, leftData, {10.0f, 15.0f}},
-            {Leave, rightData, {-10.0f, 15.0f}},
-            {Enter, leftData, {10.0f, 15.0f}}
+            {Move, rightData4, {10.0f, 10.0f}},
+            {Enter, rightData4, {10.0f, 10.0f}},
+            {Move, leftData2, {10.0f, 15.0f}},
+            {Move, leftData1, {10.0f, 15.0f}},
+            {Leave, rightData4, {-10.0f, 15.0f}},
+            {Enter, leftData2, {10.0f, 15.0f}},
+            {Enter|Captured, leftData1, {10.0f, 15.0f}}
         })), TestSuite::Compare::Container);
 
     /* Releasing the capture should also be possible on a captured Leave
@@ -5834,18 +5932,21 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
 
         ui.layer<Layer>(layer).eventCalls = {};
 
+        /* Capture is unchanged with leftData2, leftData1 will enable it */
         PointerMoveEvent eventMove1{{}, {}};
-        ui.layer<Layer>(layer).capture = true;
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 1);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
 
+        /* Capture is reset with leftData2, leftData1 passes it through
+           unchanged */
         PointerMoveEvent eventMove2{{}, {}};
         ui.layer<Layer>(layer).capture = {};
         ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = false;
+        ui.layer<Layer>(layer).captureLeave = Containers::pair(false, 2);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         /* The event removed the capture, however it's not looking for a
@@ -5854,13 +5955,20 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, leftData, {10.0f, 10.0f}},
-            {Enter|Captured, leftData, {10.0f, 10.0f}},
-            {Move|Captured, leftData, {30.0f, 15.0f}}, /* actually on rightData */
-            {Leave|Captured, leftData, {30.0f, 15.0f}},
+            {Move, leftData2, {10.0f, 10.0f}},
+            {Move, leftData1, {10.0f, 10.0f}},
+            /* Yes, leftData2 will have isCaptured set on Enter even though it
+               didn't enable it in Move */
+            {Enter|Captured, leftData2, {10.0f, 10.0f}},
+            {Enter|Captured, leftData1, {10.0f, 10.0f}},
+            {Move|Captured, leftData2, {30.0f, 15.0f}}, /* actually on rightData */
+            {Move|Captured, leftData1, {30.0f, 15.0f}}, /* actually on rightData */
+            {Leave|Captured, leftData2, {30.0f, 15.0f}},
+            {Leave, leftData1, {30.0f, 15.0f}},
         })), TestSuite::Compare::Container);
 
-    /* Capturing on an uncaptured Leave event does nothing however */
+    /* Capturing on an uncaptured Leave event does nothing, except for the
+       isCaptured() bit being true for subsequent data */
     } {
         ui.layer<Layer>(layer).eventCalls = {};
 
@@ -5872,21 +5980,26 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
 
+        /* Set on both leftData2 and leftData1 but no effect on either */
         PointerMoveEvent eventMove2{{}, {}};
         ui.layer<Layer>(layer).capture = {};
         ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = true;
+        ui.layer<Layer>(layer).captureLeave = Containers::pair(true, 3);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
         /* The capture isn't changed even though the Leave requested it */
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, leftData, {10.0f, 10.0f}},
-            {Enter, leftData, {10.0f, 10.0f}},
-            {Move, rightData, {10.0f, 15.0f}},
-            {Leave, leftData, {30.0f, 15.0f}},
-            {Enter, rightData, {10.0f, 15.0f}}
+            {Move, leftData2, {10.0f, 10.0f}},
+            {Move, leftData1, {10.0f, 10.0f}},
+            {Enter, leftData2, {10.0f, 10.0f}},
+            {Enter, leftData1, {10.0f, 10.0f}},
+            {Move, rightData4, {10.0f, 15.0f}},
+            {Leave, leftData2, {30.0f, 15.0f}},
+            /** @todo or have the isCaptured() bit reset back for all leaves? */
+            {Leave|Captured, leftData1, {30.0f, 15.0f}},
+            {Enter, rightData4, {10.0f, 15.0f}}
         })), TestSuite::Compare::Container);
 
     /* Enabling capture on an uncaptured Move and then disabling it again on an
@@ -5905,27 +6018,31 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
         ui.layer<Layer>(layer).capture = {};
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
-        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
-
-        PointerMoveEvent eventMove2{{}, {}};
-        ui.layer<Layer>(layer).capture = true;
-        ui.layer<Layer>(layer).captureEnter = false;
-        ui.layer<Layer>(layer).captureLeave = {};
-        CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
-        /* No capture as Enter reset it again */
+        CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
+        /* Enabled on leftData2 move, leftData1 move and leftData2 enter passes
+           it through; leftData1 enter disables it */
+        PointerMoveEvent eventMove2{{}, {}};
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 2);
+        ui.layer<Layer>(layer).captureEnter = Containers::pair(false, 1);
+        ui.layer<Layer>(layer).captureLeave = {};
+        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 15.0f}, eventMove2));
+        /* No capture as Enter reset it again */
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
+
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, leftData, {10.0f, 10.0f}},
-            {Enter, leftData, {10.0f, 10.0f}},
-            {Move, rightData, {10.0f, 15.0f}},
+            {Move, rightData4, {10.0f, 10.0f}},
+            {Enter, rightData4, {10.0f, 10.0f}},
+            {Move, leftData2, {10.0f, 15.0f}},
+            {Move|Captured, leftData1, {10.0f, 15.0f}},
             /* Leave is only captured if it happens on a captured node, here it
                happens on some other */
-            {Leave, leftData, {30.0f, 15.0f}},
-            {Enter|Captured, rightData, {10.0f, 15.0f}}
+            {Leave, rightData4, {-10.0f, 15.0f}},
+            {Enter|Captured, leftData2, {10.0f, 15.0f}},
+            {Enter|Captured, leftData1, {10.0f, 15.0f}} /* disables capture */
         })), TestSuite::Compare::Container);
 
     /* Disabling capture on a captured Move and then enabling it again in Leave
@@ -5940,30 +6057,37 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
 
         ui.layer<Layer>(layer).eventCalls = {};
 
+        /* Capture enabled only on the (second) leftData1 move */
         PointerMoveEvent eventMove1{{}, {}};
-        ui.layer<Layer>(layer).capture = true;
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 1);
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
 
+        /* Disabled on the leftData2 move already, leftData1 move and leftData2
+           leave then passes it through. Enabled again on leftData1 leave. */
         PointerMoveEvent eventMove2{{}, {}};
-        ui.layer<Layer>(layer).capture = false;
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
         ui.layer<Layer>(layer).captureEnter = {};
-        ui.layer<Layer>(layer).captureLeave = true;
+        ui.layer<Layer>(layer).captureLeave = Containers::pair(true, 1);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         /* On the right node, but captured on the left, so no hover */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
-            {Move, leftData, {10.0f, 10.0f}},
-            {Enter|Captured, leftData, {10.0f, 10.0f}},
-            {Move|Captured, leftData, {30.0f, 15.0f}},
+            {Move, leftData2, {10.0f, 10.0f}},
+            {Move, leftData1, {10.0f, 10.0f}},
+            {Enter|Captured, leftData2, {10.0f, 10.0f}},
+            {Enter|Captured, leftData1, {10.0f, 10.0f}},
+            {Move|Captured, leftData2, {30.0f, 15.0f}},
+            {Move, leftData1, {30.0f, 15.0f}},
             /* Leave is only captured if it happens on a captured node, here it
                happens on some other */
-            {Leave, leftData, {30.0f, 15.0f}}
+            {Leave, leftData2, {30.0f, 15.0f}},
+            {Leave, leftData1, {30.0f, 15.0f}},
         })), TestSuite::Compare::Container);
     }
 }
@@ -6023,12 +6147,15 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
     /* Two nodes on top of each other, node 1 above */
     NodeHandle node1 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle node2 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
-    /* Two data, using ID 1 and 2 for easier masking */
+    /* Three data, using ID 1, 2 and 4 for easier masking */
     /*DataHandle data0 =*/ ui.layer<Layer>(layer).create();
     DataHandle data1 = ui.layer<Layer>(layer).create();
     DataHandle data2 = ui.layer<Layer>(layer).create();
+    /*DataHandle data3 =*/ ui.layer<Layer>(layer).create();
+    DataHandle data4 = ui.layer<Layer>(layer).create();
     ui.attachData(node1, data1);
     ui.attachData(node2, data2);
+    ui.attachData(node2, data4);
 
     /* Setting capture in events that don't get accepted should do nothing to
        subsequent events and nothing to the end result also */
@@ -6044,7 +6171,37 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node1);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Move, data4, {10.0f, 10.0f}}, /* does nothing */
             {Move, data2, {10.0f, 10.0f}}, /* capturing but not accepted */
+            {Move, data1, {10.0f, 10.0f}}, /* shouldn't capture */
+            {Enter, data1, {10.0f, 10.0f}}, /* neither this */
+        })), TestSuite::Compare::Container);
+
+    /* Like above, but reversed -- data4 captures but isn't accepted, data2
+       does nothing */
+    } {
+        /* Just to reset everything */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerEvent eventReleaseReset{Pointer::MouseLeft};
+        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
+        PointerMoveEvent eventMoveReset{{}, {}};
+        ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+
+        ui.layer<Layer>(layer).eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, {}};
+        ui.layer<Layer>(layer).accept = 1;
+        ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
+        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
+        /* Node 2 captures in a non-accepted event, which should be ignored */
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node1);
+
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Move, data4, {10.0f, 10.0f}}, /* capturing but not accepted */
+            {Move, data2, {10.0f, 10.0f}}, /* does nothing */
             {Move, data1, {10.0f, 10.0f}}, /* shouldn't capture */
             {Enter, data1, {10.0f, 10.0f}}, /* neither this */
         })), TestSuite::Compare::Container);
@@ -6073,15 +6230,17 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
 
         PointerMoveEvent eventMove{{}, {}};
         ui.layer<Layer>(layer).accept = 0;
-        ui.layer<Layer>(layer).capture = Containers::pair(false, 2);
+        ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, eventMove));
         /* The capture should be reset even though the move wasn't accepted */
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Captured, data4, {10.0f, 10.0f}},
             {Press|Captured, data2, {10.0f, 10.0f}},
-            {Move|Captured, data2, {80.0f, 100.0f}}, /* cancels the capture */
+            {Move|Captured, data4, {80.0f, 100.0f}}, /* cancels the capture */
+            {Move, data2, {80.0f, 100.0f}},
             /* There should be nothing else after */
         })), TestSuite::Compare::Container);
     }
@@ -6368,7 +6527,7 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 }
 
-void AbstractUserInterfaceTest::eventCaptureDataRemoved() {
+void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
     auto&& data = EventCaptureCleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
@@ -6425,41 +6584,55 @@ void AbstractUserInterfaceTest::eventCaptureDataRemoved() {
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
 
     ui.layer<Layer>(layer).remove(leftData);
+    /* Similar to hover behavior, the node stays captured until an actual event
+       discovers there's no data anymore. This is consistent for example with a
+       case where the data would change the area where they're active for
+       events -- also something that the clean() / update() can't discover on
+       its own, only actually firing the event can. */
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
 
     if(data.clean) {
         ui.clean();
 
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        /* Same as above, the node stays captured */
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     }
 
     if(data.update) {
         ui.update();
 
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        /* Same as above, the node stays captured */
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
     if(data.release) {
         PointerEvent eventRelease{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_VERIFY(!ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+
+        /* In case of release, the captured node gets reset implicitly
+           always */
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+
     } else if(data.move) {
         PointerMoveEvent eventMove{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
-    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        CORRADE_VERIFY(!ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
 
-    CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        /* In case of move, the captured node doesn't get reset if it contains
+           no data. Otherwise, if one would drag out of a button and the button
+           would disappear, other elements would suddenly start reacting to the
+           move which goes completely against the concept of a captured
+           node. */
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
     CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
         {leftData, {10.0f, 10.0f}, true},
-        /* The release / move event isn't happening on a captured node, so
-            isCaptured() is false for it */
-        /** @todo eventually this might then try to call different data on the
-            same node (with isCaptured() set) if that ends up being a desirable
-            behavior */
-        {rightData, {10.0f, 10.0f}, false},
+        /* There's no captured data to execute the event on. It doesn't
+           propagate anywhere either, that would go against the capturing
+           behavior. */
     })), TestSuite::Compare::Container);
 
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
