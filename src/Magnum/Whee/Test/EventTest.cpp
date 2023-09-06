@@ -69,6 +69,7 @@ void EventTest::pointer() {
     CORRADE_COMPARE(event.type(), Pointer::MouseMiddle);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isHovering());
     CORRADE_VERIFY(!event.isAccepted());
 
     event.setCaptured(true);
@@ -88,6 +89,7 @@ void EventTest::pointerMove() {
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isHovering());
     CORRADE_VERIFY(!event.isAccepted());
 
     event.setCaptured(true);
@@ -106,6 +108,7 @@ void EventTest::pointerMoveNoPointer() {
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isHovering());
     CORRADE_VERIFY(!event.isAccepted());
 }
 
