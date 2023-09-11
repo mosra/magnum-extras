@@ -561,7 +561,7 @@ PrimitiveClipRatio.)")
     if(args.isSet("map")) {
         Containers::Optional<Containers::Array<const char, Utility::Path::MapDeleter>> maybeMapped;
         success = importer && (maybeMapped = Utility::Path::mapRead(args.value("file"))) && importer->openMemory(*maybeMapped);
-        mapped = *std::move(maybeMapped);
+        mapped = *Utility::move(maybeMapped);
     } else {
         success = importer && importer->openFile(_file);
     }
@@ -619,7 +619,7 @@ void Player::reload() {
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 void Player::loadFile(std::size_t totalCount, const char* filename, Containers::Array<char> data) {
-    _droppedFiles.emplace(filename, std::move(data));
+    _droppedFiles.emplace(filename, Utility::move(data));
 
     /* If the error is displayed, hide it */
     /** @todo make it just _importErrorUiPlane->hide() once the bug with a

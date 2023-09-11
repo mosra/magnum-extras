@@ -1005,7 +1005,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
 
         loadImage(texture, *imageData);
 
-        _data->textures[i] = std::move(texture);
+        _data->textures[i] = Utility::move(texture);
     }
 
     /* Load all lights. Lights that fail to load will be NullOpt, saving the
@@ -1038,7 +1038,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
                 break;
         }
 
-        _data->lights[i].light = std::move(light);
+        _data->lights[i].light = Utility::move(light);
     }
 
     /* Load all skins. Skins that fail to load will be NullOpt. The data will
@@ -1060,7 +1060,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
 
         skins[i].offset = totalJointCount;
         totalJointCount += skinData->joints().size();
-        skins[i].skin = std::move(skinData);
+        skins[i].skin = Utility::move(skinData);
     }
     Debug{} << "Loaded" << importer.skin3DCount() << "skins with" << totalJointCount << "joints in total and at most" << _data->maxJointCount << "joints per skin";
 
@@ -1079,7 +1079,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
             continue;
         }
 
-        materials[i] = std::move(*materialData).as<Trade::PhongMaterialData>();
+        materials[i] = Utility::move(*materialData).as<Trade::PhongMaterialData>();
     }
 
     /* Load all meshes. Meshes that fail to load will be NullOpt. Remember
@@ -1124,7 +1124,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
                     flags |= MeshTools::CompileFlag::GenerateFlatNormals;
                 }
 
-                meshData = MeshTools::generateIndices(*std::move(meshData));
+                meshData = MeshTools::generateIndices(*Utility::move(meshData));
 
             /* Otherwise prefer smooth normals, if we have an index buffer
                telling us neighboring faces */
@@ -1179,7 +1179,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         _data->meshes[i].perVertexJointCount = perVertexJointCount.first();
         _data->meshes[i].secondaryPerVertexJointCount = perVertexJointCount.second();
         _data->meshes[i].mesh = MeshTools::compile(*meshData, flags);
-        _data->meshes[i].name = std::move(meshName);
+        _data->meshes[i].name = Utility::move(meshName);
     }
 
     /* Load the scene. Save the object pointers in an array for easier mapping
