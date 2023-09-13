@@ -299,30 +299,92 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
         /**
          * @brief Create a quad
          * @param style         Style index
+         * @param node          Node to attach to
          * @return New data handle
          *
-         * All styling is driven from the @ref BaseLayerStyleItem at index
-         * @p style. Use @ref create(UnsignedInt, const Color3&, const Vector4&)
+         * Expects that @p style is less than @ref Shared::styleCount(). All
+         * styling is driven from the @ref BaseLayerStyleItem at index
+         * @p style. Use @ref create(UnsignedInt, const Color3&, NodeHandle) or
+         * @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
          * for creating a quad with a custom color and outline width. This
-         * function is equivalent to calling it with @cpp 0xffffff_srgbf @ce
+         * function is equivalent to calling them with @cpp 0xffffff_srgbf @ce
          * for the base color and a zero vector for the outline width.
          */
-        DataHandle create(UnsignedInt style) {
-            return create(style, Color3{1.0f});
+        DataHandle create(UnsignedInt style, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return create(style, Color3{1.0f}, node);
         }
 
         /**
          * @brief Create a quad with a style index in a concrete enum type
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt).
+         * @ref create(UnsignedInt, NodeHandle).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
             #endif
-        > DataHandle create(StyleIndex style) {
-            return create(UnsignedInt(style));
+        > DataHandle create(StyleIndex style, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return create(UnsignedInt(style), node);
+        }
+
+        /**
+         * @brief Create a quad with a custom base color
+         * @param style         Style index
+         * @param color         Custom base color
+         * @param node          Node to attach to
+         * @return New data handle
+         *
+         * Expects that @p style is less than @ref Shared::styleCount().
+         * Styling is driven from the @ref BaseLayerStyleItem at index
+         * @p style, in addition @ref BaseLayerStyleItem::topColor and
+         * @relativeref{BaseLayerStyleItem,bottomColor} is multiplied with
+         * @p color. Use @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
+         * for creating a quad with a custom color and outline width. This
+         * function is equivalent to calling it with a zero vector for the
+         * outline width.
+         * @see @ref create(UnsignedInt, NodeHandle)
+         */
+        DataHandle create(UnsignedInt style, const Color3& color, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return create(style, color, {}, node);
+        }
+
+        /**
+         * @brief Create a quad with a style index in a concrete enum type and with a custom base color
+         *
+         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
+         * @ref create(UnsignedInt, const Color3&, NodeHandle).
+         */
+        template<class StyleIndex
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            #endif
+        > DataHandle create(StyleIndex style, const Color3& color, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return create(UnsignedInt(style), color, node);
         }
 
         /**
@@ -331,6 +393,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
          * @param color         Custom base color
          * @param outlineWidth  Custom outline width in order left, top, right,
          *      bottom
+         * @param node          Node to attach to
          * @return New data handle
          *
          * Expects that @p style is less than @ref Shared::styleCount().
@@ -339,46 +402,71 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
          * @relativeref{BaseLayerStyleItem,bottomColor} is multiplied with
          * @p color and @p outlineWidth is added to
          * @ref BaseLayerStyleItem::outlineWidth.
-         * @see @ref create(UnsignedInt)
+         * @see @ref create(UnsignedInt, NodeHandle),
+         *      @ref create(UnsignedInt, const Color3&, NodeHandle)
          */
-        DataHandle create(UnsignedInt style, const Color3& color, const Vector4& outlineWidth = {});
+        DataHandle create(UnsignedInt style, const Color3& color, const Vector4& outlineWidth, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        );
 
         /**
          * @brief Create a quad with a style index in a concrete enum type and with a custom base color and outline width
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, const Color3&, const Vector4&).
+         * @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
             #endif
-        > DataHandle create(StyleIndex style, const Color3& color, const Vector4& outlineWidth = {}) {
-            return create(UnsignedInt(style), color, outlineWidth);
+        > DataHandle create(StyleIndex style, const Color3& color, const Vector4& outlineWidth, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return create(UnsignedInt(style), color, outlineWidth, node);
         }
 
         /**
          * @brief Create a quad with a custom base color and outline width with all edges having the same value
          *
-         * See @ref create(UnsignedInt, const Color3&, const Vector4&) for more
-         * information.
+         * See @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
+         * for more information.
          */
-        DataHandle create(UnsignedInt style, const Color3& color, Float outlineWidth) {
-            return create(style, color, Vector4{outlineWidth});
+        DataHandle create(UnsignedInt style, const Color3& color, Float outlineWidth, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return create(style, color, Vector4{outlineWidth}, node);
         }
 
         /**
          * @brief Create a quad with a style index in a concrete enum type and a custom base color and outline width with all edges having the same value
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, const Color3&, Float).
+         * @ref create(UnsignedInt, const Color3&, Float, NodeHandle).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
             #endif
-        > DataHandle create(StyleIndex style, const Color3& color, Float outlineWidth) {
-            return create(UnsignedInt(style), color, outlineWidth);
+        > DataHandle create(StyleIndex style, const Color3& color, Float outlineWidth, NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        ) {
+            return create(UnsignedInt(style), color, outlineWidth, node);
         }
 
         /**

@@ -75,11 +75,11 @@ BaseLayer::~BaseLayer() = default;
 
 BaseLayer& BaseLayer::operator=(BaseLayer&&) noexcept = default;
 
-DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const Vector4& outlineWidth) {
+DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const Vector4& outlineWidth, const NodeHandle node) {
     CORRADE_ASSERT(style < _state->shared.styleCount,
         "Whee::BaseLayer::create(): style" << style << "out of range for" << _state->shared.styleCount << "styles", {});
 
-    const DataHandle handle = AbstractLayer::create();
+    const DataHandle handle = AbstractLayer::create(node);
     const UnsignedInt id = dataHandleId(handle);
     if(id >= _state->data.size())
         arrayAppend(_state->data, NoInit, id - _state->data.size() + 1);

@@ -73,7 +73,7 @@ class Layer: public AbstractLayer {
     public:
         explicit Layer(LayerHandle handle, bool skipVertexDataUpdate, bool skipIndexDataUpdate, bool events);
 
-        DataHandle create(const Color4ub& color);
+        DataHandle create(const Color4ub& color, NodeHandle node);
 
     private:
         LayerFeatures doFeatures() const override {
@@ -121,8 +121,8 @@ Layer::Layer(LayerHandle handle, bool skipVertexDataUpdate, bool skipIndexDataUp
     _mesh.setIndexBuffer(_indexBuffer, 0, MeshIndexType::UnsignedInt);
 }
 
-DataHandle Layer::create(const Color4ub& color) {
-    const DataHandle handle = AbstractLayer::create();
+DataHandle Layer::create(const Color4ub& color, NodeHandle node) {
+    const DataHandle handle = AbstractLayer::create(node);
     const UnsignedInt id = dataHandleId(handle);
     if(id >= _colors.size())
         arrayAppend(_colors, NoInit, id - _colors.size() + 1);
@@ -247,10 +247,8 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
             NodeHandle nodeSub = _ui.createNode(node, {0.0f, 0.0f}, {1.0f, 1.0f});
             Color4ub color = colors[(i*117) % colors.size()];
             ColorHsv hsv = color.toHsv();
-            DataHandle data = layer1.create(color);
-            DataHandle dataSub = layer2.create(Color4ub::fromHsv({hsv.hue, hsv.saturation*0.25f, hsv.value}));
-            _ui.attachData(node, data);
-            _ui.attachData(nodeSub, dataSub);
+            layer1.create(color, node);
+            layer2.create(Color4ub::fromHsv({hsv.hue, hsv.saturation*0.25f, hsv.value}), nodeSub);
             ++i;
         }
     }

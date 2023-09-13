@@ -59,8 +59,8 @@ struct AbstractLayerTest: TestSuite::Tester {
     void createRemoveHandleRecycle();
     void createRemoveHandleDisable();
     void createNoHandlesLeft();
+    void createAttached();
     void removeInvalid();
-
     void attach();
     void attachInvalid();
 
@@ -109,8 +109,8 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::createRemoveHandleRecycle,
               &AbstractLayerTest::createRemoveHandleDisable,
               &AbstractLayerTest::createNoHandlesLeft,
+              &AbstractLayerTest::createAttached,
               &AbstractLayerTest::removeInvalid,
-
               &AbstractLayerTest::attach,
               &AbstractLayerTest::attachInvalid,
 
@@ -242,6 +242,8 @@ void AbstractLayerTest::createRemove() {
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0xab, 0x12)};
+
+    /* The node argument is tested in createAttached() below */
 
     DataHandle first = layer.create();
     CORRADE_COMPARE(first, dataHandle(layer.handle(), 0, 1));
@@ -431,6 +433,33 @@ void AbstractLayerTest::createNoHandlesLeft() {
        to give a heads-up when modifying the handle ID bit count */
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::create(): can only have at most 1048576 data\n");
+}
+
+void AbstractLayerTest::createAttached() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+
+    NodeHandle node = nodeHandle(9872, 0xbeb);
+
+    /* Explicitly passing a null handle should work too, and cause no state
+       change */
+    DataHandle notAttached = layer.create(NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(notAttached), NodeHandle::Null);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Passing a non-null handle causes a state change */
+    DataHandle attached = layer.create(node);
+    CORRADE_COMPARE(layer.node(attached), node);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+
+    /* The attachment should be reflected in the view as well */
+    CORRADE_COMPARE_AS(layer.nodes(), Containers::arrayView({
+        NodeHandle::Null,
+        node
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractLayerTest::removeInvalid() {
@@ -651,27 +680,20 @@ void AbstractLayerTest::cleanNodes() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    /* Create seven data to match the seven bits */
-    DataHandle first = layer.create();
-    DataHandle second = layer.create();
-    DataHandle third = layer.create();
-    DataHandle fourth = layer.create();
-    DataHandle fifth = layer.create();
-    DataHandle sixth = layer.create();
-    DataHandle seventh = layer.create();
-
-    /* Attach them to random handles, leave one unassigned, attach two data to
-       one node */
     NodeHandle nodeFirst = nodeHandle(0, 0xcec);
     NodeHandle nodeSecond = nodeHandle(1, 0xded);
     NodeHandle nodeFourth = nodeHandle(3, 0xaba);
     NodeHandle nodeEighth = nodeHandle(7, 0xfef);
-    layer.attach(first, nodeEighth);
-    layer.attach(third, nodeSecond);
-    layer.attach(fourth, nodeFirst);
-    layer.attach(fifth, nodeFourth);
-    layer.attach(sixth, nodeFirst);
-    layer.attach(seventh, nodeFourth);
+
+    /* Create seven data to match the seven bits. Attach them to random
+       handles, leave one unassigned, attach two data to one node. */
+    DataHandle first = layer.create(nodeEighth);
+    DataHandle second = layer.create();
+    DataHandle third = layer.create(nodeSecond);
+    DataHandle fourth = layer.create(nodeFirst);
+    DataHandle fifth = layer.create(nodeFourth);
+    DataHandle sixth = layer.create(nodeFirst);
+    DataHandle seventh = layer.create(nodeFourth);
 
     /* Remove two of them */
     layer.remove(third);
