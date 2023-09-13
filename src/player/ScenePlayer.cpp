@@ -2111,7 +2111,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
         if(selectedId >= _data->objects.size()) {
             /* 0xffff is the background, but anything else is just wrong */
             if(selectedId != 0xffff)
-                Warning{} << "Selected ID" << selectedId << "out of bounds for" << _data->objects.size() << "objects, ignoring";
+                Warning{} << "Selected ID" << selectedId << "out of range for" << _data->objects.size() << "objects, ignoring";
 
         /* Otherwise add a visualizer and update the info */
         } else {
