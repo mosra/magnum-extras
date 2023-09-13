@@ -58,8 +58,8 @@ struct BaseLayerTest: TestSuite::Tester {
     void constructCopy();
     void constructMove();
 
-    void create();
-    void setStyle();
+    template<class T> void create();
+    template<class T> void setStyle();
     void setColor();
     void setOutlineWidth();
 
@@ -77,6 +77,12 @@ const struct {
     {"empty update", true},
     {"", false},
 };
+
+enum class Enum: UnsignedShort {};
+
+Debug& operator<<(Debug& debug, Enum value) {
+    return debug << UnsignedInt(value);
+}
 
 BaseLayerTest::BaseLayerTest() {
     addTests({&BaseLayerTest::styleSizeAlignment<BaseLayerStyleCommon>,
@@ -99,8 +105,10 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::constructCopy,
               &BaseLayerTest::constructMove,
 
-              &BaseLayerTest::create,
-              &BaseLayerTest::setStyle,
+              &BaseLayerTest::create<UnsignedInt>,
+              &BaseLayerTest::create<Enum>,
+              &BaseLayerTest::setStyle<UnsignedInt>,
+              &BaseLayerTest::setStyle<Enum>,
               &BaseLayerTest::setColor,
               &BaseLayerTest::setOutlineWidth,
 
@@ -364,7 +372,9 @@ void BaseLayerTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Layer>::value);
 }
 
-void BaseLayerTest::create() {
+template<class T> void BaseLayerTest::create() {
+    setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
+
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
     } shared{38};
@@ -381,30 +391,36 @@ void BaseLayerTest::create() {
 
     /* Default color and outline width */
     {
-        DataHandle data = layer.create(17);
+        DataHandle data = layer.create(T(17));
         CORRADE_COMPARE(layer.style(data), 17);
         CORRADE_COMPARE(layer.color(data), 0xffffff_rgbf);
         CORRADE_COMPARE(layer.outlineWidth(data), Vector4{0.0f});
 
     /* Default outline width */
     } {
-        DataHandle data = layer.create(23, 0xff3366_rgbf);
+        DataHandle data = layer.create(T(23), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.style(data), 23);
         CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.outlineWidth(data), Vector4{0.0f});
 
     /* Single-value outline width */
     } {
-        DataHandle data = layer.create(19, 0xff3366_rgbf, 4.0f);
+        DataHandle data = layer.create(T(19), 0xff3366_rgbf, 4.0f);
         CORRADE_COMPARE(layer.style(data), 19);
         CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.outlineWidth(data), Vector4{4.0f});
 
-    /* Everything explicit, testing also the getter overloads */
+    /* Everything explicit, testing also the getter overloads and templates */
     } {
-        DataHandle data = layer.create(37, 0xff3366_rgbf, {3.0f, 2.0f, 1.0f, 4.0f});
+        DataHandle data = layer.create(T(37), 0xff3366_rgbf, {3.0f, 2.0f, 1.0f, 4.0f});
         CORRADE_COMPARE(layer.style(data), 37);
+        /* Can't use T, as the function restrict to enum types which woulf fail
+           for T == UnsignedInt */
+        CORRADE_COMPARE(layer.template style<Enum>(data), Enum(37));
         CORRADE_COMPARE(layer.style(dataHandleData(data)), 37);
+        /* Can't use T, as the function restrict to enum types which woulf fail
+           for T == UnsignedInt */
+        CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(data)), Enum(37));
         CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.color(dataHandleData(data)), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.outlineWidth(data), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
@@ -415,7 +431,9 @@ void BaseLayerTest::create() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 }
 
-void BaseLayerTest::setStyle() {
+template<class T> void BaseLayerTest::setStyle() {
+    setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
+
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
     } shared{67};
@@ -435,12 +453,12 @@ void BaseLayerTest::setStyle() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a style marks the layer as dirty */
-    layer.setStyle(data, 37);
+    layer.setStyle(data, T(37));
     CORRADE_COMPARE(layer.style(data), 37);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 
     /* Testing also the other overload */
-    layer.setStyle(dataHandleData(data), 66);
+    layer.setStyle(dataHandleData(data), T(66));
     CORRADE_COMPARE(layer.style(data), 66);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 }
