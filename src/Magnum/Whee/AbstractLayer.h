@@ -100,9 +100,9 @@ enum class LayerState: UnsignedByte {
      * @ref LayerState::NeedsAttachmentUpdate.
      *
      * This flag *isn't* set implicitly after a @ref AbstractLayer::create()
-     * call, as newly created data only become a part of the visible node
-     * hierarchy with @ref AbstractLayer::attach() (or
-     * @ref AbstractUserInterface::attachData()).
+     * call with a null @ref NodeHandle, as such newly created data only become
+     * a part of the visible node hierarchy with @ref AbstractLayer::attach()
+     * (or @ref AbstractUserInterface::attachData()).
      *
      * Note that there's also interface-wide
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate, which is set when
@@ -117,6 +117,8 @@ enum class LayerState: UnsignedByte {
      * @ref AbstractUserInterface::update()) needs to be called to refresh the
      * data attached to visible node hierarchy after the node attachments were
      * changed. Set implicitly after every @ref AbstractLayer::attach() call,
+     * after @ref AbstractLayer::create() with a non-null @ref NodeHandle and
+     * after @ref AbstractLayer::remove() for a data that's attached to a node,
      * is reset next time @ref AbstractLayer::update() is called. Implies
      * @ref LayerState::NeedsUpdate.
      */
@@ -261,14 +263,26 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
 
         /**
          * @brief Create a data
+         * @param node      Node to attach to
          * @return New data handle
          *
          * Allocates a new handle in a free slot in the internal storage or
          * grows the storage if there's no free slots left. Expects that
          * there's at most 1048576 data. The returned handle can be removed
          * again with @ref remove().
+         *
+         * If @p node is not @ref NodeHandle::Null, directly attaches the
+         * created data to given node, equivalent to calling @ref attach().
+         * That then causes @ref LayerState::NeedsAttachmentUpdate to be set.
+         * If @p node is @ref NodeHandle::Null, no @ref LayerState is set.
          */
-        DataHandle create();
+        DataHandle create(NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        );
 
         /**
          * @brief Remove a data
@@ -321,7 +335,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *
          * Calling this function causes @ref LayerState::NeedsAttachmentUpdate
          * to be set.
-         * @see @ref isHandleValid(DataHandle) const,
+         * @see @ref isHandleValid(DataHandle) const, @ref create(),
          *      @ref AbstractUserInterface::attachData()
          */
         void attach(DataHandle data, NodeHandle node);
