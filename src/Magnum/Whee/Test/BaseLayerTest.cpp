@@ -136,6 +136,15 @@ Debug& operator<<(Debug& debug, StyleIndex value) {
 
 const struct {
     const char* name;
+    NodeHandle node;
+    LayerStates state;
+} CreateData[]{
+    {"create", NodeHandle::Null, LayerStates{}},
+    {"create and attach", nodeHandle(9872, 0xbeb), LayerState::NeedsAttachmentUpdate}
+};
+
+const struct {
+    const char* name;
     bool update;
 } EventStyleTransitionData[]{
     {"update before", true},
@@ -170,11 +179,13 @@ BaseLayerTest::BaseLayerTest() {
 
               &BaseLayerTest::construct,
               &BaseLayerTest::constructCopy,
-              &BaseLayerTest::constructMove,
+              &BaseLayerTest::constructMove});
 
-              &BaseLayerTest::create<UnsignedInt>,
-              &BaseLayerTest::create<Enum>,
-              &BaseLayerTest::setStyle<UnsignedInt>,
+    addInstancedTests<BaseLayerTest>({&BaseLayerTest::create<UnsignedInt>,
+                                      &BaseLayerTest::create<Enum>},
+        Containers::arraySize(CreateData));
+
+    addTests({&BaseLayerTest::setStyle<UnsignedInt>,
               &BaseLayerTest::setStyle<Enum>,
               &BaseLayerTest::setColor,
               &BaseLayerTest::setOutlineWidth,
@@ -448,6 +459,8 @@ void BaseLayerTest::constructMove() {
 }
 
 template<class T> void BaseLayerTest::create() {
+    auto&& data = CreateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
 
     struct LayerShared: BaseLayer::Shared {
@@ -464,44 +477,49 @@ template<class T> void BaseLayerTest::create() {
 
     /* Default color and outline width */
     {
-        DataHandle data = layer.create(T(17));
-        CORRADE_COMPARE(layer.style(data), 17);
-        CORRADE_COMPARE(layer.color(data), 0xffffff_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(data), Vector4{0.0f});
+        DataHandle layerData = layer.create(T(17), data.node);
+        CORRADE_COMPARE(layer.node(layerData), data.node);
+        CORRADE_COMPARE(layer.style(layerData), 17);
+        CORRADE_COMPARE(layer.color(layerData), 0xffffff_rgbf);
+        CORRADE_COMPARE(layer.outlineWidth(layerData), Vector4{0.0f});
+        CORRADE_COMPARE(layer.state(), data.state);
 
     /* Default outline width */
     } {
-        DataHandle data = layer.create(T(23), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.style(data), 23);
-        CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(data), Vector4{0.0f});
+        DataHandle layerData = layer.create(T(23), 0xff3366_rgbf, data.node);
+        CORRADE_COMPARE(layer.node(layerData), data.node);
+        CORRADE_COMPARE(layer.style(layerData), 23);
+        CORRADE_COMPARE(layer.color(layerData), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.outlineWidth(layerData), Vector4{0.0f});
+        CORRADE_COMPARE(layer.state(), data.state);
 
     /* Single-value outline width */
     } {
-        DataHandle data = layer.create(T(19), 0xff3366_rgbf, 4.0f);
-        CORRADE_COMPARE(layer.style(data), 19);
-        CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(data), Vector4{4.0f});
+        DataHandle layerData = layer.create(T(19), 0xff3366_rgbf, 4.0f, data.node);
+        CORRADE_COMPARE(layer.node(layerData), data.node);
+        CORRADE_COMPARE(layer.style(layerData), 19);
+        CORRADE_COMPARE(layer.color(layerData), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.outlineWidth(layerData), Vector4{4.0f});
+        CORRADE_COMPARE(layer.state(), data.state);
 
     /* Everything explicit, testing also the getter overloads and templates */
     } {
-        DataHandle data = layer.create(T(37), 0xff3366_rgbf, {3.0f, 2.0f, 1.0f, 4.0f});
-        CORRADE_COMPARE(layer.style(data), 37);
+        DataHandle layerData = layer.create(T(37), 0xff3366_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, data.node);
+        CORRADE_COMPARE(layer.node(layerData), data.node);
+        CORRADE_COMPARE(layer.style(layerData), 37);
         /* Can't use T, as the function restricts to enum types which would
            fail for T == UnsignedInt */
-        CORRADE_COMPARE(layer.template style<Enum>(data), Enum(37));
-        CORRADE_COMPARE(layer.style(dataHandleData(data)), 37);
+        CORRADE_COMPARE(layer.template style<Enum>(layerData), Enum(37));
+        CORRADE_COMPARE(layer.style(dataHandleData(layerData)), 37);
         /* Can't use T, as the function restricts to enum types which would
            fail for T == UnsignedInt */
-        CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(data)), Enum(37));
-        CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.color(dataHandleData(data)), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(data), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
-        CORRADE_COMPARE(layer.outlineWidth(dataHandleData(data)), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
+        CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(layerData)), Enum(37));
+        CORRADE_COMPARE(layer.color(layerData), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.color(dataHandleData(layerData)), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.outlineWidth(layerData), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
+        CORRADE_COMPARE(layer.outlineWidth(dataHandleData(layerData)), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
+        CORRADE_COMPARE(layer.state(), data.state);
     }
-
-    /* Creation alone shouldn't set any state flags */
-    CORRADE_COMPARE(layer.state(), LayerStates{});
 }
 
 template<class T> void BaseLayerTest::setStyle() {
@@ -697,24 +715,21 @@ void BaseLayerTest::updateDataOrder() {
         const BaseLayer::State& stateData() const { return *_state; }
     } layer{layerHandle(0, 1), shared};
 
+    /* Two node handles to attach the data to */
+    NodeHandle node6 = nodeHandle(6, 0);
+    NodeHandle node15 = nodeHandle(15, 0);
+
     /* Create 10 data handles. Only three get filled and actually used. */
     layer.create(0);                                                    /* 0 */
     layer.create(0);                                                    /* 1 */
     layer.create(0);                                                    /* 2 */
-    DataHandle data3 = layer.create(2, 0xff3366_rgbf, {1.0f, 2.0f, 3.0f, 4.0f});
+    layer.create(2, 0xff3366_rgbf, {1.0f, 2.0f, 3.0f, 4.0f}, node6);    /* 3 */
     layer.create(0);                                                    /* 4 */
     layer.create(0);                                                    /* 5 */
     layer.create(0);                                                    /* 6 */
-    DataHandle data7 = layer.create(1, 0x112233_rgbf, Vector4{2.0f});
+    layer.create(1, 0x112233_rgbf, Vector4{2.0f}, node15);              /* 7 */
     layer.create(0);                                                    /* 8 */
-    DataHandle data9 = layer.create(3, 0x663399_rgbf, {3.0f, 2.0f, 1.0f, 4.0f});
-
-    /* Two node handles to attach the data to */
-    NodeHandle node6 = nodeHandle(6, 0);
-    NodeHandle node15 = nodeHandle(15, 0);
-    layer.attach(data7, node15);
-    layer.attach(data3, node6);
-    layer.attach(data9, node15);
+    layer.create(3, 0x663399_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, node15);   /* 9 */
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
@@ -902,8 +917,7 @@ void BaseLayerTest::eventStyleTransitionNoOp() {
 
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
     /* Deliberately setting a style that isn't the "default" */
-    DataHandle data = layer.create(StyleIndex::GreenPressedHover);
-    layer.attach(data, node);
+    DataHandle data = layer.create(StyleIndex::GreenPressedHover, node);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -1063,14 +1077,10 @@ void BaseLayerTest::eventStyleTransition() {
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
     /* One extra data to verify it's mapping from nodes to data correctly */
     layer.create(StyleIndex::Green);
-    DataHandle dataGreen = layer.create(StyleIndex::Green);
-    DataHandle dataRed = layer.create(StyleIndex::Red);
-    DataHandle dataBlue = layer.create(StyleIndex::Blue);
-    DataHandle dataWhite = layer.create(StyleIndex::White);
-    layer.attach(dataGreen, nodeGreen);
-    layer.attach(dataRed, nodeRed);
-    layer.attach(dataBlue, nodeBlue);
-    layer.attach(dataWhite, nodeWhite);
+    DataHandle dataGreen = layer.create(StyleIndex::Green, nodeGreen);
+    DataHandle dataRed = layer.create(StyleIndex::Red, nodeRed);
+    DataHandle dataBlue = layer.create(StyleIndex::Blue, nodeBlue);
+    DataHandle dataWhite = layer.create(StyleIndex::White, nodeWhite);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -1262,8 +1272,7 @@ void BaseLayerTest::eventStyleTransitionNoHover() {
     NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
 
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    DataHandle data = layer.create(StyleIndex::Green);
-    layer.attach(data, node);
+    DataHandle data = layer.create(StyleIndex::Green, node);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -1358,12 +1367,10 @@ void BaseLayerTest::eventStyleTransitionNoCapture() {
     NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
 
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    DataHandle layerData = layer.create(StyleIndex::Green);
-    layer.attach(layerData, node);
+    DataHandle layerData = layer.create(StyleIndex::Green, node);
 
     EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer(), data.disableCapture));
-    DataHandle eventData = eventLayer.create();
-    eventLayer.attach(eventData, node);
+    eventLayer.create(node);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -1419,8 +1426,7 @@ void BaseLayerTest::eventStyleTransitionOutOfRange() {
     NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
 
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    DataHandle data = layer.create(StyleIndex::Red);
-    layer.attach(data, node);
+    layer.create(StyleIndex::Red, node);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});

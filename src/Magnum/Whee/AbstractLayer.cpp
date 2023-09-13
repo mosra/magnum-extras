@@ -210,7 +210,7 @@ bool AbstractLayer::isHandleValid(const DataHandle handle) const {
     return dataHandleLayer(handle) == _state->handle && isHandleValid(dataHandleData(handle));
 }
 
-DataHandle AbstractLayer::create() {
+DataHandle AbstractLayer::create(const NodeHandle node) {
     State& state = *_state;
 
     /* Find the first free data if there is, update the free index to point to
@@ -236,6 +236,11 @@ DataHandle AbstractLayer::create() {
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
+    if(node != NodeHandle::Null) {
+        data->used.node = node;
+        state.state |= LayerState::NeedsAttachmentUpdate;
+    }
+
     return dataHandle(state.handle, (data - state.data), data->used.generation);
 }
 
