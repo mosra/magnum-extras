@@ -312,6 +312,20 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
         }
 
         /**
+         * @brief Create a quad with a style index in a concrete enum type
+         *
+         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
+         * @ref create(UnsignedInt).
+         */
+        template<class StyleIndex
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            #endif
+        > DataHandle create(StyleIndex style) {
+            return create(UnsignedInt(style));
+        }
+
+        /**
          * @brief Create a quad with a custom base color and outline width
          * @param style         Style index
          * @param color         Custom base color
@@ -330,6 +344,20 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
         DataHandle create(UnsignedInt style, const Color3& color, const Vector4& outlineWidth = {});
 
         /**
+         * @brief Create a quad with a style index in a concrete enum type and with a custom base color and outline width
+         *
+         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
+         * @ref create(UnsignedInt, const Color3&, const Vector4&).
+         */
+        template<class StyleIndex
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            #endif
+        > DataHandle create(StyleIndex style, const Color3& color, const Vector4& outlineWidth = {}) {
+            return create(UnsignedInt(style), color, outlineWidth);
+        }
+
+        /**
          * @brief Create a quad with a custom base color and outline width with all edges having the same value
          *
          * See @ref create(UnsignedInt, const Color3&, const Vector4&) for more
@@ -340,7 +368,21 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
         }
 
         /**
-         * @brief Quad style index
+         * @brief Create a quad with a style index in a concrete enum type and a custom base color and outline width with all edges having the same value
+         *
+         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
+         * @ref create(UnsignedInt, const Color3&, Float).
+         */
+        template<class StyleIndex
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            #endif
+        > DataHandle create(StyleIndex style, const Color3& color, Float outlineWidth) {
+            return create(UnsignedInt(style), color, outlineWidth);
+        }
+
+        /**
+         * @brief Type-erased quad style index
          *
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
@@ -348,12 +390,32 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
         UnsignedInt style(DataHandle handle) const;
 
         /**
-         * @brief Quad style index assuming it belongs to this layer
+         * @brief Quad style index in a concrete enum type
+         *
+         * Expects that @p handle is valid.
+         */
+        template<class StyleIndex> StyleIndex style(DataHandle handle) const {
+            static_assert(std::is_enum<StyleIndex>::value, "expected an enum type");
+            return StyleIndex(style(handle));
+        }
+
+        /**
+         * @brief Type-erased quad style index assuming it belongs to this layer
          *
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(LayerDataHandle) const
          */
         UnsignedInt style(LayerDataHandle handle) const;
+
+        /**
+         * @brief Quad style index in a concrete enum type assuming it belongs to this layer
+         *
+         * Expects that @p handle is valid.
+         */
+        template<class StyleIndex> StyleIndex style(LayerDataHandle handle) const {
+            static_assert(std::is_enum<StyleIndex>::value, "expected an enum type");
+            return StyleIndex(style(handle));
+        }
 
         /**
          * @brief Set quad style index
@@ -368,6 +430,20 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
         void setStyle(DataHandle handle, UnsignedInt style);
 
         /**
+         * @brief Set quad style index in a concrete enum type
+         *
+         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
+         * @ref setStyle(DataHandle, UnsignedInt).
+         */
+        template<class StyleIndex
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            #endif
+        > void setStyle(DataHandle handle, StyleIndex style) {
+            setStyle(handle, UnsignedInt(style));
+        }
+
+        /**
          * @brief Set quad style index assuming it belongs to this layer
          *
          * Like @ref setStyle(DataHandle, UnsignedInt) but without checking
@@ -375,6 +451,20 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
          * for more information.
          */
         void setStyle(LayerDataHandle handle, UnsignedInt style);
+
+        /**
+         * @brief Set quad style index in a concrete enum type assuming it belongs to this layer
+         *
+         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
+         * @ref setStyle(LayerDataHandle, UnsignedInt).
+         */
+        template<class StyleIndex
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            #endif
+        > void setStyle(LayerDataHandle handle, StyleIndex style) {
+            setStyle(handle, UnsignedInt(style));
+        }
 
         /**
          * @brief Quad custom base color
