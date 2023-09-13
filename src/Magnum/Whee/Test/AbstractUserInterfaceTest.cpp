@@ -1819,8 +1819,7 @@ void AbstractUserInterfaceTest::cleanNoOp() {
     NodeHandle nested = ui.createNode(root, {}, {});
 
     /* Data attached to the root node */
-    DataHandle data = ui.layer(layerHandle).create();
-    ui.attachData(root, data);
+    DataHandle data = ui.layer(layerHandle).create(root);
 
     /* Remove the nested node to create some "dirtiness" */
     ui.removeNode(nested);
@@ -1854,14 +1853,10 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
     NodeHandle nested = ui.createNode(root, {}, {});
 
     /* Data attached to both, from both layers, in random order */
-    DataHandle data1 = ui.layer(layerHandle1).create();
-    DataHandle data2 = ui.layer(layerHandle2).create();
-    DataHandle data3 = ui.layer(layerHandle1).create();
-    DataHandle data4 = ui.layer(layerHandle2).create();
-    ui.attachData(nested, data1);
-    ui.attachData(root, data2);
-    ui.attachData(root, data3);
-    ui.attachData(nested, data4);
+    DataHandle data1 = ui.layer(layerHandle1).create(nested);
+    DataHandle data2 = ui.layer(layerHandle2).create(root);
+    DataHandle data3 = ui.layer(layerHandle1).create(root);
+    DataHandle data4 = ui.layer(layerHandle2).create(nested);
 
     /* Remove the nested node */
     ui.removeNode(nested);
@@ -1901,12 +1896,9 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
     NodeHandle second2 = ui.createNode(first1, {}, {});
 
     /* Data attached to the leaf nodes */
-    DataHandle data1 = ui.layer(layerHandle).create();
-    DataHandle data2 = ui.layer(layerHandle).create();
-    DataHandle data3 = ui.layer(layerHandle).create();
-    ui.attachData(second1, data1);
-    ui.attachData(first2, data2);
-    ui.attachData(second2, data3);
+    DataHandle data1 = ui.layer(layerHandle).create(second1);
+    DataHandle data2 = ui.layer(layerHandle).create(first2);
+    DataHandle data3 = ui.layer(layerHandle).create(second2);
 
     /* Remove the subtree */
     ui.removeNode(first1);
@@ -1984,8 +1976,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
     NodeHandle second = ui.createNode(first, {}, {});
 
     /* Data attached to the leaf node */
-    DataHandle data = ui.layer(layerHandle).create();
-    ui.attachData(second, data);
+    DataHandle data = ui.layer(layerHandle).create(second);
 
     /* Remove a subtree but then create a new node which recycles the same
        handle */
@@ -2025,8 +2016,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
     NodeHandle third = ui.createNode(second, {}, {});
 
     /* Data attached to the leaf node */
-    DataHandle data = ui.layer(layerHandle).create();
-    ui.attachData(third, data);
+    DataHandle data = ui.layer(layerHandle).create(third);
 
     /* Remove a subtree but then create a new node which recycles the same
        handle, and parent it to one of the (now dangling) nodes */
@@ -2063,10 +2053,8 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
     NodeHandle second = ui.createNode(first, {}, {});
 
     /* Data attached to the nested nodes */
-    DataHandle data1 = ui.layer(layerHandle).create();
-    DataHandle data2 = ui.layer(layerHandle).create();
-    ui.attachData(second, data1);
-    ui.attachData(first, data2);
+    ui.layer(layerHandle).create(second);
+    ui.layer(layerHandle).create(first);
 
     /* Removing the top-level node */
     ui.removeNode(root);
@@ -3231,23 +3219,25 @@ void AbstractUserInterfaceTest::draw() {
 
     Containers::Pointer<Layer> layer3Instance{InPlaceInit, layer3, LayerFeature::Event};
 
-    DataHandle leftData2 = layer1Instance->create();
-    DataHandle leftData1 = layer2Instance->create();
-    DataHandle leftData3 = layer1Instance->create();
-    DataHandle anotherTopLevelData1 = layer1Instance->create();
-    DataHandle anotherTopLevelData2 = layer2Instance->create();
-    DataHandle anotherTopLevelData3 = layer3Instance->create();
-    DataHandle anotherTopLevelData4 = layer2Instance->create();
-    DataHandle topLevelData = layer3Instance->create();
-    DataHandle culledData = layer2Instance->create();
-    DataHandle nestedData = layer2Instance->create();
-    DataHandle topLevelNotInOrderData = layer2Instance->create();
-    DataHandle removedData = layer1Instance->create();
-    DataHandle topLevelHiddenData = layer2Instance->create();
-    DataHandle rightData1 = layer3Instance->create();
-    DataHandle rightData2 = layer2Instance->create();
-    DataHandle layer1OnlyData = layer1Instance->create();
-    DataHandle layer2OnlyData = layer2Instance->create();
+    /* The commented out variables are either removed, culled or hidden, thus
+       not referenced from any doUpdate() or doDraw() below */
+    DataHandle leftData2 = layer1Instance->create(left);
+    DataHandle leftData1 = layer2Instance->create(left);
+    DataHandle leftData3 = layer1Instance->create(left);
+    DataHandle anotherTopLevelData1 = layer1Instance->create(anotherTopLevel);
+    DataHandle anotherTopLevelData2 = layer2Instance->create(anotherTopLevel);
+    DataHandle anotherTopLevelData3 = layer3Instance->create(anotherTopLevel);
+    DataHandle anotherTopLevelData4 = layer2Instance->create(anotherTopLevel);
+    DataHandle topLevelData = layer3Instance->create(topLevel);
+    /*DataHandle culledData =*/ layer2Instance->create(culled);
+    DataHandle nestedData = layer2Instance->create(nested);
+    /*DataHandle topLevelNotInOrderData =*/ layer2Instance->create(topLevelNotInOrder);
+    /*DataHandle removedData =*/ layer1Instance->create(removed);
+    /*DataHandle topLevelHiddenData =*/ layer2Instance->create(topLevelHidden);
+    DataHandle rightData1 = layer3Instance->create(right);
+    DataHandle rightData2 = layer2Instance->create(right);
+    DataHandle layer1OnlyData = layer1Instance->create(layer1Only);
+    DataHandle layer2OnlyData = layer2Instance->create(layer2Only);
 
     /* These follow the node nesting order and then the order in which the
        data get attached below */
@@ -3353,24 +3343,6 @@ void AbstractUserInterfaceTest::draw() {
     ui.setLayerInstance(Utility::move(layer1Instance));
     ui.setLayerInstance(Utility::move(layer2Instance));
     ui.setLayerInstance(Utility::move(layer3Instance));
-
-    ui.attachData(nested, nestedData);
-    ui.attachData(left, leftData1);
-    ui.attachData(anotherTopLevel, anotherTopLevelData1);
-    ui.attachData(anotherTopLevel, anotherTopLevelData2);
-    ui.attachData(anotherTopLevel, anotherTopLevelData3);
-    ui.attachData(anotherTopLevel, anotherTopLevelData4);
-    ui.attachData(left, leftData2);
-    ui.attachData(topLevelNotInOrder, topLevelNotInOrderData);
-    ui.attachData(removed, removedData);
-    ui.attachData(topLevelHidden, topLevelHiddenData);
-    ui.attachData(topLevel, topLevelData);
-    ui.attachData(right, rightData1);
-    ui.attachData(left, leftData3);
-    ui.attachData(culled, culledData);
-    ui.attachData(right, rightData2);
-    ui.attachData(layer1Only, layer1OnlyData);
-    ui.attachData(layer2Only, layer2OnlyData);
 
     ui.setNodeOrder(anotherTopLevel, topLevel);
     ui.clearNodeOrder(topLevelNotInOrder);
@@ -3555,16 +3527,18 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     LayerHandle layer3 = ui.createLayer();
     Containers::Pointer<Layer> layer3Instance{InPlaceInit, layer3, LayerFeature::Draw|LayerFeature::Event};
 
-    DataHandle bottomData1 = layer1Instance->create();
-    DataHandle bottomData2 = layer2Instance->create();
-    DataHandle topNestedData1 = layer3Instance->create();
-    DataHandle topNestedData2 = layer1Instance->create();
-    DataHandle topNestedData3 = layer3Instance->create();
-    DataHandle topNestedOutsideData = layer3Instance->create();
-    DataHandle notInOrderData = layer1Instance->create();
-    DataHandle hiddenData = layer2Instance->create();
-    DataHandle removedData = layer3Instance->create();
-    DataHandle topData = layer3Instance->create();
+    /* The commented out variables are not participating in events in any
+       way */
+    DataHandle bottomData1 = layer1Instance->create(bottom);
+    /*DataHandle bottomData2 =*/ layer2Instance->create(bottom);
+    DataHandle topNestedData1 = layer3Instance->create(topNested);
+    DataHandle topNestedData2 = layer1Instance->create(topNested);
+    DataHandle topNestedData3 = layer3Instance->create(topNested);
+    DataHandle topNestedOutsideData = layer3Instance->create(topNestedOutside);
+    /*DataHandle notInOrderData =*/ layer1Instance->create(notInOrder);
+    /*DataHandle hiddenData =*/ layer2Instance->create(hidden);
+    /*DataHandle removedData =*/ layer3Instance->create(removed);
+    DataHandle topData = layer3Instance->create(top);
 
     bool layer1Accept = true;
     bool layer2Accept = true;
@@ -3579,17 +3553,6 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     ui.setLayerInstance(Utility::move(layer1Instance));
     ui.setLayerInstance(Utility::move(layer2Instance));
     ui.setLayerInstance(Utility::move(layer3Instance));
-
-    ui.attachData(bottom, bottomData1);
-    ui.attachData(bottom, bottomData2);
-    ui.attachData(top, topData);
-    ui.attachData(topNested, topNestedData2);
-    ui.attachData(topNested, topNestedData1);
-    ui.attachData(topNested, topNestedData3);
-    ui.attachData(topNestedOutside, topNestedOutsideData);
-    ui.attachData(notInOrder, notInOrderData);
-    ui.attachData(hidden, hiddenData);
-    ui.attachData(removed, removedData);
 
     ui.clearNodeOrder(notInOrder);
     ui.removeNode(removed);
@@ -3782,10 +3745,8 @@ void AbstractUserInterfaceTest::eventEdges() {
 
     NodeHandle bottom = ui.createNode({0.0f, 0.0f}, {100.0f, 100.0f});
     NodeHandle top = ui.createNode({10.0f, 20.0f}, {80.0f, 60.0f});
-    DataHandle bottomData = ui.layer<Layer>(layer).create();
-    DataHandle topData = ui.layer<Layer>(layer).create();
-    ui.attachData(bottom, bottomData);
-    ui.attachData(top, topData);
+    DataHandle bottomData = ui.layer<Layer>(layer).create(bottom);
+    DataHandle topData = ui.layer<Layer>(layer).create(top);
 
     /* Top left corner should go to the top node */
     {
@@ -3892,10 +3853,8 @@ void AbstractUserInterfaceTest::eventPointerPress() {
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
     /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data2 = ui.layer<Layer>(layer).create();
-    DataHandle data3 = ui.layer<Layer>(layer).create();
-    ui.attachData(node, data2);
-    ui.attachData(node, data3);
+    DataHandle data2 = ui.layer<Layer>(layer).create(node);
+    DataHandle data3 = ui.layer<Layer>(layer).create(node);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
     if(data.update) {
@@ -3970,10 +3929,8 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
     /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data2 = ui.layer<Layer>(layer).create();
-    DataHandle data3 = ui.layer<Layer>(layer).create();
-    ui.attachData(node, data2);
-    ui.attachData(node, data3);
+    DataHandle data2 = ui.layer<Layer>(layer).create(node);
+    DataHandle data3 = ui.layer<Layer>(layer).create(node);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
     if(data.update) {
@@ -4061,12 +4018,9 @@ void AbstractUserInterfaceTest::eventPointerMove() {
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData1 = ui.layer<Layer>(layer).create();
-    DataHandle leftData2 = ui.layer<Layer>(layer).create();
-    DataHandle rightData = ui.layer<Layer>(layer).create();
-    ui.attachData(left, leftData1);
-    ui.attachData(left, leftData2);
-    ui.attachData(right, rightData);
+    DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
+    DataHandle leftData2 = ui.layer<Layer>(layer).create(left);
+    DataHandle rightData = ui.layer<Layer>(layer).create(right);
 
     if(data.update) {
         ui.update();
@@ -4239,8 +4193,7 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
 
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     /*DataHandle nodeData1 =*/ ui.layer<Layer>(layer).create();
-    DataHandle nodeData2 = ui.layer<Layer>(layer).create();
-    ui.attachData(node, nodeData2);
+    /*DataHandle nodeData2 =*/ ui.layer<Layer>(layer).create(node);
 
     /* Press, move, release, move on the same node */
     {
@@ -4342,12 +4295,9 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
        00     -------- accepts always */
     NodeHandle node0 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle node1 = ui.createNode({10.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle data00 = ui.layer<Layer>(layer).create();
-    DataHandle data01 = ui.layer<Layer>(layer).create();
-    DataHandle data10 = ui.layer<Layer>(layer).create();
-    ui.attachData(node0, data00);
-    ui.attachData(node0, data01);
-    ui.attachData(node1, data10);
+    DataHandle data00 = ui.layer<Layer>(layer).create(node0);
+    DataHandle data01 = ui.layer<Layer>(layer).create(node0);
+    DataHandle data10 = ui.layer<Layer>(layer).create(node1);
 
     /* Move on node 1, but the second move doesn't get accepted and falls back
        to node 0, generating Leave and Enter events as appropriate */
@@ -4489,8 +4439,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
        through the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
-    DataHandle nestedData = ui.layer<Layer>(layer).create();
-    ui.attachData(nested, nestedData);
+    DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
         ui.update();
@@ -4573,8 +4522,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHidden() {
        through the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
-    DataHandle nestedData = ui.layer<Layer>(layer).create();
-    ui.attachData(nested, nestedData);
+    DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
         ui.update();
@@ -4663,8 +4611,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
        the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
-    DataHandle nestedData = ui.layer<Layer>(layer).create();
-    ui.attachData(nested, nestedData);
+    DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
         ui.update();
@@ -4749,8 +4696,7 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
 
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle nodeData = ui.layer<Layer>(layer).create();
-    ui.attachData(node, nodeData);
+    DataHandle nodeData = ui.layer<Layer>(layer).create(node);
 
     if(data.update) {
         ui.update();
@@ -4872,12 +4818,9 @@ void AbstractUserInterfaceTest::eventCapture() {
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData1 = ui.layer<Layer>(layer).create();
-    DataHandle leftData2 = ui.layer<Layer>(layer).create();
-    DataHandle rightData = ui.layer<Layer>(layer).create();
-    ui.attachData(left, leftData1);
-    ui.attachData(left, leftData2);
-    ui.attachData(right, rightData);
+    DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
+    DataHandle leftData2 = ui.layer<Layer>(layer).create(left);
+    DataHandle rightData = ui.layer<Layer>(layer).create(right);
 
     /* Nothing captured initially */
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
@@ -5218,8 +5161,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
     NodeHandle node = ui.createNode({20.0f, 10.0f}, {20.0f, 20.0f});
     /*DataHandle nodeData1 =*/ ui.layer<Layer>(layer).create();
-    DataHandle nodeData2 = ui.layer<Layer>(layer).create();
-    ui.attachData(node, nodeData2);
+    /*DataHandle nodeData2 =*/ ui.layer<Layer>(layer).create(node);
 
     /* Set the node as initially hovered */
     PointerMoveEvent eventMove0{{}, {}};
@@ -5556,14 +5498,11 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData1 = ui.layer<Layer>(layer).create();
-    DataHandle rightData1 = ui.layer<Layer>(layer).create();
-    DataHandle rightData2 = ui.layer<Layer>(layer).create();
-    ui.attachData(left, leftData1);
+    DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
     /* Attachment order doesn't matter, it'll always pick rightData2 first
        because it has higher ID */
-    ui.attachData(right, rightData1);
-    ui.attachData(right, rightData2);
+    DataHandle rightData1 = ui.layer<Layer>(layer).create(right);
+    DataHandle rightData2 = ui.layer<Layer>(layer).create(right);
 
     /* If the press event isn't accepted, no capture should happen, so the
        release happens on the actual node that is under */
@@ -5842,13 +5781,10 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
     /* Three data, using ID 1, 2 and 4 for easier masking */
     /*DataHandle data0 =*/ ui.layer<Layer>(layer).create();
-    DataHandle leftData1 = ui.layer<Layer>(layer).create();
-    DataHandle leftData2 = ui.layer<Layer>(layer).create();
+    DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
+    DataHandle leftData2 = ui.layer<Layer>(layer).create(left);
     /*DataHandle data3 =*/ ui.layer<Layer>(layer).create();
-    DataHandle rightData4 = ui.layer<Layer>(layer).create();
-    ui.attachData(left, leftData1);
-    ui.attachData(left, leftData2);
-    ui.attachData(right, rightData4);
+    DataHandle rightData4 = ui.layer<Layer>(layer).create(right);
 
     /* If capture is disabled on press, the release happens on the actual node
        that is under. The capture status is preserved across calls, so if
@@ -6342,13 +6278,10 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
     NodeHandle node2 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     /* Three data, using ID 1, 2 and 4 for easier masking */
     /*DataHandle data0 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data1 = ui.layer<Layer>(layer).create();
-    DataHandle data2 = ui.layer<Layer>(layer).create();
+    DataHandle data1 = ui.layer<Layer>(layer).create(node1);
+    DataHandle data2 = ui.layer<Layer>(layer).create(node2);
     /*DataHandle data3 =*/ ui.layer<Layer>(layer).create();
-    DataHandle data4 = ui.layer<Layer>(layer).create();
-    ui.attachData(node1, data1);
-    ui.attachData(node2, data2);
-    ui.attachData(node2, data4);
+    DataHandle data4 = ui.layer<Layer>(layer).create(node2);
 
     /* Setting capture in events that don't get accepted should do nothing to
        subsequent events and nothing to the end result also */
@@ -6490,8 +6423,7 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
        parent gets moved */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
-    DataHandle nestedData = ui.layer<Layer>(layer).create();
-    ui.attachData(nested, nestedData);
+    DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
         ui.update();
@@ -6575,10 +6507,8 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHidden() {
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle leftNested = ui.createNode(left, {}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData = ui.layer<Layer>(layer).create();
-    DataHandle rightData = ui.layer<Layer>(layer).create();
-    ui.attachData(leftNested, leftData);
-    ui.attachData(right, rightData);
+    DataHandle leftData = ui.layer<Layer>(layer).create(leftNested);
+    DataHandle rightData = ui.layer<Layer>(layer).create(right);
 
     if(data.update) {
         ui.update();
@@ -6666,14 +6596,13 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
 
-    /* Two nodes next to each other */
+    /* Two nodes next to each other, nested in order to verify that the removal
+       gets propagated through the hierarchy */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle leftNested = ui.createNode(left, {}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData = ui.layer<Layer>(layer).create();
-    DataHandle rightData = ui.layer<Layer>(layer).create();
-    ui.attachData(leftNested, leftData);
-    ui.attachData(right, rightData);
+    DataHandle leftData = ui.layer<Layer>(layer).create(leftNested);
+    DataHandle rightData = ui.layer<Layer>(layer).create(right);
 
     if(data.update) {
         ui.update();
@@ -6766,10 +6695,8 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
-    DataHandle leftData = ui.layer<Layer>(layer).create();
-    DataHandle rightData = ui.layer<Layer>(layer).create();
-    ui.attachData(left, leftData);
-    ui.attachData(right, rightData);
+    DataHandle leftData = ui.layer<Layer>(layer).create(left);
+    /*DataHandle rightData =*/ ui.layer<Layer>(layer).create(right);
 
     if(data.update) {
         ui.update();

@@ -373,7 +373,7 @@ void BaseLayerGLTest::render() {
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    ui.attachData(node, ui.layer<BaseLayerGL>(layer).create(1));
+    ui.layer<BaseLayerGL>(layer).create(1, node);
 
     ui.draw();
 
@@ -417,9 +417,8 @@ void BaseLayerGLTest::renderCustomColor() {
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     DataHandle nodeData = data.setLater ?
-        ui.layer<BaseLayerGL>(layer).create(0) :
-        ui.layer<BaseLayerGL>(layer).create(0, 0x336699_rgbf);
-    ui.attachData(node, nodeData);
+        ui.layer<BaseLayerGL>(layer).create(0, node) :
+        ui.layer<BaseLayerGL>(layer).create(0, 0x336699_rgbf, node);
 
     if(data.partialUpdate) {
         ui.update();
@@ -479,10 +478,9 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     DataHandle nodeData;
     if(data.setLater)
-        nodeData = ui.layer<BaseLayerGL>(layer).create(0);
+        nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
     else
-        nodeData = ui.layer<BaseLayerGL>(layer).create(0, 0xffffff_rgbf, {-8.0f, 6.0f, 4.0f, 8.0f});
-    ui.attachData(node, nodeData);
+        nodeData = ui.layer<BaseLayerGL>(layer).create(0, 0xffffff_rgbf, {-8.0f, 6.0f, 4.0f, 8.0f}, node);
 
     if(data.partialUpdate) {
         ui.update();
@@ -538,8 +536,7 @@ void BaseLayerGLTest::renderChangeStyle() {
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0);
-    ui.attachData(node, nodeData);
+    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
 
     if(data.partialUpdate) {
         ui.update();
@@ -627,17 +624,17 @@ void BaseLayerGLTest::drawOrder() {
     NodeHandle childAboveRed = ui.createNode(childBelowBlue, {-8.0f, 8.0f}, {16.0f, 16.0f});
 
     if(data.dataInNodeOrder) {
-        ui.attachData(topLevelBelowRed, ui.layer<BaseLayerGL>(layer).create(0));
-        ui.attachData(topLevelOnTopGreen, ui.layer<BaseLayerGL>(layer).create(1));
-        ui.attachData(topLevelHiddenBlue, ui.layer<BaseLayerGL>(layer).create(2));
-        ui.attachData(childBelowBlue, ui.layer<BaseLayerGL>(layer).create(2));
-        ui.attachData(childAboveRed, ui.layer<BaseLayerGL>(layer).create(0));
+        ui.layer<BaseLayerGL>(layer).create(0, topLevelBelowRed);
+        ui.layer<BaseLayerGL>(layer).create(1, topLevelOnTopGreen);
+        ui.layer<BaseLayerGL>(layer).create(2, topLevelHiddenBlue);
+        ui.layer<BaseLayerGL>(layer).create(2, childBelowBlue);
+        ui.layer<BaseLayerGL>(layer).create(0, childAboveRed);
     } else {
-        ui.attachData(topLevelOnTopGreen, ui.layer<BaseLayerGL>(layer).create(1));
-        ui.attachData(topLevelHiddenBlue, ui.layer<BaseLayerGL>(layer).create(2));
-        ui.attachData(topLevelBelowRed, ui.layer<BaseLayerGL>(layer).create(0));
-        ui.attachData(childAboveRed, ui.layer<BaseLayerGL>(layer).create(0));
-        ui.attachData(childBelowBlue, ui.layer<BaseLayerGL>(layer).create(2));
+        ui.layer<BaseLayerGL>(layer).create(1, topLevelOnTopGreen);
+        ui.layer<BaseLayerGL>(layer).create(2, topLevelHiddenBlue);
+        ui.layer<BaseLayerGL>(layer).create(0, topLevelBelowRed);
+        ui.layer<BaseLayerGL>(layer).create(0, childAboveRed);
+        ui.layer<BaseLayerGL>(layer).create(2, childBelowBlue);
     }
 
     ui.draw();
@@ -688,8 +685,7 @@ void BaseLayerGLTest::eventStyleTransition() {
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0);
-    ui.attachData(node, nodeData);
+    ui.layer<BaseLayerGL>(layer).create(0, node);
 
     ui.draw();
 
