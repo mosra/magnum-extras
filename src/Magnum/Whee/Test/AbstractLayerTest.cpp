@@ -1356,20 +1356,25 @@ void AbstractLayerTest::pointerEvent() {
             CORRADE_COMPARE(event.type(), Pointer::MouseRight);
             called *= 3;
         }
-        void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+        void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 3);
-            CORRADE_COMPARE(event.type(), Pointer::Finger);
+            CORRADE_COMPARE(event.type(), Pointer::Pen);
             called *= 5;
         }
-        void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+        void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 4);
             CORRADE_COMPARE(event.type(), Pointer::Finger);
             called *= 7;
         }
-        void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+        void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 5);
             CORRADE_COMPARE(event.type(), Pointer::Finger);
             called *= 11;
+        }
+        void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            CORRADE_COMPARE(dataId, 6);
+            CORRADE_COMPARE(event.type(), Pointer::Finger);
+            called *= 13;
         }
 
         int called = 1;
@@ -1384,6 +1389,7 @@ void AbstractLayerTest::pointerEvent() {
     layer.create();
     layer.create();
     layer.create();
+    layer.create();
     {
         PointerEvent event{Pointer::MouseLeft};
         layer.pointerPressEvent(1, event);
@@ -1391,16 +1397,19 @@ void AbstractLayerTest::pointerEvent() {
         PointerEvent event{Pointer::MouseRight};
         layer.pointerReleaseEvent(2, event);
     } {
-        PointerMoveEvent event{Pointer::Finger, {}};
-        layer.pointerMoveEvent(3, event);
+        PointerEvent event{Pointer::Pen};
+        layer.pointerTapOrClickEvent(3, event);
     } {
         PointerMoveEvent event{Pointer::Finger, {}};
-        layer.pointerEnterEvent(4, event);
+        layer.pointerMoveEvent(4, event);
     } {
         PointerMoveEvent event{Pointer::Finger, {}};
-        layer.pointerLeaveEvent(5, event);
+        layer.pointerEnterEvent(5, event);
+    } {
+        PointerMoveEvent event{Pointer::Finger, {}};
+        layer.pointerLeaveEvent(6, event);
     }
-    CORRADE_COMPARE(layer.called, 2*3*5*7*11);
+    CORRADE_COMPARE(layer.called, 2*3*5*7*11*13);
 }
 
 void AbstractLayerTest::pointerEventNotSupported() {
@@ -1418,12 +1427,14 @@ void AbstractLayerTest::pointerEventNotSupported() {
     PointerMoveEvent moveEvent{{}, {}};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
+    layer.pointerTapOrClickEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): feature not supported\n"
+        "Whee::AbstractLayer::pointerTapOrClickEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerMoveEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerEnterEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerLeaveEvent(): feature not supported\n");
@@ -1444,6 +1455,7 @@ void AbstractLayerTest::pointerEventNotImplemented() {
     PointerMoveEvent moveEvent{{}, {}};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
+    layer.pointerTapOrClickEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
@@ -1472,12 +1484,14 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     PointerMoveEvent moveEvent{{}, {}};
     layer.pointerPressEvent(2, event);
     layer.pointerReleaseEvent(2, event);
+    layer.pointerTapOrClickEvent(2, event);
     layer.pointerMoveEvent(2, moveEvent);
     layer.pointerEnterEvent(2, moveEvent);
     layer.pointerLeaveEvent(2, moveEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n"
+        "Whee::AbstractLayer::pointerTapOrClickEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerEnterEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerLeaveEvent(): index 2 out of range for 2 data\n");
@@ -1504,12 +1518,14 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
     moveEvent.setAccepted();
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
+    layer.pointerTapOrClickEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): event already accepted\n"
+        "Whee::AbstractLayer::pointerTapOrClickEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerMoveEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerEnterEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerLeaveEvent(): event already accepted\n");
