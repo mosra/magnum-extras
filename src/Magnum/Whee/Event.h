@@ -85,7 +85,8 @@ CORRADE_ENUMSET_OPERATORS(Pointers)
 @see @ref AbstractUserInterface::pointerPressEvent(),
     @ref AbstractUserInterface::pointerReleaseEvent(),
     @ref AbstractLayer::pointerPressEvent(),
-    @ref AbstractLayer::pointerReleaseEvent()
+    @ref AbstractLayer::pointerReleaseEvent(),
+    @ref AbstractLayer::pointerTapOrClickEvent()
 */
 class PointerEvent {
     public:
@@ -130,7 +131,7 @@ class PointerEvent {
          * or a release alone.
          *
          * Calling this function only makes sense on a pointer press event, it
-         * has no effect on a pointer release event.
+         * has no effect on a pointer release event or a tap or click event.
          */
         void setCaptured(bool captured) {
             _captured = captured;
