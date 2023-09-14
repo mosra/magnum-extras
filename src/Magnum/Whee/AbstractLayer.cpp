@@ -452,6 +452,21 @@ void AbstractLayer::pointerReleaseEvent(const UnsignedInt dataId, PointerEvent& 
 
 void AbstractLayer::doPointerReleaseEvent(UnsignedInt, PointerEvent&) {}
 
+void AbstractLayer::pointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::pointerTapOrClickEvent(): feature not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
+    #endif
+    CORRADE_ASSERT(dataId < state.data.size(),
+        "Whee::AbstractLayer::pointerTapOrClickEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::pointerTapOrClickEvent(): event already accepted", );
+    return doPointerTapOrClickEvent(dataId, event);
+}
+
+void AbstractLayer::doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) {}
+
 void AbstractLayer::pointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
     CORRADE_ASSERT(features() & LayerFeature::Event,
         "Whee::AbstractLayer::pointerMoveEvent(): feature not supported", );

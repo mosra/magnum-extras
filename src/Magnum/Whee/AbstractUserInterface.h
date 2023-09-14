@@ -973,7 +973,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Culls invisible nodes, calculates clip rectangles
          * -    Orders data attachments in each layer by draw order
          * -    Calls @ref AbstractLayer::update() with the ordered data
-         * -    Resets @ref pointerEventCapturedNode() or
+         * -    Resets @ref pointerEventPressedNode(),
+         *      @ref pointerEventCapturedNode() or
          *      @ref pointerEventHoveredNode() if the nodes no longer exist or
          *      are not visible
          *
@@ -1012,18 +1013,21 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * handling node at given position and thus the event should be
          * propagated further.
          *
-         * The node that accepted the event implicitly captures all further
-         * pointer events until and including a @ref pointerReleaseEvent() even
-         * if they happen outside of its area, unless
-         * @ref PointerEvent::setCaptured() is called by the implementation to
-         * disable this behavior. The capture can be also removed from a later
-         * @ref pointerMoveEvent(). Any node that was already captured when
-         * calling this function is ignored.
+         * The node that accepted the event is remembered and is subsequently
+         * used by @ref pointerReleaseEvent() to emit a
+         * @ref AbstractLayer::pointerTapOrClickEvent(), if the release happens
+         * on it as well. The node that accepted the event also implicitly
+         * captures all further pointer events until and including a
+         * @ref pointerReleaseEvent() even if they happen outside of its area,
+         * unless @ref PointerEvent::setCaptured() is called by the
+         * implementation to disable this behavior. The capture can be also
+         * removed from a later @ref pointerMoveEvent(). Any node that was
+         * already captured when calling this function is ignored.
          *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(),
-         *      @ref pointerEventCapturedNode()
+         *      @ref pointerEventPressedNode(), @ref pointerEventCapturedNode()
          */
         bool pointerPressEvent(const Vector2& globalPosition, PointerEvent& event);
 
@@ -1060,10 +1064,16 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * wasn't or there wasn't any visible event handling node at given
          * position and thus the event should be propagated further.
          *
+         * If the node that accepted the event is the same as the node on which
+         * a previous @ref pointerPressEvent() happened and the pointer was
+         * either captured or didn't leave the node area since, calls also
+         * @ref AbstractLayer::pointerTapOrClickEvent() on all data attached to
+         * it.
+         *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(),
-         *      @ref pointerEventCapturedNode()
+         *      @ref pointerEventPressedNode(), @ref pointerEventCapturedNode()
          */
         bool pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event);
 
@@ -1138,6 +1148,28 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      @ref pointerEventHoveredNode()
          */
         bool pointerMoveEvent(const Vector2& globalPosition, PointerMoveEvent& event);
+
+        /**
+         * @brief Node pressed by last pointer event
+         *
+         * Returns handle of a node that was under the pointer for the last
+         * @ref pointerPressEvent(), the pointer wasn't released since and the
+         * pointer is either captured on that node or didn't leave its area
+         * since. If a @ref pointerReleaseEvent() then happens on the node
+         * area, all data attached to it will receive a
+         * @ref AbstractLayer::pointerTapOrClickEvent().
+         *
+         * If no pointer press event was called yet, if the event wasn't
+         * accepted by any data, if @ref pointerReleaseEvent() was called since
+         * or the pointer was uncaptured and left the node area, returns
+         * @ref NodeHandle::Null. It also becomes @ref NodeHandle::Null if the
+         * node or any of its parents were removed or hidden and @ref update()
+         * was called since.
+         *
+         * The returned handle may be invalid if the node or any of its parents
+         * were removed and @ref clean() wasn't called since.
+         */
+        NodeHandle pointerEventPressedNode() const;
 
         /**
          * @brief Node captured by last pointer event
