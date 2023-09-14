@@ -1095,6 +1095,28 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         bool pointerMoveEvent(const Vector2& globalPosition, PointerMoveEvent& event);
 
         /**
+         * @brief Node pressed by last pointer event
+         *
+         * Returns handle of a node that was under the pointer for the last
+         * @ref pointerPressEvent(), the pointer wasn't released since and the
+         * pointer is either captured on that node or didn't leave its area
+         * since. If a @ref pointerReleaseEvent() then happens on the node
+         * area, all data attached to it will receive a
+         * @ref AbstractLayer::pointerTapOrClickEvent().
+         *
+         * If no pointer press event was called yet, if the event wasn't
+         * accepted by any data, if @ref pointerReleaseEvent() was called since
+         * or the pointer was uncaptured and left the node area, returns
+         * @ref NodeHandle::Null. It also becomes @ref NodeHandle::Null if the
+         * node or any of its parents were removed or hidden and @ref update()
+         * was called since.
+         *
+         * The returned handle may be invalid if the node or any of its parents
+         * were removed and @ref clean() wasn't called since.
+         */
+        NodeHandle pointerEventPressedNode() const;
+
+        /**
          * @brief Node captured by last pointer event
          *
          * Returns handle of a node that captured the last
