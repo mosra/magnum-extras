@@ -4,50 +4,78 @@ environment:
   matrix:
   - TARGET: desktop
     COMPILER: msvc
+    PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     APPVEYOR_JOB_NAME: windows-msvc2015
+    CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: msvc
+    PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     APPVEYOR_JOB_NAME: windows-msvc2017
+    CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: msvc
+    PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     APPVEYOR_JOB_NAME: windows-msvc2019
+    CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: msvc
+    PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     APPVEYOR_JOB_NAME: windows-msvc2022
+    CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: msvc
+    PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     APPVEYOR_JOB_NAME: windows-static-msvc2019
+    CONFIGURATION: Debug
     BUILD_STATIC: ON
   - TARGET: desktop
     COMPILER: msvc
+    PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     APPVEYOR_JOB_NAME: windows-static-msvc2022
+    CONFIGURATION: Debug
     BUILD_STATIC: ON
   - TARGET: desktop
     COMPILER: msvc-clang
+    PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     APPVEYOR_JOB_NAME: windows-msvc2019-clang
+    CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: msvc-clang
+    PLATFORM: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     APPVEYOR_JOB_NAME: windows-msvc2022-clang
+    CONFIGURATION: Debug
+  # Build the 32bit as Release, so we catch things that are not a problem
+  # either with 64bit or Debug.
   - TARGET: desktop
     COMPILER: msvc
+    PLATFORM:
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    APPVEYOR_JOB_NAME: windows-32b-msvc2015
+    CONFIGURATION: Release
+  - TARGET: desktop
+    COMPILER: msvc
+    PLATFORM: x64
     # Same reasoning as in Corrade for /EHsc
     COMPILER_EXTRA: -DCMAKE_CXX_FLAGS="/permissive- /EHsc" -DMSVC_COMPATIBILITY=OFF
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     APPVEYOR_JOB_NAME: windows-conforming-msvc2019
+    CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: msvc
+    PLATFORM: x64
     # Not playing with fire and using /EHsc on 2022 as well
     COMPILER_EXTRA: -DCMAKE_CXX_FLAGS="/permissive- /EHsc" -DMSVC_COMPATIBILITY=OFF
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     APPVEYOR_JOB_NAME: windows-conforming-msvc2022
+    CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: mingw
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
