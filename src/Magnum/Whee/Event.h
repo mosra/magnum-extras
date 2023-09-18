@@ -204,6 +204,14 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
         explicit PointerMoveEvent(Containers::Optional<Pointer> type, Pointers types);
 
         /**
+         * @brief Constructor
+         *
+         * Meant to be used for testing purposes. The @p relativePosition gets
+         * overwritten in @ref AbstractUserInterface event handler internals.
+         */
+        explicit PointerMoveEvent(Containers::Optional<Pointer> type, Pointers types, const Vector2& relativePosition);
+
+        /**
          * @brief Pointer type that changed in this event
          *
          * If no pointer changed in this event (i.e., all pointers that were
