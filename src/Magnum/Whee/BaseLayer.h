@@ -735,20 +735,23 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared {
 #ifndef DOXYGEN_GENERATING_OUTPUT
 template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> BaseLayer::Shared& BaseLayer::Shared::setStyleTransition() {
     /* No matter what simplification I do, GCC warns about "implicit conversion
-       to bool", so it's this obvious ugly == here. The + for the lambdas needs
-       to be there to turn them into function pointers, otherwise the ?: is
-       confused. UGH C++. */
+       to bool", so it's this obvious ugly == here. There could be either + for
+       the lambdas to turn them into function pointers to avoid ?: getting
+       confused, but that doesn't work on MSVC 2015 so instead it's the nullptr
+       being cast. */
+    /** @todo revert back to the + once CORRADE_MSVC2015_COMPATIBILITY is
+        dropped */
     return setStyleTransition(
-        toPressedBlur == nullptr ? nullptr : +[](UnsignedInt index) {
+        toPressedBlur == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toPressedBlur(StyleIndex(index)));
         },
-        toPressedHover == nullptr ? nullptr : +[](UnsignedInt index) {
+        toPressedHover == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toPressedHover(StyleIndex(index)));
         },
-        toInactiveBlur == nullptr ? nullptr : +[](UnsignedInt index) {
+        toInactiveBlur == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toInactiveBlur(StyleIndex(index)));
         },
-        toInactiveHover == nullptr ? nullptr : +[](UnsignedInt index) {
+        toInactiveHover == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toInactiveHover(StyleIndex(index)));
         });
 }
