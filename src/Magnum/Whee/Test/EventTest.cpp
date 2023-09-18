@@ -40,7 +40,9 @@ struct EventTest: TestSuite::Tester {
 
     void pointer();
     void pointerMove();
+    void pointerMoveRelativePosition();
     void pointerMoveNoPointer();
+    void pointerMoveNoPointerRelativePosition();
 };
 
 EventTest::EventTest() {
@@ -49,7 +51,9 @@ EventTest::EventTest() {
 
               &EventTest::pointer,
               &EventTest::pointerMove,
-              &EventTest::pointerMoveNoPointer});
+              &EventTest::pointerMoveRelativePosition,
+              &EventTest::pointerMoveNoPointer,
+              &EventTest::pointerMoveNoPointerRelativePosition});
 }
 
 void EventTest::debugPointer() {
@@ -102,11 +106,32 @@ void EventTest::pointerMove() {
     CORRADE_VERIFY(!event.isAccepted());
 }
 
+void EventTest::pointerMoveRelativePosition() {
+    PointerMoveEvent event{Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger, {3.0f, -6.5f}};
+    CORRADE_COMPARE(event.type(), Pointer::MouseRight);
+    CORRADE_COMPARE(event.types(), Pointer::MouseLeft|Pointer::Finger);
+    CORRADE_COMPARE(event.position(), Vector2{});
+    CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
+    CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isAccepted());
+}
+
 void EventTest::pointerMoveNoPointer() {
     PointerMoveEvent event{{}, Pointer::MouseLeft|Pointer::Finger};
     CORRADE_COMPARE(event.type(), Containers::NullOpt);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
+    CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isAccepted());
+}
+
+void EventTest::pointerMoveNoPointerRelativePosition() {
+    PointerMoveEvent event{{}, Pointer::MouseLeft|Pointer::Finger, {3.0f, -6.5f}};
+    CORRADE_COMPARE(event.type(), Containers::NullOpt);
+    CORRADE_COMPARE(event.position(), Vector2{});
+    CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
     CORRADE_VERIFY(!event.isAccepted());
