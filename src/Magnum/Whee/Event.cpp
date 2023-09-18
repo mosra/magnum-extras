@@ -63,6 +63,8 @@ Debug& operator<<(Debug& debug, const Pointers value) {
 
 PointerMoveEvent::PointerMoveEvent(const Containers::Optional<Pointer> type, const Pointers types): _type{type ? *type : Pointer{}}, _types{types} {}
 
+PointerMoveEvent::PointerMoveEvent(const Containers::Optional<Pointer> type, const Pointers types, const Vector2& relativePosition): _relativePosition{relativePosition}, _type{type ? *type : Pointer{}}, _types{types} {}
+
 Containers::Optional<Pointer> PointerMoveEvent::type() const {
     return _type == Pointer{} ? Containers::NullOpt : Containers::optional(_type);
 }
