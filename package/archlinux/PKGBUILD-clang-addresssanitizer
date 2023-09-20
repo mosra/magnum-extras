@@ -1,0 +1,42 @@
+# Author: mosra <mosra@centrum.cz>
+pkgname=magnum-extras
+pkgver=dev.clang.addresssanitizer
+pkgrel=1
+pkgdesc="Extras for the Magnum C++11/C++14 graphics engine (clang-addresssanitizer build)"
+arch=('i686' 'x86_64')
+url="https://magnum.graphics"
+license=('MIT')
+depends=('magnum')
+makedepends=('cmake' 'ninja' 'clang')
+options=(!strip)
+provides=('magnum-extras-git')
+
+_rootdir=$startdir/../../
+
+build() {
+    mkdir -p "$_rootdir/build-clang-addresssanitizer"
+    cd "$_rootdir/build-clang-addresssanitizer"
+
+    cmake .. \
+        -DCMAKE_CXX_COMPILER=clang++ \
+        -DCMAKE_CXX_FLAGS="-fsanitize=address" \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DMAGNUM_BUILD_TESTS=ON \
+        -DMAGNUM_BUILD_GL_TESTS=ON \
+        -DMAGNUM_WITH_PLAYER=ON \
+        -DMAGNUM_WITH_UI=ON \
+        -DMAGNUM_WITH_UI_GALLERY=ON \
+        -G Ninja
+    ninja
+}
+
+check() {
+    cd "$_rootdir/build-clang-addresssanitizer"
+    ASAN_OPTIONS="color=always" LSAN_OPTIONS="color=always" CORRADE_TEST_COLOR=ON ctest --output-on-failure
+}
+
+package() {
+    cd "$_rootdir/build-clang-addresssanitizer"
+    DESTDIR="$pkgdir/" ninja install
+}
