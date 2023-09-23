@@ -30,6 +30,8 @@
  */
 
 #include <string> /** @todo clean this up */
+#include <Corrade/Containers/ArrayView.h>
+#include <Corrade/Containers/StringView.h>
 #include <Corrade/Interconnect/Emitter.h>
 #include <Corrade/Utility/Unicode.h>
 #include <Magnum/Text/Text.h>
@@ -159,22 +161,21 @@ class MAGNUM_UI_EXPORT Input: public Widget, public Interconnect::Emitter {
 template<class KeyEvent> bool Input::handleKeyPress(KeyEvent& event) {
     /* Cursor left */
     if(event.key() == KeyEvent::Key::Left && _cursor > 0) {
-        std::tie(std::ignore, _cursor) = Utility::Unicode::prevChar(_value, _cursor);
+        _cursor = Utility::Unicode::prevChar(_value, _cursor).second();
 
     /* Backspace */
     } else if(event.key() == KeyEvent::Key::Backspace && _cursor > 0) {
         const std::size_t prevCursor = _cursor;
-        std::tie(std::ignore, _cursor) = Utility::Unicode::prevChar(_value, _cursor);
+        _cursor = Utility::Unicode::prevChar(_value, _cursor).second();
         _value.erase(_cursor, prevCursor - _cursor);
 
     /* Cursor right */
     } else if(event.key() == KeyEvent::Key::Right && _cursor < _value.size()) {
-        std::tie(std::ignore, _cursor) = Utility::Unicode::nextChar(_value, _cursor);
+        _cursor = Utility::Unicode::nextChar(_value, _cursor).second();
 
     /* Delete */
     } else if(event.key() == KeyEvent::Key::Delete && _cursor < _value.size()) {
-        std::size_t nextCursor;
-        std::tie(std::ignore, nextCursor) = Utility::Unicode::nextChar(_value, _cursor);
+        const std::size_t nextCursor = Utility::Unicode::nextChar(_value, _cursor).second();
         _value.erase(_cursor, nextCursor - _cursor);
 
     /* Everything else didn't contribute to the state */
