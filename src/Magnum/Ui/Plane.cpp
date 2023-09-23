@@ -25,6 +25,7 @@
 
 #include "Plane.h"
 
+#include <Magnum/Text/GlyphCache.h>
 #include <Magnum/Text/Renderer.h>
 #include <Magnum/Text/GlyphCache.h>
 
