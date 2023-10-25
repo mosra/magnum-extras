@@ -26,6 +26,7 @@
 #include <Magnum/GL/Renderer.h>
 
 #include "Magnum/Whee/BaseLayerGL.h"
+#include "Magnum/Whee/TextLayerGL.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
@@ -47,6 +48,15 @@ GL::Renderer::setBlendFunction(
 }
 
 {
+/* [TextLayerGL-renderer] */
+GL::Renderer::enable(GL::Renderer::Feature::Blending);
+GL::Renderer::setBlendFunction(
+    GL::Renderer::BlendFunction::One,
+    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+/* [TextLayerGL-renderer] */
+}
+
+{
 /* [BaseLayerGL-setStyle] */
 struct {
     Whee::BaseLayerStyleCommon common;
@@ -59,5 +69,20 @@ DOXYGEN_ELLIPSIS()
 Whee::BaseLayerGL::Shared baseLayer{3};
 baseLayer.setStyle(style);
 /* [BaseLayerGL-setStyle] */
+}
+
+{
+/* [TextLayerGL-setStyle] */
+struct {
+    Whee::TextLayerStyleCommon common;
+    Whee::TextLayerStyleItem body;
+    Whee::TextLayerStyleItem tooltip;
+    Whee::TextLayerStyleItem button;
+} style;
+DOXYGEN_ELLIPSIS()
+
+Whee::TextLayerGL::Shared textLayer{3};
+textLayer.setStyle(style);
+/* [TextLayerGL-setStyle] */
 }
 }

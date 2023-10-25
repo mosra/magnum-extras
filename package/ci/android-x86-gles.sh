@@ -83,6 +83,7 @@ cmake .. \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DMAGNUM_WITH_STBIMAGEIMPORTER=$TARGET_GLES3 \
+    -DMAGNUM_WITH_STBTRUETYPEFONT=$TARGET_GLES3 \
     -G Ninja
 ninja install
 cd ../..
