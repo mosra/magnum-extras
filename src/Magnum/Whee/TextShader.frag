@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,48 +23,33 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for the @ref Magnum::Whee namespace
- */
+struct StyleEntry {
+    lowp vec4 color;
+};
 
-#include "Magnum/Magnum.h"
+layout(std140
+    #ifdef EXPLICIT_BINDING
+    , binding = 0
+    #endif
+) uniform Style {
+    /* Reserved so users set up the style data from a placeholder
+       TextLayerStyleCommon and TextLayerStyleItem[] instead of just items
+       alone, which would make future code adapting rather error-prone */
+    lowp vec4 reserved;
+    StyleEntry styles[STYLE_COUNT];
+};
 
-namespace Magnum { namespace Whee {
-
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
-
-class AbstractLayer;
-class AbstractUserInterface;
-
-class BaseLayer;
-struct BaseLayerStyleCommon;
-struct BaseLayerStyleItem;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
+#ifdef EXPLICIT_BINDING
+layout(binding = 0)
 #endif
+uniform lowp sampler2D glyphTextureData;
 
-class EventConnection;
-class EventLayer;
+in mediump vec3 interpolatedTextureCoordinates;
+in lowp vec4 interpolatedColor;
+flat in mediump uint interpolatedStyle;
 
-enum class FontHandle: UnsignedShort;
-class TextLayer;
-struct TextLayerStyleCommon;
-struct TextLayerStyleItem;
-#ifdef MAGNUM_TARGET_GL
-class TextLayerGL;
-#endif
-class TextProperties;
+out lowp vec4 fragmentColor;
 
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
-
-}}
-
-#endif
+void main() {
+    fragmentColor = styles[interpolatedStyle].color*interpolatedColor*texture(glyphTextureData, interpolatedTextureCoordinates.xy).r;
+}

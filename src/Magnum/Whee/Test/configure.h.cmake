@@ -24,3 +24,4 @@
 */
 
 #define WHEE_TEST_DIR "${WHEE_TEST_DIR}"
+#define UI_DIR "${UI_DIR}"

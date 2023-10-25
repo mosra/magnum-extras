@@ -27,7 +27,7 @@
 # property that would have to be set on each target separately.
 set(CMAKE_FOLDER "Magnum/Whee")
 
-find_package(Magnum REQUIRED)
+find_package(Magnum REQUIRED Text)
 if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED GL)
 endif()
@@ -48,7 +48,9 @@ set(MagnumWhee_GracefulAssert_SRCS
     AbstractUserInterface.cpp
     AbstractVisualLayer.cpp
     BaseLayer.cpp
-    EventLayer.cpp)
+    EventLayer.cpp
+    TextLayer.cpp
+    TextProperties.cpp)
 
 set(MagnumWhee_HEADERS
     AbstractLayer.h
@@ -58,22 +60,27 @@ set(MagnumWhee_HEADERS
     Event.h
     EventLayer.h
     Handle.h
+    TextLayer.h
+    TextProperties.h
     Whee.h
     visibility.h)
 
 set(MagnumWhee_PRIVATE_HEADERS
     Implementation/abstractUserInterface.h
     Implementation/abstractVisualLayerState.h
-    Implementation/baseLayerState.h)
+    Implementation/baseLayerState.h
+    Implementation/textLayerState.h)
 
 if(MAGNUM_TARGET_GL)
     corrade_add_resource(MagnumWhee_RESOURCES resources.conf)
     list(APPEND MagnumWhee_SRCS
         ${MagnumWhee_RESOURCES})
     list(APPEND MagnumWhee_GracefulAssert_SRCS
-        BaseLayerGL.cpp)
+        BaseLayerGL.cpp
+        TextLayerGL.cpp)
     list(APPEND MagnumWhee_HEADERS
-        BaseLayerGL.h)
+        BaseLayerGL.h
+        TextLayerGL.h)
 endif()
 
 # Objects shared between main and test library
@@ -107,7 +114,8 @@ elseif(MAGNUM_BUILD_STATIC_PIC)
     set_target_properties(MagnumWhee PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 target_link_libraries(MagnumWhee PUBLIC
-    Magnum::Magnum)
+    Magnum::Magnum
+    Magnum::Text)
 if(MAGNUM_TARGET_GL)
     target_link_libraries(MagnumWhee PUBLIC Magnum::GL)
 endif()
@@ -137,7 +145,8 @@ if(MAGNUM_BUILD_TESTS)
         set_target_properties(MagnumWheeTestLib PROPERTIES POSITION_INDEPENDENT_CODE ON)
     endif()
     target_link_libraries(MagnumWheeTestLib PUBLIC
-        Magnum::Magnum)
+        Magnum::Magnum
+        Magnum::Text)
     if(MAGNUM_TARGET_GL)
         target_link_libraries(MagnumWheeTestLib PUBLIC Magnum::GL)
     endif()

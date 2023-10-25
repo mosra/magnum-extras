@@ -39,7 +39,7 @@ namespace Magnum { namespace Whee {
 @m_since_latest
 
 Provides style management and style changing depending on input events for
-builtin visual layers like @ref BaseLayer.
+builtin visual layers like @ref BaseLayer or @ref TextLayer.
 */
 class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
     public:
@@ -215,7 +215,9 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * @brief Style count
          *
          * @see @ref BaseLayerGL::Shared::Shared(UnsignedInt),
-         *      @ref BaseLayerGL::Shared::setStyle()
+         *      @ref TextLayerGL::Shared::Shared(UnsignedInt),
+         *      @ref BaseLayerGL::Shared::setStyle(),
+         *      @ref TextLayerGL::Shared::setStyle()
          */
         UnsignedInt styleCount() const;
 
