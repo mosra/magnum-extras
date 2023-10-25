@@ -34,6 +34,8 @@ corrade_add_test(WheeBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumWheeTestLib
 corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventLayerTest EventLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
+corrade_add_test(WheeTextLayerTest TextLayerTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeTextPropertiesTest TextPropertiesTest.cpp LIBRARIES MagnumWheeTestLib)
 if(CORRADE_TARGET_EMSCRIPTEN)
     if(CMAKE_VERSION VERSION_LESS 3.13)
         message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
@@ -67,12 +69,14 @@ endif()
 
 set_property(TARGET
     WheeHandleTest
+    WheeTextLayerTest
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
 
 if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED DebugTools)
 
     corrade_add_test(WheeBaseLayerGL_Test BaseLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
+    corrade_add_test(WheeTextLayerGL_Test TextLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
 
     if(NOT CORRADE_TARGET_ANDROID)
         find_package(Magnum REQUIRED Shaders)
@@ -109,13 +113,15 @@ if(MAGNUM_BUILD_GL_TESTS)
     find_package(Magnum REQUIRED OpenGLTester)
     if(MAGNUM_BUILD_STATIC)
         find_package(Magnum COMPONENTS AnyImageImporter)
-        find_package(MagnumPlugins COMPONENTS StbImageImporter)
+        find_package(MagnumPlugins COMPONENTS StbImageImporter StbTrueTypeFont)
     endif()
 
     if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
         set(WHEE_TEST_DIR .)
+        set(UI_DIR .)
     else()
         set(WHEE_TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+        set(UI_DIR ${PROJECT_SOURCE_DIR}/src/Magnum/Ui)
     endif()
 
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
@@ -146,6 +152,29 @@ if(MAGNUM_BUILD_GL_TESTS)
         endif()
         if(MagnumPlugins_StbImageImporter_FOUND)
             target_link_libraries(WheeBaseLayerGLTest PRIVATE MagnumPlugins::StbImageImporter)
+        endif()
+    endif()
+
+    corrade_add_test(WheeTextLayerGLTest TextLayerGLTest.cpp
+        LIBRARIES
+            MagnumWheeTestLib
+            Magnum::DebugTools
+            Magnum::OpenGLTester
+        FILES
+            ../../Ui/SourceSansPro-Regular.ttf
+            TextLayerTestFiles/colored.png
+            TextLayerTestFiles/default.png
+            TextLayerTestFiles/draw-order.png)
+    target_include_directories(WheeTextLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    if(MAGNUM_BUILD_STATIC)
+        if(Magnum_AnyImageImporter_FOUND)
+            target_link_libraries(WheeTextLayerGLTest PRIVATE Magnum::AnyImageImporter)
+        endif()
+        if(MagnumPlugins_StbImageImporter_FOUND)
+            target_link_libraries(WheeTextLayerGLTest PRIVATE MagnumPlugins::StbImageImporter)
+        endif()
+        if(MagnumPlugins_StbTrueTypeFont_FOUND)
+            target_link_libraries(WheeTextLayerGLTest PRIVATE MagnumPlugins::StbTrueTypeFont)
         endif()
     endif()
 endif()
