@@ -195,7 +195,7 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState): BaseLay
 }
 
 LayerFeatures BaseLayerGL::doFeatures() const {
-    return LayerFeature::Draw;
+    return BaseLayer::doFeatures()|LayerFeature::Draw;
 }
 
 void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i&) {
