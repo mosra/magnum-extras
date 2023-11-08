@@ -2051,6 +2051,12 @@ void AbstractUserInterfaceTest::state() {
     NodeHandle another = ui.createNode({5.0f, 0.0f}, {1.0f, 2.0f});
     NodeHandle nested1 = ui.createNode(node, {1.0f, 3.0f}, {1.0f, 2.0f});
     NodeHandle nested2 = ui.createNode(node, {2.0f, 2.0f}, {1.0f, 2.0f});
+    /* This node isn't visible so it won't appear anywhere */
+    /*NodeHandle invisible =*/ ui.createNode({10.0f, 20.0f}, {30.0f, 40.0f}, NodeFlag::Hidden);
+    /* This node is not part of the top-level order so it won't appear anywhere
+       either */
+    NodeHandle notInOrder = ui.createNode({30.0f, 40.0f}, {10.0f, 20.0f});
+    ui.clearNodeOrder(notInOrder);
 
     /* Creating nodes sets a state flag */
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -2211,6 +2217,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
@@ -2261,6 +2269,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
@@ -2320,6 +2330,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -2378,6 +2390,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -2422,7 +2436,9 @@ void AbstractUserInterfaceTest::state() {
             {},
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {},
-            {}
+            {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}  /* another, unclipped */
@@ -2474,6 +2490,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -2533,6 +2551,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{5.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
@@ -2586,6 +2606,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -2631,7 +2653,9 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
             {},
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {}
+            {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -2682,6 +2706,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}, /* another, unclipped */
@@ -2726,6 +2752,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}, /* another, unclipped */
@@ -2749,7 +2777,7 @@ void AbstractUserInterfaceTest::state() {
     /* Removing a node sets a state flag */
     ui.removeNode(node);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
-    CORRADE_COMPARE(ui.nodeUsedCount(), 3);
+    CORRADE_COMPARE(ui.nodeUsedCount(), 5);
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
 
     /* Calling clean() removes the child nodes, the now-invalid attachment and
@@ -2766,7 +2794,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(ui.nodeUsedCount(), 1);
+        CORRADE_COMPARE(ui.nodeUsedCount(), 3);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
@@ -2789,6 +2817,8 @@ void AbstractUserInterfaceTest::state() {
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {},
             {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}, /* another, unclipped */
@@ -2804,7 +2834,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    CORRADE_COMPARE(ui.nodeUsedCount(), 1);
+    CORRADE_COMPARE(ui.nodeUsedCount(), 3);
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
@@ -2839,7 +2869,9 @@ void AbstractUserInterfaceTest::state() {
             {},
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {},
-            {}
+            {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
         };
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
             {{}, {}}
