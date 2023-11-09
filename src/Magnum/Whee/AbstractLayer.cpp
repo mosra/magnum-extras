@@ -337,10 +337,6 @@ NodeHandle AbstractLayer::node(LayerDataHandle data) const {
     return _state->data[layerDataHandleId(data)].used.node;
 }
 
-Containers::StridedArrayView1D<const UnsignedShort> AbstractLayer::generations() const {
-    return stridedArrayView(_state->data).slice(&Data::used).slice(&Data::Used::generation);
-}
-
 Containers::StridedArrayView1D<const NodeHandle> AbstractLayer::nodes() const {
     return stridedArrayView(_state->data).slice(&Data::used).slice(&Data::Used::node);
 }

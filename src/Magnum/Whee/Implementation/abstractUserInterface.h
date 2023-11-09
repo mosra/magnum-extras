@@ -614,9 +614,8 @@ Containers::Pair<UnsignedInt, UnsignedInt> orderVisibleNodeDataInto(const Contai
 }
 
 /* The `dataNodes` array is expected to be the same as passed into
-   `orderVisibleNodeDataInto()`. The `dataGenerations` array is then matching
-   generations and together with `layer` is used to form actual data handles in
-   the output.
+   `orderVisibleNodeDataInto()`. The array indices together with `layer` are
+   used to form (generation-less) data handles in the output.
 
    The `visibleNodeEventDataOffsets` is expected to be the output of
    `orderVisibleNodeDataInto()` above with an additional first zero element,
@@ -625,9 +624,8 @@ Containers::Pair<UnsignedInt, UnsignedInt> orderVisibleNodeDataInto(const Contai
    `visibleNodeEventDataOffsets[i]` to `visibleNodeEventDataOffsets[i + 1]`
    then being the range of data in `visibleNodeEventData` corresponding to node
    `i`. */
-void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers::StridedArrayView1D<const UnsignedShort>& dataGenerations, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<DataHandle> visibleNodeEventData) {
+void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<DataHandle> visibleNodeEventData) {
     CORRADE_INTERNAL_ASSERT(
-        dataNodes.size() == dataGenerations.size() &&
         visibleNodeEventDataOffsets.size() == visibleNodeMask.size() + 1);
 
     /* Go through the data list in reverse, convert that to data handle ranges.
@@ -643,7 +641,9 @@ void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers
             continue;
         const UnsignedInt id = nodeHandleId(node);
         if(visibleNodeMask[id])
-            visibleNodeEventData[visibleNodeEventDataOffsets[id + 1]++] = dataHandle(layer, i - 1, dataGenerations[i - 1]);
+            /* The DataHandle generation isn't used for anything, only data and
+               layer ID is extracted out of the handle, so can be arbitrary. */
+            visibleNodeEventData[visibleNodeEventDataOffsets[id + 1]++] = dataHandle(layer, i - 1, 0);
     }
 }
 
