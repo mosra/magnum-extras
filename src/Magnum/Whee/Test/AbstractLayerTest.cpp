@@ -157,14 +157,14 @@ void AbstractLayerTest::debugFeatures() {
 
 void AbstractLayerTest::debugState() {
     std::ostringstream out;
-    Debug{&out} << LayerState::NeedsClean << LayerState(0xbe);
-    CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsClean Whee::LayerState(0xbe)\n");
+    Debug{&out} << LayerState::NeedsAttachmentUpdate << LayerState(0xbe);
+    CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsAttachmentUpdate Whee::LayerState(0xbe)\n");
 }
 
 void AbstractLayerTest::debugStates() {
     std::ostringstream out;
-    Debug{&out} << (LayerState::NeedsClean|LayerState(0xe0)) << LayerStates{};
-    CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsClean|Whee::LayerState(0xe0) Whee::LayerStates{}\n");
+    Debug{&out} << (LayerState::NeedsUpdate|LayerState(0xe0)) << LayerStates{};
+    CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsUpdate|Whee::LayerState(0xe0) Whee::LayerStates{}\n");
 }
 
 void AbstractLayerTest::debugStatesSupersets() {
@@ -239,6 +239,8 @@ void AbstractLayerTest::constructMove() {
 void AbstractLayerTest::createRemove() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0xab, 0x12)};
@@ -264,7 +266,7 @@ void AbstractLayerTest::createRemove() {
     layer.remove(first);
     CORRADE_VERIFY(!layer.isHandleValid(first));
     CORRADE_VERIFY(layer.isHandleValid(second));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 1);
 
@@ -272,7 +274,7 @@ void AbstractLayerTest::createRemove() {
     layer.remove(dataHandleData(second));
     CORRADE_VERIFY(!layer.isHandleValid(first));
     CORRADE_VERIFY(!layer.isHandleValid(second));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 0);
 }
@@ -280,6 +282,8 @@ void AbstractLayerTest::createRemove() {
 void AbstractLayerTest::createRemoveHandleRecycle() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0xab, 0x12)};
@@ -382,6 +386,8 @@ void AbstractLayerTest::createRemoveHandleRecycle() {
 void AbstractLayerTest::createRemoveHandleDisable() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0xab, 0x12)};
@@ -416,6 +422,7 @@ void AbstractLayerTest::createNoHandlesLeft() {
 
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
@@ -438,6 +445,7 @@ void AbstractLayerTest::createNoHandlesLeft() {
 void AbstractLayerTest::createAttached() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0xab, 0x12)};
@@ -467,6 +475,8 @@ void AbstractLayerTest::removeInvalid() {
 
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
@@ -493,6 +503,7 @@ void AbstractLayerTest::removeInvalid() {
 void AbstractLayerTest::attach() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0xab, 0x12)};
@@ -550,6 +561,7 @@ void AbstractLayerTest::attachInvalid() {
 
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0xab, 0x12)};
@@ -664,6 +676,8 @@ void AbstractLayerTest::setSizeNotImplemented() {
 void AbstractLayerTest::cleanNodes() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
 
@@ -978,6 +992,8 @@ void AbstractLayerTest::updateInvalidSizes() {
 void AbstractLayerTest::state() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0xab, 0x12)};
@@ -1019,40 +1035,33 @@ void AbstractLayerTest::state() {
     layer.update({}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* remove() adds NeedClean */
+    /* remove() adds nothing on its own */
     layer.remove(data1);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
-
-    /* cleanNodes() then resets NeedsClean. Passing the matching generation to
-       not make it remove the other nodes too. */
-    layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* remove() adds also NeedsAttachmentUpdate if the data were attached */
+    /* remove() adds NeedsAttachmentUpdate if the data were attached */
     layer.remove(data2);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean|LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets one */
     layer.update({}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
-
-    /* cleanNodes() the other */
-    layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing the other overload */
     layer.remove(dataHandleData(data3));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean|LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
-    /* update() and cleanNodes() then reset it */
-    layer.update({}, {}, {}, {}, {}, {}, {});
+    /* cleanNodes() (no-op in this case) doesn't remove any flags on its own */
+    CORRADE_COMPARE(layer.usedCount(), 1);
     layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
+    CORRADE_COMPARE(layer.usedCount(), 1);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+
+    /* Only update() does */
+    layer.update({}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* cleanNodes() that removes a data attached to an invalid node doesn't set
-       any flags -- there it's assumed a proper cleanup happened upfront in the
-       UserInterface itself, otherwise this would require another round of
-       cleanNodes() calls */
+    /* cleanNodes() that removes a data doesn't set any flags either */
     CORRADE_VERIFY(layer.isHandleValid(data4));
     layer.cleanNodes(Containers::arrayView({UnsignedShort{0xfef}}));
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -1341,6 +1350,7 @@ void AbstractLayerTest::drawInvalidSizes() {
 void AbstractLayerTest::pointerEvent() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override {
             return LayerFeature::Event;
@@ -1443,6 +1453,7 @@ void AbstractLayerTest::pointerEventNotSupported() {
 void AbstractLayerTest::pointerEventNotImplemented() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override {
             return LayerFeature::Event;
@@ -1469,6 +1480,7 @@ void AbstractLayerTest::pointerEventOutOfRange() {
 
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override {
             return LayerFeature::Event;
@@ -1502,6 +1514,7 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
 
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override {
             return LayerFeature::Event;

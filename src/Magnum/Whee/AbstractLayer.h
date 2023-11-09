@@ -83,10 +83,9 @@ CORRADE_ENUMSET_OPERATORS(LayerFeatures)
 @brief Layer state
 @m_since_latest
 
-Used to decide whether @ref AbstractLayer::cleanNodes() (called from
-@ref AbstractUserInterface::clean()) or @ref AbstractLayer::update() (called
-from @ref AbstractUserInterface::update()) need to be called to refresh the
-internal state before the interface is drawn or an event is handled. See
+Used to decide whether @ref AbstractLayer::update() (called from
+@ref AbstractUserInterface::update()) need to be called to refresh the internal
+state before the interface is drawn or an event is handled. See
 @ref UserInterfaceState for interface-wide state.
 @see @ref LayerStates, @ref AbstractLayer::state()
 */
@@ -123,21 +122,6 @@ enum class LayerState: UnsignedByte {
      * @ref LayerState::NeedsUpdate.
      */
     NeedsAttachmentUpdate = NeedsUpdate|(1 << 1),
-
-    /**
-     * @ref AbstractLayer::cleanNodes() (which is called from
-     * @ref AbstractUserInterface::clean()) needs to be called to prune state
-     * belonging to no-longer-valid data. Set implicitly after every
-     * @ref AbstractLayer::remove() call, is reset next time
-     * @ref AbstractLayer::cleanNodes() is called.
-     *
-     * Note that there's also interface-wide
-     * @ref UserInterfaceState::NeedsDataClean, which is set when nodes get
-     * removed, to remove also the data attached to them. The two flags are set
-     * independently, but both of them imply
-     * @ref AbstractUserInterface::clean() needs to be called.
-     */
-    NeedsClean = 1 << 2
 };
 
 /**
@@ -262,59 +246,6 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         bool isHandleValid(DataHandle handle) const;
 
         /**
-         * @brief Create a data
-         * @param node      Node to attach to
-         * @return New data handle
-         *
-         * Allocates a new handle in a free slot in the internal storage or
-         * grows the storage if there's no free slots left. Expects that
-         * there's at most 1048576 data. The returned handle can be removed
-         * again with @ref remove().
-         *
-         * If @p node is not @ref NodeHandle::Null, directly attaches the
-         * created data to given node, equivalent to calling @ref attach().
-         * That then causes @ref LayerState::NeedsAttachmentUpdate to be set.
-         * If @p node is @ref NodeHandle::Null, no @ref LayerState is set.
-         */
-        DataHandle create(NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        );
-
-        /**
-         * @brief Remove a data
-         *
-         * Expects that @p handle is valid. After this call,
-         * @ref isHandleValid(DataHandle) const returns @cpp false @ce for
-         * @p handle. See also @ref remove(LayerDataHandle) which is a simpler
-         * operation if the data is already known to belong to this layer.
-         *
-         * Calling this function causes @ref LayerState::NeedsClean to be set.
-         * If @p handle is attached to a node, calling this function also
-         * causes @ref LayerState::NeedsAttachmentUpdate to be set.
-         * @see @ref cleanNodes(), @ref node()
-         */
-        void remove(DataHandle handle);
-
-        /**
-         * @brief Remove a data assuming it belongs to this layer
-         *
-         * Expects that @p handle is valid. After this call,
-         * @ref isHandleValid(LayerDataHandle) const returns @cpp false @ce for
-         * @p handle. See also @ref remove(DataHandle) which additionally
-         * checks that the data belongs to this layer.
-         *
-         * Calling this function causes @ref LayerState::NeedsClean to be set.
-         * If @p handle is attached to a node, calling this function also
-         * causes @ref LayerState::NeedsAttachmentUpdate to be set.
-         * @see @ref dataHandleData(), @ref cleanNodes(), @ref node()
-         */
-        void remove(LayerDataHandle handle);
-
-        /**
          * @brief Attach data to a node
          *
          * Makes the @p data handle tied to a particular @p node, meaning it
@@ -412,10 +343,6 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * decide about node attachment validity, data with invalid node
          * attachments are then removed. Delegates to @ref doClean(), see its
          * documentation for more information about the arguments.
-         *
-         * Calling this function resets @ref LayerState::NeedsClean, however
-         * note that behavior of this function is independent of @ref state()
-         * --- it performs the clean always regardless of what flags are set.
          */
         void cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations);
 
@@ -436,10 +363,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Calling this function resets @ref LayerState::NeedsUpdate and
          * @ref LayerState::NeedsAttachmentUpdate, however note that behavior
          * of this function is independent of @ref state() --- it performs the
-         * update always regardless of what flags are set. The function can be
-         * called even in case @ref LayerState::NeedsClean is set as long as
-         * @p dataIds contain only IDs that aren't scheduled for removal, the
-         * two states are independent.
+         * update always regardless of what flags are set.
          */
         void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
@@ -565,6 +489,68 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *      @ref PointerMoveEvent::setAccepted()
          */
         void pointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
+    protected:
+        /**
+         * @brief Create a data
+         * @param node      Node to attach to
+         * @return New data handle
+         *
+         * Allocates a new handle in a free slot in the internal storage or
+         * grows the storage if there's no free slots left. Expects that
+         * there's at most 1048576 data. The returned handle can be removed
+         * again with @ref remove().
+         *
+         * If @p node is not @ref NodeHandle::Null, directly attaches the
+         * created data to given node, equivalent to calling @ref attach().
+         * That then causes @ref LayerState::NeedsAttachmentUpdate to be set.
+         * If @p node is @ref NodeHandle::Null, no @ref LayerState is set. The
+         * subclass is meant to wrap this function in a public API and perform
+         * appropriate additional initialization work there.
+         */
+        DataHandle create(NodeHandle node =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            NodeHandle::Null
+            #else
+            NodeHandle{} /* To not have to include Handle.h */
+            #endif
+        );
+
+        /**
+         * @brief Remove a data
+         *
+         * Expects that @p handle is valid. After this call,
+         * @ref isHandleValid(DataHandle) const returns @cpp false @ce for
+         * @p handle. See also @ref remove(LayerDataHandle) which is a simpler
+         * operation if the data is already known to belong to this layer.
+         *
+         * If @p handle is attached to a node, calling this function causes
+         * @ref LayerState::NeedsAttachmentUpdate to be set. Other than that,
+         * no flag is set to trigger a subsequent @ref cleanNodes() or
+         * @ref update() --- instead the subclass is meant to wrap this
+         * function in a public API and perform appropriate cleanup work
+         * directly there.
+         * @see @ref node()
+         */
+        void remove(DataHandle handle);
+
+        /**
+         * @brief Remove a data assuming it belongs to this layer
+         *
+         * Expects that @p handle is valid. After this call,
+         * @ref isHandleValid(LayerDataHandle) const returns @cpp false @ce for
+         * @p handle. See also @ref remove(DataHandle) which additionally
+         * checks that the data belongs to this layer.
+         *
+         * If @p handle is attached to a node, calling this function causes
+         * @ref LayerState::NeedsAttachmentUpdate to be set. Other than that,
+         * no flag is set to trigger a subsequent @ref cleanNodes() or
+         * @ref update() --- instead the subclass is meant to wrap this
+         * function in a public API and perform appropriate cleanup work
+         * directly there.
+         * @see @ref dataHandleData(), @ref node()
+         */
+        void remove(LayerDataHandle handle);
 
     private:
         /** @brief Implementation for @ref features() */
