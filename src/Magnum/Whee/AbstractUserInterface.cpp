@@ -1444,7 +1444,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         /* If the Layer::features is non-empty, it means the
                            instance is present (from which it was taken). No
                            need to explicitly check that as well. */
-                        layerItem.used.instance->generations(),
                         layerItem.used.instance->nodes(),
                         state.visibleNodeEventDataOffsets,
                         state.visibleNodeMask,

@@ -363,14 +363,6 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         NodeHandle node(LayerDataHandle data) const;
 
         /**
-         * @brief Generation counters for all data
-         *
-         * Used internally from @ref AbstractUserInterface::update(). Size of
-         * the returned view is the same as @ref capacity().
-         */
-        Containers::StridedArrayView1D<const UnsignedShort> generations() const;
-
-        /**
          * @brief Node attachments for all data
          *
          * Used internally from @ref AbstractUserInterface::update(), meant to
