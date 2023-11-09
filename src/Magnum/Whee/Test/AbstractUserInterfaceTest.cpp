@@ -264,20 +264,6 @@ const struct {
     {"move", false, true, false, false},
 };
 
-const struct {
-    const char* name;
-    bool release;
-    bool move;
-    bool clean;
-    bool update;
-} EventCaptureCleanUpdateData[]{
-    {"release, clean + update before", true, false, true, true},
-    {"release, clean before", true, false, true, false},
-    {"release, update before", true, false, false, true},
-    {"release", true, false, false, false},
-    {"move", false, true, false, false},
-};
-
 AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addTests({&AbstractUserInterfaceTest::debugNodeFlag,
               &AbstractUserInterfaceTest::debugNodeFlags,
@@ -373,7 +359,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
         Containers::arraySize(EventNodeRemovedData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved},
-        Containers::arraySize(CleanUpdateData));
+        Containers::arraySize(UpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventCapture,
               &AbstractUserInterfaceTest::eventCaptureEdges,
@@ -391,7 +377,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
         Containers::arraySize(EventCaptureNodeRemovedData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventCaptureAllDataRemoved},
-        Containers::arraySize(EventCaptureCleanUpdateData));
+        Containers::arraySize(EventCaptureUpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventTapOrClick});
 
@@ -465,18 +451,11 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean\n");
 
-    /* NeedsNodeClean is a superset of NeedsDataClean, so only one should be
-       printed */
-    } {
-        std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsDataClean);
-        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean\n");
-
     /* NeedsNodeClean is a superset of all others, so it should be printed
        alone */
     } {
         std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsDataClean |UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
+        Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean\n");
     }
 }
@@ -1601,6 +1580,8 @@ void AbstractUserInterfaceTest::data() {
     /* Data handles tested thoroughly in AbstractLayerTest already */
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
@@ -1618,7 +1599,7 @@ void AbstractUserInterfaceTest::data() {
     CORRADE_VERIFY(ui.isHandleValid(dataHandle2));
 
     /* Not valid when removed again */
-    ui.layer(layerHandle).remove(dataHandle1);
+    ui.layer<Layer>(layerHandle).remove(dataHandle1);
     CORRADE_VERIFY(!ui.isHandleValid(dataHandle1));
     CORRADE_VERIFY(ui.isHandleValid(dataHandle2));
 
@@ -1636,12 +1617,13 @@ void AbstractUserInterfaceTest::dataAttach() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
     ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
 
-    DataHandle handle = ui.layer(layerHandle).create();
+    DataHandle handle = ui.layer<Layer>(layerHandle).create();
     CORRADE_COMPARE(ui.layer(layerHandle).node(handle), NodeHandle::Null);
 
     ui.attachData(node, handle);
@@ -1834,6 +1816,7 @@ void AbstractUserInterfaceTest::cleanNoOp() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
@@ -1844,7 +1827,7 @@ void AbstractUserInterfaceTest::cleanNoOp() {
     NodeHandle nested = ui.createNode(root, {}, {});
 
     /* Data attached to the root node */
-    DataHandle data = ui.layer(layerHandle).create(root);
+    DataHandle data = ui.layer<Layer>(layerHandle).create(root);
 
     /* Remove the nested node to create some "dirtiness" */
     ui.removeNode(nested);
@@ -1867,6 +1850,7 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
@@ -1878,10 +1862,10 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
     NodeHandle nested = ui.createNode(root, {}, {});
 
     /* Data attached to both, from both layers, in random order */
-    DataHandle data1 = ui.layer(layerHandle1).create(nested);
-    DataHandle data2 = ui.layer(layerHandle2).create(root);
-    DataHandle data3 = ui.layer(layerHandle1).create(root);
-    DataHandle data4 = ui.layer(layerHandle2).create(nested);
+    DataHandle data1 = ui.layer<Layer>(layerHandle1).create(nested);
+    DataHandle data2 = ui.layer<Layer>(layerHandle2).create(root);
+    DataHandle data3 = ui.layer<Layer>(layerHandle1).create(root);
+    DataHandle data4 = ui.layer<Layer>(layerHandle2).create(nested);
 
     /* Remove the nested node */
     ui.removeNode(nested);
@@ -1908,6 +1892,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
@@ -1921,9 +1906,9 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
     NodeHandle second2 = ui.createNode(first1, {}, {});
 
     /* Data attached to the leaf nodes */
-    DataHandle data1 = ui.layer(layerHandle).create(second1);
-    DataHandle data2 = ui.layer(layerHandle).create(first2);
-    DataHandle data3 = ui.layer(layerHandle).create(second2);
+    DataHandle data1 = ui.layer<Layer>(layerHandle).create(second1);
+    DataHandle data2 = ui.layer<Layer>(layerHandle).create(first2);
+    DataHandle data3 = ui.layer<Layer>(layerHandle).create(second2);
 
     /* Remove the subtree */
     ui.removeNode(first1);
@@ -1990,6 +1975,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
@@ -2001,7 +1987,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
     NodeHandle second = ui.createNode(first, {}, {});
 
     /* Data attached to the leaf node */
-    DataHandle data = ui.layer(layerHandle).create(second);
+    DataHandle data = ui.layer<Layer>(layerHandle).create(second);
 
     /* Remove a subtree but then create a new node which recycles the same
        handle */
@@ -2029,6 +2015,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
@@ -2041,7 +2028,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
     NodeHandle third = ui.createNode(second, {}, {});
 
     /* Data attached to the leaf node */
-    DataHandle data = ui.layer(layerHandle).create(third);
+    DataHandle data = ui.layer<Layer>(layerHandle).create(third);
 
     /* Remove a subtree but then create a new node which recycles the same
        handle, and parent it to one of the (now dangling) nodes */
@@ -2067,6 +2054,7 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
@@ -2078,8 +2066,8 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
     NodeHandle second = ui.createNode(first, {}, {});
 
     /* Data attached to the nested nodes */
-    ui.layer(layerHandle).create(second);
-    ui.layer(layerHandle).create(first);
+    ui.layer<Layer>(layerHandle).create(second);
+    ui.layer<Layer>(layerHandle).create(first);
 
     /* Removing the top-level node */
     ui.removeNode(root);
@@ -2131,6 +2119,8 @@ void AbstractUserInterfaceTest::state() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
 
@@ -2206,11 +2196,11 @@ void AbstractUserInterfaceTest::state() {
     }
 
     /* Creating a data in a layer sets no state flags */
-    DataHandle dataNested2 = ui.layer(layer).create();
-    DataHandle dataNode = ui.layer(layer).create();
-    DataHandle dataAnother = ui.layer(layer).create();
-    DataHandle dataNotAttached = ui.layer(layer).create();
-    DataHandle dataNested1 = ui.layer(layer).create();
+    DataHandle dataNested2 = ui.layer<Layer>(layer).create();
+    DataHandle dataNode = ui.layer<Layer>(layer).create();
+    DataHandle dataAnother = ui.layer<Layer>(layer).create();
+    DataHandle dataNotAttached = ui.layer<Layer>(layer).create();
+    DataHandle dataNested1 = ui.layer<Layer>(layer).create();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
 
@@ -2760,76 +2750,22 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
 
-    /* Removing a non-attached data marks the layer with NeedsClean, which is
-       then propagated to the UI-wide state */
-    ui.layer(layer).remove(dataNotAttached);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
+    /* Removing a non-attached data does no change to the layer state and thus
+       neither to the UI-wide state */
+    ui.layer<Layer>(layer).remove(dataNotAttached);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
 
-    /* Calling clean() resets the states to not require clean() anymore */
-    if(data.clean) {
-        {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-            bool expectedDataIdsToRemove[]{
-                /* data4 already removed, so not set */
-                false, false, false, false, false
-            };
-            ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
-            ui.clean();
-        }
-        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
-    }
-
-    /* Calling update() calls clean() if wasn't done above already but
-       otherwise it's a no-op */
-    {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        bool expectedDataIdsToRemove[]{
-            /* data4 already removed, so not set */
-            false, false, false, false, false
-        };
-        ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
-        ui.update();
-    }
-    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
-
-    /* Removing data marks the layer with NeedsClean, which is then propagated
-       to the UI-wide state */
-    ui.layer(layer).remove(dataNode);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
+    /* Removing attached data marks the layer with NeedsDataAttachmentUpdate,
+       which is then propagated to the UI-wide state */
+    ui.layer<Layer>(layer).remove(dataNode);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
 
-    /* Calling clean() removes the now-invalid attachment and resets the states
-       to not require clean() anymore */
-    if(data.clean) {
-        {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-            bool expectedDataIdsToRemove[]{
-                /* data2 already removed, so not set */
-                false, false, false, false, false
-            };
-            ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
-            ui.clean();
-        }
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 2);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
-    }
-
     /* Calling update() then uploads remaining data and resets the remaining
-       state flag; also calls clean() if wasn't done above already */
+       state flag; */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        bool expectedDataIdsToRemove[]{
-            /* data2 already removed, so not set */
-            false, false, false, false, false
-        };
         UnsignedInt expectedDataIds[]{
             dataHandleId(dataAnother),
             dataHandleId(dataNested1)
@@ -2848,7 +2784,6 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{3.0f, 1.0f}, {2.0f, 4.0f}}
         };
-        ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
@@ -2857,9 +2792,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
-    /* doClean() should only be called either in the branch above or from
-       update(), never both */
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 2);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
 
     /* Removing a node sets a state flag */
@@ -2884,7 +2817,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.nodeUsedCount(), 1);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 3);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
     }
 
@@ -2922,7 +2855,7 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 3);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
 
     /* Add one more layer to check layer removal behavior, should set no state
@@ -2987,6 +2920,8 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
     };
@@ -3022,8 +2957,8 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Creating a data doesn't result in any NeedsUpdate on the layer */
-    DataHandle data1 = ui.layer(layer1).create();
-    DataHandle data2 = ui.layer(layer2).create();
+    DataHandle data1 = ui.layer<Layer>(layer1).create();
+    DataHandle data2 = ui.layer<Layer>(layer2).create();
     CORRADE_COMPARE(ui.layer(layer1).state(), LayerStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
@@ -3036,12 +2971,10 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     ui.addNodeFlags(node, NodeFlag::Hidden);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
-    /* Having the UI marked with NeedsNodeUpdate shouldn't prevent the
-       NeedsClean from a later layer from being propagated to the UI-wide
-       state */
-    ui.layer(layer2).remove(data2);
-    CORRADE_COMPARE(ui.layer(layer2).state(), LayerState::NeedsClean);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataClean);
+    /* Removing a data doesn't result in any state flag on the layer */
+    ui.layer<Layer>(layer2).remove(data2);
+    CORRADE_COMPARE(ui.layer(layer2).state(), LayerStates{});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 }
 
 void AbstractUserInterfaceTest::drawEmpty() {
@@ -3074,6 +3007,8 @@ void AbstractUserInterfaceTest::draw() {
 
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, features{features} {}
+
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return features; }
 
@@ -3505,6 +3440,8 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, features{features} {}
 
+        using AbstractLayer::create;
+
         LayerFeatures doFeatures() const override { return features; }
 
         /* doClean() / doUpdate() tested thoroughly enough in draw() above */
@@ -3757,6 +3694,7 @@ void AbstractUserInterfaceTest::eventEdges() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -3853,6 +3791,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -3931,6 +3870,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -4019,6 +3959,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -4213,6 +4154,8 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, bool accept): AbstractLayer{handle}, accept{accept} {}
 
+        using AbstractLayer::create;
+
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
@@ -4304,6 +4247,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -4459,6 +4403,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -4542,6 +4487,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHidden() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -4631,6 +4577,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -4706,7 +4653,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
 }
 
 void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
-    auto&& data = CleanUpdateData[testCaseInstanceId()];
+    auto&& data = UpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Event scaling doesn't affect these tests */
@@ -4719,6 +4666,8 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -4764,15 +4713,7 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
        that the clean() / update() can't discover on its own, only actually
        firing the event can. */
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
-
-    if(data.clean) {
-        ui.clean();
-
-        /* Same as above, the node stays hovered */
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
-    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     if(data.update) {
         ui.update();
@@ -4813,6 +4754,7 @@ void AbstractUserInterfaceTest::eventCapture() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -5165,6 +5107,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -5504,6 +5447,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -5777,6 +5721,7 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -6290,6 +6235,7 @@ void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -6438,6 +6384,7 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -6530,6 +6477,7 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHidden() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -6626,6 +6574,7 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -6716,7 +6665,7 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
 }
 
 void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
-    auto&& data = EventCaptureCleanUpdateData[testCaseInstanceId()];
+    auto&& data = EventCaptureUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Event scaling doesn't affect these tests */
@@ -6724,6 +6673,8 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -6778,15 +6729,7 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
        events -- also something that the clean() / update() can't discover on
        its own, only actually firing the event can. */
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
-
-    if(data.clean) {
-        ui.clean();
-
-        /* Same as above, the node stays captured */
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
-    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     if(data.update) {
         ui.update();
@@ -6841,6 +6784,7 @@ void AbstractUserInterfaceTest::eventTapOrClick() {
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -7294,6 +7238,7 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHidden() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -7383,6 +7328,7 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeRemoved() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
@@ -7474,6 +7420,7 @@ void AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved() {
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
         using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
@@ -7522,7 +7469,7 @@ void AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved() {
        events -- also something that the clean() / update() can't discover on
        its own, only actually firing the event can. */
     CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean|UserInterfaceState::NeedsDataAttachmentUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     if(data.update) {
         ui.update();
