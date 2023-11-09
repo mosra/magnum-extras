@@ -317,6 +317,8 @@ void AbstractVisualLayerTest::styleOutOfRange() {
 
     struct Layer: AbstractVisualLayer {
         explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
+
+        using AbstractVisualLayer::create;
     } layer{layerHandle(0, 1), shared};
 
     DataHandle data = layer.create();
@@ -842,6 +844,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
 
     struct EventLayer: AbstractLayer {
         explicit EventLayer(LayerHandle handle, bool disableCapture): AbstractLayer{handle}, disableCapture{disableCapture} {}
+
+        using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override {
             return LayerFeature::Event;
