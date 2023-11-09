@@ -66,7 +66,6 @@ Debug& operator<<(Debug& debug, const LayerState value) {
         #define _c(value) case LayerState::value: return debug << "::" #value;
         _c(NeedsUpdate)
         _c(NeedsAttachmentUpdate)
-        _c(NeedsClean)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -78,8 +77,7 @@ Debug& operator<<(Debug& debug, const LayerStates value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::LayerStates{}", {
         LayerState::NeedsAttachmentUpdate,
         /* Implied by NeedsAttachmentUpdate, has to be after */
-        LayerState::NeedsUpdate,
-        LayerState::NeedsClean
+        LayerState::NeedsUpdate
     });
 }
 
@@ -253,7 +251,6 @@ void AbstractLayer::remove(const DataHandle handle) {
         "Whee::AbstractLayer::remove(): invalid handle" << handle, );
 
     State& state = *_state;
-    state.state |= LayerState::NeedsClean;
     /* If the data was attached to a node, mark the layer also as needing a
        update() call to refresh node data attachment state, which also bubbles
        up to the UI itself */
@@ -271,7 +268,6 @@ void AbstractLayer::remove(const LayerDataHandle handle) {
         "Whee::AbstractLayer::remove(): invalid handle" << handle, );
 
     State& state = *_state;
-    state.state |= LayerState::NeedsClean;
     /* If the data was attached to a node, mark the layer also as needing a
        update() call to refresh node data attachment state, which also bubbles
        up to the UI itself */
@@ -313,7 +309,7 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
     }
 
     /* Updating LayerState (or not) is caller's responsibility. For example,
-       clean() below *unsets* NeedsClean instead of setting it. */
+       clean() below doesn't set any state after calling removeInternal(). */
 }
 
 void AbstractLayer::attach(DataHandle data, NodeHandle node) {
@@ -386,9 +382,6 @@ void AbstractLayer::cleanNodes(const Containers::StridedArrayView1D<const Unsign
     }
 
     doClean(dataIdsToRemove);
-    /* Unmark the UI as needing a clean() call. Unlike in UserInterface, the
-       NeedsUpdate state is independent of this flag. */
-    state.state &= ~LayerState::NeedsClean;
 }
 
 void AbstractLayer::doClean(Containers::BitArrayView) {}

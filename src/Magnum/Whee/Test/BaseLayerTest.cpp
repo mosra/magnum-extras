@@ -61,7 +61,7 @@ struct BaseLayerTest: TestSuite::Tester {
     void constructCopy();
     void constructMove();
 
-    template<class T> void create();
+    template<class T> void createRemove();
     void setColor();
     void setOutlineWidth();
 
@@ -90,9 +90,14 @@ const struct {
     const char* name;
     NodeHandle node;
     LayerStates state;
-} CreateData[]{
-    {"create", NodeHandle::Null, LayerStates{}},
-    {"create and attach", nodeHandle(9872, 0xbeb), LayerState::NeedsAttachmentUpdate}
+    bool layerDataHandleOverloads;
+} CreateRemoveData[]{
+    {"create",
+        NodeHandle::Null, LayerStates{}, false},
+    {"create and attach",
+        nodeHandle(9872, 0xbeb), LayerState::NeedsAttachmentUpdate, false},
+    {"LayerDataHandle overloads",
+        NodeHandle::Null, LayerStates{}, true},
 };
 
 BaseLayerTest::BaseLayerTest() {
@@ -116,9 +121,9 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::constructCopy,
               &BaseLayerTest::constructMove});
 
-    addInstancedTests<BaseLayerTest>({&BaseLayerTest::create<UnsignedInt>,
-                                      &BaseLayerTest::create<Enum>},
-        Containers::arraySize(CreateData));
+    addInstancedTests<BaseLayerTest>({&BaseLayerTest::createRemove<UnsignedInt>,
+                                      &BaseLayerTest::createRemove<Enum>},
+        Containers::arraySize(CreateRemoveData));
 
     addTests({&BaseLayerTest::setColor,
               &BaseLayerTest::setOutlineWidth,
@@ -379,8 +384,8 @@ void BaseLayerTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<BaseLayer>::value);
 }
 
-template<class T> void BaseLayerTest::create() {
-    auto&& data = CreateData[testCaseInstanceId()];
+template<class T> void BaseLayerTest::createRemove() {
+    auto&& data = CreateRemoveData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
     setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
 
@@ -392,55 +397,56 @@ template<class T> void BaseLayerTest::create() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    /* Just to be sure the getters aren't picking up the first ever data
-       always */
-    layer.create(2);
-
     /* Default color and outline width */
-    {
-        DataHandle layerData = layer.create(T(17), data.node);
-        CORRADE_COMPARE(layer.node(layerData), data.node);
-        CORRADE_COMPARE(layer.style(layerData), 17);
-        CORRADE_COMPARE(layer.color(layerData), 0xffffff_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(layerData), Vector4{0.0f});
-        CORRADE_COMPARE(layer.state(), data.state);
+    DataHandle first = layer.create(T(17), data.node);
+    CORRADE_COMPARE(layer.node(first), data.node);
+    CORRADE_COMPARE(layer.style(first), 17);
+    CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.outlineWidth(first), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), data.state);
 
     /* Default outline width */
-    } {
-        DataHandle layerData = layer.create(T(23), 0xff3366_rgbf, data.node);
-        CORRADE_COMPARE(layer.node(layerData), data.node);
-        CORRADE_COMPARE(layer.style(layerData), 23);
-        CORRADE_COMPARE(layer.color(layerData), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(layerData), Vector4{0.0f});
-        CORRADE_COMPARE(layer.state(), data.state);
+    DataHandle second = layer.create(T(23), 0xff3366_rgbf, data.node);
+    CORRADE_COMPARE(layer.node(second), data.node);
+    CORRADE_COMPARE(layer.style(second), 23);
+    CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.outlineWidth(second), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), data.state);
 
     /* Single-value outline width */
-    } {
-        DataHandle layerData = layer.create(T(19), 0xff3366_rgbf, 4.0f, data.node);
-        CORRADE_COMPARE(layer.node(layerData), data.node);
-        CORRADE_COMPARE(layer.style(layerData), 19);
-        CORRADE_COMPARE(layer.color(layerData), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(layerData), Vector4{4.0f});
-        CORRADE_COMPARE(layer.state(), data.state);
+    DataHandle third = layer.create(T(19), 0xff3366_rgbf, 4.0f, data.node);
+    CORRADE_COMPARE(layer.node(third), data.node);
+    CORRADE_COMPARE(layer.style(third), 19);
+    CORRADE_COMPARE(layer.color(third), 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.outlineWidth(third), Vector4{4.0f});
+    CORRADE_COMPARE(layer.state(), data.state);
 
     /* Everything explicit, testing also the getter overloads and templates */
-    } {
-        DataHandle layerData = layer.create(T(37), 0xff3366_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, data.node);
-        CORRADE_COMPARE(layer.node(layerData), data.node);
-        CORRADE_COMPARE(layer.style(layerData), 37);
+    DataHandle fourth = layer.create(T(37), 0xff3366_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, data.node);
+    CORRADE_COMPARE(layer.node(fourth), data.node);
+    if(data.layerDataHandleOverloads) {
+        CORRADE_COMPARE(layer.style(dataHandleData(fourth)), 37);
         /* Can't use T, as the function restricts to enum types which would
            fail for T == UnsignedInt */
-        CORRADE_COMPARE(layer.template style<Enum>(layerData), Enum(37));
-        CORRADE_COMPARE(layer.style(dataHandleData(layerData)), 37);
+        CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(fourth)), Enum(37));
+        CORRADE_COMPARE(layer.color(dataHandleData(fourth)), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.outlineWidth(dataHandleData(fourth)), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
+    } else {
+        CORRADE_COMPARE(layer.style(fourth), 37);
         /* Can't use T, as the function restricts to enum types which would
-           fail for T == UnsignedInt */
-        CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(layerData)), Enum(37));
-        CORRADE_COMPARE(layer.color(layerData), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.color(dataHandleData(layerData)), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(layerData), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
-        CORRADE_COMPARE(layer.outlineWidth(dataHandleData(layerData)), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
-        CORRADE_COMPARE(layer.state(), data.state);
+            fail for T == UnsignedInt */
+        CORRADE_COMPARE(layer.template style<Enum>(fourth), Enum(37));
+        CORRADE_COMPARE(layer.color(fourth), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.outlineWidth(fourth), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
     }
+    CORRADE_COMPARE(layer.state(), data.state);
+
+    /* Removing a quad just delegates to the base implementation, nothing
+       else needs to be cleaned up */
+    data.layerDataHandleOverloads ?
+        layer.remove(dataHandleData(third)) :
+        layer.remove(third);
+    CORRADE_VERIFY(!layer.isHandleValid(third));
 }
 
 void BaseLayerTest::setColor() {

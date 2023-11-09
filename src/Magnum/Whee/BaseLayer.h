@@ -451,6 +451,24 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         }
 
         /**
+         * @brief Remove a quad
+         *
+         * Delegates to @ref AbstractLayer::remove(DataHandle).
+         */
+        void remove(DataHandle handle) {
+            AbstractVisualLayer::remove(handle);
+        }
+
+        /**
+         * @brief Remove a quad assuming it belongs to this layer
+         *
+         * Delegates to @ref AbstractLayer::remove(LayerDataHandle).
+         */
+        void remove(LayerDataHandle handle) {
+            AbstractVisualLayer::remove(handle);
+        }
+
+        /**
          * @brief Quad custom base color
          *
          * Expects that @p handle is valid.

@@ -132,25 +132,14 @@ enum class UserInterfaceState: UnsignedByte {
     NeedsNodeUpdate = NeedsNodeLayoutUpdate|(1 << 4),
 
     /**
-     * @ref AbstractUserInterface::clean() needs to be called to prune state
-     * belonging to no-longer-valid data. Set implicitly if any of the layers
-     * have @ref LayerState::NeedsClean set, is reset next time
-     * @ref AbstractUserInterface::clean() is called. Implied by
-     * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
-     * everything that sets that flag.
-     */
-    NeedsDataClean = 1 << 5,
-
-    /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
      * hierarchies of removed nodes and data attached to those. Set implicitly
-     * after every @relativeref{AbstractUserInterface,removeNode()} call, is
-     * reset to @ref UserInterfaceState::NeedsNodeUpdate next time
+     * after every @ref AbstractUserInterface::removeNode() call, is reset to
+     * @ref UserInterfaceState::NeedsNodeUpdate next time
      * @ref AbstractUserInterface::clean() is called. Implies
-     * @ref UserInterfaceState::NeedsNodeUpdate and
-     * @ref UserInterfaceState::NeedsDataClean.
+     * @ref UserInterfaceState::NeedsNodeUpdate.
      */
-    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 6),
+    NeedsNodeClean = NeedsNodeUpdate|(1 << 5),
 };
 
 /**
@@ -933,19 +922,18 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * Called implicitly from @ref update() and subsequently also from
          * @ref draw() and all event processing functions. If @ref state()
-         * contains neither @ref UserInterfaceState::NeedsDataClean nor
-         * @ref UserInterfaceState::NeedsNodeClean, this function is a no-op,
-         * otherwise it performs a subset of the following depending on the
-         * state:
+         * doesn't contain @ref UserInterfaceState::NeedsNodeClean, this
+         * function is a no-op, otherwise it performs a subset of the following
+         * depending on the state:
          *
          * -    Removes nodes with an invalid (removed) parent node
          * -    Calls @ref AbstractLayer::cleanNodes() with updated node
          *      generations, causing removal of data attached to invalid nodes
          *
-         * After calling this function, @ref state() contains neither
-         * @ref UserInterfaceState::NeedsDataClean nor
-         * @ref UserInterfaceState::NeedsNodeClean; @ref nodeUsedCount() and
-         * @ref AbstractLayer::usedCount() may get smaller.
+         * After calling this function, @ref state() doesn't contain
+         * @ref UserInterfaceState::NeedsNodeClean anymore;
+         * @ref nodeUsedCount() and @ref AbstractLayer::usedCount() may get
+         * smaller.
          */
         AbstractUserInterface& clean();
 

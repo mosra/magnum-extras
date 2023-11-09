@@ -50,7 +50,6 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         _c(NeedsNodeClipUpdate)
         _c(NeedsNodeLayoutUpdate)
         _c(NeedsNodeUpdate)
-        _c(NeedsDataClean)
         _c(NeedsNodeClean)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -62,8 +61,6 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
 Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::UserInterfaceStates{}", {
         UserInterfaceState::NeedsNodeClean,
-        /* Implied by NeedsNodeClean, has to be after */
-        UserInterfaceState::NeedsDataClean,
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsNodeUpdate,
         /* Implied by NeedsNodeUpdate, has to be after */
@@ -413,19 +410,17 @@ UserInterfaceStates AbstractUserInterface::state() const {
        (removed) layers have instances set to nullptr as well, so this will
        skip them. */
     UserInterfaceStates states;
-    if(!(state.state >= (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))) for(const Layer& layer: state.layers) {
+    if(!(state.state >= UserInterfaceState::NeedsDataAttachmentUpdate)) for(const Layer& layer: state.layers) {
         if(const AbstractLayer* const instance = layer.used.instance.get()) {
             const LayerStates layerState = instance->state();
             if(layerState >= LayerState::NeedsUpdate)
                 states |= UserInterfaceState::NeedsDataUpdate;
             if(layerState >= LayerState::NeedsAttachmentUpdate)
                 states |= UserInterfaceState::NeedsDataAttachmentUpdate;
-            if(layerState >= LayerState::NeedsClean)
-                states |= UserInterfaceState::NeedsDataClean;
 
             /* There's no broader state than this so if it's set, we can stop
                iterating further */
-            if(states == (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))
+            if(states == UserInterfaceState::NeedsDataAttachmentUpdate)
                 break;
         }
     }
@@ -1126,12 +1121,10 @@ void AbstractUserInterface::clearNodeOrder(const NodeHandle handle) {
 
 AbstractUserInterface& AbstractUserInterface::clean() {
     /* Get the state including what bubbles from layers. If there's nothing to
-       clean, bail. No other states should be left after that. */
+       clean, bail. */
     const UserInterfaceStates states = this->state();
-    if(!(states >= UserInterfaceState::NeedsDataClean)) {
-        CORRADE_INTERNAL_ASSERT(!(states >= UserInterfaceState::NeedsNodeClean));
+    if(!(states >= UserInterfaceState::NeedsNodeClean))
         return *this;
-    }
 
     State& state = *_state;
 
@@ -1173,12 +1166,10 @@ AbstractUserInterface& AbstractUserInterface::clean() {
             if(nodeHandleGeneration(node.used.parentOrOrder) != 0 && !isHandleValid(node.used.parentOrOrder))
                 removeNodeInternal(id);
         }
-    }
 
-    /* 3. Next perform a clean for data node assignments, keeping only data
-       that are either not attached or attached to (remaining) valid node
-       handles. If no data update is needed, skip this altogether. */
-    if(states >= UserInterfaceState::NeedsDataClean) {
+        /* 3. Next perform a clean for data node assignments, keeping only data
+           that are either not attached or attached to (remaining) valid node
+           handles. */
         const Containers::StridedArrayView1D<const UnsignedShort> nodeGenerations = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::generation);
 
         /* In each layer remove data attached to invalid non-null nodes */
@@ -1188,7 +1179,7 @@ AbstractUserInterface& AbstractUserInterface::clean() {
 
     /* Unmark the UI as needing a clean() call, but keep the Update states
        including ones that bubbled up from layers */
-    state.state = states & ~((UserInterfaceState::NeedsDataClean|UserInterfaceState::NeedsNodeClean) & ~UserInterfaceState::NeedsNodeUpdate);
+    state.state = states & ~(UserInterfaceState::NeedsNodeClean & ~UserInterfaceState::NeedsNodeUpdate);
     return *this;
 }
 
