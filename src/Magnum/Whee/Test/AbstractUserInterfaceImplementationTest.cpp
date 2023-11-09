@@ -1218,29 +1218,29 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoTopLevelNode
 
 void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
     /* Subset of data node attachments from orderVisibleNodeData() above for
-       layers that have Event set */
-    const Containers::Pair<NodeHandle, UnsignedShort> layer2NodeAttachments[]{
-        {},                             /* 0 */
-        {},                             /* 1 */
-        {nodeHandle(4, 0xbab), 0x111},  /* 2 */
-        {nodeHandle(3, 0xfef), 0x333},  /* 3 */
-        {nodeHandle(12, 0xccc), 0x222}, /* 4 */
-        {},                             /* 5 */
-        {nodeHandle(2, 0xddd), 0x777}   /* 6 */
+       layers that have Event set. */
+    const NodeHandle layer2NodeAttachments[]{
+        NodeHandle{},           /* 0 */
+        NodeHandle{},           /* 1 */
+        nodeHandle(4, 0xbab),   /* 2 */
+        nodeHandle(3, 0xfef),   /* 3 */
+        nodeHandle(12, 0xccc),  /* 4 */
+        NodeHandle{},           /* 5 */
+        nodeHandle(2, 0xddd)    /* 6 */
     };
-    const Containers::Pair<NodeHandle, UnsignedShort> layer3NodeAttachments[]{
-        {nodeHandle(2, 0xefe), 0x555},  /* 0 */
-        {},                             /* 1 */
-        {nodeHandle(7, 0xf0f), 0x888}   /* 2 */
+    const NodeHandle layer3NodeAttachments[]{
+        nodeHandle(2, 0xefe),   /* 0 */
+        NodeHandle{},           /* 1 */
+        nodeHandle(7, 0xf0f)    /* 2 */
     };
-    const Containers::Pair<NodeHandle, UnsignedShort> layer5NodeAttachments[]{
-        {},                             /* 0 */
-        {nodeHandle(3, 0xc0c), 0x444},  /* 1 */
-        {nodeHandle(3, 0xc0c), 0x666},  /* 2 */
-        {},                             /* 3 */
+    const NodeHandle layer5NodeAttachments[]{
+        NodeHandle{},           /* 0 */
+        nodeHandle(3, 0xc0c),   /* 1 */
+        nodeHandle(3, 0xc0c),   /* 2 */
+        NodeHandle{},           /* 3 */
         /* Node 8 isn't in the visible hierarchy so the assignment gets
            ignored */
-        {nodeHandle(8, 0xbbb), 0x999},  /* 4 */
+        nodeHandle(8, 0xbbb),   /* 4 */
     };
 
     /* Compared to orderVisibleNodeData(), only node 8 is left among the
@@ -1271,7 +1271,7 @@ void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
     LayerHandle layer2 = layerHandle(2, 0x88);
     LayerHandle layer3 = layerHandle(3, 0x22);
     LayerHandle layer5 = layerHandle(5, 0x44);
-    Containers::Pair<Containers::StridedArrayView1D<const Containers::Pair<NodeHandle, UnsignedShort>>, LayerHandle> layers[]{
+    Containers::Pair<Containers::StridedArrayView1D<const NodeHandle>, LayerHandle> layers[]{
         {layer5NodeAttachments, layer5},
         {layer3NodeAttachments, layer3},
         {layer2NodeAttachments, layer2},
@@ -1282,8 +1282,7 @@ void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
         CORRADE_ITERATION(layer.second());
         Implementation::orderNodeDataForEventHandlingInto(
             layer.second(),
-            layer.first().slice(&Containers::Pair<NodeHandle, UnsignedShort>::second),
-            layer.first().slice(&Containers::Pair<NodeHandle, UnsignedShort>::first),
+            layer.first(),
             visibleNodeEventDataOffsets,
             Containers::BitArrayView{visibleNodeMask, 0, 14},
             visibleNodeEventData);
@@ -1308,20 +1307,20 @@ void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventData).prefix(Containers::arrayView(visibleNodeEventDataOffsets).back()), Containers::arrayView({
         /* Node 2 */
-        dataHandle(layer3, 0, 0x555),
-        dataHandle(layer2, 6, 0x777),
+        dataHandle(layer3, 0, 0),
+        dataHandle(layer2, 6, 0),
         /* Node 3. Order of items from the same layer matches inverse data ID
            order, not the order in which they were created or attached. */
-        dataHandle(layer5, 2, 0x666),
-        dataHandle(layer5, 1, 0x444),
-        dataHandle(layer2, 3, 0x333),
+        dataHandle(layer5, 2, 0),
+        dataHandle(layer5, 1, 0),
+        dataHandle(layer2, 3, 0),
         /* Node 4 */
-        dataHandle(layer2, 2, 0x111),
+        dataHandle(layer2, 2, 0),
         /* Node 7 */
-        dataHandle(layer3, 2, 0x888),
+        dataHandle(layer3, 2, 0),
         /* Node 8 isn't visible */
         /* Node 12 */
-        dataHandle(layer2, 4, 0x222)
+        dataHandle(layer2, 4, 0)
     }), TestSuite::Compare::Container);
 }
 
