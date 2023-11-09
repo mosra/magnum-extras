@@ -71,13 +71,13 @@ using namespace Math::Literals;
 
 class Layer: public AbstractLayer {
     public:
-        explicit Layer(LayerHandle handle, bool skipVertexDataUpdate, bool skipIndexDataUpdate);
+        explicit Layer(LayerHandle handle, bool skipVertexDataUpdate, bool skipIndexDataUpdate, bool events);
 
         DataHandle create(const Color4ub& color);
 
     private:
         LayerFeatures doFeatures() const override {
-            return LayerFeature::Draw;
+            return LayerFeature::Draw|(_advertiseEvents ? LayerFeature::Event : LayerFeatures{});
         }
 
         void doSetSize(const Vector2& size, const Vector2i&) override {
@@ -103,14 +103,14 @@ class Layer: public AbstractLayer {
         Containers::Array<Vertex> _vertices;
         Vector2 _projectionSize;
 
-        bool _skipVertexDataUpdate, _skipIndexDataUpdate;
+        bool _skipVertexDataUpdate, _skipIndexDataUpdate, _advertiseEvents;
         GL::Mesh _mesh;
         GL::Buffer _vertexBuffer{GL::Buffer::TargetHint::Array}, _indexBuffer{GL::Buffer::TargetHint::ElementArray};
         Shaders::FlatGL2D _shader{Shaders::FlatGL2D::Configuration{}
             .setFlags(Shaders::FlatGL2D::Flag::VertexColor)};
 };
 
-Layer::Layer(LayerHandle handle, bool skipVertexDataUpdate, bool skipIndexDataUpdate): AbstractLayer{handle}, _skipVertexDataUpdate{skipVertexDataUpdate}, _skipIndexDataUpdate{skipIndexDataUpdate} {
+Layer::Layer(LayerHandle handle, bool skipVertexDataUpdate, bool skipIndexDataUpdate, bool advertiseEvents): AbstractLayer{handle}, _skipVertexDataUpdate{skipVertexDataUpdate}, _skipIndexDataUpdate{skipIndexDataUpdate}, _advertiseEvents{advertiseEvents} {
     _mesh.addVertexBuffer(_vertexBuffer, 0,
         Shaders::FlatGL2D::Position{
             Shaders::FlatGL2D::Position::DataType::UnsignedShort},
@@ -199,6 +199,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
             visible set change */
         .addBooleanOption("skip-vertex-data-update").setHelp("skip-vertex-data-update", "skip vertex data update")
         .addBooleanOption("skip-index-data-update").setHelp("skip-index-data-update", "skip index data update")
+        .addBooleanOption("advertise-events").setHelp("advertise-events", "advertise (but don't handle) events on the main layer")
         .addBooleanOption("node-clip-update").setHelp("node-clip-update", "trigger NeedsNodeClipUpdate update every frame")
         .addBooleanOption("node-layout-update").setHelp("node-layout-update", "trigger NeedsNodeLayoutUpdate update every frame")
         .addBooleanOption("node-update").setHelp("node-update", "trigger NeedsNodeUpdate every frame")
@@ -213,6 +214,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
     _triggerNodeUpdate = args.isSet("node-update");
     bool skipVertexDataUpdate = args.isSet("skip-vertex-data-update");
     bool skipIndexDataUpdate = args.isSet("skip-index-data-update");
+    bool advertiseEvents = args.isSet("advertise-events");
 
     const Vector2ui size = args.value<Vector2ui>("size");
     if(size.product() > 1000000)
@@ -230,8 +232,8 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
 
     _layer1 = _ui.createLayer();
     _layer2 = _ui.createLayer();
-    Layer& layer1 = _ui.setLayerInstance(Containers::pointer<Layer>(_layer1, skipVertexDataUpdate, skipIndexDataUpdate));
-    Layer& layer2 = _ui.setLayerInstance(Containers::pointer<Layer>(_layer2, skipVertexDataUpdate, skipIndexDataUpdate));
+    Layer& layer1 = _ui.setLayerInstance(Containers::pointer<Layer>(_layer1, skipVertexDataUpdate, skipIndexDataUpdate, advertiseEvents));
+    Layer& layer2 = _ui.setLayerInstance(Containers::pointer<Layer>(_layer2, skipVertexDataUpdate, skipIndexDataUpdate, advertiseEvents));
 
     const Containers::StaticArrayView<256, const Vector3ub> colors = DebugTools::ColorMap::turbo();
 
