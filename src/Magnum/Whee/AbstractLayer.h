@@ -582,10 +582,17 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @param dataIdsToRemove   Data IDs to remove
          *
          * Implementation for @ref cleanNodes(), which is called from
-         * @ref AbstractUserInterface::clean(). The @p dataIdsToRemove view has
-         * the same size as @ref capacity() and is guaranteed to have bits set
-         * only for valid data IDs, i.e. data IDs that are already removed are
-         * not set.
+         * @ref AbstractUserInterface::clean() (and transitively from
+         * @ref AbstractUserInterface::update()) whenever
+         * @ref UserInterfaceState::NeedsNodeClean or any of the states that
+         * imply it are present in @ref AbstractUserInterface::state().
+         *
+         * The @p dataIdsToRemove view has the same size as @ref capacity() and
+         * is guaranteed to have bits set only for valid data IDs, i.e. data
+         * IDs that are already removed are not set.
+         *
+         * This function may get also called with @p dataIdsToRemove having all
+         * bits zero.
          *
          * Default implementation does nothing.
          */
@@ -606,12 +613,18 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *      @p clipRectIds
          *
          * Implementation for @ref update(), which is called from
-         * @ref AbstractUserInterface::update(). Node handles corresponding to
-         * @p dataIds are available in @ref nodes(), node IDs can be then
-         * extracted from the handles using @ref nodeHandleId(). The node IDs
-         * then index into the @p nodeOffsets and @p nodeSizes views. The
-         * @p nodeOffsets and @p nodeSizes have the same size and are
-         * guaranteed to be large enough to contain any valid node ID.
+         * @ref AbstractUserInterface::update() whenever
+         * @ref UserInterfaceState::NeedsDataUpdate or any of the states that
+         * imply it are present in @ref AbstractUserInterface::state(). Is
+         * always called after @ref doClean() and before @ref doDraw(), with
+         * at least one @ref doSetSize() call happening at some point before.
+         *
+         * Node handles corresponding to @p dataIds are available in
+         * @ref nodes(), node IDs can be then extracted from the handles
+         * using @ref nodeHandleId(). The node IDs then index into the
+         * @p nodeOffsets and @p nodeSizes views. The @p nodeOffsets and
+         * @p nodeSizes have the same size and are guaranteed to be large
+         * enough to contain any valid node ID.
          *
          * All @ref nodes() at indices corresponding to @p dataIds are
          * guaranteed to not be @ref NodeHandle::Null at the time this function
@@ -635,6 +648,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * denotes that no clipping is needed. Tt's up to the implementation
          * whether it clips the actual data directly or whether it performs
          * clipping at draw time.
+         *
+         * This function may get also called with @p dataIds being empty, for
+         * example when @ref setNeedsUpdate() was called but the layer doesn't
+         * have any data currently visible.
          *
          * Default implementation does nothing. Data passed to this function
          * are subsequently passed to @ref doDraw() calls as well, the only
@@ -691,7 +708,9 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @p clipRectCount values in order to interleave the draws for a
          * correct back-to-front order. In each call, the sum of all
          * @p clipRectDataCounts in the range given by @p clipRectOffset and
-         * @p clipRectCount is equal to @p count.
+         * @p clipRectCount is equal to @p count. Unlike @ref doUpdate() or
+         * @ref doClean(), this function is never called with an empty
+         * @p count.
          */
         virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
