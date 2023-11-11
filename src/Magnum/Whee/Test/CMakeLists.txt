@@ -31,6 +31,7 @@ corrade_add_test(WheeAbstractLayerTest AbstractLayerTest.cpp LIBRARIES MagnumWhe
 corrade_add_test(WheeAbstractUserInterfaceTest AbstractUserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
+corrade_add_test(WheeEventLayerTest EventLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
 if(CORRADE_TARGET_EMSCRIPTEN)
     if(CMAKE_VERSION VERSION_LESS 3.13)
