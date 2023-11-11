@@ -201,6 +201,8 @@ constexpr UnsignedInt fontHandleGeneration(FontHandle handle) {
 Draws text laid out using the @ref Text library. You'll most likely instantiate
 the class through @ref TextLayerGL, which contains a concrete OpenGL
 implementation.
+@see @ref UserInterface::textLayer(),
+    @ref UserInterface::setTextLayerInstance(), @ref StyleFeature::TextLayer
 */
 class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
     public:

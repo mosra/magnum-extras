@@ -29,6 +29,7 @@ set(CMAKE_FOLDER "Magnum/Whee/Test")
 
 corrade_add_test(WheeAbstractLayerTest AbstractLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractLayouterTest AbstractLayouterTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeAbstractStyleTest AbstractStyleTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractUserInterfaceTest AbstractUserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractVisualLayerTest AbstractVisualLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumWheeTestLib)
@@ -37,6 +38,7 @@ corrade_add_test(WheeEventLayerTest EventLayerTest.cpp LIBRARIES MagnumWheeTestL
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeTextLayerTest TextLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeTextPropertiesTest TextPropertiesTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeUserInterfaceTest UserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
 if(CORRADE_TARGET_EMSCRIPTEN)
     if(CMAKE_VERSION VERSION_LESS 3.13)
         message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
@@ -79,6 +81,7 @@ if(MAGNUM_TARGET_GL)
 
     corrade_add_test(WheeBaseLayerGL_Test BaseLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
     corrade_add_test(WheeTextLayerGL_Test TextLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
+    corrade_add_test(WheeUserInterfaceGL_Test UserInterfaceGL_Test.cpp LIBRARIES MagnumWhee)
 
     if(NOT CORRADE_TARGET_ANDROID)
         find_package(Magnum REQUIRED Shaders)
@@ -185,4 +188,9 @@ if(MAGNUM_BUILD_GL_TESTS)
             target_link_libraries(WheeTextLayerGLTest PRIVATE MagnumPlugins::StbTrueTypeFont)
         endif()
     endif()
+
+    corrade_add_test(WheeUserInterfaceGLTest UserInterfaceGLTest.cpp
+        LIBRARIES
+            MagnumWheeTestLib
+            Magnum::OpenGLTester)
 endif()

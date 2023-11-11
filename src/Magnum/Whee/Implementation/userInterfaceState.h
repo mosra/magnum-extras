@@ -1,5 +1,5 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
+#ifndef Magnum_Whee_Implementation_userInterfaceState_h
+#define Magnum_Whee_Implementation_userInterfaceState_h
 /*
     This file is part of Magnum.
 
@@ -25,58 +25,32 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/** @file
- * @brief Forward declarations for the @ref Magnum::Whee namespace
- */
+/* Definition of the UserInterface::State struct to be used by both
+   UserInterface and UserInterfaceGL as well as UserInterface tests, and (if
+   this header gets published) eventually possibly also 3rd party renderer
+   implementations */
 
-#include "Magnum/Magnum.h"
+#include <Corrade/Containers/Optional.h>
+#include <Corrade/PluginManager/Manager.h>
+#include <Magnum/Text/AbstractFont.h>
+
+#include "Magnum/Whee/UserInterface.h"
 
 namespace Magnum { namespace Whee {
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
-enum class LayoutHandle: UnsignedLong;
-enum class LayouterHandle: UnsignedShort;
-enum class LayouterDataHandle: UnsignedInt;
+struct UserInterface::State {
+    /* So that UserInterfaceGL::State and potential other derived state structs
+       can be deleted through the base pointer. Same approach is used for
+       AbstractVisualLayer::State and derived structs. */
+    virtual ~State() = default;
 
-class AbstractLayer;
-class AbstractLayouter;
-class AbstractUserInterface;
+    Containers::Optional<PluginManager::Manager<Text::AbstractFont>> fontManagerStorage;
+    PluginManager::Manager<Text::AbstractFont>* fontManager;
 
-class BaseLayer;
-struct BaseLayerCommonStyleUniform;
-struct BaseLayerStyleUniform;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
-#endif
-
-class EventConnection;
-class EventLayer;
-
-enum class FontHandle: UnsignedShort;
-class TextLayer;
-struct TextLayerCommonStyleUniform;
-struct TextLayerStyleUniform;
-#ifdef MAGNUM_TARGET_GL
-class TextLayerGL;
-#endif
-class TextProperties;
-
-enum class StyleFeature: UnsignedByte;
-typedef Containers::EnumSet<StyleFeature, 7> StyleFeatures;
-class AbstractStyle;
-
-class UserInterface;
-class UserInterfaceGL;
-
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
+    BaseLayer* baseLayer{};
+    TextLayer* textLayer{};
+    EventLayer* eventLayer{};
+};
 
 }}
 

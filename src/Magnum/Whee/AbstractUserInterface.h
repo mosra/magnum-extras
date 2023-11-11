@@ -297,6 +297,9 @@ CORRADE_ENUMSET_OPERATORS(NodeFlags)
 @brief Base for the main user interface
 @m_since_latest
 
+Doesn't contain any implicit layers or layouters. You'll most likely want to
+instantiate the @ref UserInterface subclass instead.
+
 @section Whee-AbstractUserInterface-dpi DPI awareness
 
 There are three separate concepts for DPI-aware UI rendering:
