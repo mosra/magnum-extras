@@ -30,6 +30,7 @@
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Magnum.h>
+#include <Magnum/Math/Functions.h>
 
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Handle.h"
@@ -244,6 +245,85 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
     return offset;
 }
 
+/* The `visibleNodeMask` has bits set for nodes in `visibleNodeIds` that are
+   at least partially visible in the parent clip rects.
+
+   The `clipStack` array is temporary storage. */
+void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& absoluteNodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::MutableBitArrayView visibleNodeMask) {
+    CORRADE_INTERNAL_ASSERT(
+        nodeSizes.size() == absoluteNodeOffsets.size() &&
+        clipStack.size() == visibleNodeIds.size() &&
+        visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
+        visibleNodeMask.size() == absoluteNodeOffsets.size());
+
+    /* Clear the visibility mask, individual bits will be set only if they're
+       visible */
+    visibleNodeMask.resetAll();
+
+    /* Filter the visible node list and keep only nodes that are at least
+       partially visible in the intersection of all parent clip rects */
+    std::size_t i = 0;
+    std::size_t depth = 0;
+    while(i != visibleNodeIds.size()) {
+        const UnsignedInt nodeId = visibleNodeIds[i];
+
+        /* Calculate node clip rect min and max */
+        const Vector2 min = absoluteNodeOffsets[nodeId];
+        const Vector2 max = min + nodeSizes[nodeId];
+
+        bool visible;
+        /* If the rect has an empty area, skip it altogether */
+        if(Math::equal(min, max).any()) {
+            visible = false;
+
+        /* If we're at a top-level node, save its clip rect for use by
+           children */
+        } else if(depth == 0) {
+            clipStack[depth].first() = min;
+            clipStack[depth].second() = max;
+            visible = true;
+
+        /* Otherwise intersect with the parent clip rect */
+        } else {
+            const Vector2 parentMin = clipStack[depth - 1].first();
+            const Vector2 parentMax = clipStack[depth - 1].second();
+
+            /* If the clip rects are completely disjoint, there's no point in
+               continuing for any children. Logic follows Math::intersects()
+               for Range. */
+            /** @todo can't test & intersection calculation be done as a single
+                operation? */
+            visible = (parentMax > min).all() &&
+                      (parentMin < max).all();
+
+            /* If they intersect, calculate the clip rect intersection. Logic
+               follows Math::intersect() for Range. */
+            if(visible) {
+                clipStack[depth].first() = Math::max(parentMin, min);
+                clipStack[depth].second() = Math::min(parentMax, max);
+            }
+        }
+
+        /* If the node is visible */
+        if(visible) {
+            /* Remember offset after all children of its node so we know when
+               to pop this clip rect off the stack */
+            clipStack[depth].third() = i + visibleNodeChildrenCounts[i] + 1;
+            visibleNodeMask.set(nodeId);
+            ++depth;
+
+            /* Continue to the next entry */
+            ++i;
+
+        /* Otherwise there's no point in testing any children either */
+        } else i += visibleNodeChildrenCounts[i] + 1;
+
+        /* Pop the clip stack items for which all children were processed */
+        while(depth && clipStack[depth - 1].third() == i)
+            --depth;
+    }
+}
+
 /* The `visibleNodeDataOffsets` and `visibleNodeData` arrays get filled with
    data handles for visible nodes, with `visibleNodeDataOffsets[i]` to
    `visibleNodeDataOffsets[i + 1]` being the range of data in
@@ -260,10 +340,10 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
    `dataToDrawLayerIds[j]`, with their total count being the return value of
    this function.
 
-   The `visibleNodeMask` and `previousDataToUpdateLayerOffsets` arrays are
-   temporary storage. The `visibleNodeMask`, `visibleNodeDataOffsets` and
-   `dataToUpdateLayerOffsets` arrays are expected to be zero-initialized. */
-UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::StridedArrayView1D<const DataHandle>& data, const Containers::StridedArrayView1D<const LayerHandle>& layersNext, const LayerHandle firstLayer, const Containers::StridedArrayView1D<const LayerFeatures>& layerFeatures, const Containers::MutableBitArrayView visibleNodeMask, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<DataHandle> visibleNodeData, const Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets, const Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateNodeIds, const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
+   The `previousDataToUpdateLayerOffsets` array is temporary storage. The
+   `visibleNodeDataOffsets` and `dataToUpdateLayerOffsets` arrays are expected
+   to be zero-initialized. */
+UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::StridedArrayView1D<const DataHandle>& data, const Containers::StridedArrayView1D<const LayerHandle>& layersNext, const LayerHandle firstLayer, const Containers::StridedArrayView1D<const LayerFeatures>& layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<DataHandle> visibleNodeData, const Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets, const Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateNodeIds, const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
     CORRADE_INTERNAL_ASSERT(
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
         data.size() == dataNodes.size() &&
@@ -287,12 +367,6 @@ UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const 
             i = 0;
         return 0;
     }
-
-    /* Create a bitmask for all visible nodes IDs. Nodes that are not present
-       in the array (not included in the draw order, or invalid handles) and
-       hidden nodes stay with the bits set to zero. */
-    for(const UnsignedInt& i: visibleNodeIds)
-        visibleNodeMask.set(i);
 
     /* Count how much data belongs to each visible node, skipping the first
        element ...*/
