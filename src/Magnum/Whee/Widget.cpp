@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,56 +23,44 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Magnum/Magnum.h"
+#include "Widget.h"
+
+#include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/UserInterface.h"
 
 namespace Magnum { namespace Whee {
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
-enum class LayoutHandle: UnsignedLong;
-enum class LayouterHandle: UnsignedShort;
-enum class LayouterDataHandle: UnsignedInt;
+Widget::Widget(Widget&& other) noexcept: _ui{other._ui}, _node{other._node} {
+    /* not using NodeHandle::Null to not need to include Handle.h */
+    other._node = NodeHandle{};
+}
 
-class AbstractLayer;
-class AbstractLayouter;
-class AbstractUserInterface;
+Widget::~Widget() {
+    /* Explicitly checking for null handles even though isHandleValid() does
+       that to avoid a needless indirection */
+    if(_node != NodeHandle::Null && _ui->isHandleValid(_node))
+        _ui->removeNode(_node);
+}
 
-class BaseLayer;
-struct BaseLayerCommonStyleUniform;
-struct BaseLayerStyleUniform;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
-#endif
+Widget& Widget::operator=(Widget&& other) noexcept {
+    Utility::swap(_ui, other._ui);
+    Utility::swap(_node, other._node);
+    return *this;
+}
 
-class EventConnection;
-class EventLayer;
+bool Widget::isHidden() const {
+    return _ui->nodeFlags(_node) >= NodeFlag::Hidden;
+}
 
-enum class FontHandle: UnsignedShort;
-class TextLayer;
-struct TextLayerCommonStyleUniform;
-struct TextLayerStyleUniform;
-#ifdef MAGNUM_TARGET_GL
-class TextLayerGL;
-#endif
-class TextProperties;
+void Widget::setHidden(const bool hidden) {
+    hidden ? _ui->addNodeFlags(_node, NodeFlag::Hidden) :
+             _ui->clearNodeFlags(_node, NodeFlag::Hidden);
+}
 
-enum class StyleFeature: UnsignedByte;
-typedef Containers::EnumSet<StyleFeature, 7> StyleFeatures;
-class AbstractStyle;
-
-class UserInterface;
-class UserInterfaceGL;
-class Widget;
-
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
+NodeHandle Widget::release() {
+    const NodeHandle out = _node;
+    _node = NodeHandle::Null;
+    return out;
+}
 
 }}
-
-#endif
