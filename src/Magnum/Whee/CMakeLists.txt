@@ -41,7 +41,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
 
 set(MagnumWhee_SRCS
     Event.cpp
-    Handle.cpp)
+    Handle.cpp
+    Widget.cpp)
 
 set(MagnumWhee_GracefulAssert_SRCS
     AbstractLayer.cpp
@@ -69,6 +70,7 @@ set(MagnumWhee_HEADERS
     TextProperties.h
     UserInterface.h
     Whee.h
+    Widget.h
     visibility.h)
 
 set(MagnumWhee_PRIVATE_HEADERS
