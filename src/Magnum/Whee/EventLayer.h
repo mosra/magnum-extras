@@ -169,6 +169,8 @@ struct EventConnectionData {
 
 Provides signal/slot-like functionality, connecting events happening on nodes
 with aribtrary functions handling them.
+@see @ref UserInterface::eventLayer(),
+    @ref UserInterface::setEventLayerInstance(), @ref StyleFeature::EventLayer
 */
 class MAGNUM_WHEE_EXPORT EventLayer: public AbstractLayer {
     public:
