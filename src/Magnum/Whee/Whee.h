@@ -96,6 +96,10 @@ class AbstractStyle;
 class UserInterface;
 class UserInterfaceGL;
 
+class AbstractWidget;
+template<class> class BasicWidget;
+typedef BasicWidget<UserInterface> Widget;
+
 enum class Pointer: UnsignedByte;
 typedef Containers::EnumSet<Pointer> Pointers;
 class PointerEvent;
