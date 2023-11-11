@@ -41,10 +41,10 @@ namespace Magnum { namespace Whee {
 
 Debug& operator<<(Debug& debug, const UserInterfaceState value) {
     /* Special case coming from the UserInterfaceStates printer. As both are a
-       superset of NeedsDataClean, printing just one would result in
-       `NeedsDataClean|UserInterfaceState(0x2)` in the output. */
-    if(value == UserInterfaceState(UnsignedByte(UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataClean)))
-        return debug << UserInterfaceState::NeedsNodeUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsDataClean;
+       superset of NeedsDataAttachmentUpdate, printing just one would result in
+       `NeedsDataClean|UserInterfaceState(0x4)` in the output. */
+    if(value == UserInterfaceState(UnsignedByte(UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataClean)))
+        return debug << UserInterfaceState::NeedsNodeClipUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsDataClean;
 
     debug << "Whee::UserInterfaceState" << Debug::nospace;
 
@@ -53,6 +53,7 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         #define _c(value) case UserInterfaceState::value: return debug << "::" #value;
         _c(NeedsDataUpdate)
         _c(NeedsDataAttachmentUpdate)
+        _c(NeedsNodeClipUpdate)
         _c(NeedsNodeLayoutUpdate)
         _c(NeedsNodeUpdate)
         _c(NeedsDataClean)
@@ -67,21 +68,22 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
 Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::UserInterfaceStates{}", {
         UserInterfaceState::NeedsNodeClean,
-        /* Both are a superset of NeedsDataClean, meaning printing just one
-           would result in `NeedsDataClean|UserInterfaceState(0x2)` in the
-           output. So we pass both and let the UserInterfaceState  deal with
-           that. */
-        UserInterfaceState(UnsignedByte(UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataClean)),
+        /* Both are a superset of NeedsDataAttachmentUpdate, meaning printing
+           just one would result in `NeedsDataClean|UserInterfaceState(0x4)` in
+           the output. So we pass both and let the UserInterfaceState printer
+           deal with that. */
+        UserInterfaceState(UnsignedByte(UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataClean)),
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsDataClean,
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsNodeUpdate,
         /* Implied by NeedsNodeUpdate, has to be after */
         UserInterfaceState::NeedsNodeLayoutUpdate,
-        /* Implied by NeedsNodeUpdate, has to be after */
+        /* Implied by NeedsNodeLayoutUpdate, has to be after */
+        UserInterfaceState::NeedsNodeClipUpdate,
+        /* Implied by NeedsNodeClipUpdate, has to be after */
         UserInterfaceState::NeedsDataAttachmentUpdate,
-        /* Implied by NeedsDataAttachmentUpdate and NeedsNodeLayoutUpdate, has
-           to be after */
+        /* Implied by NeedsDataAttachmentUpdate, has to be after */
         UserInterfaceState::NeedsDataUpdate
     });
 }
@@ -361,6 +363,7 @@ struct AbstractUserInterface::State {
     Containers::ArrayView<UnsignedInt> visibleNodeChildrenCounts;
     Containers::StridedArrayView1D<UnsignedInt> visibleFrontToBackTopLevelNodeIndices;
     Containers::ArrayView<Vector2> absoluteNodeOffsets;
+    Containers::MutableBitArrayView visibleNodeMask;
     Containers::ArrayTuple dataStateStorage;
     Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets;
     Containers::ArrayView<UnsignedInt> dataToUpdateIds;
@@ -830,8 +833,8 @@ void AbstractUserInterface::setNodeSize(const NodeHandle handle, const Vector2& 
     State& state = *_state;
     state.nodes[nodeHandleId(handle)].used.size = size;
 
-    /* Mark the UI as needing an update() call to refresh data state */
-    state.state |= UserInterfaceState::NeedsDataUpdate;
+    /* Mark the UI as needing an update() call to refresh node clip state */
+    state.state |= UserInterfaceState::NeedsNodeClipUpdate;
 }
 
 NodeFlags AbstractUserInterface::nodeFlags(const NodeHandle handle) const {
@@ -1303,7 +1306,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess;
-    Containers::MutableBitArrayView visibleNodeMask;
+    Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack;
     Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets;
     Containers::ArrayView<DataHandle> visibleNodeData;
     Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets;
@@ -1312,9 +1315,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
         {NoInit, state.nodes.size(), children},
         {NoInit, state.nodes.size(), parentsToProcess},
-        {ValueInit, state.nodes.size(), visibleNodeMask},
         /* Running data offset (+1) for each item */
         {ValueInit, state.nodes.size() + 1, visibleNodeDataOffsets},
+        {NoInit, state.nodes.size(), clipStack},
         {NoInit, state.data.size(), visibleNodeData},
         /* Running data offset (+1) for each item */
         {ValueInit, state.layers.size() + 1, previousDataToUpdateLayerOffsets},
@@ -1329,6 +1332,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.nodes.size(), state.visibleNodeChildrenCounts},
             {NoInit, state.nodeOrder.size(), state.visibleFrontToBackTopLevelNodeIndices},
             {NoInit, state.nodes.size(), state.absoluteNodeOffsets},
+            {NoInit, state.nodes.size(), state.visibleNodeMask},
         };
 
         /* 1. Order the visible node hierarchy. */
@@ -1361,11 +1365,23 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 nodeHandleGeneration(node.used.parentOrOrder) == 0 ? node.used.offset :
                     state.absoluteNodeOffsets[nodeHandleId(node.used.parentOrOrder)] + node.used.offset;
         }
+    }
 
+    /* If no clip update is needed, the `state.visibleNodeMask` is all
+       up-to-date */
+    if(states >= UserInterfaceState::NeedsNodeClipUpdate) {
         /* 4. Cull / clip the visible nodes based on their clip rects */
+        Implementation::cullVisibleNodesInto(
+            state.absoluteNodeOffsets,
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size),
+            clipStack.prefix(state.visibleNodeIds.size()),
+            state.visibleNodeIds,
+            state.visibleNodeChildrenCounts,
+            state.visibleNodeMask);
 
-        /** @todo implement; might want also a layer-specific cull / clip
-            implementation that gets called after the "upload" step */
+        /** @todo might want also a layer-specific cull / clip implementation
+            that gets called after the "upload" step, for line art, text runs
+            and such */
     }
 
     /* If no data attachment update is needed, the data in
@@ -1397,7 +1413,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::next),
             state.firstLayer,
             stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::features),
-            visibleNodeMask,
+            state.visibleNodeMask,
             visibleNodeDataOffsets,
             visibleNodeData,
             state.dataToUpdateLayerOffsets,
@@ -1456,7 +1472,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         /* If the node capturing pointer events is no longer valid or is now
            invisible, reset it */
         if(!isHandleValid(state.pointerEventCapturedNode) ||
-           !visibleNodeMask[nodeHandleId(state.pointerEventCapturedNode)]) {
+           !state.visibleNodeMask[nodeHandleId(state.pointerEventCapturedNode)]) {
             state.pointerEventCapturedNode = NodeHandle::Null;
             state.pointerEventCapturedData = DataHandle::Null;
         }
@@ -1464,7 +1480,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         /* If the hovered node is no longer valid or is now invisible, reset
            it */
         if(!isHandleValid(state.pointerEventHoveredNode) ||
-           !visibleNodeMask[nodeHandleId(state.pointerEventHoveredNode)]) {
+           !state.visibleNodeMask[nodeHandleId(state.pointerEventHoveredNode)]) {
             state.pointerEventHoveredNode = NodeHandle::Null;
             state.pointerEventHoveredData = DataHandle::Null;
         }

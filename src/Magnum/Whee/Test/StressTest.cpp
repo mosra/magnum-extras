@@ -59,6 +59,7 @@ class StressTest: public Platform::Application {
         AbstractUserInterface _ui;
         LayerHandle _layer1, _layer2;
         bool _triggerDataUpdate,
+            _triggerNodeClipUpdate,
             _triggerNodeLayoutUpdate,
             _triggerNodeUpdate;
 
@@ -196,6 +197,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
             visible set change */
         .addBooleanOption("skip-vertex-data-update").setHelp("skip-vertex-data-update", "skip vertex data update")
         .addBooleanOption("skip-index-data-update").setHelp("skip-index-data-update", "skip index data update")
+        .addBooleanOption("node-clip-update").setHelp("node-clip-update", "trigger NeedsNodeClipUpdate update every frame")
         .addBooleanOption("node-layout-update").setHelp("node-layout-update", "trigger NeedsNodeLayoutUpdate update every frame")
         .addBooleanOption("node-update").setHelp("node-update", "trigger NeedsNodeUpdate every frame")
         /** @todo other triggers */
@@ -203,6 +205,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
         .parse(arguments.argc, arguments.argv);
 
     _triggerDataUpdate = args.isSet("data-update");
+    _triggerNodeClipUpdate = args.isSet("node-clip-update");
     _triggerNodeLayoutUpdate = args.isSet("node-layout-update");
     _triggerNodeUpdate = args.isSet("node-update");
     bool skipVertexDataUpdate = args.isSet("skip-vertex-data-update");
@@ -262,6 +265,8 @@ void StressTest::drawEvent() {
     NodeHandle node = nodeHandle(Math::min(std::size_t{56}, _ui.nodeCapacity() - 1), 1);
     if(_triggerNodeUpdate)
         _ui.setNodeFlags(node, ~_ui.nodeFlags(node));
+    else if(_triggerNodeClipUpdate)
+        _ui.setNodeSize(nodeHandle(0, 1), _ui.nodeSize(nodeHandle(0, 1)));
     else if(_triggerNodeLayoutUpdate)
         _ui.setNodeOffset(nodeHandle(0, 1), _ui.nodeOffset(nodeHandle(0, 1)));
     else if(_triggerDataUpdate)
