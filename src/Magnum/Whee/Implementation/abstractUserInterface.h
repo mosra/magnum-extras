@@ -263,8 +263,8 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
 
    The `nodeLayoutLevels`, `layoutLevelOffsets`, `topLevelLayouts`,
    `topLevelLayoutLevels` and `levelPartitionedTopLevelLayouts` arrays are
-   temporary storage, the `layoutLevelOffsets` array is expected to be
-   zero-initialized. */
+   temporary storage, the `nodeLayoutLevels` and `layoutLevelOffsets` arrays
+   are expected to be zero-initialized. */
 std::size_t discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParentOrOrder, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const UnsignedInt layouterCount, const Containers::StridedArrayView2D<const LayoutHandle>& nodeLayouts, const Containers::StridedArrayView2D<UnsignedInt>& nodeLayoutLevels, const Containers::ArrayView<UnsignedInt> layoutLevelOffsets, const Containers::StridedArrayView1D<LayoutHandle>& topLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutLevels, const Containers::StridedArrayView1D<LayoutHandle>& levelPartitionedTopLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutOffsets, const Containers::StridedArrayView1D<UnsignedByte>& topLevelLayoutLayouterIds, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutIds) {
     CORRADE_INTERNAL_ASSERT(
         nodeLayouts.size()[0] == nodeParentOrOrder.size() &&
@@ -314,7 +314,9 @@ std::size_t discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D
         if(nodeHandleGeneration(nodeParentOrOrder[nodeId]) == 0) {
             for(std::size_t i = 0; i != layouts.size(); ++i) {
                 if(layouts[i] != LayoutHandle::Null) {
-                    layoutLevels[i] = nextFreeLevel;
+                    /* The layoutLevels get the level + 1, 0 indicating the
+                       layout (if non-null) isn't assigned to a visible node */
+                    layoutLevels[i] = nextFreeLevel + 1;
                     topLevelLayouts[topLevelLayoutIndex] = layouts[i];
                     topLevelLayoutLevels[topLevelLayoutIndex] = nextFreeLevel;
                     ++nextFreeLevel;
@@ -339,7 +341,9 @@ std::size_t discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D
                 if(layouts[i] != LayoutHandle::Null &&
                    parentLayouts[i] != LayoutHandle::Null)
                 {
-                    nextFreeLevel = Math::max(nextFreeLevel, parentLayoutLevels[i] + 1);
+                    /* The layoutLevels get the level + 1, subtract it back.
+                       The next free level is then a level after. */
+                    nextFreeLevel = Math::max(nextFreeLevel, parentLayoutLevels[i] - 1 + 1);
                     layoutLevels[i] = parentLayoutLevels[i];
                 }
             }
@@ -351,7 +355,9 @@ std::size_t discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D
                 if(layouts[i] != LayoutHandle::Null &&
                    parentLayouts[i] == LayoutHandle::Null)
                 {
-                    layoutLevels[i] = nextFreeLevel;
+                    /* The layoutLevels get the level + 1, 0 indicating the
+                       layout (if non-null) isn't assigned to a visible node */
+                    layoutLevels[i] = nextFreeLevel + 1;
                     topLevelLayouts[topLevelLayoutIndex] = layouts[i];
                     topLevelLayoutLevels[topLevelLayoutIndex] = nextFreeLevel;
                     ++nextFreeLevel;
@@ -366,7 +372,7 @@ std::size_t discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D
     CORRADE_INTERNAL_ASSERT(topLevelLayoutIndex <= topLevelLayouts.size());
 
     /* 2. Partition the top-level layout list by level. */
-    CORRADE_INTERNAL_ASSERT(maxLevel + 1 <= layoutLevelOffsets.size());
+    CORRADE_INTERNAL_ASSERT(maxLevel <= layoutLevelOffsets.size());
 
     /* First calculate the count of layouts for each level, skipping the first
        element ... */

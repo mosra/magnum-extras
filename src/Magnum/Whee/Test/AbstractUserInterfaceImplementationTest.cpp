@@ -903,7 +903,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesMultipl
         #undef __
     };
 
-    UnsignedInt nodeLayoutLevels[7*5];
+    UnsignedInt nodeLayoutLevels[7*5]{};
     UnsignedInt layoutLevelOffsets[11 + 1]{};
     LayoutHandle topLevelLayouts[11];
     UnsignedInt topLevelLayoutLevels[11];
@@ -991,7 +991,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoVisib
         a1,             LayoutHandle{},
         LayoutHandle{}, b2
     };
-    UnsignedInt nodeLayoutLevels[3*2];
+    UnsignedInt nodeLayoutLevels[3*2]{};
 
     /* Shouldn't blow up in any way */
     UnsignedInt layoutLevelOffsets[1]{};
@@ -1030,7 +1030,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
         a
     };
 
-    UnsignedInt nodeLayoutLevels[1];
+    UnsignedInt nodeLayoutLevels[1]{};
     UnsignedInt layoutLevelOffsets[1 + 1]{};
     LayoutHandle topLevelLayouts[1];
     UnsignedInt topLevelLayoutLevels[1];
@@ -1087,7 +1087,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
         a, b, c
     };
 
-    UnsignedInt nodeLayoutLevels[3];
+    UnsignedInt nodeLayoutLevels[3]{};
     UnsignedInt layoutLevelOffsets[3 + 1]{};
     LayoutHandle topLevelLayouts[3];
     UnsignedInt topLevelLayoutLevels[3];

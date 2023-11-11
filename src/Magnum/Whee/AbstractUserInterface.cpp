@@ -1608,7 +1608,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
         /* Not all nodes have layouts from all layouters, initialize to
            LayoutHandle::Null */
         {ValueInit, {state.nodes.size(), usedLayouterCount}, nodeLayouts},
-        {NoInit, {state.nodes.size(), usedLayouterCount}, nodeLayoutLevels},
+        /* Zero-initialized as zeros indicate the layout (if non-null) is
+           assigned to a node that's not visible */
+        {ValueInit, {state.nodes.size(), usedLayouterCount}, nodeLayoutLevels},
         /* Running layout offset (+1) for each level */
         {ValueInit, layoutCount + 1, layoutLevelOffsets},
         {NoInit, layoutCount, topLevelLayouts},
