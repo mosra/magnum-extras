@@ -49,6 +49,9 @@ struct BaseLayerStyleItem;
 class BaseLayerGL;
 #endif
 
+class EventConnection;
+class EventLayer;
+
 enum class Pointer: UnsignedByte;
 typedef Containers::EnumSet<Pointer> Pointers;
 class PointerEvent;
