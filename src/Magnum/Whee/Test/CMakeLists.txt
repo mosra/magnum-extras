@@ -48,6 +48,7 @@ corrade_add_test(WheeTextLayerTest TextLayerTest.cpp LIBRARIES MagnumWheeTestLib
 corrade_add_test(WheeTextLayerStyleAnimatorTest TextLayerStyleAnimatorTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeTextPropertiesTest TextPropertiesTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeUserInterfaceTest UserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeWidgetTest WidgetTest.cpp LIBRARIES MagnumWheeTestLib)
 if(CORRADE_TARGET_EMSCRIPTEN)
     if(CMAKE_VERSION VERSION_LESS 3.13)
         message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")

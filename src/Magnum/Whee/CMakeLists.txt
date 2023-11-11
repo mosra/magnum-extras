@@ -59,7 +59,8 @@ set(MagnumWhee_GracefulAssert_SRCS
     TextLayer.cpp
     TextLayerAnimator.cpp
     TextProperties.cpp
-    UserInterface.cpp)
+    UserInterface.cpp
+    Widget.cpp)
 
 set(MagnumWhee_HEADERS
     AbstractAnimator.h
@@ -82,6 +83,7 @@ set(MagnumWhee_HEADERS
     TextProperties.h
     UserInterface.h
     Whee.h
+    Widget.h
     visibility.h)
 
 set(MagnumWhee_PRIVATE_HEADERS
