@@ -53,11 +53,11 @@ enum class UserInterfaceState: UnsignedByte {
     /**
      * @ref AbstractUserInterface::update() needs to be called to recalculate
      * or reupload data attached to visible node hierarchy after they've been
-     * changed. Set implicitly after every
-     * @ref AbstractUserInterface::setNodeSize() call and if any of the layers
-     * have @ref LayerState::NeedsUpdate set, is reset next time
+     * changed. Set implicitly if any of the layers have
+     * @ref LayerState::NeedsUpdate set, is reset next time
      * @ref AbstractUserInterface::update() is called. Implied by
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
+     * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate},
      * @relativeref{UserInterfaceState,NeedsDataClean} and
@@ -76,6 +76,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref UserInterfaceState::NeedsDataClean was set, is reset next time
      * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate},
      * @relativeref{UserInterfaceState,NeedsDataClean} and
@@ -86,16 +87,30 @@ enum class UserInterfaceState: UnsignedByte {
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
-     * visible node hierarchy layout after node sizes or offsets changed. Set
-     * implicitly after every @ref AbstractUserInterface::setNodeOffset() call,
-     * is reset next time @ref AbstractUserInterface::update() is called.
-     * Implies @ref UserInterfaceState::NeedsDataUpdate. Implied by
+     * visible node set after node sizes changed. Set implicitly after every
+     * @ref AbstractUserInterface::setNodeSize() call, is
+     * reset next time @ref AbstractUserInterface::update() is called. Implies
+     * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate},
      * @relativeref{UserInterfaceState,NeedsDataClean} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsNodeLayoutUpdate = NeedsDataUpdate|(1 << 2),
+    NeedsNodeClipUpdate = NeedsDataAttachmentUpdate|(1 << 2),
+
+    /**
+     * @ref AbstractUserInterface::update() needs to be called to refresh the
+     * visible node hierarchy layout after node sizes or offsets changed. Set
+     * implicitly after every @ref AbstractUserInterface::setNodeOffset() call,
+     * is reset next time @ref AbstractUserInterface::update() is called.
+     * Implies @ref UserInterfaceState::NeedsNodeClipUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate},
+     * @relativeref{UserInterfaceState,NeedsDataClean} and
+     * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
+     * everything that sets those flags.
+     */
+    NeedsNodeLayoutUpdate = NeedsNodeClipUpdate|(1 << 3),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -108,12 +123,11 @@ enum class UserInterfaceState: UnsignedByte {
      * @relativeref{AbstractUserInterface,setNodeOrder()} and
      * @relativeref{AbstractUserInterface,clearNodeOrder()} call, is reset next
      * time @ref AbstractUserInterface::update() is called. Implies
-     * @ref UserInterfaceState::NeedsDataAttachmentUpdate and
      * @ref UserInterfaceState::NeedsNodeLayoutUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsNodeUpdate = NeedsDataAttachmentUpdate|NeedsNodeLayoutUpdate|(1 << 3),
+    NeedsNodeUpdate = NeedsNodeLayoutUpdate|(1 << 4),
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune
@@ -126,7 +140,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsDataClean = NeedsDataAttachmentUpdate|(1 << 4),
+    NeedsDataClean = NeedsDataAttachmentUpdate|(1 << 5),
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
@@ -137,7 +151,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref UserInterfaceState::NeedsNodeUpdate and
      * @ref UserInterfaceState::NeedsDataClean.
      */
-    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 5),
+    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 6),
 };
 
 /**
@@ -729,7 +743,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Expects that @p handle is valid.
          *
          * Calling this function causes
-         * @ref UserInterfaceState::NeedsDataUpdate to be set.
+         * @ref UserInterfaceState::NeedsNodeClipUpdate to be set.
          * @see @ref isHandleValid(NodeHandle) const
          */
         void setNodeSize(NodeHandle handle, const Vector2& size);
@@ -950,6 +964,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * and all event processing functions. If @ref state() contains none of
          * @ref UserInterfaceState::NeedsDataUpdate,
          * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
+         * @ref UserInterfaceState::NeedsNodeClipUpdate,
          * @ref UserInterfaceState::NeedsNodeLayoutUpdate or
          * @ref UserInterfaceState::NeedsNodeUpdate, this function is a no-op,
          * otherwise it performs a subset of the following depending on the
@@ -958,6 +973,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Orders visible nodes back-to-front for drawing, front-to-back
          *      for event processing and collects their data attachments
          * -    Calculates absolute offsets for visible nodes
+         * -    Culls invisible nodes
          * -    Partitions node data attachments by the layer and then by draw
          *      order
          * -    Calls @ref AbstractLayer::update() with the partitioned data

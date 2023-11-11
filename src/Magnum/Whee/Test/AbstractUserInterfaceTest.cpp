@@ -408,26 +408,33 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Debug{&out} << (UserInterfaceState::NeedsDataUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsDataAttachmentUpdate\n");
 
+    /* NeedsNodeClipUpdate is a superset of NeedsDataAttachmentUpdate, so only
+       one should be printed */
+    } {
+        std::ostringstream out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
+        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClipUpdate\n");
+
+    /* NeedsNodeLayoutUpdate is a superset of NeedsNodeClipUpdate, so only one
+       should be printed */
+    } {
+        std::ostringstream out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeLayoutUpdate|UserInterfaceState::NeedsNodeClipUpdate);
+        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeLayoutUpdate\n");
+
+    /* NeedsNodeUpdate is a superset of NeedsNodeLayoutUpdate, so only one
+       should be printed */
+    } {
+        std::ostringstream out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsNodeLayoutUpdate);
+        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeUpdate\n");
+
     /* NeedsDataClean is a superset of NeedsDataAttachmentUpdate, so only one
        should be printed */
     } {
         std::ostringstream out;
         Debug{&out} << (UserInterfaceState::NeedsDataClean |UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsDataClean\n");
-
-    /* NeedsNodeUpdate is a superset of NeedsDataAttachmentUpdate, so only one
-       should be printed */
-    } {
-        std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
-        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeUpdate\n");
-
-    /* NeedsNodeLayoutUpdate is a superset of NeedsDataUpdate, so only one
-       should be printed */
-    } {
-        std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeLayoutUpdate|UserInterfaceState::NeedsDataUpdate);
-        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeLayoutUpdate\n");
 
     /* NeedsNodeClean is a superset of NeedsNodeUpdate, so only one should be
        printed */
@@ -443,19 +450,12 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsDataClean);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean\n");
 
-    /* NeedsNodeUpdate is a superset of both NeedsDataAttachmentUpdate and
-       NeedsNodeLayoutUpdate, so only one should be printed */
-    } {
-        std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsNodeLayoutUpdate|UserInterfaceState::NeedsNodeUpdate);
-        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeUpdate\n");
-
-    /* NeedsNodeUpdate and NeedsDataClean are both supersets of
+    /* NeedsNodeClipUpdate and NeedsDataClean are both supersets of
        NeedsDataAttachmentUpdate, so only the two should be printed */
     } {
         std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataClean);
-        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeUpdate|Whee::UserInterfaceState::NeedsDataClean\n");
+        Debug{&out} << (UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataClean);
+        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClipUpdate|Whee::UserInterfaceState::NeedsDataClean\n");
 
     /* NeedsNodeClean is a superset of all others, so it should be printed
        alone */
@@ -2198,10 +2198,20 @@ void AbstractUserInterfaceTest::state() {
     AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
+    /*   2        3         4         5         6
+       0                              +---------+
+       1 +----------------------------| another |
+       2 |       node                 +---------+
+       3 |                  +---------+
+       4 |        +---------| nested2 |
+       5 |        | nested1 +---------+
+       6 +--------+---------+---------+           */
+    NodeHandle node = ui.createNode({2.0f, 1.0f}, {3.0f, 5.0f});
+    NodeHandle another = ui.createNode({5.0f, 0.0f}, {1.0f, 2.0f});
+    NodeHandle nested1 = ui.createNode(node, {1.0f, 3.0f}, {1.0f, 2.0f});
+    NodeHandle nested2 = ui.createNode(node, {2.0f, 2.0f}, {1.0f, 2.0f});
+
     /* Creating nodes sets a state flag */
-    NodeHandle node = ui.createNode({1.0f, 2.0f}, {3.0f, 4.0f});
-    NodeHandle another = ui.createNode({2.0f, 1.0f}, {4.0f, 3.0f});
-    NodeHandle nested = ui.createNode(node, {0.5f, 1.5f}, {2.5f, 3.5f});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
     /* Calling clean() doesn't do anything. Until data are added, there's
@@ -2289,6 +2299,7 @@ void AbstractUserInterfaceTest::state() {
     DataHandle data1 = ui.layer(layer).create();
     DataHandle data2 = ui.layer(layer).create();
     DataHandle data3 = ui.layer(layer).create();
+    DataHandle data4 = ui.layer(layer).create();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
 
@@ -2317,7 +2328,8 @@ void AbstractUserInterfaceTest::state() {
     /* Attaching the data sets flags. Shuffled order to have non-trivial
        results. */
     ui.attachData(node, data2);
-    ui.attachData(nested, data1);
+    ui.attachData(nested1, data4);
+    ui.attachData(nested2, data1);
     ui.attachData(another, data3);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
@@ -2338,13 +2350,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data1), nodeHandleId(nested)},
+            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data1), nodeHandleId(nested2)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-            {{1.0f, 2.0f}, {3.0f, 4.0f}}, /* node */
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
-            {{1.5f, 3.5f}, {2.5f, 3.5f}}, /* nested */
+            {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
         };
         ui.layer<Layer>(layer).expectedData = expectedData;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
@@ -2376,13 +2390,15 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data1), nodeHandleId(nested)},
+            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data1), nodeHandleId(nested2)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-            {{1.0f, 2.0f}, {3.0f, 4.0f}}, /* node */
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
-            {{1.5f, 3.5f}, {2.5f, 3.5f}}, /* nested */
+            {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
         };
         ui.layer<Layer>(layer).expectedData = expectedData;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
@@ -2392,11 +2408,19 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
 
-    /* Changing a node size sets a state flag to update the data. Individual
-       node resize doesn't currently affect the layout in any way, so no
-       NeedsNodeLayoutUpdate. */
-    ui.setNodeSize(node, {3.5f, 4.5f});
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+    /* Changing a node size sets a state flag to update clipping. In this case
+       it causes the nested2 node to get culled:
+
+         2        3         4         5         6
+       0                              +---------+
+       1 +------------------+         | another |
+       2 |       node       |         +---------+
+       3 |                  +---------+
+       4 |        +---------| nested2 |
+       5 +--------| nested1 +---------+
+       6          +---------+                     */
+    ui.setNodeSize(node, {2.0f, 4.0f});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
 
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
@@ -2404,24 +2428,26 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
     }
 
-    /* Calling update() reuploads the data with a single size changed and
-       resets the flag, but internally shouldn't do any other state rebuild */
+    /* Calling update() reuploads the data except for the culled node, with
+       a single size changed and resets the flag, but internally shouldn't do
+       any other state rebuild */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data1), nodeHandleId(nested)},
+            {dataHandleId(data4), nodeHandleId(nested1)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-            {{1.0f, 2.0f}, {3.5f, 4.5f}}, /* node */
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
-            {{1.5f, 3.5f}, {2.5f, 3.5f}}, /* nested */
+            {{2.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
         };
         ui.layer<Layer>(layer).expectedData = expectedData;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
@@ -2432,8 +2458,17 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
 
     /* Changing a node offset sets a state flag to recalculate also nested
-       node offsets. */
-    ui.setNodeOffset(node, {1.5f, 2.5f});
+       node offsets, except for nested2 that's still culled.
+
+         2        3         4         5         6
+       0                              +---------+
+       1          +-------------------| another |
+       2          |       node        +---------+
+       3          |                   +---------+
+       4          |         +---------| nested2 |
+       5          +---------| nested1 +---------+
+       6                    +---------+           */
+    ui.setNodeOffset(node, {3.0f, 1.0f});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeLayoutUpdate);
 
     /* Calling clean() should be a no-op */
@@ -2453,13 +2488,14 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data1), nodeHandleId(nested)},
+            {dataHandleId(data4), nodeHandleId(nested1)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-            {{1.5f, 2.5f}, {3.5f, 4.5f}}, /* node */
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
-            {{2.0f, 4.0f}, {2.5f, 3.5f}}, /* nested */
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
         };
         ui.layer<Layer>(layer).expectedData = expectedData;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
@@ -2492,8 +2528,9 @@ void AbstractUserInterfaceTest::state() {
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {},
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {},
+            {}
         };
         ui.layer<Layer>(layer).expectedData = expectedData;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
@@ -2523,19 +2560,20 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
     }
 
-    /* Calling update() reuploads the original data again and resets the
+    /* Calling update() reuploads the previous data again and resets the
        flag */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data1), nodeHandleId(nested)},
+            {dataHandleId(data4), nodeHandleId(nested1)},
             {dataHandleId(data3), nodeHandleId(another)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-            {{1.5f, 2.5f}, {3.5f, 4.5f}}, /* node */
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
-            {{2.0f, 4.0f}, {2.5f, 3.5f}}, /* nested */
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
         };
         ui.layer<Layer>(layer).expectedData = expectedData;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
@@ -2570,12 +2608,13 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data1), nodeHandleId(nested)}
+            {dataHandleId(data4), nodeHandleId(nested1)},
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-            {{1.5f, 2.5f}, {3.5f, 4.5f}}, /* node */
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
             {},
-            {{2.0f, 4.0f}, {2.5f, 3.5f}}, /* nested */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {}
         };
         ui.layer<Layer>(layer).expectedData = expectedData;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
@@ -2611,12 +2650,13 @@ void AbstractUserInterfaceTest::state() {
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data3), nodeHandleId(another)},
             {dataHandleId(data2), nodeHandleId(node)},
-            {dataHandleId(data1), nodeHandleId(nested)},
+            {dataHandleId(data4), nodeHandleId(nested1)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-            {{1.5f, 2.5f}, {3.5f, 4.5f}}, /* node */
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
-            {{2.0f, 4.0f}, {2.5f, 3.5f}}, /* nested */
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
         };
         ui.layer<Layer>(layer).expectedData = expectedData;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
@@ -2630,7 +2670,7 @@ void AbstractUserInterfaceTest::state() {
        to the UI-wide state */
     ui.layer(layer).remove(data2);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
+    CORRADE_COMPARE(ui.dataAttachmentCount(), 4);
 
     /* Calling clean() removes the now-invalid attachment and resets the states
        to not require clean() anymore */
@@ -2638,7 +2678,7 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             bool expectedDataIdsToRemove[]{
-                false, false, false /* data2 already removed, so not set */
+                false, false, false, false /* data2 already removed, so not set */
             };
             ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
             ui.clean();
@@ -2646,7 +2686,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 2);
+        CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
     }
 
     /* Calling update() then uploads remaining data and resets the remaining
@@ -2654,16 +2694,17 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         bool expectedDataIdsToRemove[]{
-            false, false, false /* data2 already removed, so not set */
+            false, false, false, false /* data2 already removed, so not set */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data3), nodeHandleId(another)},
-            {dataHandleId(data1), nodeHandleId(nested)},
+            {dataHandleId(data4), nodeHandleId(nested1)}
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-            {{1.5f, 2.5f}, {3.5f, 4.5f}}, /* node */
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
-            {{2.0f, 4.0f}, {2.5f, 3.5f}}, /* nested */
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
         };
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
         ui.layer<Layer>(layer).expectedData = expectedData;
@@ -2671,7 +2712,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 2);
+    CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
     /* doClean() should only be called either in the branch above or from
        update(), never both */
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
@@ -2680,8 +2721,8 @@ void AbstractUserInterfaceTest::state() {
     /* Removing a node sets a state flag */
     ui.removeNode(node);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
-    CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 2);
+    CORRADE_COMPARE(ui.nodeUsedCount(), 3);
+    CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
 
     /* Calling clean() removes the child nodes, the now-invalid attachment and
        resets the state to not require clean() anymore */
@@ -2689,9 +2730,9 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             bool expectedDataIdsToRemove[]{
-                /* data1 was attached to `nested`, which got orphaned after
-                   removing its parent, `node` */
-                true, false, false
+                /* data1 and data4 was attached to nested2 and nested1, which
+                   got orphaned after removing its parent, `node` */
+                true, false, false, true
             };
             ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
             ui.clean();
@@ -2708,16 +2749,17 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         bool expectedDataIdsToRemove[]{
-            /* data1 was attached to `nested`, which got orphaned after
-                removing its parent, `node` */
-            true, false, false
+            /* data1 and data4 was attached to nested2 and nested1, which got
+               orphaned after removing its parent, `node` */
+            true, false, false, true
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
             {dataHandleId(data3), nodeHandleId(another)},
         };
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {},
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {},
             {},
         };
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
@@ -2764,8 +2806,9 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {},
-            {{2.0f, 1.0f}, {4.0f, 3.0f}}, /* another */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
             {},
+            {}
         };
         ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
         ui.layer<Layer>(anotherLayer).expectedData = {};
@@ -2939,24 +2982,38 @@ void AbstractUserInterfaceTest::draw() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    NodeHandle topLevel = ui.createNode({10.0f, 20.0f}, {200.0f, 100.0f});
-    NodeHandle left = ui.createNode(topLevel, {30.0f, 40.0f}, {20.0f, 10.0f});
-    NodeHandle right = ui.createNode(topLevel, {60.0f, 40.0f}, {15.0f, 25.0f});
-    NodeHandle anotherTopLevel = ui.createNode({100.0f, 200.0f}, {5.0f, 10.0f});
-    NodeHandle topLevelNotInOrder = ui.createNode({}, {});
+    /*   1 2      3 4 5       6 7 8      9 10     11
+       3 +------------------------+
+         |         top level      |
+       4 |          +-----------+ |      +--------+
+       5 | +------+ |  right  +----------| not in |
+       6 | | left | | +-------|          | order  |
+       7 | +------+ | | nested|  another +--------+
+       8 |          +-+-------| top level  |
+       9 +--------------------|            |
+      10   +----------+       +------------+
+           |  culled  |
+      11   +----------+                             */
+    NodeHandle topLevel = ui.createNode({1.0f, 3.0f}, {7.0f, 6.0f});
+    NodeHandle left = ui.createNode(topLevel, {1.0f, 2.0f}, {1.0f, 2.0f});
+    NodeHandle right = ui.createNode(topLevel, {3.0f, 1.0f}, {3.0f, 4.0f});
+    NodeHandle anotherTopLevel = ui.createNode({6.0f, 5.0f}, {4.0f, 5.0f});
+    NodeHandle topLevelNotInOrder = ui.createNode({9.0f, 4.0f}, {2.0f, 3.0f});
     NodeHandle removed = ui.createNode(right, {}, {});
-    NodeHandle nested = ui.createNode(left, {20.0f, 30.0f}, {5.0f, 7.0f});
+    NodeHandle culled = ui.createNode(left, {0.0f, 5.0f}, {3.0f, 1.0f});
+    NodeHandle nested = ui.createNode(right, {1.0f, 2.0f}, {2.0f, 2.0f});
 
     /* These follow the node handle IDs, nodes that are not part of the
        visible hierarchy have the data undefined */
     Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
-        {{10.0f, 20.0f}, {200.0f, 100.0f}},
-        {{40.0f, 60.0f}, {20.0f, 10.0f}},
-        {{70.0f, 60.0f}, {15.0f, 25.0f}},
-        {{100.0f, 200.0f}, {5.0f, 10.0f}},
-        {}, /* not in order */
-        {}, /* removed */
-        {{60.0f, 90.0f}, {5.0f, 7.0f}}
+        {{1.0f, 3.0f}, {7.0f, 6.0f}}, /* topLevel */
+        {{2.0f, 5.0f}, {1.0f, 2.0f}}, /* left */
+        {{4.0f, 4.0f}, {3.0f, 4.0f}}, /* right */
+        {{6.0f, 5.0f}, {4.0f, 5.0f}}, /* anotherTopLevel */
+        {},                           /* removed */
+        {},                           /* not in order */
+        {},                           /* culled */
+        {{5.0f, 6.0f}, {2.0f, 2.0f}}, /* nested */
     };
 
     /* Layer without an instance, to verify those get skipped during updates */
@@ -2979,6 +3036,7 @@ void AbstractUserInterfaceTest::draw() {
     DataHandle anotherTopLevelData3 = layer3Instance->create();
     DataHandle anotherTopLevelData4 = layer2Instance->create();
     DataHandle topLevelData = layer3Instance->create();
+    DataHandle culledData = layer2Instance->create();
     DataHandle nestedData = layer2Instance->create();
     DataHandle topLevelNotInOrderData = layer2Instance->create();
     DataHandle removedData = layer1Instance->create();
@@ -3001,9 +3059,10 @@ void AbstractUserInterfaceTest::draw() {
         {dataHandleId(anotherTopLevelData4), nodeHandleId(anotherTopLevel)},
         /* topLevel */
         {dataHandleId(leftData1), nodeHandleId(left)},
-        {dataHandleId(nestedData), nodeHandleId(nested)},
         {dataHandleId(rightData2), nodeHandleId(right)},
-        /* Nothing for topLevelNotInOrderData as it's not visible */
+        {dataHandleId(nestedData), nodeHandleId(nested)},
+        /* Nothing for topLevelNotInOrderData and culledData as they're not
+           visible */
     };
     Containers::Pair<UnsignedInt, UnsignedInt> expectedLayer3Data[]{
         /* anotherTopLevel */
@@ -3045,12 +3104,13 @@ void AbstractUserInterfaceTest::draw() {
     ui.attachData(topLevel, topLevelData);
     ui.attachData(right, rightData1);
     ui.attachData(left, leftData3);
+    ui.attachData(culled, culledData);
     ui.attachData(right, rightData2);
 
     ui.setNodeOrder(anotherTopLevel, topLevel);
     ui.clearNodeOrder(topLevelNotInOrder);
     ui.removeNode(removed);
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 13);
+    CORRADE_COMPARE(ui.dataAttachmentCount(), 14);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
     CORRADE_COMPARE(layer1UpdateCallCount, 0);
     CORRADE_COMPARE(layer2UpdateCallCount, 0);
@@ -3058,7 +3118,7 @@ void AbstractUserInterfaceTest::draw() {
 
     if(data.clean) {
         ui.clean();
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 12);
+        CORRADE_COMPARE(ui.dataAttachmentCount(), 13);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(layer1UpdateCallCount, 0);
         CORRADE_COMPARE(layer2UpdateCallCount, 0);
@@ -3068,7 +3128,7 @@ void AbstractUserInterfaceTest::draw() {
     /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
-        CORRADE_COMPARE(ui.dataAttachmentCount(), 12);
+        CORRADE_COMPARE(ui.dataAttachmentCount(), 13);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE(layer1UpdateCallCount, 1);
         CORRADE_COMPARE(layer2UpdateCallCount, 1);
@@ -3077,7 +3137,7 @@ void AbstractUserInterfaceTest::draw() {
 
     /* draw() should call update() and clean() only if needed */
     ui.draw();
-    CORRADE_COMPARE(ui.dataAttachmentCount(), 12);
+    CORRADE_COMPARE(ui.dataAttachmentCount(), 13);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(layer1UpdateCallCount, 1);
     CORRADE_COMPARE(layer2UpdateCallCount, 1);
