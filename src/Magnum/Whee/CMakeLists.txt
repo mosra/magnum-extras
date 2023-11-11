@@ -46,16 +46,19 @@ set(MagnumWhee_SRCS
 set(MagnumWhee_GracefulAssert_SRCS
     AbstractLayer.cpp
     AbstractLayouter.cpp
+    AbstractStyle.cpp
     AbstractUserInterface.cpp
     AbstractVisualLayer.cpp
     BaseLayer.cpp
     EventLayer.cpp
     TextLayer.cpp
-    TextProperties.cpp)
+    TextProperties.cpp
+    UserInterface.cpp)
 
 set(MagnumWhee_HEADERS
     AbstractLayer.h
     AbstractLayouter.h
+    AbstractStyle.h
     AbstractUserInterface.h
     AbstractVisualLayer.h
     BaseLayer.h
@@ -64,6 +67,7 @@ set(MagnumWhee_HEADERS
     Handle.h
     TextLayer.h
     TextProperties.h
+    UserInterface.h
     Whee.h
     visibility.h)
 
@@ -71,7 +75,8 @@ set(MagnumWhee_PRIVATE_HEADERS
     Implementation/abstractUserInterface.h
     Implementation/abstractVisualLayerState.h
     Implementation/baseLayerState.h
-    Implementation/textLayerState.h)
+    Implementation/textLayerState.h
+    Implementation/userInterfaceState.h)
 
 if(MAGNUM_TARGET_GL)
     corrade_add_resource(MagnumWhee_RESOURCES resources.conf)
@@ -79,10 +84,12 @@ if(MAGNUM_TARGET_GL)
         ${MagnumWhee_RESOURCES})
     list(APPEND MagnumWhee_GracefulAssert_SRCS
         BaseLayerGL.cpp
-        TextLayerGL.cpp)
+        TextLayerGL.cpp
+        UserInterfaceGL.cpp)
     list(APPEND MagnumWhee_HEADERS
         BaseLayerGL.h
-        TextLayerGL.h)
+        TextLayerGL.h
+        UserInterfaceGL.h)
 endif()
 
 # Objects shared between main and test library
