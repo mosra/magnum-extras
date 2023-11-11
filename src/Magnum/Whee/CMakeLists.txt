@@ -46,13 +46,15 @@ set(MagnumWhee_SRCS
 set(MagnumWhee_GracefulAssert_SRCS
     AbstractLayer.cpp
     AbstractUserInterface.cpp
-    BaseLayer.cpp)
+    BaseLayer.cpp
+    EventLayer.cpp)
 
 set(MagnumWhee_HEADERS
     AbstractLayer.h
     AbstractUserInterface.h
     BaseLayer.h
     Event.h
+    EventLayer.h
     Handle.h
     Whee.h
     visibility.h)
