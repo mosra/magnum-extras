@@ -348,6 +348,8 @@ struct BaseLayerStyleUniform {
 Draws quads with a color gradient, variable rounded corners and outline. You'll
 most likely instantiate the class through @ref BaseLayerGL, which contains a
 concrete OpenGL implementation.
+@see @ref UserInterface::baseLayer(),
+    @ref UserInterface::setBaseLayerInstance(), @ref StyleFeature::BaseLayer
 */
 class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
     public:
