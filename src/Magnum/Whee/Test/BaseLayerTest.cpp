@@ -45,10 +45,20 @@ struct BaseLayerTest: TestSuite::Tester {
     template<class T> void styleSizeAlignment();
 
     void styleCommonConstructDefault();
+    void styleCommonConstruct();
+    void styleCommonConstructSingleSmoothness();
     void styleCommonConstructNoInit();
     void styleCommonSetters();
 
     void styleItemConstructDefault();
+    void styleItemConstruct();
+    void styleItemConstructSingleRadiusWidth();
+    void styleItemConstructNoOutline();
+    void styleItemConstructNoOutlineSingleRadius();
+    void styleItemConstructNoGradient();
+    void styleItemConstructNoGradientSingleRadiusWidth();
+    void styleItemConstructNoGradientNoOutline();
+    void styleItemConstructNoGradientNoOutlineSingleRadius();
     void styleItemConstructNoInit();
     void styleItemSetters();
 
@@ -105,10 +115,20 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::styleSizeAlignment<BaseLayerStyleItem>,
 
               &BaseLayerTest::styleCommonConstructDefault,
+              &BaseLayerTest::styleCommonConstruct,
+              &BaseLayerTest::styleCommonConstructSingleSmoothness,
               &BaseLayerTest::styleCommonConstructNoInit,
               &BaseLayerTest::styleCommonSetters,
 
               &BaseLayerTest::styleItemConstructDefault,
+              &BaseLayerTest::styleItemConstruct,
+              &BaseLayerTest::styleItemConstructSingleRadiusWidth,
+              &BaseLayerTest::styleItemConstructNoOutline,
+              &BaseLayerTest::styleItemConstructNoOutlineSingleRadius,
+              &BaseLayerTest::styleItemConstructNoGradient,
+              &BaseLayerTest::styleItemConstructNoGradientSingleRadiusWidth,
+              &BaseLayerTest::styleItemConstructNoGradientNoOutline,
+              &BaseLayerTest::styleItemConstructNoGradientNoOutlineSingleRadius,
               &BaseLayerTest::styleItemConstructNoInit,
               &BaseLayerTest::styleItemSetters,
 
@@ -183,6 +203,26 @@ void BaseLayerTest::styleCommonConstructDefault() {
     CORRADE_VERIFY(!std::is_convertible<DefaultInitT, BaseLayerStyleCommon>::value);
 }
 
+void BaseLayerTest::styleCommonConstruct() {
+    BaseLayerStyleCommon a{3.0f, 5.0f};
+    CORRADE_COMPARE(a.smoothness, 3.0f);
+    CORRADE_COMPARE(a.innerOutlineSmoothness, 5.0f);
+
+    constexpr BaseLayerStyleCommon ca{3.0f, 5.0f};
+    CORRADE_COMPARE(ca.smoothness, 3.0f);
+    CORRADE_COMPARE(ca.innerOutlineSmoothness, 5.0f);
+}
+
+void BaseLayerTest::styleCommonConstructSingleSmoothness() {
+    BaseLayerStyleCommon a{4.0f};
+    CORRADE_COMPARE(a.smoothness, 4.0f);
+    CORRADE_COMPARE(a.innerOutlineSmoothness, 4.0f);
+
+    constexpr BaseLayerStyleCommon ca{4.0f};
+    CORRADE_COMPARE(ca.smoothness, 4.0f);
+    CORRADE_COMPARE(ca.innerOutlineSmoothness, 4.0f);
+}
+
 void BaseLayerTest::styleCommonConstructNoInit() {
     /* Testing only some fields, should be enough */
     BaseLayerStyleCommon a;
@@ -250,6 +290,150 @@ void BaseLayerTest::styleItemConstructDefault() {
 
     /* Implicit construction is not allowed */
     CORRADE_VERIFY(!std::is_convertible<DefaultInitT, BaseLayerStyleItem>::value);
+}
+
+void BaseLayerTest::styleItemConstruct() {
+    BaseLayerStyleItem a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
+    CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.bottomColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0x663399cc_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+    CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+    CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{0.1f, 0.2f, 0.3f, 0.4f}));
+
+    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
+    CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.bottomColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0x663399cc_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+    CORRADE_COMPARE(ca.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+    CORRADE_COMPARE(ca.innerOutlineCornerRadius, (Vector4{0.1f, 0.2f, 0.3f, 0.4f}));
+}
+
+void BaseLayerTest::styleItemConstructSingleRadiusWidth() {
+    BaseLayerStyleItem a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
+    CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.bottomColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0x663399cc_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, Vector4{2.5f});
+    CORRADE_COMPARE(a.cornerRadius, Vector4{3.5f});
+    CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{4.5f});
+
+    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
+    CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.bottomColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0x663399cc_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, Vector4{2.5f});
+    CORRADE_COMPARE(ca.cornerRadius, Vector4{3.5f});
+    CORRADE_COMPARE(ca.innerOutlineCornerRadius, Vector4{4.5f});
+}
+
+void BaseLayerTest::styleItemConstructNoOutline() {
+    BaseLayerStyleItem a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
+    CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.bottomColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, Vector4{0.0f});
+    CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+    CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+
+    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
+    CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.bottomColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, Vector4{0.0f});
+    CORRADE_COMPARE(ca.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+    CORRADE_COMPARE(ca.innerOutlineCornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+}
+
+void BaseLayerTest::styleItemConstructNoOutlineSingleRadius() {
+    BaseLayerStyleItem a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 2.5f};
+    CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.bottomColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, Vector4{0.0f});
+    CORRADE_COMPARE(a.cornerRadius, Vector4{2.5f});
+    CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{2.5f});
+
+    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 2.5f};
+    CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.bottomColor, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, Vector4{0.0f});
+    CORRADE_COMPARE(ca.cornerRadius, Vector4{2.5f});
+    CORRADE_COMPARE(ca.innerOutlineCornerRadius, Vector4{2.5f});
+}
+
+void BaseLayerTest::styleItemConstructNoGradient() {
+    BaseLayerStyleItem a{0xff336699_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
+    CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0x663399cc_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+    CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+    CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{0.1f, 0.2f, 0.3f, 0.4f}));
+
+    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
+    CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0x663399cc_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+    CORRADE_COMPARE(ca.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+    CORRADE_COMPARE(ca.innerOutlineCornerRadius, (Vector4{0.1f, 0.2f, 0.3f, 0.4f}));
+}
+
+void BaseLayerTest::styleItemConstructNoGradientSingleRadiusWidth() {
+    BaseLayerStyleItem a{0xff336699_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
+    CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0x663399cc_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, Vector4{2.5f});
+    CORRADE_COMPARE(a.cornerRadius, Vector4{3.5f});
+    CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{4.5f});
+
+    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
+    CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0x663399cc_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, Vector4{2.5f});
+    CORRADE_COMPARE(ca.cornerRadius, Vector4{3.5f});
+    CORRADE_COMPARE(ca.innerOutlineCornerRadius, Vector4{4.5f});
+}
+
+void BaseLayerTest::styleItemConstructNoGradientNoOutline() {
+    BaseLayerStyleItem a{0xff336699_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
+    CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, Vector4{0.0f});
+    CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+    CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+
+    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
+    CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, Vector4{0.0f});
+    CORRADE_COMPARE(ca.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+    CORRADE_COMPARE(ca.innerOutlineCornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
+}
+
+void BaseLayerTest::styleItemConstructNoGradientNoOutlineSingleRadius() {
+    BaseLayerStyleItem a{0xff336699_rgbaf, 2.5f};
+    CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(a.outlineWidth, Vector4{0.0f});
+    CORRADE_COMPARE(a.cornerRadius, Vector4{2.5f});
+    CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{2.5f});
+
+    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 2.5f};
+    CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(ca.outlineWidth, Vector4{0.0f});
+    CORRADE_COMPARE(ca.cornerRadius, Vector4{2.5f});
+    CORRADE_COMPARE(ca.innerOutlineCornerRadius, Vector4{2.5f});
 }
 
 void BaseLayerTest::styleItemConstructNoInit() {

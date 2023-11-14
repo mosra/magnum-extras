@@ -46,6 +46,12 @@ struct BaseLayerStyleCommon {
     /** @brief Construct with default values */
     constexpr explicit BaseLayerStyleCommon(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f}, innerOutlineSmoothness{0.0f} {}
 
+    /** @brief Constructor */
+    constexpr /*implicit*/ BaseLayerStyleCommon(Float smoothness, Float innerOutlineSmoothness): smoothness{smoothness}, innerOutlineSmoothness{innerOutlineSmoothness} {}
+
+    /** @brief Construct with the @ref smoothness and @ref innerOutlineSmoothness fields set to the same value */
+    constexpr /*implicit*/ BaseLayerStyleCommon(Float smoothness): BaseLayerStyleCommon{smoothness, smoothness} {}
+
     /** @brief Construct without initializing the contents */
     explicit BaseLayerStyleCommon(NoInitT) noexcept {}
 
@@ -115,6 +121,68 @@ struct BaseLayerStyleCommon {
 struct BaseLayerStyleItem {
     /** @brief Construct with default values */
     constexpr explicit BaseLayerStyleItem(DefaultInitT = DefaultInit) noexcept: topColor{1.0f}, bottomColor{1.0f}, outlineColor{1.0f}, outlineWidth{0.0f}, cornerRadius{0.0f}, innerOutlineCornerRadius{0.0f} {}
+
+    /** @brief Constructor */
+    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& topColor, const Color4& bottomColor, const Color4& outlineColor, const Vector4& outlineWidth, const Vector4& cornerRadius, const Vector4& innerOutlineCornerRadius): topColor{topColor}, bottomColor{bottomColor}, outlineColor{outlineColor}, outlineWidth{outlineWidth}, cornerRadius{cornerRadius}, innerOutlineCornerRadius{innerOutlineCornerRadius} {}
+
+    /**
+     * @brief Construct with all corners having the same radius and all edges the same outline width
+     *
+     * The @ref outlineWidth, @ref cornerRadius and
+     * @ref innerOutlineCornerRadius fields have all components set to the
+     * values of @p outlineWidth, @p cornerRadius and
+     * @p innerOutlineCornerRadius.
+     */
+    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& topColor, const Color4& bottomColor, const Color4& outlineColor, Float outlineWidth, Float cornerRadius, Float innerOutlineCornerRadius): BaseLayerStyleItem{topColor, bottomColor, outlineColor, Vector4{outlineWidth}, Vector4{cornerRadius}, Vector4{innerOutlineCornerRadius}} {}
+
+    /**
+     * @brief Construct with no outline
+     *
+     * The @ref outlineColor field is set to @cpp 0xffffff_srgbf @ce,
+     * @ref outlineWidth to a zero vector and both @ref cornerRadius and
+     * @ref innerOutlineCornerRadius get a value of @p cornerRadius.
+     */
+    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& topColor, const Color4& bottomColor, const Vector4& cornerRadius): BaseLayerStyleItem{topColor, bottomColor, Color4{1.0f}, Vector4{0.0f}, cornerRadius, cornerRadius} {}
+
+    /**
+     * @brief Construct with no outline and all corners having the same radius
+     *
+     * Delegates to @ref BaseLayerStyleItem(const Color4&, const Color4&, const Vector4&)
+     * with @p cornerRadius having all components set to the same value.
+     */
+    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& topColor, const Color4& bottomColor, Float cornerRadius): BaseLayerStyleItem{topColor, bottomColor, Vector4{cornerRadius}} {}
+
+    /**
+     * @brief Construct with no gradient
+     *
+     * The @ref topColor and @ref bottomColor fields are both set to the value
+     * of @p color.
+     */
+    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& color, const Color4& outlineColor, const Vector4& outlineWidth, const Vector4& cornerRadius, const Vector4& innerOutlineCornerRadius): BaseLayerStyleItem{color, color, outlineColor, outlineWidth, cornerRadius, innerOutlineCornerRadius} {}
+
+    /**
+     * @brief Construct with no gradient, all corners having the same radius and all edges the same outline width
+     *
+     * Delegates to @ref BaseLayerStyleItem(const Color4&, const Color4&, const Color4&, Float, Float, Float)
+     * with @p color used for both @p topColor and @p bottomColor.
+     */
+    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& color, const Color4& outlineColor, Float outlineWidth, Float cornerRadius, Float innerOutlineCornerRadius): BaseLayerStyleItem{color, color, outlineColor, outlineWidth, cornerRadius, innerOutlineCornerRadius} {}
+
+    /**
+     * @brief Construct with no gradient and no outline
+     *
+     * Delegates to @ref BaseLayerStyleItem(const Color4&, const Color4&, const Vector4&)
+     * with @p color used for both @p topColor and @p bottomColor.
+     */
+    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& color, const Vector4& cornerRadius): BaseLayerStyleItem{color, color, cornerRadius} {}
+
+    /**
+     * @brief Construct with no gradient, no outline and all corners having the same radius
+     *
+     * Delegates to @ref BaseLayerStyleItem(const Color4&, const Color4&, Float)
+     * with @p color used for both @p topColor and @p bottomColor.
+     */
+    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& color, Float cornerRadius): BaseLayerStyleItem{color, color, cornerRadius} {}
 
     /** @brief Construct without initializing the contents */
     explicit BaseLayerStyleItem(NoInitT) noexcept: topColor{NoInit}, bottomColor{NoInit}, outlineColor{NoInit}, outlineWidth{NoInit}, cornerRadius{NoInit}, innerOutlineCornerRadius{NoInit} {}

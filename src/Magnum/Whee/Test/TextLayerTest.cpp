@@ -60,6 +60,7 @@ struct TextLayerTest: TestSuite::Tester {
     void styleCommonSetters();
 
     void styleItemConstructDefault();
+    void styleItemConstruct();
     void styleItemConstructNoInit();
     void styleItemSetters();
 
@@ -194,6 +195,7 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::styleCommonSetters,
 
               &TextLayerTest::styleItemConstructDefault,
+              &TextLayerTest::styleItemConstruct,
               &TextLayerTest::styleItemConstructNoInit,
               &TextLayerTest::styleItemSetters,
 
@@ -335,6 +337,14 @@ void TextLayerTest::styleItemConstructDefault() {
 
     /* Implicit construction is not allowed */
     CORRADE_VERIFY(!std::is_convertible<DefaultInitT, TextLayerStyleItem>::value);
+}
+
+void TextLayerTest::styleItemConstruct() {
+    TextLayerStyleItem a{0xff336699_rgbaf};
+    CORRADE_COMPARE(a.color, 0xff336699_rgbaf);
+
+    constexpr TextLayerStyleItem ca{0xff336699_rgbaf};
+    CORRADE_COMPARE(ca.color, 0xff336699_rgbaf);
 }
 
 void TextLayerTest::styleItemConstructNoInit() {
