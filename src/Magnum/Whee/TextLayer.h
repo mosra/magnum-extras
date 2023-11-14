@@ -85,6 +85,9 @@ struct TextLayerStyleItem {
     /** @brief Construct with default values */
     constexpr explicit TextLayerStyleItem(DefaultInitT = DefaultInit) noexcept: color{1.0f} {}
 
+    /** @brief Constructor */
+    constexpr /*implicit*/ TextLayerStyleItem(const Color4& color): color{color} {}
+
     /** @brief Construct without initializing the contents */
     explicit TextLayerStyleItem(NoInitT) noexcept: color{NoInit} {}
 
