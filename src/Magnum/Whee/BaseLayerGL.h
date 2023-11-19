@@ -119,8 +119,8 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
         template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex)> Shared& setStyleTransition() {
             return static_cast<Shared&>(BaseLayer::Shared::setStyleTransition<StyleIndex, toPressed, toInactive>());
         }
-        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items);
-        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items);
+        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding);
+        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items, std::initializer_list<Vector4> itemPadding);
         #endif
 
     private:

@@ -68,6 +68,7 @@ struct BaseLayerTest: TestSuite::Tester {
     void sharedConstructMove();
 
     void sharedSetStyle();
+    void sharedSetStyleImplicitPadding();
     void sharedSetStyleInvalidSize();
 
     void construct();
@@ -77,6 +78,7 @@ struct BaseLayerTest: TestSuite::Tester {
     template<class T> void createRemove();
     void setColor();
     void setOutlineWidth();
+    void setPadding();
 
     void invalidHandle();
     void styleOutOfRange();
@@ -87,9 +89,23 @@ struct BaseLayerTest: TestSuite::Tester {
 const struct {
     const char* name;
     bool emptyUpdate;
+    Vector2 node6Offset, node6Size;
+    Vector4 paddingFromStyle;
+    Vector4 paddingFromData;
 } UpdateDataOrderData[]{
-    {"empty update", true},
-    {"", false},
+    {"empty update", true,
+        {}, {}, {}, {}},
+    {"", false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
+    {"padding from style", false,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}},
+    {"padding from data", false,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {}, {2.0f, 0.5f, 1.0f, 1.5f}},
+    {"padding from both style and data", false,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}},
 };
 
 enum class Enum: UnsignedShort {};
@@ -140,6 +156,7 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::sharedConstructMove,
 
               &BaseLayerTest::sharedSetStyle,
+              &BaseLayerTest::sharedSetStyleImplicitPadding,
               &BaseLayerTest::sharedSetStyleInvalidSize,
 
               &BaseLayerTest::construct,
@@ -152,6 +169,7 @@ BaseLayerTest::BaseLayerTest() {
 
     addTests({&BaseLayerTest::setColor,
               &BaseLayerTest::setOutlineWidth,
+              &BaseLayerTest::setPadding,
 
               &BaseLayerTest::invalidHandle,
               &BaseLayerTest::styleOutOfRange});
@@ -546,6 +564,47 @@ void BaseLayerTest::sharedConstructMove() {
 void BaseLayerTest::sharedSetStyle() {
     struct Shared: BaseLayer::Shared {
         explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        State& state() { return static_cast<State&>(*_state); }
+
+        void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) override {
+            CORRADE_COMPARE(common.smoothness, 3.14f);
+            CORRADE_COMPARE(items.size(), 3);
+            CORRADE_COMPARE(items[1].outlineColor, 0xc0ffee_rgbf);
+            ++setStyleCalled;
+        }
+
+        Int setStyleCalled = 0;
+    } shared{3};
+
+    /* By default there's no padding */
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{}
+    }), TestSuite::Compare::Container);
+
+    shared.setStyle(
+        BaseLayerStyleCommon{}
+            .setSmoothness(3.14f),
+        {BaseLayerStyleItem{},
+         BaseLayerStyleItem{}
+            .setOutlineColor(0xc0ffee_rgbf),
+         BaseLayerStyleItem{}},
+        {{1.0f, 2.0f, 3.0f, 4.0f},
+         {4.0f, 3.0f, 2.0f, 1.0f},
+         {2.0f, 1.0f, 4.0f, 3.0f}});
+    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{1.0f, 2.0f, 3.0f, 4.0f},
+        Vector4{4.0f, 3.0f, 2.0f, 1.0f},
+        Vector4{2.0f, 1.0f, 4.0f, 3.0f}
+    }), TestSuite::Compare::Container);
+}
+
+void BaseLayerTest::sharedSetStyleImplicitPadding() {
+    struct Shared: BaseLayer::Shared {
+        explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        State& state() { return static_cast<State&>(*_state); }
 
         void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) override {
             CORRADE_COMPARE(common.smoothness, 3.14f);
@@ -566,8 +625,40 @@ void BaseLayerTest::sharedSetStyle() {
         {BaseLayerStyleItem{},
          BaseLayerStyleItem{}
             .setOutlineColor(0xc0ffee_rgbf),
-         BaseLayerStyleItem{}});
+         BaseLayerStyleItem{}},
+        {});
     CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{}
+    }), TestSuite::Compare::Container);
+
+    /* Setting a style with implicit padding after a non-implicit padding was
+       set should reset it back to zeros */
+    shared.setStyle(
+        BaseLayerStyleCommon{}
+            .setSmoothness(3.14f),
+        {BaseLayerStyleItem{},
+         BaseLayerStyleItem{}
+            .setOutlineColor(0xc0ffee_rgbf),
+         BaseLayerStyleItem{}},
+        {{1.0f, 2.0f, 3.0f, 4.0f},
+         {4.0f, 3.0f, 2.0f, 1.0f},
+         {2.0f, 1.0f, 4.0f, 3.0f}});
+    shared.setStyle(
+        BaseLayerStyleCommon{}
+            .setSmoothness(3.14f),
+        {BaseLayerStyleItem{},
+         BaseLayerStyleItem{}
+            .setOutlineColor(0xc0ffee_rgbf),
+         BaseLayerStyleItem{}},
+        {});
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{}
+    }), TestSuite::Compare::Container);
 }
 
 void BaseLayerTest::sharedSetStyleInvalidSize() {
@@ -582,8 +673,14 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
     std::ostringstream out;
     Error redirectError{&out};
     shared.setStyle(BaseLayerStyleCommon{},
-        {BaseLayerStyleItem{}, BaseLayerStyleItem{}});
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::setStyle(): expected 3 style items, got 2\n");
+        {BaseLayerStyleItem{}, BaseLayerStyleItem{}},
+        {{}, {}, {}});
+    shared.setStyle(BaseLayerStyleCommon{},
+        {BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}},
+        {{}, {}});
+    CORRADE_COMPARE(out.str(),
+        "Whee::BaseLayer::Shared::setStyle(): expected 3 style items, got 2\n"
+        "Whee::BaseLayer::Shared::setStyle(): expected either no or 3 paddings, got 2\n");
 }
 
 void BaseLayerTest::construct() {
@@ -645,6 +742,8 @@ template<class T> void BaseLayerTest::createRemove() {
         void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{38};
 
+    /* Not setting any padding via style -- tested in setPadding() instead */
+
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
@@ -655,6 +754,7 @@ template<class T> void BaseLayerTest::createRemove() {
     CORRADE_COMPARE(layer.style(first), 17);
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(first), Vector4{0.0f});
+    CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Default outline width */
@@ -663,6 +763,7 @@ template<class T> void BaseLayerTest::createRemove() {
     CORRADE_COMPARE(layer.style(second), 23);
     CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(second), Vector4{0.0f});
+    CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Single-value outline width */
@@ -671,6 +772,7 @@ template<class T> void BaseLayerTest::createRemove() {
     CORRADE_COMPARE(layer.style(third), 19);
     CORRADE_COMPARE(layer.color(third), 0xff3366_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(third), Vector4{4.0f});
+    CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Everything explicit, testing also the getter overloads and templates */
@@ -683,6 +785,7 @@ template<class T> void BaseLayerTest::createRemove() {
         CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(fourth)), Enum(37));
         CORRADE_COMPARE(layer.color(dataHandleData(fourth)), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.outlineWidth(dataHandleData(fourth)), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
+        CORRADE_COMPARE(layer.padding(dataHandleData(fourth)), Vector4{0.0f});
     } else {
         CORRADE_COMPARE(layer.style(fourth), 37);
         /* Can't use T, as the function restricts to enum types which would
@@ -690,6 +793,7 @@ template<class T> void BaseLayerTest::createRemove() {
         CORRADE_COMPARE(layer.template style<Enum>(fourth), Enum(37));
         CORRADE_COMPARE(layer.color(fourth), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.outlineWidth(fourth), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
+        CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
     }
     CORRADE_COMPARE(layer.state(), data.state);
 
@@ -771,6 +875,46 @@ void BaseLayerTest::setOutlineWidth() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 }
 
+void BaseLayerTest::setPadding() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
+    } shared{3};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Just to be sure the setters aren't picking up the first ever data
+       always */
+    layer.create(2);
+
+    DataHandle data = layer.create(1, 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.padding(data), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting a padding marks the layer as dirty */
+    layer.setPadding(data, {2.0f, 4.0f, 3.0f, 1.0f});
+    CORRADE_COMPARE(layer.padding(data), (Vector4{2.0f, 4.0f, 3.0f, 1.0f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+
+    /* Testing also the other overload */
+    layer.setPadding(dataHandleData(data), {1.0f, 2.0f, 3.0f, 4.0f});
+    CORRADE_COMPARE(layer.padding(dataHandleData(data)), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+
+    /* Single-value padding */
+    layer.setPadding(data, 4.0f);
+    CORRADE_COMPARE(layer.padding(data), Vector4{4.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+
+    /* Testing also the other overload */
+    layer.setPadding(dataHandleData(data), 3.0f);
+    CORRADE_COMPARE(layer.padding(dataHandleData(data)), Vector4{3.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+}
+
 void BaseLayerTest::invalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -794,6 +938,10 @@ void BaseLayerTest::invalidHandle() {
     layer.outlineWidth(LayerDataHandle::Null);
     layer.setOutlineWidth(DataHandle::Null, {});
     layer.setOutlineWidth(LayerDataHandle::Null, {});
+    layer.padding(DataHandle::Null);
+    layer.padding(LayerDataHandle::Null);
+    layer.setPadding(DataHandle::Null, {});
+    layer.setPadding(LayerDataHandle::Null, {});
     CORRADE_COMPARE(out.str(),
         "Whee::BaseLayer::color(): invalid handle Whee::DataHandle::Null\n"
         "Whee::BaseLayer::color(): invalid handle Whee::LayerDataHandle::Null\n"
@@ -802,7 +950,11 @@ void BaseLayerTest::invalidHandle() {
         "Whee::BaseLayer::outlineWidth(): invalid handle Whee::DataHandle::Null\n"
         "Whee::BaseLayer::outlineWidth(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::BaseLayer::setOutlineWidth(): invalid handle Whee::DataHandle::Null\n"
-        "Whee::BaseLayer::setOutlineWidth(): invalid handle Whee::LayerDataHandle::Null\n");
+        "Whee::BaseLayer::setOutlineWidth(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::BaseLayer::padding(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::BaseLayer::padding(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::BaseLayer::setPadding(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::BaseLayer::setPadding(): invalid handle Whee::LayerDataHandle::Null\n");
 }
 
 void BaseLayerTest::styleOutOfRange() {
@@ -854,7 +1006,7 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(0);                                                    /* 0 */
     layer.create(0);                                                    /* 1 */
     layer.create(0);                                                    /* 2 */
-    layer.create(2, 0xff3366_rgbf, {1.0f, 2.0f, 3.0f, 4.0f}, node6);    /* 3 */
+    DataHandle data3 = layer.create(2, 0xff3366_rgbf, {1.0f, 2.0f, 3.0f, 4.0f}, node6);
     layer.create(0);                                                    /* 4 */
     layer.create(0);                                                    /* 5 */
     layer.create(0);                                                    /* 6 */
@@ -862,10 +1014,18 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(0);                                                    /* 8 */
     layer.create(3, 0x663399_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, node15);   /* 9 */
 
+    if(!data.paddingFromStyle.isZero()) shared.setStyle(
+        BaseLayerStyleCommon{},
+        {BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}},
+        {{}, {}, data.paddingFromStyle, {}});
+
+    if(!data.paddingFromData.isZero())
+        layer.setPadding(data3, data.paddingFromData);
+
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
-    nodeOffsets[6] = {1.0f, 2.0f};
-    nodeSizes[6] = {10.0f, 15.0f};
+    nodeOffsets[6] = data.node6Offset;
+    nodeSizes[6] = data.node6Size;
     nodeOffsets[15] = {3.0f, 4.0f};
     nodeSizes[15] = {20.0f, 5.0f};
 
