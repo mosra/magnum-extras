@@ -87,6 +87,7 @@ struct BaseLayerTest: TestSuite::Tester {
 
     void updateEmpty();
     void updateDataOrder();
+    void updateNoStyleSet();
 };
 
 const struct {
@@ -183,6 +184,8 @@ BaseLayerTest::BaseLayerTest() {
 
     addInstancedTests({&BaseLayerTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
+
+    addTests({&BaseLayerTest::updateNoStyleSet});
 }
 
 using namespace Math::Literals;
@@ -583,12 +586,10 @@ void BaseLayerTest::sharedSetStyle() {
         Int setStyleCalled = 0;
     } shared{3};
 
-    /* By default there's no padding */
-    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
-        Vector4{},
-        Vector4{},
-        Vector4{}
-    }), TestSuite::Compare::Container);
+    /* By default the shared.state().styles array is empty, it gets only filled
+       during the setStyle() call. The empty state is used to detect whether
+       setStyle() was called at all when calling update(). */
+    CORRADE_VERIFY(shared.state().styles.isEmpty());
 
     shared.setStyle(
         BaseLayerStyleCommon{}
@@ -1013,7 +1014,11 @@ void BaseLayerTest::updateEmpty() {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
 
         void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{3};
+    } shared{1};
+    shared.setStyle(
+        BaseLayerStyleCommon{},
+        {BaseLayerStyleItem{}},
+        {});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1040,6 +1045,11 @@ void BaseLayerTest::updateDataOrder() {
         void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{4};
 
+    shared.setStyle(
+        BaseLayerStyleCommon{},
+        {BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}},
+        {{}, {}, data.paddingFromStyle, {}});
+
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
         const BaseLayer::State& stateData() const {
@@ -1062,11 +1072,6 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(1, 0x112233_rgbf, Vector4{2.0f}, node15);              /* 7 */
     layer.create(0);                                                    /* 8 */
     layer.create(3, 0x663399_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, node15);   /* 9 */
-
-    if(!data.paddingFromStyle.isZero()) shared.setStyle(
-        BaseLayerStyleCommon{},
-        {BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}},
-        {{}, {}, data.paddingFromStyle, {}});
 
     if(!data.paddingFromData.isZero())
         layer.setPadding(data3, data.paddingFromData);
@@ -1148,6 +1153,25 @@ void BaseLayerTest::updateDataOrder() {
             { 10.0f,  2.5f},
         }), TestSuite::Compare::Container);
     }
+}
+
+void BaseLayerTest::updateNoStyleSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
+    } shared{4};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.update({}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::update(): no style data was set\n");
 }
 
 }}}}
