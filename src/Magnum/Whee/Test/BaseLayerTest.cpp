@@ -70,6 +70,9 @@ struct BaseLayerTest: TestSuite::Tester {
     void sharedSetStyle();
     void sharedSetStyleImplicitPadding();
     void sharedSetStyleInvalidSize();
+    void sharedSetStyleImplicitMapping();
+    void sharedSetStyleImplicitMappingImplicitPadding();
+    void sharedSetStyleImplicitMappingInvalidSize();
 
     void construct();
     void constructCopy();
@@ -130,8 +133,8 @@ const struct {
 };
 
 BaseLayerTest::BaseLayerTest() {
-    addTests({&BaseLayerTest::styleSizeAlignment<BaseLayerStyleCommon>,
-              &BaseLayerTest::styleSizeAlignment<BaseLayerStyleItem>,
+    addTests({&BaseLayerTest::styleSizeAlignment<BaseLayerCommonStyleUniform>,
+              &BaseLayerTest::styleSizeAlignment<BaseLayerStyleUniform>,
 
               &BaseLayerTest::styleCommonConstructDefault,
               &BaseLayerTest::styleCommonConstruct,
@@ -159,6 +162,9 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::sharedSetStyle,
               &BaseLayerTest::sharedSetStyleImplicitPadding,
               &BaseLayerTest::sharedSetStyleInvalidSize,
+              &BaseLayerTest::sharedSetStyleImplicitMapping,
+              &BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding,
+              &BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize,
 
               &BaseLayerTest::construct,
               &BaseLayerTest::constructCopy,
@@ -184,11 +190,11 @@ BaseLayerTest::BaseLayerTest() {
 using namespace Math::Literals;
 
 template<class> struct StyleTraits;
-template<> struct StyleTraits<BaseLayerStyleCommon> {
-    static const char* name() { return "BaseLayerStyleCommon"; }
+template<> struct StyleTraits<BaseLayerCommonStyleUniform> {
+    static const char* name() { return "BaseLayerCommonStyleUniform"; }
 };
-template<> struct StyleTraits<BaseLayerStyleItem> {
-    static const char* name() { return "BaseLayerStyleItem"; }
+template<> struct StyleTraits<BaseLayerStyleUniform> {
+    static const char* name() { return "BaseLayerStyleUniform"; }
 };
 
 template<class T> void BaseLayerTest::styleSizeAlignment() {
@@ -206,54 +212,54 @@ template<class T> void BaseLayerTest::styleSizeAlignment() {
 }
 
 void BaseLayerTest::styleCommonConstructDefault() {
-    BaseLayerStyleCommon a;
-    BaseLayerStyleCommon b{DefaultInit};
+    BaseLayerCommonStyleUniform a;
+    BaseLayerCommonStyleUniform b{DefaultInit};
     CORRADE_COMPARE(a.smoothness, 0.0f);
     CORRADE_COMPARE(b.smoothness, 0.0f);
     CORRADE_COMPARE(a.innerOutlineSmoothness, 0.0f);
     CORRADE_COMPARE(b.innerOutlineSmoothness, 0.0f);
 
-    constexpr BaseLayerStyleCommon ca;
-    constexpr BaseLayerStyleCommon cb{DefaultInit};
+    constexpr BaseLayerCommonStyleUniform ca;
+    constexpr BaseLayerCommonStyleUniform cb{DefaultInit};
     CORRADE_COMPARE(ca.smoothness, 0.0f);
     CORRADE_COMPARE(cb.smoothness, 0.0f);
     CORRADE_COMPARE(ca.innerOutlineSmoothness, 0.0f);
     CORRADE_COMPARE(cb.innerOutlineSmoothness, 0.0f);
 
-    CORRADE_VERIFY(std::is_nothrow_default_constructible<BaseLayerStyleCommon>::value);
-    CORRADE_VERIFY(std::is_nothrow_constructible<BaseLayerStyleCommon, DefaultInitT>::value);
+    CORRADE_VERIFY(std::is_nothrow_default_constructible<BaseLayerCommonStyleUniform>::value);
+    CORRADE_VERIFY(std::is_nothrow_constructible<BaseLayerCommonStyleUniform, DefaultInitT>::value);
 
     /* Implicit construction is not allowed */
-    CORRADE_VERIFY(!std::is_convertible<DefaultInitT, BaseLayerStyleCommon>::value);
+    CORRADE_VERIFY(!std::is_convertible<DefaultInitT, BaseLayerCommonStyleUniform>::value);
 }
 
 void BaseLayerTest::styleCommonConstruct() {
-    BaseLayerStyleCommon a{3.0f, 5.0f};
+    BaseLayerCommonStyleUniform a{3.0f, 5.0f};
     CORRADE_COMPARE(a.smoothness, 3.0f);
     CORRADE_COMPARE(a.innerOutlineSmoothness, 5.0f);
 
-    constexpr BaseLayerStyleCommon ca{3.0f, 5.0f};
+    constexpr BaseLayerCommonStyleUniform ca{3.0f, 5.0f};
     CORRADE_COMPARE(ca.smoothness, 3.0f);
     CORRADE_COMPARE(ca.innerOutlineSmoothness, 5.0f);
 }
 
 void BaseLayerTest::styleCommonConstructSingleSmoothness() {
-    BaseLayerStyleCommon a{4.0f};
+    BaseLayerCommonStyleUniform a{4.0f};
     CORRADE_COMPARE(a.smoothness, 4.0f);
     CORRADE_COMPARE(a.innerOutlineSmoothness, 4.0f);
 
-    constexpr BaseLayerStyleCommon ca{4.0f};
+    constexpr BaseLayerCommonStyleUniform ca{4.0f};
     CORRADE_COMPARE(ca.smoothness, 4.0f);
     CORRADE_COMPARE(ca.innerOutlineSmoothness, 4.0f);
 }
 
 void BaseLayerTest::styleCommonConstructNoInit() {
     /* Testing only some fields, should be enough */
-    BaseLayerStyleCommon a;
+    BaseLayerCommonStyleUniform a;
     a.smoothness = 3.0f;
     a.innerOutlineSmoothness = 20.0f;
 
-    new(&a) BaseLayerStyleCommon{NoInit};
+    new(&a) BaseLayerCommonStyleUniform{NoInit};
     {
         /* Explicitly check we're not on Clang because certain Clang-based IDEs
            inherit __GNUC__ if GCC is used instead of leaving it at 4 like
@@ -267,7 +273,7 @@ void BaseLayerTest::styleCommonConstructNoInit() {
 }
 
 void BaseLayerTest::styleCommonSetters() {
-    BaseLayerStyleCommon a;
+    BaseLayerCommonStyleUniform a;
     a.setSmoothness(34.0f, 12.0f);
     CORRADE_COMPARE(a.smoothness, 34.0f);
     CORRADE_COMPARE(a.innerOutlineSmoothness, 12.0f);
@@ -279,8 +285,8 @@ void BaseLayerTest::styleCommonSetters() {
 }
 
 void BaseLayerTest::styleItemConstructDefault() {
-    BaseLayerStyleItem a;
-    BaseLayerStyleItem b{DefaultInit};
+    BaseLayerStyleUniform a;
+    BaseLayerStyleUniform b{DefaultInit};
     CORRADE_COMPARE(a.topColor, 0xffffffff_srgbaf);
     CORRADE_COMPARE(b.topColor, 0xffffffff_srgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xffffffff_srgbaf);
@@ -294,8 +300,8 @@ void BaseLayerTest::styleItemConstructDefault() {
     CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{0.0f});
     CORRADE_COMPARE(b.innerOutlineCornerRadius, Vector4{0.0f});
 
-    constexpr BaseLayerStyleItem ca;
-    constexpr BaseLayerStyleItem cb{DefaultInit};
+    constexpr BaseLayerStyleUniform ca;
+    constexpr BaseLayerStyleUniform cb{DefaultInit};
     CORRADE_COMPARE(ca.topColor, 0xffffffff_srgbaf);
     CORRADE_COMPARE(cb.topColor, 0xffffffff_srgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xffffffff_srgbaf);
@@ -309,15 +315,15 @@ void BaseLayerTest::styleItemConstructDefault() {
     CORRADE_COMPARE(ca.innerOutlineCornerRadius, Vector4{0.0f});
     CORRADE_COMPARE(cb.innerOutlineCornerRadius, Vector4{0.0f});
 
-    CORRADE_VERIFY(std::is_nothrow_default_constructible<BaseLayerStyleCommon>::value);
-    CORRADE_VERIFY(std::is_nothrow_constructible<BaseLayerStyleCommon, DefaultInitT>::value);
+    CORRADE_VERIFY(std::is_nothrow_default_constructible<BaseLayerCommonStyleUniform>::value);
+    CORRADE_VERIFY(std::is_nothrow_constructible<BaseLayerCommonStyleUniform, DefaultInitT>::value);
 
     /* Implicit construction is not allowed */
-    CORRADE_VERIFY(!std::is_convertible<DefaultInitT, BaseLayerStyleCommon>::value);
+    CORRADE_VERIFY(!std::is_convertible<DefaultInitT, BaseLayerCommonStyleUniform>::value);
 }
 
 void BaseLayerTest::styleItemConstruct() {
-    BaseLayerStyleItem a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
+    BaseLayerStyleUniform a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(a.outlineColor, 0x663399cc_rgbaf);
@@ -325,7 +331,7 @@ void BaseLayerTest::styleItemConstruct() {
     CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
     CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{0.1f, 0.2f, 0.3f, 0.4f}));
 
-    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
+    constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(ca.outlineColor, 0x663399cc_rgbaf);
@@ -335,7 +341,7 @@ void BaseLayerTest::styleItemConstruct() {
 }
 
 void BaseLayerTest::styleItemConstructSingleRadiusWidth() {
-    BaseLayerStyleItem a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
+    BaseLayerStyleUniform a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(a.outlineColor, 0x663399cc_rgbaf);
@@ -343,7 +349,7 @@ void BaseLayerTest::styleItemConstructSingleRadiusWidth() {
     CORRADE_COMPARE(a.cornerRadius, Vector4{3.5f});
     CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{4.5f});
 
-    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
+    constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(ca.outlineColor, 0x663399cc_rgbaf);
@@ -353,7 +359,7 @@ void BaseLayerTest::styleItemConstructSingleRadiusWidth() {
 }
 
 void BaseLayerTest::styleItemConstructNoOutline() {
-    BaseLayerStyleItem a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
+    BaseLayerStyleUniform a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
@@ -361,7 +367,7 @@ void BaseLayerTest::styleItemConstructNoOutline() {
     CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
     CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
 
-    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
+    constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
@@ -371,7 +377,7 @@ void BaseLayerTest::styleItemConstructNoOutline() {
 }
 
 void BaseLayerTest::styleItemConstructNoOutlineSingleRadius() {
-    BaseLayerStyleItem a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 2.5f};
+    BaseLayerStyleUniform a{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 2.5f};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
@@ -379,7 +385,7 @@ void BaseLayerTest::styleItemConstructNoOutlineSingleRadius() {
     CORRADE_COMPARE(a.cornerRadius, Vector4{2.5f});
     CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{2.5f});
 
-    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 2.5f};
+    constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, 0xaabbccdd_rgbaf, 2.5f};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
@@ -389,7 +395,7 @@ void BaseLayerTest::styleItemConstructNoOutlineSingleRadius() {
 }
 
 void BaseLayerTest::styleItemConstructNoGradient() {
-    BaseLayerStyleItem a{0xff336699_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
+    BaseLayerStyleUniform a{0xff336699_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.outlineColor, 0x663399cc_rgbaf);
@@ -397,7 +403,7 @@ void BaseLayerTest::styleItemConstructNoGradient() {
     CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
     CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{0.1f, 0.2f, 0.3f, 0.4f}));
 
-    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
+    constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, 0x663399cc_rgbaf, {1.0f, 2.0f, 3.0f, 4.0f}, {5.0f, 6.0f, 7.0f, 8.0f}, {0.1f, 0.2f, 0.3f, 0.4f}};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.outlineColor, 0x663399cc_rgbaf);
@@ -407,7 +413,7 @@ void BaseLayerTest::styleItemConstructNoGradient() {
 }
 
 void BaseLayerTest::styleItemConstructNoGradientSingleRadiusWidth() {
-    BaseLayerStyleItem a{0xff336699_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
+    BaseLayerStyleUniform a{0xff336699_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.outlineColor, 0x663399cc_rgbaf);
@@ -415,7 +421,7 @@ void BaseLayerTest::styleItemConstructNoGradientSingleRadiusWidth() {
     CORRADE_COMPARE(a.cornerRadius, Vector4{3.5f});
     CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{4.5f});
 
-    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
+    constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, 0x663399cc_rgbaf, 2.5f, 3.5f, 4.5f};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.outlineColor, 0x663399cc_rgbaf);
@@ -425,7 +431,7 @@ void BaseLayerTest::styleItemConstructNoGradientSingleRadiusWidth() {
 }
 
 void BaseLayerTest::styleItemConstructNoGradientNoOutline() {
-    BaseLayerStyleItem a{0xff336699_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
+    BaseLayerStyleUniform a{0xff336699_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
@@ -433,7 +439,7 @@ void BaseLayerTest::styleItemConstructNoGradientNoOutline() {
     CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
     CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
 
-    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
+    constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
@@ -443,7 +449,7 @@ void BaseLayerTest::styleItemConstructNoGradientNoOutline() {
 }
 
 void BaseLayerTest::styleItemConstructNoGradientNoOutlineSingleRadius() {
-    BaseLayerStyleItem a{0xff336699_rgbaf, 2.5f};
+    BaseLayerStyleUniform a{0xff336699_rgbaf, 2.5f};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
@@ -451,7 +457,7 @@ void BaseLayerTest::styleItemConstructNoGradientNoOutlineSingleRadius() {
     CORRADE_COMPARE(a.cornerRadius, Vector4{2.5f});
     CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{2.5f});
 
-    constexpr BaseLayerStyleItem ca{0xff336699_rgbaf, 2.5f};
+    constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, 2.5f};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
@@ -462,11 +468,11 @@ void BaseLayerTest::styleItemConstructNoGradientNoOutlineSingleRadius() {
 
 void BaseLayerTest::styleItemConstructNoInit() {
     /* Testing only some fields, should be enough */
-    BaseLayerStyleItem a;
+    BaseLayerStyleUniform a;
     a.bottomColor = 0xff3366_rgbf;
     a.innerOutlineCornerRadius = {1.0f, 2.0f, 3.0f, 4.0f};
 
-    new(&a) BaseLayerStyleItem{NoInit};
+    new(&a) BaseLayerStyleUniform{NoInit};
     {
         /* Explicitly check we're not on Clang because certain Clang-based IDEs
            inherit __GNUC__ if GCC is used instead of leaving it at 4 like
@@ -480,7 +486,7 @@ void BaseLayerTest::styleItemConstructNoInit() {
 }
 
 void BaseLayerTest::styleItemSetters() {
-    BaseLayerStyleItem a;
+    BaseLayerStyleUniform a;
     a.setColor(0xff336699_rgbaf, 0xaabbccdd_rgbaf)
      .setOutlineColor(0x663399cc_rgbaf)
      .setOutlineWidth({1.0f, 2.0f, 3.0f, 4.0f})
@@ -508,18 +514,19 @@ void BaseLayerTest::styleItemSetters() {
 
 void BaseLayerTest::sharedConstruct() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{3};
-    CORRADE_COMPARE(shared.styleCount(), 3);
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{3, 5};
+    CORRADE_COMPARE(shared.styleUniformCount(), 3);
+    CORRADE_COMPARE(shared.styleCount(), 5);
 }
 
 void BaseLayerTest::sharedConstructNoCreate() {
     struct Shared: BaseLayer::Shared {
         explicit Shared(NoCreateT): BaseLayer::Shared{NoCreate} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{NoCreate};
 
     /* Shouldn't crash */
@@ -535,9 +542,9 @@ void BaseLayerTest::sharedConstructCopy() {
            without the constructor the type would be impossible to construct
            (and thus also to copy), leading to false positives in the trait
            check below */
-        explicit CORRADE_UNUSED Shared(UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<BaseLayer::Shared::State>(styleCount)} {}
+        explicit CORRADE_UNUSED Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<BaseLayer::Shared::State>(styleUniformCount, styleCount)} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, const Containers::ArrayView<const BaseLayerStyleItem>) override {}
+        void doSetStyle(const BaseLayerCommonStyleUniform&, const Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     };
 
     CORRADE_VERIFY(!std::is_copy_constructible<Shared>{});
@@ -546,19 +553,21 @@ void BaseLayerTest::sharedConstructCopy() {
 
 void BaseLayerTest::sharedConstructMove() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, const Containers::ArrayView<const BaseLayerStyleItem>) override {}
+        void doSetStyle(const BaseLayerCommonStyleUniform&, const Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     };
 
-    Shared a{3};
+    Shared a{3, 5};
 
     Shared b{Utility::move(a)};
-    CORRADE_COMPARE(b.styleCount(), 3);
+    CORRADE_COMPARE(b.styleUniformCount(), 3);
+    CORRADE_COMPARE(b.styleCount(), 5);
 
-    Shared c{5};
+    Shared c{5, 7};
     c = Utility::move(b);
-    CORRADE_COMPARE(c.styleCount(), 3);
+    CORRADE_COMPARE(c.styleUniformCount(), 3);
+    CORRADE_COMPARE(c.styleCount(), 5);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
@@ -566,18 +575,18 @@ void BaseLayerTest::sharedConstructMove() {
 
 void BaseLayerTest::sharedSetStyle() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) override {
-            CORRADE_COMPARE(common.smoothness, 3.14f);
-            CORRADE_COMPARE(items.size(), 3);
-            CORRADE_COMPARE(items[1].outlineColor, 0xc0ffee_rgbf);
+        void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) override {
+            CORRADE_COMPARE(commonUniform.smoothness, 3.14f);
+            CORRADE_COMPARE(uniforms.size(), 3);
+            CORRADE_COMPARE(uniforms[1].outlineColor, 0xc0ffee_rgbf);
             ++setStyleCalled;
         }
 
         Int setStyleCalled = 0;
-    } shared{3};
+    } shared{3, 5};
 
     /* By default the shared.state().styles array is empty, it gets only filled
        during the setStyle() call. The empty state is used to detect whether
@@ -585,29 +594,37 @@ void BaseLayerTest::sharedSetStyle() {
     CORRADE_VERIFY(shared.state().styles.isEmpty());
 
     shared.setStyle(
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
-        {BaseLayerStyleItem{},
-         BaseLayerStyleItem{}
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}
             .setOutlineColor(0xc0ffee_rgbf),
-         BaseLayerStyleItem{}},
+         BaseLayerStyleUniform{}},
+        {2, 1, 0, 0, 1},
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
-         {2.0f, 1.0f, 4.0f, 3.0f}});
+         {2.0f, 1.0f, 4.0f, 3.0f},
+         {1.0f, 3.0f, 2.0f, 4.0f},
+         {4.0f, 1.0f, 3.0f, 2.0f}});
     CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::uniform), Containers::stridedArrayView({
+        2u, 1u, 0u, 0u, 1u
+    }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
         Vector4{1.0f, 2.0f, 3.0f, 4.0f},
         Vector4{4.0f, 3.0f, 2.0f, 1.0f},
-        Vector4{2.0f, 1.0f, 4.0f, 3.0f}
+        Vector4{2.0f, 1.0f, 4.0f, 3.0f},
+        Vector4{1.0f, 3.0f, 2.0f, 4.0f},
+        Vector4{4.0f, 1.0f, 3.0f, 2.0f}
     }), TestSuite::Compare::Container);
 }
 
 void BaseLayerTest::sharedSetStyleImplicitPadding() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
         State& state() { return static_cast<State&>(*_state); }
 
-        void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) override {
+        void doSetStyle(const BaseLayerCommonStyleUniform& common, Containers::ArrayView<const BaseLayerStyleUniform> items) override {
             CORRADE_COMPARE(common.smoothness, 3.14f);
             CORRADE_COMPARE(items.size(), 3);
             CORRADE_COMPARE(items[1].outlineColor, 0xc0ffee_rgbf);
@@ -615,21 +632,27 @@ void BaseLayerTest::sharedSetStyleImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{3};
+    } shared{3, 5};
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
     shared.setStyle(
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
-        {BaseLayerStyleItem{},
-         BaseLayerStyleItem{}
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}
             .setOutlineColor(0xc0ffee_rgbf),
-         BaseLayerStyleItem{}},
+         BaseLayerStyleUniform{}},
+        {2, 1, 0, 0, 1},
         {});
     CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::uniform), Containers::stridedArrayView({
+        2u, 1u, 0u, 0u, 1u
+    }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
         Vector4{},
         Vector4{},
         Vector4{}
@@ -638,24 +661,30 @@ void BaseLayerTest::sharedSetStyleImplicitPadding() {
     /* Setting a style with implicit padding after a non-implicit padding was
        set should reset it back to zeros */
     shared.setStyle(
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
-        {BaseLayerStyleItem{},
-         BaseLayerStyleItem{}
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}
             .setOutlineColor(0xc0ffee_rgbf),
-         BaseLayerStyleItem{}},
+         BaseLayerStyleUniform{}},
+        {2, 1, 0, 0, 1},
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
-         {2.0f, 1.0f, 4.0f, 3.0f}});
+         {2.0f, 1.0f, 4.0f, 3.0f},
+         {1.0f, 3.0f, 2.0f, 4.0f},
+         {4.0f, 1.0f, 3.0f, 2.0f}});
     shared.setStyle(
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(3.14f),
-        {BaseLayerStyleItem{},
-         BaseLayerStyleItem{}
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}
             .setOutlineColor(0xc0ffee_rgbf),
-         BaseLayerStyleItem{}},
+         BaseLayerStyleUniform{}},
+        {2, 1, 0, 0, 1},
         {});
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
         Vector4{},
         Vector4{},
         Vector4{}
@@ -666,30 +695,154 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{3, 5};
 
     std::ostringstream out;
     Error redirectError{&out};
-    shared.setStyle(BaseLayerStyleCommon{},
-        {BaseLayerStyleItem{}, BaseLayerStyleItem{}},
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+        {0, 1, 2, 3, 4},
+        {{}, {}, {}, {}, {}});
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+        {0, 1, 2},
+        {{}, {}, {}, {}, {}});
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+        {0, 1, 2, 3, 4},
         {{}, {}, {}});
-    shared.setStyle(BaseLayerStyleCommon{},
-        {BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}},
-        {{}, {}});
     CORRADE_COMPARE(out.str(),
-        "Whee::BaseLayer::Shared::setStyle(): expected 3 style items, got 2\n"
-        "Whee::BaseLayer::Shared::setStyle(): expected either no or 3 paddings, got 2\n");
+        "Whee::BaseLayer::Shared::setStyle(): expected 3 uniforms, got 2\n"
+        "Whee::BaseLayer::Shared::setStyle(): expected 5 style uniform indices, got 3\n"
+        "Whee::BaseLayer::Shared::setStyle(): expected either no or 5 paddings, got 3\n");
+}
+
+void BaseLayerTest::sharedSetStyleImplicitMapping() {
+    struct Shared: BaseLayer::Shared {
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        State& state() { return static_cast<State&>(*_state); }
+
+        void doSetStyle(const BaseLayerCommonStyleUniform& common, Containers::ArrayView<const BaseLayerStyleUniform> items) override {
+            CORRADE_COMPARE(common.smoothness, 3.14f);
+            CORRADE_COMPARE(items.size(), 3);
+            CORRADE_COMPARE(items[1].outlineColor, 0xc0ffee_rgbf);
+            ++setStyleCalled;
+        }
+
+        Int setStyleCalled = 0;
+    } shared{3, 3};
+
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}
+            .setOutlineColor(0xc0ffee_rgbf),
+         BaseLayerStyleUniform{}},
+        {{1.0f, 2.0f, 3.0f, 4.0f},
+         {4.0f, 3.0f, 2.0f, 1.0f},
+         {2.0f, 1.0f, 4.0f, 3.0f}});
+    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::uniform), Containers::stridedArrayView({
+        0u, 1u, 2u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{1.0f, 2.0f, 3.0f, 4.0f},
+        Vector4{4.0f, 3.0f, 2.0f, 1.0f},
+        Vector4{2.0f, 1.0f, 4.0f, 3.0f}
+    }), TestSuite::Compare::Container);
+}
+
+void BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
+    struct Shared: BaseLayer::Shared {
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        State& state() { return static_cast<State&>(*_state); }
+
+        void doSetStyle(const BaseLayerCommonStyleUniform& common, Containers::ArrayView<const BaseLayerStyleUniform> items) override {
+            CORRADE_COMPARE(common.smoothness, 3.14f);
+            CORRADE_COMPARE(items.size(), 3);
+            CORRADE_COMPARE(items[1].outlineColor, 0xc0ffee_rgbf);
+            ++setStyleCalled;
+        }
+
+        Int setStyleCalled = 0;
+    } shared{3, 3};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}
+            .setOutlineColor(0xc0ffee_rgbf),
+         BaseLayerStyleUniform{}},
+        {});
+    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::uniform), Containers::stridedArrayView({
+        0u, 1u, 2u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{}
+    }), TestSuite::Compare::Container);
+
+    /* Setting a style with implicit padding after a non-implicit padding was
+       set should reset it back to zeros */
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}
+            .setOutlineColor(0xc0ffee_rgbf),
+         BaseLayerStyleUniform{}},
+        {{1.0f, 2.0f, 3.0f, 4.0f},
+         {4.0f, 3.0f, 2.0f, 1.0f},
+         {2.0f, 1.0f, 4.0f, 3.0f}});
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(3.14f),
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}
+            .setOutlineColor(0xc0ffee_rgbf),
+         BaseLayerStyleUniform{}},
+        {});
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{}
+    }), TestSuite::Compare::Container);
+}
+
+void BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: BaseLayer::Shared {
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{3, 5};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+        {{}, {}, {}, {}, {}});
+    CORRADE_COMPARE(out.str(),
+        "Whee::BaseLayer::Shared::setStyle(): there's 3 uniforms for 5 styles, provide an explicit mapping\n");
 }
 
 void BaseLayerTest::construct() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{3, 5};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -706,17 +859,17 @@ void BaseLayerTest::constructCopy() {
 
 void BaseLayerTest::constructMove() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     };
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     };
 
-    LayerShared shared{3};
-    LayerShared shared2{5};
+    LayerShared shared{1, 3};
+    LayerShared shared2{5, 7};
 
     Layer a{layerHandle(137, 0xfe), shared};
 
@@ -738,10 +891,10 @@ template<class T> void BaseLayerTest::createRemove() {
     setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{38};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{12, 38};
 
     /* Not setting any padding via style -- tested in setPadding() instead */
 
@@ -808,10 +961,10 @@ template<class T> void BaseLayerTest::createRemove() {
 
 void BaseLayerTest::setColor() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{1, 3};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -838,10 +991,10 @@ void BaseLayerTest::setColor() {
 
 void BaseLayerTest::setOutlineWidth() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{2, 3};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -878,10 +1031,10 @@ void BaseLayerTest::setOutlineWidth() {
 
 void BaseLayerTest::setPadding() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{2, 3};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -920,10 +1073,10 @@ void BaseLayerTest::invalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{1, 1};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -961,11 +1114,14 @@ void BaseLayerTest::invalidHandle() {
 void BaseLayerTest::styleOutOfRange() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    /* In this case the uniform count is higher than the style count, which is
+       unlikely to happen in practice. It's to verify the check happens against
+       the style count, not uniform count. */
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{6, 3};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -987,14 +1143,15 @@ void BaseLayerTest::updateDataOrder() {
        output is checked in BaseLayerGLTest. */
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{4};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{3, 4};
 
     shared.setStyle(
-        BaseLayerStyleCommon{},
-        {BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}, BaseLayerStyleItem{}},
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+        {1, 2, 0, 1},
         {{}, {}, data.paddingFromStyle, {}});
 
     struct Layer: BaseLayer {
@@ -1057,15 +1214,18 @@ void BaseLayerTest::updateDataOrder() {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
         CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].style, 2);
+        /* Created with style 2, which is mapped to uniform 0 */
+        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 0);
 
         CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].color, 0x112233_rgbf);
         CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].outlineWidth, Vector4{2.0f});
-        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].style, 1);
+        /* Created with style 1, which is mapped to uniform 2 */
+        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].styleUniform, 2);
 
         CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0x663399_rgbf);
         CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
-        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].style, 3);
+        /* Created with style 3, which is mapped to uniform 1 */
+        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 1);
     }
 
     Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::BaseLayerVertex::position);
@@ -1106,10 +1266,10 @@ void BaseLayerTest::updateNoStyleSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
-    } shared{4};
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{1, 1};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
