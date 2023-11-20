@@ -472,9 +472,9 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
 @brief Shared state for the text layer
 
 Contains a set of fonts and a glyph cache used by all of them. In order to use
-the layer it's expected that @ref setGlyphCache() was called, at least one font
-was added with @ref addFont() and fonts were assigned to corresponding styles
-with @ref setStyle().
+the layer it's expected that @ref setGlyphCache() was called and at least one
+font was added with @ref addFont(). In order to update or draw the layer it's
+expected that @ref setStyle() was called.
 
 Pre-filling the glyph cache with appropriate glyphs for a particular font is
 the user responsibility, the implementation currently won't perform that on its

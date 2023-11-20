@@ -113,6 +113,7 @@ struct TextLayerTest: TestSuite::Tester {
     void updateCleanDataOrder();
     void updateAlignment();
     void updatePadding();
+    void updateNoStyleSet();
 };
 
 enum class Enum: UnsignedShort {};
@@ -272,6 +273,8 @@ TextLayerTest::TextLayerTest() {
     addInstancedTests({&TextLayerTest::updateAlignment,
                        &TextLayerTest::updatePadding},
         Containers::arraySize(UpdateAlignmentPaddingData));
+
+    addTests({&TextLayerTest::updateNoStyleSet});
 }
 
 using namespace Containers::Literals;
@@ -903,17 +906,10 @@ void TextLayerTest::sharedSetStyle() {
     } shared{3};
     shared.setGlyphCache(cache);
 
-    /* By default there are all null font handles and no padding */
-    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
-        FontHandle::Null,
-        FontHandle::Null,
-        FontHandle::Null
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
-        Vector4{},
-        Vector4{},
-        Vector4{}
-    }), TestSuite::Compare::Container);
+    /* By default the shared.state().styles array is empty, it gets only filled
+       during the setStyle() call. The empty state is used to detect whether
+       setStyle() was called at all when calling update(). */
+    CORRADE_VERIFY(shared.state().styles.isEmpty());
 
     Font font1, font2;
     cache.addFont(67, &font1);
@@ -2030,11 +2026,40 @@ void TextLayerTest::styleOutOfRange() {
 }
 
 void TextLayerTest::updateEmpty() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return false; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(56, &font);
+
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
+        using TextLayer::Shared::setGlyphCache;
+
         void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+    } shared{1};
+    shared.setGlyphCache(cache);
+
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    shared.setStyle(
+        TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {fontHandle},
+        {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2775,6 +2800,25 @@ void TextLayerTest::updatePadding() {
         Vector2{6.0f, -4.0f} + data.offset,
         Vector2{8.0f, -4.0f} + data.offset,
     }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::updateNoStyleSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+    } shared{1};
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.update({}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::TextLayer::update(): no style data was set\n");
 }
 
 }}}}

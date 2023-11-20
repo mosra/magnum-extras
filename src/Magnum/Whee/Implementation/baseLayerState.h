@@ -45,9 +45,10 @@ struct BaseLayerStyle {
 }
 
 struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount}, styles{ValueInit, styleCount} {}
+    explicit State(UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount} {}
 
-    /* Padding values assigned to each style */
+    /* Padding values assigned to each style. Initially empty to be able to
+       detect whether setStyle() was called. */
     Containers::Array<Implementation::BaseLayerStyle> styles;
 };
 

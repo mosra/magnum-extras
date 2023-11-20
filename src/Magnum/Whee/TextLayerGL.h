@@ -80,10 +80,10 @@ class MAGNUM_WHEE_EXPORT TextLayerGL: public TextLayer {
 /**
 @brief Shared state for the OpenGL implementation of the text layer
 
-Contains fonts, shader instances and style data. In order to use
-the layer it's expected that @ref setGlyphCache() was called, at least one font
-was added with @ref addFont() and fonts were assigned to corresponding styles
-with @ref setStyle().
+Contains fonts, shader instances and style data. In order to use the layer it's
+expected that @ref setGlyphCache() was called and at least one font was added
+with @ref addFont(). In order to update or draw the layer it's expected that
+@ref setStyle() was called.
 */
 class MAGNUM_WHEE_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
     public:

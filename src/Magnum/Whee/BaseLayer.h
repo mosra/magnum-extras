@@ -735,8 +735,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
 @brief Shared state for the base layer
 
 Contains style data. You'll most likely instantiate the class through
-@ref BaseLayerGL::Shared. In order to draw the layer it's expected that
-@ref setStyle() was called.
+@ref BaseLayerGL::Shared. In order to update or draw the layer it's expected
+that @ref setStyle() was called.
 */
 class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     public:

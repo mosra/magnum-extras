@@ -140,6 +140,8 @@ TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& commo
         CORRADE_ASSERT(isHandleValid(itemFonts[i]),
             "Whee::TextLayer::Shared::setStyle(): invalid handle" << itemFonts[i] << "at index" << i, *this);
     #endif
+    if(state.styles.isEmpty())
+        state.styles = Containers::Array<Implementation::TextLayerStyle>{NoInit, state.styleCount};
     Utility::copy(itemFonts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::font));
     if(itemPadding.isEmpty()) {
         /** @todo some Utility::fill() for this */
@@ -172,13 +174,9 @@ void TextLayer::shapeInternal(
     /* Decide on a font */
     FontHandle font = properties.font();
     if(font == FontHandle::Null) {
-        /* This assumes that fonts can never be deleted, otherwise it'd have to
-           call isHandleValid() on the Shared class somehow. setStyle() checks
-           that all handles are non-null (and valid), so if a handle is null it
-           means setStyle() wasn't called yet. */
-        font = sharedState.styles[style].font;
-        CORRADE_ASSERT(font != FontHandle::Null,
+        CORRADE_ASSERT(!sharedState.styles.isEmpty(),
             messagePrefix << "no style data was set and no custom font was supplied", );
+        font = sharedState.styles[style].font;
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
         messagePrefix << "invalid handle" << font, );
 
@@ -428,6 +426,10 @@ void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
 void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     State& state = static_cast<State&>(*_state);
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
+    /* Technically needed only if there's any actual data to update, but
+       require it always for consistency (and easier testing) */
+    CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+        "Whee::TextLayer::update(): no style data was set", );
 
     /* Recompact the glyph data by removing unused runs */
     {

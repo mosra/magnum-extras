@@ -80,8 +80,8 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
 /**
 @brief Shared state for the OpenGL implementation of the base layer
 
-Contains shader instances. In order to draw the layer it's expected that
-@ref setStyle() was called.
+Contains shader instances. In order to update or draw the layer it's expected
+that @ref setStyle() was called.
 */
 class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
     public:

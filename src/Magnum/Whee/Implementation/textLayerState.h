@@ -61,7 +61,7 @@ struct TextLayerStyle {
 }
 
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount}, styles{ValueInit, styleCount} {}
+    explicit State(UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount} {}
 
     /* Glyph cache used by all fonts. It's expected to know about each font
        that's added. */
@@ -72,7 +72,8 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
        FontHandle generation counters doesn't need to exist here. */
     Containers::Array<Implementation::TextLayerFont> fonts;
 
-    /* Fonts and padding values assigned to each style */
+    /* Fonts and padding values assigned to each style. Initially empty to be
+       able to detect whether setStyle() was called. */
     Containers::Array<Implementation::TextLayerStyle> styles;
 };
 
