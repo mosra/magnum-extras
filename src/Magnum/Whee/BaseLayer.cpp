@@ -51,6 +51,8 @@ BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& commo
         "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleCount << "style items, got" << items.size(), *this);
     CORRADE_ASSERT(itemPadding.isEmpty() || itemPadding.size() == state.styleCount,
         "Whee::BaseLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << itemPadding.size(), *this);
+    if(state.styles.isEmpty())
+        state.styles = Containers::Array<Implementation::BaseLayerStyle>{NoInit, state.styleCount};
     if(itemPadding.isEmpty()) {
         /** @todo some Utility::fill() for this */
         for(Implementation::BaseLayerStyle& style: state.styles)
@@ -193,6 +195,8 @@ void BaseLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding)
 void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
+    CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+        "Whee::BaseLayer::update(): no style data was set", );
 
     /* Fill in indices in desired order */
     arrayResize(state.indices, NoInit, dataIds.size()*6);
