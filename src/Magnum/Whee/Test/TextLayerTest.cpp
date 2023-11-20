@@ -112,6 +112,7 @@ struct TextLayerTest: TestSuite::Tester {
     void updateCleanDataOrder();
     void updateAlignment();
     void updatePadding();
+    void updateNoStyleSet();
 };
 
 enum class Enum: UnsignedShort {};
@@ -269,6 +270,8 @@ TextLayerTest::TextLayerTest() {
     addInstancedTests({&TextLayerTest::updateAlignment,
                        &TextLayerTest::updatePadding},
         Containers::arraySize(UpdateAlignmentPaddingData));
+
+    addTests({&TextLayerTest::updateNoStyleSet});
 }
 
 using namespace Containers::Literals;
@@ -900,17 +903,10 @@ void TextLayerTest::sharedSetStyle() {
     } shared{3};
     shared.setGlyphCache(cache);
 
-    /* By default there are all null font handles and no padding */
-    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
-        FontHandle::Null,
-        FontHandle::Null,
-        FontHandle::Null
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
-        Vector4{},
-        Vector4{},
-        Vector4{}
-    }), TestSuite::Compare::Container);
+    /* By default the shared.state().styles array is empty, it gets only filled
+       during the setStyle() call. The empty state is used to detect whether
+       setStyle() was called at all when calling update(). */
+    CORRADE_VERIFY(shared.state().styles.isEmpty());
 
     Font font1, font2;
     cache.addFont(67, &font1);
@@ -2754,6 +2750,25 @@ void TextLayerTest::updatePadding() {
         Vector2{6.0f, -4.0f} + data.offset,
         Vector2{8.0f, -4.0f} + data.offset,
     }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::updateNoStyleSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+    } shared{1};
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.update({}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::TextLayer::update(): no style data was set\n");
 }
 
 }}}}
