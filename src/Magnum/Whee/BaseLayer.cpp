@@ -41,31 +41,60 @@ namespace Magnum { namespace Whee {
 
 BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {}
 
-BaseLayer::Shared::Shared(const UnsignedInt styleCount): Shared{Containers::pointer<State>(styleCount)} {}
+BaseLayer::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): Shared{Containers::pointer<State>(styleUniformCount, styleCount)} {}
 
 BaseLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCreate} {}
 
-BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding) {
+UnsignedInt BaseLayer::Shared::styleUniformCount() const {
+    return static_cast<const State&>(*_state).styleUniformCount;
+}
+
+void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(items.size() == state.styleCount,
-        "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleCount << "style items, got" << items.size(), *this);
-    CORRADE_ASSERT(itemPadding.isEmpty() || itemPadding.size() == state.styleCount,
-        "Whee::BaseLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << itemPadding.size(), *this);
+    /* Allocation done before the asserts so if they fail in a graceful assert
+       build, we don't hit another assert in Utility::copy(styleToUniform) in
+       the setStyle() below */
     if(state.styles.isEmpty())
         state.styles = Containers::Array<Implementation::BaseLayerStyle>{NoInit, state.styleCount};
-    if(itemPadding.isEmpty()) {
+    CORRADE_ASSERT(uniforms.size() == state.styleUniformCount,
+        "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleUniformCount << "uniforms, got" << uniforms.size(), );
+    CORRADE_ASSERT(stylePaddings.isEmpty() || stylePaddings.size() == state.styleCount,
+        "Whee::BaseLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << stylePaddings.size(), );
+    if(stylePaddings.isEmpty()) {
         /** @todo some Utility::fill() for this */
         for(Implementation::BaseLayerStyle& style: state.styles)
             style.padding = {};
     } else {
-        Utility::copy(itemPadding, stridedArrayView(state.styles).slice(&Implementation::BaseLayerStyle::padding));
+        Utility::copy(stylePaddings, stridedArrayView(state.styles).slice(&Implementation::BaseLayerStyle::padding));
     }
-    doSetStyle(common, items);
+    doSetStyle(commonUniform, uniforms);
+}
+
+BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(styleToUniform.size() == state.styleCount,
+        "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleCount << "style uniform indices, got" << styleToUniform.size(), *this);
+    setStyleInternal(commonUniform, uniforms, stylePaddings);
+    Utility::copy(styleToUniform, stridedArrayView(state.styles).slice(&Implementation::BaseLayerStyle::uniform));
     return *this;
 }
 
-BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& common, const std::initializer_list<BaseLayerStyleItem> items, const std::initializer_list<Vector4> itemPadding) {
-    return setStyle(common, Containers::arrayView(items), Containers::arrayView(itemPadding));
+BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const std::initializer_list<BaseLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<Vector4> stylePaddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(stylePaddings));
+}
+
+BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(state.styleUniformCount == state.styleCount,
+        "Whee::BaseLayer::Shared::setStyle(): there's" << state.styleUniformCount << "uniforms for" << state.styleCount << "styles, provide an explicit mapping", *this);
+    setStyleInternal(commonUniform, uniforms, paddings);
+    for(UnsignedInt i = 0; i != state.styleCount; ++i)
+        state.styles[i].uniform = i;
+    return *this;
+}
+
+BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const std::initializer_list<BaseLayerStyleUniform> uniforms, const std::initializer_list<Vector4> paddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::arrayView(paddings));
 }
 
 BaseLayer::BaseLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
@@ -250,7 +279,7 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             vertex.centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{i});
             vertex.outlineWidth = data.outlineWidth;
             vertex.color = data.color;
-            vertex.style = data.style;
+            vertex.styleUniform = sharedState.styles[data.style].uniform;
         }
     }
 }
