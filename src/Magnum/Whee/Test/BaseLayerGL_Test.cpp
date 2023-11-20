@@ -60,8 +60,11 @@ void BaseLayerGL_Test::sharedConstructZeroStyleCount() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    BaseLayerGL::Shared{0};
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayerGL::Shared: expected non-zero style count\n");
+    BaseLayerGL::Shared{0, 4};
+    BaseLayerGL::Shared{4, 0};
+    CORRADE_COMPARE(out.str(),
+        "Whee::BaseLayerGL::Shared: expected non-zero style uniform count\n"
+        "Whee::BaseLayerGL::Shared: expected non-zero style count\n");
 }
 
 }}}}

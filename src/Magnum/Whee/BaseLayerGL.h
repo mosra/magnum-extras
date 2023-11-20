@@ -88,11 +88,22 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
         /**
          * @brief Constructor
          *
-         * The @p styleCount parameter specifies the number of distinct styles
-         * to use for drawing and is expected to be non-zero. Style data are
-         * then set with @ref setStyle().
+         * The @p styleUniformCount parameter specifies the size of the uniform
+         * array, @p styleCount then the number of distinct styles to use for
+         * drawing. The sizes are independent in order to allow styles with
+         * different paddings share the same uniform data. Both
+         * @p styleUniformCount and @p styleCount is expected to be non-zero.
+         * Style data are then set with @ref setStyle().
          */
-        explicit Shared(UnsignedInt styleCount);
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount);
+
+        /**
+         * @brief Construct with style uniform count being the same as style count
+         *
+         * Equivalent to calling @ref Shared(UnsignedInt, UnsignedInt) with
+         * both parameters set to @p styleCount.
+         */
+        explicit Shared(UnsignedInt styleCount): Shared{styleCount, styleCount} {}
 
         /**
          * @brief Construct without creating the contents
@@ -106,15 +117,17 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
         MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION()
-        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding);
-        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items, std::initializer_list<Vector4> itemPadding);
+        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& paddins);
+        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, std::initializer_list<BaseLayerStyleUniform> uniforms, std::initializer_list<Vector4> paddings);
+        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, std::initializer_list<BaseLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<Vector4> stylePaddings);
         #endif
 
     private:
         struct State;
         friend BaseLayerGL;
 
-        void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) override;
+        void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) override;
 };
 
 }}

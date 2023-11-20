@@ -56,6 +56,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     explicit BaseLayerGLTest();
 
     void sharedConstruct();
+    void sharedConstructSameStyleUniformCount();
     /* NoCreate tested in BaseLayerGL_Test to verify it works without a GL
        context */
     void sharedConstructCopy();
@@ -92,59 +93,59 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     const char* filename;
-    BaseLayerStyleCommon styleCommon;
-    BaseLayerStyleItem styleItem;
+    BaseLayerCommonStyleUniform styleUniformCommon;
+    BaseLayerStyleUniform styleUniform;
 } RenderData[]{
     {"default", "default.png",
-        BaseLayerStyleCommon{},
-        BaseLayerStyleItem{}},
+        BaseLayerCommonStyleUniform{},
+        BaseLayerStyleUniform{}},
     {"gradient", "gradient.png",
-        BaseLayerStyleCommon{},
-        BaseLayerStyleItem{}
+        BaseLayerCommonStyleUniform{},
+        BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
     {"rounded corners, all same, default smoothness", "rounded-corners-same-hard.png",
-        BaseLayerStyleCommon{},
-        BaseLayerStyleItem{}
+        BaseLayerCommonStyleUniform{},
+        BaseLayerStyleUniform{}
             .setCornerRadius(24.0f)},
     {"rounded corners, all same", "rounded-corners-same.png",
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
-        BaseLayerStyleItem{}
+        BaseLayerStyleUniform{}
             .setCornerRadius(24.0f)},
     {"rounded corners, different", "rounded-corners-different.png",
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
-        BaseLayerStyleItem{}
+        BaseLayerStyleUniform{}
             /* Top left, bottom left, top right, bottom right; one radius is
                more than half of the height, one is zero */
             .setCornerRadius({4.0f, 44.0f, 24.0f, 0.0f})},
     {"outline, default color", "default.png",
-        BaseLayerStyleCommon{},
-        BaseLayerStyleItem{}
+        BaseLayerCommonStyleUniform{},
+        BaseLayerStyleUniform{}
             .setOutlineWidth(8.0f)},
     {"outline, all sides same", "outline-same.png",
-        BaseLayerStyleCommon{},
-        BaseLayerStyleItem{}
+        BaseLayerCommonStyleUniform{},
+        BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setOutlineWidth(8.0f)},
     {"outline, different", "outline-different.png",
-        BaseLayerStyleCommon{},
-        BaseLayerStyleItem{}
+        BaseLayerCommonStyleUniform{},
+        BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             /* Left, top, right, bottom; one side is going over the center,
                one is zero */
             .setOutlineWidth({8.0f, 4.0f, 0.0f, 32.0f})},
     {"outline, rounded corners inside", "outline-rounded-corners-inside.png",
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
-        BaseLayerStyleItem{}
+        BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
     {"outline, rounded corners, different", "outline-rounded-corners-both-different.png",
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
-        BaseLayerStyleItem{}
+        BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             /* Top left, bottom left, top right, bottom right */
             .setCornerRadius({36.0f, 12.0f, 4.0f, 0.0f})
@@ -155,16 +156,16 @@ const struct {
             /* Left, top, right, bottom  */
             .setOutlineWidth({18.0f, 8.0f, 0.0f, 4.0f})},
     {"outline, rounded corners, different inner and outer smoothness", "outline-rounded-corners-different-smoothness.png",
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f, 8.0f),
-        BaseLayerStyleItem{}
+        BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setCornerRadius(16.0f)
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
     {"outline with gradient", "outline-gradient.png",
-        BaseLayerStyleCommon{},
-        BaseLayerStyleItem{}
+        BaseLayerCommonStyleUniform{},
+        BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             /* It gets multiplied with the gradient */
             .setOutlineColor(0x3333ff_rgbf)
@@ -223,6 +224,7 @@ const struct {
 
 BaseLayerGLTest::BaseLayerGLTest() {
     addTests({&BaseLayerGLTest::sharedConstruct,
+              &BaseLayerGLTest::sharedConstructSameStyleUniformCount,
               &BaseLayerGLTest::sharedConstructCopy,
               &BaseLayerGLTest::sharedConstructMove,
 
@@ -271,7 +273,14 @@ BaseLayerGLTest::BaseLayerGLTest() {
 }
 
 void BaseLayerGLTest::sharedConstruct() {
+    BaseLayerGL::Shared shared{3, 5};
+    CORRADE_COMPARE(shared.styleUniformCount(), 3);
+    CORRADE_COMPARE(shared.styleCount(), 5);
+}
+
+void BaseLayerGLTest::sharedConstructSameStyleUniformCount() {
     BaseLayerGL::Shared shared{3};
+    CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 3);
 }
 
@@ -368,15 +377,23 @@ void BaseLayerGLTest::render() {
     AbstractUserInterface ui{RenderSize};
 
     /* Testing the ArrayView overload, others cases use the initializer list */
-    BaseLayerStyleItem styleItems[]{
-        /* To verify it's not always picking the first style */
-        BaseLayerStyleItem{},
-        data.styleItem
+    BaseLayerStyleUniform styleUniforms[]{
+        /* To verify it's not always picking the first uniform */
+        BaseLayerStyleUniform{},
+        BaseLayerStyleUniform{},
+        data.styleUniform,
     };
-    BaseLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleItems))};
+    UnsignedInt styleToUniform[]{
+        /* To verify it's not using the style ID as uniform ID */
+        1, 2, 0, 1, 0
+    };
+    BaseLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleUniforms)), UnsignedInt(Containers::arraySize(styleToUniform))};
     /* The (lack of any) effect of padding on rendered output is tested
        thoroughly in renderPadding() */
-    layerShared.setStyle(data.styleCommon, styleItems, {});
+    layerShared.setStyle(data.styleUniformCommon,
+        styleUniforms,
+        styleToUniform,
+        {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -413,8 +430,8 @@ void BaseLayerGLTest::renderCustomColor() {
     AbstractUserInterface ui{RenderSize};
 
     BaseLayerGL::Shared layerShared{1};
-    layerShared.setStyle(BaseLayerStyleCommon{}, {
-        BaseLayerStyleItem{}
+    layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
+        BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf/0x336699_rgbf, 0x774422_rgbf/0x336699_rgbf)
     }, {});
 
@@ -468,8 +485,8 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
     AbstractUserInterface ui{RenderSize};
 
     BaseLayerGL::Shared layerShared{1};
-    layerShared.setStyle(BaseLayerStyleCommon{}, {
-        BaseLayerStyleItem{}
+    layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
+        BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setOutlineWidth({16.0f, 2.0f, 4.0f, 0.0f})
     }, {});
@@ -528,9 +545,9 @@ void BaseLayerGLTest::renderPadding() {
 
     BaseLayerGL::Shared layerShared{1};
     layerShared.setStyle(
-        BaseLayerStyleCommon{}
+        BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
-        {BaseLayerStyleItem{}
+        {BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             /* Top left, bottom left, top right, bottom right */
             .setCornerRadius({36.0f, 12.0f, 4.0f, 0.0f})
@@ -586,9 +603,9 @@ void BaseLayerGLTest::renderChangeStyle() {
     AbstractUserInterface ui{RenderSize};
 
     BaseLayerGL::Shared layerShared{2};
-    layerShared.setStyle(BaseLayerStyleCommon{}, {
-        BaseLayerStyleItem{},
-        BaseLayerStyleItem{}
+    layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
+        BaseLayerStyleUniform{},
+        BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
     }, {});
 
@@ -658,14 +675,16 @@ void BaseLayerGLTest::drawOrder() {
     AbstractUserInterface ui{DrawSize};
 
     BaseLayerGL::Shared layerShared{3};
-    layerShared.setStyle(BaseLayerStyleCommon{}, {
-        BaseLayerStyleItem{}            /* 0, red */
+    /* Testing the styleToUniform initializer list overload, others cases use
+       implicit mapping initializer list overloads */
+    layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
+        BaseLayerStyleUniform{}         /* 0, red */
             .setColor(0xff0000_rgbf),
-        BaseLayerStyleItem{}            /* 1, green */
+        BaseLayerStyleUniform{}         /* 1, green */
             .setColor(0x00ff00_rgbf),
-        BaseLayerStyleItem{}            /* 2, blue */
+        BaseLayerStyleUniform{}         /* 2, blue */
             .setColor(0x0000ff_rgbf)
-    }, {});
+    }, {0, 1, 2}, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -722,9 +741,9 @@ void BaseLayerGLTest::eventStyleTransition() {
 
     BaseLayerGL::Shared layerShared{2};
     layerShared
-        .setStyle(BaseLayerStyleCommon{}, {
-            BaseLayerStyleItem{},           /* default */
-            BaseLayerStyleItem{}            /* gradient */
+        .setStyle(BaseLayerCommonStyleUniform{}, {
+            BaseLayerStyleUniform{},        /* default */
+            BaseLayerStyleUniform{}         /* gradient */
                 .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
         }, {})
         .setStyleTransition(

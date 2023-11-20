@@ -47,8 +47,8 @@ class AbstractLayouter;
 class AbstractUserInterface;
 
 class BaseLayer;
-struct BaseLayerStyleCommon;
-struct BaseLayerStyleItem;
+struct BaseLayerCommonStyleUniform;
+struct BaseLayerStyleUniform;
 #ifdef MAGNUM_TARGET_GL
 class BaseLayerGL;
 #endif

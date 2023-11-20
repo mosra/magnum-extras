@@ -143,7 +143,7 @@ BaseShaderGL::BaseShaderGL(UnsignedInt styleCount) {
 }
 
 struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
-    explicit State(UnsignedInt styleCount): BaseLayer::Shared::State{styleCount} {}
+    explicit State(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared::State{styleUniformCount, styleCount} {}
 
     BaseShaderGL shader{NoCreate};
     /* The buffer is NoCreate'd at first to be able to detect whether
@@ -151,32 +151,41 @@ struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
     GL::Buffer styleBuffer{NoCreate};
 };
 
-BaseLayerGL::Shared::Shared(const UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<State>(styleCount)} {
+BaseLayerGL::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<State>(styleUniformCount, styleCount)} {
+    CORRADE_ASSERT(styleUniformCount, "Whee::BaseLayerGL::Shared: expected non-zero style uniform count", );
     CORRADE_ASSERT(styleCount, "Whee::BaseLayerGL::Shared: expected non-zero style count", );
     /* Construct the shader only after the assertion as it otherwise may fail
        to compile */
-    static_cast<State&>(*_state).shader = BaseShaderGL{styleCount};
+    static_cast<State&>(*_state).shader = BaseShaderGL{styleUniformCount};
 }
 
 BaseLayerGL::Shared::Shared(NoCreateT) noexcept: BaseLayer::Shared{NoCreate} {}
 
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding) {
-    return static_cast<Shared&>(BaseLayer::Shared::setStyle(common, items, itemPadding));
+BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+    return static_cast<Shared&>(BaseLayer::Shared::setStyle(commonUniform, uniforms, paddings));
 }
 
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerStyleCommon& common, const std::initializer_list<BaseLayerStyleItem> items, const std::initializer_list<Vector4> itemPadding) {
-    return static_cast<Shared&>(BaseLayer::Shared::setStyle(common, items, itemPadding));
+BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const std::initializer_list<BaseLayerStyleUniform> uniforms, const std::initializer_list<Vector4> paddings) {
+    return static_cast<Shared&>(BaseLayer::Shared::setStyle(commonUniform, uniforms, paddings));
 }
 
-void BaseLayerGL::Shared::doSetStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items) {
+BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+    return static_cast<Shared&>(BaseLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, stylePaddings));
+}
+
+BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const std::initializer_list<BaseLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<Vector4> stylePaddings) {
+    return static_cast<Shared&>(BaseLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, stylePaddings));
+}
+
+void BaseLayerGL::Shared::doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms) {
     auto& state = static_cast<State&>(*_state);
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     if(!state.styleBuffer.id())
-        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(BaseLayerStyleCommon) + sizeof(BaseLayerStyleItem)*_state->styleCount}};
+        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*state.styleUniformCount}};
 
-    state.styleBuffer.setSubData(0, {&common, 1});
-    state.styleBuffer.setSubData(sizeof(BaseLayerStyleCommon), items);
+    state.styleBuffer.setSubData(0, {&commonUniform, 1});
+    state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform), uniforms);
 }
 
 struct BaseLayerGL::State: BaseLayer::State {

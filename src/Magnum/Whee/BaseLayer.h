@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::BaseLayer, struct @ref Magnum::Whee::BaseLayerStyleCommon, @ref Magnum::Whee::BaseLayerStyleItem
+ * @brief Class @ref Magnum::Whee::BaseLayer, struct @ref Magnum::Whee::BaseLayerCommonStyleUniform, @ref Magnum::Whee::BaseLayerStyleUniform
  * @m_since_latest
  */
 
@@ -37,23 +37,27 @@
 namespace Magnum { namespace Whee {
 
 /**
-@brief Common style properties for all @ref BaseLayer data
+@brief Properties common to all @ref BaseLayer style uniforms
 @m_since_latest
 
-@see @ref BaseLayerStyleItem, @ref BaseLayer::Shared::setStyle()
+Together with one or more @ref BaseLayerStyleUniform instances contains style
+properties that are used by the @ref BaseLayer shaders to draw the layer data,
+packed in a form that allows direct usage in uniform buffers. Is uploaded
+using @ref BaseLayer::Shared::setStyle(), style data that aren't used by the
+shader are passed to the function separately.
 */
-struct BaseLayerStyleCommon {
+struct BaseLayerCommonStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit BaseLayerStyleCommon(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f}, innerOutlineSmoothness{0.0f} {}
+    constexpr explicit BaseLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f}, innerOutlineSmoothness{0.0f} {}
 
     /** @brief Constructor */
-    constexpr /*implicit*/ BaseLayerStyleCommon(Float smoothness, Float innerOutlineSmoothness): smoothness{smoothness}, innerOutlineSmoothness{innerOutlineSmoothness} {}
+    constexpr /*implicit*/ BaseLayerCommonStyleUniform(Float smoothness, Float innerOutlineSmoothness): smoothness{smoothness}, innerOutlineSmoothness{innerOutlineSmoothness} {}
 
     /** @brief Construct with the @ref smoothness and @ref innerOutlineSmoothness fields set to the same value */
-    constexpr /*implicit*/ BaseLayerStyleCommon(Float smoothness): BaseLayerStyleCommon{smoothness, smoothness} {}
+    constexpr /*implicit*/ BaseLayerCommonStyleUniform(Float smoothness): BaseLayerCommonStyleUniform{smoothness, smoothness} {}
 
     /** @brief Construct without initializing the contents */
-    explicit BaseLayerStyleCommon(NoInitT) noexcept {}
+    explicit BaseLayerCommonStyleUniform(NoInitT) noexcept {}
 
     /** @{
      * @name Convenience setters
@@ -68,7 +72,7 @@ struct BaseLayerStyleCommon {
      * @brief Set the @ref smoothness and @ref innerOutlineSmoothness fields
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleCommon& setSmoothness(Float smoothness, Float innerOutlineSmoothness) {
+    BaseLayerCommonStyleUniform& setSmoothness(Float smoothness, Float innerOutlineSmoothness) {
         this->smoothness = smoothness;
         this->innerOutlineSmoothness = innerOutlineSmoothness;
         return *this;
@@ -78,7 +82,7 @@ struct BaseLayerStyleCommon {
      * @brief Set the @ref smoothness and @ref innerOutlineSmoothness fields to the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleCommon& setSmoothness(Float smoothness) {
+    BaseLayerCommonStyleUniform& setSmoothness(Float smoothness) {
         this->smoothness = smoothness;
         this->innerOutlineSmoothness = smoothness;
         return *this;
@@ -113,17 +117,22 @@ struct BaseLayerStyleCommon {
 };
 
 /**
-@brief Varying style properties for @ref BaseLayer data
+@brief @ref BaseLayer style uniform
 @m_since_latest
 
-@see @ref BaseLayerStyleCommon, @ref BaseLayer::Shared::setStyle()
+Instances of this class together with @ref BaseLayerCommonStyleUniform contain
+style properties that are used by the @ref BaseLayer shaders to draw the layer
+data, packed in a form that allows direct usage in uniform buffers. Total count
+of styles is specified with the @ref BaseLayerGL::Shared::Shared() constructor,
+uniforms are then uploaded using @ref BaseLayer::Shared::setStyle(), style data
+that aren't used by the shader are passed to the function separately.
 */
-struct BaseLayerStyleItem {
+struct BaseLayerStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit BaseLayerStyleItem(DefaultInitT = DefaultInit) noexcept: topColor{1.0f}, bottomColor{1.0f}, outlineColor{1.0f}, outlineWidth{0.0f}, cornerRadius{0.0f}, innerOutlineCornerRadius{0.0f} {}
+    constexpr explicit BaseLayerStyleUniform(DefaultInitT = DefaultInit) noexcept: topColor{1.0f}, bottomColor{1.0f}, outlineColor{1.0f}, outlineWidth{0.0f}, cornerRadius{0.0f}, innerOutlineCornerRadius{0.0f} {}
 
     /** @brief Constructor */
-    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& topColor, const Color4& bottomColor, const Color4& outlineColor, const Vector4& outlineWidth, const Vector4& cornerRadius, const Vector4& innerOutlineCornerRadius): topColor{topColor}, bottomColor{bottomColor}, outlineColor{outlineColor}, outlineWidth{outlineWidth}, cornerRadius{cornerRadius}, innerOutlineCornerRadius{innerOutlineCornerRadius} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& topColor, const Color4& bottomColor, const Color4& outlineColor, const Vector4& outlineWidth, const Vector4& cornerRadius, const Vector4& innerOutlineCornerRadius): topColor{topColor}, bottomColor{bottomColor}, outlineColor{outlineColor}, outlineWidth{outlineWidth}, cornerRadius{cornerRadius}, innerOutlineCornerRadius{innerOutlineCornerRadius} {}
 
     /**
      * @brief Construct with all corners having the same radius and all edges the same outline width
@@ -133,7 +142,7 @@ struct BaseLayerStyleItem {
      * values of @p outlineWidth, @p cornerRadius and
      * @p innerOutlineCornerRadius.
      */
-    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& topColor, const Color4& bottomColor, const Color4& outlineColor, Float outlineWidth, Float cornerRadius, Float innerOutlineCornerRadius): BaseLayerStyleItem{topColor, bottomColor, outlineColor, Vector4{outlineWidth}, Vector4{cornerRadius}, Vector4{innerOutlineCornerRadius}} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& topColor, const Color4& bottomColor, const Color4& outlineColor, Float outlineWidth, Float cornerRadius, Float innerOutlineCornerRadius): BaseLayerStyleUniform{topColor, bottomColor, outlineColor, Vector4{outlineWidth}, Vector4{cornerRadius}, Vector4{innerOutlineCornerRadius}} {}
 
     /**
      * @brief Construct with no outline
@@ -142,15 +151,15 @@ struct BaseLayerStyleItem {
      * @ref outlineWidth to a zero vector and both @ref cornerRadius and
      * @ref innerOutlineCornerRadius get a value of @p cornerRadius.
      */
-    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& topColor, const Color4& bottomColor, const Vector4& cornerRadius): BaseLayerStyleItem{topColor, bottomColor, Color4{1.0f}, Vector4{0.0f}, cornerRadius, cornerRadius} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& topColor, const Color4& bottomColor, const Vector4& cornerRadius): BaseLayerStyleUniform{topColor, bottomColor, Color4{1.0f}, Vector4{0.0f}, cornerRadius, cornerRadius} {}
 
     /**
      * @brief Construct with no outline and all corners having the same radius
      *
-     * Delegates to @ref BaseLayerStyleItem(const Color4&, const Color4&, const Vector4&)
+     * Delegates to @ref BaseLayerStyleUniform(const Color4&, const Color4&, const Vector4&)
      * with @p cornerRadius having all components set to the same value.
      */
-    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& topColor, const Color4& bottomColor, Float cornerRadius): BaseLayerStyleItem{topColor, bottomColor, Vector4{cornerRadius}} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& topColor, const Color4& bottomColor, Float cornerRadius): BaseLayerStyleUniform{topColor, bottomColor, Vector4{cornerRadius}} {}
 
     /**
      * @brief Construct with no gradient
@@ -158,34 +167,34 @@ struct BaseLayerStyleItem {
      * The @ref topColor and @ref bottomColor fields are both set to the value
      * of @p color.
      */
-    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& color, const Color4& outlineColor, const Vector4& outlineWidth, const Vector4& cornerRadius, const Vector4& innerOutlineCornerRadius): BaseLayerStyleItem{color, color, outlineColor, outlineWidth, cornerRadius, innerOutlineCornerRadius} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& color, const Color4& outlineColor, const Vector4& outlineWidth, const Vector4& cornerRadius, const Vector4& innerOutlineCornerRadius): BaseLayerStyleUniform{color, color, outlineColor, outlineWidth, cornerRadius, innerOutlineCornerRadius} {}
 
     /**
      * @brief Construct with no gradient, all corners having the same radius and all edges the same outline width
      *
-     * Delegates to @ref BaseLayerStyleItem(const Color4&, const Color4&, const Color4&, Float, Float, Float)
+     * Delegates to @ref BaseLayerStyleUniform(const Color4&, const Color4&, const Color4&, Float, Float, Float)
      * with @p color used for both @p topColor and @p bottomColor.
      */
-    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& color, const Color4& outlineColor, Float outlineWidth, Float cornerRadius, Float innerOutlineCornerRadius): BaseLayerStyleItem{color, color, outlineColor, outlineWidth, cornerRadius, innerOutlineCornerRadius} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& color, const Color4& outlineColor, Float outlineWidth, Float cornerRadius, Float innerOutlineCornerRadius): BaseLayerStyleUniform{color, color, outlineColor, outlineWidth, cornerRadius, innerOutlineCornerRadius} {}
 
     /**
      * @brief Construct with no gradient and no outline
      *
-     * Delegates to @ref BaseLayerStyleItem(const Color4&, const Color4&, const Vector4&)
+     * Delegates to @ref BaseLayerStyleUniform(const Color4&, const Color4&, const Vector4&)
      * with @p color used for both @p topColor and @p bottomColor.
      */
-    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& color, const Vector4& cornerRadius): BaseLayerStyleItem{color, color, cornerRadius} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& color, const Vector4& cornerRadius): BaseLayerStyleUniform{color, color, cornerRadius} {}
 
     /**
      * @brief Construct with no gradient, no outline and all corners having the same radius
      *
-     * Delegates to @ref BaseLayerStyleItem(const Color4&, const Color4&, Float)
+     * Delegates to @ref BaseLayerStyleUniform(const Color4&, const Color4&, Float)
      * with @p color used for both @p topColor and @p bottomColor.
      */
-    constexpr /*implicit*/ BaseLayerStyleItem(const Color4& color, Float cornerRadius): BaseLayerStyleItem{color, color, cornerRadius} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& color, Float cornerRadius): BaseLayerStyleUniform{color, color, cornerRadius} {}
 
     /** @brief Construct without initializing the contents */
-    explicit BaseLayerStyleItem(NoInitT) noexcept: topColor{NoInit}, bottomColor{NoInit}, outlineColor{NoInit}, outlineWidth{NoInit}, cornerRadius{NoInit}, innerOutlineCornerRadius{NoInit} {}
+    explicit BaseLayerStyleUniform(NoInitT) noexcept: topColor{NoInit}, bottomColor{NoInit}, outlineColor{NoInit}, outlineWidth{NoInit}, cornerRadius{NoInit}, innerOutlineCornerRadius{NoInit} {}
 
     /** @{
      * @name Convenience setters
@@ -200,7 +209,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref topColor and @ref bottomColor fields
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setColor(const Color4& top, const Color4& bottom) {
+    BaseLayerStyleUniform& setColor(const Color4& top, const Color4& bottom) {
         topColor = top;
         bottomColor = bottom;
         return *this;
@@ -210,7 +219,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref topColor and @ref bottomColor fields to the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setColor(const Color4& color) {
+    BaseLayerStyleUniform& setColor(const Color4& color) {
         topColor = color;
         bottomColor = color;
         return *this;
@@ -220,7 +229,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref outlineColor field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setOutlineColor(const Color4& color) {
+    BaseLayerStyleUniform& setOutlineColor(const Color4& color) {
         outlineColor = color;
         return *this;
     }
@@ -229,7 +238,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref outlineWidth field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setOutlineWidth(const Vector4& width) {
+    BaseLayerStyleUniform& setOutlineWidth(const Vector4& width) {
         outlineWidth = width;
         return *this;
     }
@@ -238,7 +247,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref outlineWidth field with all edges having the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setOutlineWidth(Float width) {
+    BaseLayerStyleUniform& setOutlineWidth(Float width) {
         outlineWidth = Vector4{width};
         return *this;
     }
@@ -247,7 +256,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref cornerRadius field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setCornerRadius(const Vector4& radius) {
+    BaseLayerStyleUniform& setCornerRadius(const Vector4& radius) {
         cornerRadius = radius;
         return *this;
     }
@@ -256,7 +265,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref cornerRadius field with all corners having the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setCornerRadius(Float radius) {
+    BaseLayerStyleUniform& setCornerRadius(Float radius) {
         cornerRadius = Vector4{radius};
         return *this;
     }
@@ -265,7 +274,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref innerOutlineCornerRadius field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setInnerOutlineCornerRadius(const Vector4& radius) {
+    BaseLayerStyleUniform& setInnerOutlineCornerRadius(const Vector4& radius) {
         innerOutlineCornerRadius = radius;
         return *this;
     }
@@ -274,7 +283,7 @@ struct BaseLayerStyleItem {
      * @brief Set the @ref innerOutlineCornerRadius field with all corners having the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleItem& setInnerOutlineCornerRadius(Float radius) {
+    BaseLayerStyleUniform& setInnerOutlineCornerRadius(Float radius) {
         innerOutlineCornerRadius = Vector4{radius};
         return *this;
     }
@@ -352,7 +361,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @p style is less than @ref Shared::styleCount(). All
-         * styling is driven from the @ref BaseLayerStyleItem at index
+         * styling is driven from the @ref BaseLayerStyleUniform at index
          * @p style. Use @ref create(UnsignedInt, const Color3&, NodeHandle) or
          * @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
          * for creating a quad with a custom color and outline width. This
@@ -397,9 +406,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @p style is less than @ref Shared::styleCount().
-         * Styling is driven from the @ref BaseLayerStyleItem at index
-         * @p style, in addition @ref BaseLayerStyleItem::topColor and
-         * @relativeref{BaseLayerStyleItem,bottomColor} is multiplied with
+         * Styling is driven from the @ref BaseLayerStyleUniform at index
+         * @p style, in addition @ref BaseLayerStyleUniform::topColor and
+         * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
          * @p color. Use @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
          * for creating a quad with a custom color and outline width. This
          * function is equivalent to calling it with a zero vector for the
@@ -446,11 +455,11 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @p style is less than @ref Shared::styleCount().
-         * Styling is driven from the @ref BaseLayerStyleItem at index
-         * @p style, in addition @ref BaseLayerStyleItem::topColor and
-         * @relativeref{BaseLayerStyleItem,bottomColor} is multiplied with
+         * Styling is driven from the @ref BaseLayerStyleUniform at index
+         * @p style, in addition @ref BaseLayerStyleUniform::topColor and
+         * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
          * @p color and @p outlineWidth is added to
-         * @ref BaseLayerStyleItem::outlineWidth.
+         * @ref BaseLayerStyleUniform::outlineWidth.
          * @see @ref create(UnsignedInt, NodeHandle),
          *      @ref create(UnsignedInt, const Color3&, NodeHandle)
          */
@@ -555,8 +564,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Set quad custom base color
          *
-         * Expects that @p handle is valid. @ref BaseLayerStyleItem::topColor
-         * and @relativeref{BaseLayerStyleItem,bottomColor} is multiplied with
+         * Expects that @p handle is valid.
+         * @ref BaseLayerStyleUniform::topColor and
+         * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
          * @p color. By default, unless specified in @ref create() already, the
          * custom color is @cpp 0xffffff_srgbf @ce, i.e. not affecting the
          * style in any way.
@@ -595,10 +605,10 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @brief Set quad custom outline width
          *
          * Expects that @p handle is valid. The @p width is in order left, top,
-         * right, bottom and is added to @ref BaseLayerStyleItem::outlineWidth.
-         * By default, unless specified in @ref create() already, the custom
-         * outline width is a zero vector, i.e. not affecting the style in any
-         * way.
+         * right, bottom and is added to
+         * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
+         * specified in @ref create() already, the custom outline width is a
+         * zero vector, i.e. not affecting the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const
@@ -609,9 +619,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @brief Set quad custom outline width with all edges having the same value
          *
          * Expects that @p handle is valid. The @p width is added to
-         * @ref BaseLayerStyleItem::outlineWidth. By default, unless specified
-         * in @ref create() already, the custom outline width is zero, i.e. not
-         * affecting the style in any way.
+         * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
+         * specified in @ref create() already, the custom outline width is
+         * zero, i.e. not affecting the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const
@@ -741,21 +751,63 @@ that @ref setStyle() was called.
 class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     public:
         /**
-         * @brief Set style data
-         * @param common        Data common to all styles
-         * @param items         Individual style data
-         * @param itemPadding   Padding inside the node in order left, top,
-         *      right, bottom for each style
+         * @brief Style uniform count
+         *
+         * Size of the style uniform buffer. May or may not be the same as
+         * @ref styleCount().
+         * @see @ref BaseLayerGL::Shared::Shared(UnsignedInt, UnsignedInt),
+         *      @ref setStyle()
+         */
+        UnsignedInt styleUniformCount() const;
+
+        /**
+         * @brief Set style data with implicit mapping between styles and uniforms
+         * @param commonUniform Common style uniform data
+         * @param uniforms      Style uniforms
+         * @param paddings      Padding inside the node in order left, top,
+         *      right, bottom corresponding to style uniforms
          * @return Reference to self (for method chaining)
          *
-         * The @p items view is expected to have the same size as
-         * @ref styleCount(). The @p padding view is expected to either have
-         * the same size as @ref styleCount() or be empty, in which case all
-         * paddings are implicitly zero.
+         * The @p uniforms view is expected to have the same size as
+         * @ref styleUniformCount(). The @p paddings view is expected to either
+         * have the same size as @ref styleCount() or be empty, in which case
+         * all paddings are implicitly zero.
+         *
+         * Can only be called if @ref styleUniformCount() and @ref styleCount()
+         * were set to the same value in the constructor, otherwise you have
+         * to additionally provide a mapping from styles to uniforms using
+         * @ref setStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * instead.
          */
-        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding);
+        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
-        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items, std::initializer_list<Vector4> itemPadding);
+        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, std::initializer_list<BaseLayerStyleUniform> uniforms, std::initializer_list<Vector4> paddings);
+
+        /**
+         * @brief Set style data
+         * @param commonUniform     Common style uniform data
+         * @param uniforms          Style uniforms
+         * @param styleToUniform    Style to style uniform mapping
+         * @param stylePaddings     Per-style padding inside the node in order
+         *      left, top, right, bottom
+         * @return Reference to self (for method chaining)
+         *
+         * The @p uniforms view is expected to have the same size as
+         * @ref styleUniformCount(), the @p styleToUniform view the same size
+         * as @ref styleCount(). The @p stylePaddings view is expected to
+         * either have the same size as @ref styleCount() or be empty, in which
+         * case all paddings are implicitly zero.
+         *
+         * Value of @cpp styleToUniform[i] @ce should give back an index into
+         * the @p uniforms array for style @cpp i @ce. If
+         * @ref styleUniformCount() and @ref styleCount() is the same and the
+         * mapping is implicit, you can use the
+         * @ref setStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>, const Containers::StridedArrayView1D<const Vector4>&)
+         * convenience overload instead.
+         */
+        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        /** @overload */
+        Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, std::initializer_list<BaseLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<Vector4> stylePaddings);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -772,13 +824,16 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
-        explicit Shared(UnsignedInt styleCount);
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount);
         /* Can't be MAGNUM_WHEE_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
 
     private:
-        /* The items are guaranteed to have the same size as styleCount() */
-        virtual void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) = 0;
+        MAGNUM_WHEE_LOCAL void setStyleInternal(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> styleUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+
+        /* The items are guaranteed to have the same size as
+           styleUniformCount() */
+        virtual void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) = 0;
 };
 
 }}
