@@ -549,7 +549,7 @@ void BaseLayerTest::sharedConstructCopy() {
            without the constructor the type would be impossible to construct
            (and thus also to copy), leading to false positives in the trait
            check below */
-        explicit CORRADE_UNUSED Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<BaseLayer::Shared::State>(styleUniformCount, styleCount)} {}
+        explicit CORRADE_UNUSED Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<BaseLayer::Shared::State>(*this, styleUniformCount, styleCount)} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, const Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     };
@@ -858,8 +858,10 @@ void BaseLayerTest::construct() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(137, 0xfe), shared};
 
-    /* There isn't anything to query on the BaseLayer itself */
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&layer.shared(), &shared);
+    /* Const overload */
+    CORRADE_COMPARE(&static_cast<const Layer&>(layer).shared(), &shared);
 }
 
 void BaseLayerTest::constructCopy() {
@@ -884,12 +886,13 @@ void BaseLayerTest::constructMove() {
     Layer a{layerHandle(137, 0xfe), shared};
 
     Layer b{Utility::move(a)};
-    /* There isn't anything to query on the BaseLayer itself */
     CORRADE_COMPARE(b.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&b.shared(), &shared);
 
     Layer c{layerHandle(0, 2), shared2};
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&c.shared(), &shared);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<BaseLayer>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<BaseLayer>::value);

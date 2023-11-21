@@ -30,6 +30,7 @@
    header gets published) eventually possibly also 3rd party renderer
    implementations */
 
+#include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
 
 #include "Magnum/Whee/AbstractVisualLayer.h"
@@ -41,7 +42,7 @@ namespace Implementation {
 }
 
 struct AbstractVisualLayer::Shared::State {
-    explicit State(const UnsignedInt styleCount) noexcept: styleCount{styleCount} {}
+    explicit State(Shared& self, const UnsignedInt styleCount) noexcept: self{self}, styleCount{styleCount} {}
     /* Assumes that the derived state structs will have
        non-trivially-destructible members. Without a virtual destructor those
        wouldn't be destructed properly when deleting from the base pointer.
@@ -53,6 +54,10 @@ struct AbstractVisualLayer::Shared::State {
        and nicer to caches than several loose allocations of non-virtual
        types. */
     virtual ~State() = default;
+
+    /* References the public instance, for use by BaseLayer::shared() and
+       similar APIs. Gets updated when the Shared instance itself is moved. */
+    Containers::Reference<Shared> self;
 
     UnsignedInt styleCount;
     UnsignedInt(*styleTransitionToPressedBlur)(UnsignedInt) = Implementation::styleTransitionPassthrough;
@@ -77,6 +82,11 @@ struct AbstractVisualLayer::State {
     /* This view is assumed to point to subclass own data and maintained to
        have its size always match layer capacity */
     Containers::StridedArrayView1D<UnsignedInt> styles;
+    /* 99% of internal accesses to the Shared instance need the State struct,
+       so saving it directly to avoid an extra indirection, In some cases the
+       public API reference is needed (mainly for user-side access, such as
+       BaseLayer::shared()), that one is referenced in State::self (and also
+       correctly updated when the State instance gets moved). */
     Shared::State& shared;
 };
 
