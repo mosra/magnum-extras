@@ -329,8 +329,10 @@ void TextLayerGLTest::construct() {
     TextLayerGL::Shared shared{3};
 
     TextLayerGL layer{layerHandle(137, 0xfe), shared};
-    /* There isn't anything to query on the TextLayerGL itself */
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&layer.shared(), &shared);
+    /* Const overload */
+    CORRADE_COMPARE(&static_cast<const TextLayerGL&>(layer).shared(), &shared);
 }
 
 void TextLayerGLTest::constructCopy() {
@@ -345,12 +347,13 @@ void TextLayerGLTest::constructMove() {
     TextLayerGL a{layerHandle(137, 0xfe), shared};
 
     TextLayerGL b{Utility::move(a)};
-    /* There isn't anything to query on the TextLayerGL itself */
     CORRADE_COMPARE(b.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&b.shared(), &shared);
 
     TextLayerGL c{layerHandle(0, 2), shared2};
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&c.shared(), &shared);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<TextLayerGL>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<TextLayerGL>::value);

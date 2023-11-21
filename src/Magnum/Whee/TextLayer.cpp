@@ -54,7 +54,7 @@ Debug& operator<<(Debug& debug, const FontHandle value) {
 
 TextLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {}
 
-TextLayer::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): Shared{Containers::pointer<State>(styleUniformCount, styleCount)} {}
+TextLayer::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): Shared{Containers::pointer<State>(*this, styleUniformCount, styleCount)} {}
 
 TextLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCreate} {}
 
@@ -86,8 +86,9 @@ std::size_t TextLayer::Shared::fontCount() const {
 }
 
 namespace {
-    /* TextLayer::setText(), which doesn't have access to the outer State
-       class, needs this too */
+    /* TextLayer::setText() uses this too. It has access to the outer Shared
+       API via shared() so it could call the public API directly, but this is
+       two indirections less. */
     bool isHandleValid(const Containers::ArrayView<const Implementation::TextLayerFont> fonts, const FontHandle handle) {
         return fontHandleGeneration(handle) == 1 && fontHandleId(handle) < fonts.size();
     }

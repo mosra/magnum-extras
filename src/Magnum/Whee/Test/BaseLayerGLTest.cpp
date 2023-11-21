@@ -307,8 +307,10 @@ void BaseLayerGLTest::construct() {
     BaseLayerGL::Shared shared{3};
 
     BaseLayerGL layer{layerHandle(137, 0xfe), shared};
-    /* There isn't anything to query on the BaseLayerGL itself */
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&layer.shared(), &shared);
+    /* Const overload */
+    CORRADE_COMPARE(&static_cast<const BaseLayerGL&>(layer).shared(), &shared);
 }
 
 void BaseLayerGLTest::constructCopy() {
@@ -323,12 +325,13 @@ void BaseLayerGLTest::constructMove() {
     BaseLayerGL a{layerHandle(137, 0xfe), shared};
 
     BaseLayerGL b{Utility::move(a)};
-    /* There isn't anything to query on the BaseLayerGL itself */
     CORRADE_COMPARE(b.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&b.shared(), &shared);
 
     BaseLayerGL c{layerHandle(0, 2), shared2};
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&c.shared(), &shared);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<BaseLayerGL>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<BaseLayerGL>::value);
