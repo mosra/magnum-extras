@@ -67,6 +67,15 @@ class MAGNUM_WHEE_EXPORT TextLayerGL: public TextLayer {
          */
         explicit TextLayerGL(LayerHandle handle, Shared& shared);
 
+        /**
+         * @brief Shared state used by this layer
+         *
+         * Reference to the instance passed to @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&).
+         */
+        inline Shared& shared();
+        /** @overload */
+        inline const Shared& shared() const;
+
     private:
         struct State;
 
@@ -165,6 +174,14 @@ class MAGNUM_WHEE_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
 
         void doSetStyle(const TextLayerCommonStyleUniform& common, Containers::ArrayView<const TextLayerStyleUniform> items) override;
 };
+
+inline TextLayerGL::Shared& TextLayerGL::shared() {
+    return static_cast<Shared&>(TextLayer::shared());
+}
+
+inline const TextLayerGL::Shared& TextLayerGL::shared() const {
+    return static_cast<const Shared&>(TextLayer::shared());
+}
 
 }}
 #else

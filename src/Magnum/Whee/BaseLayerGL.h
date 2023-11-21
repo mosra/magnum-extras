@@ -67,6 +67,15 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
          */
         explicit BaseLayerGL(LayerHandle handle, Shared& shared);
 
+        /**
+         * @brief Shared state used by this layer
+         *
+         * Reference to the instance passed to @ref BaseLayerGL::BaseLayerGL(LayerHandle, Shared&).
+         */
+        inline Shared& shared();
+        /** @overload */
+        inline const Shared& shared() const;
+
     private:
         struct State;
 
@@ -142,6 +151,14 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
 
         void doSetStyle(const BaseLayerCommonStyleUniform& common, Containers::ArrayView<const BaseLayerStyleUniform> items) override;
 };
+
+inline BaseLayerGL::Shared& BaseLayerGL::shared() {
+    return static_cast<Shared&>(BaseLayer::shared());
+}
+
+inline const BaseLayerGL::Shared& BaseLayerGL::shared() const {
+    return static_cast<const Shared&>(BaseLayer::shared());
+}
 
 }}
 #else
