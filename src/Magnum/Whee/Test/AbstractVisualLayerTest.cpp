@@ -47,6 +47,7 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void sharedConstructNoCreate();
     void sharedConstructCopy();
     void sharedConstructMove();
+    void sharedConstructMoveMovedOutInstance();
 
     void construct();
     void constructCopy();
@@ -131,6 +132,7 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
               &AbstractVisualLayerTest::sharedConstructNoCreate,
               &AbstractVisualLayerTest::sharedConstructCopy,
               &AbstractVisualLayerTest::sharedConstructMove,
+              &AbstractVisualLayerTest::sharedConstructMoveMovedOutInstance,
 
               &AbstractVisualLayerTest::construct,
               &AbstractVisualLayerTest::constructCopy,
@@ -154,10 +156,14 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
 }
 
 void AbstractVisualLayerTest::sharedConstruct() {
+    AbstractVisualLayer::Shared* self;
     struct Shared: AbstractVisualLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
-    } shared{3};
+        explicit Shared(UnsignedInt styleCount, AbstractVisualLayer::Shared*& selfPointer): AbstractVisualLayer::Shared{styleCount} {
+            selfPointer = &*_state->self;
+        }
+    } shared{3, self};
     CORRADE_COMPARE(shared.styleCount(), 3);
+    CORRADE_COMPARE(self, &shared);
 }
 
 void AbstractVisualLayerTest::sharedConstructNoCreate() {
@@ -179,20 +185,69 @@ void AbstractVisualLayerTest::sharedConstructCopy() {
 
 void AbstractVisualLayerTest::sharedConstructMove() {
     struct Shared: AbstractVisualLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleCount, Containers::Reference<AbstractVisualLayer::Shared>*& selfPointer): AbstractVisualLayer::Shared{styleCount} {
+            selfPointer = &_state->self;
+        }
     };
 
-    Shared a{3};
+    Containers::Reference<AbstractVisualLayer::Shared>* aSelf;
+    Shared a{3, aSelf};
+    CORRADE_COMPARE(&**aSelf, &a);
 
     Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleCount(), 3);
+    CORRADE_COMPARE(&**aSelf, &b);
 
-    Shared c{5};
+    Containers::Reference<AbstractVisualLayer::Shared>* cSelf;
+    Shared c{5, cSelf};
+    CORRADE_COMPARE(&**cSelf, &c);
+
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleCount(), 3);
+    CORRADE_COMPARE(&**aSelf, &c);
+    CORRADE_COMPARE(&**cSelf, &b);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<AbstractVisualLayer::Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<AbstractVisualLayer::Shared>::value);
+}
+
+void AbstractVisualLayerTest::sharedConstructMoveMovedOutInstance() {
+    struct Shared: AbstractVisualLayer::Shared {
+        explicit Shared(UnsignedInt styleCount, Containers::Reference<AbstractVisualLayer::Shared>*& selfPointer): AbstractVisualLayer::Shared{styleCount} {
+            selfPointer = &_state->self;
+        }
+    };
+
+    Containers::Reference<AbstractVisualLayer::Shared>* aSelf;
+    Shared a{3, aSelf};
+    Shared out{Utility::move(a)};
+    CORRADE_COMPARE(&**aSelf, &out);
+
+    /* B should be moved out as well */
+    Shared b{Utility::move(a)};
+    CORRADE_COMPARE(&**aSelf, &out);
+
+    Containers::Reference<AbstractVisualLayer::Shared>* cSelf;
+    Shared c{5, cSelf};
+    CORRADE_COMPARE(&**cSelf, &c);
+
+    /* Moving a moved-out instance (a) to an alive instance (c) should redirect
+       only the alive self */
+    c = Utility::move(a);
+    CORRADE_COMPARE(&**aSelf, &out);
+    CORRADE_COMPARE(&**cSelf, &a);
+
+    /* Moving an alive instance (a) to a moved-out instance (b) should again
+       redirect only the alive self */
+    b = Utility::move(a);
+    CORRADE_COMPARE(&**aSelf, &out);
+    CORRADE_COMPARE(&**cSelf, &b);
+
+    /* Moving a moved-out instance (a) to a moved-out instance (c) shouldn't
+       do anything */
+    c = Utility::move(a);
+    CORRADE_COMPARE(&**aSelf, &out);
+    CORRADE_COMPARE(&**cSelf, &b);
 }
 
 void AbstractVisualLayerTest::construct() {
@@ -206,6 +261,9 @@ void AbstractVisualLayerTest::construct() {
 
     /* There isn't anything to query on the AbstractVisualLayer itself */
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&layer.shared(), &shared);
+    /* Const overload */
+    CORRADE_COMPARE(&static_cast<const Layer&>(layer).shared(), &shared);
 }
 
 void AbstractVisualLayerTest::constructCopy() {
@@ -228,12 +286,13 @@ void AbstractVisualLayerTest::constructMove() {
     Layer a{layerHandle(137, 0xfe), shared};
 
     Layer b{Utility::move(a)};
-    /* There isn't anything to query on the AbstractVisualLayer itself */
     CORRADE_COMPARE(b.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&b.shared(), &shared);
 
     Layer c{layerHandle(0, 2), shared2};
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layerHandle(137, 0xfe));
+    CORRADE_COMPARE(&c.shared(), &shared);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<AbstractVisualLayer>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<AbstractVisualLayer>::value);

@@ -207,6 +207,14 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         class Shared;
 
         /**
+         * @brief Shared state used by this layer
+         *
+         * Reference to the instance passed to @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&).
+         */
+        inline Shared& shared();
+        inline const Shared& shared() const; /**< @overload */
+
+        /**
          * @brief Create a text
          * @param style         Style index
          * @param text          Text to render
@@ -668,6 +676,14 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
            styleUniformCount() */
         virtual void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) = 0;
 };
+
+inline TextLayer::Shared& TextLayer::shared() {
+    return static_cast<Shared&>(AbstractVisualLayer::shared());
+}
+
+inline const TextLayer::Shared& TextLayer::shared() const {
+    return static_cast<const Shared&>(AbstractVisualLayer::shared());
+}
 
 }}
 

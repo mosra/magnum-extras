@@ -35,15 +35,31 @@ namespace Magnum { namespace Whee {
 
 AbstractVisualLayer::Shared::Shared(Containers::Pointer<State>&& state): _state{Utility::move(state)} {}
 
-AbstractVisualLayer::Shared::Shared(const UnsignedInt styleCount): Shared{Containers::pointer<State>(styleCount)} {}
+AbstractVisualLayer::Shared::Shared(const UnsignedInt styleCount): Shared{Containers::pointer<State>(*this, styleCount)} {}
 
 AbstractVisualLayer::Shared::Shared(NoCreateT) noexcept {}
 
-AbstractVisualLayer::Shared::Shared(Shared&&) noexcept = default;
+AbstractVisualLayer::Shared::Shared(Shared&& other) noexcept: _state{Utility::move(other._state)} {
+    /* Need to also update the self reference so it points to the new
+       instance */
+    if(_state)
+        _state->self = *this;
+}
 
 AbstractVisualLayer::Shared::~Shared() = default;
 
-AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::operator=(Shared&&) noexcept = default;
+AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::operator=(Shared&& other) noexcept {
+    Utility::swap(other._state, _state);
+    /* Need to also update the self references so they point to the new
+       instances */
+    if(other._state && _state)
+        Utility::swap(other._state->self, _state->self);
+    else if(other._state)
+        other._state->self = other;
+    else if(_state)
+        _state->self = *this;
+    return *this;
+}
 
 UnsignedInt AbstractVisualLayer::Shared::styleCount() const {
     return _state->styleCount;
@@ -70,6 +86,14 @@ AbstractVisualLayer::AbstractVisualLayer(AbstractVisualLayer&&) noexcept = defau
 AbstractVisualLayer::~AbstractVisualLayer() = default;
 
 AbstractVisualLayer& AbstractVisualLayer::operator=(AbstractVisualLayer&&) noexcept = default;
+
+const AbstractVisualLayer::Shared& AbstractVisualLayer::shared() const {
+    return _state->shared.self;
+}
+
+AbstractVisualLayer::Shared& AbstractVisualLayer::shared() {
+    return _state->shared.self;
+}
 
 UnsignedInt AbstractVisualLayer::style(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),

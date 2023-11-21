@@ -65,6 +65,15 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
         AbstractVisualLayer& operator=(AbstractVisualLayer&&) noexcept;
 
         /**
+         * @brief Shared state used by this layer
+         *
+         * Reference to the instance passed to @ref BaseLayerGL::BaseLayerGL(LayerHandle, Shared&)
+         * or @ref TextLayerGL::TextLayerGL(LayerHandle, Shared&).
+         */
+        Shared& shared();
+        const Shared& shared() const; /**< @overload */
+
+        /**
          * @brief Type-erased data style index
          *
          * Expects that @p handle is valid. The index is guaranteed to be less

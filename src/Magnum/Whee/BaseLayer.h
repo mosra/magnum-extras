@@ -355,6 +355,14 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         class Shared;
 
         /**
+         * @brief Shared state used by this layer
+         *
+         * Reference to the instance passed to @ref BaseLayerGL::BaseLayerGL(LayerHandle, Shared&).
+         */
+        inline Shared& shared();
+        inline const Shared& shared() const; /**< @overload */
+
+        /**
          * @brief Create a quad
          * @param style         Style index
          * @param node          Node to attach to
@@ -835,6 +843,14 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
            styleUniformCount() */
         virtual void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) = 0;
 };
+
+inline BaseLayer::Shared& BaseLayer::shared() {
+    return static_cast<Shared&>(AbstractVisualLayer::shared());
+}
+
+inline const BaseLayer::Shared& BaseLayer::shared() const {
+    return static_cast<const Shared&>(AbstractVisualLayer::shared());
+}
 
 }}
 
