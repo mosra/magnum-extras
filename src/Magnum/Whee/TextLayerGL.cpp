@@ -150,7 +150,7 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
 }
 
 struct TextLayerGL::Shared::State: TextLayer::Shared::State {
-    explicit State(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared::State{styleUniformCount, styleCount} {}
+    explicit State(Shared& self, UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared::State{self, styleUniformCount, styleCount} {}
 
     /* Never used directly, only owns the instance passed to
        setGlyphCache(GlyphCache&&) if it got called instead of
@@ -163,7 +163,7 @@ struct TextLayerGL::Shared::State: TextLayer::Shared::State {
     GL::Buffer styleBuffer{NoCreate};
 };
 
-TextLayerGL::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): TextLayer::Shared{Containers::pointer<State>(styleUniformCount, styleCount)} {
+TextLayerGL::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): TextLayer::Shared{Containers::pointer<State>(*this, styleUniformCount, styleCount)} {
     CORRADE_ASSERT(styleUniformCount, "Whee::TextLayerGL::Shared: expected non-zero style uniform count", );
     CORRADE_ASSERT(styleCount, "Whee::TextLayerGL::Shared: expected non-zero style count", );
     /* Construct the shader only after the assertion as it otherwise may fail
