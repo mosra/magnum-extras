@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,60 +23,21 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Magnum/Magnum.h"
+/* TextStyleUniform enum name, then TextLayerStyleUniform constructor
+   arguments. Put into a dedicated file to be able to put as much as possible
+   into constexpr arrays without losing the correspondence between TextStyle
+   and the actual items. Matching order tested in StyleTest, see all #includes
+   of this file in Style.cpp for actual uses. */
 
-namespace Magnum { namespace Whee {
+#ifdef _c
+_c(Button,                      0x22272e_rgbf)
+_c(ButtonDisabled,              0x2f363fff_rgbaf*0.8f)
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
-enum class LayoutHandle: UnsignedLong;
-enum class LayouterHandle: UnsignedShort;
-enum class LayouterDataHandle: UnsignedInt;
-
-class AbstractLayer;
-class AbstractLayouter;
-class AbstractRenderer;
-class AbstractUserInterface;
-
-class BaseLayer;
-struct BaseLayerCommonStyleUniform;
-struct BaseLayerStyleUniform;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
-#endif
-
-class EventConnection;
-class EventLayer;
-
-enum class FontHandle: UnsignedShort;
-class TextLayer;
-struct TextLayerCommonStyleUniform;
-struct TextLayerStyleUniform;
-#ifdef MAGNUM_TARGET_GL
-class TextLayerGL;
-#endif
-class TextProperties;
-
-class RendererGL;
-
-enum class StyleFeature: UnsignedByte;
-typedef Containers::EnumSet<StyleFeature, 15> StyleFeatures;
-class AbstractStyle;
-
-enum class Icon: UnsignedInt;
-class UserInterface;
-class UserInterfaceGL;
-class Widget;
-
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
-
-}}
-
+/* Flat button is styled the same as links (--link-color, --link-active-color).
+   Disabled state is --dim-link-color with 80% opacity. */
+_c(ButtonFlatInactiveBlur,      0x8fa5ec_rgbf)
+_c(ButtonFlatInactiveHover,     0xd0d9f7_rgbf)
+_c(ButtonFlatPressedBlur,       0xd0d9f7_rgbf)
+_c(ButtonFlatPressedHover,      0xd0d9f7_rgbf)
+_c(ButtonFlatDisabled,          0xacacacff_rgbaf*0.3f)
 #endif
