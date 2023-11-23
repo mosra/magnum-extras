@@ -512,9 +512,17 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         UnsignedInt styleUniformCount() const;
 
         /**
+         * @brief Whether a glyph cache has been set
+         *
+         * @see @ref glyphCache(), @ref setGlyphCache()
+         */
+        bool hasGlyphCache() const;
+
+        /**
          * @brief Glyph cache instance
          *
          * Expects that a glyph cache was set with @ref setGlyphCache().
+         * @see @ref hasGlyphCache()
          */
         Text::AbstractGlyphCache& glyphCache();
         const Text::AbstractGlyphCache& glyphCache() const; /**< @overload */

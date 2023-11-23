@@ -70,6 +70,10 @@ TextLayer::Shared& TextLayer::Shared::setGlyphCache(Text::AbstractGlyphCache& ca
     return *this;
 }
 
+bool TextLayer::Shared::hasGlyphCache() const {
+    return static_cast<const State&>(*_state).glyphCache;
+}
+
 Text::AbstractGlyphCache& TextLayer::Shared::glyphCache() {
     return const_cast<Text::AbstractGlyphCache&>(const_cast<const TextLayer::Shared&>(*this).glyphCache());
 }
