@@ -444,6 +444,8 @@ void TextLayerTest::sharedConstruct() {
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
 
+    CORRADE_VERIFY(!shared.hasGlyphCache());
+
     CORRADE_COMPARE(shared.fontCount(), 0);
     CORRADE_VERIFY(!shared.isHandleValid(FontHandle::Null));
 }
@@ -514,7 +516,10 @@ void TextLayerTest::sharedSetGlyphCache() {
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
     } shared{3, 5};
+    CORRADE_VERIFY(!shared.hasGlyphCache());
+
     shared.setGlyphCache(cache);
+    CORRADE_VERIFY(shared.hasGlyphCache());
     CORRADE_COMPARE(&shared.glyphCache(), &cache);
     /* Const overload */
     CORRADE_COMPARE(&const_cast<const Shared&>(shared).glyphCache(), &cache);
@@ -538,6 +543,7 @@ void TextLayerTest::sharedSetGlyphCacheAlreadySet() {
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
     } shared{3, 5};
     shared.setGlyphCache(cache);
+    CORRADE_VERIFY(shared.hasGlyphCache());
 
     std::ostringstream out;
     Error redirectError{&out};
