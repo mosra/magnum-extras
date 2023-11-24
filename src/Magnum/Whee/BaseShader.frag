@@ -118,9 +118,9 @@ void main() {
         styles[interpolatedStyle].bottomColor,
         (normalizedQuadPosition.y + 1.0)*0.5)*interpolatedColor;
 
-    /* Mix with outline color */
+    /* Transition to outline color */
     lowp float innerOutlineSmoothness = style_innerOutlineSmoothness;
-    lowp vec4 outlineColor = styles[interpolatedStyle].outlineColor*gradientColor;
+    lowp vec4 outlineColor = styles[interpolatedStyle].outlineColor;
     lowp vec4 color = mix(outlineColor, gradientColor, smoothstep(-innerOutlineSmoothness, +innerOutlineSmoothness, outlineDist));
 
     /* Final color */
