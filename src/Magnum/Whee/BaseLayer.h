@@ -309,8 +309,7 @@ struct BaseLayerStyleUniform {
     /**
      * @brief Outline color
      *
-     * Default value is @cpp 0xffffffff_srgbf @ce. Is multiplied with the
-     * @ref topColor and @ref bottomColor gradient. Visible only if
+     * Default value is @cpp 0xffffffff_srgbf @ce. Visible only if
      * @ref outlineWidth is non-zero on at least one side or if the difference
      * between @ref cornerRadius and @ref innerOutlineCornerRadius makes it
      * show.

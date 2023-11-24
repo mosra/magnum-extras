@@ -167,7 +167,6 @@ const struct {
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
-            /* It gets multiplied with the gradient */
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f)},
 };
