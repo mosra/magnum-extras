@@ -5405,7 +5405,8 @@ void AbstractUserInterfaceTest::drawEmpty() {
     AbstractUserInterface ui{{100, 100}};
 
     struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
+        explicit Layer(LayerHandle handle, bool node): AbstractLayer{handle}, _node{node} {}
+
         using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Draw; }
@@ -5414,8 +5415,8 @@ void AbstractUserInterfaceTest::drawEmpty() {
             CORRADE_COMPARE(dataIds.size(), 0);
             CORRADE_COMPARE(clipRectIds.size(), 0);
             CORRADE_COMPARE(clipRectDataCounts.size(), 0);
-            CORRADE_COMPARE(nodeOffsets.size(), 1);
-            CORRADE_COMPARE(nodeSizes.size(), 1);
+            CORRADE_COMPARE(nodeOffsets.size(), _node ? 1 : 0);
+            CORRADE_COMPARE(nodeSizes.size(), _node ? 1 : 0);
             CORRADE_COMPARE(clipRectOffsets.size(), 0);
             CORRADE_COMPARE(clipRectSizes.size(), 0);
             ++updateCallCount;
@@ -5426,13 +5427,16 @@ void AbstractUserInterfaceTest::drawEmpty() {
         }
 
         Int updateCallCount = 0;
+
+        private:
+            bool _node;
     };
 
     Layer *layer1{}, *layer2{};
     if(data.layer1)
-        layer1 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+        layer1 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.node));
     if(data.layer2)
-        layer2 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+        layer2 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.node));
 
     if(data.node) {
         NodeHandle node = ui.createNode({}, {100, 100});
