@@ -122,8 +122,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void statePropagateFromLayers();
     void statePropagateFromLayouters();
 
-    void drawEmpty();
     void draw();
+    void drawEmpty();
 
     void eventEmpty();
     void eventAlreadyAccepted();
@@ -193,6 +193,95 @@ const struct {
     {"update before", false, true, false},
     {"", false, false, false},
     {"non-implicit layer order", false, false, true},
+};
+
+const struct {
+    const char* name;
+    bool layer1, layer2, node;
+    bool hide, attach, clean, update;
+} DrawEmptyData[]{
+    {"nothing, clean + update before",
+        false, false, false,
+        false, false, true, true},
+    {"nothing, clean before",
+        false, false, false,
+        false, false, true, false},
+    {"nothing, update before",
+        false, false, false,
+        false, false, false, true},
+    {"nothing",
+        false, false, false,
+        false, false, false, false},
+
+    {"no node, one layer with update needed",
+        true, false, false,
+        false, false, false, false},
+    {"no node, two layers with update needed",
+        true, true, false,
+        false, false, false, false},
+    {"no node, two layers with update needed, clean + update before",
+        true, true, false,
+        false, false, true, true},
+    {"no node, two layers with update needed, clean before",
+        true, true, false,
+        false, false, true, false},
+    {"no node, two layers with update needed, update before",
+        true, true, false,
+        false, false, false, true},
+
+    {"node but no data attachment, one layer with update needed",
+        true, false, true,
+        false, false, false, false},
+    {"node but no data attachment, two layers with update needed",
+        true, true, true,
+        false, false, false, false},
+    {"node but no data attachment, two layers with update needed, clean + update before",
+        true, true, true,
+        false, false, true, true},
+    {"node but no data attachment, two layers with update needed, clean before",
+        true, true, true,
+        false, false, true, false},
+    {"node but no data attachment, two layers with update needed, update before",
+        true, true, true,
+        false, false, false, true},
+
+    {"node not in top-level order, no layers",
+        false, false, true,
+        false, true, false, false},
+    {"node not in top-level order, one layer",
+        true, false, true,
+        false, true, false, false},
+    {"node not in top-level order, two layers",
+        true, true, true,
+        false, true, false, false},
+    {"node not in top-level order, two layers, clean + update before",
+        true, true, true,
+        false, true, true, true},
+    {"node not in top-level order, two layers, clean before",
+        true, true, true,
+        false, true, true, false},
+    {"node not in top-level order, two layers, update before",
+        true, true, true,
+        false, true, false, true},
+
+    {"node hidden, no layers",
+        false, false, true,
+        true, true, false, false},
+    {"node hidden, one layer",
+        true, false, true,
+        true, true, false, false},
+    {"node hidden, two layers",
+        true, true, true,
+        true, true, false, false},
+    {"node hidden, two layers, clean + update before",
+        true, true, true,
+        true, true, true, true},
+    {"node hidden, two layers, clean before",
+        true, true, true,
+        true, true, true, false},
+    {"node hidden, two layers, update before",
+        true, true, true,
+        true, true, false, false},
 };
 
 const struct {
@@ -399,11 +488,11 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addTests({&AbstractUserInterfaceTest::statePropagateFromLayers,
               &AbstractUserInterfaceTest::statePropagateFromLayouters});
 
-    addInstancedTests({&AbstractUserInterfaceTest::drawEmpty},
-        Containers::arraySize(CleanUpdateData));
-
     addInstancedTests({&AbstractUserInterfaceTest::draw},
         Containers::arraySize(DrawData));
+
+    addInstancedTests({&AbstractUserInterfaceTest::drawEmpty},
+        Containers::arraySize(DrawEmptyData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventEmpty},
         Containers::arraySize(CleanUpdateData));
@@ -4955,27 +5044,6 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
 }
 
-void AbstractUserInterfaceTest::drawEmpty() {
-    auto&& data = CleanUpdateData[testCaseInstanceId()];
-    setTestCaseDescription(data.name);
-
-    AbstractUserInterface ui{{100, 100}};
-    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-
-    /* Just verify that this doesn't crash or assert, there's nothing visibly
-       changing after these calls */
-    if(data.clean) {
-        ui.clean();
-        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    }
-    if(data.update) {
-        ui.update();
-        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    }
-    ui.draw();
-    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-}
-
 void AbstractUserInterfaceTest::draw() {
     auto&& data = DrawData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -5351,6 +5419,99 @@ void AbstractUserInterfaceTest::draw() {
         /* layer 3 doesn't have LayerFeature::Draw, so draw() shouldn't be
            called with anything for it */
     })), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceTest::drawEmpty() {
+    auto&& data = DrawEmptyData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Draw; }
+
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+            CORRADE_COMPARE(dataIds.size(), 0);
+            CORRADE_COMPARE(clipRectIds.size(), 0);
+            CORRADE_COMPARE(clipRectDataCounts.size(), 0);
+            CORRADE_COMPARE(nodeOffsets.size(), 1);
+            CORRADE_COMPARE(nodeSizes.size(), 1);
+            CORRADE_COMPARE(clipRectOffsets.size(), 0);
+            CORRADE_COMPARE(clipRectSizes.size(), 0);
+            ++updateCallCount;
+        }
+
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            CORRADE_FAIL("This shouldn't be called");
+        }
+
+        Int updateCallCount = 0;
+    };
+
+    Layer *layer1{}, *layer2{};
+    if(data.layer1)
+        layer1 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    if(data.layer2)
+        layer2 = &ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    if(data.node) {
+        NodeHandle node = ui.createNode({}, {100, 100});
+        if(data.layer1) {
+            if(data.attach)
+                layer1->create(node);
+            /* Without an attachment no update is triggered by default, so
+               force it */
+            else {
+                layer1->setNeedsUpdate();
+            }
+        }
+        if(data.layer2) {
+            if(data.attach)
+                layer2->create(node);
+            /* Without an attachment no update is triggered by default, so
+               force it */
+            else {
+                layer2->setNeedsUpdate();
+            }
+        }
+        if(data.hide)
+            ui.addNodeFlags(node, NodeFlag::Hidden);
+        else
+            ui.clearNodeOrder(node);
+    } else {
+        /* Without a node no update is triggered by default, so force it */
+        if(data.layer1)
+            layer1->setNeedsUpdate();
+        if(data.layer2)
+            layer2->setNeedsUpdate();
+    }
+
+    if(data.layer1)
+        CORRADE_COMPARE(layer1->updateCallCount, 0);
+    if(data.layer2)
+        CORRADE_COMPARE(layer2->updateCallCount, 0);
+
+    if(data.clean) {
+        ui.clean();
+        if(data.layer1 || data.layer2)
+            CORRADE_COMPARE_AS(ui.state(),
+                UserInterfaceState::NeedsDataUpdate,
+                TestSuite::Compare::GreaterOrEqual);
+        else CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+    ui.draw();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    if(data.layer1)
+        CORRADE_COMPARE(layer1->updateCallCount, 1);
+    if(data.layer2)
+        CORRADE_COMPARE(layer2->updateCallCount, 1);
 }
 
 void AbstractUserInterfaceTest::eventEmpty() {
