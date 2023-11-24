@@ -1807,6 +1807,12 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* If no data attachment update is needed, the data in
        `state.dataStateStorage` and all views pointing to it is already
        up-to-date. */
+    /** @todo trigger this branch also if NeedsDataUpdate is set but size of
+        `state.dataToUpdateLayerOffsets` isn't in sync with `state.layers`
+        size, which happens for example if setNeedsUpdate() is called on a
+        layer but there's nothing attached to any node in the UI at all. See
+        AbstractUserInterfaceTest::drawEmpty() for a repro case (it's currently
+        skipped to not assert). */
     if(states >= UserInterfaceState::NeedsDataAttachmentUpdate) {
         /* Calculate count of visible top-level nodes and layers that draw in
            order to accurately size the array with draws */
