@@ -1586,10 +1586,21 @@ AbstractUserInterface& AbstractUserInterface::update() {
        however again the assumption is that in majority of cases there will be
        very little freed data and all of them attached to some node. */
     std::size_t dataCount = 0;
-    if(states >= UserInterfaceState::NeedsDataAttachmentUpdate)
+    if(states >= UserInterfaceState::NeedsDataAttachmentUpdate ||
+       /* Trigger this branch also if NeedsDataUpdate is set but size of
+          `state.dataToUpdateLayerOffsets` isn't in sync with `state.layers`
+          size, which happens for example if setNeedsUpdate() is called on a
+          layer but there's nothing attached to any node in the UI at all. The
+          same condition is below, and it depends on dataCount being correctly
+          calculated here in order to size visibleNodeDataIds, which then gets
+          sliced in the NeedsDataUpdate branch below. */
+       /** @todo FFS this is rather horrible, exhibit 1 of 2 */
+       (states >= UserInterfaceState::NeedsDataUpdate && state.layers.size() + 1 != state.dataToUpdateLayerOffsets.size()))
+    {
         for(Layer& layer: state.layers)
             if(AbstractLayer* const instance = layer.used.instance.get())
                 dataCount += instance->capacity();
+    }
 
     /* Single allocation for all temporary data */
     /** @todo well, not really, there's one more temp array for layout mask
@@ -1825,7 +1836,14 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* If no data attachment update is needed, the data in
        `state.dataStateStorage` and all views pointing to it is already
        up-to-date. */
-    if(states >= UserInterfaceState::NeedsDataAttachmentUpdate) {
+    if(states >= UserInterfaceState::NeedsDataAttachmentUpdate ||
+       /* Trigger this branch also if NeedsDataUpdate is set but size of
+          `state.dataToUpdateLayerOffsets` isn't in sync with `state.layers`
+          size, which happens for example if setNeedsUpdate() is called on a
+          layer but there's nothing attached to any node in the UI at all */
+       /** @todo FFS this is rather horrible, exhibit 2 of 2 */
+       (states >= UserInterfaceState::NeedsDataUpdate && state.layers.size() + 1 != state.dataToUpdateLayerOffsets.size()))
+    {
         /* Calculate count of visible top-level nodes and layers that draw in
            order to accurately size the array with draws */
         UnsignedInt visibleTopLevelNodeCount = 0;
