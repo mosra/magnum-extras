@@ -37,6 +37,7 @@ void mainWheeGL();
 void mainWheeGL() {
 {
 /* [BaseLayerGL-renderer] */
+GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
 GL::Renderer::enable(GL::Renderer::Feature::Blending);
 GL::Renderer::setBlendFunction(
     GL::Renderer::BlendFunction::One,
