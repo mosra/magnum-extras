@@ -41,9 +41,12 @@ namespace Magnum { namespace Whee {
 @brief OpenGL implementation of the text layer
 @m_since_latest
 
-The layer expects pre-multiplied blending set up in order to draw correctly, as
-shown below. It produces geometry in a counter-clockwise winding, so
-@ref GL::Renderer::Feature::FaceCulling can stay enabled when drawing it.
+The layer expects pre-multiplied blending set up and scissor enabled in order
+to draw correctly, as shown below. It produces geometry in a counter-clockwise
+winding, so @ref GL::Renderer::Feature::FaceCulling can stay enabled when
+drawing it. The scissor rectangle is reset back to the whole framebuffer size
+(as supplied to the user interface constructor or
+@ref AbstractUserInterface::setSize()) after drawing.
 
 @snippet Whee-gl.cpp TextLayerGL-renderer
 

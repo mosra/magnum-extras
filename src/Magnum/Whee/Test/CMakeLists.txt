@@ -166,6 +166,8 @@ if(MAGNUM_BUILD_GL_TESTS)
             Magnum::OpenGLTester
         FILES
             ../../Ui/SourceSansPro-Regular.ttf
+            TextLayerTestFiles/clipping-disabled.png
+            TextLayerTestFiles/clipping-enabled.png
             TextLayerTestFiles/colored.png
             TextLayerTestFiles/default.png
             TextLayerTestFiles/draw-order.png)
