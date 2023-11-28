@@ -66,6 +66,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void constructCopy();
     void constructMove();
 
+    void drawNoSizeSet();
     void drawNoStyleSet();
 
     void renderSetup();
@@ -79,6 +80,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void drawSetup();
     void drawTeardown();
     void drawOrder();
+    void drawClipping();
 
     void eventStyleTransition();
 
@@ -221,6 +223,23 @@ const struct {
     {"data created randomly", false}
 };
 
+const struct {
+    const char* name;
+    const char* filename;
+    bool clip;
+    bool singleTopLevel;
+    bool flipOrder;
+} DrawClippingData[]{
+    {"clipping disabled", "clipping-disabled.png",
+        false, false, false},
+    {"clipping top-level nodes", "clipping-enabled.png",
+        true, false, false},
+    {"clipping top-level nodes, different node order", "clipping-enabled.png",
+        true, false, true},
+    {"single top-level node with clipping subnodes", "clipping-enabled.png",
+        true, true, false},
+};
+
 BaseLayerGLTest::BaseLayerGLTest() {
     addTests({&BaseLayerGLTest::sharedConstruct,
               &BaseLayerGLTest::sharedConstructSameStyleUniformCount,
@@ -231,6 +250,7 @@ BaseLayerGLTest::BaseLayerGLTest() {
               &BaseLayerGLTest::constructCopy,
               &BaseLayerGLTest::constructMove,
 
+              &BaseLayerGLTest::drawNoSizeSet,
               &BaseLayerGLTest::drawNoStyleSet});
 
     addInstancedTests({&BaseLayerGLTest::render},
@@ -256,6 +276,11 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addInstancedTests({&BaseLayerGLTest::drawOrder},
         Containers::arraySize(DrawOrderData),
+        &BaseLayerGLTest::drawSetup,
+        &BaseLayerGLTest::drawTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::drawClipping},
+        Containers::arraySize(DrawClippingData),
         &BaseLayerGLTest::drawSetup,
         &BaseLayerGLTest::drawTeardown);
 
@@ -336,11 +361,25 @@ void BaseLayerGLTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<BaseLayerGL>::value);
 }
 
+void BaseLayerGLTest::drawNoSizeSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    BaseLayerGL::Shared shared{3};
+    BaseLayerGL layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayerGL::draw(): user interface size wasn't set\n");
+}
+
 void BaseLayerGLTest::drawNoStyleSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     BaseLayerGL::Shared shared{3};
     BaseLayerGL layer{layerHandle(0, 1), shared};
+
+    layer.setSize({10, 10}, {10, 10});
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -360,6 +399,7 @@ void BaseLayerGLTest::renderSetup() {
         .bind();
 
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 }
@@ -369,6 +409,7 @@ void BaseLayerGLTest::renderTeardown() {
     _color = GL::Texture2D{NoCreate};
 
     GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
@@ -658,6 +699,7 @@ void BaseLayerGLTest::drawSetup() {
         .bind();
 
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 }
@@ -667,6 +709,7 @@ void BaseLayerGLTest::drawTeardown() {
     _color = GL::Texture2D{NoCreate};
 
     GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
@@ -731,6 +774,88 @@ void BaseLayerGLTest::drawOrder() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/draw-order.png"),
+        DebugTools::CompareImageToFile{_manager});
+}
+
+void BaseLayerGLTest::drawClipping() {
+    auto&& data = DrawClippingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* X is divided by 10, Y by 100 when rendering. Window size (for events)
+       isn't used for anything here. */
+    AbstractUserInterface ui{{640.0f, 6400.0f}, {1.0f, 1.0f}, DrawSize};
+
+    BaseLayerGL::Shared layerShared{3};
+    layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
+        BaseLayerStyleUniform{}         /* 0, red */
+            .setColor(0xff0000_rgbf),
+        BaseLayerStyleUniform{}         /* 1, green */
+            .setColor(0x00ff00_rgbf),
+        BaseLayerStyleUniform{}         /* 2, blue */
+            .setColor(0x0000ff_rgbf)
+    }, {});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+
+    /* Two main clip nodes, each containing subnodes that have custom white
+       outline that shouldn't be visible if clipping is enabled. They're either
+       top-level nodes with possibly swapped order, in which case they're
+       submitted in two separate draws, or they're sub-nodes of a single
+       top-level node in which case they're drawn together with two clip rect
+       ranges. */
+    NodeHandle parent = NodeHandle::Null;
+    if(data.singleTopLevel) {
+        parent = ui.createNode({}, {});
+    }
+
+    NodeHandle leftTop = ui.createNode(parent, {60.0f, 600.0f}, {320.0f, 3200.0f});
+    NodeHandle leftTop1 = ui.createNode(leftTop, {-20.0f, -200.0f}, {360.0f, 1800.0f});
+    NodeHandle leftTop2 = ui.createNode(leftTop, {-20.0f, 1600.0f}, {360.0f, 1800.0f});
+    /* Child of leftTop2, but should only be clipped against leftTop, not
+       leftTop2 */
+    NodeHandle leftTop21 = ui.createNode(leftTop2, {140.0f, -400.0f}, {80.0f, 2400.0f});
+    layer.create(0, 0xffffff_rgbf, {20.0f, 200.0f, 20.0f, 000.0f}, leftTop1);
+    layer.create(1, 0xffffff_rgbf, {20.0f, 000.0f, 20.0f, 200.0f}, leftTop2);
+    layer.create(2, 0xffffff_rgbf, {00.0f, 000.0f, 00.0f, 400.0f}, leftTop21);
+
+    NodeHandle rightBottom = ui.createNode(parent, {380.0f, 3800.0f}, {200.0f, 2000.0f});
+    NodeHandle rightBottom1 = ui.createNode(rightBottom, {-40.0f, -400.0f}, {140.0f, 2800.0f});
+    /* Completely outside the rightBottom area, should get culled, i.e. not
+       even passed to draw() */
+    NodeHandle rightBottom11 = ui.createNode(rightBottom1, {-300.0f, 2000.0f}, {80.0f, 800.0f});
+    /* Data added to the clip node should get clipped as well */
+    DataHandle rightBottomData = layer.create(0, 0xffffff_rgbf, {40.0f, 400.0f, 40.0f, 400.0f}, rightBottom);
+    layer.setPadding(rightBottomData, {-40.0f, -400.0f, -40.0f, -400.0f});
+    layer.create(2, 0xffffff_rgbf, {40.0f, 400.0f, 00.0f, 400.0f}, rightBottom1);
+    layer.create(1, 0xffffff_rgbf, {10.0f, 100.0f, 10.0f, 100.0f}, rightBottom11);
+
+    if(data.flipOrder) {
+        CORRADE_COMPARE(ui.nodeOrderNext(rightBottom), NodeHandle::Null);
+        ui.setNodeOrder(rightBottom, leftTop);
+        CORRADE_COMPARE(ui.nodeOrderNext(rightBottom), leftTop);
+    }
+
+    if(data.clip) {
+        ui.addNodeFlags(leftTop, NodeFlag::Clip);
+        ui.addNodeFlags(rightBottom, NodeFlag::Clip);
+    }
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
         DebugTools::CompareImageToFile{_manager});
 }
 
