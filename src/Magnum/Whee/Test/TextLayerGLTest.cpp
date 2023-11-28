@@ -73,6 +73,7 @@ struct TextLayerGLTest: GL::OpenGLTester {
     void constructCopy();
     void constructMove();
 
+    void drawNoSizeSet();
     void drawNoStyleSet();
 
     void renderSetup();
@@ -86,6 +87,7 @@ struct TextLayerGLTest: GL::OpenGLTester {
     void drawSetup();
     void drawTeardown();
     void drawOrder();
+    void drawClipping();
 
     void eventStyleTransition();
 
@@ -203,6 +205,23 @@ const struct {
     {"data created randomly", false}
 };
 
+const struct {
+    const char* name;
+    const char* filename;
+    bool clip;
+    bool singleTopLevel;
+    bool flipOrder;
+} DrawClippingData[]{
+    {"clipping disabled", "clipping-disabled.png",
+        false, false, false},
+    {"clipping top-level nodes", "clipping-enabled.png",
+        true, false, false},
+    {"clipping top-level nodes, different node order", "clipping-enabled.png",
+        true, false, true},
+    {"single top-level node with clipping subnodes", "clipping-enabled.png",
+        true, true, false},
+};
+
 TextLayerGLTest::TextLayerGLTest() {
     addTests({&TextLayerGLTest::sharedConstruct,
               &TextLayerGLTest::sharedConstructSameStyleUniformCount,
@@ -216,6 +235,7 @@ TextLayerGLTest::TextLayerGLTest() {
               &TextLayerGLTest::constructCopy,
               &TextLayerGLTest::constructMove,
 
+              &TextLayerGLTest::drawNoSizeSet,
               &TextLayerGLTest::drawNoStyleSet});
 
     addInstancedTests({&TextLayerGLTest::render},
@@ -241,6 +261,11 @@ TextLayerGLTest::TextLayerGLTest() {
 
     addInstancedTests({&TextLayerGLTest::drawOrder},
         Containers::arraySize(DrawOrderData),
+        &TextLayerGLTest::drawSetup,
+        &TextLayerGLTest::drawTeardown);
+
+    addInstancedTests({&TextLayerGLTest::drawClipping},
+        Containers::arraySize(DrawClippingData),
         &TextLayerGLTest::drawSetup,
         &TextLayerGLTest::drawTeardown);
 
@@ -359,11 +384,25 @@ void TextLayerGLTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<TextLayerGL>::value);
 }
 
+void TextLayerGLTest::drawNoSizeSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    TextLayerGL::Shared shared{3};
+    TextLayerGL layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::TextLayerGL::draw(): user interface size wasn't set\n");
+}
+
 void TextLayerGLTest::drawNoStyleSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     TextLayerGL::Shared shared{3};
     TextLayerGL layer{layerHandle(0, 1), shared};
+
+    layer.setSize({10, 10}, {10, 10});
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -381,6 +420,7 @@ void TextLayerGLTest::renderSetup() {
         .bind();
 
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 }
@@ -390,6 +430,7 @@ void TextLayerGLTest::renderTeardown() {
     _color = GL::Texture2D{NoCreate};
 
     GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
@@ -718,6 +759,7 @@ void TextLayerGLTest::drawSetup() {
         .bind();
 
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 }
@@ -727,6 +769,7 @@ void TextLayerGLTest::drawTeardown() {
     _color = GL::Texture2D{NoCreate};
 
     GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
@@ -860,6 +903,161 @@ void TextLayerGLTest::drawOrder() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/draw-order.png"),
+        DebugTools::CompareImageToFile{_importerManager});
+}
+
+void TextLayerGLTest::drawClipping() {
+    auto&& data = DrawClippingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Based on BaseLayerGLTest::drawClipping(), with additional variability
+       due to each text having a different size */
+
+    /* X is divided by 10, Y by 100 when rendering. Window size (for events)
+       isn't used for anything here. */
+    AbstractUserInterface ui{{640.0f, 6400.0f}, {1.0f, 1.0f}, DrawSize};
+
+    /* A font that just produces glyph ID 0 spaced 16 units apart */
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return _opened; }
+        Properties doOpenFile(Containers::StringView, Float) override {
+            _opened = true;
+            return {8.0f, 80.0f, -80.0f, 160.0f, 1};
+        }
+        void doClose() override { _opened = false; }
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override {
+            struct Shaper: Text::AbstractShaper {
+                using Text::AbstractShaper::AbstractShaper;
+
+                UnsignedInt doShape(Containers::StringView text, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
+                    return text.size();
+                }
+                void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
+                    for(std::size_t i = 0; i != ids.size(); ++i)
+                        ids[i] = 0;
+                }
+                void doGlyphOffsetsAdvancesInto(const Containers::StridedArrayView1D<Vector2>& offsets, const Containers::StridedArrayView1D<Vector2>& advances) const override {
+                    for(std::size_t i = 0; i != offsets.size(); ++i) {
+                        offsets[i] = {0.0f, -80.0f};
+                        advances[i] = {8.0f, 0.0f};
+                    }
+                }
+                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {
+                    /** @todo implement when it actually does get called for
+                        cursor / selection */
+                    CORRADE_FAIL("This shouldn't be called.");
+                }
+            };
+            return Containers::pointer<Shaper>(*this);
+        }
+
+        bool _opened = false;
+    } font;
+    font.openFile({}, 8.0f);
+
+    /* A full-white glyph cache, containing just one 7x160 glyph. Default
+       padding is 1, resetting to 0 to make this work. */
+    Text::GlyphCache cache{{8, 160}, {}};
+    for(auto row: cache.image().pixels<UnsignedByte>()[0])
+        for(UnsignedByte& pixel: row)
+            pixel = 255;
+    cache.flushImage({{}, {8, 160}});
+    cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 160}});
+
+    TextLayerGL::Shared layerShared{3, 5};
+    layerShared.setGlyphCache(cache);
+
+    FontHandle fontHandleLarge = layerShared.addFont(font, 160.0f);
+    FontHandle fontHandleSmall = layerShared.addFont(font, 80.0f);
+    /* Testing the styleToUniform initializer list overload, others cases use
+       implicit mapping initializer list overloads */
+    layerShared.setStyle(TextLayerCommonStyleUniform{}, {
+        TextLayerStyleUniform{}
+            .setColor(0xff0000_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x00ff00_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x0000ff_rgbf)
+    }, {
+        0, /* 0, red large */
+        0, /* 1, red small */
+        1, /* 2, green small */
+        2, /* 3, blue large */
+        2, /* 4, blue small */
+    }, {
+        fontHandleLarge,
+        fontHandleSmall,
+        fontHandleSmall,
+        fontHandleLarge,
+        fontHandleSmall
+    }, {});
+
+    TextLayerGL& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
+
+    /* Two main clip nodes, each containing subnodes which areas should touch
+       each other but not overlap if clipping is enabled. They're either
+       top-level nodes with possibly swapped order, in which case they're
+       submitted in two separate draws, or they're sub-nodes of a single
+       top-level node in which case they're drawn together with two clip rect
+       ranges. */
+    NodeHandle parent = NodeHandle::Null;
+    if(data.singleTopLevel) {
+        parent = ui.createNode({}, {});
+    }
+
+    NodeHandle leftTop = ui.createNode(parent, {100.0f, 600.0f}, {320.0f, 3200.0f});
+    NodeHandle leftTop1 = ui.createNode(leftTop, {0.0f, 0.0f}, {320.0f, 2400.0f});
+    NodeHandle leftTop2 = ui.createNode(leftTop, {0.0f, 2400.0f}, {320.0f, 800.0f});
+    /* Child of leftTop2, but should only be clipped against leftTop, not
+       leftTop2 */
+    NodeHandle leftTop21 = ui.createNode(leftTop2, {60.0f, -800.0f}, {80.0f, 2400.0f});
+    layer.create(0, "abc", {}, leftTop1);
+    layer.create(2, "abcdef", {}, leftTop2);
+    layer.create(3, "a", {}, leftTop21);
+
+    NodeHandle rightBottom = ui.createNode(parent, {420.0f, 3600.0f}, {160.0f, 2000.0f});
+    NodeHandle rightBottom1 = ui.createNode(rightBottom, {0.0f, 0.0f}, {80.0f, 2000.0f});
+    /* Completely outside the rightBottom area, should get culled, i.e. not
+       even passed to draw() */
+    NodeHandle rightBottom11 = ui.createNode(rightBottom1, {-400.0f, 1400.0f}, {80.0f, 800.0f});
+    /* Data added to the clip node should get clipped as well */
+    DataHandle rightBottomData = layer.create(4, "abc", {}, rightBottom);
+    layer.setPadding(rightBottomData, {20.0f, 1600.0f, 0.0f, 0.0f});
+    layer.create(1, "abcd", {}, rightBottom1);
+    layer.create(2, "a", {}, rightBottom11);
+
+    if(data.flipOrder) {
+        CORRADE_COMPARE(ui.nodeOrderNext(rightBottom), NodeHandle::Null);
+        ui.setNodeOrder(rightBottom, leftTop);
+        CORRADE_COMPARE(ui.nodeOrderNext(rightBottom), leftTop);
+    }
+
+    if(data.clip) {
+        ui.addNodeFlags(leftTop, NodeFlag::Clip);
+        ui.addNodeFlags(rightBottom, NodeFlag::Clip);
+    }
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "TextLayerTestFiles", data.filename}),
         DebugTools::CompareImageToFile{_importerManager});
 }
 
