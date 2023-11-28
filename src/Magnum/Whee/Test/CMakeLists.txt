@@ -135,6 +135,8 @@ if(MAGNUM_BUILD_GL_TESTS)
             Magnum::DebugTools
             Magnum::OpenGLTester
         FILES
+            BaseLayerTestFiles/clipping-disabled.png
+            BaseLayerTestFiles/clipping-enabled.png
             BaseLayerTestFiles/default.png
             BaseLayerTestFiles/draw-order.png
             BaseLayerTestFiles/gradient.png
