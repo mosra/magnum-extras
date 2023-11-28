@@ -30,11 +30,13 @@
 #include <Corrade/Utility/Format.h>
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/Math/Matrix3.h>
+#include <Magnum/Math/Range.h>
 #include <Magnum/GL/AbstractShaderProgram.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/Context.h>
 #include <Magnum/GL/Extensions.h>
 #include <Magnum/GL/Mesh.h>
+#include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Shader.h>
 #include <Magnum/GL/Version.h>
 
@@ -193,6 +195,8 @@ struct BaseLayerGL::State: BaseLayer::State {
 
     GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array}, indexBuffer{GL::Buffer::TargetHint::ElementArray};
     GL::Mesh mesh;
+    Vector2 clipScale;
+    Vector2i framebufferSize;
 };
 
 BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState._state))} {
@@ -206,14 +210,21 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState): BaseLay
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
 }
 
-void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i&) {
+void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize) {
+    auto& state = static_cast<State&>(*_state);
+    auto& sharedState = static_cast<Shared::State&>(state.shared);
+
     /* The BaseLayer populates the data expecting the origin is top left and Y
        down */
     const Matrix3 projectionMatrix =
         Matrix3::scaling({1.0f, -1.0f})*
         Matrix3::translation({-1.0f, -1.0f})*
         Matrix3::projection(size);
-    static_cast<Shared::State&>(static_cast<State&>(*_state).shared).shader.setTransformationProjectionMatrix(projectionMatrix);
+    sharedState.shader.setTransformationProjectionMatrix(projectionMatrix);
+
+    /* For scaling and Y-flipping the clip rects in doDraw() */
+    state.clipScale = Vector2{framebufferSize}/size;
+    state.framebufferSize = framebufferSize;
 }
 
 void BaseLayerGL::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
@@ -225,18 +236,47 @@ void BaseLayerGL::doUpdate(const Containers::StridedArrayView1D<const UnsignedIn
     state.mesh.setCount(state.indices.size());
 }
 
-void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const std::size_t clipRectOffset, const std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     auto& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(!state.framebufferSize.isZero() && !state.clipScale.isZero(),
+        "Whee::BaseLayerGL::draw(): user interface size wasn't set", );
+
     auto& sharedState = static_cast<Shared::State&>(state.shared);
     CORRADE_ASSERT(sharedState.styleBuffer.id(),
         "Whee::BaseLayerGL::draw(): no style data was set", );
 
-    state.mesh
-        .setIndexOffset(offset*6)
-        .setCount(count*6);
-    sharedState.shader
-        .bindStyleBuffer(sharedState.styleBuffer)
-        .draw(state.mesh);
+    sharedState.shader.bindStyleBuffer(sharedState.styleBuffer);
+
+    std::size_t clipDataOffset = offset;
+    for(std::size_t i = 0; i != clipRectCount; ++i) {
+        const UnsignedInt clipRectId = clipRectIds[clipRectOffset + i];
+        const UnsignedInt clipRectDataCount = clipRectDataCounts[clipRectOffset + i];
+        const Vector2i clipRectOffset_ = Vector2i{clipRectOffsets[clipRectId]*state.clipScale};
+        const Vector2i clipRectSize = clipRectSizes[clipRectId].isZero() ?
+            state.framebufferSize : Vector2i{clipRectSizes[clipRectId]*state.clipScale};
+
+        GL::Renderer::setScissor(Range2Di::fromSize(
+            {clipRectOffset_.x(), state.framebufferSize.y() - clipRectOffset_.y() - clipRectSize.y()},
+            clipRectSize));
+
+        state.mesh
+            .setIndexOffset(clipDataOffset*6)
+            .setCount(clipRectDataCount*6);
+        sharedState.shader
+            .draw(state.mesh);
+
+        clipDataOffset += clipRectDataCount;
+    }
+
+    CORRADE_INTERNAL_ASSERT(clipDataOffset == offset + count);
+    #ifdef CORRADE_NO_ASSERT
+    static_cast<void>(count);
+    #endif
+
+    /** @todo this should be done on the UI level only on the transition
+        between a layer that uses scissor and a layer that doesn't (or for the
+        last layer), not again for every layer */
+    GL::Renderer::setScissor({{}, state.framebufferSize});
 }
 
 }}
