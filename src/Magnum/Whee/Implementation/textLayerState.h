@@ -49,7 +49,8 @@ struct TextLayerFont {
        things simple, every Font item has its own even though they might come
        from the same AbstractFont originally. */
     Containers::Pointer<Text::AbstractShaper> shaper;
-    Float size;
+    /* Size at which to render divided by `font->size()` */
+    Float scale;
     UnsignedInt glyphCacheFontId;
 };
 
@@ -111,15 +112,14 @@ struct TextLayerData {
     Vector4 padding;
     UnsignedInt glyphRun;
     UnsignedInt style;
-    /* There's no way to change a font after a text has been laid out, it has
-       to be laid out again. The font is here just to be able to query its
-       metrics when creating glyph quad vertices. */
-    FontHandle font;
+    /* Ratio of the style size and font size, for appropriately scaling the
+       rectangles coming out of the glyph cache */
+    Float scale;
     /* Alignment is both to align the glyphs while shaping and to position the
        bounding box relative to the node. Again impossible to change without
        relayouting the text. */
     Text::Alignment alignment;
-    /* 1 byte free */
+    /* 3 bytes free */
     Color3 color;
 };
 

@@ -113,7 +113,7 @@ FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size
     /** @todo assert that the font is opened? doesn't prevent anybody from
         closing it, tho */
 
-    arrayAppend(state.fonts, InPlaceInit, nullptr, font, nullptr, size, *glyphCacheFontId);
+    arrayAppend(state.fonts, InPlaceInit, nullptr, font, nullptr, size/font.size(), *glyphCacheFontId);
     return fontHandle(state.fonts.size() - 1, 1);
 }
 
@@ -253,7 +253,7 @@ UnsignedInt TextLayer::shapeInternal(
         Vector2 cursor;
         const Range2D lineRectangle = Text::renderLineGlyphPositionsInto(
             fontState.font,
-            fontState.size,
+            fontState.scale*fontState.font->size(),
             properties.layoutDirection(),
             glyphOffsetsPositions,
             glyphAdvances,
@@ -279,9 +279,9 @@ UnsignedInt TextLayer::shapeInternal(
             glyph.glyphId = sharedState.glyphCache->glyphId(fontState.glyphCacheFontId, glyph.glyphId);
     }
 
-    /* Save font and alignment */
+    /* Save scale and alignment */
     Implementation::TextLayerData& data = state.data[id];
-    data.font = font;
+    data.scale = fontState.scale;
     data.alignment = properties.alignment();
 
     return glyphRun;
@@ -521,7 +521,6 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
         const UnsignedInt dataId = dataIds[i];
         const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
         const Implementation::TextLayerData& data = state.data[dataId];
-        const Implementation::TextLayerFont& font = sharedState.fonts[fontHandleId(data.font)];
         const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
 
         /* Fill in quad vertices in the same order as the original text runs */
@@ -531,7 +530,7 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
         const Containers::StridedArrayView1D<Implementation::TextLayerVertex> vertexData = state.vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
         Text::renderGlyphQuadsInto(
             *sharedState.glyphCache,
-            font.size/font.font->size(),
+            data.scale,
             glyphData.slice(&Implementation::TextLayerGlyphData::position),
             glyphData.slice(&Implementation::TextLayerGlyphData::glyphId),
             vertexData.slice(&Implementation::TextLayerVertex::position),

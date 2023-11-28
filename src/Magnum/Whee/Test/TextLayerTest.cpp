@@ -598,7 +598,7 @@ void TextLayerTest::sharedAddFont() {
         : Text::AbstractFont
     {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
@@ -642,7 +642,7 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
         explicit Font(Int& destructed): _destructed(destructed) {}
 
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         ~Font() {
@@ -794,7 +794,7 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
@@ -841,7 +841,7 @@ void TextLayerTest::sharedFontInvalidHandle() {
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
@@ -899,7 +899,7 @@ void TextLayerTest::sharedSetStyle() {
 
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
@@ -978,7 +978,7 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
 
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
@@ -1089,7 +1089,7 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
 
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
@@ -1159,7 +1159,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
 
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
@@ -1267,7 +1267,7 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
@@ -2118,7 +2118,7 @@ void TextLayerTest::styleOutOfRange() {
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         UnsignedInt doGlyphId(char32_t) override { return {}; }
