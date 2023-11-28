@@ -50,7 +50,7 @@ struct TextLayerFont {
        from the same AbstractFont originally. */
     Containers::Pointer<Text::AbstractShaper> shaper;
     Float size;
-    /* 4 bytes free */
+    UnsignedInt glyphCacheFontId;
 };
 
 struct TextLayerStyle {

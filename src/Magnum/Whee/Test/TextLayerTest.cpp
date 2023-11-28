@@ -613,21 +613,23 @@ void TextLayerTest::sharedAddFont() {
     } font1, font2;
 
     /* First font */
-    cache.addFont(13, &font1);
+    UnsignedInt firstFontId = cache.addFont(13, &font1);
     FontHandle first = shared.addFont(font1, 13.0f);
     CORRADE_COMPARE(first, Whee::fontHandle(0, 1));
     CORRADE_COMPARE(shared.fontCount(), 1);
     CORRADE_VERIFY(shared.isHandleValid(first));
+    CORRADE_COMPARE(shared.glyphCacheFontId(first), firstFontId);
     CORRADE_COMPARE(&shared.font(first), &font1);
     /* Const overload */
     CORRADE_COMPARE(&const_cast<const Shared&>(shared).font(first), &font1);
 
     /* Second font */
-    cache.addFont(56, &font2);
+    UnsignedInt secondFontId = cache.addFont(56, &font2);
     FontHandle second = shared.addFont(font2, 6.0f);
     CORRADE_COMPARE(second, Whee::fontHandle(1, 1));
     CORRADE_COMPARE(shared.fontCount(), 2);
     CORRADE_VERIFY(shared.isHandleValid(second));
+    CORRADE_COMPARE(shared.glyphCacheFontId(second), secondFontId);
     CORRADE_COMPARE(&shared.font(second), &font2);
     /* Const overload */
     CORRADE_COMPARE(&const_cast<const Shared&>(shared).font(second), &font2);
@@ -675,12 +677,13 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
         CORRADE_COMPARE(shared.fontCount(), 0);
 
         Containers::Pointer<Font> font1{InPlaceInit, destructed};
-        cache.addFont(13, font1.get());
+        UnsignedInt firstFontId = cache.addFont(13, font1.get());
         Font* pointer1 = font1.get();
         FontHandle first = shared.addFont(Utility::move(font1), 13.0f);
         CORRADE_COMPARE(first, Whee::fontHandle(0, 1));
         CORRADE_COMPARE(shared.fontCount(), 1);
         CORRADE_VERIFY(shared.isHandleValid(first));
+        CORRADE_COMPARE(shared.glyphCacheFontId(first), firstFontId);
         CORRADE_COMPARE(&shared.font(first), pointer1);
 
         /* It should be possible to add a second font using the same pointer
@@ -689,16 +692,18 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
         CORRADE_COMPARE(second, Whee::fontHandle(1, 1));
         CORRADE_COMPARE(shared.fontCount(), 2);
         CORRADE_VERIFY(shared.isHandleValid(second));
+        CORRADE_COMPARE(shared.glyphCacheFontId(second), firstFontId);
         CORRADE_COMPARE(&shared.font(second), pointer1);
 
         /* Add a second font, to verify both get deleted appropriately */
         Containers::Pointer<Font> font2{InPlaceInit, destructed};
-        cache.addFont(13, font2.get());
+        UnsignedInt thirdFontId = cache.addFont(13, font2.get());
         Font* pointer2 = font2.get();
         FontHandle third = shared.addFont(Utility::move(font2), 22.0f);
         CORRADE_COMPARE(third, Whee::fontHandle(2, 1));
         CORRADE_COMPARE(shared.fontCount(), 3);
         CORRADE_VERIFY(shared.isHandleValid(third));
+        CORRADE_COMPARE(shared.glyphCacheFontId(third), thirdFontId);
         CORRADE_COMPARE(&shared.font(third), pointer2);
     }
 
@@ -873,12 +878,16 @@ void TextLayerTest::sharedFontInvalidHandle() {
 
     std::ostringstream out;
     Error redirectError{&out};
+    shared.glyphCacheFontId(FontHandle(0x12ab));
+    shared.glyphCacheFontId(FontHandle::Null);
     shared.font(FontHandle(0x12ab));
     shared.font(FontHandle::Null);
     /* Const overload */
     const_cast<const Shared&>(shared).font(FontHandle(0x12ab));
     const_cast<const Shared&>(shared).font(FontHandle::Null);
     CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::Shared::glyphCacheFontId(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
+        "Whee::TextLayer::Shared::glyphCacheFontId(): invalid handle Whee::FontHandle::Null\n"
         "Whee::TextLayer::Shared::font(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
         "Whee::TextLayer::Shared::font(): invalid handle Whee::FontHandle::Null\n"
         "Whee::TextLayer::Shared::font(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
