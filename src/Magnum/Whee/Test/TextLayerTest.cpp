@@ -603,7 +603,7 @@ void TextLayerTest::sharedAddFont() {
         : Text::AbstractFont
     {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -647,7 +647,7 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
         explicit Font(Int& destructed): _destructed(destructed) {}
 
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         ~Font() {
@@ -799,7 +799,7 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -846,7 +846,7 @@ void TextLayerTest::sharedFontInvalidHandle() {
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -904,7 +904,7 @@ void TextLayerTest::sharedSetStyle() {
 
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -983,7 +983,7 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
 
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -1126,7 +1126,7 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
 
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -1196,7 +1196,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
 
     struct Font: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -1304,7 +1304,7 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -2233,7 +2233,7 @@ void TextLayerTest::styleOutOfRange() {
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
@@ -2278,7 +2278,7 @@ void TextLayerTest::styleOutOfRange() {
 void TextLayerTest::updateEmpty() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
-        bool doIsOpened() const override { return false; }
+        bool doIsOpened() const override { return true; }
         void doClose() override {}
 
         void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
