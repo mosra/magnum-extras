@@ -582,6 +582,17 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         FontHandle addFont(Containers::Pointer<Text::AbstractFont>&& font, Float size);
 
         /**
+         * @brief ID of a font in a glyph cache
+         *
+         * Returns ID under which given font glyphs are stored in the
+         * @ref glyphCache(). For fonts with an instance is equivalent to the
+         * ID returned from @ref Text::AbstractGlyphCache::findFont(). Expects
+         * that @p handle is valid.
+         * @see @ref isHandleValid(FontHandle) const
+         */
+        UnsignedInt glyphCacheFontId(FontHandle handle) const;
+
+        /**
          * @brief Font instance
          *
          * Expects that @p handle is valid.
