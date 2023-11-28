@@ -106,14 +106,15 @@ FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(state.glyphCache,
         "Whee::TextLayer::Shared::addFont(): no glyph cache set", {});
-    CORRADE_ASSERT(state.glyphCache->findFont(font),
+    const Containers::Optional<UnsignedInt> glyphCacheFontId = state.glyphCache->findFont(font);
+    CORRADE_ASSERT(glyphCacheFontId,
         "Whee::TextLayer::Shared::addFont(): font not found among" << state.glyphCache->fontCount() << "fonts in set glyph cache", {});
     CORRADE_ASSERT(state.fonts.size() < 1 << Implementation::FontHandleIdBits,
         "Whee::TextLayer::Shared::addFont(): can only have at most" << (1 << Implementation::FontHandleIdBits) << "fonts", {});
     /** @todo assert that the font is opened? doesn't prevent anybody from
         closing it, tho */
 
-    arrayAppend(state.fonts, InPlaceInit, nullptr, font, nullptr, size);
+    arrayAppend(state.fonts, InPlaceInit, nullptr, font, nullptr, size, *glyphCacheFontId);
     return fontHandle(state.fonts.size() - 1, 1);
 }
 
@@ -123,6 +124,13 @@ FontHandle TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&& 
     const FontHandle handle = addFont(*font, size);
     static_cast<State&>(*_state).fonts.back().fontStorage = Utility::move(font);
     return handle;
+}
+
+UnsignedInt TextLayer::Shared::glyphCacheFontId(const FontHandle handle) const {
+    const State& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::Shared::glyphCacheFontId(): invalid handle" << handle, {});
+    return state.fonts[fontHandleId(handle)].glyphCacheFontId;
 }
 
 const Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) const {
@@ -270,12 +278,8 @@ void TextLayer::shapeInternal(
     /* Query font-specific glyph IDs and convert them to cache-global */
     shaper.glyphIdsInto(glyphData.slice(&Implementation::TextLayerGlyphData::glyphId));
     {
-        /* Shared::addFont() already ensured that the font is contained in the
-           cache, so this should never fail */
-        const Containers::Optional<UnsignedInt> fontId = sharedState.glyphCache->findFont(*fontState.font);
-        CORRADE_INTERNAL_ASSERT(fontId);
         for(Implementation::TextLayerGlyphData& glyph: glyphData)
-            glyph.glyphId = sharedState.glyphCache->glyphId(*fontId, glyph.glyphId);
+            glyph.glyphId = sharedState.glyphCache->glyphId(fontState.glyphCacheFontId, glyph.glyphId);
     }
 
     /* Save font, alignment and the glyph run reference */
