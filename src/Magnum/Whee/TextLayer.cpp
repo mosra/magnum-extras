@@ -31,11 +31,13 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/Triple.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Swizzle.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
+#include <Magnum/Text/Direction.h>
 #include <Magnum/Text/Renderer.h>
 
 #include "Magnum/Whee/Event.h"
@@ -113,7 +115,7 @@ FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size
     /** @todo assert that the font is opened? doesn't prevent anybody from
         closing it, tho */
 
-    arrayAppend(state.fonts, InPlaceInit, nullptr, font, nullptr, size/font.size(), *glyphCacheFontId);
+    arrayAppend(state.fonts, InPlaceInit, nullptr, &font, nullptr, size/font.size(), *glyphCacheFontId);
     return fontHandle(state.fonts.size() - 1, 1);
 }
 
@@ -125,6 +127,21 @@ FontHandle TextLayer::Shared::addFont(Containers::Pointer<Text::AbstractFont>&& 
     return handle;
 }
 
+FontHandle TextLayer::Shared::addInstancelessFont(const UnsignedInt glyphCacheFontId, const Float scale) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(state.glyphCache,
+        "Whee::TextLayer::Shared::addInstancelessFont(): no glyph cache set", {});
+    CORRADE_ASSERT(glyphCacheFontId < state.glyphCache->fontCount(),
+        "Whee::TextLayer::Shared::addInstancelessFont(): index" << glyphCacheFontId << "out of range for" << state.glyphCache->fontCount() << "fonts in set glyph cache", {});
+    CORRADE_ASSERT(!state.glyphCache->fontPointer(glyphCacheFontId),
+        "Whee::TextLayer::Shared::addInstancelessFont(): glyph cache font" << glyphCacheFontId << "has an instance set", {});
+    CORRADE_ASSERT(state.fonts.size() < 1 << Implementation::FontHandleIdBits,
+        "Whee::TextLayer::Shared::addInstancelessFont(): can only have at most" << (1 << Implementation::FontHandleIdBits) << "fonts", {});
+
+    arrayAppend(state.fonts, InPlaceInit, nullptr, nullptr, nullptr, scale, glyphCacheFontId);
+    return fontHandle(state.fonts.size() - 1, 1);
+}
+
 UnsignedInt TextLayer::Shared::glyphCacheFontId(const FontHandle handle) const {
     const State& state = static_cast<const State&>(*_state);
     CORRADE_ASSERT(isHandleValid(handle),
@@ -132,11 +149,21 @@ UnsignedInt TextLayer::Shared::glyphCacheFontId(const FontHandle handle) const {
     return state.fonts[fontHandleId(handle)].glyphCacheFontId;
 }
 
+bool TextLayer::Shared::hasFontInstance(const FontHandle handle) const {
+    const State& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::Shared::hasFontInstance(): invalid handle" << handle, {});
+    return state.fonts[fontHandleId(handle)].font;
+}
+
 const Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) const {
     const State& state = static_cast<const State&>(*_state);
     CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::TextLayer::Shared::font(): invalid handle" << handle, state.fonts[0].font);
-    return state.fonts[fontHandleId(handle)].font;
+        "Whee::TextLayer::Shared::font(): invalid handle" << handle, *state.fonts[0].font);
+    Text::AbstractFont* const font = state.fonts[fontHandleId(handle)].font;
+    CORRADE_ASSERT(font,
+        "Whee::TextLayer::Shared::font():" << handle << "is an instance-less font", *state.fonts[0].font);
+    return *font;
 }
 
 Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
@@ -221,12 +248,15 @@ UnsignedInt TextLayer::shapeInternal(
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
         messagePrefix << "invalid handle" << font, {});
 
+    Implementation::TextLayerFont& fontState = sharedState.fonts[fontHandleId(font)];
+    CORRADE_ASSERT(fontState.font,
+        messagePrefix << font << "is an instance-less font", {});
+
     /** @todo once the TextProperties combine multiple fonts, scripts etc, this
         all should probably get wrapped in some higher level API in Text
         directly (AbstractLayouter?), which cuts the text to parts depending
         on font, script etc. and then puts all shaped runs together again? */
     /* Get a shaper instance */
-    Implementation::TextLayerFont& fontState = sharedState.fonts[fontHandleId(font)];
     if(!fontState.shaper)
         fontState.shaper = fontState.font->createShaper();
     Text::AbstractShaper& shaper = *fontState.shaper;
@@ -252,7 +282,7 @@ UnsignedInt TextLayer::shapeInternal(
     {
         Vector2 cursor;
         const Range2D lineRectangle = Text::renderLineGlyphPositionsInto(
-            fontState.font,
+            *fontState.font,
             fontState.scale*fontState.font->size(),
             properties.layoutDirection(),
             glyphOffsetsPositions,
@@ -272,11 +302,16 @@ UnsignedInt TextLayer::shapeInternal(
             glyphOffsetsPositions);
     }
 
+    /* Glyph cache. The create() (or createGlyph()) should have ensured that a
+       glyph cache is set, thus the subsequent setText() don't need to check again. */
+    const Text::AbstractGlyphCache* const glyphCache = sharedState.glyphCache;
+    CORRADE_INTERNAL_ASSERT(glyphCache);
+
     /* Query font-specific glyph IDs and convert them to cache-global */
     shaper.glyphIdsInto(glyphData.slice(&Implementation::TextLayerGlyphData::glyphId));
     {
         for(Implementation::TextLayerGlyphData& glyph: glyphData)
-            glyph.glyphId = sharedState.glyphCache->glyphId(fontState.glyphCacheFontId, glyph.glyphId);
+            glyph.glyphId = glyphCache->glyphId(fontState.glyphCacheFontId, glyph.glyphId);
     }
 
     /* Save scale and alignment */
@@ -285,6 +320,87 @@ UnsignedInt TextLayer::shapeInternal(
     data.alignment = properties.alignment();
 
     return glyphRun;
+}
+
+UnsignedInt TextLayer::shapeGlyphInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const UnsignedInt id, const UnsignedInt style, const UnsignedInt glyphId, const TextProperties& properties)
+{
+    State& state = static_cast<State&>(*_state);
+    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
+
+    /* Decide on a font */
+    FontHandle font = properties.font();
+    if(font == FontHandle::Null) {
+        CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+            messagePrefix << "no style data was set and no custom font was supplied", {});
+        font = sharedState.styles[style].font;
+    } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
+        messagePrefix << "invalid handle" << font, {});
+
+    /* The createGlyph() (or create()) should have ensured that a glyph cache
+       is set, thus the subsequent setGlyph() doesn't need to check again. */
+    const Implementation::TextLayerFont& fontState = sharedState.fonts[fontHandleId(font)];
+    const Text::AbstractGlyphCache* const glyphCache = sharedState.glyphCache;
+    CORRADE_INTERNAL_ASSERT(glyphCache);
+
+    CORRADE_ASSERT(glyphId < glyphCache->fontGlyphCount(fontState.glyphCacheFontId),
+        messagePrefix << "glyph" << glyphId << "out of range for" << glyphCache->fontGlyphCount(fontState.glyphCacheFontId) << "glyphs in glyph cache font" << fontState.glyphCacheFontId, {});
+
+    /* Query the glyph rectangle in order to align it. Compared to a regular
+       text run, where the glyphs might not be present in the glyph cache yet
+       (and can thus be filled in on-demand), here we require those to be
+       present upfront. */
+    const UnsignedInt cacheGlobalGlyphId = glyphCache->glyphId(fontState.glyphCacheFontId, glyphId);
+    const Containers::Triple<Vector2i, Int, Range2Di> glyph = sharedState.glyphCache->glyph(cacheGlobalGlyphId);
+    const Range2D glyphRectangle = Range2D{Range2Di::fromSize(glyph.first(), glyph.third().size())}
+        .scaled(fontState.scale);
+
+    /* Query glyph offsets and advances, abuse the glyphData fields for those;
+       then convert those in-place to absolute glyph positions and align
+       them */
+    Vector2 glyphPosition[1]{};
+    {
+        const Range2D blockRectangle = Text::alignRenderedLine(
+            glyphRectangle,
+            /** @todo could the direction be abused for anything cool? */
+            Text::LayoutDirection::HorizontalTopToBottom,
+            properties.alignment(),
+            glyphPosition);
+        Text::alignRenderedBlock(
+            blockRectangle,
+            /** @todo could the direction be abused for anything cool? */
+            Text::LayoutDirection::HorizontalTopToBottom,
+            properties.alignment(),
+            glyphPosition);
+    }
+
+    /* Add a new run containing just that one glyph */
+    const UnsignedInt glyphRun = state.glyphRuns.size();
+    const UnsignedInt glyphOffset = state.glyphData.size();
+    arrayAppend(state.glyphData, InPlaceInit, *glyphPosition, cacheGlobalGlyphId);
+    arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, 1u, id);
+
+    /* Save scale and alignment */
+    Implementation::TextLayerData& data = state.data[id];
+    data.scale = fontState.scale;
+    data.alignment = properties.alignment();
+
+    return glyphRun;
+}
+
+DataHandle TextLayer::createInternal(const NodeHandle node) {
+    State& state = static_cast<State&>(*_state);
+
+    const DataHandle handle = AbstractLayer::create(node);
+    const UnsignedInt id = dataHandleId(handle);
+    if(id >= state.data.size()) {
+        arrayAppend(state.data, NoInit, id - state.data.size() + 1);
+        state.styles = stridedArrayView(state.data).slice(&Implementation::TextLayerData::style);
+    }
+    return handle;
 }
 
 DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const Color3& color, const NodeHandle node) {
@@ -298,12 +414,8 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
         "Whee::TextLayer::create(): style" << style << "out of range for" << sharedState.styleCount << "styles", {});
 
     /* Create a data */
-    const DataHandle handle = AbstractLayer::create(node);
+    const DataHandle handle = createInternal(node);
     const UnsignedInt id = dataHandleId(handle);
-    if(id >= state.data.size()) {
-        arrayAppend(state.data, NoInit, id - state.data.size() + 1);
-        state.styles = stridedArrayView(state.data).slice(&Implementation::TextLayerData::style);
-    }
 
     /* Shape the text, save its properties */
     const UnsignedInt glyphRun = shapeInternal(
@@ -313,6 +425,38 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
         id, style, text, properties);
     Implementation::TextLayerData& data = state.data[id];
     /** @todo is there a way to have create() with all possible per-data
+        options that doesn't make it ambiguous / impossible to extend further?
+        like, having both color and padding optional is ambiguous, etc. */
+    data.padding = {};
+    data.glyphRun = glyphRun;
+    data.style = style;
+    data.color = color;
+
+    return handle;
+}
+
+DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt glyph, const TextProperties& properties, const Color3& color, const NodeHandle node) {
+    State& state = static_cast<State&>(*_state);
+    #ifndef CORRADE_NO_ASSERT
+    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
+    #endif
+    CORRADE_ASSERT(sharedState.glyphCache,
+        "Whee::TextLayer::createGlyph(): no glyph cache was set", {});
+    CORRADE_ASSERT(style < sharedState.styleCount,
+        "Whee::TextLayer::createGlyph(): style" << style << "out of range for" << sharedState.styleCount << "styles", {});
+
+    /* Create a data */
+    const DataHandle handle = createInternal(node);
+    const UnsignedInt id = dataHandleId(handle);
+
+    /* Shape the glyph, save its properties */
+    const UnsignedInt glyphRun = shapeGlyphInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::createGlyph():",
+        #endif
+        id, style, glyph, properties);
+    Implementation::TextLayerData& data = state.data[id];
+    /** @todo is there a way to have createGlyph() with all possible per-data
         options that doesn't make it ambiguous / impossible to extend further?
         like, having both color and padding optional is ambiguous, etc. */
     data.padding = {};
@@ -380,6 +524,39 @@ void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringVi
         "Whee::TextLayer::setText():",
         #endif
         id, data.style, text, properties);
+    setNeedsUpdate();
+}
+
+void TextLayer::setGlyph(const DataHandle handle, const UnsignedInt glyph, const TextProperties& properties) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::setGlyph(): invalid handle" << handle, );
+    setGlyphInternal(dataHandleId(handle), glyph, properties);
+}
+
+void TextLayer::setGlyph(const LayerDataHandle handle, const UnsignedInt glyph, const TextProperties& properties) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::setGlyph(): invalid handle" << handle, );
+    setGlyphInternal(layerDataHandleId(handle), glyph, properties);
+}
+
+void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, const TextProperties& properties) {
+    State& state = static_cast<State&>(*_state);
+    Implementation::TextLayerData& data = state.data[id];
+
+    /* Mark the original glyph run as unused. It'll be removed during the next
+       recompaction in doUpdate(). We could also just reuse the offset in case
+       the original run was 1 glyph or more (and setTextInternal() could do
+       that too), but this way makes the often-updated data clustered to the
+       end, allowing potential savings in data upload. */
+    state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
+
+    /* Shape the glyph, reference the updated run index, mark the layer as
+       needing an update */
+    data.glyphRun = shapeGlyphInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setGlyph():",
+        #endif
+        id, data.style, glyph, properties);
     setNeedsUpdate();
 }
 
