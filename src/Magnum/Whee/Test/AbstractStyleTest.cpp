@@ -31,6 +31,7 @@
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
+#include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Whee/AbstractStyle.h"
 #include "Magnum/Whee/BaseLayer.h"
@@ -60,6 +61,8 @@ struct AbstractStyleTest: TestSuite::Tester {
     void textLayerGlyphCachePropertiesNotSupported();
     void textLayerGlyphCachePropertiesNotImplemented();
     void textLayerGlyphCachePropertiesNotImplementedDefaults();
+    void textLayerGlyphCacheSizeNoTextFeature();
+    void textLayerGlyphCacheSizeFeaturesNotSupported();
     void setTextLayerGlyphCacheSize();
 
     void apply();
@@ -72,9 +75,12 @@ struct AbstractStyleTest: TestSuite::Tester {
     void applyTextLayerNoGlyphCache();
     void applyTextLayerDifferentGlyphCache();
     void applyTextLayerNoFontManager();
+    void applyTextLayerImagesTextLayerNotPresent();
+    void applyTextLayerImagesNoImporterManager();
     void applyEventLayerNotPresent();
 
     private:
+        PluginManager::Manager<Trade::AbstractImporter> _importerManager;
         PluginManager::Manager<Text::AbstractFont> _fontManager;
 };
 
@@ -88,6 +94,10 @@ const struct {
         StyleFeature::BaseLayer, true},
     {"text layer only", false, true, false,
         StyleFeature::TextLayer, true},
+    {"text layer images only", false, true, false,
+        StyleFeature::TextLayerImages, true},
+    {"text layer + text layer images", false, true, false,
+        StyleFeature::TextLayer|StyleFeature::TextLayerImages, true},
     {"event layer only", false, false, true,
         StyleFeature::EventLayer, true},
     {"everything except base layer", false, true, true,
@@ -116,6 +126,8 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotImplemented,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotImplementedDefaults,
+              &AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature,
+              &AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported,
               &AbstractStyleTest::setTextLayerGlyphCacheSize});
 
     addInstancedTests({&AbstractStyleTest::apply},
@@ -130,6 +142,8 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::applyTextLayerNoGlyphCache,
               &AbstractStyleTest::applyTextLayerDifferentGlyphCache,
               &AbstractStyleTest::applyTextLayerNoFontManager,
+              &AbstractStyleTest::applyTextLayerImagesTextLayerNotPresent,
+              &AbstractStyleTest::applyTextLayerImagesNoImporterManager,
               &AbstractStyleTest::applyEventLayerNotPresent});
 }
 
@@ -148,7 +162,7 @@ void AbstractStyleTest::debugFeatures() {
 void AbstractStyleTest::construct() {
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
     CORRADE_COMPARE(style.features(), StyleFeature::BaseLayer);
 }
@@ -158,7 +172,7 @@ void AbstractStyleTest::constructCopy() {
         explicit Style(StyleFeatures features): _features{features} {}
 
         StyleFeatures doFeatures() const override { return _features; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
 
         StyleFeatures _features;
     };
@@ -181,7 +195,7 @@ void AbstractStyleTest::noFeaturesReturned() {
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return {}; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     std::ostringstream out;
@@ -199,7 +213,7 @@ void AbstractStyleTest::styleCount() {
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
         UnsignedInt doTextLayerStyleUniformCount() const override { return 7; }
         UnsignedInt doTextLayerStyleCount() const override { return 9; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
     CORRADE_COMPARE(style.baseLayerStyleUniformCount(), 3);
     CORRADE_COMPARE(style.baseLayerStyleCount(), 5);
@@ -228,7 +242,7 @@ void AbstractStyleTest::styleCountNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     /* Capture correct function name */
@@ -255,7 +269,7 @@ void AbstractStyleTest::styleCountNotImplemented() {
         StyleFeatures doFeatures() const override {
             return StyleFeature::BaseLayer|StyleFeature::TextLayer;
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     std::ostringstream out;
@@ -285,7 +299,7 @@ void AbstractStyleTest::styleCountNotImplementedDefaults() {
         UnsignedInt doTextLayerStyleCount() const override {
             return 35;
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     /* With baseLayerStyleCount() / textLayerStyleCount() not implemented it
@@ -297,21 +311,22 @@ void AbstractStyleTest::styleCountNotImplementedDefaults() {
 void AbstractStyleTest::textLayerGlyphCacheProperties() {
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
-            return StyleFeature::TextLayer;
+            return StyleFeature::TextLayer|StyleFeature(0x10);
         }
         PixelFormat doTextLayerGlyphCacheFormat() const override {
             return PixelFormat::RG32F;
         }
-        Vector3i doTextLayerGlyphCacheSize() const override {
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override {
+            CORRADE_COMPARE(features, StyleFeature::TextLayer|StyleFeature(0x10));
             return {3, 5, 18};
         }
         Vector2i doTextLayerGlyphCachePadding() const override {
             return {2, 4};
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
     CORRADE_COMPARE(style.textLayerGlyphCacheFormat(), PixelFormat::RG32F);
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(), (Vector3i{3, 5, 18}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer|StyleFeature(0x10)), (Vector3i{3, 5, 18}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{2, 4}));
 }
 
@@ -326,7 +341,7 @@ void AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
-        Vector3i doTextLayerGlyphCacheSize() const override {
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -334,7 +349,7 @@ void AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     /* Capture correct function name */
@@ -343,7 +358,7 @@ void AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported() {
     std::ostringstream out;
     Error redirectError{&out};
     style.textLayerGlyphCacheFormat();
-    style.textLayerGlyphCacheSize();
+    style.textLayerGlyphCacheSize(StyleFeature::TextLayer);
     style.textLayerGlyphCachePadding();
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractStyle::textLayerGlyphCacheFormat(): feature not supported\n"
@@ -359,14 +374,14 @@ void AbstractStyleTest::textLayerGlyphCachePropertiesNotImplemented() {
         StyleFeatures doFeatures() const override {
             return StyleFeature::TextLayer;
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     std::ostringstream out;
     Error redirectError{&out};
     /* textLayerGlyphCacheFormat() and textLayerGlyphCachePadding() have
        defaults, tested below */
-    style.textLayerGlyphCacheSize();
+    style.textLayerGlyphCacheSize(StyleFeature::TextLayer);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::textLayerGlyphCacheSize(): feature advertised but not implemented\n");
 }
 
@@ -375,7 +390,7 @@ void AbstractStyleTest::textLayerGlyphCachePropertiesNotImplementedDefaults() {
         StyleFeatures doFeatures() const override {
             return StyleFeature::TextLayer;
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     CORRADE_COMPARE(style.textLayerGlyphCacheFormat(), PixelFormat::R8Unorm);
@@ -384,51 +399,91 @@ void AbstractStyleTest::textLayerGlyphCachePropertiesNotImplementedDefaults() {
     /* textLayerGlyphCacheSize() asserts, tested above */
 }
 
-void AbstractStyleTest::setTextLayerGlyphCacheSize() {
+void AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
             return StyleFeature::TextLayer;
         }
-        Vector3i doTextLayerGlyphCacheSize() const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    style.textLayerGlyphCacheSize(StyleFeature::BaseLayer|StyleFeature(0x10));
+    CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Whee::StyleFeature::TextLayer but got Whee::StyleFeature::BaseLayer|Whee::StyleFeature(0x10)\n");
+}
+
+void AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::TextLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    style.textLayerGlyphCacheSize(StyleFeature::TextLayer|StyleFeature::BaseLayer);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::textLayerGlyphCacheSize(): Whee::StyleFeature::BaseLayer|Whee::StyleFeature::TextLayer not a subset of supported Whee::StyleFeature::TextLayer\n");
+}
+
+void AbstractStyleTest::setTextLayerGlyphCacheSize() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::TextLayer|StyleFeature::TextLayerImages;
+        }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override {
+            if(features >= StyleFeature::TextLayerImages)
+                return {256, 128, 32};
             return {16, 32, 8};
         }
         Vector2i doTextLayerGlyphCachePadding() const override {
             return {4, 2};
         }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
     /* By default it returns what the style says */
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(), (Vector3i{16, 32, 8}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer|StyleFeature::TextLayerImages), (Vector3i{256, 128, 32}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{16, 32, 8}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{4, 2}));
 
     /* Setting a new value */
     style.setTextLayerGlyphCacheSize({48, 56, 12}, {6, 8});
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(), (Vector3i{48, 56, 12}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{48, 56, 12}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{6, 8}));
+
+    /* It doesn't get overwritten or forgotten when asking for a size with
+       different features */
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer|StyleFeature::TextLayerImages), (Vector3i{256, 128, 32}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{48, 56, 12}));
 
     /* Setting a new but smaller value than before */
     style.setTextLayerGlyphCacheSize({24, 48, 10}, {5, 3});
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(), (Vector3i{24, 48, 10}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{24, 48, 10}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{5, 3}));
 
     /* Setting a value smaller than what style says picks the style instead */
     style.setTextLayerGlyphCacheSize({}, {});
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(), (Vector3i{16, 32, 8}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{16, 32, 8}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{4, 2}));
 
     /* Setting a new value only picks the dimensions that are actually
        larger */
     style.setTextLayerGlyphCacheSize({12, 33, 6}, {5, 1});
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(), (Vector3i{16, 33, 8}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{16, 33, 8}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{5, 2}));
 
     style.setTextLayerGlyphCacheSize({17, 24, 6}, {3, 3});
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(), (Vector3i{17, 32, 8}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{17, 32, 8}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{4, 3}));
 
     style.setTextLayerGlyphCacheSize({12, 24, 12});
-    CORRADE_COMPARE(style.textLayerGlyphCacheSize(), (Vector3i{16, 32, 12}));
+    CORRADE_COMPARE(style.textLayerGlyphCacheSize(StyleFeature::TextLayer), (Vector3i{16, 32, 12}));
     CORRADE_COMPARE(style.textLayerGlyphCachePadding(), (Vector2i{4, 2}));
 }
 
@@ -481,19 +536,21 @@ void AbstractStyleTest::apply() {
         Style(Int& applyCalled, StyleFeatures expectedFeatures, bool succeed): _applyCalled(applyCalled), _expectedFeatures{expectedFeatures}, _succeed{succeed} {}
 
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer;
+            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer;
         }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
         UnsignedInt doTextLayerStyleUniformCount() const override { return 2; }
         UnsignedInt doTextLayerStyleCount() const override { return 4; }
         PixelFormat doTextLayerGlyphCacheFormat() const override { return PixelFormat::R16F; }
-        Vector3i doTextLayerGlyphCacheSize() const override { return {16, 24, 2}; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return {16, 24, 2}; }
         Vector2i doTextLayerGlyphCachePadding() const override { return {3, 1}; }
-        bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager) const override {
+        bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override {
             CORRADE_COMPARE(features, _expectedFeatures);
             if(features >= StyleFeature::TextLayer)
                 CORRADE_VERIFY(fontManager);
+            if(features >= StyleFeature::TextLayerImages)
+                CORRADE_VERIFY(importerManager);
             ++_applyCalled;
             return _succeed;
         }
@@ -503,7 +560,7 @@ void AbstractStyleTest::apply() {
         bool _succeed;
     } style{applyCalled, data.features, data.succeed};
 
-    CORRADE_COMPARE(style.apply(ui, data.features, data.features & StyleFeature::TextLayer ? &_fontManager : nullptr), data.succeed);
+    CORRADE_COMPARE(style.apply(ui, data.features, data.features >= StyleFeature::TextLayerImages ? &_importerManager : nullptr, data.features >= StyleFeature::TextLayer ? &_fontManager : nullptr), data.succeed);
     CORRADE_COMPARE(applyCalled, 1);
 }
 
@@ -516,7 +573,7 @@ void AbstractStyleTest::applyNoFeatures() {
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -527,7 +584,7 @@ void AbstractStyleTest::applyNoFeatures() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    style.apply(ui, {}, nullptr);
+    style.apply(ui, {}, nullptr, nullptr);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): no features specified\n");
 }
 
@@ -540,7 +597,7 @@ void AbstractStyleTest::applyFeaturesNotSupported() {
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -551,7 +608,7 @@ void AbstractStyleTest::applyFeaturesNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    style.apply(ui, StyleFeature::TextLayer|StyleFeature::BaseLayer, nullptr);
+    style.apply(ui, StyleFeature::TextLayer|StyleFeature::BaseLayer, nullptr, nullptr);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): Whee::StyleFeature::BaseLayer|Whee::StyleFeature::TextLayer not a subset of supported Whee::StyleFeature::TextLayer\n");
 }
 
@@ -576,7 +633,7 @@ void AbstractStyleTest::applyBaseLayerNotPresent() {
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -587,7 +644,7 @@ void AbstractStyleTest::applyBaseLayerNotPresent() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    style.apply(ui, StyleFeature::BaseLayer, nullptr);
+    style.apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): base layer not present in the user interface\n");
 }
 
@@ -615,7 +672,7 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return _styleUniformCount; }
         UnsignedInt doBaseLayerStyleCount() const override { return _styleCount; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -628,8 +685,8 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    Style{4, 5}.apply(ui, StyleFeature::BaseLayer, nullptr);
-    Style{3, 4}.apply(ui, StyleFeature::BaseLayer, nullptr);
+    Style{4, 5}.apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
+    Style{3, 4}.apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractStyle::apply(): style has 4 uniforms and 5 styles but the base layer has 3 and 5\n"
         "Whee::AbstractStyle::apply(): style has 3 uniforms and 4 styles but the base layer has 3 and 5\n");
@@ -656,7 +713,7 @@ void AbstractStyleTest::applyTextLayerNotPresent() {
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -667,7 +724,7 @@ void AbstractStyleTest::applyTextLayerNotPresent() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    style.apply(ui, StyleFeature::TextLayer, nullptr);
+    style.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): text layer not present in the user interface\n");
 }
 
@@ -695,7 +752,7 @@ void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
         UnsignedInt doTextLayerStyleUniformCount() const override { return _styleUniformCount; }
         UnsignedInt doTextLayerStyleCount() const override { return _styleCount; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -708,8 +765,8 @@ void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    Style{4, 5}.apply(ui, StyleFeature::TextLayer, nullptr);
-    Style{3, 4}.apply(ui, StyleFeature::TextLayer, nullptr);
+    Style{4, 5}.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
+    Style{3, 4}.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractStyle::apply(): style has 4 uniforms and 5 styles but the text layer has 3 and 5\n"
         "Whee::AbstractStyle::apply(): style has 3 uniforms and 4 styles but the text layer has 3 and 5\n");
@@ -736,7 +793,7 @@ void AbstractStyleTest::applyTextLayerNoGlyphCache() {
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
         UnsignedInt doTextLayerStyleCount() const override { return 1; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -747,7 +804,7 @@ void AbstractStyleTest::applyTextLayerNoGlyphCache() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    style.apply(ui, StyleFeature::TextLayer, nullptr);
+    style.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): glyph cache not present in the text layer\n");
 }
 
@@ -785,9 +842,9 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
         UnsignedInt doTextLayerStyleCount() const override { return 1; }
         PixelFormat doTextLayerGlyphCacheFormat() const override { return _format; }
-        Vector3i doTextLayerGlyphCacheSize() const override { return _size; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return _size; }
         Vector2i doTextLayerGlyphCachePadding() const override { return _padding; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -803,17 +860,17 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
     std::ostringstream out;
     Error redirectError{&out};
     Style{PixelFormat::R8Unorm, {3, 5, 2}, {4, 1}}
-        .apply(ui, StyleFeature::TextLayer, nullptr);
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{PixelFormat::RG16F, {4, 5, 2}, {4, 1}}
-        .apply(ui, StyleFeature::TextLayer, nullptr);
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{PixelFormat::RG16F, {3, 4, 2}, {4, 1}}
-        .apply(ui, StyleFeature::TextLayer, nullptr);
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{PixelFormat::RG16F, {3, 5, 4}, {4, 1}}
-        .apply(ui, StyleFeature::TextLayer, nullptr);
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{PixelFormat::RG16F, {3, 5, 2}, {3, 1}}
-        .apply(ui, StyleFeature::TextLayer, nullptr);
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{PixelFormat::RG16F, {3, 5, 2}, {4, 2}}
-        .apply(ui, StyleFeature::TextLayer, nullptr);
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractStyle::apply(): style has a PixelFormat::R8Unorm glyph cache of size {3, 5, 2} and padding {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
        "Whee::AbstractStyle::apply(): style has a PixelFormat::RG16F glyph cache of size {4, 5, 2} and padding {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
@@ -854,9 +911,9 @@ void AbstractStyleTest::applyTextLayerNoFontManager() {
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
-        Vector3i doTextLayerGlyphCacheSize() const override { return {16, 16, 1}; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return {16, 16, 1}; }
         UnsignedInt doTextLayerStyleCount() const override { return 1; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -867,8 +924,81 @@ void AbstractStyleTest::applyTextLayerNoFontManager() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    style.apply(ui, StyleFeature::TextLayer, nullptr);
+    style.apply(ui, StyleFeature::TextLayer, &_importerManager, nullptr);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): fontManager has to be specified for applying a text layer style\n");
+}
+
+void AbstractStyleTest::applyTextLayerImagesTextLayerNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeature::TextLayerImages; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return {16, 16, 1}; }
+        UnsignedInt doTextLayerStyleCount() const override { return 1; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::TextLayerImages, nullptr, nullptr);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): text layer not present in the user interface\n");
+}
+
+void AbstractStyleTest::applyTextLayerImagesNoImporterManager() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {16, 16}};
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
+    shared.setGlyphCache(cache);
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeature::TextLayerImages; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return {16, 16, 1}; }
+        UnsignedInt doTextLayerStyleCount() const override { return 1; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::TextLayerImages, nullptr, &_fontManager);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): importerManager has to be specified for applying text layer style images\n");
 }
 
 void AbstractStyleTest::applyEventLayerNotPresent() {
@@ -902,7 +1032,7 @@ void AbstractStyleTest::applyEventLayerNotPresent() {
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::EventLayer; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*) const override {
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -913,7 +1043,7 @@ void AbstractStyleTest::applyEventLayerNotPresent() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    style.apply(ui, StyleFeature::EventLayer, nullptr);
+    style.apply(ui, StyleFeature::EventLayer, nullptr, nullptr);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): event layer not present in the user interface\n");
 }
 
