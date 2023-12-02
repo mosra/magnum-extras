@@ -54,6 +54,7 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void constructMove();
 
     template<class T> void setStyle();
+    void setTransitionedStyle();
     void invalidHandle();
     void styleOutOfRange();
 
@@ -140,6 +141,7 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
 
               &AbstractVisualLayerTest::setStyle<UnsignedInt>,
               &AbstractVisualLayerTest::setStyle<Enum>,
+              &AbstractVisualLayerTest::setTransitionedStyle,
               &AbstractVisualLayerTest::invalidHandle,
               &AbstractVisualLayerTest::styleOutOfRange,
 
@@ -351,8 +353,175 @@ template<class T> void AbstractVisualLayerTest::setStyle() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 }
 
+void AbstractVisualLayerTest::setTransitionedStyle() {
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Style {
+        /* 2 is first, to avoid accidentally matching the order */
+        InactiveBlur2,
+        InactiveBlur1,
+        InactiveHover2,
+        InactiveHover1,
+        PressedBlur2,
+        PressedBlur1,
+        PressedHover2,
+        PressedHover1,
+    };
+
+    StyleLayerShared shared{8};
+    shared.setStyleTransition(
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveBlur1:
+                case InactiveHover1:
+                case PressedBlur1:
+                case PressedHover1:
+                    return PressedBlur1;
+                case InactiveBlur2:
+                case InactiveHover2:
+                case PressedBlur2:
+                case PressedHover2:
+                    return PressedBlur2;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveBlur1:
+                case InactiveHover1:
+                case PressedBlur1:
+                case PressedHover1:
+                    return PressedHover1;
+                case InactiveBlur2:
+                case InactiveHover2:
+                case PressedBlur2:
+                case PressedHover2:
+                    return PressedHover2;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveBlur1:
+                case InactiveHover1:
+                case PressedBlur1:
+                case PressedHover1:
+                    return InactiveBlur1;
+                case InactiveBlur2:
+                case InactiveHover2:
+                case PressedBlur2:
+                case PressedHover2:
+                    return InactiveBlur2;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveBlur1:
+                case InactiveHover1:
+                case PressedBlur1:
+                case PressedHover1:
+                    return InactiveHover1;
+                case InactiveBlur2:
+                case InactiveHover2:
+                case PressedBlur2:
+                case PressedHover2:
+                    return InactiveHover2;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        });
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+
+    /* Node 2 is first, to avoid accidentally matching the order */
+    NodeHandle node2 = ui.createNode({}, {100, 50});
+    NodeHandle node1 = ui.createNode({0, 50}, {100, 50});
+    DataHandle data1 = layer.create(InactiveBlur1, node1);
+    DataHandle data2 = layer.create(InactiveBlur2, node2);
+
+    /* Nothing is hovered or pressed initially. */
+    CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+
+    /* Setting a transitioned style picks InactiveBlur. Switching the IDs to be
+       sure it actually changed. */
+    layer.setTransitionedStyle(ui, data1, PressedBlur2);
+    layer.setTransitionedStyle(ui, data2, InactiveHover1);
+    CORRADE_COMPARE(layer.style(data1), InactiveBlur2);
+    CORRADE_COMPARE(layer.style(data2), InactiveBlur1);
+
+    /* Hovering node 2 causes the style to be changed to InactiveHover */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node2);
+        CORRADE_COMPARE(layer.style(data2), InactiveHover1);
+    }
+
+    /* Setting a transitioned style (switching IDs again) picks InactiveHover
+       for the hovered node, the other stays InactiveBlur. Using the integer
+       overload. */
+    layer.setTransitionedStyle(ui, data1, UnsignedInt(InactiveHover1));
+    layer.setTransitionedStyle(ui, data2, UnsignedInt(PressedBlur2));
+    CORRADE_COMPARE(layer.style(data1), InactiveBlur1);
+    CORRADE_COMPARE(layer.style(data2), InactiveHover2);
+
+    /* Pressing on node 2 causes the style to be changed to PressedHover */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, event));
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), node2);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node2);
+        CORRADE_COMPARE(layer.style(data2), PressedHover2);
+    }
+
+    /* Setting a transitioned style (switching IDs again) picks PressedHover
+       for the pressed & hovered node, the other again stays InactiveBlur.
+       Using the LayerDataHandle overload. */
+    layer.setTransitionedStyle(ui, dataHandleData(data1), PressedBlur2);
+    layer.setTransitionedStyle(ui, dataHandleData(data2), InactiveBlur1);
+    CORRADE_COMPARE(layer.style(data1), InactiveBlur2);
+    CORRADE_COMPARE(layer.style(data2), PressedHover1);
+
+    /* Moving onto node 1 causes the style to be changed to PressedBlur. No
+       node is hovered due to event capture on node 2. */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 75}, event));
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), node2);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style(data2), PressedBlur1);
+    }
+
+    /* Setting a transitioned style (switching IDs again) picks PressedBlur
+       for the pressed node, the other again stays InactiveBlur. Using the
+       integer + LayerDataHandle overload. */
+    layer.setTransitionedStyle(ui, dataHandleData(data1), UnsignedInt(InactiveBlur1));
+    layer.setTransitionedStyle(ui, dataHandleData(data2), UnsignedInt(PressedHover2));
+    CORRADE_COMPARE(layer.style(data1), InactiveBlur1);
+    CORRADE_COMPARE(layer.style(data2), PressedBlur2);
+
+    /* Releasing causes the style to be changed to InactiveBlur */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({50, 75}, event));
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style(data2), InactiveBlur2);
+    }
+
+    /* Setting a transitioned style (switching IDs again) picks InactiveBlur
+       for both */
+    layer.setTransitionedStyle(ui, data1, PressedBlur2);
+    layer.setTransitionedStyle(ui, data2, InactiveHover1);
+    CORRADE_COMPARE(layer.style(data1), InactiveBlur2);
+    CORRADE_COMPARE(layer.style(data2), InactiveBlur1);
+}
+
 void AbstractVisualLayerTest::invalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
 
     struct LayerShared: AbstractVisualLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
@@ -368,15 +537,21 @@ void AbstractVisualLayerTest::invalidHandle() {
     layer.style(LayerDataHandle::Null);
     layer.setStyle(DataHandle::Null, 0);
     layer.setStyle(LayerDataHandle::Null, 0);
+    layer.setTransitionedStyle(ui, DataHandle::Null, 0);
+    layer.setTransitionedStyle(ui, LayerDataHandle::Null, 0);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractVisualLayer::style(): invalid handle Whee::DataHandle::Null\n"
         "Whee::AbstractVisualLayer::style(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::AbstractVisualLayer::setStyle(): invalid handle Whee::DataHandle::Null\n"
-        "Whee::AbstractVisualLayer::setStyle(): invalid handle Whee::LayerDataHandle::Null\n");
+        "Whee::AbstractVisualLayer::setStyle(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): invalid handle Whee::LayerDataHandle::Null\n");
 }
 
 void AbstractVisualLayerTest::styleOutOfRange() {
     CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
 
     struct LayerShared: AbstractVisualLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
@@ -394,9 +569,13 @@ void AbstractVisualLayerTest::styleOutOfRange() {
     Error redirectError{&out};
     layer.setStyle(data, 3);
     layer.setStyle(dataHandleData(data), 3);
+    layer.setTransitionedStyle(ui, data, 3);
+    layer.setTransitionedStyle(ui, dataHandleData(data), 3);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
-        "Whee::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n");
+        "Whee::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): style 3 out of range for 3 styles\n"
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): style 3 out of range for 3 styles\n");
 }
 
 StyleIndex styleIndexTransitionToInactiveBlur(StyleIndex index) {
