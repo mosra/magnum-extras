@@ -33,6 +33,7 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Magnum/Text/AbstractFont.h>
+#include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Whee/UserInterface.h"
 
@@ -46,6 +47,9 @@ struct UserInterface::State {
 
     Containers::Optional<PluginManager::Manager<Text::AbstractFont>> fontManagerStorage;
     PluginManager::Manager<Text::AbstractFont>* fontManager;
+
+    Containers::Optional<PluginManager::Manager<Trade::AbstractImporter>> importerManagerStorage;
+    PluginManager::Manager<Trade::AbstractImporter>* importerManager;
 
     BaseLayer* baseLayer{};
     TextLayer* textLayer{};

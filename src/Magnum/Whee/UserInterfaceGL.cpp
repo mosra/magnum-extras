@@ -53,17 +53,17 @@ UserInterfaceGL::UserInterfaceGL(NoCreateT, const Vector2& size, const Vector2& 
 
 UserInterfaceGL::UserInterfaceGL(NoCreateT, const Vector2i& size): UserInterfaceGL{NoCreate, Vector2{size}, Vector2{size}, size} {}
 
-UserInterfaceGL::UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{NoCreate, size, windowSize, framebufferSize} {
+UserInterfaceGL::UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{NoCreate, size, windowSize, framebufferSize} {
     /* If this fails, the program exits. Which is consistent with e.g. how
        Platform::*Application implicitly handles failures, and users have an
        option to use tryCreate() in that case for more graceful handling (or
        trySetStyle() in this case). */
-    setStyle(style, fontManager);
+    setStyle(style, importerManager, fontManager);
 }
 
-UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, style, fontManager} {}
+UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, style, importerManager, fontManager} {}
 
-bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeatures features, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
     CORRADE_ASSERT(features,
         "Whee::UserInterfaceGL::trySetStyle(): no features specified", {});
     CORRADE_ASSERT(features <= style.features(),
@@ -100,10 +100,30 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         }
 
         /* Create a glyph cache */
+        const Vector3i glyphCacheSize = style.textLayerGlyphCacheSize(features);
         /** @todo clean up once an array glyph cache exists */
-        CORRADE_ASSERT(style.textLayerGlyphCacheSize().z() == 1,
-            "Whee::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of" << Debug::packed << style.textLayerGlyphCacheSize(), {});
-        state.textLayerShared.setGlyphCache(Text::GlyphCache{GL::textureFormat(style.textLayerGlyphCacheFormat()), style.textLayerGlyphCacheSize().xy(), style.textLayerGlyphCachePadding()});
+        CORRADE_ASSERT(glyphCacheSize.z() == 1,
+            "Whee::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of" << Debug::packed << style.textLayerGlyphCacheSize(features), {});
+        state.textLayerShared.setGlyphCache(Text::GlyphCache{GL::textureFormat(style.textLayerGlyphCacheFormat()), glyphCacheSize.xy(), style.textLayerGlyphCachePadding()});
+    }
+    if(features >= StyleFeature::TextLayerImages) {
+        /* If features contain StyleFeature::TextLayer, state.textLayer was
+           already added above, so it's enough to check state.textLayer alone.
+           However, mention the StateFeature as well to hint that they can be
+           also applied both together. */
+        CORRADE_ASSERT(state.textLayer,
+            "Whee::UserInterfaceGL::trySetStyle(): text layer not present and" << StyleFeature::TextLayer << "isn't being applied as well", {});
+
+        /* Create a local importer plugin manager if external wasn't passed. If
+           the text layer isn't present, the manager shouldn't be present
+           either. */
+        CORRADE_INTERNAL_ASSERT(!_state->importerManager);
+        if(importerManager) {
+            _state->importerManager = importerManager;
+        } else {
+            _state->importerManagerStorage.emplace();
+            _state->importerManager = &*_state->importerManagerStorage;
+        }
     }
     if(features >= StyleFeature::EventLayer) {
         CORRADE_ASSERT(!state.eventLayer,
@@ -111,21 +131,21 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         setEventLayerInstance(Containers::pointer<EventLayer>(createLayer()));
     }
 
-    return style.apply(*this, features, _state->fontManager);
+    return style.apply(*this, features, _state->importerManager, _state->fontManager);
 }
 
-bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return trySetStyle(style, style.features(), fontManager);
+bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return trySetStyle(style, style.features(), importerManager, fontManager);
 }
 
-UserInterfaceGL& UserInterfaceGL::setStyle(const AbstractStyle& style, const StyleFeatures features, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    if(!trySetStyle(style, features, fontManager))
+UserInterfaceGL& UserInterfaceGL::setStyle(const AbstractStyle& style, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    if(!trySetStyle(style, features, importerManager, fontManager))
         std::exit(1); /* LCOV_EXCL_LINE */
     return *this;
 }
 
-UserInterfaceGL& UserInterfaceGL::setStyle(const AbstractStyle& style, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return setStyle(style, style.features(), fontManager);
+UserInterfaceGL& UserInterfaceGL::setStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return setStyle(style, style.features(), importerManager, fontManager);
 }
 
 UserInterfaceGL& UserInterfaceGL::setBaseLayerInstance(Containers::Pointer<BaseLayerGL>&& instance) {

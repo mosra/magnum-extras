@@ -66,7 +66,7 @@ class TextLayerGL;
 class TextProperties;
 
 enum class StyleFeature: UnsignedByte;
-typedef Containers::EnumSet<StyleFeature, 7> StyleFeatures;
+typedef Containers::EnumSet<StyleFeature, 15> StyleFeatures;
 class AbstractStyle;
 
 class UserInterface;

@@ -35,6 +35,7 @@
 #ifdef MAGNUM_TARGET_GL
 #include <Corrade/PluginManager/PluginManager.h>
 #include <Magnum/Text/Text.h>
+#include <Magnum/Trade/Trade.h>
 
 #include "Magnum/Whee/UserInterface.h"
 
@@ -102,33 +103,37 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
          * @param framebufferSize   Size of the window framebuffer. On some
          *      platforms with HiDPI screens may be different from window size.
          * @param style             Style instance to use
+         * @param importerManager   Optional plugin manager instance for image
+         *      loading
          * @param fontManager       Optional plugin manager instance for font
          *      loading
          *
          * Equivalent to constructing with @ref UserInterfaceGL(NoCreateT)
          * and then calling @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
-         * and @ref setStyle(const AbstractStyle&, PluginManager::Manager<Text::AbstractFont>*).
+         * and @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information. In
          * particular, if style application fails, the program exits. Use the
          * @ref UserInterfaceGL(NoCreateT, const Vector2&, const Vector2&, const Vector2i&)
          * constructor in combination with @ref trySetStyle() for a more
          * graceful failure handling.
          */
-        explicit UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        explicit UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Construct with an unscaled size and set up a style
          *
-         * Delegates to @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Text::AbstractFont>*)
+         * Delegates to @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * with all sizes set to @p size. Doing so assumes that the coordinate
          * system in which events are passed matches framebuffer size.
          */
-        explicit UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        explicit UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Set features from a style
          * @param style             Style instance
          * @param features          Style features to apply
+         * @param importerManager   Optional plugin manager instance for image
+         *      loading
          * @param fontManager       Optional plugin manager instance for font
          *      loading
          * @return Reference to self (for method chaining)
@@ -143,9 +148,9 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
          * alternative.
          *
          * Expects that @p features are a subset of @ref AbstractStyle::features()
-         * of @p style and contain at least one feature and that the user
+         * of @p style, contain at least one feature and that the user
          * interface doesn't yet contain any layers corresponding to
-         * @p features.
+         * @p features as documented in the @ref StyleFeature enum values.
          *
          * @m_class{m-note m-warning}
          *
@@ -161,39 +166,39 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
          * another compatible style, call @ref AbstractStyle::apply() directly.
          * See its documentation for more information about style compatibility
          * restrictions.
-         * @see @ref setStyle(const AbstractStyle&, PluginManager::Manager<Text::AbstractFont>*),
+         * @see @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
          *      @ref hasBaseLayer(), @ref hasTextLayer(), @ref hasEventLayer(),
-         *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Text::AbstractFont>*),
-         *      @ref UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Text::AbstractFont>*)
+         *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
+         *      @ref UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          */
-        UserInterfaceGL& setStyle(const AbstractStyle& style, StyleFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        UserInterfaceGL& setStyle(const AbstractStyle& style, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Set all features from a style
          * @return Reference to self (for method chaining)
          *
-         * Equivalent to calling @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*)
+         * Equivalent to calling @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * with @p features set to @ref AbstractStyle::features() of @p style.
          */
-        UserInterfaceGL& setStyle(const AbstractStyle& style, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        UserInterfaceGL& setStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Try to set features from a style
          *
-         * Unlike @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Text::AbstractFont>*)
+         * Unlike @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
          * of exiting, @cpp true @ce otherwise.
          */
-        bool trySetStyle(const AbstractStyle& style, StyleFeatures features, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        bool trySetStyle(const AbstractStyle& style, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Try to set all features from a style
          *
-         * Unlike @ref setStyle(const AbstractStyle&, PluginManager::Manager<Text::AbstractFont>*)
+         * Unlike @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
          * of exiting, @cpp true @ce otherwise.
          */
-        bool trySetStyle(const AbstractStyle& style, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+        bool trySetStyle(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Set a base layer instance

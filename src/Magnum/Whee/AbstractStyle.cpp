@@ -44,6 +44,7 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
         #define _c(value) case StyleFeature::value: return debug << "::" #value;
         _c(BaseLayer)
         _c(TextLayer)
+        _c(TextLayerImages)
         _c(EventLayer)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -56,6 +57,7 @@ Debug& operator<<(Debug& debug, const StyleFeatures value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::StyleFeatures{}", {
         StyleFeature::BaseLayer,
         StyleFeature::TextLayer,
+        StyleFeature::TextLayerImages,
         StyleFeature::EventLayer,
     });
 }
@@ -121,13 +123,17 @@ PixelFormat AbstractStyle::doTextLayerGlyphCacheFormat() const {
     return PixelFormat::R8Unorm;
 }
 
-Vector3i AbstractStyle::textLayerGlyphCacheSize() const {
-    CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
+Vector3i AbstractStyle::textLayerGlyphCacheSize(StyleFeatures features) const {
+    CORRADE_ASSERT(this->features() >= StyleFeature::TextLayer,
         "Whee::AbstractStyle::textLayerGlyphCacheSize(): feature not supported", {});
-    return Math::max(doTextLayerGlyphCacheSize(), _textLayerGlyphCacheSize);
+    CORRADE_ASSERT(features >= StyleFeature::TextLayer,
+        "Whee::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of" << StyleFeature::TextLayer << "but got" << features, {});
+    CORRADE_ASSERT(features <= this->features(),
+        "Whee::AbstractStyle::textLayerGlyphCacheSize():" << features << "not a subset of supported" << this->features(), {});
+    return Math::max(doTextLayerGlyphCacheSize(features), _textLayerGlyphCacheSize);
 }
 
-Vector3i AbstractStyle::doTextLayerGlyphCacheSize() const {
+Vector3i AbstractStyle::doTextLayerGlyphCacheSize(StyleFeatures) const {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractStyle::textLayerGlyphCacheSize(): feature advertised but not implemented", {});
 }
 
@@ -147,7 +153,7 @@ AbstractStyle& AbstractStyle::setTextLayerGlyphCacheSize(const Vector3i& size, c
     return *this;
 }
 
-bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, PluginManager::Manager<Text::AbstractFont>* const fontManager) const {
+bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) const {
     CORRADE_ASSERT(features,
         "Whee::AbstractStyle::apply(): no features specified", {});
     CORRADE_ASSERT(features <= this->features(),
@@ -174,14 +180,21 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
         CORRADE_ASSERT(shared.hasGlyphCache(),
             "Whee::AbstractStyle::apply(): glyph cache not present in the text layer", {});
         const Text::AbstractGlyphCache& cache = shared.glyphCache();
+        const Vector3i cacheSize = textLayerGlyphCacheSize(features);
         CORRADE_ASSERT(
             cache.format() == textLayerGlyphCacheFormat() &&
-            cache.size() == textLayerGlyphCacheSize() &&
+            cache.size() == cacheSize &&
             cache.padding() == textLayerGlyphCachePadding(),
-            "Whee::AbstractStyle::apply(): style has a" << textLayerGlyphCacheFormat() << "glyph cache of size" << Debug::packed << textLayerGlyphCacheSize() << "and padding" << Debug::packed << textLayerGlyphCachePadding() << "but the text layer has" << cache.format() << Debug::nospace << "," << Debug::packed << cache.size() << "and" << Debug::packed << cache.padding(), {});
+            "Whee::AbstractStyle::apply(): style has a" << textLayerGlyphCacheFormat() << "glyph cache of size" << Debug::packed << cacheSize << "and padding" << Debug::packed << textLayerGlyphCachePadding() << "but the text layer has" << cache.format() << Debug::nospace << "," << Debug::packed << cache.size() << "and" << Debug::packed << cache.padding(), {});
 
         CORRADE_ASSERT(fontManager,
             "Whee::AbstractStyle::apply(): fontManager has to be specified for applying a text layer style", {});
+    }
+    if(features >= StyleFeature::TextLayerImages) {
+        CORRADE_ASSERT(ui.hasTextLayer(),
+            "Whee::AbstractStyle::apply(): text layer not present in the user interface", {});
+        CORRADE_ASSERT(importerManager,
+            "Whee::AbstractStyle::apply(): importerManager has to be specified for applying text layer style images", {});
     }
     if(features >= StyleFeature::EventLayer) {
         CORRADE_ASSERT(ui.hasEventLayer(),
@@ -189,7 +202,7 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
     }
     #endif
 
-    return doApply(ui, features, fontManager);
+    return doApply(ui, features, importerManager, fontManager);
 }
 
 }}
