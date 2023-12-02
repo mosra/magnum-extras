@@ -81,7 +81,7 @@ set(_MAGNUMEXTRAS_MAGNUM_DEPENDENCIES )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
     # TODO remove once Whee replaces Ui
     if(_component STREQUAL Ui OR _component STREQUAL Whee)
-        set(_MAGNUMEXTRAS_${_component}_MAGNUM_DEPENDENCIES Text GL)
+        set(_MAGNUMEXTRAS_${_component}_MAGNUM_DEPENDENCIES Text GL Trade)
     endif()
 
     list(APPEND _MAGNUMEXTRAS_MAGNUM_DEPENDENCIES ${_MAGNUMEXTRAS_${_component}_MAGNUM_DEPENDENCIES})

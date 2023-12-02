@@ -27,7 +27,7 @@
 # property that would have to be set on each target separately.
 set(CMAKE_FOLDER "Magnum/Whee")
 
-find_package(Magnum REQUIRED Text)
+find_package(Magnum REQUIRED Text Trade)
 if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED GL)
 endif()
@@ -126,7 +126,8 @@ elseif(MAGNUM_BUILD_STATIC_PIC)
 endif()
 target_link_libraries(MagnumWhee PUBLIC
     Magnum::Magnum
-    Magnum::Text)
+    Magnum::Text
+    Magnum::Trade)
 if(MAGNUM_TARGET_GL)
     target_link_libraries(MagnumWhee PUBLIC Magnum::GL)
 endif()
@@ -157,7 +158,8 @@ if(MAGNUM_BUILD_TESTS)
     endif()
     target_link_libraries(MagnumWheeTestLib PUBLIC
         Magnum::Magnum
-        Magnum::Text)
+        Magnum::Text
+        Magnum::Trade)
     if(MAGNUM_TARGET_GL)
         target_link_libraries(MagnumWheeTestLib PUBLIC Magnum::GL)
     endif()
