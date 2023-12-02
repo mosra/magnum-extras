@@ -27,6 +27,7 @@
 
 #include <Corrade/Containers/StridedArrayView.h>
 
+#include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
@@ -128,6 +129,40 @@ void AbstractVisualLayer::setStyle(const LayerDataHandle handle, const UnsignedI
 void AbstractVisualLayer::setStyleInternal(const UnsignedInt id, const UnsignedInt style) {
     CORRADE_INTERNAL_DEBUG_ASSERT(_state->styles.size() == capacity());
     _state->styles[id] = style;
+    setNeedsUpdate();
+}
+
+void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const DataHandle handle, const UnsignedInt style) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): invalid handle" << handle, );
+    CORRADE_ASSERT(style < _state->shared.styleCount,
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): style" << style << "out of range for" << _state->shared.styleCount << "styles", );
+    setTransitionedStyleInternal(ui, dataHandleData(handle), style);
+}
+
+void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): invalid handle" << handle, );
+    CORRADE_ASSERT(style < _state->shared.styleCount,
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): style" << style << "out of range for" << _state->shared.styleCount << "styles", );
+    setTransitionedStyleInternal(ui, handle, style);
+}
+
+void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
+    State& state = *_state;
+    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
+
+    const Shared::State& sharedState = state.shared;
+    const NodeHandle node = this->node(handle);
+    const bool hovered = ui.pointerEventHoveredNode() == node;
+    UnsignedInt(*transition)(UnsignedInt);
+    if(ui.pointerEventPressedNode() == node) transition = hovered ?
+        sharedState.styleTransitionToPressedHover :
+        sharedState.styleTransitionToPressedBlur;
+    else transition = hovered ?
+        sharedState.styleTransitionToInactiveHover :
+        sharedState.styleTransitionToInactiveBlur;
+    state.styles[layerDataHandleId(handle)] = transition(style);
     setNeedsUpdate();
 }
 
