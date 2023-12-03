@@ -719,13 +719,7 @@ UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vect
     return clipRectsOffset + 1;
 }
 
-/* The `visibleNodeEventDataCounts` array gets the visible per-node data counts
-   added if `layerFeatures` contains `LayerFeature::Event`, otherwise it's left
-   untouched. The `visibleNodeEventDataCounts` is meant to be
-   `visibleNodeEventDataOffsets.exceptPrefix(1)` that's then passed to
-   `orderNodeDataForEventHandling()` below.
-
-   The `dataToUpdateLayerOffsets` and `dataToUpdateIds` arrays get filled with
+/* The `dataToUpdateLayerOffsets` and `dataToUpdateIds` arrays get filled with
    data and node IDs in the desired draw order, clustered by layer ID, with
    `dataToUpdateLayerOffsets[i]` to `dataToUpdateLayerOffsets[i + 1]` being the
    range of data in `dataToUpdateIds` corresponding to layer `i`.
@@ -743,11 +737,10 @@ UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vect
    storage -- they get filled with data IDs for visible nodes, with  `visibleNodeDataOffsets[i]` to
    `visibleNodeDataOffsets[i + 1]` being the range of data in
    `visibleNodeDataIds` corresponding to visible node at index `i`. */
-Containers::Pair<UnsignedInt, UnsignedInt> orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, LayerFeatures layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectNodeCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateClipRectIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateClipRectDataCounts, UnsignedInt offset, UnsignedInt clipRectOffset, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawClipRectOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawClipRectSizes) {
+Containers::Pair<UnsignedInt, UnsignedInt> orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, LayerFeatures layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectNodeCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<UnsignedInt> visibleNodeDataIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateClipRectIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateClipRectDataCounts, UnsignedInt offset, UnsignedInt clipRectOffset, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawClipRectOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawClipRectSizes) {
     CORRADE_INTERNAL_ASSERT(
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
         visibleNodeDataOffsets.size() == visibleNodeMask.size() + 1 &&
-        visibleNodeEventDataCounts.size() == visibleNodeMask.size() &&
         visibleNodeDataIds.size() == dataNodes.size() &&
         offset <= dataToUpdateIds.size() &&
         dataToUpdateClipRectDataCounts.size() == dataToUpdateClipRectIds.size()  &&
@@ -778,13 +771,6 @@ Containers::Pair<UnsignedInt, UnsignedInt> orderVisibleNodeDataInto(const Contai
         const UnsignedInt id = nodeHandleId(node);
         if(visibleNodeMask[id])
             ++visibleNodeDataOffsets[id + 1];
-    }
-
-    /* If this is an event layer, add those counts to the event data counters.
-       After accumulating the counts across all layers, they'll get turned into
-       a running offset and passed to orderNodeDataForEventHandling() below. */
-    if(layerFeatures & LayerFeature::Event) for(std::size_t i = 0, iMax = visibleNodeMask.size(); i != iMax; ++i) {
-        visibleNodeEventDataCounts[i] += visibleNodeDataOffsets[i + 1];
     }
 
     /* ... then convert the counts to a running offset. Now
@@ -901,6 +887,23 @@ Containers::Pair<UnsignedInt, UnsignedInt> orderVisibleNodeDataInto(const Contai
     CORRADE_INTERNAL_ASSERT(clipRectInputOffset == clipRectNodeCounts.size());
 
     return {offset, clipRectOffset};
+}
+
+/* Counts how much data belongs to each visible node, skipping the first
+   element. Should be called for `dataNodes` from all layers that have
+   LayerFeature::Event, the `visibleNodeEventDataOffsets` array then converted
+   to an offset array and passed to `orderNodeDataForEventHandling()` below. */
+void countNodeDataForEventHandlingInto(const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets, const Containers::BitArrayView visibleNodeMask) {
+    CORRADE_INTERNAL_ASSERT(
+        visibleNodeEventDataOffsets.size() == visibleNodeMask.size() + 1);
+
+    for(const NodeHandle node: dataNodes) {
+        if(node == NodeHandle::Null)
+            continue;
+        const UnsignedInt id = nodeHandleId(node);
+        if(visibleNodeMask[id])
+            ++visibleNodeEventDataOffsets[id + 1];
+    }
 }
 
 /* The `dataNodes` array is expected to be the same as passed into
