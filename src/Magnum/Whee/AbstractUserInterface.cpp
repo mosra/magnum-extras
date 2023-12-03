@@ -1925,7 +1925,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         state.visibleNodeMask,
                         state.clipRectNodeCounts.prefix(state.clipRectCount),
                         visibleNodeDataOffsets,
-                        state.visibleNodeEventDataOffsets.exceptPrefix(1),
                         visibleNodeDataIds.prefix(instance->capacity()),
                         state.dataToUpdateIds,
                         state.dataToUpdateClipRectIds,
@@ -1965,6 +1964,14 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         )
                             j = i;
                     }
+
+                    /* If the layer has LayerFeature::Event, count the data for
+                       it, accumulating them across all event layers */
+                    if(layerItem.used.features >= LayerFeature::Event)
+                        Implementation::countNodeDataForEventHandlingInto(
+                            instance->nodes(),
+                            state.visibleNodeEventDataOffsets,
+                            state.visibleNodeMask);
                 }
 
                 state.dataToUpdateLayerOffsets[i + 1] = {offset, clipRectOffset};

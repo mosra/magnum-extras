@@ -67,7 +67,7 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
     void orderVisibleNodeData();
     void orderVisibleNodeDataNoTopLevelNodes();
 
-    void orderNodeDataForEventHandling();
+    void countOrderNodeDataForEventHandling();
 
     void compactDraws();
 };
@@ -417,7 +417,7 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
               &AbstractUserInterfaceImplementationTest::orderVisibleNodeData,
               &AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoTopLevelNodes,
 
-              &AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling,
+              &AbstractUserInterfaceImplementationTest::countOrderNodeDataForEventHandling,
 
               &AbstractUserInterfaceImplementationTest::compactDraws});
 }
@@ -1641,7 +1641,6 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
     };
 
     UnsignedInt visibleNodeDataOffsets[15]{};
-    UnsignedInt visibleNodeEventDataCounts[14]{};
     UnsignedInt visibleNodeDataIds[18];
     UnsignedInt dataToUpdateIds[18];
     Containers::Pair<UnsignedInt, UnsignedInt> dataToUpdateClipRectIdsDataCounts[Containers::arraySize(layers)*Containers::arraySize(clipRectNodeCounts)];
@@ -1663,7 +1662,6 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             Containers::BitArrayView{visibleNodeMask, 0, 14},
             clipRectNodeCounts,
             visibleNodeDataOffsets,
-            visibleNodeEventDataCounts,
             Containers::arrayView(visibleNodeDataIds).prefix(layer.first().size()),
             dataToUpdateIds,
             Containers::stridedArrayView(dataToUpdateClipRectIdsDataCounts)
@@ -1692,23 +1690,6 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         clipRectOffset = out.second();
         arrayAppend(dataToUpdateLayerOffsets, InPlaceInit, offset, clipRectOffset);
     }
-
-    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataCounts), Containers::arrayView<UnsignedInt>({
-        0,  /* Node 0, not part of the top-level hierarchy */
-        0,  /* Node 1 */
-        3,  /* Node 2, layers 2 and 3 */
-        3,  /* Node 3, layer 2 and 5 */
-        1,  /* Node 4, layer 2 */
-        0,  /* Node 5, layer 3, but marked as invisible */
-        0,  /* Node 6, layer 2, but marked as invisible */
-        1,  /* Node 7, layer 3 */
-        0,  /* Node 8, layer 5, but not part of the top-level hierarchy */
-        0,  /* Node 9 */
-        0,  /* Node 10 */
-        0,  /* Node 11 */
-        1,  /* Node 12, layer 2 */
-        0,  /* Node 13 */
-    }), TestSuite::Compare::Container);
 
     /* This is the offset filled in by the test itself above, in the order in
        which layers are processed */
@@ -1848,7 +1829,6 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoTopLevelNode
     UnsignedByte visibleNodeMaskData[1];
     Containers::BitArrayView visibleNodeMask{visibleNodeMaskData, 0, 3};
     UnsignedInt visibleNodeDataOffsets[4];
-    UnsignedInt visibleNodeEventDataCounts[3];
     UnsignedInt visibleNodeDataIds[3];
     Containers::Pair<UnsignedInt, UnsignedInt> count = Implementation::orderVisibleNodeDataInto(
         nullptr,
@@ -1858,7 +1838,6 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoTopLevelNode
         visibleNodeMask,
         nullptr,
         visibleNodeDataOffsets,
-        visibleNodeEventDataCounts,
         visibleNodeDataIds,
         nullptr,
         nullptr,
@@ -1874,7 +1853,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoTopLevelNode
     CORRADE_COMPARE(count.second(), 0);
 }
 
-void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
+void AbstractUserInterfaceImplementationTest::countOrderNodeDataForEventHandling() {
     /* Subset of data node attachments from orderVisibleNodeData() above for
        layers that have Event set. */
     const NodeHandle layer2NodeAttachments[]{
@@ -1904,11 +1883,52 @@ void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
     /* Compared to orderVisibleNodeData(), only node 8 is left among the
        assignments, all others can stay visible even if they aren't as it
        shouldn't matter for them */
-    UnsignedShort visibleNodeMask[]{0xffff & ~(1 << 8)};
+    UnsignedShort visibleNodeMaskData[]{0xffff & ~(1 << 8)};
+    Containers::BitArrayView visibleNodeMask{visibleNodeMaskData, 0, 14};
 
-    /* Output from orderVisibleNodeData() above, turned into an offset array
-       with an extra 0 at the front */
-    UnsignedInt visibleNodeEventDataOffsets[]{
+    LayerHandle layer2 = layerHandle(2, 0x88);
+    LayerHandle layer3 = layerHandle(3, 0x22);
+    LayerHandle layer5 = layerHandle(5, 0x44);
+    Containers::Pair<Containers::StridedArrayView1D<const NodeHandle>, LayerHandle> layers[]{
+        {layer5NodeAttachments, layer5},
+        {layer3NodeAttachments, layer3},
+        {layer2NodeAttachments, layer2},
+    };
+
+    /* First count the event data for all layers */
+    UnsignedInt visibleNodeEventDataOffsets[15]{};
+    for(const auto& layer: layers) {
+        CORRADE_ITERATION(layer.second());
+        Implementation::countNodeDataForEventHandlingInto(layer.first(), visibleNodeEventDataOffsets, visibleNodeMask);
+    }
+    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataOffsets), Containers::arrayView<UnsignedInt>({
+        0,
+        0,  /* Node 0, not part of the top-level hierarchy */
+        0,  /* Node 1 */
+        2,  /* Node 2, layers 2 and 3 */
+        3,  /* Node 3, layer 2 and 5 */
+        1,  /* Node 4, layer 2 */
+        0,  /* Node 5, layer 3, but marked as invisible */
+        0,  /* Node 6, layer 2, but marked as invisible */
+        1,  /* Node 7, layer 3 */
+        0,  /* Node 8, layer 5, but not part of the top-level hierarchy */
+        0,  /* Node 9 */
+        0,  /* Node 10 */
+        0,  /* Node 11 */
+        1,  /* Node 12, layer 2 */
+        0,  /* Node 13 */
+    }), TestSuite::Compare::Container);
+
+    /* Turn the counts into running offsets */
+    {
+        UnsignedInt visibleNodeEventDataCount = 0;
+        for(UnsignedInt& i: visibleNodeEventDataOffsets) {
+            const UnsignedInt nextOffset = visibleNodeEventDataCount + i;
+            i = visibleNodeEventDataCount;
+            visibleNodeEventDataCount = nextOffset;
+        }
+    }
+    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataOffsets), Containers::arrayView<UnsignedInt>({
         0,
         0,  /* Node 0 */
         0,  /* Node 1 */
@@ -1924,17 +1944,9 @@ void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
         7,  /* Node 11 */
         7,  /* Node 12, 1 item from layer 2 */
         8,  /* Node 13 */
-    };
+    }), TestSuite::Compare::Container);
 
-    LayerHandle layer2 = layerHandle(2, 0x88);
-    LayerHandle layer3 = layerHandle(3, 0x22);
-    LayerHandle layer5 = layerHandle(5, 0x44);
-    Containers::Pair<Containers::StridedArrayView1D<const NodeHandle>, LayerHandle> layers[]{
-        {layer5NodeAttachments, layer5},
-        {layer3NodeAttachments, layer3},
-        {layer2NodeAttachments, layer2},
-    };
-
+    /* Then order the data for all layers */
     DataHandle visibleNodeEventData[9];
     for(const auto& layer: layers) {
         CORRADE_ITERATION(layer.second());
@@ -1942,7 +1954,7 @@ void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
             layer.second(),
             layer.first(),
             visibleNodeEventDataOffsets,
-            Containers::BitArrayView{visibleNodeMask, 0, 14},
+            visibleNodeMask,
             visibleNodeEventData);
     }
 
