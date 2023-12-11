@@ -261,17 +261,18 @@ class MAGNUM_WHEE_EXPORT AbstractLayouter {
          * just for testing purposes, there should be no need to call this
          * function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave. Expects that
-         * the @p nodeOffsets and @p nodeSizes views have the same size. The
-         * @p nodeOffsets and @p nodeSizes views should be large enough to
-         * contain any valid node ID. Delegates to @ref doUpdate(), see its
-         * documentation for more information about the arguments.
+         * the size of @p layoutIdsToUpdate is the same as @ref capacity(),
+         * and that the @p nodeOffsets and @p nodeSizes views have both the
+         * same size. The @p nodeOffsets and @p nodeSizes views should be large
+         * enough to contain any valid node ID. Delegates to @ref doUpdate(),
+         * see its documentation for more information about the arguments.
          *
          * Calling this function resets @ref LayouterState::NeedsUpdate and
          * @ref LayouterState::NeedsAssignmentUpdate, however note that
          * behavior of this function is independent of @ref state() --- it
          * performs the update always regardless of what flags are set.
          */
-        void update(const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes);
+        void update(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes);
 
     protected:
         /**
@@ -355,6 +356,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayouter {
 
         /**
          * @brief Update selected top-level layouts
+         * @param[in] layoutIdsToUpdate Layout IDs to update
          * @param[in] topLevelLayoutIds Top-level layout IDs to update from
          * @param[in,out] nodeOffsets   Node offsets indexed by node ID
          * @param[in,out] nodeSizes     Node sizes indexed by node ID
@@ -365,15 +367,17 @@ class MAGNUM_WHEE_EXPORT AbstractLayouter {
          * imply it are present in @ref AbstractUserInterface::state(). Is
          * always called after @ref doClean().
          *
-         * Node handles corresponding to @p topLevelLayoutIds are available in
+         * The @p layoutIdsToUpdate view has the same size as @ref capacity()
+         * and is guaranteed to have bits set only for valid layout IDs
+         * assigned to nodes visible at the time this function is called. Node
+         * handles corresponding to @p topLevelLayoutIds are available in
          * @ref nodes(), node IDs can be then extracted from the handles using
          * @ref nodeHandleId(). The node IDs then index into the @p nodeOffsets
          * and @p nodeSizes views, which both have the same size and are
-         * guaranteed to be large enough to contain any valid node ID.
-         *
-         * All @ref nodes() at indices corresponding to @p topLevelLayoutIds
-         * are guaranteed to not be @ref NodeHandle::Null at the time this
-         * function is called. The @p topLevelLayoutIds are mutually disjoint
+         * guaranteed to be large enough to contain any valid node ID. All
+         * @ref nodes() at indices corresponding to @p topLevelLayoutIds are
+         * guaranteed to not be @ref NodeHandle::Null at the time this function
+         * is called. The @p topLevelLayoutIds are mutually disjoint
          * hierarchies that don't depend on each other in any way and thus are
          * and can be processed in an arbitrary order. For each top-level
          * layout, the calculation should be done in a way that satisfies the
@@ -386,20 +390,27 @@ class MAGNUM_WHEE_EXPORT AbstractLayouter {
          * layouter ran on the same node in an earlier step. The implementation
          * can then either take the offset and size and modify it, or overwrite
          * it with a completely different value. The arrays contain also
-         * offsets and sizes for nodes different than those (indirectly)
-         * referenced from @p topLevelLayoutIds, such as nodes controlled by
-         * different layouters or nodes positioned directly, and the
-         * implementation should not modify those in any way.
+         * offsets and sizes for nodes different than those referenced from
+         * @p layoutIdsToUpdate, such as nodes controlled by different
+         * layouters or nodes positioned directly, and the implementation
+         * should not modify those in any way. On the other hand it's expected
+         * to update *all* layouts set in the mask, failing to do so will leave
+         * particular node offsets and sizes at values that were set initially
+         * or at intermediate values coming from a previous layouter.
          *
          * Unlike @ref AbstractLayer::doUpdate(), calls to this function may
-         * happen several times with different @p topLevelLayoutIds, ordered
-         * relative to calls to other layouters on which output this layouter
-         * may depend or wich may depend on output of this layouter. This
-         * function may get also called with @p topLevelLayoutIds being empty,
-         * for example when @ref setNeedsUpdate() was called but the layouter
-         * doesn't have any layouts currently visible.
+         * happen several times with different @p layoutIdsToUpdate and
+         * @p topLevelLayoutIds, ordered relative to calls to other layouters
+         * on which output this layouter may depend or wich may depend on
+         * output of this layouter. The set of layout IDs in both arguments is
+         * disjoint among the calls to this functions, i.e. the function is
+         * never called twice with the same ID present. This function may get
+         * also called with @p layoutIdsToUpdate having all bits zero and
+         * @p topLevelLayoutIds being empty, for example when
+         * @ref setNeedsUpdate() was called but the layouter doesn't have any
+         * layouts currently visible.
          */
-        virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) = 0;
+        virtual void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) = 0;
 
         /* Common implementation for remove(LayoutHandle) and
            remove(LayouterDataHandle) */

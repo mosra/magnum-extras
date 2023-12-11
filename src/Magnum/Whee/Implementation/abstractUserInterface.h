@@ -255,17 +255,18 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
    roots from which layout is calculated. They're ordered by dependency, i.e.
    if a top-level layout node has its size calculated by another layout, it
    ensures that it's ordered after the layout it depends on. Prefix of the
-   `topLevelLayoutOffsets` array, with prefix size being the function return
-   value, is filled with a running offset into the `topLevelLayoutIds` array,
-   with `[topLevelLayoutOffsets[i], topLevelLayoutOffsets[i + 1])` being the
-   range of IDs to submit to AbstractLayouter::layout() of a layouter
+   `topLevelLayoutOffsets` array, with prefix size being the second function
+   return value, is filled with a running offset into the `topLevelLayoutIds`
+   array, with `[topLevelLayoutOffsets[i], topLevelLayoutOffsets[i + 1])` being
+   the range of IDs to submit to AbstractLayouter::layout() of a layouter
    `topLevelLayoutLayouterIds[i]`.
 
    The `nodeLayoutLevels`, `layoutLevelOffsets`, `topLevelLayouts`,
    `topLevelLayoutLevels` and `levelPartitionedTopLevelLayouts` arrays are
    temporary storage, the `nodeLayoutLevels` and `layoutLevelOffsets` arrays
-   are expected to be zero-initialized. */
-std::size_t discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParentOrOrder, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const UnsignedInt layouterCount, const Containers::StridedArrayView2D<const LayoutHandle>& nodeLayouts, const Containers::StridedArrayView2D<UnsignedInt>& nodeLayoutLevels, const Containers::ArrayView<UnsignedInt> layoutLevelOffsets, const Containers::StridedArrayView1D<LayoutHandle>& topLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutLevels, const Containers::StridedArrayView1D<LayoutHandle>& levelPartitionedTopLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutOffsets, const Containers::StridedArrayView1D<UnsignedByte>& topLevelLayoutLayouterIds, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutIds) {
+   are expected to be zero-initialized. The first return value is meant to be
+   subsequently used for sizing inputs to `fillLayoutUpdateMasksInto()`. */
+Containers::Pair<UnsignedInt, std::size_t> discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParentOrOrder, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const UnsignedInt layouterCount, const Containers::StridedArrayView2D<const LayoutHandle>& nodeLayouts, const Containers::StridedArrayView2D<UnsignedInt>& nodeLayoutLevels, const Containers::ArrayView<UnsignedInt> layoutLevelOffsets, const Containers::StridedArrayView1D<LayoutHandle>& topLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutLevels, const Containers::StridedArrayView1D<LayoutHandle>& levelPartitionedTopLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutOffsets, const Containers::StridedArrayView1D<UnsignedByte>& topLevelLayoutLayouterIds, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutIds) {
     CORRADE_INTERNAL_ASSERT(
         nodeLayouts.size()[0] == nodeParentOrOrder.size() &&
         nodeLayouts.isContiguous<1>() &&
@@ -467,7 +468,70 @@ std::size_t discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D
         }
     }
 
-    return outputTopLevelLayoutIndex;
+    return {maxLevel, outputTopLevelLayoutIndex};
+}
+
+/* Assumes the `masks` size is a sum of layouter capacities for all entries in
+   `topLevelLayoutLayouterIds`. For each entry in `topLevelLayoutLayouterIds`
+   the `masks` will then contain a range corresponding to given layouter
+   capacity, with bits being set for all layouts that are meant to be updated
+   in given update() run.
+
+   The `nodeLayouts`, `nodeLayoutLevels`, `layoutLevelOffsets`,
+   `topLevelLayoutOffsets` and `topLevelLayoutLayouterIds` arrays are output of
+   the `discoverTopLevelLayoutNodesInto()` call above. The
+   `layouterLevelMaskOffset` array is temporary storage, the `masks` array is
+   expected to be zero-initialized. */
+void fillLayoutUpdateMasksInto(const Containers::StridedArrayView2D<const LayoutHandle>& nodeLayouts, const Containers::StridedArrayView2D<const UnsignedInt>& nodeLayoutLevels, const Containers::ArrayView<const UnsignedInt> layoutLevelOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutOffsets, const Containers::StridedArrayView1D<const UnsignedByte>& topLevelLayoutLayouterIds, const Containers::ArrayView<const UnsignedInt> layouterCapacities, const Containers::StridedArrayView2D<std::size_t>& layouterLevelMaskOffsets, const Containers::MutableBitArrayView masks) {
+    CORRADE_INTERNAL_ASSERT(
+        nodeLayoutLevels.size() == nodeLayouts.size() &&
+        /* Can't pin layoutLevelOffsets size to anything as
+           discoverTopLevelLayoutNodesInto() conservatively expects it to be
+           enough even if every layout would be its own level */
+        topLevelLayoutOffsets.size() == topLevelLayoutLayouterIds.size() + 1 &&
+        layouterLevelMaskOffsets.size()[1] == layouterCapacities.size());
+
+    /* 1. Map each update() run to a range in the masks array, and create a
+       mapping from the per-layouter level in nodeLayoutLevels to an offset
+       in the masks array */
+    UnsignedInt currentLevel = 0;
+    std::size_t maskOffset = 0;
+    for(std::size_t i = 0; i != topLevelLayoutOffsets.size() - 1; ++i) {
+        /* Levels are associated with the content of topLevelLayoutIds coming
+           from discoverTopLevelLayoutNodesInto() implicitly -- each update()
+           run is fully contained within a range of particular level as it's
+           partitioned from it by layouter ID. The per-layouter runs thus don't
+           cross the level range boundaries. */
+        if(topLevelLayoutOffsets[i] >= layoutLevelOffsets[currentLevel + 1]) {
+            CORRADE_INTERNAL_DEBUG_ASSERT(topLevelLayoutOffsets[i] == layoutLevelOffsets[currentLevel + 1]);
+            ++currentLevel;
+        }
+
+        const UnsignedInt layouterId = topLevelLayoutLayouterIds[i];
+        layouterLevelMaskOffsets[{currentLevel, layouterId}] = maskOffset;
+        maskOffset += layouterCapacities[layouterId];
+    }
+
+    CORRADE_INTERNAL_ASSERT(maskOffset == masks.size());
+
+    /* 2. Set bits in the `masks` corresponding to items in nodeLayouts. */
+    const std::size_t nodeCount = nodeLayouts.size()[0];
+    const std::size_t layouterCount = nodeLayouts.size()[1];
+    for(std::size_t node = 0; node != nodeCount; ++node) {
+        for(std::size_t layouter = 0; layouter != layouterCount; ++layouter) {
+            /* If the level is 0 it means that there's no layout assigned to
+               given node from this layouter (thus nothing to set anywhere), or
+               that the node isn't visible. Invisible nodes are not meant to be
+               updated either, skip them. */
+            const UnsignedInt level = nodeLayoutLevels[{node, layouter}];
+            if(!level)
+                continue;
+            const LayoutHandle layout = nodeLayouts[{node, layouter}];
+            CORRADE_INTERNAL_DEBUG_ASSERT(layout != LayoutHandle::Null);
+            const UnsignedInt layouterId = layoutHandleLayouterId(layout);
+            masks.set(layouterLevelMaskOffsets[{level - 1, layouterId}] + layoutHandleId(layout));
+        }
+    }
 }
 
 /* The `visibleNodeMask` has bits set for nodes in `visibleNodeIds` that are

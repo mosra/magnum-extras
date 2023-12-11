@@ -1309,7 +1309,7 @@ void AbstractUserInterfaceTest::layouterSetInstance() {
                 ++destructed;
             }
 
-            void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
 
             int& destructed;
         };
@@ -1374,7 +1374,7 @@ void AbstractUserInterfaceTest::layouterSetInstanceInvalid() {
     struct Layouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
     AbstractUserInterface ui{{100, 100}};
@@ -1400,7 +1400,7 @@ void AbstractUserInterfaceTest::layouterGetInvalid() {
     struct Layouter: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
 
     AbstractUserInterface ui{{100, 100}};
@@ -2175,7 +2175,7 @@ void AbstractUserInterfaceTest::layout() {
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
     Containers::Pointer<Layouter> layouter{InPlaceInit, layouterHandle};
     LayoutHandle layoutHandle1 = layouter->add(nodeHandle(0x12345, 0xabc));
@@ -2392,7 +2392,7 @@ void AbstractUserInterfaceTest::cleanNoOp() {
             using AbstractLayouter::AbstractLayouter;
             using AbstractLayouter::add;
 
-            void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -2474,7 +2474,7 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
             using AbstractLayouter::AbstractLayouter;
             using AbstractLayouter::add;
 
-            void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle1));
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle2));
@@ -2567,7 +2567,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
             using AbstractLayouter::AbstractLayouter;
             using AbstractLayouter::add;
 
-            void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -2681,7 +2681,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
             using AbstractLayouter::AbstractLayouter;
             using AbstractLayouter::add;
 
-            void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -2751,7 +2751,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
             using AbstractLayouter::AbstractLayouter;
             using AbstractLayouter::add;
 
-            void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -2817,7 +2817,7 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
             using AbstractLayouter::AbstractLayouter;
             using AbstractLayouter::add;
 
-            void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+            void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
         };
         ui.setLayouterInstance(Containers::pointer<Layouter>(layouterHandle));
 
@@ -2878,9 +2878,7 @@ void AbstractUserInterfaceTest::state() {
     if(!data.layouters) {
         nested2 = ui.createNode(node, {2.0f, 2.0f}, {1.0f, 2.0f});
     } else {
-        /** @todo is currently not modified by the layouter because not a
-            top-level, needs the bitmask */
-        nested2 = ui.createNode(node, {2.0f, 2.0f}, {1.0f, 2.0f});
+        nested2 = ui.createNode(node, {2.0f, 4.0f}, {1.0f, 1.0f});
     }
     /* This node is assigned a layout but isn't visible so it won't appear
        anywhere. It also shouldn't be modified by the layouter in any way. */
@@ -2919,7 +2917,7 @@ void AbstractUserInterfaceTest::state() {
             ++cleanCallCount;
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {
             arrayAppend(updateCalls, layouterHandleId(handle()));
         }
 
@@ -2930,9 +2928,12 @@ void AbstractUserInterfaceTest::state() {
     struct Layouter1: Layouter {
         using Layouter::Layouter;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_ITERATION("Layouter1");
-            Layouter::doUpdate(topLevelLayoutIds, nodeOffsets, nodeSizes);
+            Layouter::doUpdate(layoutIdsToUpdate, topLevelLayoutIds, nodeOffsets, nodeSizes);
+            CORRADE_COMPARE_AS(layoutIdsToUpdate,
+                expectedLayoutIdsToUpdate.sliceBit(0),
+                TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(topLevelLayoutIds,
                 expectedTopLevelLayoutIds,
                 TestSuite::Compare::Container);
@@ -2945,25 +2946,31 @@ void AbstractUserInterfaceTest::state() {
                     continue;
                 CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
             }
-            /** @todo this doesn't handle children, need the bitmask */
-            for(UnsignedInt id: topLevelLayoutIds) {
+            for(std::size_t id = 0; id != layoutIdsToUpdate.size(); ++id) {
+                /** @todo some way to iterate set bits */
+                if(!layoutIdsToUpdate[id])
+                    continue;
                 nodeOffsets[nodeHandleId(nodes()[id])].x() += 2.0f;
                 nodeSizes[nodeHandleId(nodes()[id])].x() *= 2.0f;
             }
         }
 
+        Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate;
         Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
     };
     struct Layouter2: Layouter {
         using Layouter::Layouter;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             CORRADE_ITERATION("Layouter2 call" << updateCallId);
-            Layouter::doUpdate(topLevelLayoutIds, nodeOffsets, nodeSizes);
+            Layouter::doUpdate(layoutIdsToUpdate, topLevelLayoutIds, nodeOffsets, nodeSizes);
             CORRADE_COMPARE_AS(updateCallId,
                 2,
                 TestSuite::Compare::Less);
+            CORRADE_COMPARE_AS(layoutIdsToUpdate,
+                expectedLayoutIdsToUpdate[updateCallId].sliceBit(0),
+                TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(topLevelLayoutIds,
                 expectedTopLevelLayoutIds[updateCallId],
                 TestSuite::Compare::Container);
@@ -2976,14 +2983,17 @@ void AbstractUserInterfaceTest::state() {
                     continue;
                 CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[updateCallId][i]);
             }
-            /** @todo this doesn't handle children, need the bitmask */
-            for(UnsignedInt id: topLevelLayoutIds) {
+            for(std::size_t id = 0; id != layoutIdsToUpdate.size(); ++id) {
+                /** @todo some way to iterate set bits */
+                if(!layoutIdsToUpdate[id])
+                    continue;
                 nodeOffsets[nodeHandleId(nodes()[id])].y() += -2.0f;
                 nodeSizes[nodeHandleId(nodes()[id])].y() *= 2.0f;
             }
             ++updateCallId;
         }
 
+        Containers::StridedArrayView1D<const bool> expectedLayoutIdsToUpdate[2];
         Containers::StridedArrayView1D<const UnsignedInt> expectedTopLevelLayoutIds[2];
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes[2];
         Int updateCallId = 0;
@@ -3065,6 +3075,18 @@ void AbstractUserInterfaceTest::state() {
            layouters, and resets the flag. */
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            bool expectedLayoutIdsToUpdate1[]{
+                /* layout2Node, layout2Nested2 and layout2Another2 */
+                false, true, true, false, true
+            };
+            bool expectedLayoutIdsToUpdate2[]{
+                /* layout1Another1 */
+                false, true, false
+            };
+            bool expectedLayoutIdsToUpdate3[]{
+                /* layout2Another1 */
+                false, false, false, true, false
+            };
             UnsignedInt expectedTopLevelLayoutIds1[]{
                 layoutHandleId(layout2Node),
                 layoutHandleId(layout2Another2),
@@ -3083,7 +3105,7 @@ void AbstractUserInterfaceTest::state() {
                 {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
                 {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
                 {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-                {{2.0f, 2.0f}, {1.0f, 2.0f}}, /* nested2 */ /** @todo modify too */
+                {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
                 {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
             };
@@ -3105,6 +3127,9 @@ void AbstractUserInterfaceTest::state() {
                 {{9.0f, 9.0f}, {9.0f, 9.0f}},
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}
             };
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
@@ -3432,6 +3457,20 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
+        bool expectedLayoutIdsToUpdate1[]{
+            /* layout2Node, layout2Nested2 and layout2Another2. Before calling
+               layouters it's not yet clear that layout2Nested2 is going to be
+               culled, so this includes it. */
+            false, true, true, false, true
+        };
+        bool expectedLayoutIdsToUpdate2[]{
+            /* layout1Another1 */
+            false, true, false
+        };
+        bool expectedLayoutIdsToUpdate3[]{
+            /* layout2Another1 */
+            false, false, false, true, false
+        };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
             layoutHandleId(layout2Another2),
@@ -3447,7 +3486,7 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
             {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 2.0f}, {1.0f, 2.0f}}, /* nested2 */ /** @todo modify too */
+            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
@@ -3471,6 +3510,9 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
@@ -3560,6 +3602,21 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
+        bool expectedLayoutIdsToUpdate1[]{
+            /* layout2Node, layout2Nested2 and layout2Another2. Again, before
+               calling layouters it's not yet clear that layout2Nested2 is
+               going to be culled even though it was culled before, so this
+               includes it. */
+            false, true, true, false, true
+        };
+        bool expectedLayoutIdsToUpdate2[]{
+            /* layout1Another1 */
+            false, true, false
+        };
+        bool expectedLayoutIdsToUpdate3[]{
+            /* layout2Another1 */
+            false, false, false, true, false
+        };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
             layoutHandleId(layout2Another2),
@@ -3575,7 +3632,7 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
             {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 2.0f}, {1.0f, 2.0f}}, /* nested2 */ /** @todo modify too */
+            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
@@ -3599,6 +3656,9 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
@@ -3675,6 +3735,18 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
+        bool expectedLayoutIdsToUpdate1[]{
+            /* layout2Another2 */
+            false, false, false, false, true
+        };
+        bool expectedLayoutIdsToUpdate2[]{
+            /* layout1Another1 */
+            false, true, false
+        };
+        bool expectedLayoutIdsToUpdate3[]{
+            /* layout2Another1 */
+            false, false, false, true, false
+        };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Another2),
         };
@@ -3713,6 +3785,9 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
@@ -3790,6 +3865,18 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
+        bool expectedLayoutIdsToUpdate1[]{
+            /* layout2Node, layout2Nested2 and layout2Another2 */
+            false, true, true, false, true
+        };
+        bool expectedLayoutIdsToUpdate2[]{
+            /* layout1Another1 */
+            false, true, false
+        };
+        bool expectedLayoutIdsToUpdate3[]{
+            /* layout2Another1 */
+            false, false, false, true, false
+        };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
             layoutHandleId(layout2Another2),
@@ -3805,7 +3892,7 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
             {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 2.0f}, {1.0f, 2.0f}}, /* nested2 */ /** @todo modify too */
+            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
@@ -3829,6 +3916,9 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
@@ -4049,6 +4139,10 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
+        bool expectedLayoutIdsToUpdate1[]{
+            /* layout2Node, layout2Nested2 and layout2Another2 */
+            false, true, true, false, true
+        };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
             layoutHandleId(layout2Another2),
@@ -4058,12 +4152,15 @@ void AbstractUserInterfaceTest::state() {
             {},
             {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 2.0f}, {1.0f, 2.0f}}, /* nested2 */ /** @todo modify too */
+            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = {};
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = {};
@@ -4143,6 +4240,18 @@ void AbstractUserInterfaceTest::state() {
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
+        bool expectedLayoutIdsToUpdate1[]{
+            /* layout2Node, layout2Nested2 and layout2Another2 */
+            false, true, true, false, true
+        };
+        bool expectedLayoutIdsToUpdate2[]{
+            /* layout1Another1 */
+            false, true, false
+        };
+        bool expectedLayoutIdsToUpdate3[]{
+            /* layout2Another1 */
+            false, false, false, true, false
+        };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
             layoutHandleId(layout2Another2),
@@ -4158,7 +4267,7 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
             {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-            {{2.0f, 2.0f}, {1.0f, 2.0f}}, /* nested2 */ /** @todo modify too */
+            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
@@ -4182,6 +4291,9 @@ void AbstractUserInterfaceTest::state() {
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
@@ -4247,6 +4359,15 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
+            bool expectedLayoutIdsToUpdate1[]{
+                /* layout2Node, layout2Nested2, layout2Another1 and
+                   layout2Another2 */
+                false, true, true, true, true
+            };
+            /* Layouter1 is called with nothing just to reset the
+               NeedsLayoutAssignmentUpdate flag. */
+            /** @todo which is rather ugly, better idea? */
+            bool expectedLayoutIdsToUpdate2[3]{};
             UnsignedInt expectedTopLevelLayoutIds1[]{
                 layoutHandleId(layout2Another1),
                 layoutHandleId(layout2Node),
@@ -4257,7 +4378,7 @@ void AbstractUserInterfaceTest::state() {
                 {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
                 {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
                 {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
-                {{2.0f, 2.0f}, {1.0f, 2.0f}}, /* nested2 */ /** @todo modify too */
+                {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
                 {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
             };
@@ -4271,6 +4392,9 @@ void AbstractUserInterfaceTest::state() {
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}
             };
             layouterUpdateCalls = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = {};
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = {};
@@ -4458,6 +4582,10 @@ void AbstractUserInterfaceTest::state() {
                removing `node`. The duplicate layout gets removed also. */
             true, true, true, false, false
         };
+        bool expectedLayoutIdsToUpdate1[]{
+            /* layout2Another1 and layout2Another2 */
+            false, false, false, true, true
+        };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Another1),
             layoutHandleId(layout2Another2),
@@ -4475,6 +4603,9 @@ void AbstractUserInterfaceTest::state() {
             layouterUpdateCalls = {};
             ui.layouter<Layouter>(layouter1).expectedLayoutIdsToRemove = expectedLayoutIdsToRemove1;
             ui.layouter<Layouter>(layouter2).expectedLayoutIdsToRemove = expectedLayoutIdsToRemove2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = {};
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
             ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = {};
@@ -4565,6 +4696,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
             layouterUpdateCalls = {};
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = {};
             ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = {};
             ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = {};
 
@@ -4767,7 +4899,7 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     };
     ui.setLayouterInstance(Containers::pointer<Layouter>(layouterRemoved));
     ui.setLayouterInstance(Containers::pointer<Layouter>(layouter1));
@@ -5327,14 +5459,13 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
-            for(std::size_t i = 0; i != capacity(); ++i) {
-                NodeHandle node = nodes[i];
-                if(node == NodeHandle::Null)
+            for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+                if(!layoutIdsToUpdate[i])
                     continue;
-                nodeOffsets[nodeHandleId(node)].y() -= 1000.0f;
-                nodeSizes[nodeHandleId(node)] *= 100.0f;
+                nodeOffsets[nodeHandleId(nodes[i])].y() -= 1000.0f;
+                nodeSizes[nodeHandleId(nodes[i])] *= 100.0f;
             }
         }
     };
@@ -6704,14 +6835,13 @@ void AbstractUserInterfaceTest::eventCapture() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
-            for(std::size_t i = 0; i != capacity(); ++i) {
-                NodeHandle node = nodes[i];
-                if(node == NodeHandle::Null)
+            for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+                if(!layoutIdsToUpdate[i])
                     continue;
-                nodeOffsets[nodeHandleId(node)].y() -= 1000.0f;
-                nodeSizes[nodeHandleId(node)] *= 100.0f;
+                nodeOffsets[nodeHandleId(nodes[i])].y() -= 1000.0f;
+                nodeSizes[nodeHandleId(nodes[i])] *= 100.0f;
             }
         }
     };
@@ -8756,14 +8886,13 @@ void AbstractUserInterfaceTest::eventTapOrClick() {
         using AbstractLayouter::AbstractLayouter;
         using AbstractLayouter::add;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
-            for(std::size_t i = 0; i != capacity(); ++i) {
-                NodeHandle node = nodes[i];
-                if(node == NodeHandle::Null)
+            for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+                if(!layoutIdsToUpdate[i])
                     continue;
-                nodeOffsets[nodeHandleId(node)].y() -= 1000.0f;
-                nodeSizes[nodeHandleId(node)] *= 100.0f;
+                nodeOffsets[nodeHandleId(nodes[i])].y() -= 1000.0f;
+                nodeSizes[nodeHandleId(nodes[i])] *= 100.0f;
             }
         }
     };

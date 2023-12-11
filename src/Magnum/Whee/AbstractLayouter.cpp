@@ -325,10 +325,12 @@ void AbstractLayouter::cleanNodes(const Containers::StridedArrayView1D<const Uns
 
 void AbstractLayouter::doClean(Containers::BitArrayView) {}
 
-void AbstractLayouter::update(const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) {
+void AbstractLayouter::update(const Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>& topLevelLayoutIds, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes) {
+    CORRADE_ASSERT(layoutIdsToUpdate.size() == capacity(),
+        "Whee::AbstractLayouter::update(): expected layoutIdsToUpdate to have" << capacity() << "bits but got" << layoutIdsToUpdate.size(), );
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size(),
         "Whee::AbstractLayouter::update(): expected node offset and size views to have the same size but got" << nodeOffsets.size() << "and" << nodeSizes.size(), );
-    doUpdate(topLevelLayoutIds, nodeOffsets, nodeSizes);
+    doUpdate(layoutIdsToUpdate, topLevelLayoutIds, nodeOffsets, nodeSizes);
     _state->state &= ~LayouterState::NeedsAssignmentUpdate;
 }
 
