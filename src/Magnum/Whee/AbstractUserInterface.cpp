@@ -27,6 +27,7 @@
 
 #include <Corrade/Containers/ArrayTuple.h>
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
@@ -426,6 +427,9 @@ struct AbstractUserInterface::State {
     Containers::ArrayView<UnsignedInt> topLevelLayoutOffsets;
     Containers::ArrayView<UnsignedByte> topLevelLayoutLayouterIds;
     Containers::ArrayView<UnsignedInt> topLevelLayoutIds;
+    /** @todo this is a separate allocation from layoutStateStorage, unify
+        somehow */
+    Containers::BitArray layoutMasks;
     Containers::ArrayTuple dataStateStorage;
     Containers::ArrayView<Containers::Pair<UnsignedInt, UnsignedInt>> dataToUpdateLayerOffsets;
     Containers::ArrayView<UnsignedInt> dataToUpdateIds;
@@ -1588,6 +1592,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 dataCount += instance->capacity();
 
     /* Single allocation for all temporary data */
+    /** @todo well, not really, there's one more temp array for layout mask
+        calculation */
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess;
@@ -1597,6 +1603,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
     Containers::ArrayView<LayoutHandle> topLevelLayouts;
     Containers::ArrayView<UnsignedInt> topLevelLayoutLevels;
     Containers::ArrayView<LayoutHandle> levelPartitionedTopLevelLayouts;
+    Containers::ArrayView<UnsignedInt> layouterCapacities;
     Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack;
     Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets;
     Containers::ArrayView<UnsignedInt> visibleNodeDataIds;
@@ -1616,6 +1623,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         {NoInit, layoutCount, topLevelLayouts},
         {NoInit, layoutCount, topLevelLayoutLevels},
         {NoInit, layoutCount, levelPartitionedTopLevelLayouts},
+        {NoInit, state.layouters.size(), layouterCapacities},
         /* Running data offset (+1) for each item. This array gets overwritten
            from scratch for each layer so zero-initializing is done inside
            orderVisibleNodeDataInto() instead. */
@@ -1699,7 +1707,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
         /* 4. Discover top-level layouts to be subsequently fed to layouter
            update() calls. */
-        const std::size_t topLevelLayoutOffsetCount = Implementation::discoverTopLevelLayoutNodesInto(
+        const Containers::Pair<UnsignedInt, std::size_t> maxLevelTopLevelLayoutOffsetCount = Implementation::discoverTopLevelLayoutNodesInto(
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parentOrOrder),
             state.visibleNodeIds,
             state.layouters.size(),
@@ -1712,40 +1720,78 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.topLevelLayoutOffsets,
             state.topLevelLayoutLayouterIds,
             state.topLevelLayoutIds);
-        state.topLevelLayoutOffsets = state.topLevelLayoutOffsets.prefix(topLevelLayoutOffsetCount);
+        state.topLevelLayoutOffsets = state.topLevelLayoutOffsets.prefix(maxLevelTopLevelLayoutOffsetCount.second());
+        state.topLevelLayoutLayouterIds = state.topLevelLayoutLayouterIds.prefix(maxLevelTopLevelLayoutOffsetCount.second() - 1);
+
+        /* Fill in layouter capacities */
+        /** @todo a way to have them all accessible via some strided slice?
+            by having the AbstractLayouter::State directly inside Layouter it
+            could also save the extra PIMPL allocation for every instance */
+        for(std::size_t i = 0; i != state.layouters.size(); ++i)
+            if(const AbstractLayouter* const instance = state.layouters[i].used.instance.get())
+                layouterCapacities[i] = instance->capacity();
+
+        /* Calculate the total bit count for all layout masks and allocate
+           them, together with a temporary mapping array */
+        /** @todo while everything else is tucked into an ArrayTuple, often
+            significantly overallocating, this is not -- have some bump
+            allocators finally */
+        std::size_t maskSize = 0;
+        for(std::size_t i = 0; i != maxLevelTopLevelLayoutOffsetCount.second() - 1; ++i)
+            maskSize += state.layouters[state.topLevelLayoutLayouterIds[i]].used.instance->capacity();
+        state.layoutMasks = Containers::BitArray{ValueInit, maskSize};
+        Containers::Array<std::size_t> layouterLevelMaskOffsets{NoInit, state.layouters.size()*maxLevelTopLevelLayoutOffsetCount.first()};
+
+        /* 5. Fill the per-layout-update masks. */
+        Implementation::fillLayoutUpdateMasksInto(
+            nodeLayouts,
+            nodeLayoutLevels,
+            layoutLevelOffsets,
+            state.topLevelLayoutOffsets,
+            state.topLevelLayoutLayouterIds,
+            layouterCapacities,
+            stridedArrayView(layouterLevelMaskOffsets).expanded<0, 2>({maxLevelTopLevelLayoutOffsetCount.first(), state.layouters.size()}),
+            state.layoutMasks);
     }
 
     /* If no layout update is needed, the `state.nodeOffsets`,
        `state.nodeSizes` and `state.absoluteNodeOffsets` are all
        up-to-date */
     if(states >= UserInterfaceState::NeedsLayoutUpdate) {
-        /* 5. Copy the explicitly set offset + sizes to the output. */
+        /* 6. Copy the explicitly set offset + sizes to the output. */
         Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::offset), state.nodeOffsets);
         Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size), state.nodeSizes);
 
-        /* 6. Perform layout calculation for all top-level layouts. */
+        /* 7. Perform layout calculation for all top-level layouts. */
+        std::size_t offset = 0;
         for(std::size_t i = 0; i != state.topLevelLayoutOffsets.size() - 1; ++i) {
             AbstractLayouter* const instance = state.layouters[state.topLevelLayoutLayouterIds[i]].used.instance.get();
             CORRADE_INTERNAL_ASSERT(instance);
 
             instance->update(
+                state.layoutMasks.sliceSize(offset, instance->capacity()),
                 state.topLevelLayoutIds.slice(
                     state.topLevelLayoutOffsets[i],
                     state.topLevelLayoutOffsets[i + 1]),
                 state.nodeOffsets,
                 state.nodeSizes);
+
+            offset += instance->capacity();
         }
+        CORRADE_INTERNAL_ASSERT(offset == state.layoutMasks.size());
 
         /* Call a no-op update() on layouters that have Needs*Update flags but
            have no visible layouts so update() wasn't called for them above */
         /** @todo this is nasty, think of a better solution */
         for(Layouter& layouter: state.layouters) {
             AbstractLayouter* const instance = layouter.used.instance.get();
-            if(instance && instance->state() & LayouterState::NeedsAssignmentUpdate)
-                instance->update({}, state.nodeOffsets, state.nodeSizes);
+            if(instance && instance->state() & LayouterState::NeedsAssignmentUpdate) {
+                /** @todo yeah and this allocation REALLY isn't great */
+                instance->update(Containers::BitArray{ValueInit, instance->capacity()}, {}, state.nodeOffsets, state.nodeSizes);
+            }
         }
 
-        /* 7. Calculate absolute offsets for visible nodes. */
+        /* 8. Calculate absolute offsets for visible nodes. */
         for(const UnsignedInt id: state.visibleNodeIds) {
             const Node& node = state.nodes[id];
             const Vector2 nodeOffset = state.nodeOffsets[id];
@@ -1758,7 +1804,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* If no clip update is needed, the `state.visibleNodeMask` is all
        up-to-date */
     if(states >= UserInterfaceState::NeedsNodeClipUpdate) {
-        /* 8. Cull / clip the visible nodes based on their clip rects */
+        /* 9. Cull / clip the visible nodes based on their clip rects */
         state.clipRectCount = Implementation::cullVisibleNodesInto(
             state.absoluteNodeOffsets,
             state.nodeSizes,
@@ -1817,7 +1863,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
         state.dataToUpdateLayerOffsets[0] = {0, 0};
         if(state.firstLayer != LayerHandle::Null) {
-            /* 9. Go through the layer draw order and order data of each layer
+            /* 10. Go through the layer draw order and order data of each layer
                that are assigned to visible nodes into a contiguous range,
                populating also the draw list and count of event data per
                visible node as a side effect. */
@@ -1899,7 +1945,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 state.dataToUpdateLayerOffsets[i + 1] = {offset, clipRectOffset};
             }
 
-            /* 10. Take the count of event data per visible node, turn that
+            /* 11. Take the count of event data per visible node, turn that
                into an offset array and populate it. */
 
             /* `[state.visibleNodeEventDataOffsets[i + 1], state.visibleNodeEventDataOffsets[i + 2])`
@@ -1916,7 +1962,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 }
             }
 
-            /* 11. Go through all event handling layers and populate the
+            /* 12. Go through all event handling layers and populate the
                `state.visibleNodeEventData` array based on the
                `state.visibleNodeEventDataOffsets` populated above. Compared
                to drawing, event handling has the layers in a front-to-back
@@ -1944,7 +1990,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             } while(layer != lastLayer);
         }
 
-        /* 12. Compact the draw calls by throwing away the empty ones. This
+        /* 13. Compact the draw calls by throwing away the empty ones. This
            cannot be done in the above loop directly as it'd need to go first
            by top-level node and then by layer in each. That it used to do in a
            certain way before which was much slower. */
@@ -1956,7 +2002,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.dataToDrawClipRectSizes);
     }
 
-    /* 13. For each layer submit an update of visible data across all visible
+    /* 14. For each layer submit an update of visible data across all visible
        top-level nodes. If no data update is needed, the data in layers is
        already up-to-date. */
     if(states >= UserInterfaceState::NeedsDataUpdate) for(std::size_t i = 0; i != state.layers.size(); ++i) {
@@ -1992,7 +2038,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
     /** @todo layer-specific cull/clip step? */
 
-    /* 14. Refresh the event handling state based on visible nodes. */
+    /* 15. Refresh the event handling state based on visible nodes. */
     if(states >= UserInterfaceState::NeedsNodeUpdate) {
         /* If the pressed node is no longer valid or is now invisible, reset
            it */

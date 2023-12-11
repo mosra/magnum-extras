@@ -56,6 +56,9 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
     void discoverTopLevelLayoutNodesSingleNode();
     void discoverTopLevelLayoutNodesSingleNodeLayoutChain();
 
+    void fillLayoutUpdateMasks();
+    void fillLayoutUpdateMasksNoLayouters();
+
     void cullVisibleNodesClipRects();
     void cullVisibleNodesEdges();
     void cullVisibleNodes();
@@ -395,7 +398,10 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
     addTests({&AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoLayouters,
               &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoVisibleNodes,
               &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleNode,
-              &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleNodeLayoutChain});
+              &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleNodeLayoutChain,
+
+              &AbstractUserInterfaceImplementationTest::fillLayoutUpdateMasks,
+              &AbstractUserInterfaceImplementationTest::fillLayoutUpdateMasksNoLayouters});
 
     addInstancedTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodesClipRects},
         Containers::arraySize(CullVisibleNodesClipRectsData));
@@ -785,7 +791,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleL
         levelPartitionedTopLevelLayouts,
         topLevelLayoutOffsets,
         topLevelLayoutLayouterIds,
-        topLevelLayoutIds);
+        topLevelLayoutIds).second();
     CORRADE_COMPARE_AS(count,
         0,
         TestSuite::Compare::Greater);
@@ -923,7 +929,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesMultipl
         levelPartitionedTopLevelLayouts,
         topLevelLayoutOffsets,
         topLevelLayoutLayouterIds,
-        topLevelLayoutIds);
+        topLevelLayoutIds).second();
     CORRADE_COMPARE_AS(count,
         0,
         TestSuite::Compare::Greater);
@@ -968,7 +974,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoLayou
         {},
         topLevelLayoutOffsets,
         {},
-        {});
+        {}).second();
     CORRADE_COMPARE(count, 1);
     CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutOffsets),
         Containers::arrayView({0u}),
@@ -1008,7 +1014,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoVisib
         {},
         topLevelLayoutOffsets,
         {},
-        {});
+        {}).second();
     CORRADE_COMPARE(count, 1);
     CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutOffsets),
         Containers::arrayView({0u}),
@@ -1050,7 +1056,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
         levelPartitionedTopLevelLayouts,
         topLevelLayoutOffsets,
         topLevelLayoutLayouterIds,
-        topLevelLayoutIds);
+        topLevelLayoutIds).second();
     CORRADE_COMPARE_AS(count,
         0,
         TestSuite::Compare::Greater);
@@ -1107,7 +1113,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
         levelPartitionedTopLevelLayouts,
         topLevelLayoutOffsets,
         topLevelLayoutLayouterIds,
-        topLevelLayoutIds);
+        topLevelLayoutIds).second();
     CORRADE_COMPARE_AS(count,
         0,
         TestSuite::Compare::Greater);
@@ -1123,6 +1129,113 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
     CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutIds).prefix(topLevelLayoutOffsets[count - 1]),
         Containers::arrayView({layoutHandleId(a), layoutHandleId(b), layoutHandleId(c)}),
         TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::fillLayoutUpdateMasks() {
+    LayouterHandle layouterA = layouterHandle(0xa, 1);
+    LayouterHandle layouterB = layouterHandle(0xb, 1);
+    LayouterHandle layouterC = layouterHandle(0xc, 1);
+    LayoutHandle a0 = layoutHandle(layouterA, 0, 1);
+    LayoutHandle a1 = layoutHandle(layouterA, 1, 1);
+    LayoutHandle a2 = layoutHandle(layouterA, 2, 1);
+    LayoutHandle a5 = layoutHandle(layouterA, 5, 1);
+    LayoutHandle a6 = layoutHandle(layouterA, 6, 1);
+    LayoutHandle b0 = layoutHandle(layouterB, 0, 1);
+    LayoutHandle b1 = layoutHandle(layouterB, 1, 1);
+    LayoutHandle b3 = layoutHandle(layouterB, 3, 1);
+    LayoutHandle b4 = layoutHandle(layouterB, 4, 1);
+    LayoutHandle b5 = layoutHandle(layouterB, 5, 1);
+    LayoutHandle b7 = layoutHandle(layouterB, 7, 1);
+    LayoutHandle b9 = layoutHandle(layouterB, 9, 1);
+    LayoutHandle c0 = layoutHandle(layouterC, 0, 1);
+    LayoutHandle c1 = layoutHandle(layouterC, 1, 1);
+    LayoutHandle c2 = layoutHandle(layouterC, 2, 1);
+    LayoutHandle c3 = layoutHandle(layouterC, 3, 1);
+
+    Containers::Pair<LayoutHandle, UnsignedInt> nodeLayoutsLevels[]{
+        /* Level + 1, with 0 (for b9) indicating the node has a layouter but it
+           isn't visible so it shouldn't be in the mask either */
+        {},      {b4, 3}, {},
+        {a1, 1}, {b1, 2}, {c0, 4},
+        {a2, 5}, {b7, 3}, {},
+        {},      {b3, 3}, {c3, 4},
+        {},      {},      {},
+        {a5, 3}, {b9, 0}, {},
+        {a6, 5}, {},      {},
+        {a0, 1}, {b5, 2}, {c1, 4},
+        {},      {b0, 3}, {c2, 4},
+    };
+
+    Containers::Pair<UnsignedInt, UnsignedByte> topLevelLayoutOffsetsLayouterIds[]{
+        /* Not using layouterHandleId(layouterA) etc because the cast to
+           UnsignedByte is then extremely annoying */
+        {0, 0xa}, /* level 0, a1 + a0 */
+        {1, 0xb}, /* level 1, b1 and b5 separately */
+        {3, 0xb}, /* level 2, b4 + b0 and then b7 + b3 */
+        {5, 0xa}, /* level 2, a5 */
+        {6, 0xc}, /* level 3, c0 to c2 and then c3 */
+        {8, 0xa}, /* level 4, a2 + a6 */
+        {9, 0xff},
+    };
+
+    UnsignedInt layoutLevelOffsets[]{
+        0, /* level 0 is 1 item */
+        1, /* level 1 is 2 items */
+        3, /* level 2 is 3 items */
+        6, /* level 3 is 2 items */
+        8, /* level 4 is 1 item */
+        9
+    };
+
+    UnsignedInt layouterCapacities[0xd];
+    layouterCapacities[layouterHandleId(layouterA)] = 7;  /* 2 places unused */
+    layouterCapacities[layouterHandleId(layouterB)] = 10; /* 4 places unused */
+    layouterCapacities[layouterHandleId(layouterC)] = 4;  /* all places used */
+
+    std::size_t layouterLevelMaskOffsets[0xd*5];
+    UnsignedByte masksData[6]{};
+    Containers::MutableBitArrayView masks{masksData, 0, 7 + 2*10 + 7 + 4 + 7};
+    Implementation::fillLayoutUpdateMasksInto(
+        stridedArrayView(nodeLayoutsLevels).slice(&Containers::Pair<LayoutHandle, UnsignedInt>::first).expanded<0, 2>({9, 3}),
+        stridedArrayView(nodeLayoutsLevels).slice(&Containers::Pair<LayoutHandle, UnsignedInt>::second).expanded<0, 2>({9, 3}),
+        layoutLevelOffsets,
+        stridedArrayView(topLevelLayoutOffsetsLayouterIds).slice(&Containers::Pair<UnsignedInt, UnsignedByte>::first),
+        stridedArrayView(topLevelLayoutOffsetsLayouterIds).slice(&Containers::Pair<UnsignedInt, UnsignedByte>::second).exceptSuffix(1),
+        layouterCapacities,
+        Containers::stridedArrayView(layouterLevelMaskOffsets).expanded<0, 2>({5, 0xd}),
+        masks);
+    /* The bits should be mutually disjoint for each layouter */
+    CORRADE_COMPARE_AS(masks, Containers::stridedArrayView({
+     /* 0  1  2  3  4  5  6  7  8  9 */
+        /* level 0; a1, a0 */
+        1, 1, 0, 0, 0, 0, 0,
+        /* level 1; b1, b5 */
+        0, 1, 0, 0, 0, 1, 0, 0, 0, 0,
+        /* level 2; b4, b0, b7, b3 */
+        1, 0, 0, 1, 1, 0, 0, 1, 0, 0,
+        /* level 2; a5 */
+        0, 0, 0, 0, 0, 1, 0,
+        /* level 3; c0, c1, c2, c3 */
+        1, 1, 1, 1,
+        /* level 4; a2, a6 */
+        0, 0, 1, 0, 0, 0, 1
+    }).sliceBit(0), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::fillLayoutUpdateMasksNoLayouters() {
+    /* Shouldn't blow up in any way */
+    UnsignedInt topLevelLayoutOffsets[1];
+    UnsignedInt layoutLevelOffsets[1]{};
+    Implementation::fillLayoutUpdateMasksInto(
+        Containers::StridedArrayView2D<const LayoutHandle>{nullptr, {9, 0}},
+        Containers::StridedArrayView2D<UnsignedInt>{nullptr, {9, 0}},
+        layoutLevelOffsets,
+        topLevelLayoutOffsets,
+        {},
+        {},
+        {},
+        {});
+    CORRADE_VERIFY(true);
 }
 
 void AbstractUserInterfaceImplementationTest::cullVisibleNodesClipRects() {
