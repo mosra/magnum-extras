@@ -25,6 +25,7 @@
 
 #include <new>
 #include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
@@ -2759,6 +2760,8 @@ void TextLayerTest::updateCleanDataOrder() {
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
+    UnsignedByte nodesEnabledData[2]{}; /** @todo deliberately zero, use */
+    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 16};
     nodeOffsets[6] = data.node6Offset;
     nodeSizes[6] = data.node6Size;
     nodeOffsets[15] = {3.0f, 4.0f};
@@ -2766,7 +2769,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
-        layer.update({}, {}, {}, nodeOffsets, nodeSizes, {}, {});
+        layer.update({}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
         CORRADE_COMPARE_AS(layer.stateData().indices,
             Containers::ArrayView<const UnsignedInt>{},
             TestSuite::Compare::Container);
@@ -2778,7 +2781,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Just the filled subset is getting updated */
     UnsignedInt dataIds[]{9, 5, 7, 3};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* The indices should be filled just for the four items */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
@@ -2973,7 +2976,7 @@ void TextLayerTest::updateCleanDataOrder() {
     }), TestSuite::Compare::Container);
 
     UnsignedInt dataIdsPostClean[]{9, 7};
-    layer.update(dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, {}, {});
+    layer.update(dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* There should be just 9 glyph runs, assigned to the remaining 9 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -3073,7 +3076,7 @@ void TextLayerTest::updateCleanDataOrder() {
     }), TestSuite::Compare::Container);
 
     UnsignedInt dataIdsPostRemoval[]{9};
-    layer.update(dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, {}, {});
+    layer.update(dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* There should be just 7 glyph runs, assigned to the remaining 7 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -3235,10 +3238,12 @@ void TextLayerTest::updateAlignment() {
 
     Vector2 nodeOffsets[4];
     Vector2 nodeSizes[4];
+    UnsignedByte nodesEnabledData[1]{};
+    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 4};
     nodeOffsets[3] = {50.5f, 20.5f};
     nodeSizes[3] = {200.8f, 100.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* 2--3
        |  |
@@ -3314,10 +3319,12 @@ void TextLayerTest::updateAlignmentGlyph() {
 
     Vector2 nodeOffsets[4];
     Vector2 nodeSizes[4];
+    UnsignedByte nodesEnabledData[1]{};
+    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 4};
     nodeOffsets[3] = {50.5f, 20.5f};
     nodeSizes[3] = {200.8f, 100.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* 2--3
        |  |
@@ -3426,10 +3433,12 @@ void TextLayerTest::updatePadding() {
 
     Vector2 nodeOffsets[4];
     Vector2 nodeSizes[4];
+    UnsignedByte nodesEnabledData[1]{};
+    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 4};
     nodeOffsets[3] = {20.5f, 10.5f};
     nodeSizes[3] = {300.8f, 150.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* 2--3
        |  |
@@ -3506,10 +3515,12 @@ void TextLayerTest::updatePaddingGlyph() {
 
     Vector2 nodeOffsets[4];
     Vector2 nodeSizes[4];
+    UnsignedByte nodesEnabledData[1]{};
+    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 4};
     nodeOffsets[3] = {20.5f, 10.5f};
     nodeSizes[3] = {300.8f, 150.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* 2--3
        |  |
@@ -3537,7 +3548,7 @@ void TextLayerTest::updateNoStyleSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update({}, {}, {}, {}, {}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::TextLayer::update(): no style data was set\n");
 }
 
