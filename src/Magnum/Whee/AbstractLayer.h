@@ -356,16 +356,17 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * the @p clipRectIds and @p clipRectDataCounts views have the same
          * size, @p nodeOffsets and @p nodeSizes have the same size and
          * @p clipRectOffsets and @p clipRectOffset have the same size. The
-         * @p nodeOffsets and @p nodeSizes views should be large enough to
-         * contain any valid node ID. Delegates to @ref doUpdate(), see its
-         * documentation for more information about the arguments.
+         * @p nodeOffsets, @p nodeSizes and @p nodesEnabled views should be
+         * large enough to contain any valid node ID. Delegates to
+         * @ref doUpdate(), see its documentation for more information about
+         * the arguments.
          *
          * Calling this function resets @ref LayerState::NeedsUpdate and
          * @ref LayerState::NeedsAttachmentUpdate, however note that behavior
          * of this function is independent of @ref state() --- it performs the
          * update always regardless of what flags are set.
          */
-        void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Draw a sub-range of visible layer data
@@ -377,12 +378,13 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * size, that the @p clipRectIds and @p clipRectDataCounts views have
          * the same size, @p nodeOffsets and @p nodeSizes have the same size
          * and @p clipRectOffsets and @p clipRectOffset have the same size. The
-         * @p nodeOffsets and @p nodeSizes views should be large enough to
-         * contain any valid node ID. Delegates to @ref doDraw(), see its
-         * documentation for more information about the arguments.
+         * @p nodeOffsets, @p nodeSizes and @p nodesEnabled views should be
+         * large enough to contain any valid node ID. Delegates to
+         * @ref doDraw(), see its documentation for more information about the
+         * arguments.
          * @see @ref features()
          */
-        void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Handle a pointer press event
@@ -607,6 +609,9 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *      clip rect from @p clipRectIds
          * @param nodeOffsets       Absolute node offsets indexed by node ID
          * @param nodeSizes         Node sizes indexed by node ID
+         * @param nodesEnabled      Which visible nodes are enabled, i.e. which
+         *      don't have @ref NodeFlag::Disabled set on themselves or any
+         *      parent node
          * @param clipRectOffsets   Absolute clip rect offsets referenced by
          *      @p clipRectIds
          * @param clipRectSizes     Clip rect sizes referenced by
@@ -622,16 +627,16 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Node handles corresponding to @p dataIds are available in
          * @ref nodes(), node IDs can be then extracted from the handles
          * using @ref nodeHandleId(). The node IDs then index into the
-         * @p nodeOffsets and @p nodeSizes views. The @p nodeOffsets and
-         * @p nodeSizes have the same size and are guaranteed to be large
-         * enough to contain any valid node ID.
+         * @p nodeOffsets, @p nodeSizes and @p nodesEnabled views. The
+         * @p nodeOffsets, @p nodeSizes and @p nodesEnabled have the same size
+         * and are guaranteed to be large enough to contain any valid node ID.
          *
          * All @ref nodes() at indices corresponding to @p dataIds are
          * guaranteed to not be @ref NodeHandle::Null at the time this function
-         * is called. The @p nodeOffsets and @p nodeSizes arrays may contain
-         * random or uninitialized values for nodes different than those
-         * referenced from @p dataIds, such as for nodes that are not currently
-         * visible or freed node handles.
+         * is called. The @p nodeOffsets, @p nodeSizes and @p nodesDisabled
+         * arrays may contain random or uninitialized values for nodes
+         * different than those referenced from @p dataIds, such as for nodes
+         * that are not currently visible or freed node handles.
          *
          * The node data are meant to be clipped by rects defined in
          * @p clipRectOffsets and @p clipRectSizes. The @p clipRectIds and
@@ -659,7 +664,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * data to update, while @ref doDraw() is called several times with
          * different sub-ranges of the data based on desired draw order.
          */
-        virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Draw a sub-range of visible layer data
@@ -681,6 +686,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *      passed to @ref doUpdate() earlier.
          * @param nodeSizes         Node sizes. Same as the view passed to
          *      @ref doUpdate() earlier.
+         * @param nodesEnabled      Which visible nodes are enabled, i.e. which
+         *      don't have @ref NodeFlag::Disabled set on themselves or any
+         *      parent node. Same as the view passed to @ref doUpdate()
+         *      earlier.
          * @param clipRectOffsets   Absolute clip rect offsets. Same as the
          *      view passed to @ref doUpdate() earlier.
          * @param clipRectSizes     Clip rect sizes. Same as the view passed to
@@ -692,8 +701,8 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref doUpdate() was called at some point before this function with
          * the exact same views passed to @p dataIds, @p clipRectIds,
          * @p clipRectDataCounts, @p nodeOffsets, @p nodeSizes,
-         * @p clipRectOffsets and @p clipRectSizes, see its documentation for
-         * their relations and constraints.
+         * @p nodesEnabled, @p clipRectOffsets and @p clipRectSizes, see its
+         * documentation for their relations and constraints.
          *
          * Like with @ref doUpdate(), the @p clipRectOffsets and
          * @p clipRectSizes are in the same coordinate system as @p nodeOffsets
@@ -712,7 +721,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref doClean(), this function is never called with an empty
          * @p count.
          */
-        virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Handle a pointer press event

@@ -49,6 +49,7 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         #define _c(value) case UserInterfaceState::value: return debug << "::" #value;
         _c(NeedsDataUpdate)
         _c(NeedsDataAttachmentUpdate)
+        _c(NeedsNodeEnabledUpdate)
         _c(NeedsNodeClipUpdate)
         _c(NeedsLayoutUpdate)
         _c(NeedsLayoutAssignmentUpdate)
@@ -73,6 +74,8 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         /* Implied by NeedsLayoutUpdate, has to be after */
         UserInterfaceState::NeedsNodeClipUpdate,
         /* Implied by NeedsNodeClipUpdate, has to be after */
+        UserInterfaceState::NeedsNodeEnabledUpdate,
+        /* Implied by NeedsNodeEnabledUpdate, has to be after */
         UserInterfaceState::NeedsDataAttachmentUpdate,
         /* Implied by NeedsDataAttachmentUpdate, has to be after */
         UserInterfaceState::NeedsDataUpdate
@@ -87,6 +90,8 @@ Debug& operator<<(Debug& debug, const NodeFlag value) {
         #define _c(value) case NodeFlag::value: return debug << "::" #value;
         _c(Hidden)
         _c(Clip)
+        _c(NoEvents)
+        _c(Disabled)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -97,7 +102,10 @@ Debug& operator<<(Debug& debug, const NodeFlag value) {
 Debug& operator<<(Debug& debug, const NodeFlags value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::NodeFlags{}", {
         NodeFlag::Hidden,
-        NodeFlag::Clip
+        NodeFlag::Clip,
+        NodeFlag::Disabled,
+        /* Implied by Disabled, has to be after */
+        NodeFlag::NoEvents
     });
 }
 
@@ -420,6 +428,8 @@ struct AbstractUserInterface::State {
     Containers::ArrayView<Vector2> nodeSizes;
     Containers::ArrayView<Vector2> absoluteNodeOffsets;
     Containers::MutableBitArrayView visibleNodeMask;
+    Containers::MutableBitArrayView visibleEventNodeMask;
+    Containers::MutableBitArrayView visibleEnabledNodeMask;
     Containers::ArrayView<Vector2> clipRectOffsets;
     Containers::ArrayView<Vector2> clipRectSizes;
     Containers::ArrayView<UnsignedInt> clipRectNodeCounts;
@@ -1182,6 +1192,8 @@ void AbstractUserInterface::setNodeFlagsInternal(const UnsignedInt id, const Nod
         state.state |= UserInterfaceState::NeedsNodeUpdate;
     if((state.nodes[id].used.flags & NodeFlag::Clip) != (flags & NodeFlag::Clip))
         state.state |= UserInterfaceState::NeedsNodeClipUpdate;
+    if((state.nodes[id].used.flags & (NodeFlag::NoEvents|NodeFlag::Disabled)) != (flags & (NodeFlag::NoEvents|NodeFlag::Disabled)))
+        state.state |= UserInterfaceState::NeedsNodeEnabledUpdate;
     state.nodes[id].used.flags = flags;
 }
 
@@ -1655,6 +1667,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.nodes.size(), state.nodeSizes},
             {NoInit, state.nodes.size(), state.absoluteNodeOffsets},
             {NoInit, state.nodes.size(), state.visibleNodeMask},
+            {NoInit, state.nodes.size(), state.visibleEventNodeMask},
+            {NoInit, state.nodes.size(), state.visibleEnabledNodeMask},
             {NoInit, state.nodes.size(), state.clipRectOffsets},
             {NoInit, state.nodes.size(), state.clipRectSizes},
             {NoInit, state.nodes.size(), state.clipRectNodeCounts},
@@ -1833,6 +1847,33 @@ AbstractUserInterface& AbstractUserInterface::update() {
             and such */
     }
 
+    /* If no node enabled state update is needed, the `state.visibleNodeMask`
+       and `state.visibleEnabledNodeMask` are up-to-date */
+    if(states >= UserInterfaceState::NeedsNodeEnabledUpdate) {
+        /** @todo copy() for a BitArrayView, finally */
+        CORRADE_INTERNAL_ASSERT(
+            state.visibleNodeMask.offset() == 0 &&
+            state.visibleEventNodeMask.offset() == 0 &&
+            state.visibleEnabledNodeMask.offset() == 0);
+        const std::size_t sizeWholeBytes = (state.visibleNodeMask.size() + 7)/8;
+        Utility::copy(
+            Containers::arrayView(state.visibleNodeMask.data(), sizeWholeBytes),
+            Containers::arrayView(state.visibleEventNodeMask.data(), sizeWholeBytes));
+        Utility::copy(
+            Containers::arrayView(state.visibleNodeMask.data(), sizeWholeBytes),
+            Containers::arrayView(state.visibleEnabledNodeMask.data(), sizeWholeBytes));
+        Implementation::propagateNodeFlagToChildrenInto<NodeFlag::NoEvents>(
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
+            state.visibleNodeIds,
+            state.visibleNodeChildrenCounts,
+            state.visibleEventNodeMask);
+        Implementation::propagateNodeFlagToChildrenInto<NodeFlag::Disabled>(
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
+            state.visibleNodeIds,
+            state.visibleNodeChildrenCounts,
+            state.visibleEnabledNodeMask);
+    }
+
     /* If no data attachment update is needed, the data in
        `state.dataStateStorage` and all views pointing to it is already
        up-to-date. */
@@ -1971,7 +2012,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         Implementation::countNodeDataForEventHandlingInto(
                             instance->nodes(),
                             state.visibleNodeEventDataOffsets,
-                            state.visibleNodeMask);
+                            state.visibleEventNodeMask);
                 }
 
                 state.dataToUpdateLayerOffsets[i + 1] = {offset, clipRectOffset};
@@ -2014,7 +2055,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                            need to explicitly check that as well. */
                         layerItem.used.instance->nodes(),
                         state.visibleNodeEventDataOffsets,
-                        state.visibleNodeMask,
+                        state.visibleEventNodeMask,
                         state.visibleNodeEventData);
                 }
 
@@ -2048,8 +2089,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
            empty in order to allow the implementations to do various cleanups.
            Plus the update() call resets the NeedsUpdate state on the layer,
            if it's set. */
-        /** @todo include a bitmask of what node offsets/sizes actually
-            changed */
+        /** @todo include a bitmask of what node offsets / sizes / enabled bits
+            / data actually changed, or if it's just the set / order of drawn
+            IDs */
         instance->update(
             state.dataToUpdateIds.slice(
                 state.dataToUpdateLayerOffsets[i].first(),
@@ -2062,8 +2104,15 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 state.dataToUpdateLayerOffsets[i + 1].second()),
             /** @todo some layer implementations may eventually want relative
                 offsets, not absolute, provide both? */
+            /** @todo once the changed mask is there, might be useful to have
+                (opt-in?) offsets relative to the clip rect -- it can be a
+                different draw anyway, so it might be easier to just add an
+                extra transform at draw time without triggering a full data
+                update for all offsets; what changes is the culling tho, which
+                still needs at least the index buffer update, not everything */
             state.absoluteNodeOffsets,
             state.nodeSizes,
+            state.visibleEnabledNodeMask,
             state.clipRectOffsets.prefix(state.clipRectCount),
             state.clipRectSizes.prefix(state.clipRectCount));
     }
@@ -2071,25 +2120,25 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /** @todo layer-specific cull/clip step? */
 
     /* 15. Refresh the event handling state based on visible nodes. */
-    if(states >= UserInterfaceState::NeedsNodeUpdate) {
-        /* If the pressed node is no longer valid or is now invisible, reset
-           it */
+    if(states >= UserInterfaceState::NeedsNodeEnabledUpdate) {
+        /* If the pressed node is no longer valid, is now invisible or doesn't
+           react to events, reset it */
         if(!isHandleValid(state.pointerEventPressedNode) ||
-           !state.visibleNodeMask[nodeHandleId(state.pointerEventHoveredNode)]) {
+           !state.visibleEventNodeMask[nodeHandleId(state.pointerEventHoveredNode)]) {
             state.pointerEventPressedNode = NodeHandle::Null;
         }
 
-        /* If the node capturing pointer events is no longer valid or is now
-           invisible, reset it */
+        /* If the node capturing pointer events is no longer valid, is now
+           invisible or doesn't react to events, reset it */
         if(!isHandleValid(state.pointerEventCapturedNode) ||
-           !state.visibleNodeMask[nodeHandleId(state.pointerEventCapturedNode)]) {
+           !state.visibleEventNodeMask[nodeHandleId(state.pointerEventCapturedNode)]) {
             state.pointerEventCapturedNode = NodeHandle::Null;
         }
 
-        /* If the hovered node is no longer valid or is now invisible, reset
-           it */
+        /* If the hovered node is no longer valid, is now invisible or
+           doesn't react to events, reset it */
         if(!isHandleValid(state.pointerEventHoveredNode) ||
-           !state.visibleNodeMask[nodeHandleId(state.pointerEventHoveredNode)]) {
+           !state.visibleEventNodeMask[nodeHandleId(state.pointerEventHoveredNode)]) {
             state.pointerEventHoveredNode = NodeHandle::Null;
         }
     }
@@ -2133,6 +2182,7 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             state.dataToDrawClipRectSizes[i],
             state.absoluteNodeOffsets,
             state.nodeSizes,
+            state.visibleEnabledNodeMask,
             state.clipRectOffsets.prefix(state.clipRectCount),
             state.clipRectSizes.prefix(state.clipRectCount));
     }

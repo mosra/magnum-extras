@@ -24,6 +24,7 @@
 */
 
 #include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StringIterable.h>
 #include <Corrade/PluginManager/Manager.h>
@@ -369,7 +370,7 @@ void BaseLayerGLTest::drawNoSizeSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::BaseLayerGL::draw(): user interface size wasn't set\n");
 }
 
@@ -383,7 +384,7 @@ void BaseLayerGLTest::drawNoStyleSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::BaseLayerGL::draw(): no style data was set\n");
 }
 

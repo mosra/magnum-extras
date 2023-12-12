@@ -244,6 +244,36 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
     return offset;
 }
 
+/* The `visibleNodeIds` and `visibleNodeChildrenCounts` are outputs of
+   orderVisibleNodesDepthFirstInto() above. The `mask` bits get set to 1 for
+   all nodes that have a particular NodeFlag set, or any of their parents has it
+   set. To be used for NodeFlag::NoEvent and Disabled.
+
+   Only ever resets bits, never sets -- assumes the mask is initially set to
+   1s (for example for visible and not culled nodes), and the operation results
+   in fewer 1s being set. */
+template<NodeFlag flag> void propagateNodeFlagToChildrenInto(const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::MutableBitArrayView mask) {
+    CORRADE_INTERNAL_ASSERT(
+        visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
+        mask.size() == nodeFlags.size());
+
+    /* The visible node IDs are ordered such that all children of a particular
+       node are right behind it. Thus, in order to mark a node including all
+       its children, we simply iterate the node IDs for all children and set
+       corresponding bits, and then only continue after all children. That also
+       means we don't redundantly check for the flag in nodes that are already
+       marked transitively. */
+    for(std::size_t i = 0; i != visibleNodeIds.size(); ++i) {
+        if(nodeFlags[visibleNodeIds[i]] >= flag) {
+            const std::size_t childrenCount = visibleNodeChildrenCounts[i];
+            for(std::size_t j = i, jMax = i + 1 + childrenCount; j != jMax; ++j)
+                mask.reset(visibleNodeIds[j]);
+            i += childrenCount;
+            continue;
+        }
+    }
+}
+
 /* The `visibleNodeIds` is the output of orderVisibleNodesDepthFirstInto()
    above. The `nodeLayouts` is meant to be a 2D array, where the first
    dimension is all node IDs and the second dimension is all layouters ordered
@@ -917,9 +947,9 @@ void countNodeDataForEventHandlingInto(const Containers::StridedArrayView1D<cons
    `visibleNodeEventDataOffsets[i]` to `visibleNodeEventDataOffsets[i + 1]`
    then being the range of data in `visibleNodeEventData` corresponding to node
    `i`. */
-void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<DataHandle> visibleNodeEventData) {
+void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets, const Containers::BitArrayView visibleEventNodeMask, const Containers::ArrayView<DataHandle> visibleNodeEventData) {
     CORRADE_INTERNAL_ASSERT(
-        visibleNodeEventDataOffsets.size() == visibleNodeMask.size() + 1);
+        visibleNodeEventDataOffsets.size() == visibleEventNodeMask.size() + 1);
 
     /* Go through the data list in reverse, convert that to data handle ranges.
        The `visibleNodeEventDataOffsets` array gets shifted by one element by
@@ -933,7 +963,7 @@ void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers
         if(node == NodeHandle::Null)
             continue;
         const UnsignedInt id = nodeHandleId(node);
-        if(visibleNodeMask[id])
+        if(visibleEventNodeMask[id])
             /* The DataHandle generation isn't used for anything, only data and
                layer ID is extracted out of the handle, so can be arbitrary. */
             visibleNodeEventData[visibleNodeEventDataOffsets[id + 1]++] = dataHandle(layer, i - 1, 0);
