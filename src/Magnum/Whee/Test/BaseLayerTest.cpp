@@ -25,6 +25,7 @@
 
 #include <new>
 #include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/TestSuite/Tester.h>
@@ -1213,6 +1214,8 @@ void BaseLayerTest::updateDataOrder() {
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
+    UnsignedByte nodesEnabledData[2]{}; /** @todo deliberately zero, use */
+    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 16};
     nodeOffsets[6] = data.node6Offset;
     nodeSizes[6] = data.node6Size;
     nodeOffsets[15] = {3.0f, 4.0f};
@@ -1220,7 +1223,7 @@ void BaseLayerTest::updateDataOrder() {
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
-        layer.update({}, {}, {}, nodeOffsets, nodeSizes, {}, {});
+        layer.update({}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
         CORRADE_COMPARE_AS(layer.stateData().indices,
             Containers::ArrayView<const UnsignedInt>{},
             TestSuite::Compare::Container);
@@ -1229,7 +1232,7 @@ void BaseLayerTest::updateDataOrder() {
 
     /* Just the filled subset is getting updated */
     UnsignedInt dataIds[]{9, 7, 3};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* The indices should be filled just for the three items */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
@@ -1308,7 +1311,7 @@ void BaseLayerTest::updateNoStyleSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update({}, {}, {}, {}, {}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::BaseLayer::update(): no style data was set\n");
 }
 
