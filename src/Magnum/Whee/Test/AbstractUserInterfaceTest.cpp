@@ -52,6 +52,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
 
     void debugNodeFlag();
     void debugNodeFlags();
+    void debugNodeFlagsSupersets();
     void debugState();
     void debugStates();
     void debugStatesSupersets();
@@ -138,7 +139,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventPointerMoveRelativePositionWithPressRelease();
     void eventPointerMoveNotAccepted();
     void eventPointerMoveNodePositionUpdated();
-    void eventPointerMoveNodeHidden();
+    void eventPointerMoveNodeHiddenDisabledNoEvents();
     void eventPointerMoveNodeRemoved();
     void eventPointerMoveAllDataRemoved();
 
@@ -148,12 +149,12 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventCaptureNotCaptured();
     void eventCaptureChangeCaptureInNotAcceptedEvent();
     void eventCaptureNodePositionUpdated();
-    void eventCaptureNodeHidden();
+    void eventCaptureNodeHiddenDisabledNoEvents();
     void eventCaptureNodeRemoved();
     void eventCaptureAllDataRemoved();
 
     void eventTapOrClick();
-    void eventTapOrClickNodeHidden();
+    void eventTapOrClickNodeHiddenDisabledNoEvents();
     void eventTapOrClickNodeRemoved();
     void eventTapOrClickAllDataRemoved();
 };
@@ -331,6 +332,26 @@ const struct {
 
 const struct {
     const char* name;
+    NodeFlag flag;
+    bool update;
+    UserInterfaceState expectedState;
+} EventPointerNodeHiddenDisabledNoEventsData[]{
+    {"hidden, update before", NodeFlag::Hidden, true,
+        UserInterfaceState::NeedsNodeUpdate},
+    {"hidden", NodeFlag::Hidden, false,
+        UserInterfaceState::NeedsNodeUpdate},
+    {"no events, update before", NodeFlag::NoEvents, true,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"no events", NodeFlag::NoEvents, false,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"disabled, update before", NodeFlag::Disabled, true,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"disabled", NodeFlag::Disabled, false,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+};
+
+const struct {
+    const char* name;
     bool update;
     bool removeParent;
 } EventPointerNodeRemovedData[]{
@@ -362,6 +383,40 @@ const struct {
 
 const struct {
     const char* name;
+    NodeFlag flag;
+    bool release;
+    bool move;
+    bool update;
+    UserInterfaceState expectedState;
+} EventCaptureNodeHiddenDisabledNoEventsData[]{
+    {"hidden, release, update before", NodeFlag::Hidden, true, false, true,
+        UserInterfaceState::NeedsNodeUpdate},
+    {"hidden, release", NodeFlag::Hidden, true, false, false,
+        UserInterfaceState::NeedsNodeUpdate},
+    {"hidden, move, update before", NodeFlag::Hidden, false, true, true,
+        UserInterfaceState::NeedsNodeUpdate},
+    {"hidden, move", NodeFlag::Hidden, false, true, false,
+        UserInterfaceState::NeedsNodeUpdate},
+    {"no events, release, update before", NodeFlag::NoEvents, true, false, true,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"no events, release", NodeFlag::NoEvents, true, false, false,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"no events, move, update before", NodeFlag::NoEvents, false, true, true,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"no events, move", NodeFlag::NoEvents, false, true, false,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"disabled, release, update before", NodeFlag::Disabled, true, false, true,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"disabled, release", NodeFlag::Disabled, true, false, false,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"disabled, move, update before", NodeFlag::Disabled, false, true, true,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+    {"disabled, move", NodeFlag::Disabled, false, true, false,
+        UserInterfaceState::NeedsNodeEnabledUpdate},
+};
+
+const struct {
+    const char* name;
     bool release;
     bool move;
     bool update;
@@ -377,6 +432,7 @@ const struct {
 AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addTests({&AbstractUserInterfaceTest::debugNodeFlag,
               &AbstractUserInterfaceTest::debugNodeFlags,
+              &AbstractUserInterfaceTest::debugNodeFlagsSupersets,
               &AbstractUserInterfaceTest::debugState,
               &AbstractUserInterfaceTest::debugStates,
               &AbstractUserInterfaceTest::debugStatesSupersets,
@@ -477,9 +533,11 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addTests({&AbstractUserInterfaceTest::eventPointerMoveNotAccepted});
 
-    addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated,
-                       &AbstractUserInterfaceTest::eventPointerMoveNodeHidden},
+    addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated},
         Containers::arraySize(UpdateData));
+
+    addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveNodeHiddenDisabledNoEvents},
+        Containers::arraySize(EventPointerNodeHiddenDisabledNoEventsData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveNodeRemoved},
         Containers::arraySize(EventPointerNodeRemovedData));
@@ -495,9 +553,11 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::eventCaptureNotCaptured,
               &AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent});
 
-    addInstancedTests({&AbstractUserInterfaceTest::eventCaptureNodePositionUpdated,
-                       &AbstractUserInterfaceTest::eventCaptureNodeHidden},
+    addInstancedTests({&AbstractUserInterfaceTest::eventCaptureNodePositionUpdated},
         Containers::arraySize(EventCaptureUpdateData));
+
+    addInstancedTests({&AbstractUserInterfaceTest::eventCaptureNodeHiddenDisabledNoEvents},
+        Containers::arraySize(EventCaptureNodeHiddenDisabledNoEventsData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventCaptureNodeRemoved},
         Containers::arraySize(EventCaptureNodeRemovedData));
@@ -508,8 +568,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClick},
         Containers::arraySize(EventLayouterData));
 
-    addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClickNodeHidden},
-        Containers::arraySize(UpdateData));
+    addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClickNodeHiddenDisabledNoEvents},
+        Containers::arraySize(EventPointerNodeHiddenDisabledNoEventsData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClickNodeRemoved},
         Containers::arraySize(EventPointerNodeRemovedData));
@@ -530,6 +590,15 @@ void AbstractUserInterfaceTest::debugNodeFlags() {
     CORRADE_COMPARE(out.str(), "Whee::NodeFlag::Hidden|Whee::NodeFlag(0xe0) Whee::NodeFlags{}\n");
 }
 
+void AbstractUserInterfaceTest::debugNodeFlagsSupersets() {
+    /* Disabled is a superset of NoEvents, so only one should be printed */
+    {
+        std::ostringstream out;
+        Debug{&out} << (NodeFlag::Disabled|NodeFlag::NoEvents);
+        CORRADE_COMPARE(out.str(), "Whee::NodeFlag::Disabled\n");
+    }
+}
+
 void AbstractUserInterfaceTest::debugState() {
     std::ostringstream out;
     Debug{&out} << UserInterfaceState::NeedsNodeClean << UserInterfaceState(0xbe);
@@ -538,8 +607,12 @@ void AbstractUserInterfaceTest::debugState() {
 
 void AbstractUserInterfaceTest::debugStates() {
     std::ostringstream out;
-    Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState(0x80)) << UserInterfaceStates{};
-    CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean|Whee::UserInterfaceState(0x80) Whee::UserInterfaceStates{}\n");
+    Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState(0x100)) << UserInterfaceStates{};
+    {
+        CORRADE_EXPECT_FAIL("There are no bits left and every value is a superset of the previous so there's not really any way to test this.");
+        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean|Whee::UserInterfaceState(0x100) Whee::UserInterfaceStates{}\n");
+    }
+    CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean Whee::UserInterfaceStates{}\n");
 }
 
 void AbstractUserInterfaceTest::debugStatesSupersets() {
@@ -550,11 +623,18 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Debug{&out} << (UserInterfaceState::NeedsDataUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsDataAttachmentUpdate\n");
 
-    /* NeedsNodeClipUpdate is a superset of NeedsDataAttachmentUpdate, so only
-       one should be printed */
+    /* NeedsNodeEnabledUpdate is a superset of NeedsDataAttachmentUpdate, so
+       only one should be printed */
     } {
         std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
+        Debug{&out} << (UserInterfaceState::NeedsNodeEnabledUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
+        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeEnabledUpdate\n");
+
+    /* NeedsNodeClipUpdate is a superset of NeedsNodeEnabledUpdate, so only one
+       should be printed */
+    } {
+        std::ostringstream out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsNodeEnabledUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClipUpdate\n");
 
     /* NeedsLayoutUpdate is a superset of NeedsNodeClipUpdate, so only one
@@ -3190,7 +3270,7 @@ void AbstractUserInterfaceTest::state() {
             ++cleanCallCount;
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_COMPARE_AS(dataIds,
                 expectedDataIds,
                 TestSuite::Compare::Container);
@@ -3209,6 +3289,9 @@ void AbstractUserInterfaceTest::state() {
                     continue;
                 CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
             }
+            CORRADE_COMPARE_AS(nodesEnabled,
+                expectedNodesEnabled.sliceBit(0),
+                TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(clipRectOffsets,
                 expectedClipRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::first),
                 TestSuite::Compare::Container);
@@ -3222,6 +3305,7 @@ void AbstractUserInterfaceTest::state() {
         Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
         Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedClipRectIdsDataCounts;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
+        Containers::StridedArrayView1D<const bool> expectedNodesEnabled;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedClipRectOffsetsSizes;
         Int cleanCallCount = 0;
         Int updateCallCount = 0;
@@ -3351,6 +3435,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible and notInOrder */
+            true, true, true, true, true, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
             {1, 1}  /* another1, unclipped */
@@ -3363,6 +3451,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
@@ -3417,6 +3506,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible and notInOrder */
+            true, true, true, true, true, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
             {1, 1}  /* another1, unclipped */
@@ -3429,6 +3522,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
@@ -3561,6 +3655,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible, notInOrder and now nested2 */
+            true, true, true, true, false, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
             {1, 1}  /* another1, unclipped */
@@ -3573,6 +3671,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -3707,6 +3806,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible, notInOrder and again nested2 */
+            true, true, true, true, false, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
             {1, 1}  /* another1, unclipped */
@@ -3719,6 +3822,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -3834,6 +3938,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* Only another1 and another2 are left visible (and enabled) now */
+            false, true, true, false, false, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}  /* another1, unclipped */
             /* another2 has no data */
@@ -3844,6 +3952,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -3967,6 +4076,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible, notInOrder and nested2 again */
+            true, true, true, true, false, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
             {1, 1}  /* another1, unclipped */
@@ -3979,6 +4092,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -3999,6 +4113,240 @@ void AbstractUserInterfaceTest::state() {
     /* Resetting a Hidden flag that's not there should be a no-op,
        independently of what other flags get cleared */
     ui.clearNodeFlags(node, NodeFlag(0x70)|NodeFlag::Hidden);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting a Disabled flag sets a state flag */
+    ui.addNodeFlags(node, NodeFlag::Disabled);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+        if(data.layouters) {
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+            CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+                layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            }), TestSuite::Compare::Container);
+        }
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+    }
+
+    /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
+       call layouters. */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataAnother1),
+        };
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another1 */
+            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
+        };
+        bool expectedNodesEnabled[]{
+            /* Only another1 and another2 are left enabled now */
+            false, true, true, false, false, false, false
+        };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and remaining child */
+            {1, 1}  /* another1, unclipped */
+            /* another2 has no data */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+            {{}, {}},
+            {{}, {}}
+        };
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    if(data.layouters) {
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+            /* update() again gets called twice on layouter 2 */
+            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+        }), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+
+    /* Setting a Disabled flag that's already there should be a no-op */
+    ui.addNodeFlags(node, NodeFlag::Disabled);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting an NoEvents flag that's already implied by Disabled should be a
+       no-op */
+    ui.addNodeFlags(node, NodeFlag::NoEvents);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting just the NoEvents flag (i.e, removing what Disabled adds on top
+       of it) sets a state flag. It'll no longer mark the nodes as disabled for
+       drawing, but still updates internal state related to events (which is
+       tested directly in the event*NodeHiddenDisabledNoEvents() cases). */
+    ui.clearNodeFlags(node, NodeFlag::Disabled & ~NodeFlag::NoEvents);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+        if(data.layouters) {
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        }
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+    }
+
+    /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
+       call layouters. */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataAnother1),
+        };
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another1 */
+            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
+        };
+        bool expectedNodesEnabled[]{
+            /* Again all enabled except invisible, notInOrder and nested2 */
+            true, true, true, true, false, false, false
+        };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and remaining child */
+            {1, 1}  /* another1, unclipped */
+            /* another2 has no data */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+            {{}, {}},
+            {{}, {}}
+        };
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    if(data.layouters) {
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+            /* update() again gets called twice on layouter 2 */
+            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+        }), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+
+    /* Clearing also the NoEvents flag sets a state flag to update also the
+       event-related masks. */
+    ui.clearNodeFlags(node, NodeFlag::NoEvents);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+        if(data.layouters) {
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        }
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+    }
+
+    /* Calling update() rebuilds internal masks of nodes enabled for events, so
+       the state passed to doUpdate() is the same as above. It doesn't call
+       layouters. */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataAnother1),
+        };
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another1 */
+            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
+            {},                           /* invisible */
+            {},                           /* notInOrder */
+        };
+        bool expectedNodesEnabled[]{
+            /* Again all enabled except invisible, notInOrder and nested2 */
+            true, true, true, true, false, false, false
+        };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and remaining child */
+            {1, 1}  /* another1, unclipped */
+            /* another2 has no data */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+            {{}, {}},
+            {{}, {}}
+        };
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    if(data.layouters) {
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+            /* update() again gets called twice on layouter 2 */
+            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+        }), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+
+    /* Resetting a NoEvents flag that's not there should be a no-op */
+    ui.clearNodeFlags(node, NodeFlag::NoEvents);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Setting a Clip flag that's already there should be a no-op,
@@ -4022,7 +4370,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
     }
 
     /* Calling update() uploads the full data including the no-longer-clipped
@@ -4044,6 +4392,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible and notInOrder */
+            true, true, true, true, true, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
             {1, 1}  /* another1, unclipped */
@@ -4056,6 +4408,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
@@ -4069,7 +4422,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
 
     /* Resetting a Clip flag that's not there should be a no-op, independently
        of what other flags get cleared */
@@ -4092,7 +4445,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
     }
 
     /* Calling update() reuploads the previous data again and resets the state
@@ -4113,6 +4466,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible, notInOrder & nested2 now again */
+            true, true, true, true, false, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
             {1, 1}  /* another1, unclipped */
@@ -4125,6 +4482,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
@@ -4138,7 +4496,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
 
     /* Calling clearNodeOrder() sets a state flag */
     ui.clearNodeOrder(another1);
@@ -4156,7 +4514,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
     }
 
     /* Calling update() calls the one remaining layouter, uploads data in
@@ -4208,6 +4566,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* Only node, another2 and nested1 left visible & enabled */
+            true, false, true, true, false, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
             /* another2 has no data */
@@ -4218,6 +4580,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -4233,7 +4596,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
 
     /* Calling clearNodeOrder() on a node that isn't in the order is a no-op */
     ui.clearNodeOrder(another1);
@@ -4256,7 +4619,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
     }
 
     /* Calling update() calls the layouters the same way as before the another1
@@ -4342,6 +4705,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* Again all enabled except invisible, notInOrder and nested2 */
+            true, true, true, true, false, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}, /* another1, unclipped */
             {1, 2}  /* node and remaining child */
@@ -4354,6 +4721,7 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -4369,7 +4737,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
 
     if(data.layouters) {
         /* Removing a layout marks the layouter with NeedsAssignmentUpdate,
@@ -4448,6 +4816,10 @@ void AbstractUserInterfaceTest::state() {
                 {},                           /* invisible */
                 {}                            /* notInOrder */
             };
+            bool expectedNodesEnabled[]{
+                /* All enabled except invisible, notInOrder and nested2 */
+                true, true, true, true, false, false, false
+            };
             Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
                 {0, 1}, /* another1, unclipped */
                 {1, 2}  /* node and remaining child */
@@ -4460,6 +4832,7 @@ void AbstractUserInterfaceTest::state() {
             };
             ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
             ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+            ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
             ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
             ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -4478,7 +4851,7 @@ void AbstractUserInterfaceTest::state() {
             layouterHandleId(layouter2), layouterHandleId(layouter1),
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
     }
 
     /* Removing a non-attached data does no change to the layer state and thus
@@ -4524,8 +4897,13 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{}, {}},
         };
+        bool expectedNodesEnabled[]{
+            /* Again all enabled except invisible, notInOrder and nested2 */
+            true, true, true, true, false, false, false
+        };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
@@ -4540,7 +4918,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14 + (data.layouters ? 1 : 0));
 
     /* Removing a node sets a state flag */
     ui.removeNode(node);
@@ -4593,7 +4971,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14 + (data.layouters ? 1 : 0));
     }
 
     /* Calling update() then calls the layouters, uploads remaining data and
@@ -4665,6 +5043,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* Only another1 and another2 left now */
+            false, true, true, false, false, false, false
+        };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}, /* another1, unclipped */
             /* another2 has no data */
@@ -4676,6 +5058,7 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -4695,7 +5078,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
 
     /* Removing a layouter sets a state flag */
     if(data.layouters) {
@@ -4715,7 +5098,7 @@ void AbstractUserInterfaceTest::state() {
                 layouterHandleId(layouter2),
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
+            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
         }
 
         /* Calling update() then resets the remaining state flag. There's no
@@ -4743,6 +5126,10 @@ void AbstractUserInterfaceTest::state() {
                 {},                           /* invisible */
                 {}                            /* notInOrder */
             };
+            bool expectedNodesEnabled[]{
+                /* Only another1 and another2 left */
+                false, true, true, false, false, false, false
+            };
             Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
                 {0, 1}, /* another1, unclipped */
                 /* another2 has no data */
@@ -4753,6 +5140,7 @@ void AbstractUserInterfaceTest::state() {
             };
             ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
             ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+            ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
             ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
             ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
 
@@ -4766,7 +5154,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17);
     }
 
     /* Add one more layer to check layer removal behavior, should set no state
@@ -4815,6 +5203,10 @@ void AbstractUserInterfaceTest::state() {
             {},                           /* invisible */
             {},                           /* notInOrder */
         };
+        bool expectedNodesEnabled[]{
+            /* Only another1 and another2 left */
+            false, true, true, false, false, false, false
+        };
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
             {{}, {}},
             {{}, {}}
@@ -4822,6 +5214,7 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
         ui.layer<Layer>(anotherLayer).expectedDataIds = {};
         ui.layer<Layer>(anotherLayer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(anotherLayer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(anotherLayer).expectedClipRectIdsDataCounts = {};
         ui.layer<Layer>(anotherLayer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         ui.update();
@@ -5005,7 +5398,7 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(framebufferSize, (Vector2i{400, 500}));
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_ITERATION(handle());
             /* doSetSize() should have been called exactly once at this point
                if this layer draws, and not at all if it doesn't */
@@ -5028,6 +5421,9 @@ void AbstractUserInterfaceTest::draw() {
                     continue;
                 CORRADE_COMPARE(Containers::pair(nodeOffsets[i], nodeSizes[i]), expectedNodeOffsetsSizes[i]);
             }
+            CORRADE_COMPARE_AS(nodesEnabled,
+                expectedNodesEnabled.sliceBit(0),
+                TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(clipRectOffsets,
                 expectedClipRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::first),
                 TestSuite::Compare::Container);
@@ -5039,12 +5435,13 @@ void AbstractUserInterfaceTest::draw() {
             actualClipRectDataCounts = clipRectDataCounts;
             actualNodeOffsets = nodeOffsets;
             actualNodeSizes = nodeSizes;
+            actualNodesEnabled = nodesEnabled;
             actualClipRectOffsets = clipRectOffsets;
             actualClipRectSizes = clipRectSizes;
             ++*updateCallCount;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_ITERATION(handle());
             /* doSetSize() should have been called exactly once at this point */
             CORRADE_COMPARE(setSizeCallCount, 1);
@@ -5064,6 +5461,9 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(nodeSizes.data(), actualNodeSizes.data());
             CORRADE_COMPARE(nodeSizes.size(), actualNodeSizes.size());
             CORRADE_COMPARE(nodeSizes.stride(), actualNodeSizes.stride());
+            CORRADE_COMPARE(nodesEnabled.data(), actualNodesEnabled.data());
+            CORRADE_COMPARE(nodesEnabled.offset(), actualNodesEnabled.offset());
+            CORRADE_COMPARE(nodesEnabled.size(), actualNodesEnabled.size());
             CORRADE_COMPARE(clipRectOffsets.data(), actualClipRectOffsets.data());
             CORRADE_COMPARE(clipRectOffsets.size(), actualClipRectOffsets.size());
             CORRADE_COMPARE(clipRectOffsets.stride(), actualClipRectOffsets.stride());
@@ -5079,6 +5479,7 @@ void AbstractUserInterfaceTest::draw() {
         Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
         Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedClipRectIdsDataCounts;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
+        Containers::StridedArrayView1D<const bool> expectedNodesEnabled;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedClipRectOffsetsSizes;
         Int* updateCallCount;
         Int setSizeCallCount = 0;
@@ -5091,6 +5492,7 @@ void AbstractUserInterfaceTest::draw() {
         Containers::StridedArrayView1D<const UnsignedInt> actualClipRectDataCounts;
         Containers::StridedArrayView1D<const Vector2> actualNodeOffsets;
         Containers::StridedArrayView1D<const Vector2> actualNodeSizes;
+        Containers::BitArrayView actualNodesEnabled;
         Containers::StridedArrayView1D<const Vector2> actualClipRectOffsets;
         Containers::StridedArrayView1D<const Vector2> actualClipRectSizes;
     };
@@ -5111,8 +5513,8 @@ void AbstractUserInterfaceTest::draw() {
            | culled | |  only   |        |  only  |
       11   +--------+ +---------+        +--------+ */
     NodeHandle topLevel = ui.createNode({1.0f, 3.0f}, {7.0f, 6.0f});
-    NodeHandle left = ui.createNode(topLevel, {1.0f, 2.0f}, {1.0f, 2.0f}, NodeFlag::Clip);
-    NodeHandle right = ui.createNode(topLevel, {3.0f, 1.0f}, {3.0f, 4.0f}, NodeFlag::Clip);
+    NodeHandle left = ui.createNode(topLevel, {1.0f, 2.0f}, {1.0f, 2.0f}, NodeFlag::Clip|NodeFlag::NoEvents);
+    NodeHandle right = ui.createNode(topLevel, {3.0f, 1.0f}, {3.0f, 4.0f}, NodeFlag::Clip|NodeFlag::Disabled);
     NodeHandle layer1Only = ui.createNode({5.0f, 9.0f}, {2.0f, 2.0f});
     NodeHandle anotherTopLevel = ui.createNode({6.0f, 5.0f}, {4.0f, 5.0f});
     NodeHandle layer2Only = ui.createNode({9.0f, 9.0f}, {2.0f, 2.0f});
@@ -5137,6 +5539,19 @@ void AbstractUserInterfaceTest::draw() {
         {},                           /* not in order */
         {},                           /* culled */
         {{5.0f, 6.0f}, {3.0f, 3.0f}}, /* nested */
+    };
+    bool expectedNodesEnabled[]{
+        true,   /* topLevel */
+        true,   /* left, is NoEvents but that doesn't affect drawing */
+        false,  /* right, is Disabled */
+        true,   /* layer1Only */
+        true,   /* anotherTopLevel */
+        true,   /* layer2Only */
+        false,  /* removed */
+        false,  /* topLevelHidden, is Hidden */
+        false,  /* not in order */
+        false,  /* culled */
+        false,  /* nested, is a child of right, which is Disabled */
     };
 
     /* Layer without an instance, to verify those get skipped during updates */
@@ -5268,6 +5683,9 @@ void AbstractUserInterfaceTest::draw() {
     layer1Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
     layer2Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
     layer3Instance->expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+    layer1Instance->expectedNodesEnabled = expectedNodesEnabled;
+    layer2Instance->expectedNodesEnabled = expectedNodesEnabled;
+    layer3Instance->expectedNodesEnabled = expectedNodesEnabled;
     layer1Instance->expectedClipRectIdsDataCounts = expectedLayer1ClipRectIdsDataCounts;
     layer2Instance->expectedClipRectIdsDataCounts = expectedLayer2ClipRectIdsDataCounts;
     layer3Instance->expectedClipRectIdsDataCounts = expectedLayer3ClipRectIdsDataCounts;
@@ -5373,18 +5791,19 @@ void AbstractUserInterfaceTest::drawEmpty() {
 
         LayerFeatures doFeatures() const override { return LayerFeature::Draw; }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_COMPARE(dataIds.size(), 0);
             CORRADE_COMPARE(clipRectIds.size(), 0);
             CORRADE_COMPARE(clipRectDataCounts.size(), 0);
             CORRADE_COMPARE(nodeOffsets.size(), 1);
             CORRADE_COMPARE(nodeSizes.size(), 1);
+            CORRADE_COMPARE(nodesEnabled.size(), 1);
             CORRADE_COMPARE(clipRectOffsets.size(), 0);
             CORRADE_COMPARE(clipRectSizes.size(), 0);
             ++updateCallCount;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             CORRADE_FAIL("This shouldn't be called");
         }
 
@@ -5593,9 +6012,16 @@ void AbstractUserInterfaceTest::event() {
     NodeHandle notInOrder = ui.createNode(
         baseNodeOffset,
         baseNodeScale*Vector2{200.0f, 200.0f});
+    /* These three should all be invisible for events */
     NodeHandle hidden = ui.createNode(
         baseNodeOffset,
         baseNodeScale*Vector2{200.0f, 200.0f}, NodeFlag::Hidden);
+    NodeHandle disabled = ui.createNode(
+        baseNodeOffset,
+        baseNodeScale*Vector2{200.0f, 200.0f}, NodeFlag::Disabled);
+    NodeHandle noEvents = ui.createNode(
+        baseNodeOffset,
+        baseNodeScale*Vector2{200.0f, 200.0f}, NodeFlag::NoEvents);
     NodeHandle topNestedOutside = ui.createNode(topNested,
         baseNodeOffset + Vector2{7.5f, 7.5f},
         baseNodeScale*Vector2{10.0f, 10.0f});
@@ -5606,6 +6032,8 @@ void AbstractUserInterfaceTest::event() {
         layouter.add(topNested);
         layouter.add(removed);
         layouter.add(hidden);
+        layouter.add(disabled);
+        layouter.add(noEvents);
         layouter.add(notInOrder);
         layouter.add(topNestedOutside);
     }
@@ -5629,6 +6057,8 @@ void AbstractUserInterfaceTest::event() {
     DataHandle topNestedOutsideData = layer3Instance->create(topNestedOutside);
     /*DataHandle notInOrderData =*/ layer1Instance->create(notInOrder);
     /*DataHandle hiddenData =*/ layer2Instance->create(hidden);
+    /*DataHandle disabledData =*/ layer3Instance->create(disabled);
+    /*DataHandle noEventsData =*/ layer1Instance->create(noEvents);
     /*DataHandle removedData =*/ layer3Instance->create(removed);
     DataHandle topData = layer3Instance->create(top);
 
@@ -5648,25 +6078,25 @@ void AbstractUserInterfaceTest::event() {
 
     ui.clearNodeOrder(notInOrder);
     ui.removeNode(removed);
-    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 3);
+    CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
     CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
-    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 5);
+    CORRADE_COMPARE(ui.layer(layer3).usedCount(), 6);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
 
     if(data.clean) {
         ui.clean();
-        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 3);
+        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
         CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
-        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 5);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
     }
 
     /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
-        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 3);
+        CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
         CORRADE_COMPARE(ui.layer(layer2).usedCount(), 2);
-        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 4);
+        CORRADE_COMPARE(ui.layer(layer3).usedCount(), 5);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
@@ -6501,8 +6931,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 }
 
-void AbstractUserInterfaceTest::eventPointerMoveNodeHidden() {
-    auto&& data = UpdateData[testCaseInstanceId()];
+void AbstractUserInterfaceTest::eventPointerMoveNodeHiddenDisabledNoEvents() {
+    auto&& data = EventPointerNodeHiddenDisabledNoEventsData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Event scaling doesn't affect these tests */
@@ -6542,8 +6972,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeHidden() {
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
 
-    /* Nested node in order to verify that the hidden flag gets propagated
-       through the hierarchy */
+    /* Nested node in order to verify that the hidden/disabled/... flag gets
+       propagated through the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
     DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
@@ -6557,8 +6987,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeHidden() {
     CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), nested);
 
-    ui.addNodeFlags(node, NodeFlag::Hidden);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+    ui.addNodeFlags(node, data.flag);
+    CORRADE_COMPARE(ui.state(), data.expectedState);
 
     if(data.update) {
         ui.update();
@@ -8514,8 +8944,8 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 }
 
-void AbstractUserInterfaceTest::eventCaptureNodeHidden() {
-    auto&& data = EventCaptureUpdateData[testCaseInstanceId()];
+void AbstractUserInterfaceTest::eventCaptureNodeHiddenDisabledNoEvents() {
+    auto&& data = EventCaptureNodeHiddenDisabledNoEventsData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Event scaling doesn't affect these tests */
@@ -8556,8 +8986,8 @@ void AbstractUserInterfaceTest::eventCaptureNodeHidden() {
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
 
-    /* Two nodes next to each other, nested in order to verify that the hidden
-       flag gets propagated through the hierarchy */
+    /* Two nodes next to each other, nested in order to verify that the
+       hidden/disabled/... flag gets propagated through the hierarchy */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle leftNested = ui.createNode(left, {}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
@@ -8573,8 +9003,8 @@ void AbstractUserInterfaceTest::eventCaptureNodeHidden() {
     CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), leftNested);
 
-    ui.addNodeFlags(left, NodeFlag::Hidden);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+    ui.addNodeFlags(left, data.flag);
+    CORRADE_COMPARE(ui.state(), data.expectedState);
 
     if(data.update) {
         ui.update();
@@ -9289,8 +9719,8 @@ void AbstractUserInterfaceTest::eventTapOrClick() {
     }
 }
 
-void AbstractUserInterfaceTest::eventTapOrClickNodeHidden() {
-    auto&& data = UpdateData[testCaseInstanceId()];
+void AbstractUserInterfaceTest::eventTapOrClickNodeHiddenDisabledNoEvents() {
+    auto&& data = EventPointerNodeHiddenDisabledNoEventsData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Event scaling doesn't affect these tests */
@@ -9332,8 +9762,8 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeHidden() {
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
 
-    /* Nested node in order to verify that the hidden flag gets propagated
-       through the hierarchy */
+    /* Nested node in order to verify that the hidden/disabled/... flag gets
+       propagated through the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
     DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
@@ -9347,8 +9777,8 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeHidden() {
     CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
     CORRADE_COMPARE(ui.pointerEventPressedNode(), nested);
 
-    ui.addNodeFlags(node, NodeFlag::Hidden);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+    ui.addNodeFlags(node, data.flag);
+    CORRADE_COMPARE(ui.state(), data.expectedState);
 
     if(data.update) {
         ui.update();

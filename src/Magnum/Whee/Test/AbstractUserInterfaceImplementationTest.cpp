@@ -49,6 +49,8 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
 
     void visibleTopLevelNodeIndices();
 
+    void propagateNodeFlagToChildren();
+
     void discoverTopLevelLayoutNodesSingleLayouterPerNode();
     void discoverTopLevelLayoutNodesMultipleLayoutersPerNode();
     void discoverTopLevelLayoutNodesNoLayouters();
@@ -390,6 +392,8 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
 
               &AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices,
 
+              &AbstractUserInterfaceImplementationTest::propagateNodeFlagToChildren,
+
               &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleLayouterPerNode});
 
     addInstancedTests({&AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesMultipleLayoutersPerNode},
@@ -665,6 +669,88 @@ void AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices() {
     CORRADE_COMPARE_AS(Containers::arrayView(visibleTopLevelNodeIndices).prefix(count), Containers::arrayView<UnsignedInt>({
         0, 1, 3, 10
     }), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::propagateNodeFlagToChildren() {
+    /* Mostly like the output in the orderVisibleNodesDepthFirst() case or
+       input in visibleTopLevelNodeIndices() */
+    Containers::Pair<UnsignedInt, UnsignedInt> visibleNodeIdsChildrenCountsFlags[]{
+        {3, 0}, /* NoEvents */
+        {13, 1},
+            {0, 0},
+        {1, 6}, /* NoEvents */
+            {4, 2}, /* Disabled */
+                {5, 1},
+                    {6, 0},
+            {9, 0},
+            {11, 1}, /* Disabled */
+                {10, 0},
+        {17, 0} /* Disabled */
+    };
+
+    NodeFlags nodeFlags[]{
+        {},                 /* 0 */
+        NodeFlag::NoEvents, /* 1, affects also 4, 5, 6, 9, 11, 10 */
+        NodeFlag::Disabled, /* 2, not visible */
+        NodeFlag::NoEvents, /* 3 */
+        NodeFlag::Disabled, /* 4, affects also 5, 6 */
+        {},                 /* 5 */
+        {},                 /* 6 */
+        {},                 /* 7, not visible */
+        NodeFlag::NoEvents, /* 8, not visible */
+        {},                 /* 9 */
+        {},                 /* 10 */
+        NodeFlag::Disabled, /* 11, affects also 10 */
+        {},                 /* 12, not visible */
+        {},                 /* 13 */
+        {},                 /* 14, not visible */
+        {},                 /* 15, not visible */
+        {},                 /* 16, not visible */
+        NodeFlag::Disabled, /* 17 */
+    };
+
+    /* The NoEvents is implied by Disabled, so it should be reset for both */
+    UnsignedByte nodesNoEventsData[3]{0xff, 0xff, 0xff};
+    Containers::MutableBitArrayView nodesNoEvents{nodesNoEventsData, 0, 18};
+    Implementation::propagateNodeFlagToChildrenInto<NodeFlag::NoEvents>(
+        nodeFlags,
+        Containers::stridedArrayView(visibleNodeIdsChildrenCountsFlags).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+        Containers::stridedArrayView(visibleNodeIdsChildrenCountsFlags).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+        nodesNoEvents);
+    CORRADE_COMPARE_AS(nodesNoEvents, Containers::stridedArrayView({
+     /* 0  1  2  3  4  5  6  7 */
+        1, 0, 1, 0, 0, 0, 0, 1,
+     /* 8  9 10 11 12 13 14 15 16 17 */
+        1, 0, 0, 0, 1, 1, 1, 1, 1, 0
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* OTOH, Disabled shouldn't be set for nodes that are only NoEvents */
+    UnsignedByte nodesDisabledData[3]{0xff, 0xff, 0xff};
+    Containers::MutableBitArrayView nodesDisabled{nodesDisabledData, 0, 18};
+    Implementation::propagateNodeFlagToChildrenInto<NodeFlag::Disabled>(
+        nodeFlags,
+        Containers::stridedArrayView(visibleNodeIdsChildrenCountsFlags).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+        Containers::stridedArrayView(visibleNodeIdsChildrenCountsFlags).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+        nodesDisabled);
+    CORRADE_COMPARE_AS(nodesDisabled, Containers::stridedArrayView({
+     /* 0  1  2  3  4  5  6  7 */
+        1, 1, 1, 1, 0, 0, 0, 1,
+     /* 8  9 10 11 12 13 14 15 16 17 */
+        1, 1, 0, 0, 1, 1, 1, 1, 1, 0
+    }).sliceBit(0), TestSuite::Compare::Container);
+
+    /* It should never reset bits, only set them */
+    UnsignedByte allZerosData[3]{};
+    Containers::MutableBitArrayView allZeros{allZerosData, 0, 18};
+    Implementation::propagateNodeFlagToChildrenInto<NodeFlag::Disabled>(
+        nodeFlags,
+        Containers::stridedArrayView(visibleNodeIdsChildrenCountsFlags).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+        Containers::stridedArrayView(visibleNodeIdsChildrenCountsFlags).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+        allZeros);
+    CORRADE_COMPARE_AS(allZeros, Containers::stridedArrayView({
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    }).sliceBit(0), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleLayouterPerNode() {
@@ -1883,8 +1969,8 @@ void AbstractUserInterfaceImplementationTest::countOrderNodeDataForEventHandling
     /* Compared to orderVisibleNodeData(), only node 8 is left among the
        assignments, all others can stay visible even if they aren't as it
        shouldn't matter for them */
-    UnsignedShort visibleNodeMaskData[]{0xffff & ~(1 << 8)};
-    Containers::BitArrayView visibleNodeMask{visibleNodeMaskData, 0, 14};
+    UnsignedShort visibleEventNodeMaskData[]{0xffff & ~(1 << 8)};
+    Containers::BitArrayView visibleEventNodeMask{visibleEventNodeMaskData, 0, 14};
 
     LayerHandle layer2 = layerHandle(2, 0x88);
     LayerHandle layer3 = layerHandle(3, 0x22);
@@ -1899,7 +1985,7 @@ void AbstractUserInterfaceImplementationTest::countOrderNodeDataForEventHandling
     UnsignedInt visibleNodeEventDataOffsets[15]{};
     for(const auto& layer: layers) {
         CORRADE_ITERATION(layer.second());
-        Implementation::countNodeDataForEventHandlingInto(layer.first(), visibleNodeEventDataOffsets, visibleNodeMask);
+        Implementation::countNodeDataForEventHandlingInto(layer.first(), visibleNodeEventDataOffsets, visibleEventNodeMask);
     }
     CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataOffsets), Containers::arrayView<UnsignedInt>({
         0,
@@ -1954,7 +2040,7 @@ void AbstractUserInterfaceImplementationTest::countOrderNodeDataForEventHandling
             layer.second(),
             layer.first(),
             visibleNodeEventDataOffsets,
-            visibleNodeMask,
+            visibleEventNodeMask,
             visibleNodeEventData);
     }
 
