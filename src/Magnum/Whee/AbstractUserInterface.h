@@ -58,6 +58,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref LayerState::NeedsUpdate set, is reset next time
      * @ref AbstractUserInterface::update() is called. Implied by
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
+     * @relativeref{UserInterfaceState,NeedsNodeEnabledUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
@@ -77,6 +78,7 @@ enum class UserInterfaceState: UnsignedByte {
      * every @ref AbstractUserInterface::attachData() call, is reset next time
      * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeEnabledUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
@@ -88,20 +90,38 @@ enum class UserInterfaceState: UnsignedByte {
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
-     * visible node set after node clip state changed. Set implicitly after
-     * every @relativeref{AbstractUserInterface,setNodeFlags()},
+     * enabled node set after node flags changed. Set implicitly after every
+     * @relativeref{AbstractUserInterface,setNodeFlags()},
      * @relativeref{AbstractUserInterface,addNodeFlags()} and
      * @relativeref{AbstractUserInterface,clearNodeFlags()} that changes the
-     * presence of the @ref NodeFlag::Clip flag; is reset next time
-     * @ref AbstractUserInterface::update() is called. Implies
-     * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
+     * presence of the @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled
+     * flag; is reset next time @ref AbstractUserInterface::update() is called.
+     * Implies @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsNodeClipUpdate = NeedsDataAttachmentUpdate|(1 << 2),
+    NeedsNodeEnabledUpdate = NeedsDataAttachmentUpdate|(1 << 2),
+
+    /**
+     * @ref AbstractUserInterface::update() needs to be called to refresh the
+     * visible node set after node flags changed. Set implicitly after every
+     * @relativeref{AbstractUserInterface,setNodeFlags()},
+     * @relativeref{AbstractUserInterface,addNodeFlags()} and
+     * @relativeref{AbstractUserInterface,clearNodeFlags()} that changes the
+     * presence of the @ref NodeFlag::Clip flag; is reset next time
+     * @ref AbstractUserInterface::update() is called. Implies
+     * @ref UserInterfaceState::NeedsNodeEnabledUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
+     * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
+     * everything that sets those flags.
+     */
+    NeedsNodeClipUpdate = NeedsNodeEnabledUpdate|(1 << 3),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -117,7 +137,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsLayoutUpdate = NeedsNodeClipUpdate|(1 << 3),
+    NeedsLayoutUpdate = NeedsNodeClipUpdate|(1 << 4),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -132,7 +152,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsLayoutAssignmentUpdate = NeedsLayoutUpdate|(1 << 4),
+    NeedsLayoutAssignmentUpdate = NeedsLayoutUpdate|(1 << 5),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -151,7 +171,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsNodeUpdate = NeedsLayoutAssignmentUpdate|(1 << 5),
+    NeedsNodeUpdate = NeedsLayoutAssignmentUpdate|(1 << 6),
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
@@ -162,7 +182,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref AbstractUserInterface::clean() is called. Implies
      * @ref UserInterfaceState::NeedsNodeUpdate.
      */
-    NeedsNodeClean = NeedsNodeUpdate|(1 << 6),
+    NeedsNodeClean = NeedsNodeUpdate|(1 << 7),
 };
 
 /**
@@ -214,6 +234,7 @@ enum class NodeFlag: UnsignedByte {
      *
      * Changing this flag causes @ref UserInterfaceState::NeedsNodeUpdate to be
      * set.
+     * @see @ref NodeFlag::NoEvents, @ref NodeFlag::Disabled
      */
     Hidden = 1 << 0,
 
@@ -226,6 +247,28 @@ enum class NodeFlag: UnsignedByte {
      * to be set.
      */
     Clip = 1 << 1,
+
+    /**
+     * The node, all nested nodes and all attached data don't get any events
+     * even if a particular layer implements event handlers. Doesn't have any
+     * visual effect, see @ref NodeFlag::Disabled or @ref NodeFlag::Hidden for
+     * alternatives.
+     *
+     * Changing this flag causes
+     * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
+     */
+    NoEvents = 1 << 2,
+
+    /**
+     * The node, all nested nodes and all attached data are disabled. Implies
+     * @ref NodeFlag::NoEvents and additionally has a visual effect on layers
+     * that implement a disabled state.
+     *
+     * Changing this flag causes
+     * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
+     * @see @ref NodeFlag::Hidden
+     */
+    Disabled = NoEvents|(1 << 3),
 };
 
 /**
@@ -958,7 +1001,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * function, it causes @ref UserInterfaceState::NeedsNodeUpdate to be
          * set. If @ref NodeFlag::Clip was added or cleared by calling this
          * function, it causes @ref UserInterfaceState::NeedsNodeClipUpdate to
-         * be set.
+         * be set. If @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled was
+         * added or cleared by calling this function, it causes
+         * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref addNodeFlags(),
          *      @ref clearNodeFlags()
          */
@@ -1158,6 +1203,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * and all event processing functions. If @ref state() contains none of
          * @ref UserInterfaceState::NeedsDataUpdate,
          * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
+         * @ref UserInterfaceState::NeedsNodeEnabledUpdate,
          * @ref UserInterfaceState::NeedsNodeClipUpdate,
          * @ref UserInterfaceState::NeedsLayoutUpdate,
          * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate or
@@ -1171,12 +1217,15 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Performs layout calculation
          * -    Calculates absolute offsets for visible nodes
          * -    Culls invisible nodes, calculates clip rectangles
+         * -    Propagates @ref NodeFlag::Disabled and @ref NodeFlag::NoEvents
+         *      to child nodes
          * -    Orders data attachments in each layer by draw order
          * -    Calls @ref AbstractLayer::update() with the ordered data
          * -    Resets @ref pointerEventPressedNode(),
          *      @ref pointerEventCapturedNode() or
-         *      @ref pointerEventHoveredNode() if the nodes no longer exist or
-         *      are not visible
+         *      @ref pointerEventHoveredNode() if the nodes no longer exist,
+         *      are not visible or have @ref NodeFlag::NoEvents or
+         *      @ref NodeFlag::Disabled set on them or their parents
          *
          * After calling this function, @ref state() is empty.
          */
@@ -1363,8 +1412,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * accepted by any data, if @ref pointerReleaseEvent() was called since
          * or the pointer was uncaptured and left the node area, returns
          * @ref NodeHandle::Null. It also becomes @ref NodeHandle::Null if the
-         * node or any of its parents were removed or hidden and @ref update()
-         * was called since.
+         * node or any of its parents were removed, hidden or have
+         * @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled set and
+         * @ref update() was called since.
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref clean() wasn't called since.
@@ -1386,8 +1436,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * released with @ref PointerEvent::setCaptured() or if a
          * @ref pointerReleaseEvent() was called since, returns
          * @ref NodeHandle::Null. It also becomes @ref NodeHandle::Null if the
-         * node or any of its parents were removed or hidden and @ref update()
-         * was called since.
+         * node or any of its parents were removed, hidden or have
+         * @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled set and
+         * @ref update() was called since.
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref clean() wasn't called since.
@@ -1405,7 +1456,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * this either becomes @ref NodeHandle::Null, or another node becomes
          * hovered, receiving an enter event. It's also @ref NodeHandle::Null
          * if no pointer move event was called yet or if the node or any of its
-         * parents were removed or hidden and @ref update() was called since.
+         * parents were removed, hidden or have @ref NodeFlag::NoEvents or
+         * @ref NodeFlag::Disabled set and @ref update() was called since.
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref clean() wasn't called since.
