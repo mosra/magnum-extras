@@ -1105,6 +1105,9 @@ void TextLayerGLTest::eventStyleTransition() {
             },
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            },
+            [](UnsignedInt) -> UnsignedInt {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             });
 
     LayerHandle layer = ui.createLayer();
