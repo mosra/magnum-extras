@@ -2750,7 +2750,7 @@ void TextLayerTest::updateCleanDataOrder() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{3, 6};
     shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
@@ -2758,9 +2758,19 @@ void TextLayerTest::updateCleanDataOrder() {
     FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {1, 2, 0, 1, 1},
-        {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
-        {{}, {}, data.paddingFromStyle, {}, data.paddingFromStyle});
+        /* Style 5 doesn't get used (gets transitioned to 2), use a weird
+           uniform index and padding to verify it doesn't get picked. The font
+           handle should however match style 2 as it can't be transitioned. */
+        {1, 2, 0, 1, 1, 666},
+        {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
+        {{}, {}, data.paddingFromStyle, {}, data.paddingFromStyle, Vector4{666}});
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        [](UnsignedInt style) {
+            return style == 5 ? 2u : style;
+        }
+    );
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2778,9 +2788,12 @@ void TextLayerTest::updateCleanDataOrder() {
     layer.create(0, "", {});                            /* 0, quad 0 */
     layer.create(0, "", {});                            /* 1, quad 1 */
     layer.create(0, "", {});                            /* 2, quad 2 */
-    DataHandle data3 = layer.create(2, "hello", {}, 0xff3366_rgbf, node6);
+    /* Node 6 is disabled, so style 5 should get transitioned to 2 */
+    DataHandle data3 = layer.create(5, "hello", {}, 0xff3366_rgbf, node6);
                                                         /* 3, quad 3 to 7 */
     layer.create(0, "", {});                            /* 4, quad 8 */
+    /* Node 6 is disabled, but style 4 has no disabled transition so this stays
+       the same */
     DataHandle data5 = layer.createGlyph(4, 13, {}, 0xcceeff_rgbf, node6);
                                                         /* 5, quad 9 */
     layer.create(0, "", {});                            /* 6, quad 10 */
@@ -2810,12 +2823,13 @@ void TextLayerTest::updateCleanDataOrder() {
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
-    UnsignedByte nodesEnabledData[2]{}; /** @todo deliberately zero, use */
-    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 16};
+    UnsignedByte nodesEnabledData[2]{};
+    Containers::MutableBitArrayView nodesEnabled{nodesEnabledData, 0, 16};
     nodeOffsets[6] = data.node6Offset;
     nodeSizes[6] = data.node6Size;
     nodeOffsets[15] = {3.0f, 4.0f};
     nodeSizes[15] = {20.0f, 5.0f};
+    nodesEnabled.set(15);
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
@@ -2856,7 +2870,8 @@ void TextLayerTest::updateCleanDataOrder() {
     for(std::size_t i = 0; i != 5*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
-        /* Created with style 2, which is mapped to uniform 0 */
+        /* Created with style 2, transitioned from 5, which is mapped to
+           uniform 0 */
         CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 0);
     }
     for(std::size_t i = 0; i != 1*4; ++i) {
@@ -3008,6 +3023,8 @@ void TextLayerTest::updateCleanDataOrder() {
         nodeGenerations[6] = nodeHandleGeneration(node6) + 1;
         nodeGenerations[15] = nodeHandleGeneration(node15);
         layer.cleanNodes(nodeGenerations);
+        /* Node 6 was disabled before already, so the nodesEnabled mask doesn't
+           need to be updated */
     }
 
     /* The run corresponding to the removed data should be marked as unused,

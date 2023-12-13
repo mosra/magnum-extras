@@ -112,7 +112,8 @@ struct TextLayerGlyphRun {
 struct TextLayerData {
     Vector4 padding;
     UnsignedInt glyphRun;
-    UnsignedInt style;
+    /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
+    UnsignedInt style, calculatedStyle;
     /* Ratio of the style size and font size, for appropriately scaling the
        rectangles coming out of the glyph cache */
     Float scale;

@@ -1206,13 +1206,22 @@ void BaseLayerTest::updateDataOrder() {
         explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 4};
+    } shared{3, 5};
 
     shared.setStyle(
         BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
-        {1, 2, 0, 1},
-        {{}, {}, data.paddingFromStyle, {}});
+        /* Style 4 doesn't get used (gets transitioned to 2), use a weird
+           uniform index and padding to verify it doesn't get picked */
+        {1, 2, 0, 1, 666},
+        {{}, {}, data.paddingFromStyle, {}, Vector4{666}});
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        [](UnsignedInt style) {
+            return style == 4 ? 2u : style;
+        }
+    );
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1229,7 +1238,8 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(0);                                                    /* 0 */
     layer.create(0);                                                    /* 1 */
     layer.create(0);                                                    /* 2 */
-    DataHandle data3 = layer.create(2, 0xff3366_rgbf, {1.0f, 2.0f, 3.0f, 4.0f}, node6);
+    /* Node 6 is disabled, so style 4 should get transitioned to 2 */
+    DataHandle data3 = layer.create(4, 0xff3366_rgbf, {1.0f, 2.0f, 3.0f, 4.0f}, node6);
     layer.create(0);                                                    /* 4 */
     layer.create(0);                                                    /* 5 */
     layer.create(0);                                                    /* 6 */
@@ -1242,12 +1252,13 @@ void BaseLayerTest::updateDataOrder() {
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
-    UnsignedByte nodesEnabledData[2]{}; /** @todo deliberately zero, use */
-    Containers::BitArrayView nodesEnabled{nodesEnabledData, 0, 16};
+    UnsignedByte nodesEnabledData[2]{};
+    Containers::MutableBitArrayView nodesEnabled{nodesEnabledData, 0, 16};
     nodeOffsets[6] = data.node6Offset;
     nodeSizes[6] = data.node6Size;
     nodeOffsets[15] = {3.0f, 4.0f};
     nodeSizes[15] = {20.0f, 5.0f};
+    nodesEnabled.set(15);
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
