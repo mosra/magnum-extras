@@ -64,6 +64,9 @@ struct AbstractVisualLayer::Shared::State {
     UnsignedInt(*styleTransitionToPressedHover)(UnsignedInt) = Implementation::styleTransitionPassthrough;
     UnsignedInt(*styleTransitionToInactiveBlur)(UnsignedInt) = Implementation::styleTransitionPassthrough;
     UnsignedInt(*styleTransitionToInactiveHover)(UnsignedInt) = Implementation::styleTransitionPassthrough;
+    /* Unlike the others, this one can be nullptr, in which case the whole
+       logic in doUpdate() gets skipped */
+    UnsignedInt(*styleTransitionToDisabled)(UnsignedInt) = nullptr;
 };
 
 struct AbstractVisualLayer::State {
@@ -79,9 +82,11 @@ struct AbstractVisualLayer::State {
        types. */
     virtual ~State() = default;
 
-    /* This view is assumed to point to subclass own data and maintained to
-       have its size always match layer capacity */
-    Containers::StridedArrayView1D<UnsignedInt> styles;
+    /* These views are assumed to point to subclass own data and maintained to
+       have its size always match layer capacity. The `calculatedStyles` are a
+       copy of `styles` with additional transitions applied for disabled
+       nodes, which is performed in the layer doUpdate(). */
+    Containers::StridedArrayView1D<UnsignedInt> styles, calculatedStyles;
     /* 99% of internal accesses to the Shared instance need the State struct,
        so saving it directly to avoid an extra indirection, In some cases the
        public API reference is needed (mainly for user-side access, such as

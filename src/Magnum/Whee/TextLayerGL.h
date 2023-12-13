@@ -153,17 +153,17 @@ class MAGNUM_WHEE_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
-        Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt)) {
-            return static_cast<Shared&>(TextLayer::Shared::setStyleTransition(toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover));
+        Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) {
+            return static_cast<Shared&>(TextLayer::Shared::setStyleTransition(toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover, toDisabled));
         }
-        template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> Shared& setStyleTransition() {
-            return static_cast<Shared&>(TextLayer::Shared::setStyleTransition<StyleIndex, toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover>());
+        template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() {
+            return static_cast<Shared&>(TextLayer::Shared::setStyleTransition<StyleIndex, toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover, toDisabled>());
         }
-        Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt)) {
-            return static_cast<Shared&>(TextLayer::Shared::setStyleTransition(toPressed, toInactive));
+        Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) {
+            return static_cast<Shared&>(TextLayer::Shared::setStyleTransition(toPressed, toInactive, toDisabled));
         }
-        template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex)> Shared& setStyleTransition() {
-            return static_cast<Shared&>(TextLayer::Shared::setStyleTransition<StyleIndex, toPressed, toInactive>());
+        template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() {
+            return static_cast<Shared&>(TextLayer::Shared::setStyleTransition<StyleIndex, toPressed, toInactive, toDisabled>());
         }
         Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Vector4>& padding);
         Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<FontHandle> fonts, std::initializer_list<Vector4> padding);
