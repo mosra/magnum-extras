@@ -234,6 +234,10 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
            tests causes linker errors */
         LayerFeatures doFeatures() const override;
 
+        /* Updates State::Shared::calculatedStyles based on which nodes are
+           enabled. Should be called by subclasses. */
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
+
         Containers::Pointer<State> _state;
 
     private:
@@ -289,37 +293,48 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * @brief Set type-erased style transition functions
          * @return Reference to self (for method chaining)
          *
-         * The @p toPressedBlur and @p toPressedHover change a style index to a
-         * pressed blurred or hovered one, for example after a pointer was
-         * pressed on a hovered button, after an activated but blur button was
-         * pressed via a keyboard, but also after a pointer leaves a pressed
-         * button, making it blur or re-enters it, making it hovered again.
+         * The @p toPressedBlur and @p toPressedHover change a non-disabled
+         * style index to a pressed blurred or hovered one, for example after a
+         * pointer was pressed on a hovered button, after an activated but blur
+         * button was pressed via a keyboard, but also after a pointer leaves a
+         * pressed button, making it blur or re-enters it, making it hovered
+         * again.
          *
-         * The @p toInactiveBlur and @p toInactiveHover change a style index to
-         * an inactive blurred or hovered one, for example when a mouse enters
-         * or leaves an area of otherwise inactive and not pressed button, but
-         * also when a button is released again or an input is no longer
-         * active.
+         * The @p toInactiveBlur and @p toInactiveHover change a non-disabled
+         * style index to an inactive blurred or hovered one, for example when
+         * a mouse enters or leaves an area of otherwise inactive and not
+         * pressed button, but also when a button is released again or an input
+         * is no longer active.
+         *
+         * The @p toDisabled changes a style index to a disabled one, which
+         * happens when a @ref NodeFlag::Disabled is set on a node. Such a node
+         * then doesn't receive any events until enabled again, meaning the
+         * disabled style index cannot transition into any other.
          *
          * If any of the functions is @cpp nullptr @ce, given transition is
          * a no-op, keeping the same index.
          *
-         * For correct behavior, all functions should be mutually invertible,
-         * e.g. @cpp toPressedHover(toInactiveBlur(style)) == style @ce if the
+         * For correct behavior, the @p toPressedBlur, @p toPressedHover,
+         * @p toInactiveBlur and @p toInactiveHover functions should be
+         * mutually invertible, e.g.
+         * @cpp toPressedHover(toInactiveBlur(style)) == style @ce if the
          * `style` was a pressed hovered style to begin with (and both
-         * transition functions were defined). If the style doesn't handle
-         * hover in any way, for example for touch-only interfaces, you can
-         * use @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
+         * transition functions were defined). The @p toDisabled function
+         * doesn't have to be, i.e. it can conflate multiple styles into one,
+         * as a disabled style is internally never transitioned back to a
+         * non-disabled one. If the style doesn't handle hover in any way, for
+         * example for touch-only interfaces, you can use
+         * @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
          * instead, which doesn't make any distinction between the hover and
          * blur states and uses the same transition function for both.
          */
-        Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt));
+        Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt));
 
         /**
          * @brief Set style transition functions
          * @return Reference to self (for method chaining)
          *
-         * Like @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))",
+         * Like @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))",
          * but allows to use a concrete enum type instead of a typeless index.
          * Same as with the type-erased variant, if any of the function
          * template parameters is @cpp nullptr @ce, given transition is a
@@ -327,20 +342,20 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          *
          * @snippet Whee.cpp AbstractVisualLayer-Shared-setStyleTransition
          */
-        template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> Shared& setStyleTransition();
+        template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition();
 
         /**
          * @brief Set style transition functions without hover state
          * @return Reference to self (for method chaining)
          *
-         * Same as calling @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
+         * Same as calling @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
          * with @p toPressed used for both @p toPressedBlur and
          * @p toPressedHover and @p toInactive used for both @p toInactiveBlur
          * and @p toInactiveHover. Useful in case the style doesn't handle
          * hover in any way, for example for touch-only interfaces.
          */
-        Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt)) {
-            return setStyleTransition(toPressed, toPressed, toInactive, toInactive);
+        Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) {
+            return setStyleTransition(toPressed, toPressed, toInactive, toInactive, toDisabled);
         }
 
         /**
@@ -353,8 +368,8 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * the style doesn't handle hover in any way, for example for
          * touch-only interfaces.
          */
-        template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex)> Shared& setStyleTransition() {
-            return setStyleTransition<StyleIndex, toPressed, toPressed, toInactive, toInactive>();
+        template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() {
+            return setStyleTransition<StyleIndex, toPressed, toPressed, toInactive, toInactive, toDisabled>();
         }
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -376,23 +391,23 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #define MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION() \
-    Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt)) { \
-        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover)); \
+    Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover, toDisabled)); \
     }                                                                       \
-    template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> Shared& setStyleTransition() { \
-        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover>()); \
+    template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover, toDisabled>()); \
     }                                                                       \
-    Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt)) { \
-        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressed, toInactive)); \
+    Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressed, toInactive, toDisabled)); \
     }                                                                       \
-    template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex)> Shared& setStyleTransition() { \
-        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toPressed, toInactive>()); \
+    template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toPressed, toInactive, toDisabled>()); \
     }
 #endif
 
 /* The damn thing fails to match these to the declarations above */
 #ifndef DOXYGEN_GENERATING_OUTPUT
-template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition() {
+template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition() {
     /* No matter what simplification I do, GCC warns about "implicit conversion
        to bool", so it's this obvious ugly == here. There could be + for the
        lambdas to turn them into function pointers to avoid ?: getting
@@ -412,6 +427,9 @@ template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*t
         },
         toInactiveHover == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toInactiveHover(StyleIndex(index)));
+        },
+        toDisabled == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
+            return UnsignedInt(toDisabled(StyleIndex(index)));
         });
 }
 #endif

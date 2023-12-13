@@ -63,7 +63,8 @@ struct BaseLayerData {
     Vector4 padding;
     Vector4 outlineWidth;
     Color3 color;
-    UnsignedInt style;
+    /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
+    UnsignedInt style, calculatedStyle;
 };
 
 struct BaseLayerVertex {

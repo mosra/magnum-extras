@@ -402,6 +402,7 @@ DataHandle TextLayer::createInternal(const NodeHandle node) {
     if(id >= state.data.size()) {
         arrayAppend(state.data, NoInit, id - state.data.size() + 1);
         state.styles = stridedArrayView(state.data).slice(&Implementation::TextLayerData::style);
+        state.calculatedStyles = stridedArrayView(state.data).slice(&Implementation::TextLayerData::calculatedStyle);
     }
     return handle;
 }
@@ -433,6 +434,7 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
     data.padding = {};
     /* glyphRun is filled by shapeInternal() */
     data.style = style;
+    /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     data.color = color;
 
     return handle;
@@ -465,6 +467,7 @@ DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt gly
     data.padding = {};
     /* glyphRun is filled by shapeGlyphInternal() */
     data.style = style;
+    /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     data.color = color;
 
     return handle;
@@ -638,7 +641,10 @@ void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
        remove(). See a comment there for more information. */
 }
 
-void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
+    /* The base implementation populates data.calculatedStyle */
+    AbstractVisualLayer::doUpdate(dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+
     State& state = static_cast<State&>(*_state);
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     /* Technically needed only if there's any actual data to update, but
@@ -722,7 +728,7 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             vertexData.slice(&Implementation::TextLayerVertex::textureCoordinates));
 
         /* Align the glyph run relative to the node area */
-        const Vector4 padding = sharedState.styles[data.style].padding + data.padding;
+        const Vector4 padding = sharedState.styles[data.calculatedStyle].padding + data.padding;
         Vector2 offset = nodeOffsets[nodeId] + padding.xy();
         const Vector2 size = nodeSizes[nodeId] - padding.xy() - Math::gather<'z', 'w'>(padding);
         const UnsignedByte alignmentHorizontal = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentHorizontal);
@@ -756,7 +762,7 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
         for(Implementation::TextLayerVertex& vertex: vertexData) {
             vertex.position = vertex.position*Vector2::yScale(-1.0f) + offset;
             vertex.color = data.color;
-            vertex.styleUniform = sharedState.styles[data.style].uniform;
+            vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
         }
 
         /* Generate indices in draw order. Remeber the offset for each data to

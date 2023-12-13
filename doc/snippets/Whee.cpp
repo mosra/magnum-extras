@@ -49,6 +49,9 @@ StyleIndex styleIndexTransitionToPressedBlur(StyleIndex index) {
 StyleIndex styleIndexTransitionToPressedHover(StyleIndex index) {
     DOXYGEN_ELLIPSIS(return index;)
 }
+StyleIndex styleIndexTransitionToDisabled(StyleIndex index) {
+    DOXYGEN_ELLIPSIS(return index;)
+}
 
 DOXYGEN_ELLIPSIS(} int main() {)
 
@@ -57,6 +60,7 @@ shared.setStyleTransition<StyleIndex,
     styleIndexTransitionToPressedBlur,
     styleIndexTransitionToPressedHover,
     styleIndexTransitionToInactiveBlur,
-    styleIndexTransitionToInactiveHover>();
+    styleIndexTransitionToInactiveHover,
+    styleIndexTransitionToDisabled>();
 /* [AbstractVisualLayer-Shared-setStyleTransition] */
 }
