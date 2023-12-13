@@ -61,6 +61,7 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void eventStyleTransitionNoOp();
     void eventStyleTransition();
     void eventStyleTransitionNoHover();
+    void eventStyleTransitionDisabled();
     void eventStyleTransitionNoCapture();
     void eventStyleTransitionOutOfRange();
 };
@@ -85,6 +86,10 @@ enum class StyleIndex: UnsignedByte {
 
     White = 10,
     WhiteHover = 11,
+
+    GreenDisabled = 12,
+    /* Common for red & blue, to test that there's no inverse mapping done */
+    RedBlueDisabled = 13
 };
 
 Debug& operator<<(Debug& debug, StyleIndex value) {
@@ -102,6 +107,8 @@ Debug& operator<<(Debug& debug, StyleIndex value) {
         _c(BluePressed)
         _c(White)
         _c(WhiteHover)
+        _c(GreenDisabled)
+        _c(RedBlueDisabled)
         #undef _c
     }
 
@@ -147,7 +154,8 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransition},
         Containers::arraySize(EventStyleTransitionData));
 
-    addTests({&AbstractVisualLayerTest::eventStyleTransitionNoHover});
+    addTests({&AbstractVisualLayerTest::eventStyleTransitionNoHover,
+              &AbstractVisualLayerTest::eventStyleTransitionDisabled});
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNoCapture},
         Containers::arraySize(EventStyleTransitionNoCaptureData));
@@ -305,19 +313,22 @@ struct StyleLayerShared: AbstractVisualLayer::Shared {
 struct StyleLayer: AbstractVisualLayer {
     explicit StyleLayer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
 
+    const State& stateData() const { return static_cast<const State&>(*_state); }
+
     /* Just saves the style index and sync's the styles array */
     template<class T> DataHandle create(T style, NodeHandle node = NodeHandle::Null) {
         const DataHandle handle = AbstractVisualLayer::create(node);
         const UnsignedInt id = dataHandleId(handle);
         if(id >= data.size()) {
             arrayAppend(data, NoInit, id - data.size() + 1);
-            _state->styles = data;
+            _state->styles = stridedArrayView(data).slice(&decltype(data)::Type::first);
+            _state->calculatedStyles = stridedArrayView(data).slice(&decltype(data)::Type::second);
         }
-        data[id] = UnsignedInt(style);
+        data[id].first() = UnsignedInt(style);
         return handle;
     }
 
-    Containers::Array<UnsignedInt> data;
+    Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> data;
 };
 
 template<class T> void AbstractVisualLayerTest::setStyle() {
@@ -420,6 +431,10 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
                 case PressedHover2:
                     return InactiveHover2;
             }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt) -> UnsignedInt {
+            CORRADE_FAIL("This shouldn't be called");
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         });
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
@@ -588,6 +603,9 @@ StyleIndex styleIndexTransitionToInactiveBlur(StyleIndex index) {
         case StyleIndex::White:
         case StyleIndex::WhiteHover:
             return StyleIndex::White;
+        case StyleIndex::GreenDisabled:
+        case StyleIndex::RedBlueDisabled:
+            CORRADE_FAIL("Called with" << index);
     }
     CORRADE_FAIL("Called with" << UnsignedInt(index));
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
@@ -611,6 +629,9 @@ StyleIndex styleIndexTransitionToInactiveHover(StyleIndex index) {
         case StyleIndex::White:
         case StyleIndex::WhiteHover:
             return StyleIndex::WhiteHover;
+        case StyleIndex::GreenDisabled:
+        case StyleIndex::RedBlueDisabled:
+            CORRADE_FAIL("Called with" << index);
     }
     CORRADE_FAIL("Called with" << UnsignedInt(index));
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
@@ -634,6 +655,9 @@ StyleIndex styleIndexTransitionToPressedBlur(StyleIndex index) {
         case StyleIndex::White:
         case StyleIndex::WhiteHover:
             return StyleIndex::White;
+        case StyleIndex::GreenDisabled:
+        case StyleIndex::RedBlueDisabled:
+            CORRADE_FAIL("Called with" << index);
     }
     CORRADE_FAIL("Called with" << UnsignedInt(index));
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
@@ -657,13 +681,52 @@ StyleIndex styleIndexTransitionToPressedHover(StyleIndex index) {
         case StyleIndex::White:
         case StyleIndex::WhiteHover:
             return StyleIndex::WhiteHover;
+        case StyleIndex::GreenDisabled:
+        case StyleIndex::RedBlueDisabled:
+            CORRADE_FAIL("Called with" << index);
+    }
+    CORRADE_FAIL("Called with" << UnsignedInt(index));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+/* The toDisabled function should only be called from doUpdate(), this verifies
+   that */
+StyleIndex styleIndexTransitionToDisabledDoNotCall(StyleIndex index) {
+    CORRADE_FAIL("Called with" << UnsignedInt(index));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+StyleIndex styleIndexTransitionToDisabled(StyleIndex index) {
+    switch(index) {
+        case StyleIndex::Green:
+        case StyleIndex::GreenHover:
+        case StyleIndex::GreenPressed:
+        case StyleIndex::GreenPressedHover:
+            return StyleIndex::GreenDisabled;
+        /* These two collapse to a single style, to verify that the mapping is
+           only ever in one direction and not back */
+        case StyleIndex::Red:
+        case StyleIndex::RedHover:
+        case StyleIndex::RedPressed:
+        case StyleIndex::RedPressedHover:
+        case StyleIndex::Blue:
+        case StyleIndex::BluePressed:
+            return StyleIndex::RedBlueDisabled;
+        /* This one has no disabled state */
+        case StyleIndex::White:
+        case StyleIndex::WhiteHover:
+            return index;
+        /* The disabled state shouldn't be the source state either */
+        case StyleIndex::GreenDisabled:
+        case StyleIndex::RedBlueDisabled:
+            CORRADE_FAIL("Called with" << index);
     }
     CORRADE_FAIL("Called with" << UnsignedInt(index));
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
-    StyleLayerShared shared{12};
+    StyleLayerShared shared{14};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -727,7 +790,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         nullptr,
         styleIndexTransitionToPressedHover,
         styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover>();
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
@@ -742,7 +806,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionToPressedHover,
         nullptr,
-        styleIndexTransitionToInactiveHover>();
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
@@ -757,7 +822,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionToPressedHover,
         styleIndexTransitionToInactiveBlur,
-        nullptr>();
+        nullptr,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({1.5f, 2.0f}, event));
@@ -772,7 +838,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedBlur,
         nullptr,
         styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover>();
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
@@ -785,7 +852,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     /* Setting a null combined toPressed will do nothing for a press */
     shared.setStyleTransition<StyleIndex,
         nullptr,
-        styleIndexTransitionToInactiveBlur>();
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
@@ -798,7 +866,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     /* Setting a null combined toInactive will do nothing for a release */
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionToPressedBlur,
-        nullptr>();
+        nullptr,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.0f, 2.0f}, event));
@@ -807,18 +876,24 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
+
+    /* toDisabled no-op transition is tested in
+       eventStyleTransitionDisabled() */
 }
 
 void AbstractVisualLayerTest::eventStyleTransition() {
     auto&& data = EventStyleTransitionData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    StyleLayerShared shared{12};
+    StyleLayerShared shared{14};
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionToPressedHover,
         styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover>();
+        styleIndexTransitionToInactiveHover,
+        /* toDisabled transition is tested in eventStyleTransitionDisabled()
+           instead */
+        styleIndexTransitionToDisabledDoNotCall>();
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -844,6 +919,12 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    /* The style could be simply copied to calculatedStyles after an update as
+       no transition is set */
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
 
     /* Press on the green node. The node isn't registered as hovered, so it's
        a press without a hover. Which usually happens with taps, for example,
@@ -863,6 +944,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
     }
 
     /* Release on the green node. Again, the node isn't registered as hovered,
@@ -879,6 +964,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
     }
 
     /* Move on the red node makes it hovered */
@@ -894,6 +983,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
     }
 
     /* Tap on it makes it hovered & pressed */
@@ -910,6 +1003,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedPressedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
     }
 
     /* Move away makes it only pressed, without hover, as implicit capture is
@@ -927,6 +1024,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedPressed);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
     }
 
     /* Move back makes it hovered & pressed again */
@@ -943,6 +1044,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedPressedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
     }
 
     /* Release makes it only hover again */
@@ -959,6 +1064,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
     }
 
     /* Move away makes it not hovered anymore */
@@ -974,6 +1083,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
     }
 
     /* Move on and away from the blue is accepted but makes no change to it,
@@ -1044,7 +1157,10 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToInactiveBlur>();
+        styleIndexTransitionToInactiveBlur,
+        /* "no hover" toDisabled transition is tested in
+           eventStyleTransitionDisabled() instead */
+        styleIndexTransitionToDisabledDoNotCall>();
 
     auto testPressRelease = [&]{
         {
@@ -1093,6 +1209,131 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
     }
 }
 
+void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Mark every other node as disabled */
+    NodeHandle nodeGreen = ui.createNode({}, {100, 100});
+    NodeHandle nodeRed = ui.createNode({}, {100, 100}, NodeFlag::Disabled);
+    NodeHandle nodeBlue = ui.createNode({}, {100, 100});
+    NodeHandle nodeWhite = ui.createNode({}, {100, 100}, NodeFlag::Disabled);
+
+    StyleLayerShared shared{14};
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    /* One extra data to verify it's mapping from nodes to data correctly */
+    layer.create(StyleIndex::Green);
+    DataHandle dataGreen = layer.create(StyleIndex::Green, nodeGreen);
+    DataHandle dataRed = layer.create(StyleIndex::Red, nodeRed);
+    DataHandle dataBlue = layer.create(StyleIndex::Blue, nodeBlue);
+    DataHandle dataWhite = layer.create(StyleIndex::White, nodeWhite);
+
+    /* There should be no style change from the input to the calculated by
+       default */
+    ui.update();
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+
+    /* Set a style transition. Only the nodes that are marked as Disabled
+       should change now. */
+    shared.setStyleTransition<StyleIndex,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        styleIndexTransitionToDisabled>();
+    /** @todo make this implicit from setStyleTransition() somehow? */
+    layer.setNeedsUpdate();
+    ui.update();
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedBlueDisabled);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+    /* White doesn't have any transition implemented */
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+
+    /* Changing the flags should result in the other nodes being marked */
+    ui.setNodeFlags(nodeGreen, NodeFlag::Disabled);
+    /* NoEvents shouldn't be treated the same as Disabled */
+    ui.setNodeFlags(nodeRed, NodeFlag::NoEvents);
+    ui.setNodeFlags(nodeBlue, NodeFlag::Disabled);
+    ui.setNodeFlags(nodeWhite, NodeFlags{});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+    ui.update();
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenDisabled);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::RedBlueDisabled);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+
+    /* Setting a no-op transition should revert back */
+    shared.setStyleTransition<StyleIndex,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr>();
+    /** @todo make this implicit from setStyleTransition() somehow? */
+    layer.setNeedsUpdate();
+    ui.update();
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+
+    /* Set a no-hover style transition. The nodes that are marked as Disabled
+       should change back again. */
+    shared.setStyleTransition<StyleIndex,
+        nullptr,
+        nullptr,
+        styleIndexTransitionToDisabled>();
+    /** @todo make this implicit from setStyleTransition() somehow? */
+    layer.setNeedsUpdate();
+    ui.update();
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenDisabled);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::RedBlueDisabled);
+    /* White doesn't have any transition implemented */
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+
+    /* Setting a no-op no-hover transition should revert back again */
+    shared.setStyleTransition<StyleIndex,
+        nullptr,
+        nullptr,
+        nullptr>();
+    /** @todo make this implicit from setStyleTransition() somehow? */
+    layer.setNeedsUpdate();
+    ui.update();
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+    CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+}
+
 void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
     auto&& data = EventStyleTransitionNoCaptureData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -1102,7 +1343,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionToPressedHover,
         styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover>();
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToDisabled>();
 
     struct EventLayer: AbstractLayer {
         explicit EventLayer(LayerHandle handle, bool disableCapture): AbstractLayer{handle}, disableCapture{disableCapture} {}
@@ -1171,13 +1413,13 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
 }
 
 StyleIndex styleIndexTransitionOutOfRange(StyleIndex) {
-    return StyleIndex(12);
+    return StyleIndex(14);
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    StyleLayerShared shared{12};
+    StyleLayerShared shared{14};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -1198,14 +1440,15 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToPressedHover,
         styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover>();
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
 
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from 4 to 12 out of range for 12 styles\n");
+        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from 4 to 14 out of range for 14 styles\n");
     }
 
     /* OOB toPressedHover transition in the press event. Doing a
@@ -1215,7 +1458,8 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover>();
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent moveEvent{{}, {}};
         ui.pointerMoveEvent({1.5f, 2.0f}, moveEvent);
@@ -1224,7 +1468,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from 5 to 12 out of range for 12 styles\n");
+        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from 5 to 14 out of range for 14 styles\n");
     }
 
     /* OOB toInactiveHover transition */
@@ -1232,14 +1476,15 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionToPressedHover,
         styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionOutOfRange>();
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
 
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerReleaseEvent({1.5f, 2.5f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from 5 to 12 out of range for 12 styles\n");
+        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from 5 to 14 out of range for 14 styles\n");
     }
 
     /* OOB toInactiveBlur transition in the leave event */
@@ -1247,14 +1492,15 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionToPressedHover,
         styleIndexTransitionOutOfRange,
-        styleIndexTransitionToInactiveHover>();
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent event{{}, {}};
 
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerMoveEvent({8.5f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from 5 to 12 out of range for 12 styles\n");
+        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from 5 to 14 out of range for 14 styles\n");
     }
 
     /* OOB toInactiveHover transition in the enter event */
@@ -1262,14 +1508,31 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionToPressedHover,
         styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionOutOfRange>();
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent event{{}, {}};
 
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerMoveEvent({1.5f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from 5 to 12 out of range for 12 styles\n");
+        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from 5 to 14 out of range for 14 styles\n");
+    }
+
+    /* OOB toDisabled transition in doUpdate() */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionOutOfRange>();
+    ui.addNodeFlags(node, NodeFlag::Disabled);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+    {
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.update();
+        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::update(): style transition from 5 to 14 out of range for 14 styles\n");
     }
 }
 
