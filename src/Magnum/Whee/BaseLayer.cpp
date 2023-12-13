@@ -115,6 +115,7 @@ DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const
     if(id >= state.data.size()) {
         arrayAppend(state.data, NoInit, id - state.data.size() + 1);
         state.styles = stridedArrayView(state.data).slice(&Implementation::BaseLayerData::style);
+        state.calculatedStyles = stridedArrayView(state.data).slice(&Implementation::BaseLayerData::calculatedStyle);
     }
 
     Implementation::BaseLayerData& data = state.data[id];
@@ -132,6 +133,7 @@ DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const
     data.padding = {};
     data.color = color;
     data.style = style;
+    /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     return handle;
 }
 
@@ -226,7 +228,10 @@ LayerFeatures BaseLayer::doFeatures() const {
     return AbstractVisualLayer::doFeatures()|LayerFeature::Draw;
 }
 
-void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
+    /* The base implementation populates data.calculatedStyle */
+    AbstractVisualLayer::doUpdate(dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
     /* Technically needed only if there's any actual data to update, but
@@ -266,7 +271,7 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
            |   |
            |   |
            2---3 */
-        const Vector4 padding = sharedState.styles[data.style].padding + data.padding;
+        const Vector4 padding = sharedState.styles[data.calculatedStyle].padding + data.padding;
         const Vector2 offset = nodeOffsets[nodeId];
         const Vector2 min = offset + padding.xy();
         const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
@@ -280,7 +285,7 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             vertex.centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{i});
             vertex.outlineWidth = data.outlineWidth;
             vertex.color = data.color;
-            vertex.styleUniform = sharedState.styles[data.style].uniform;
+            vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
         }
     }
 }
