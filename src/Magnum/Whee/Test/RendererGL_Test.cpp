@@ -1,5 +1,3 @@
-#ifndef Magnum_Whee_Whee_h
-#define Magnum_Whee_Whee_h
 /*
     This file is part of Magnum.
 
@@ -25,59 +23,29 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Magnum/Magnum.h"
+#include <Corrade/TestSuite/Tester.h>
 
-namespace Magnum { namespace Whee {
+#include "Magnum/Whee/RendererGL.h"
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
-enum class DataHandle: UnsignedLong;
-enum class LayerHandle: UnsignedShort;
-enum class LayerDataHandle: UnsignedInt;
-enum class NodeHandle: UnsignedInt;
-enum class LayoutHandle: UnsignedLong;
-enum class LayouterHandle: UnsignedShort;
-enum class LayouterDataHandle: UnsignedInt;
+namespace Magnum { namespace Whee { namespace Test { namespace {
 
-class AbstractLayer;
-class AbstractLayouter;
-class AbstractRenderer;
-class AbstractUserInterface;
+struct RendererGL_Test: TestSuite::Tester {
+    explicit RendererGL_Test();
 
-class BaseLayer;
-struct BaseLayerCommonStyleUniform;
-struct BaseLayerStyleUniform;
-#ifdef MAGNUM_TARGET_GL
-class BaseLayerGL;
-#endif
+    void construct();
+};
 
-class EventConnection;
-class EventLayer;
+RendererGL_Test::RendererGL_Test() {
+    addTests({&RendererGL_Test::construct});
+}
 
-enum class FontHandle: UnsignedShort;
-class TextLayer;
-struct TextLayerCommonStyleUniform;
-struct TextLayerStyleUniform;
-#ifdef MAGNUM_TARGET_GL
-class TextLayerGL;
-#endif
-class TextProperties;
+void RendererGL_Test::construct() {
+    RendererGL renderer;
 
-class RendererGL;
+    /* It shouldn't require a GL context on construction or destruction */
+    CORRADE_COMPARE(renderer.currentDrawStates(), RendererDrawStates{});
+}
 
-enum class StyleFeature: UnsignedByte;
-typedef Containers::EnumSet<StyleFeature, 15> StyleFeatures;
-class AbstractStyle;
+}}}}
 
-class UserInterface;
-class UserInterfaceGL;
-class Widget;
-
-enum class Pointer: UnsignedByte;
-typedef Containers::EnumSet<Pointer> Pointers;
-class PointerEvent;
-class PointerMoveEvent;
-#endif
-
-}}
-
-#endif
+CORRADE_TEST_MAIN(Magnum::Whee::Test::RendererGL_Test)
