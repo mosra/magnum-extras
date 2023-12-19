@@ -47,6 +47,7 @@ set(MagnumWhee_SRCS
 set(MagnumWhee_GracefulAssert_SRCS
     AbstractLayer.cpp
     AbstractLayouter.cpp
+    AbstractRenderer.cpp
     AbstractStyle.cpp
     AbstractUserInterface.cpp
     AbstractVisualLayer.cpp
@@ -59,6 +60,7 @@ set(MagnumWhee_GracefulAssert_SRCS
 set(MagnumWhee_HEADERS
     AbstractLayer.h
     AbstractLayouter.h
+    AbstractRenderer.h
     AbstractStyle.h
     AbstractUserInterface.h
     AbstractVisualLayer.h
@@ -83,6 +85,7 @@ set(MagnumWhee_PRIVATE_HEADERS
 if(MAGNUM_TARGET_GL)
     corrade_add_resource(MagnumWhee_RESOURCES resources.conf)
     list(APPEND MagnumWhee_SRCS
+        RendererGL.cpp
         ${MagnumWhee_RESOURCES})
     list(APPEND MagnumWhee_GracefulAssert_SRCS
         BaseLayerGL.cpp
@@ -90,6 +93,7 @@ if(MAGNUM_TARGET_GL)
         UserInterfaceGL.cpp)
     list(APPEND MagnumWhee_HEADERS
         BaseLayerGL.h
+        RendererGL.h
         TextLayerGL.h
         UserInterfaceGL.h)
 endif()

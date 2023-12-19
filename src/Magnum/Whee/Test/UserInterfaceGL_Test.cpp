@@ -50,7 +50,8 @@ void UserInterfaceGL_Test::constructNoCreate() {
     CORRADE_COMPARE(ui.windowSize(), Vector2{});
     CORRADE_COMPARE(ui.framebufferSize(), Vector2i{});
 
-    /* Doesn't add any layers at all, not even ones without GL */
+    /* Doesn't add any renderer or layers at all, not even ones without GL */
+    CORRADE_VERIFY(!ui.hasRenderer());
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
@@ -64,7 +65,8 @@ void UserInterfaceGL_Test::constructNoCreateSize() {
     CORRADE_COMPARE(ui.windowSize(), (Vector2{50.0f, 75.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
 
-    /* Doesn't add any layers at all, not even ones without GL */
+    /* Doesn't add any renderer or layers at all, not even ones without GL */
+    CORRADE_VERIFY(!ui.hasRenderer());
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());
@@ -78,7 +80,8 @@ void UserInterfaceGL_Test::constructNoCreateSingleSize() {
     CORRADE_COMPARE(ui.windowSize(), (Vector2{200.0f, 300.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
 
-    /* Doesn't add any layers at all, not even ones without GL */
+    /* Doesn't add any renderer or layers at all, not even ones without GL */
+    CORRADE_VERIFY(!ui.hasRenderer());
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_VERIFY(!ui.hasBaseLayer());

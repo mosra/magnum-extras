@@ -46,6 +46,14 @@ GL::Renderer::setBlendFunction(
 }
 
 {
+/* [RendererGL] */
+GL::Renderer::setBlendFunction(
+    GL::Renderer::BlendFunction::One,
+    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+/* [RendererGL] */
+}
+
+{
 /* [TextLayerGL-renderer] */
 GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
 GL::Renderer::enable(GL::Renderer::Feature::Blending);
