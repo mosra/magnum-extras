@@ -36,6 +36,7 @@
 #include "Magnum/Whee/AbstractStyle.h"
 #include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/EventLayer.h"
+#include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/TextLayerGL.h"
 #include "Magnum/Whee/UserInterfaceGL.h"
 
@@ -52,6 +53,7 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
     void constructMove();
 
     void setStyle();
+    void setStyleRendererAlreadyPresent();
     void setStyleNoFeatures();
     void setStyleFeaturesNotSupported();
     void setStyleBaseLayerAlreadyPresent();
@@ -140,7 +142,8 @@ UserInterfaceGLTest::UserInterfaceGLTest() {
     addInstancedTests({&UserInterfaceGLTest::setStyle},
         Containers::arraySize(SetStyleData));
 
-    addTests({&UserInterfaceGLTest::setStyleNoFeatures,
+    addTests({&UserInterfaceGLTest::setStyleRendererAlreadyPresent,
+              &UserInterfaceGLTest::setStyleNoFeatures,
               &UserInterfaceGLTest::setStyleFeaturesNotSupported,
               &UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent,
               &UserInterfaceGLTest::setStyleTextLayerAlreadyPresent,
@@ -176,6 +179,13 @@ void UserInterfaceGLTest::construct() {
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
     CORRADE_COMPARE(applyCalled, 1);
+
+    /* The renderer instance is set implicitly first time a style is */
+    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_COMPARE(ui.renderer().currentTargetState(), RendererTargetState::Initial);
+    /* const overload */
+    const UserInterfaceGL& cui = ui;
+    CORRADE_COMPARE(cui.renderer().currentTargetState(), RendererTargetState::Initial);
 }
 
 void UserInterfaceGLTest::constructSingleSize() {
@@ -205,6 +215,13 @@ void UserInterfaceGLTest::constructSingleSize() {
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
     CORRADE_COMPARE(applyCalled, 1);
+
+    /* The renderer instance is set implicitly first time a style is */
+    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_COMPARE(ui.renderer().currentTargetState(), RendererTargetState::Initial);
+    /* const overload */
+    const UserInterfaceGL& cui = ui;
+    CORRADE_COMPARE(cui.renderer().currentTargetState(), RendererTargetState::Initial);
 }
 
 void UserInterfaceGLTest::constructCopy() {
@@ -281,6 +298,7 @@ void UserInterfaceGLTest::setStyle() {
     } style{applyCalled, glyphCacheSizeQueriedFeatures, actualFeatures, data.supportedFeatures, data.succeed};
 
     UserInterfaceGL ui{NoCreate, {200, 300}};
+    CORRADE_VERIFY(!ui.hasRenderer());
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
 
     /** @todo once FreeTypeFont is fixed to work with multiple plugin managers,
@@ -292,6 +310,10 @@ void UserInterfaceGLTest::setStyle() {
     CORRADE_COMPARE(ui.layerUsedCount(), data.expectedLayerCount);
     CORRADE_COMPARE(applyCalled, data.features.isEmpty() ? 1 : data.features.size());
     CORRADE_COMPARE(actualFeatures, data.expectedFeatures);
+
+    /* The renderer instance is set implicitly first time a style is, and only
+       if not already */
+    CORRADE_VERIFY(ui.hasRenderer());
 
     if(data.expectedFeatures & StyleFeature::BaseLayer) {
         CORRADE_VERIFY(ui.hasBaseLayer());
@@ -314,6 +336,24 @@ void UserInterfaceGLTest::setStyle() {
     if(data.expectedFeatures & StyleFeature::EventLayer) {
         CORRADE_VERIFY(ui.hasEventLayer());
     }
+}
+
+void UserInterfaceGLTest::setStyleRendererAlreadyPresent() {
+    UserInterfaceGL ui{NoCreate, {200, 300}};
+    CORRADE_VERIFY(!ui.hasRenderer());
+
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+    CORRADE_VERIFY(ui.hasRenderer());
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return true; }
+    } style;
+
+    /* Setting a style shouldn't attempt to set a renderer instance again if
+       it's already there */
+    ui.setStyle(style);
+    CORRADE_VERIFY(ui.hasRenderer());
 }
 
 void UserInterfaceGLTest::setStyleNoFeatures() {

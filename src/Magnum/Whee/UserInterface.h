@@ -41,7 +41,8 @@ namespace Magnum { namespace Whee {
 Provides an interface for setting up and querying @ref BaseLayer and
 @ref TextLayer instances for use by builtin widgets. You'll most likely
 instantiate the class through @ref UserInterfaceGL, which populates the
-instance with concrete OpenGL implementations of builtin layers.
+instance with concrete OpenGL implementations of the renderer and builtin
+layers.
 */
 class MAGNUM_WHEE_EXPORT UserInterface: public AbstractUserInterface {
     public:

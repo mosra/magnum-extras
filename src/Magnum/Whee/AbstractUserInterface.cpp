@@ -35,6 +35,7 @@
 
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/AbstractLayouter.h"
+#include "Magnum/Whee/AbstractRenderer.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/abstractUserInterface.h"
@@ -55,11 +56,12 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         _c(NeedsLayoutAssignmentUpdate)
         _c(NeedsNodeUpdate)
         _c(NeedsNodeClean)
+        _c(NeedsRendererSizeSetup)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedShort(value) << Debug::nospace << ")";
 }
 
 Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
@@ -78,7 +80,8 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         /* Implied by NeedsNodeEnabledUpdate, has to be after */
         UserInterfaceState::NeedsDataAttachmentUpdate,
         /* Implied by NeedsDataAttachmentUpdate, has to be after */
-        UserInterfaceState::NeedsDataUpdate
+        UserInterfaceState::NeedsDataUpdate,
+        UserInterfaceState::NeedsRendererSizeSetup
     });
 }
 
@@ -334,6 +337,9 @@ static_assert(std::is_trivially_copyable<NodeOrder>::value, "NodeOrder not trivi
 }
 
 struct AbstractUserInterface::State {
+    /* Renderer instance */
+    Containers::Pointer<AbstractRenderer> renderer;
+
     /* Layers, indexed by LayerHandle */
     Containers::Array<Layer> layers;
     /* The `Layer` then has a `next` member containing the next layer in the
@@ -487,10 +493,25 @@ AbstractUserInterface& AbstractUserInterface::setSize(const Vector2& size, const
     CORRADE_ASSERT(size.product() && windowSize.product() && framebufferSize.product(),
         "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got" << size << Debug::nospace << "," << windowSize << "and" << framebufferSize, *this);
     State& state = *_state;
-    const bool sizeOrFramebufferSizeDifferent = state.size != size || state.framebufferSize != framebufferSize;
+    const bool framebufferSizeDifferent = state.framebufferSize != framebufferSize;
+    const bool sizeOrFramebufferSizeDifferent = state.size != size || framebufferSizeDifferent;
     state.size = size;
     state.windowSize = windowSize;
     state.framebufferSize = framebufferSize;
+
+    /* If framebuffer size is different and renderer instance is already
+       present, schedule a framebuffer size setup. If the renderer doesn't have
+       the framebuffers set up yet, do it immediately so the renderer internals
+       such as custom framebuffers are ready to be used by the application.
+       Only the subsequent size changes get deferred to updateRenderer(). If a
+       renderer isn't present yet, this is done in setRendererInstance()
+       instead. */
+    if(framebufferSizeDifferent && state.renderer) {
+        if(state.renderer->framebufferSize().isZero())
+            state.renderer->setupFramebuffers(framebufferSize);
+        else
+            state.state |= UserInterfaceState::NeedsRendererSizeSetup;
+    }
 
     /* If the size or framebuffer size is different, set it on all existing
        layers that have an instance (so, also aren't freed) and support
@@ -553,6 +574,42 @@ UserInterfaceStates AbstractUserInterface::state() const {
     }
 
     return state.state|states;
+}
+
+AbstractRenderer& AbstractUserInterface::setRendererInstance(Containers::Pointer<AbstractRenderer>&& instance) {
+    State& state = *_state;
+    CORRADE_ASSERT(instance,
+        "Whee::AbstractUserInterface::setRendererInstance(): instance is null", *state.renderer);
+    CORRADE_ASSERT(!state.renderer,
+        "Whee::AbstractUserInterface::setRendererInstance(): instance already set", *instance);
+    state.renderer = Utility::move(instance);
+    /* If we already know the framebuffer size, perform framebuffer size
+       setup. Do it immediately so the renderer internals such as custom
+       framebuffers are ready to be used by the application. Only the
+       subsequent setSize() calls get deferred to updateRenderer(). If a size
+       isn't known yet, this is done in setSize() instead. */
+    if(!state.size.isZero()) {
+        CORRADE_INTERNAL_ASSERT(!state.framebufferSize.isZero());
+        state.renderer->setupFramebuffers(state.framebufferSize);
+    }
+    return *state.renderer;
+}
+
+bool AbstractUserInterface::hasRenderer() const {
+    return !!_state->renderer;
+}
+
+const AbstractRenderer& AbstractUserInterface::renderer() const {
+    const State& state = *_state;
+    CORRADE_ASSERT(state.renderer,
+        "Whee::AbstractUserInterface::renderer(): no renderer instance set",
+        /* Dereferencing get() to not hit another assert in Pointer */
+        *state.renderer.get());
+    return *state.renderer;
+}
+
+AbstractRenderer& AbstractUserInterface::renderer() {
+    return const_cast<AbstractRenderer&>(const_cast<const AbstractUserInterface&>(*this).renderer());
 }
 
 std::size_t AbstractUserInterface::layerCapacity() const {
@@ -1550,8 +1607,26 @@ AbstractUserInterface& AbstractUserInterface::clean() {
     }
 
     /* Unmark the UI as needing a clean() call, but keep the Update states
-       including ones that bubbled up from layers */
+       including ones that bubbled up from layers. States that aren't a subset
+       of NeedsNodeClean, such as NeedsRendererSizeSetup, are unaffected. */
     state.state = states & ~(UserInterfaceState::NeedsNodeClean & ~UserInterfaceState::NeedsNodeUpdate);
+    return *this;
+}
+
+AbstractUserInterface& AbstractUserInterface::updateRenderer() {
+    /** @todo once this gets more logic, the direct setupFramebuffers() calls
+        in setSize() and setRendererInstance() should be (the state flag bit)
+        and calls to this function instead */
+
+    /* If renderer framebuffer setup is desired, do it. The flag should be set
+       only if there's actually a renderer instance and the size is set. */
+    State& state = *_state;
+    if(state.state >= UserInterfaceState::NeedsRendererSizeSetup) {
+        CORRADE_INTERNAL_ASSERT(state.renderer && !state.framebufferSize.isZero());
+        state.renderer->setupFramebuffers(state.framebufferSize);
+    }
+
+    state.state &= ~UserInterfaceState::NeedsRendererSizeSetup;
     return *this;
 }
 
@@ -1559,6 +1634,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* Call clean implicitly in order to make the internal state ready for
        update. Is a no-op if there's nothing to clean. */
     clean();
+
+    /* Update the renderer as the first thing, propagating sizes to it */
+    updateRenderer();
 
     /* Get the state after the clean call including what bubbles from layers.
        If there's nothing to update, bail. No other states should be left after
@@ -2145,22 +2223,42 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
     /* Unmark the UI as needing an update() call. No other states should be
        left after that, i.e. the UI should be ready for drawing and event
-       processing. */
+       processing. Not even NeedsRendererSizeSetup should be left, as that was
+       cleared by updateRenderer() that was called above. */
     state.state &= ~UserInterfaceState::NeedsNodeUpdate;
     CORRADE_INTERNAL_ASSERT(!state.state);
     return *this;
 }
 
 AbstractUserInterface& AbstractUserInterface::draw() {
+    State& state = *_state;
+    CORRADE_ASSERT(state.renderer,
+        "Whee::AbstractUserInterface::draw(): no renderer instance set", *this);
+
     /* Call update implicitly in order to make the internal state ready for
        drawing. Is a no-op if there's nothing to update or clean. */
     update();
 
+    /* Transition the renderer to the initial state if it was in Final. If it's
+       already there, this is a no-op. */
+    AbstractRenderer& renderer = *state.renderer;
+    renderer.transition(RendererTargetState::Initial, {});
+
     /* Then submit draws in the correct back-to-front order, i.e. for every
        top-level node and then for every layer used by its children */
-    State& state = *_state;
     for(std::size_t i = 0; i != state.drawCount; ++i) {
         const UnsignedInt layerId = state.dataToDrawLayerIds[i];
+
+        /* Transition between draw states. If they're the same, it's a no-op in
+           the renderer. */
+        const LayerFeatures features = state.layers[layerId].used.features;
+        RendererDrawStates rendererDrawStates;
+        if(features >= LayerFeature::DrawUsesBlending)
+            rendererDrawStates |= RendererDrawState::Blending;
+        if(features >= LayerFeature::DrawUsesScissor)
+            rendererDrawStates |= RendererDrawState::Scissor;
+        renderer.transition(RendererTargetState::Draw, rendererDrawStates);
+
         state.layers[layerId].used.instance->draw(
             /* The views should be exactly the same as passed to update()
                before ... */
@@ -2187,6 +2285,9 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             state.clipRectSizes.prefix(state.clipRectCount));
     }
 
+    /* Transition the renderer to the final state. If no layers were drawn,
+       it goes just from Initial to Final. */
+    renderer.transition(RendererTargetState::Final, {});
     return *this;
 }
 

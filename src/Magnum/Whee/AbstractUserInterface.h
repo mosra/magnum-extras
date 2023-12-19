@@ -50,7 +50,7 @@ state before the interface is drawn or an event is handled. See also
 layouter-specific state.
 @see @ref UserInterfaceStates, @ref AbstractUserInterface::state()
 */
-enum class UserInterfaceState: UnsignedByte {
+enum class UserInterfaceState: UnsignedShort {
     /**
      * @ref AbstractUserInterface::update() needs to be called to recalculate
      * or reupload data attached to visible node hierarchy after they've been
@@ -183,6 +183,16 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref UserInterfaceState::NeedsNodeUpdate.
      */
     NeedsNodeClean = NeedsNodeUpdate|(1 << 7),
+
+    /**
+     * @ref AbstractUserInterface::updateRenderer() needs to be called to set
+     * up renderer framebuffers after user interface size was changed. Set
+     * after every @ref AbstractUserInterface::setSize() call if the
+     * framebuffer size changes and a renderer instance is already set at that
+     * point, is reset next time @ref AbstractUserInterface::updateRenderer()
+     * is called.
+     */
+    NeedsRendererSizeSetup = 1 << 8,
 };
 
 /**
@@ -450,8 +460,18 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * even after node, layers or data were created.
          *
          * Calling this function with new values will update the event position
-         * scaling accordingly. @ref AbstractLayer::setSize() is called only if
-         * @p size or @p framebufferSize changes.
+         * scaling accordingly. If @p size or @p framebufferSize changes,
+         * @ref AbstractLayer::setSize() is called on all layers. If a renderer
+         * instance is set and this function is called for the first time,
+         * @ref AbstractRenderer::setupFramebuffers() is called to make the
+         * renderer populate its internal state. On subsequent calls to this
+         * function with a renderer instance present, only
+         * @ref UserInterfaceState::NeedsRendererSizeSetup is set and the
+         * framebuffer size setup is deferred to when @ref updateRenderer() is
+         * called, either directly or through @ref update() or @ref draw(). If
+         * a renderer instance isn't set yet when calling this function, the
+         * framebuffer setup is performed in the next
+         * @ref setRendererInstance() call instead.
          */
         AbstractUserInterface& setSize(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize);
 
@@ -472,6 +492,70 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * default no flags are set.
          */
         UserInterfaceStates state() const;
+
+        /** @{
+         * @name Renderer management
+         */
+
+        /**
+         * @brief Set renderer instance
+         *
+         * Expects that the instance hasn't been set yet. A renderer instance
+         * has to be set in order to draw anything, it's the user
+         * responsibility to ensure that the GPU API used by the renderer
+         * matches the GPU API used by all layer instances, such as
+         * @ref RendererGL being used for @ref BaseLayerGL and
+         * @ref TextLayerGL. The instance is subsequently available through
+         * @ref renderer().
+         *
+         * If framebuffer size was set with @ref setSize() already, calling
+         * this function causes @ref AbstractRenderer::setupFramebuffers() to
+         * be called. Otherwise the setup gets performed in the next
+         * @ref setSize() call. Subsequent calls to @ref setSize() only set
+         * @ref UserInterfaceState::NeedsRendererSizeSetup and the framebuffer
+         * size setup is deferred to when @ref updateRenderer() is called,
+         * either directly or through @ref update() or @ref draw().
+         * @see @ref hasRenderer()
+         */
+        AbstractRenderer& setRendererInstance(Containers::Pointer<AbstractRenderer>&& instance);
+        /** @overload */
+        template<class T> T& setRendererInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setRendererInstance(Containers::Pointer<AbstractRenderer>{Utility::move(instance)}));
+        }
+
+        /**
+         * @brief Whether a renderer instance has been set
+         *
+         * @see @ref renderer(), @ref setRendererInstance()
+         */
+        bool hasRenderer() const;
+
+        /**
+         * @brief Renderer instance
+         *
+         * Expects that @ref setRendererInstance() was called.
+         * @see @ref UserInterfaceGL::renderer()
+         */
+        AbstractRenderer& renderer();
+        const AbstractRenderer& renderer() const; /**< @overload */
+
+        /**
+         * @brief Renderer instance in a concrete type
+         *
+         * Expected that @ref setRendererInstance() was called. It's the user
+         * responsibility to ensure that @p T matches the actual instance type.
+         */
+        template<class T> T& renderer() {
+            return static_cast<T&>(renderer());
+        }
+        /** @overload */
+        template<class T> const T& renderer() const {
+            return static_cast<const T&>(renderer());
+        }
+
+        /**
+         * @}
+         */
 
         /** @{
          * @name Layer and data management
@@ -1195,6 +1279,25 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         AbstractUserInterface& clean();
 
         /**
+         * @brief Update renderer framebuffer sizes
+         * @return Reference to self (for method chaining)
+         *
+         * Called implicitly from @ref update() and subsequently also from
+         * @ref draw() and all event processing functions, but is a dedicated
+         * API to allow scheduling it separately from regular updates as it's
+         * potentially expensive due to framebuffer attachment reallocation.
+         *
+         * If @ref state() doesn't contain
+         * @ref UserInterfaceState::NeedsRendererSizeSetup, this function a
+         * no-op, otherwise it calls @ref AbstractRenderer::setupFramebuffers()
+         * with current framebuffer size.
+         *
+         * After calling this function, @ref state() doesn't contain
+         * @ref UserInterfaceState::NeedsRendererSizeSetup anymore.
+         */
+        AbstractUserInterface& updateRenderer();
+
+        /**
          * @brief Update node hierarchy, data order and data contents for drawing and event processing
          * @return Reference to self (for method chaining)
          *
@@ -1202,8 +1305,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
          * constructor was used.
          *
-         * Implicitly calls @ref clean(); called implicitly from @ref draw()
-         * and all event processing functions. If @ref state() contains none of
+         * Implicitly calls @ref clean() and @ref updateRenderer(); called
+         * implicitly from @ref draw() and all event processing functions. If
+         * @ref state() contains none of
          * @ref UserInterfaceState::NeedsDataUpdate,
          * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
          * @ref UserInterfaceState::NeedsNodeEnabledUpdate,
@@ -1238,19 +1342,33 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Draw the user interface
          * @return Reference to self (for method chaining)
          *
-         * Implicitly calls @ref update() and @ref clean(). Calls
-         * @ref AbstractLayer::draw() on layers that support
-         * @ref LayerFeature::Draw in a back-to-front order.
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean() and @ref updateRenderer(). Performs the following:
+         *
+         * -    Calls @ref AbstractRenderer::transition() with
+         *      @ref RendererTargetState::Initial
+         * -    Peforms draw calls by going through draws collected by
+         *      @ref update() for each top level node and all its visible
+         *      children in a back to front order, and then for each layer that
+         *      supports @ref LayerFeature::Draw in a back to front order:
+         *      -   Calls @ref AbstractRenderer::transition() with
+         *          @ref RendererTargetState::Draw and appropriate
+         *          @ref RendererDrawStates based on whether given layer
+         *          advertises @ref LayerFeature::DrawUsesBlending or
+         *          @relativeref{LayerFeature,DrawUsesScissor}
+         *      -   Calls @ref AbstractLayer::draw()
+         * -    Calls @ref AbstractRenderer::transition() with
+         *      @ref RendererTargetState::Final
          */
         AbstractUserInterface& draw();
 
         /**
          * @brief Handle a pointer press event
          *
-         * Implicitly calls @ref update() and @ref clean(). The
-         * @p globalPosition is assumed to be in respect to @ref windowSize(),
-         * and is internally scaled to match @ref size() before being set to
-         * @ref PointerEvent.
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean() and @ref updateRenderer(). The @p globalPosition is
+         * assumed to be in respect to @ref windowSize(), and is internally
+         * scaled to match @ref size() before being set to @ref PointerEvent.
          *
          * Finds the front-most node under (scaled) @p globalPosition and
          * calls @ref AbstractLayer::pointerPressEvent() on all data attached
@@ -1286,10 +1404,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Handle a pointer release event
          *
-         * Implicitly calls @ref update() and @ref clean(). The
-         * @p globalPosition is assumed to be in respect to @ref windowSize(),
-         * and is internally scaled to match @ref size() before being set to
-         * @ref PointerEvent.
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean() and @ref updateRenderer(). The @p globalPosition is
+         * assumed to be in respect to @ref windowSize(), and is internally
+         * scaled to match @ref size() before being set to @ref PointerEvent.
          *
          * If a node was captured by a previous @ref pointerPressEvent() or
          * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
@@ -1332,10 +1450,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Handle a pointer move event
          *
-         * Implicitly calls @ref update() and @ref clean(). The
-         * @p globalPosition is assumed to be in respect to @ref windowSize(),
-         * and is internally scaled to match @ref size() before being set to
-         * @ref PointerEvent.
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean() and @ref updateRenderer(). The @p globalPosition is
+         * assumed to be in respect to @ref windowSize(), and is internally
+         * scaled to match @ref size() before being set to @ref PointerEvent.
          *
          * If a node was captured by a previous @ref pointerPressEvent() or
          * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
