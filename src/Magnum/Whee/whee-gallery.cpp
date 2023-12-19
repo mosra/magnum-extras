@@ -343,7 +343,6 @@ class WheeGallery: public Platform::Application {
 WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Whee Gallery"_s)}, _ui{{800, 600}, Vector2{windowSize()}, framebufferSize()} {
     _popup.emplace(_ui, 0.7f, false);
 
-    GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 }
