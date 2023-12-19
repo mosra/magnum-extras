@@ -46,6 +46,7 @@ struct AbstractLayerTest: TestSuite::Tester {
 
     void debugFeature();
     void debugFeatures();
+    void debugFeaturesSupersets();
     void debugState();
     void debugStates();
     void debugStatesSupersets();
@@ -96,6 +97,7 @@ struct AbstractLayerTest: TestSuite::Tester {
 AbstractLayerTest::AbstractLayerTest() {
     addTests({&AbstractLayerTest::debugFeature,
               &AbstractLayerTest::debugFeatures,
+              &AbstractLayerTest::debugFeaturesSupersets,
               &AbstractLayerTest::debugState,
               &AbstractLayerTest::debugStates,
               &AbstractLayerTest::debugStatesSupersets,
@@ -153,6 +155,24 @@ void AbstractLayerTest::debugFeatures() {
     std::ostringstream out;
     Debug{&out} << (LayerFeature::Draw|LayerFeature(0xe0)) << LayerFeatures{};
     CORRADE_COMPARE(out.str(), "Whee::LayerFeature::Draw|Whee::LayerFeature(0xe0) Whee::LayerFeatures{}\n");
+}
+
+void AbstractLayerTest::debugFeaturesSupersets() {
+    /* DrawUsesBlending and DrawUsesScissor are both a superset of Draw, so
+       only one should be printed, but if there are both then both should be */
+    {
+        std::ostringstream out;
+        Debug{&out} << (LayerFeature::DrawUsesBlending|LayerFeature::Draw);
+        CORRADE_COMPARE(out.str(), "Whee::LayerFeature::DrawUsesBlending\n");
+    } {
+        std::ostringstream out;
+        Debug{&out} << (LayerFeature::DrawUsesScissor|LayerFeature::Draw);
+        CORRADE_COMPARE(out.str(), "Whee::LayerFeature::DrawUsesScissor\n");
+    } {
+        std::ostringstream out;
+        Debug{&out} << (LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor);
+        CORRADE_COMPARE(out.str(), "Whee::LayerFeature::DrawUsesBlending|Whee::LayerFeature::DrawUsesScissor\n");
+    }
 }
 
 void AbstractLayerTest::debugState() {

@@ -23,43 +23,29 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <Magnum/GL/Renderer.h>
+#include <Corrade/TestSuite/Tester.h>
 
-#define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
-#define DOXYGEN_IGNORE(...) __VA_ARGS__
+#include "Magnum/Whee/RendererGL.h"
 
-using namespace Magnum;
+namespace Magnum { namespace Whee { namespace Test { namespace {
 
-/* Make sure the name doesn't conflict with any other snippets to avoid linker
-   warnings, unlike with `int main()` there now has to be a declaration to
-   avoid -Wmisssing-prototypes */
-void mainWheeGL();
-void mainWheeGL() {
-{
-/* [BaseLayerGL-renderer] */
-GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
-GL::Renderer::enable(GL::Renderer::Feature::Blending);
-GL::Renderer::setBlendFunction(
-    GL::Renderer::BlendFunction::One,
-    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-/* [BaseLayerGL-renderer] */
+struct RendererGL_Test: TestSuite::Tester {
+    explicit RendererGL_Test();
+
+    void construct();
+};
+
+RendererGL_Test::RendererGL_Test() {
+    addTests({&RendererGL_Test::construct});
 }
 
-{
-/* [RendererGL] */
-GL::Renderer::setBlendFunction(
-    GL::Renderer::BlendFunction::One,
-    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-/* [RendererGL] */
+void RendererGL_Test::construct() {
+    RendererGL renderer;
+
+    /* It shouldn't require a GL context on construction or destruction */
+    CORRADE_COMPARE(renderer.currentDrawStates(), RendererDrawStates{});
 }
 
-{
-/* [TextLayerGL-renderer] */
-GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
-GL::Renderer::enable(GL::Renderer::Feature::Blending);
-GL::Renderer::setBlendFunction(
-    GL::Renderer::BlendFunction::One,
-    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-/* [TextLayerGL-renderer] */
-}
-}
+}}}}
+
+CORRADE_TEST_MAIN(Magnum::Whee::Test::RendererGL_Test)

@@ -37,12 +37,20 @@
 namespace Magnum { namespace Whee {
 
 Debug& operator<<(Debug& debug, const LayerFeature value) {
+    /* Special case coming from the LayerFeatures printer. As both flags are a
+       superset of Draw, printing just one would result in
+       `LayerFeature::DrawUsesBlending|LayerFeature(0x04)` in the output. */
+    if(value == LayerFeature(UnsignedByte(LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor)))
+        return debug << LayerFeature::DrawUsesBlending << Debug::nospace << "|" << Debug::nospace << LayerFeature::DrawUsesScissor;
+
     debug << "Whee::LayerFeature" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
         #define _c(value) case LayerFeature::value: return debug << "::" #value;
         _c(Draw)
+        _c(DrawUsesBlending)
+        _c(DrawUsesScissor)
         _c(Event)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -53,6 +61,13 @@ Debug& operator<<(Debug& debug, const LayerFeature value) {
 
 Debug& operator<<(Debug& debug, const LayerFeatures value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::LayerFeatures{}", {
+        /* Both are a superset of Draw, meaning printing just one
+           would result in `LayerFeature::DrawUsesBlending|LayerFeature(0x04)`
+           in the output. So we pass both and let the LayerFeature printer deal
+           with that. */
+        LayerFeature(UnsignedByte(LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor)),
+        LayerFeature::DrawUsesBlending, /* superset of Draw */
+        LayerFeature::DrawUsesScissor, /* superset of Draw */
         LayerFeature::Draw,
         LayerFeature::Event
     });

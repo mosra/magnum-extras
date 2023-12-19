@@ -45,8 +45,9 @@ namespace Magnum { namespace Whee {
 @brief OpenGL implementation of the main user interface
 @m_since_latest
 
-Provides an interface for setting up @ref BaseLayerGL and @ref TextLayerGL
-instances, either directly or via an @ref AbstractStyle instance.
+Provides an interface for setting up @ref RendererGL, @ref BaseLayerGL and
+@ref TextLayerGL instances, either directly or via an @ref AbstractStyle
+instance.
 
 @note This class is available only if Magnum is compiled with
     @ref MAGNUM_TARGET_GL enabled (done by default). See @ref building-features
@@ -129,6 +130,29 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
         explicit UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
+         * @brief Set renderer instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the instance hasn't been set yet, either by this
+         * function or transitively either by @ref UserInterfaceGL::setStyle()
+         * or a @ref UserInterfaceGL constructor taking a style instance. The
+         * instance is subsequently available through @ref renderer().
+         * @see @ref hasRenderer()
+         */
+        UserInterfaceGL& setRendererInstance(Containers::Pointer<RendererGL>&& instance);
+
+        /**
+         * @brief Renderer instance
+         *
+         * Expects that an instance has been set, either by
+         * @ref setRendererInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle() or a @ref UserInterfaceGL
+         * constructor taking a style instance.
+         */
+        RendererGL& renderer();
+        const RendererGL& renderer() const; /**< @overload */
+
+        /**
          * @brief Set features from a style
          * @param style             Style instance
          * @param features          Style features to apply
@@ -138,14 +162,14 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
          *      loading
          * @return Reference to self (for method chaining)
          *
-         * Creates layer instances corresponding to all @p features with style
-         * uniform count, style count and other parameters coming from
-         * @p style. If @p features contain @ref StyleFeature::TextLayer and
-         * @p fontManager is @cpp nullptr @ce, an internal font plugin manager
-         * instance is created. The function then calls
-         * @ref AbstractStyle::apply() to apply the style to those layers. If
-         * it fails, the program exits, see @ref trySetStyle() for an
-         * alternative.
+         * If a renderer isn't present yet, sets its instance. Then creates
+         * layer instances corresponding to all @p features with style uniform
+         * count, style count and other parameters coming from @p style. If
+         * @p features contain @ref StyleFeature::TextLayer and @p fontManager
+         * is @cpp nullptr @ce, an internal font plugin manager instance is
+         * created. The function then calls @ref AbstractStyle::apply() to
+         * apply the style to those layers. If it fails, the program exits, see
+         * @ref trySetStyle() for an alternative.
          *
          * Expects that @p features are a subset of @ref AbstractStyle::features()
          * of @p style, contain at least one feature and that the user

@@ -33,6 +33,7 @@
 #include "Magnum/Whee/AbstractStyle.h"
 #include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/EventLayer.h"
+#include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/TextLayerGL.h"
 #include "Magnum/Whee/Implementation/userInterfaceState.h"
 
@@ -63,6 +64,19 @@ UserInterfaceGL::UserInterfaceGL(const Vector2& size, const Vector2& windowSize,
 
 UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, style, importerManager, fontManager} {}
 
+UserInterfaceGL& UserInterfaceGL::setRendererInstance(Containers::Pointer<RendererGL>&& instance) {
+    UserInterface::setRendererInstance(Utility::move(instance));
+    return *this;
+}
+
+RendererGL& UserInterfaceGL::renderer() {
+    return static_cast<RendererGL&>(UserInterface::renderer());
+}
+
+const RendererGL& UserInterfaceGL::renderer() const {
+    return static_cast<const RendererGL&>(UserInterface::renderer());
+}
+
 bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
     CORRADE_ASSERT(features,
         "Whee::UserInterfaceGL::trySetStyle(): no features specified", {});
@@ -70,6 +84,10 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         "Whee::UserInterfaceGL::trySetStyle():" << features << "not a subset of supported" << style.features(), {});
 
     State& state = static_cast<State&>(*_state);
+
+    /* Create a renderer, if not already */
+    if(!hasRenderer())
+        setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Create layers based on what features are wanted */
     if(features >= StyleFeature::BaseLayer) {

@@ -44,6 +44,7 @@ enum class LayouterDataHandle: UnsignedInt;
 
 class AbstractLayer;
 class AbstractLayouter;
+class AbstractRenderer;
 class AbstractUserInterface;
 
 class BaseLayer;
@@ -64,6 +65,8 @@ struct TextLayerStyleUniform;
 class TextLayerGL;
 #endif
 class TextProperties;
+
+class RendererGL;
 
 enum class StyleFeature: UnsignedByte;
 typedef Containers::EnumSet<StyleFeature, 15> StyleFeatures;

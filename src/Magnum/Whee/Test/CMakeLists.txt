@@ -29,6 +29,7 @@ set(CMAKE_FOLDER "Magnum/Whee/Test")
 
 corrade_add_test(WheeAbstractLayerTest AbstractLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractLayouterTest AbstractLayouterTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeAbstractRendererTest AbstractRendererTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractStyleTest AbstractStyleTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractUserInterfaceTest AbstractUserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractVisualLayerTest AbstractVisualLayerTest.cpp LIBRARIES MagnumWheeTestLib)
@@ -80,6 +81,7 @@ if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED DebugTools)
 
     corrade_add_test(WheeBaseLayerGL_Test BaseLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
+    corrade_add_test(WheeRendererGL_Test RendererGL_Test.cpp LIBRARIES MagnumWhee)
     corrade_add_test(WheeTextLayerGL_Test TextLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
     corrade_add_test(WheeUserInterfaceGL_Test UserInterfaceGL_Test.cpp LIBRARIES MagnumWhee)
 
@@ -161,6 +163,11 @@ if(MAGNUM_BUILD_GL_TESTS)
             target_link_libraries(WheeBaseLayerGLTest PRIVATE MagnumPlugins::StbImageImporter)
         endif()
     endif()
+
+    corrade_add_test(WheeRendererGLTest RendererGLTest.cpp
+        LIBRARIES
+            MagnumWhee
+            Magnum::OpenGLTester)
 
     corrade_add_test(WheeTextLayerGLTest TextLayerGLTest.cpp
         LIBRARIES

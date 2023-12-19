@@ -48,6 +48,7 @@
 #include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/RendererGL.h"
 
 #include "configure.h"
 
@@ -419,6 +420,7 @@ void BaseLayerGLTest::render() {
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Testing the ArrayView overload, others cases use the initializer list */
     BaseLayerStyleUniform styleUniforms[]{
@@ -472,6 +474,7 @@ void BaseLayerGLTest::renderCustomColor() {
        color is additionally taken from the per-vertex data as well */
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{1};
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
@@ -527,6 +530,7 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
        well */
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{1};
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
@@ -586,6 +590,7 @@ void BaseLayerGLTest::renderPadding() {
        applied directly to the node offset and size itself. */
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{1};
     layerShared.setStyle(
@@ -645,6 +650,7 @@ void BaseLayerGLTest::renderChangeStyle() {
        style ID is changed to it only later. */
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{2};
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
@@ -719,6 +725,7 @@ void BaseLayerGLTest::drawOrder() {
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{DrawSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{3};
     /* Testing the styleToUniform initializer list overload, others cases use
@@ -785,6 +792,7 @@ void BaseLayerGLTest::drawClipping() {
     /* X is divided by 10, Y by 100 when rendering. Window size (for events)
        isn't used for anything here. */
     AbstractUserInterface ui{{640.0f, 6400.0f}, {1.0f, 1.0f}, DrawSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{3};
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
@@ -866,6 +874,7 @@ void BaseLayerGLTest::eventStyleTransition() {
        already. */
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{2};
     layerShared

@@ -47,6 +47,7 @@
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/RendererGL.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
 
@@ -229,7 +230,9 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
         DebugTools::FrameProfilerGL::Value::GpuDuration|
         DebugTools::FrameProfilerGL::Value::CpuDuration, 50};
 
-    _ui.setSize(Vector2{size}*args.value<Float>("clip"), Vector2{windowSize()}, framebufferSize());
+    _ui
+        .setSize(Vector2{size}*args.value<Float>("clip"), Vector2{windowSize()}, framebufferSize())
+        .setRendererInstance(Containers::pointer<Whee::RendererGL>());
 
     _layer1 = _ui.createLayer();
     _layer2 = _ui.createLayer();

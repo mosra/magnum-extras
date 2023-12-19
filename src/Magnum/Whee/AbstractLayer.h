@@ -50,11 +50,27 @@ enum class LayerFeature: UnsignedByte {
     Draw = 1 << 0,
 
     /**
+     * Drawing using @ref AbstractLayer::draw() uses blending. Causes
+     * @ref RendererDrawState::Blending to be passed to
+     * @ref AbstractRenderer::transition() before drawing the layer. Implies
+     * @ref LayerFeature::Draw.
+     */
+    DrawUsesBlending = Draw|(1 << 1),
+
+    /**
+     * Drawing using @ref AbstractLayer::draw() uses blending. Causes
+     * @ref RendererDrawState::Scissor to be passed to
+     * @ref AbstractRenderer::transition() before drawing the layer. Implies
+     * @ref LayerFeature::Draw.
+     */
+    DrawUsesScissor = Draw|(1 << 2),
+
+    /**
      * Event handling using @ref AbstractLayer::pointerPressEvent(),
      * @relativeref{AbstractLayer,pointerReleaseEvent()} and
      * @relativeref{AbstractLayer,pointerMoveEvent()}.
      */
-    Event = 1 << 1
+    Event = 1 << 3,
 };
 
 /**

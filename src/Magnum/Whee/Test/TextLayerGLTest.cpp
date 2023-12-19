@@ -50,6 +50,7 @@
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/TextLayerGL.h"
 #include "Magnum/Whee/TextProperties.h"
 
@@ -452,6 +453,7 @@ void TextLayerGLTest::render() {
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Opened in the constructor together with cache filling to circumvent
        stb_truetype's extreme rasterization slowness */
@@ -519,6 +521,7 @@ void TextLayerGLTest::renderAlignmentPadding() {
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Opened in the constructor together with cache filling to circumvent
        stb_truetype's extreme rasterization slowness */
@@ -583,6 +586,7 @@ void TextLayerGLTest::renderCustomColor() {
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Opened in the constructor together with cache filling to circumvent
        stb_truetype's extreme rasterization slowness */
@@ -648,6 +652,7 @@ void TextLayerGLTest::renderChangeStyle() {
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Opened in the constructor together with cache filling to circumvent
        stb_truetype's extreme rasterization slowness */
@@ -711,6 +716,7 @@ void TextLayerGLTest::renderChangeText() {
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Opened in the constructor together with cache filling to circumvent
        stb_truetype's extreme rasterization slowness */
@@ -794,6 +800,7 @@ void TextLayerGLTest::drawOrder() {
        to each text having a different size */
 
     AbstractUserInterface ui{DrawSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* A font that just produces glyph ID 0 spaced 16 units apart */
     struct: Text::AbstractFont {
@@ -929,6 +936,7 @@ void TextLayerGLTest::drawClipping() {
     /* X is divided by 10, Y by 100 when rendering. Window size (for events)
        isn't used for anything here. */
     AbstractUserInterface ui{{640.0f, 6400.0f}, {1.0f, 1.0f}, DrawSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* A font that just produces glyph ID 0 spaced 16 units apart */
     struct: Text::AbstractFont {
@@ -1083,6 +1091,7 @@ void TextLayerGLTest::eventStyleTransition() {
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
 
     AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Opened in the constructor together with cache filling to circumvent
        stb_truetype's extreme rasterization slowness */

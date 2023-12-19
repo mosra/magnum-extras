@@ -41,6 +41,7 @@
 
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/AbstractLayouter.h"
+#include "Magnum/Whee/AbstractRenderer.h"
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
@@ -62,6 +63,10 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void constructSingleSize();
     void constructCopy();
     void constructMove();
+
+    void renderer();
+    void rendererSetInstanceInvalid();
+    void rendererNotSet();
 
     void layer();
     void layerHandleRecycle();
@@ -103,7 +108,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
 
     void layout();
 
-    void setSize();
+    void setSizeToLayers();
+    void setSizeToRenderer();
     void setSizeZero();
     void setSizeNotCalledBeforeUpdate();
 
@@ -124,7 +130,9 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void statePropagateFromLayouters();
 
     void draw();
+    void drawRendererTransitions();
     void drawEmpty();
+    void drawNoRendererSet();
 
     void eventEmpty();
     void eventAlreadyAccepted();
@@ -159,6 +167,14 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
 
 const struct {
     const char* name;
+    bool setSizeFirst;
+} RendererData[]{
+    {"size not set yet", false},
+    {"size already set", true},
+};
+
+const struct {
+    const char* name;
     bool layers, layouters;
 } CleanData[]{
     {"", false, false},
@@ -171,118 +187,130 @@ const struct {
     const char* name;
     bool layouters;
     bool clean;
+    bool updateRenderer;
     bool noOp;
 } StateData[]{
-    {"", false, true, false},
-    {"with no-op calls", false, true, true},
-    {"with implicit clean", false, false, false},
-    {"with implicit clean and no-op calls", false, false, true},
-    {"with layouters", true, true, false},
-    {"with layouters, with no-op calls", true, true, true},
-    {"with layouters, with implicit clean", true, false, false},
-    {"with layouters, with implicit clean and no-op calls", true, false, true},
+    {"", false, true, true, false},
+    {"with no-op calls", false, true, true, true},
+    {"with implicit clean", false, false, true, false},
+    {"with implicit clean and no-op calls", false, false, true, true},
+    {"with implicit clean and renderer update", false, false, false, false},
+    {"with layouters", true, true, true, false},
+    {"with layouters, with no-op calls", true, true, true, true},
+    {"with layouters, with implicit clean", true, false, true, false},
+    {"with layouters, with implicit clean and no-op calls", true, false, true, true},
+    {"with layouters, with implicit clean and renderer update", true, false, false, false},
 };
 
 const struct {
     const char* name;
     bool clean;
+    bool updateRenderer;
     bool update;
     bool reorderLayers;
 } DrawData[]{
-    {"clean + update before", true, true, false},
-    {"clean before", true, false, false},
-    {"update before", false, true, false},
-    {"", false, false, false},
-    {"non-implicit layer order", false, false, true},
+    {"clean + updateRenderer + update before", true, true, true, false},
+    {"clean + update before", true, false, true, false},
+    {"clean before", true, false, false, false},
+    {"updateRenderer before", false, true, false, false},
+    {"update before", false, false, true, false},
+    {"", false, false, false, false},
+    {"non-implicit layer order", false, false, false, true},
 };
 
 const struct {
     const char* name;
     bool layer1, layer2, node;
-    bool hide, attach, clean, update;
+    bool hide, attach, clean, updateRenderer, update;
 } DrawEmptyData[]{
-    {"nothing, clean + update before",
+    {"nothing, clean + updateRenderer + update before",
         false, false, false,
-        false, false, true, true},
+        false, false, true, true, true},
     {"nothing, clean before",
         false, false, false,
-        false, false, true, false},
+        false, false, true, false, false},
+    {"nothing, updateRenderer before",
+        false, false, false,
+        false, false, false, true, false},
     {"nothing, update before",
         false, false, false,
-        false, false, false, true},
+        false, false, false, false, true},
     {"nothing",
         false, false, false,
-        false, false, false, false},
+        false, false, false, false, false},
+
+    /* explicit updateRenderer() call tested only once above as it doesn't
+       affect the other cases any differently */
 
     {"no node, one layer with update needed",
         true, false, false,
-        false, false, false, false},
+        false, false, false, false, false},
     {"no node, two layers with update needed",
         true, true, false,
-        false, false, false, false},
+        false, false, false, false, false},
     {"no node, two layers with update needed, clean + update before",
         true, true, false,
-        false, false, true, true},
+        false, false, true, false, true},
     {"no node, two layers with update needed, clean before",
         true, true, false,
-        false, false, true, false},
+        false, false, true, false, false},
     {"no node, two layers with update needed, update before",
         true, true, false,
-        false, false, false, true},
+        false, false, false, false, true},
 
     {"node but no data attachment, one layer with update needed",
         true, false, true,
-        false, false, false, false},
+        false, false, false, false, false},
     {"node but no data attachment, two layers with update needed",
         true, true, true,
-        false, false, false, false},
+        false, false, false, false, false},
     {"node but no data attachment, two layers with update needed, clean + update before",
         true, true, true,
-        false, false, true, true},
+        false, false, true, false, true},
     {"node but no data attachment, two layers with update needed, clean before",
         true, true, true,
-        false, false, true, false},
+        false, false, true, false, false},
     {"node but no data attachment, two layers with update needed, update before",
         true, true, true,
-        false, false, false, true},
+        false, false, false, false, true},
 
     {"node not in top-level order, no layers",
         false, false, true,
-        false, true, false, false},
+        false, true, false, false, false},
     {"node not in top-level order, one layer",
         true, false, true,
-        false, true, false, false},
+        false, true, false, false, false},
     {"node not in top-level order, two layers",
         true, true, true,
-        false, true, false, false},
+        false, true, false, false, false},
     {"node not in top-level order, two layers, clean + update before",
         true, true, true,
-        false, true, true, true},
+        false, true, true, false, true},
     {"node not in top-level order, two layers, clean before",
         true, true, true,
-        false, true, true, false},
+        false, true, true, false, false},
     {"node not in top-level order, two layers, update before",
         true, true, true,
-        false, true, false, true},
+        false, true, false, false, true},
 
     {"node hidden, no layers",
         false, false, true,
-        true, true, false, false},
+        true, true, false, false, false},
     {"node hidden, one layer",
         true, false, true,
-        true, true, false, false},
+        true, true, false, false, false},
     {"node hidden, two layers",
         true, true, true,
-        true, true, false, false},
+        true, true, false, false, false},
     {"node hidden, two layers, clean + update before",
         true, true, true,
-        true, true, true, true},
+        true, true, true, false, true},
     {"node hidden, two layers, clean before",
         true, true, true,
-        true, true, true, false},
+        true, true, true, false, false},
     {"node hidden, two layers, update before",
         true, true, true,
-        true, true, false, false},
+        true, true, false, false, false},
 };
 
 const struct {
@@ -453,7 +481,13 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::construct,
               &AbstractUserInterfaceTest::constructSingleSize,
               &AbstractUserInterfaceTest::constructCopy,
-              &AbstractUserInterfaceTest::constructMove,
+              &AbstractUserInterfaceTest::constructMove});
+
+    addInstancedTests({&AbstractUserInterfaceTest::renderer},
+        Containers::arraySize(RendererData));
+
+    addTests({&AbstractUserInterfaceTest::rendererSetInstanceInvalid,
+              &AbstractUserInterfaceTest::rendererNotSet,
 
               &AbstractUserInterfaceTest::layer,
               &AbstractUserInterfaceTest::layerHandleRecycle,
@@ -495,7 +529,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
               &AbstractUserInterfaceTest::layout,
 
-              &AbstractUserInterfaceTest::setSize,
+              &AbstractUserInterfaceTest::setSizeToLayers,
+              &AbstractUserInterfaceTest::setSizeToRenderer,
               &AbstractUserInterfaceTest::setSizeZero,
               &AbstractUserInterfaceTest::setSizeNotCalledBeforeUpdate,
 
@@ -523,8 +558,12 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::draw},
         Containers::arraySize(DrawData));
 
+    addTests({&AbstractUserInterfaceTest::drawRendererTransitions});
+
     addInstancedTests({&AbstractUserInterfaceTest::drawEmpty},
         Containers::arraySize(DrawEmptyData));
+
+    addTests({&AbstractUserInterfaceTest::drawNoRendererSet});
 
     addInstancedTests({&AbstractUserInterfaceTest::eventEmpty},
         Containers::arraySize(CleanUpdateData));
@@ -614,18 +653,14 @@ void AbstractUserInterfaceTest::debugNodeFlagsSupersets() {
 
 void AbstractUserInterfaceTest::debugState() {
     std::ostringstream out;
-    Debug{&out} << UserInterfaceState::NeedsNodeClean << UserInterfaceState(0xbe);
-    CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean Whee::UserInterfaceState(0xbe)\n");
+    Debug{&out} << UserInterfaceState::NeedsNodeClean << UserInterfaceState(0xbebe);
+    CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean Whee::UserInterfaceState(0xbebe)\n");
 }
 
 void AbstractUserInterfaceTest::debugStates() {
     std::ostringstream out;
-    Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState(0x100)) << UserInterfaceStates{};
-    {
-        CORRADE_EXPECT_FAIL("There are no bits left and every value is a superset of the previous so there's not really any way to test this.");
-        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean|Whee::UserInterfaceState(0x100) Whee::UserInterfaceStates{}\n");
-    }
-    CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean Whee::UserInterfaceStates{}\n");
+    Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState(0x8000)) << UserInterfaceStates{};
+    CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean|Whee::UserInterfaceState(0x8000) Whee::UserInterfaceStates{}\n");
 }
 
 void AbstractUserInterfaceTest::debugStatesSupersets() {
@@ -695,6 +730,8 @@ void AbstractUserInterfaceTest::constructNoCreate() {
     CORRADE_COMPARE(ui.size(), Vector2{});
     CORRADE_COMPARE(ui.windowSize(), Vector2{});
     CORRADE_COMPARE(ui.framebufferSize(), Vector2i{});
+
+    CORRADE_VERIFY(!ui.hasRenderer());
 
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
@@ -784,6 +821,109 @@ void AbstractUserInterfaceTest::constructMove() {
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<AbstractUserInterface>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<AbstractUserInterface>::value);
+}
+
+void AbstractUserInterfaceTest::renderer() {
+    auto&& data = RendererData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    int destructed = 0;
+    int setupCalled = 0;
+
+    {
+        AbstractUserInterface ui{NoCreate};
+        if(data.setSizeFirst)
+            ui.setSize({165.0f, 156.0f}, {376.0f, 234.0f}, {17, 35});
+
+        struct Renderer: AbstractRenderer {
+            explicit Renderer(int& destructed, int& setupCalled): destructed(destructed), setupCalled(setupCalled) {}
+
+            ~Renderer() {
+                ++destructed;
+            }
+
+            RendererFeatures doFeatures() const override { return {}; }
+            void doSetupFramebuffers(const Vector2i& size) override {
+                CORRADE_COMPARE(size, (Vector2i{17, 35}));
+                ++setupCalled;
+            }
+            void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+
+            int& destructed;
+            int& setupCalled;
+        };
+
+        CORRADE_VERIFY(!ui.hasRenderer());
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+        /* If UI size was already set, setting a renderer instance causes
+           setupFramebuffers() to be directly called */
+        Containers::Pointer<Renderer> instance{InPlaceInit, destructed, setupCalled};
+        Renderer* instancePointer = instance.get();
+        Renderer& instanceReference = ui.setRendererInstance(Utility::move(instance));
+        CORRADE_VERIFY(ui.hasRenderer());
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(&instanceReference, instancePointer);
+        CORRADE_COMPARE(&ui.renderer(), instancePointer);
+        CORRADE_COMPARE(&ui.renderer<Renderer>(), instancePointer);
+        CORRADE_COMPARE(setupCalled, data.setSizeFirst ? 1 : 0);
+        CORRADE_COMPARE(destructed, 0);
+
+        /* Const overloads */
+        const AbstractUserInterface& cui = ui;
+        CORRADE_COMPARE(&cui.renderer(), instancePointer);
+        CORRADE_COMPARE(&cui.renderer<Renderer>(), instancePointer);
+
+        /* Setting the UI size only after the renderer will call the setup
+           now */
+        if(!data.setSizeFirst)
+            ui.setSize({165.0f, 156.0f}, {376.0f, 234.0f}, {17, 35});
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(setupCalled, 1);
+    }
+
+    /* The renderer should be deleted at destruction */
+    CORRADE_COMPARE(setupCalled, 1);
+    CORRADE_COMPARE(destructed, 1);
+}
+
+void AbstractUserInterfaceTest::rendererSetInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Renderer: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    };
+
+    ui.setRendererInstance(Containers::pointer<Renderer>());
+    CORRADE_VERIFY(ui.hasRenderer());
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.setRendererInstance(nullptr);
+    ui.setRendererInstance(Containers::pointer<Renderer>());
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractUserInterface::setRendererInstance(): instance is null\n"
+        "Whee::AbstractUserInterface::setRendererInstance(): instance already set\n");
+}
+
+void AbstractUserInterfaceTest::rendererNotSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+    const AbstractUserInterface& cui = ui;
+    CORRADE_VERIFY(!ui.hasRenderer());
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.renderer();
+    cui.renderer();
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractUserInterface::renderer(): no renderer instance set\n"
+        "Whee::AbstractUserInterface::renderer(): no renderer instance set\n");
 }
 
 void AbstractUserInterfaceTest::layer() {
@@ -2342,7 +2482,7 @@ void AbstractUserInterfaceTest::layout() {
     CORRADE_VERIFY(!ui.isHandleValid(layoutHandle2));
 }
 
-void AbstractUserInterfaceTest::setSize() {
+void AbstractUserInterfaceTest::setSizeToLayers() {
     AbstractUserInterface ui{NoCreate};
 
     struct Layer: AbstractLayer {
@@ -2369,13 +2509,16 @@ void AbstractUserInterfaceTest::setSize() {
     ui.setLayerInstance(Containers::pointer<Layer>(layerWithNoDrawFeature, LayerFeature::Event, calls));
     ui.setLayerInstance(Containers::pointer<Layer>(layerSetBeforeFirstSize, LayerFeature::Draw|LayerFeature::Event, calls));
     ui.removeLayer(layerThatIsRemoved);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Triple<LayerHandle, Vector2, Vector2i>>({
         /* Nothing yet */
     })), TestSuite::Compare::Container);
 
     /* Setting the size should set it for all layers that have instances and
-       support Draw */
+       support Draw. UserInterfaceState::NeedsRendererSizeSetup shouldn't be
+       set because there's no renderer for which it would be deferred. */
     ui.setSize({300.0f, 200.0f}, {3000.0f, 2000.0f}, {30, 20});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{3000.0f, 2000.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30, 20}));
@@ -2399,6 +2542,7 @@ void AbstractUserInterfaceTest::setSize() {
        the layers */
     calls = {};
     ui.setSize({300.0f, 200.0f}, {3.0f, 2.0f}, {30, 20});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{3.0f, 2.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30, 20}));
@@ -2411,6 +2555,7 @@ void AbstractUserInterfaceTest::setSize() {
        framebufferSize and windowSize stays the same */
     calls = {};
     ui.setSize({3000.0f, 2000.0f}, {3.0f, 2.0f}, {30, 20});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE(ui.size(), (Vector2{3000.0f, 2000.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{3.0f, 2.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30, 20}));
@@ -2424,6 +2569,7 @@ void AbstractUserInterfaceTest::setSize() {
        size and windowSize stays the same */
     calls = {};
     ui.setSize({3000.0f, 2000.0f}, {3.0f, 2.0f}, {300, 200});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE(ui.size(), (Vector2{3000.0f, 2000.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{3.0f, 2.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{300, 200}));
@@ -2435,6 +2581,7 @@ void AbstractUserInterfaceTest::setSize() {
     /* Finally, verify that the unscaled size overload works as well */
     calls = {};
     ui.setSize({300, 200});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{300.0f, 200.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{300, 200}));
@@ -2442,6 +2589,54 @@ void AbstractUserInterfaceTest::setSize() {
         {layerSetBeforeFirstSize, {300.0f, 200.0f}, {300, 200}},
         {layerSetAfterFirstSize, {300.0f, 200.0f}, {300, 200}},
     })), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceTest::setSizeToRenderer() {
+    AbstractUserInterface ui{NoCreate};
+
+    struct Renderer: AbstractRenderer {
+        Renderer(Int& called): called(called) {}
+
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i& size) override {
+            if(!called)
+                CORRADE_COMPARE(size, (Vector2i{10, 100}));
+            else
+                CORRADE_COMPARE(size, (Vector2i{17, 35}));
+            ++called;
+        }
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+
+        Int& called;
+    };
+
+    /* Neither UserInterfaceState::NeedsRendererSizeSetup should be set nor
+       setupFramebuffers() should be called because there's no renderer yet */
+    ui.setSize({10, 100});
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Assigning a renderer instance will cause setupFramebuffers() to be
+       called as the size is already set and the first call is immediate.
+       The inverse (setRendererInstance() instance called first, setSize()
+       second) is tested in renderer() above. */
+    Int called = 0;
+    ui.setRendererInstance(Containers::pointer<Renderer>(called));
+    CORRADE_COMPARE(called, 1);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().framebufferSize(), (Vector2i{10, 100}));
+
+    /* Calling setSize() again will not propagate it directly anymore but set a
+       state flag */
+    ui.setSize({165.0f, 156.0f}, {376.0f, 234.0f}, {17, 35});
+    CORRADE_COMPARE(called, 1);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup);
+    CORRADE_COMPARE(ui.renderer<Renderer>().framebufferSize(), (Vector2i{10, 100}));
+
+    /* Only a call to update() sets it */
+    ui.update();
+    CORRADE_COMPARE(called, 2);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().framebufferSize(), (Vector2i{17, 35}));
 }
 
 void AbstractUserInterfaceTest::setSizeZero() {
@@ -3297,7 +3492,7 @@ void AbstractUserInterfaceTest::state() {
         LayerFeatures doFeatures() const override { return {}; }
 
         /* doSetSize() not implemented here as it isn't called from
-           ui.update(), tested thoroughly in setSize() instead */
+           ui.update(), tested thoroughly in setSizeToLayers() instead */
 
         void doClean(Containers::BitArrayView dataIdsToRemove) override {
             CORRADE_COMPARE_AS(dataIdsToRemove,
@@ -3503,6 +3698,79 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
 
+    /* Setting a renderer instance propagates the size to it without setting
+       any state flag */
+    struct Renderer: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i& size) override {
+            if(!setupFramebufferCallCount)
+                CORRADE_COMPARE(size, Vector2i{100});
+            else
+                CORRADE_COMPARE(size, (Vector2i{17, 35}));
+            ++setupFramebufferCallCount;
+        }
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+
+        Int setupFramebufferCallCount = 0;
+    };
+    ui.setRendererInstance(Containers::pointer<Renderer>());
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
+    CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
+
+    /* Calling setSize() with the same size is a no-op */
+    ui.setSize({100, 100});
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
+    CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
+
+    /* Calling setSize() sets a state flag. Other interactions between
+       setRendererInstance() and setSize() is tested thoroughly in
+       renderer() and setSizeToRenderer() instead. */
+    ui.setSize({165.0f, 156.0f}, {376.0f, 234.0f}, {17, 35});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup);
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
+    CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
+
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup);
+        if(data.layouters) {
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        }
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+    }
+
+    /* Calling updateRenderer() should setup renderer framebuffers again */
+    if(data.updateRenderer) {
+        ui.updateRenderer();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
+        CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
+    }
+
+    /* Calling update() should delegate to updateRenderer() if needed but other
+       than that do nothing else on any layer or layouter */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
+    CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
+    if(data.layouters) {
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+        }), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+
     /* Marking the layer with NeedsUpdate propagates to the UI-wide state */
     ui.layer(layer).setNeedsUpdate();
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
@@ -3514,6 +3782,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -3564,6 +3833,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -3598,6 +3868,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -3714,6 +3985,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -3749,6 +4021,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -3865,6 +4138,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -3887,6 +4161,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -3995,6 +4270,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4022,6 +4298,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4135,6 +4412,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4162,6 +4440,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4214,6 +4493,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4248,6 +4528,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4297,6 +4578,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4320,6 +4602,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4370,6 +4653,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4401,6 +4685,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4450,6 +4735,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4476,6 +4762,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4524,6 +4811,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4545,6 +4833,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4623,6 +4912,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4650,6 +4940,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4764,6 +5055,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4941,6 +5233,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -4994,6 +5287,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         CORRADE_COMPARE(ui.nodeUsedCount(), 4);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
@@ -5097,6 +5391,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.nodeUsedCount(), 4);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
@@ -5206,6 +5501,7 @@ void AbstractUserInterfaceTest::state() {
             ui.clean();
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
@@ -5252,6 +5548,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.layer(anotherLayer).usedCount(), 0);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
@@ -5413,8 +5710,25 @@ void AbstractUserInterfaceTest::draw() {
     auto&& data = DrawData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    /* windowSize isn't used for anything here */
-    AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 30.0f}, {400, 500}};
+    /* windowSize isn't used for anything here, framebufferSize is subsequently
+       changed */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 30.0f}, {500, 400}};
+
+    struct Renderer: AbstractRenderer {
+        explicit Renderer(Int& setupFramebufferCallCount): setupFramebufferCallCount(setupFramebufferCallCount) {}
+
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i& size) override {
+            if(!setupFramebufferCallCount)
+                CORRADE_COMPARE(size, (Vector2i{500, 400}));
+            else
+                CORRADE_COMPARE(size, (Vector2i{400, 500}));
+            ++setupFramebufferCallCount;
+        }
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+
+        Int& setupFramebufferCallCount;
+    };
 
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, features{features} {}
@@ -5531,6 +5845,17 @@ void AbstractUserInterfaceTest::draw() {
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
+
+    /* Set up a renderer. It sets the size to it immediately. */
+    Int rendererSetupFramebufferCallCount = 0;
+    ui.setRendererInstance(Containers::pointer<Renderer>(rendererSetupFramebufferCallCount));
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(rendererSetupFramebufferCallCount, 1);
+
+    /* The next setSize() call is then deferred */
+    ui.setSize({200.0f, 300.0f}, {20.0f, 30.0f}, {400, 500});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup);
+    CORRADE_COMPARE(rendererSetupFramebufferCallCount, 1);
 
     /*   1 2      3 4 5       6 7 8      9 10     11
        3 +------------------------+
@@ -5746,7 +6071,8 @@ void AbstractUserInterfaceTest::draw() {
     CORRADE_COMPARE(ui.layer(layer1).usedCount(), 5);
     CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
     CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsRendererSizeSetup);
+    CORRADE_COMPARE(rendererSetupFramebufferCallCount, 1);
     CORRADE_COMPARE(layer1UpdateCallCount, 0);
     CORRADE_COMPARE(layer2UpdateCallCount, 0);
     CORRADE_COMPARE(layer3UpdateCallCount, 0);
@@ -5756,19 +6082,29 @@ void AbstractUserInterfaceTest::draw() {
         CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
         CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
         CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsRendererSizeSetup);
+        CORRADE_COMPARE(rendererSetupFramebufferCallCount, 1);
         CORRADE_COMPARE(layer1UpdateCallCount, 0);
         CORRADE_COMPARE(layer2UpdateCallCount, 0);
         CORRADE_COMPARE(layer3UpdateCallCount, 0);
     }
 
-    /* update() should call clean() only if needed */
+    if(data.updateRenderer) {
+        ui.updateRenderer();
+        /* updateRenderer() doesn't call clean() implicitly as it doesn't rely
+           on its results, so NeedsNodeClean can stay after */
+        CORRADE_COMPARE(ui.state(), data.clean ? UserInterfaceState::NeedsNodeUpdate : UserInterfaceState::NeedsNodeClean);
+        CORRADE_COMPARE(rendererSetupFramebufferCallCount, 2);
+    }
+
+    /* update() should call clean() and updateRenderer() only if needed */
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
         CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
         CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(rendererSetupFramebufferCallCount, 2);
         CORRADE_COMPARE(layer1UpdateCallCount, 1);
         CORRADE_COMPARE(layer2UpdateCallCount, 1);
         CORRADE_COMPARE(layer3UpdateCallCount, 1);
@@ -5780,6 +6116,7 @@ void AbstractUserInterfaceTest::draw() {
     CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
     CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(rendererSetupFramebufferCallCount, 2);
     CORRADE_COMPARE(layer1UpdateCallCount, 1);
     CORRADE_COMPARE(layer2UpdateCallCount, 1);
     CORRADE_COMPARE(layer3UpdateCallCount, 1);
@@ -5811,11 +6148,136 @@ void AbstractUserInterfaceTest::draw() {
     })), TestSuite::Compare::Container);
 }
 
+void AbstractUserInterfaceTest::drawRendererTransitions() {
+    AbstractUserInterface ui{{100, 100}};
+
+    Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>> called;
+
+    struct Renderer: AbstractRenderer {
+        explicit Renderer(Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& called): _called(called) {}
+
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState targetStateFrom, RendererTargetState targetStateTo, RendererDrawStates drawStatesFrom, RendererDrawStates drawStatesTo) override {
+            arrayAppend(_called, InPlaceInit,
+                LayerHandle::Null,
+                Containers::pair(targetStateFrom, targetStateTo),
+                Containers::pair(drawStatesFrom, drawStatesTo));
+        }
+
+        Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& _called;
+    };
+    ui.setRendererInstance(Containers::pointer<Renderer>(called));
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features, Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& called): AbstractLayer{handle}, _features{features}, _called(called) {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return _features; }
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(_called, InPlaceInit,
+                handle(),
+                Containers::Pair<RendererTargetState, RendererTargetState>{},
+                Containers::Pair<RendererDrawStates, RendererDrawStates>{});
+        }
+
+        LayerFeatures _features;
+        Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& _called;
+    };
+
+    /* Only drawing layers used here, non-drawing layers and their exclusion
+       from the draw list is tested enough in draw() above */
+    Layer& layerWithBlendingScissor = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::DrawUsesScissor|LayerFeature::DrawUsesBlending, called));
+    Layer& layerWithNothing = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::Draw, called));
+    Layer& layerWithBlending = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::DrawUsesBlending, called));
+
+    NodeHandle topLevel = ui.createNode({}, {100, 50});
+    NodeHandle topLevelChild = ui.createNode(topLevel, {}, {0, 50});
+    NodeHandle topLevelHidden = ui.createNode(topLevel, {}, {50, 50}, NodeFlag::Hidden);
+    /* These two get drawn first, transitioning from Initial, enabling
+       blending and scissor */
+    layerWithBlendingScissor.create(topLevel);
+    layerWithBlendingScissor.create(topLevelChild);
+    /* This one doesn't get drawn */
+    layerWithNothing.create(topLevelHidden);
+
+    NodeHandle anotherTopLevel = ui.createNode({0, 50}, {100, 50});
+    /* This one gets drawn second, with no transition */
+    layerWithBlendingScissor.create(anotherTopLevel);
+    NodeHandle anotherTopLevelChild = ui.createNode(anotherTopLevel, {}, {0, 50});
+    /* Drawn third, transitioning to Scissor no longer enabled */
+    layerWithBlending.create(anotherTopLevelChild);
+
+    NodeHandle thirdTopLevel = ui.createNode({25, 25}, {50, 50});
+    /* Drawn fourth, transitioning to nothing enabled */
+    layerWithNothing.create(thirdTopLevel);
+    /* Drawn fifth, transitioning to Blending enabled */
+    layerWithBlending.create(thirdTopLevel);
+
+    NodeHandle fifthTopLevel = ui.createNode({0, 0}, {100, 100});
+    /* Drawn sixth, with no transition, and then finally to a Final state with
+       nothing enabled */
+    layerWithBlending.create(fifthTopLevel);
+
+    /* Draw twice, second time the transition will be from Final to Initial */
+    for(std::size_t i: {0, 1}) {
+        CORRADE_ITERATION(i);
+
+        called = {};
+        ui.draw();
+        CORRADE_COMPARE_AS(called, (Containers::arrayView<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>({
+            /* This transition happens only the second time (see the
+               exceptPrefix() at the end) */
+            {{}, {RendererTargetState::Final, RendererTargetState::Initial},
+                 {{}, {}}},
+
+            {{}, {RendererTargetState::Initial, RendererTargetState::Draw},
+                 {{}, RendererDrawState::Blending|RendererDrawState::Scissor}},
+            {layerWithBlendingScissor.handle(), {}, {}},    /* First draw */
+            {layerWithBlendingScissor.handle(), {}, {}},    /* Second draw */
+            {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
+                 {RendererDrawState::Blending|RendererDrawState::Scissor,
+                  RendererDrawState::Blending}},
+            {layerWithBlending.handle(), {}, {}},           /* Third draw */
+            {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
+                 {RendererDrawState::Blending, {}}},
+            {layerWithNothing.handle(), {}, {}},            /* Fourth draw */
+            {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
+                 {{}, RendererDrawState::Blending}},
+            {layerWithBlending.handle(), {}, {}},           /* Fifth draw */
+            {layerWithBlending.handle(), {}, {}},           /* Sixth draw */
+            {{}, {RendererTargetState::Draw, RendererTargetState::Final},
+                 {RendererDrawState::Blending, {}}},
+        })).exceptPrefix(i == 0 ? 1 : 0), TestSuite::Compare::Container);
+    }
+}
+
 void AbstractUserInterfaceTest::drawEmpty() {
     auto&& data = DrawEmptyData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     AbstractUserInterface ui{{100, 100}};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    struct Renderer: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i& size) override {
+            CORRADE_COMPARE(size, Vector2i{100});
+            ++setupFramebufferCallCount;
+        }
+        void doTransition(RendererTargetState targetStateFrom, RendererTargetState targetStateTo, RendererDrawStates, RendererDrawStates) override {
+            CORRADE_COMPARE(targetStateFrom, RendererTargetState::Initial);
+            CORRADE_COMPARE(targetStateTo, RendererTargetState::Final);
+            ++transitionCallCount;
+        }
+
+        Int setupFramebufferCallCount = 0;
+        Int transitionCallCount = 0;
+    };
+    ui.setRendererInstance(Containers::pointer<Renderer>());
 
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, bool node): AbstractLayer{handle}, _node{node} {}
@@ -5884,6 +6346,8 @@ void AbstractUserInterfaceTest::drawEmpty() {
             layer2->setNeedsUpdate();
     }
 
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
+    CORRADE_COMPARE(ui.renderer<Renderer>().transitionCallCount, 0);
     if(data.layer1)
         CORRADE_COMPARE(layer1->updateCallCount, 0);
     if(data.layer2)
@@ -5896,17 +6360,43 @@ void AbstractUserInterfaceTest::drawEmpty() {
                 UserInterfaceState::NeedsDataUpdate,
                 TestSuite::Compare::GreaterOrEqual);
         else CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
+        CORRADE_COMPARE(ui.renderer<Renderer>().transitionCallCount, 0);
+    }
+    if(data.updateRenderer) {
+        ui.updateRenderer();
+        if(data.layer1 || data.layer2)
+            CORRADE_COMPARE_AS(ui.state(),
+                UserInterfaceState::NeedsDataUpdate,
+                TestSuite::Compare::GreaterOrEqual);
+        else CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
+        CORRADE_COMPARE(ui.renderer<Renderer>().transitionCallCount, 0);
     }
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
+        CORRADE_COMPARE(ui.renderer<Renderer>().transitionCallCount, 0);
     }
     ui.draw();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().transitionCallCount, 1);
     if(data.layer1)
         CORRADE_COMPARE(layer1->updateCallCount, 1);
     if(data.layer2)
         CORRADE_COMPARE(layer2->updateCallCount, 1);
+}
+
+void AbstractUserInterfaceTest::drawNoRendererSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.draw();
+    CORRADE_COMPARE(out.str(), "Whee::AbstractUserInterface::draw(): no renderer instance set\n");
 }
 
 void AbstractUserInterfaceTest::eventEmpty() {
