@@ -83,10 +83,10 @@ set(MagnumWhee_PRIVATE_HEADERS
 if(MAGNUM_TARGET_GL)
     corrade_add_resource(MagnumWhee_RESOURCES resources.conf)
     list(APPEND MagnumWhee_SRCS
-        RendererGL.cpp
         ${MagnumWhee_RESOURCES})
     list(APPEND MagnumWhee_GracefulAssert_SRCS
         BaseLayerGL.cpp
+        RendererGL.cpp
         TextLayerGL.cpp
         UserInterfaceGL.cpp)
     list(APPEND MagnumWhee_HEADERS
