@@ -33,6 +33,8 @@
 #include "Magnum/configure.h"
 
 #ifdef MAGNUM_TARGET_GL
+#include <Magnum/GL/GL.h>
+
 #include "Magnum/Whee/AbstractRenderer.h"
 
 namespace Magnum { namespace Whee {
@@ -54,14 +56,66 @@ supplied to the user interface constructor or
 
 @snippet Whee-gl.cpp RendererGL
 
+@section Whee-RendererGL-compositing-framebuffer Use with a compositing framebuffer
+
+By default, the @ref RendererGL instance assumes *some* framebuffer is bound
+for drawing and it doesn't touch it in any way. Layers that implement
+compositing operations however need a framebuffer which can be both drawn into
+and read from, which is achieved by constructing the renderer with
+@link Flag::CompositingFramebuffer @endlink:
+
+@snippet Whee-gl.cpp RendererGL-compositing-framebuffer
+
+With the flag enabled, the application is then responsible for clearing the
+@ref compositingFramebuffer() at frame start, drawing all content underneath
+the UI to it, and ultimately blitting it back to the main / default application
+framebuffer after the UI is drawn:
+
+@snippet Whee-gl.cpp RendererGL-compositing-framebuffer-draw
+
 @note This class is available only if Magnum is compiled with
     @ref MAGNUM_TARGET_GL enabled (done by default). See @ref building-features
     for more information.
 */
 class MAGNUM_WHEE_EXPORT RendererGL: public AbstractRenderer {
     public:
+        /**
+         * @brief Renderer flag
+         *
+         * @see @ref Flags, @ref RendererGL(Flags), @ref flags()
+         */
+        enum class Flag: UnsignedByte {
+            /**
+             * Create a framebuffer to be used as a target for drawing all UI
+             * contents and a source for compositing operations implemented by
+             * various layers.
+             *
+             * The framebuffer, with a single @ref GL::TextureFormat::RGBA8
+             * color attachment, is created on the first call to
+             * @ref setupFramebuffers(), which is called as a
+             * consequence of @ref AbstractUserInterface::setSize() or a
+             * user interface constructor taking a size parameter, and is
+             * recreated on all following @ref AbstractUserInterface::setSize()
+             * calls.
+             *
+             * Then application is then responsible for clearing the
+             * @ref compositingFramebuffer() at frame start, drawing all
+             * content underneath the UI to it, and ultimately blitting it back
+             * to the main / default application framebuffer after the UI is
+             * drawn.
+             */
+            CompositingFramebuffer = 1 << 0,
+        };
+
+        /**
+         * @brief Renderer flags
+         *
+         * @see @ref RendererGL(Flags), @ref flags()
+         */
+        typedef Containers::EnumSet<Flag> Flags;
+
         /** @brief Constructor */
-        explicit RendererGL();
+        explicit RendererGL(Flags flags = {});
 
         /** @brief Copying is not allowed */
         RendererGL(const RendererGL&) = delete;
@@ -82,6 +136,51 @@ class MAGNUM_WHEE_EXPORT RendererGL: public AbstractRenderer {
         /** @brief Move assignment */
         RendererGL& operator=(RendererGL&&) noexcept;
 
+        /** @brief Renderer flags */
+        Flags flags() const;
+
+        /**
+         * @brief Compositing framebuffer instance
+         *
+         * Available only if the renderer was constructed with
+         * @ref Flag::CompositingFramebuffer and only after framebuffer sizes
+         * were set up with @ref setupFramebuffers(), which is called as a
+         * consequence of @ref AbstractUserInterface::setSize() or a
+         * user interface constructor taking a size parameter. The viewport is
+         * implicitly set to the whole @ref framebufferSize().
+         *
+         * With a compositing framebuffer enabled, the application is
+         * responsible for clearing the framebuffer at frame start, drawing all
+         * content underneath the UI to it, and ultimately blitting it back to
+         * the main / default application framebuffer after the UI is drawn.
+         * @see @ref flags()
+         */
+        GL::Framebuffer& compositingFramebuffer();
+        const GL::Framebuffer& compositingFramebuffer() const; /**< @overload */
+
+        /**
+         * @brief Compositing framebuffer texture instance
+         *
+         * Available only if the renderer was constructed with
+         * @ref Flag::CompositingFramebuffer and only after framebuffer sizes
+         * were set up with @ref setupFramebuffers(), which is called as a
+         * consequence of @ref AbstractUserInterface::setSize() or a
+         * user interface constructor taking a size parameter. The texture is
+         * implicitly set to a single @ref GL::TextureFormat::RGBA8 level of
+         * @ref framebufferSize(), with both minification and magnification
+         * filter being @ref GL::SamplerFilter::Linear and with
+         * @ref GL::SamplerWrapping::ClampToEdge.
+         *
+         * The texture is meant to be accessed inside an
+         * @ref AbstractLayer::doComposite() implementation. In other cases,
+         * such as in an @ref AbstractLayer::doDraw(), using it may lead to a
+         * framebuffer corruption as it would be used for both sampling and as
+         * a framebuffer target.
+         * @see @ref flags()
+         */
+        GL::Texture2D& compositingTexture();
+        const GL::Texture2D& compositingTexture() const; /**< @overload */
+
     private:
         MAGNUM_WHEE_LOCAL RendererFeatures doFeatures() const override;
         MAGNUM_WHEE_LOCAL void doSetupFramebuffers(const Vector2i& size) override;
@@ -90,6 +189,20 @@ class MAGNUM_WHEE_EXPORT RendererGL: public AbstractRenderer {
         struct State;
         Containers::Pointer<State> _state;
 };
+
+CORRADE_ENUMSET_OPERATORS(RendererGL::Flags)
+
+/**
+@debugoperatorclassenum{RendererGL,Flag}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, RendererGL::Flag value);
+
+/**
+@debugoperatorclassenum{RendererGL,Flags}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, RendererGL::Flags value);
 
 }}
 #else
