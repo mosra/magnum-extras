@@ -58,6 +58,7 @@ struct AbstractRendererTest: TestSuite::Tester {
     void transition();
     void transitionInvalid();
     void transitionNoFramebufferSetup();
+    void transitionCompositeNotSupported();
 };
 
 AbstractRendererTest::AbstractRendererTest() {
@@ -78,21 +79,20 @@ AbstractRendererTest::AbstractRendererTest() {
 
               &AbstractRendererTest::transition,
               &AbstractRendererTest::transitionInvalid,
-              &AbstractRendererTest::transitionNoFramebufferSetup});
+              &AbstractRendererTest::transitionNoFramebufferSetup,
+              &AbstractRendererTest::transitionCompositeNotSupported});
 }
 
 void AbstractRendererTest::debugFeature() {
     std::ostringstream out;
-    /** @todo use a real value once it exists */
-    Debug{&out} << RendererFeature(0xbe);
-    CORRADE_COMPARE(out.str(), "Whee::RendererFeature(0xbe)\n");
+    Debug{&out} << RendererFeature::Composite << RendererFeature(0xbe);
+    CORRADE_COMPARE(out.str(), "Whee::RendererFeature::Composite Whee::RendererFeature(0xbe)\n");
 }
 
 void AbstractRendererTest::debugFeatures() {
     std::ostringstream out;
-    /** @todo use a real value once it exists */
-    Debug{&out} << RendererFeatures{0xbe} << RendererFeatures{};
-    CORRADE_COMPARE(out.str(), "Whee::RendererFeature(0xbe) Whee::RendererFeatures{}\n");
+    Debug{&out} << (RendererFeature::Composite|RendererFeature(0xb0)) << RendererFeatures{};
+    CORRADE_COMPARE(out.str(), "Whee::RendererFeature::Composite|Whee::RendererFeature(0xb0) Whee::RendererFeatures{}\n");
 }
 
 void AbstractRendererTest::debugTargetState() {
@@ -216,7 +216,9 @@ void AbstractRendererTest::setupFramebuffersInvalid() {
 
 void AbstractRendererTest::transition() {
     struct: AbstractRenderer {
-        RendererFeatures doFeatures() const override { return {}; }
+        RendererFeatures doFeatures() const override {
+            return RendererFeature::Composite;
+        }
         void doSetupFramebuffers(const Vector2i&) override {}
         void doTransition(RendererTargetState targetStateFrom, RendererTargetState targetStateTo, RendererDrawStates drawStatesFrom, RendererDrawStates drawStatesTo) override {
             /* The current*() values shouldn't be overwritten during this call
@@ -282,6 +284,21 @@ void AbstractRendererTest::transition() {
     CORRADE_COMPARE(renderer.currentTargetState(), RendererTargetState::Initial);
     CORRADE_COMPARE(renderer.currentDrawStates(), RendererDrawStates{});
 
+    /* Compositing from the initial state */
+    renderer.transition(RendererTargetState::Composite, {});
+    CORRADE_COMPARE(renderer.currentTargetState(), RendererTargetState::Composite);
+    CORRADE_COMPARE(renderer.currentDrawStates(), RendererDrawStates{});
+
+    /* Drawing */
+    renderer.transition(RendererTargetState::Draw, RendererDrawState::Scissor);
+    CORRADE_COMPARE(renderer.currentTargetState(), RendererTargetState::Draw);
+    CORRADE_COMPARE(renderer.currentDrawStates(), RendererDrawState::Scissor);
+
+    /* Compositing from the drawn state */
+    renderer.transition(RendererTargetState::Composite, {});
+    CORRADE_COMPARE(renderer.currentTargetState(), RendererTargetState::Composite);
+    CORRADE_COMPARE(renderer.currentDrawStates(), RendererDrawStates{});
+
     /* Verify only the actually changing transitions got propagated to
        doTransition() */
     CORRADE_COMPARE_AS(renderer.called, (Containers::array<Containers::Pair<Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>({
@@ -299,6 +316,12 @@ void AbstractRendererTest::transition() {
          {{}, {}}},
         {{RendererTargetState::Final, RendererTargetState::Initial},
          {{}, {}}},
+        {{RendererTargetState::Initial, RendererTargetState::Composite},
+         {{}, {}}},
+        {{RendererTargetState::Composite, RendererTargetState::Draw},
+         {{}, RendererDrawState::Scissor}},
+        {{RendererTargetState::Draw, RendererTargetState::Composite},
+         {RendererDrawState::Scissor, {}}},
     })), TestSuite::Compare::Container);
 }
 
@@ -316,7 +339,9 @@ void AbstractRendererTest::transitionInvalid() {
         #endif
         : AbstractRenderer
     {
-        RendererFeatures doFeatures() const override { return {}; }
+        RendererFeatures doFeatures() const override {
+            return RendererFeature::Composite;
+        }
         void doSetupFramebuffers(const Vector2i&) override {}
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
     } draw, final;
@@ -333,10 +358,12 @@ void AbstractRendererTest::transitionInvalid() {
        combinations, just one. OTOH transition() above verifies all valid
        states. */
     draw.transition(RendererTargetState::Initial, {});
+    draw.transition(RendererTargetState::Composite, RendererDrawState::Scissor|RendererDrawState::Blending);
     draw.transition(RendererTargetState::Final, RendererDrawState::Scissor);
     final.transition(RendererTargetState::Initial, RendererDrawState::Blending);
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractRenderer::transition(): invalid transition from Whee::RendererTargetState::Draw to Whee::RendererTargetState::Initial\n"
+        "Whee::AbstractRenderer::transition(): invalid Whee::RendererDrawState::Blending|Whee::RendererDrawState::Scissor in a transition to Whee::RendererTargetState::Composite\n"
         "Whee::AbstractRenderer::transition(): invalid Whee::RendererDrawState::Scissor in a transition to Whee::RendererTargetState::Final\n"
         "Whee::AbstractRenderer::transition(): invalid Whee::RendererDrawState::Blending in a transition to Whee::RendererTargetState::Initial\n",
         TestSuite::Compare::String);
@@ -358,6 +385,27 @@ void AbstractRendererTest::transitionNoFramebufferSetup() {
     Error redirectError{&out};
     renderer.transition(RendererTargetState::Initial, {});
     CORRADE_COMPARE(out.str(), "Whee::AbstractRenderer::transition(): framebuffer size wasn't set up\n");
+}
+
+void AbstractRendererTest::transitionCompositeNotSupported() {
+    /* Has to be tested separately from transitionInvalid() because above it
+       has to support RendererFeature::Composite in order to transition() */
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    } renderer;
+
+    /* Transition needs a framebuffer size set up */
+    renderer.setupFramebuffers({15, 37});
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    renderer.transition(RendererTargetState::Composite, {});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractRenderer::transition(): transition to Whee::RendererTargetState::Composite not supported\n");
 }
 
 }}}}

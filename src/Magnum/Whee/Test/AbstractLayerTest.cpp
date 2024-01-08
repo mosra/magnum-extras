@@ -36,6 +36,7 @@
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Whee/AbstractLayer.h"
+#include "Magnum/Whee/AbstractRenderer.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 
@@ -80,6 +81,12 @@ struct AbstractLayerTest: TestSuite::Tester {
     void updateInvalidSizes();
 
     void state();
+
+    void composite();
+    void compositeEmpty();
+    void compositeNotSupported();
+    void compositeNotImplemented();
+    void compositeInvalidSizes();
 
     void draw();
     void drawEmpty();
@@ -132,6 +139,12 @@ AbstractLayerTest::AbstractLayerTest() {
 
               &AbstractLayerTest::state,
 
+              &AbstractLayerTest::composite,
+              &AbstractLayerTest::compositeEmpty,
+              &AbstractLayerTest::compositeNotSupported,
+              &AbstractLayerTest::compositeNotImplemented,
+              &AbstractLayerTest::compositeInvalidSizes,
+
               &AbstractLayerTest::draw,
               &AbstractLayerTest::drawEmpty,
               &AbstractLayerTest::drawNotSupported,
@@ -172,6 +185,12 @@ void AbstractLayerTest::debugFeaturesSupersets() {
         std::ostringstream out;
         Debug{&out} << (LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor);
         CORRADE_COMPARE(out.str(), "Whee::LayerFeature::DrawUsesBlending|Whee::LayerFeature::DrawUsesScissor\n");
+
+    /* Composite is a superset of Draw, so only one should be printed */
+    } {
+        std::ostringstream out;
+        Debug{&out} << (LayerFeature::Composite|LayerFeature::Draw);
+        CORRADE_COMPARE(out.str(), "Whee::LayerFeature::Composite\n");
     }
 }
 
@@ -1115,6 +1134,156 @@ void AbstractLayerTest::state() {
     layer.cleanNodes(Containers::arrayView({UnsignedShort{0xfef}}));
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_VERIFY(!layer.isHandleValid(data4));
+}
+
+void AbstractLayerTest::composite() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+
+        void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes) override {
+            ++called;
+            CORRADE_COMPARE(renderer.framebufferSize(), (Vector2i{12, 34}));
+            CORRADE_COMPARE_AS(rectOffsets, Containers::arrayView<Vector2>({
+                {1.0f, 2.0f},
+                {3.0f, 4.0f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(rectSizes, Containers::arrayView<Vector2>({
+                {0.1f, 0.2f},
+                {0.3f, 0.4f}
+            }), TestSuite::Compare::Container);
+        }
+
+        Int called = 0;
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    } renderer;
+    renderer.setupFramebuffers({12, 34});
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    layer.composite(renderer,
+        Containers::arrayView<Vector2>({
+            {1.0f, 2.0f},
+            {3.0f, 4.0f}
+        }),
+        Containers::arrayView<Vector2>({
+                {0.1f, 0.2f},
+                {0.3f, 0.4f}
+        })
+    );
+    CORRADE_COMPARE(layer.called, 1);
+}
+
+void AbstractLayerTest::compositeEmpty() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+
+        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            ++called;
+        }
+
+        Int called = 0;
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    } renderer;
+
+    /* It should call the implementation even with empty contents */
+    layer.composite(renderer, {}, {});
+    CORRADE_COMPARE(layer.called, 1);
+}
+
+void AbstractLayerTest::compositeNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    } renderer;
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.composite(renderer, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::composite(): feature not supported\n");
+}
+
+void AbstractLayerTest::compositeNotImplemented() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    } renderer;
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.composite(renderer, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::composite(): feature advertised but not implemented\n");
+}
+
+void AbstractLayerTest::compositeInvalidSizes() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    } renderer;
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.composite(renderer,
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {},
+            {},
+            {}
+        })
+    );
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::composite(): expected rect offset and size views to have the same size but got 2 and 3\n");
 }
 
 void AbstractLayerTest::draw() {

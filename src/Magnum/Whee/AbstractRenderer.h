@@ -45,7 +45,15 @@ namespace Magnum { namespace Whee {
 @see @ref RendererFeatures, @ref AbstractRenderer::features()
 */
 enum class RendererFeature {
-    /* Nothing yet */
+    /**
+     * Ability to composite from the default framebuffer. If supported, the
+     * renderer is able to not only draw into the default framebuffer but also
+     * read from it, making it possible for @ref AbstractLayer::doComposite()
+     * to access framebuffer contents in a renderer-implementation-specific
+     * way. If supported, it's possible to transition from and to
+     * @ref RendererTargetState::Composite.
+     */
+    Composite = 1 << 0,
 };
 
 /**
@@ -100,12 +108,34 @@ enum class RendererTargetState {
      * -    @ref RendererTargetState::Initial, in which case the default
      *      framebuffer should be bound for drawing;
      * -    @relativeref{RendererTargetState,Draw}, in which case the default
-     *      framebuffer should stay bound.
+     *      framebuffer should stay bound;
+     * -    @relativeref{RendererTargetState,Composite}, in which case the
+     *      default framebuffer should be bound for drawing, with the
+     *      assumption that the compositing operation used some other
+     *      framebuffer.
      *
-     * Can be only transitioned to @relativeref{RendererTargetState,Draw} and
+     * Can be only transitioned to @relativeref{RendererTargetState,Draw},
+     * @relativeref{RendererTargetState,Composite} and
      * @relativeref{RendererTargetState,Final}.
      */
     Draw,
+
+    /**
+     * Compositing a layer. Used only if @ref RendererFeature::Composite is
+     * supported. Can be transitioned from:
+     *
+     * -    @ref RendererTargetState::Initial or
+     *      @relativeref{RendererTargetState,Draw}, in which case the contents
+     *      of the default framebuffer should be made available in a
+     *      renderer-implementation-specific way for use by
+     *      @ref AbstractLayer::doComposite(), with the assumption that the
+     *      compositing operation uses some other framebuffer as a target.
+     *
+     * The corresponding @ref RendererDrawStates are expected to be empty when
+     * transitioning to this state. Can be only transitioned to
+     * @relativeref{RendererTargetState,Draw}.
+     */
+    Composite,
 
     /**
      * Final state. Can be transitioned from:
@@ -309,11 +339,20 @@ class MAGNUM_WHEE_EXPORT AbstractRenderer {
          * -    @relativeref{RendererTargetState,Initial} to
          *      @relativeref{RendererTargetState,Final}. The @p drawStatesTo is
          *      guaranteed to be empty in this case.
+         * -    @relativeref{RendererTargetState,Initial} to
+         *      @relativeref{RendererTargetState,Composite}. Is guaranteed to
+         *      be called only if @ref RendererFeature::Composite is supported.
          * -    @relativeref{RendererTargetState,Draw} to
          *      @relativeref{RendererTargetState,Draw}. Called only if the
          *      @p drawStatesFrom and @p drawStatesTo differ.
          * -    @relativeref{RendererTargetState,Draw} to
+         *      @relativeref{RendererTargetState,Composite}. Is guaranteed to
+         *      be called only if @ref RendererFeature::Composite is supported.
+         * -    @relativeref{RendererTargetState,Draw} to
          *      @relativeref{RendererTargetState,Final}
+         * -    @relativeref{RendererTargetState,Composite} to
+         *      @relativeref{RendererTargetState,Draw}. Is guaranteed to
+         *      be called only if @ref RendererFeature::Composite is supported.
          * -    @relativeref{RendererTargetState,Final} to
          *      @relativeref{RendererTargetState,Initial}. Both
          *      @p drawStatesFrom and @p drawStatesTo are guaranteed to be
@@ -326,7 +365,8 @@ class MAGNUM_WHEE_EXPORT AbstractRenderer {
          *
          * In each @ref AbstractUserInterface::draw() invocation, the renderer
          * is guaranteed to start at @ref RendererTargetState::Initial, go
-         * through zero or more @relativeref{RendererTargetState,Draw} states
+         * through zero or more @relativeref{RendererTargetState,Draw} states,
+         * optionally preceded by @relativeref{RendererTargetState,Composite},
          * and end up at the @relativeref{RendererTargetState,Final} state.
          */
         virtual void doTransition(RendererTargetState targetStateFrom, RendererTargetState targetStateTo, RendererDrawStates drawStatesFrom, RendererDrawStates drawStatesTo) = 0;

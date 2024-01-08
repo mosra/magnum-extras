@@ -582,6 +582,21 @@ AbstractRenderer& AbstractUserInterface::setRendererInstance(Containers::Pointer
         "Whee::AbstractUserInterface::setRendererInstance(): instance is null", *state.renderer);
     CORRADE_ASSERT(!state.renderer,
         "Whee::AbstractUserInterface::setRendererInstance(): instance already set", *instance);
+
+    /* If the renderer doesn't support compositing, check we don't have any
+       layers that need it. This is a linear loop, but with an assumption that
+       the renderer is only set once, there isn't that many layers (and layers
+       are usually added after) it shouldn't be a perf bottleneck. A similar
+       check, verifying that a renderer supports compositing if a compositing
+       layer is added, is in setLayerInstance(). */
+    #ifndef CORRADE_NO_ASSERT
+    if(!(instance->features() >= RendererFeature::Composite)) {
+        for(const Layer& layer: state.layers)
+            CORRADE_ASSERT(!layer.used.instance || !(layer.used.instance->features() >= LayerFeature::Composite),
+                "Whee::AbstractUserInterface::setRendererInstance(): renderer without" << RendererFeature::Composite << "not usable with a layer that has" << layer.used.instance->features(), *instance);
+    }
+    #endif
+
     state.renderer = Utility::move(instance);
     /* If we already know the framebuffer size, perform framebuffer size
        setup. Do it immediately so the renderer internals such as custom
@@ -767,6 +782,11 @@ AbstractLayer& AbstractUserInterface::setLayerInstance(Containers::Pointer<Abstr
     const UnsignedInt id = layerHandleId(handle);
     CORRADE_ASSERT(!state.layers[id].used.instance,
         "Whee::AbstractUserInterface::setLayerInstance(): instance for" << handle << "already set", *state.layers[0].used.instance);
+    /* A similar check, verifying that a renderer supports compositing if
+       there's already a compositing layer, is in setRendererInstance() */
+    CORRADE_ASSERT(!(instance->features() >= LayerFeature::Composite) || !state.renderer || (state.renderer->features() >= RendererFeature::Composite),
+        "Whee::AbstractUserInterface::setLayerInstance(): layer with" << LayerFeature::Composite << "not usable with a renderer that has" << state.renderer->features(), *instance);
+
     Layer& layer = state.layers[id];
     layer.used.features = instance->features();
     layer.used.instance = Utility::move(instance);
@@ -2248,10 +2268,25 @@ AbstractUserInterface& AbstractUserInterface::draw() {
        top-level node and then for every layer used by its children */
     for(std::size_t i = 0; i != state.drawCount; ++i) {
         const UnsignedInt layerId = state.dataToDrawLayerIds[i];
+        const LayerFeatures features = state.layers[layerId].used.features;
+        AbstractLayer& instance = *state.layers[layerId].used.instance;
+
+        /* Transition to composite and composite, if the layer advertises it */
+        /** @todo have Composite independent of the Draw? for example a color /
+            screenshot picker might want to have just doComposite() and some
+            event handling implemented, but not drawing ... would require the
+            draw call collection to be changed to consider Composite alone as
+            well or something */
+        if(features >= LayerFeature::Composite) {
+            renderer.transition(RendererTargetState::Composite, {});
+            /** @todo calculate proper per-top-level-node offsets and sizes */
+            instance.composite(renderer,
+                Containers::stridedArrayView({Vector2{}}),
+                Containers::stridedArrayView({state.size}));
+        }
 
         /* Transition between draw states. If they're the same, it's a no-op in
            the renderer. */
-        const LayerFeatures features = state.layers[layerId].used.features;
         RendererDrawStates rendererDrawStates;
         if(features >= LayerFeature::DrawUsesBlending)
             rendererDrawStates |= RendererDrawState::Blending;
@@ -2259,7 +2294,7 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             rendererDrawStates |= RendererDrawState::Scissor;
         renderer.transition(RendererTargetState::Draw, rendererDrawStates);
 
-        state.layers[layerId].used.instance->draw(
+        instance.draw(
             /* The views should be exactly the same as passed to update()
                before ... */
             state.dataToUpdateIds.slice(

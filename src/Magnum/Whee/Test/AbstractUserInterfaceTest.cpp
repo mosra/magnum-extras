@@ -66,6 +66,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
 
     void renderer();
     void rendererSetInstanceInvalid();
+    void rendererSetInstanceCompositeNotSupported();
     void rendererNotSet();
 
     void layer();
@@ -75,6 +76,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void layerSetInstance();
     void layerCreateInvalid();
     void layerSetInstanceInvalid();
+    void layerSetInstanceCompositeNotSupported();
     void layerGetInvalid();
     void layerRemoveInvalid();
     void layerNoHandlesLeft();
@@ -130,6 +132,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void statePropagateFromLayouters();
 
     void draw();
+    void drawComposite();
     void drawRendererTransitions();
     void drawEmpty();
     void drawNoRendererSet();
@@ -487,6 +490,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
         Containers::arraySize(RendererData));
 
     addTests({&AbstractUserInterfaceTest::rendererSetInstanceInvalid,
+              &AbstractUserInterfaceTest::rendererSetInstanceCompositeNotSupported,
               &AbstractUserInterfaceTest::rendererNotSet,
 
               &AbstractUserInterfaceTest::layer,
@@ -496,6 +500,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::layerSetInstance,
               &AbstractUserInterfaceTest::layerCreateInvalid,
               &AbstractUserInterfaceTest::layerSetInstanceInvalid,
+              &AbstractUserInterfaceTest::layerSetInstanceCompositeNotSupported,
               &AbstractUserInterfaceTest::layerGetInvalid,
               &AbstractUserInterfaceTest::layerRemoveInvalid,
               &AbstractUserInterfaceTest::layerNoHandlesLeft,
@@ -558,7 +563,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::draw},
         Containers::arraySize(DrawData));
 
-    addTests({&AbstractUserInterfaceTest::drawRendererTransitions});
+    addTests({&AbstractUserInterfaceTest::drawComposite,
+              &AbstractUserInterfaceTest::drawRendererTransitions});
 
     addInstancedTests({&AbstractUserInterfaceTest::drawEmpty},
         Containers::arraySize(DrawEmptyData));
@@ -908,6 +914,38 @@ void AbstractUserInterfaceTest::rendererSetInstanceInvalid() {
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractUserInterface::setRendererInstance(): instance is null\n"
         "Whee::AbstractUserInterface::setRendererInstance(): instance already set\n");
+}
+
+void AbstractUserInterfaceTest::rendererSetInstanceCompositeNotSupported() {
+    /* See layerSetInstanceCompositeNotSupported() for checking the same in
+       reverse order */
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Add a compositing layer */
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+    };
+    ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    struct Renderer: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    };
+
+    /* Setting a renderer instance that doesn't support compositing will then
+       fail */
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.setRendererInstance(Containers::pointer<Renderer>());
+    CORRADE_COMPARE(out.str(), "Whee::AbstractUserInterface::setRendererInstance(): renderer without Whee::RendererFeature::Composite not usable with a layer that has Whee::LayerFeature::Composite\n");
 }
 
 void AbstractUserInterfaceTest::rendererNotSet() {
@@ -1262,6 +1300,37 @@ void AbstractUserInterfaceTest::layerSetInstanceInvalid() {
         "Whee::AbstractUserInterface::setLayerInstance(): invalid handle Whee::LayerHandle(0xcd, 0xab)\n"
         "Whee::AbstractUserInterface::setLayerInstance(): instance for Whee::LayerHandle(0x0, 0x1) already set\n",
         TestSuite::Compare::String);
+}
+
+void AbstractUserInterfaceTest::layerSetInstanceCompositeNotSupported() {
+    /* See rendererSetInstanceCompositeNotSupported() for checking the same in
+       reverse order */
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Set a renderer instance that doesn't support compositing */
+    struct Renderer: AbstractRenderer {
+        RendererFeatures doFeatures() const override { return {}; }
+        void doSetupFramebuffers(const Vector2i&) override {}
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+    };
+    ui.setRendererInstance(Containers::pointer<Renderer>());
+
+    /* Adding a compositing layer will then fail */
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+    };
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    CORRADE_COMPARE(out.str(), "Whee::AbstractUserInterface::setLayerInstance(): layer with Whee::LayerFeature::Composite not usable with a renderer that has Whee::RendererFeatures{}\n");
 }
 
 void AbstractUserInterfaceTest::layerGetInvalid() {
@@ -5744,6 +5813,10 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(framebufferSize, (Vector2i{400, 500}));
         }
 
+        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            CORRADE_FAIL("This shouldn't be called");
+        }
+
         void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_ITERATION(handle());
             /* doSetSize() should have been called exactly once at this point
@@ -6148,46 +6221,269 @@ void AbstractUserInterfaceTest::draw() {
     })), TestSuite::Compare::Container);
 }
 
+void AbstractUserInterfaceTest::drawComposite() {
+    /* windowSize isn't used for anything here */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 30.0f}, {400, 500}};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    struct Renderer: AbstractRenderer {
+        RendererFeatures doFeatures() const override {
+            return RendererFeature::Composite;
+        }
+        void doSetupFramebuffers(const Vector2i& size) override {
+            CORRADE_COMPARE(size, (Vector2i{400, 500}));
+            ++setupFramebufferCallCount;
+        }
+        void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
+
+        Int setupFramebufferCallCount;
+    };
+    Renderer& renderer = ui.setRendererInstance(Containers::pointer<Renderer>());
+
+    enum {
+        Composite,
+        Draw
+    };
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, features{features} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return features; }
+
+        void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override {
+            CORRADE_ITERATION(handle());
+            ++setSizeCallCount;
+            CORRADE_COMPARE(size, (Vector2{200.0f, 300.0f}));
+            CORRADE_COMPARE(framebufferSize, (Vector2i{400, 500}));
+        }
+
+        void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& offsets, const Containers::StridedArrayView1D<const Vector2>& sizes) override {
+            CORRADE_ITERATION(handle());
+            /* doSetSize() should have been called exactly once at this point */
+            CORRADE_COMPARE(setSizeCallCount, 1);
+
+            CORRADE_VERIFY(features & LayerFeature::Composite);
+            CORRADE_COMPARE(renderer.framebufferSize(), (Vector2i{400, 500}));
+            {
+                CORRADE_EXPECT_FAIL("Currently the whole framebuffer is being composited");
+                CORRADE_COMPARE_AS(offsets,
+                    expectedCompositeOffsetsSizes
+                        .sliceSize(compositeOffsetsSizesOffset, 1)
+                        .slice(&Containers::Pair<Vector2, Vector2>::first),
+                    TestSuite::Compare::Container);
+                CORRADE_COMPARE_AS(sizes,
+                    expectedCompositeOffsetsSizes
+                        .sliceSize(compositeOffsetsSizesOffset, 1)
+                        .slice(&Containers::Pair<Vector2, Vector2>::second),
+                    TestSuite::Compare::Container);
+                ++compositeOffsetsSizesOffset;
+            }
+            CORRADE_COMPARE_AS(offsets, Containers::arrayView({
+                Vector2{}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(sizes, Containers::arrayView({
+                Vector2{200.0f, 300.0f}
+            }), TestSuite::Compare::Container);
+
+            arrayAppend(*compositeDrawCalls, InPlaceInit, handle(), Composite, Containers::Pair<std::size_t, std::size_t>{});
+        }
+
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {}
+
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            CORRADE_ITERATION(handle());
+            /* doSetSize() should have been called exactly once at this point */
+            CORRADE_COMPARE(setSizeCallCount, 1);
+            CORRADE_COMPARE_AS(dataIds,
+                expectedDataIds,
+                TestSuite::Compare::Container);
+            arrayAppend(*compositeDrawCalls, InPlaceInit, handle(), Draw,
+                Containers::pair(offset, count));
+        }
+
+        LayerFeatures features;
+        Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedCompositeOffsetsSizes;
+        UnsignedInt compositeOffsetsSizesOffset = 0;
+        Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
+        Int setSizeCallCount = 0;
+        Containers::Array<Containers::Triple<LayerHandle, Int,
+            Containers::Pair<std::size_t, std::size_t>>>* compositeDrawCalls;
+    };
+
+    /* Only drawing layers used here, non-drawing layers and their exclusion
+       from the draw list is tested enough in draw() above */
+    Layer& layer1Compositing = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::Draw|LayerFeature::Composite));
+    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::Draw|LayerFeature::Event));
+    Layer& layer3Compositing = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::Draw|LayerFeature::Composite|LayerFeature::Event));
+
+    /* First top-level node, with one compositing layer and one
+       non-compositing */
+    NodeHandle topLevelNode1Composited = ui.createNode({20, 30}, {50, 60});
+    /* Goes out of the parent node rectangle, should be included in the
+       compositing rect */
+    NodeHandle node1Composited = ui.createNode(topLevelNode1Composited, {30, -10}, {40, 30});
+    DataHandle node1Data1Composited = layer3Compositing.create(node1Composited);
+    DataHandle node1Data2 = layer2.create(node1Composited);
+
+    /* Second top-level node, containing two composites and two draws from two
+       layers, with two data from one layer and one from the other. This
+       composition could theoretically be merged with the first top-level node
+       as the two are non-overlapping. */
+    /** @todo once the non-overlapping top-level node draw merging is
+        implemented, add a second instance to this test case that verifies with
+        an overlap */
+    NodeHandle topLevelNode2Composited = ui.createNode({100, 150}, {20, 30});
+    /* Goes out of the parent node rectangle, but the parent doesn't clip so it
+       should be also included in the compositing rect */
+    NodeHandle node2CompositedClipping = ui.createNode(topLevelNode2Composited, {5, 5}, {20, 30}, NodeFlag::Clip);
+    /* Goes out of the parent node rectangle and the parent doesn't clip so it
+       shouldn't be included in the compositing rect */
+    NodeHandle node2CompositedClipped = ui.createNode(node2CompositedClipping, {10, 20}, {500, 700});
+    DataHandle node2Data1Composited = layer1Compositing.create(node2CompositedClipped);
+    DataHandle node2Data2Composited = layer3Compositing.create(node2CompositedClipped);
+    DataHandle node2Data3Composited = layer1Compositing.create(node2CompositedClipped);
+
+    /* Third top-level node, this draw should not be preceded by any composite
+       call */
+    NodeHandle topLevelNode3 = ui.createNode({100, 30}, {40, 60});
+    DataHandle node3Data = layer2.create(topLevelNode3);
+
+    /* Fourth top-level node, compositing layer 1 again. This *has to* happen
+       independently of the previous composition  */
+    NodeHandle topLevelNode4 = ui.createNode({20, 150}, {30, 20});
+    DataHandle node4DataComposited = layer1Compositing.create(topLevelNode4);
+
+    UnsignedInt expectedLayer1DataIds[]{
+        dataHandleId(node2Data1Composited),
+        dataHandleId(node2Data3Composited),
+        dataHandleId(node4DataComposited),
+    };
+    UnsignedInt expectedLayer2DataIds[]{
+        dataHandleId(node1Data2),
+        dataHandleId(node3Data),
+    };
+    UnsignedInt expectedLayer3DataIds[]{
+        dataHandleId(node1Data1Composited),
+        dataHandleId(node2Data2Composited),
+    };
+    Containers::Pair<Vector2, Vector2> expectedLayer1CompositeOffsetsSizes[]{
+        /* Second top-level node, expanded to cover all sub-nodes but also
+           considering the clipping */
+        {{100, 150}, {25, 35}},
+        /* Fourth top-level node, nothing special */
+        {{20, 150}, {30, 20}}
+    };
+    /* Layer 2 is not compositing */
+    Containers::Pair<Vector2, Vector2> expectedLayer3CompositeOffsetsSizes[]{
+        /* First top-level node, expanded to cover all (non-clipping)
+           sub-nodes */
+        {{20, 20}, {60, 70}},
+        /* Third top-level node, nothing special */
+        {{100, 30}, {40, 60}}
+    };
+
+    layer1Compositing.expectedDataIds = expectedLayer1DataIds;
+    layer2.expectedDataIds = expectedLayer2DataIds;
+    layer3Compositing.expectedDataIds = expectedLayer3DataIds;
+    layer1Compositing.expectedCompositeOffsetsSizes = expectedLayer1CompositeOffsetsSizes;
+    layer3Compositing.expectedCompositeOffsetsSizes = expectedLayer3CompositeOffsetsSizes;
+    Containers::Array<Containers::Triple<LayerHandle, Int,
+        Containers::Pair<std::size_t, std::size_t>>> compositeDrawCalls;
+    layer1Compositing.compositeDrawCalls = &compositeDrawCalls;
+    layer2.compositeDrawCalls = &compositeDrawCalls;
+    layer3Compositing.compositeDrawCalls = &compositeDrawCalls;
+
+    /* draw() should call composite() before draw() for draw calls from layers
+       that advertise compositing */
+    ui.draw();
+    CORRADE_COMPARE(renderer.setupFramebufferCallCount, 1);
+    CORRADE_COMPARE(layer1Compositing.setSizeCallCount, 1);
+    CORRADE_COMPARE(layer2.setSizeCallCount, 1);
+    CORRADE_COMPARE(layer3Compositing.setSizeCallCount, 1);
+    CORRADE_COMPARE_AS(compositeDrawCalls, (Containers::arrayView<Containers::Triple<LayerHandle, Int,
+            Containers::Pair<std::size_t, std::size_t>>>({
+        /* First top-level node, non-composited data and then composited */
+        {layer2.handle(), Draw, {0, 1}},
+        {layer3Compositing.handle(), Composite, {}},
+        {layer3Compositing.handle(), Draw, {0, 1}},
+        /* Second top-level node, a composition with two data and then a
+           composition with one data */
+        /** @todo this composition could be merged with the above when
+            non-overlapping top-level node draw merging is implemented */
+        {layer1Compositing.handle(), Composite, {}},
+        {layer1Compositing.handle(), Draw, {0, 2}},
+        {layer3Compositing.handle(), Composite, {}},
+        {layer3Compositing.handle(), Draw, {1, 1}},
+        /* Third top-level node, just a draw */
+        {layer2.handle(), Draw, {1, 1}},
+        /* Fourth top-level node, composite and draw that has to happen in
+           isolation because of the other top-level node in between */
+        /** @todo or does it? if non-overlapping it also doesn't have to */
+        {layer1Compositing.handle(), Composite, {}},
+        {layer1Compositing.handle(), Draw, {2, 1}},
+    })), TestSuite::Compare::Container);
+}
+
 void AbstractUserInterfaceTest::drawRendererTransitions() {
     AbstractUserInterface ui{{100, 100}};
 
-    Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>> called;
+    Containers::Array<Containers::Triple<Containers::Pair<LayerHandle, Int>, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>> called;
 
     struct Renderer: AbstractRenderer {
-        explicit Renderer(Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& called): _called(called) {}
+        explicit Renderer(Containers::Array<Containers::Triple<Containers::Pair<LayerHandle, Int>, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& called): _called(called) {}
 
-        RendererFeatures doFeatures() const override { return {}; }
+        RendererFeatures doFeatures() const override {
+            return RendererFeature::Composite;
+        }
         void doSetupFramebuffers(const Vector2i&) override {}
         void doTransition(RendererTargetState targetStateFrom, RendererTargetState targetStateTo, RendererDrawStates drawStatesFrom, RendererDrawStates drawStatesTo) override {
             arrayAppend(_called, InPlaceInit,
-                LayerHandle::Null,
+                Containers::Pair<LayerHandle, Int>{},
                 Containers::pair(targetStateFrom, targetStateTo),
                 Containers::pair(drawStatesFrom, drawStatesTo));
         }
 
-        Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& _called;
+        Containers::Array<Containers::Triple<Containers::Pair<LayerHandle, Int>, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& _called;
     };
     ui.setRendererInstance(Containers::pointer<Renderer>(called));
 
+    enum {
+        Composite,
+        Draw
+    };
+
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, LayerFeatures features, Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& called): AbstractLayer{handle}, _features{features}, _called(called) {}
+        explicit Layer(LayerHandle handle, LayerFeatures features, Containers::Array<Containers::Triple<Containers::Pair<LayerHandle, Int>, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& called): AbstractLayer{handle}, _features{features}, _called(called) {}
 
         using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return _features; }
+
+        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(_called, InPlaceInit,
+                Containers::pair(handle(), Int(Composite)),
+                Containers::Pair<RendererTargetState, RendererTargetState>{},
+                Containers::Pair<RendererDrawStates, RendererDrawStates>{});
+        }
+
         void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             arrayAppend(_called, InPlaceInit,
-                handle(),
+                Containers::pair(handle(), Int(Draw)),
                 Containers::Pair<RendererTargetState, RendererTargetState>{},
                 Containers::Pair<RendererDrawStates, RendererDrawStates>{});
         }
 
         LayerFeatures _features;
-        Containers::Array<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& _called;
+        Containers::Array<Containers::Triple<Containers::Pair<LayerHandle, Int>, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>& _called;
     };
 
     /* Only drawing layers used here, non-drawing layers and their exclusion
        from the draw list is tested enough in draw() above */
+    Layer& layerWithScissorAndCompositing = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::DrawUsesScissor|LayerFeature::Composite, called));
     Layer& layerWithBlendingScissor = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::DrawUsesScissor|LayerFeature::DrawUsesBlending, called));
     Layer& layerWithNothing = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::Draw, called));
     Layer& layerWithBlending = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::DrawUsesBlending, called));
@@ -6195,28 +6491,32 @@ void AbstractUserInterfaceTest::drawRendererTransitions() {
     NodeHandle topLevel = ui.createNode({}, {100, 50});
     NodeHandle topLevelChild = ui.createNode(topLevel, {}, {0, 50});
     NodeHandle topLevelHidden = ui.createNode(topLevel, {}, {50, 50}, NodeFlag::Hidden);
-    /* These two get drawn first, transitioning from Initial, enabling
-       blending and scissor */
+    /* Composited & drawn first, transitioning from Initial, enabling
+       scissor for the draw but not compositing */
+    layerWithScissorAndCompositing.create(topLevelChild);
+    /* These two get drawn second, enabling blending in addition to scissor */
     layerWithBlendingScissor.create(topLevel);
     layerWithBlendingScissor.create(topLevelChild);
     /* This one doesn't get drawn */
     layerWithNothing.create(topLevelHidden);
 
     NodeHandle anotherTopLevel = ui.createNode({0, 50}, {100, 50});
-    /* This one gets drawn second, with no transition */
+    /* This one gets drawn third, with no transition */
     layerWithBlendingScissor.create(anotherTopLevel);
     NodeHandle anotherTopLevelChild = ui.createNode(anotherTopLevel, {}, {0, 50});
-    /* Drawn third, transitioning to Scissor no longer enabled */
+    /* Drawn fourth, transitioning to Scissor no longer enabled */
     layerWithBlending.create(anotherTopLevelChild);
 
     NodeHandle thirdTopLevel = ui.createNode({25, 25}, {50, 50});
-    /* Drawn fourth, transitioning to nothing enabled */
+    /* Composited & drawn fifth, transitioning to only Scissor enabled */
+    layerWithScissorAndCompositing.create(thirdTopLevel);
+    /* Drawn sixth, transitioning to nothing enabled */
     layerWithNothing.create(thirdTopLevel);
-    /* Drawn fifth, transitioning to Blending enabled */
+    /* Drawn seventh, transitioning to Blending enabled */
     layerWithBlending.create(thirdTopLevel);
 
     NodeHandle fifthTopLevel = ui.createNode({0, 0}, {100, 100});
-    /* Drawn sixth, with no transition, and then finally to a Final state with
+    /* Drawn eighth, with no transition, and then finally to a Final state with
        nothing enabled */
     layerWithBlending.create(fifthTopLevel);
 
@@ -6226,27 +6526,51 @@ void AbstractUserInterfaceTest::drawRendererTransitions() {
 
         called = {};
         ui.draw();
-        CORRADE_COMPARE_AS(called, (Containers::arrayView<Containers::Triple<LayerHandle, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>({
+        CORRADE_COMPARE_AS(called, (Containers::arrayView<Containers::Triple<Containers::Pair<LayerHandle, Int>, Containers::Pair<RendererTargetState, RendererTargetState>, Containers::Pair<RendererDrawStates, RendererDrawStates>>>({
             /* This transition happens only the second time (see the
                exceptPrefix() at the end) */
             {{}, {RendererTargetState::Final, RendererTargetState::Initial},
                  {{}, {}}},
 
-            {{}, {RendererTargetState::Initial, RendererTargetState::Draw},
-                 {{}, RendererDrawState::Blending|RendererDrawState::Scissor}},
-            {layerWithBlendingScissor.handle(), {}, {}},    /* First draw */
-            {layerWithBlendingScissor.handle(), {}, {}},    /* Second draw */
+            {{}, {RendererTargetState::Initial, RendererTargetState::Composite},
+                 {{}, {}}},
+            {{layerWithScissorAndCompositing.handle(), Composite}, {}, {}},
+                                                /* First draw composition */
+            {{}, {RendererTargetState::Composite, RendererTargetState::Draw},
+                 {{}, RendererDrawState::Scissor}},
+            {{layerWithScissorAndCompositing.handle(), Draw}, {}, {}},
+                                                            /* First draw */
+
+            {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
+                 {RendererDrawState::Scissor, RendererDrawState::Blending|RendererDrawState::Scissor}},
+            {{layerWithBlendingScissor.handle(), Draw}, {}, {}},
+                                                            /* Second draw */
+            {{layerWithBlendingScissor.handle(), Draw}, {}, {}},
+                                                            /* Third draw */
+
             {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
                  {RendererDrawState::Blending|RendererDrawState::Scissor,
                   RendererDrawState::Blending}},
-            {layerWithBlending.handle(), {}, {}},           /* Third draw */
-            {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
+            {{layerWithBlending.handle(), Draw}, {}, {}},   /* Fourth draw */
+
+            {{}, {RendererTargetState::Draw, RendererTargetState::Composite},
                  {RendererDrawState::Blending, {}}},
-            {layerWithNothing.handle(), {}, {}},            /* Fourth draw */
+            {{layerWithScissorAndCompositing.handle(), Composite}, {}, {}},
+                                                /* Fifth draw composition */
+            {{}, {RendererTargetState::Composite, RendererTargetState::Draw},
+                 {{}, RendererDrawState::Scissor}},
+            {{layerWithScissorAndCompositing.handle(), Draw}, {}, {}},
+                                                            /* Fifth draw */
+
+            {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
+                 {RendererDrawState::Scissor, {}}},
+            {{layerWithNothing.handle(), Draw}, {}, {}},    /* Sixth draw */
+
             {{}, {RendererTargetState::Draw, RendererTargetState::Draw},
                  {{}, RendererDrawState::Blending}},
-            {layerWithBlending.handle(), {}, {}},           /* Fifth draw */
-            {layerWithBlending.handle(), {}, {}},           /* Sixth draw */
+            {{layerWithBlending.handle(), Draw}, {}, {}},   /* Seventh draw */
+            {{layerWithBlending.handle(), Draw}, {}, {}},   /* Eighth draw */
+
             {{}, {RendererTargetState::Draw, RendererTargetState::Final},
                  {RendererDrawState::Blending, {}}},
         })).exceptPrefix(i == 0 ? 1 : 0), TestSuite::Compare::Container);
