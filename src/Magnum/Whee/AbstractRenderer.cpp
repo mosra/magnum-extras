@@ -37,7 +37,7 @@ Debug& operator<<(Debug& debug, const RendererFeature value) {
     switch(value) {
         /* LCOV_EXCL_START */
         #define _c(value) case RendererFeature::value: return debug << "::" #value;
-        /* Nothing yet */
+        _c(Composite)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -47,7 +47,7 @@ Debug& operator<<(Debug& debug, const RendererFeature value) {
 
 Debug& operator<<(Debug& debug, const RendererFeatures value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::RendererFeatures{}", {
-        /* Nothing yet */
+        RendererFeature::Composite
     });
 }
 
@@ -59,6 +59,7 @@ Debug& operator<<(Debug& debug, const RendererTargetState value) {
         #define _c(value) case RendererTargetState::value: return debug << "::" #value;
         _c(Initial)
         _c(Draw)
+        _c(Composite)
         _c(Final)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -130,15 +131,20 @@ void AbstractRenderer::transition(RendererTargetState targetState, RendererDrawS
 
     CORRADE_ASSERT(!state.framebufferSize.isZero(),
         "Whee::AbstractRenderer::transition(): framebuffer size wasn't set up", );
+    CORRADE_ASSERT(targetState != RendererTargetState::Composite || features() & RendererFeature::Composite,
+        "Whee::AbstractRenderer::transition(): transition to" << targetState << "not supported", );
     CORRADE_ASSERT(
         (state.currentTargetState == RendererTargetState::Initial && targetState == RendererTargetState::Initial) ||
         (state.currentTargetState == RendererTargetState::Initial && targetState == RendererTargetState::Draw) ||
+        (state.currentTargetState == RendererTargetState::Initial && targetState == RendererTargetState::Composite) ||
         (state.currentTargetState == RendererTargetState::Initial && targetState == RendererTargetState::Final) ||
         (state.currentTargetState == RendererTargetState::Draw && targetState == RendererTargetState::Draw) ||
+        (state.currentTargetState == RendererTargetState::Draw && targetState == RendererTargetState::Composite) ||
         (state.currentTargetState == RendererTargetState::Draw && targetState == RendererTargetState::Final) ||
+        (state.currentTargetState == RendererTargetState::Composite && targetState == RendererTargetState::Draw) ||
         (state.currentTargetState == RendererTargetState::Final && targetState == RendererTargetState::Initial),
         "Whee::AbstractRenderer::transition(): invalid transition from" << state.currentTargetState << "to" << targetState, );
-    CORRADE_ASSERT((targetState != RendererTargetState::Initial && targetState != RendererTargetState::Final) || !drawStates,
+    CORRADE_ASSERT((targetState != RendererTargetState::Initial && targetState != RendererTargetState::Composite && targetState != RendererTargetState::Final) || !drawStates,
         "Whee::AbstractRenderer::transition(): invalid" << drawStates << "in a transition to" << targetState, );
 
     if(targetState != state.currentTargetState ||
