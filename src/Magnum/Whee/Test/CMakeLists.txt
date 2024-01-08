@@ -81,7 +81,7 @@ if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED DebugTools)
 
     corrade_add_test(WheeBaseLayerGL_Test BaseLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
-    corrade_add_test(WheeRendererGL_Test RendererGL_Test.cpp LIBRARIES MagnumWhee)
+    corrade_add_test(WheeRendererGL_Test RendererGL_Test.cpp LIBRARIES MagnumWheeTestLib)
     corrade_add_test(WheeTextLayerGL_Test TextLayerGL_Test.cpp LIBRARIES MagnumWheeTestLib)
     corrade_add_test(WheeUserInterfaceGL_Test UserInterfaceGL_Test.cpp LIBRARIES MagnumWhee)
 
@@ -166,7 +166,7 @@ if(MAGNUM_BUILD_GL_TESTS)
 
     corrade_add_test(WheeRendererGLTest RendererGLTest.cpp
         LIBRARIES
-            MagnumWhee
+            MagnumWheeTestLib
             Magnum::OpenGLTester)
 
     corrade_add_test(WheeTextLayerGLTest TextLayerGLTest.cpp
