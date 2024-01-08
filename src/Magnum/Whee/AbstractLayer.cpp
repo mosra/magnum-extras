@@ -51,6 +51,7 @@ Debug& operator<<(Debug& debug, const LayerFeature value) {
         _c(Draw)
         _c(DrawUsesBlending)
         _c(DrawUsesScissor)
+        _c(Composite)
         _c(Event)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -68,6 +69,7 @@ Debug& operator<<(Debug& debug, const LayerFeatures value) {
         LayerFeature(UnsignedByte(LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor)),
         LayerFeature::DrawUsesBlending, /* superset of Draw */
         LayerFeature::DrawUsesScissor, /* superset of Draw */
+        LayerFeature::Composite, /* superset of Draw */
         LayerFeature::Draw,
         LayerFeature::Event
     });
@@ -414,6 +416,18 @@ void AbstractLayer::update(const Containers::StridedArrayView1D<const UnsignedIn
 }
 
 void AbstractLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
+
+void AbstractLayer::composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes) {
+    CORRADE_ASSERT(features() & LayerFeature::Composite,
+        "Whee::AbstractLayer::composite(): feature not supported", );
+    CORRADE_ASSERT(rectOffsets.size() == rectSizes.size(),
+        "Whee::AbstractLayer::composite(): expected rect offset and size views to have the same size but got" << rectOffsets.size() << "and" << rectSizes.size(), );
+    doComposite(renderer, rectOffsets, rectSizes);
+}
+
+void AbstractLayer::doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+    CORRADE_ASSERT_UNREACHABLE("Whee::AbstractLayer::composite(): feature advertised but not implemented", );
+}
 
 void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const std::size_t clipRectOffset, const std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     CORRADE_ASSERT(features() & LayerFeature::Draw,

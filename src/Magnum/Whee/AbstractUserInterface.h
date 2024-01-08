@@ -1351,6 +1351,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      @ref update() for each top level node and all its visible
          *      children in a back to front order, and then for each layer that
          *      supports @ref LayerFeature::Draw in a back to front order:
+         *      -   If a layer advertises @ref LayerFeature::Composite, calls
+         *          @ref AbstractRenderer::transition() with
+         *          @ref RendererTargetState::Composite, and then
+         *          @ref AbstractLayer::composite()
          *      -   Calls @ref AbstractRenderer::transition() with
          *          @ref RendererTargetState::Draw and appropriate
          *          @ref RendererDrawStates based on whether given layer

@@ -66,11 +66,22 @@ enum class LayerFeature: UnsignedByte {
     DrawUsesScissor = Draw|(1 << 2),
 
     /**
+     * Compositing contents drawn underneath this layer using
+     * @ref AbstractLayer::composite(), such as for example background blur,
+     * and then uses the result of the composition for actual drawing. It's
+     * assumed that the composition operation copies contents of the
+     * framebuffer or processes them in some way so that a subsequent
+     * @ref AbstractLayer::draw() can be performed to the same framebuffer
+     * without causing a cyclic dependency. Implies @ref LayerFeature::Draw.
+     */
+    Composite = (1 << 3)|Draw,
+
+    /**
      * Event handling using @ref AbstractLayer::pointerPressEvent(),
      * @relativeref{AbstractLayer,pointerReleaseEvent()} and
      * @relativeref{AbstractLayer,pointerMoveEvent()}.
      */
-    Event = 1 << 3,
+    Event = 1 << 4,
 };
 
 /**
@@ -385,6 +396,20 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
+         * @brief Composite previously rendered contents
+         *
+         * Used internally from @ref AbstractUserInterface::draw(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly. Expects that the layer supports
+         * @ref LayerFeature::Composite and that the @p rectOffsets and
+         * @p rectSizes views have the same size. Delegates to
+         * @ref doComposite(), see its documentation for more information about
+         * the arguments.
+         * @see @ref features()
+         */
+        void composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes);
+
+        /**
          * @brief Draw a sub-range of visible layer data
          *
          * Used internally from @ref AbstractUserInterface::draw(). Exposed
@@ -637,8 +662,9 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref AbstractUserInterface::update() whenever
          * @ref UserInterfaceState::NeedsDataUpdate or any of the states that
          * imply it are present in @ref AbstractUserInterface::state(). Is
-         * always called after @ref doClean() and before @ref doDraw(), with
-         * at least one @ref doSetSize() call happening at some point before.
+         * always called after @ref doClean() and before @ref doComposite() and
+         * @ref doDraw(), with at least one @ref doSetSize() call happening at
+         * some point before.
          *
          * Node handles corresponding to @p dataIds are available in
          * @ref nodes(), node IDs can be then extracted from the handles
@@ -683,6 +709,31 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
+         * @brief Composite previously rendered contents
+         * @param renderer          Renderer instance containing the previously
+         *      rendered contents
+         * @param rectOffsets       Offsets of framebuffer rectangles to
+         *      composite
+         * @param rectSizes         Sizes of framebuffer rectangles to
+         *      composite
+         *
+         * Implementation for @ref composite(), which is called from
+         * @ref AbstractUserInterface::draw(). Called only if
+         * @ref LayerFeature::Composite is supported, it's guaranteed that
+         * @ref doUpdate() was called at some point before this function, and
+         * that this function is called after drawing contents of all layers
+         * earlier in the top-level node and layer draw order. It's guaranteed
+         * that @ref doDraw() will get called after this function.
+         *
+         * The @p rectOffsets and @p rectSizes views contain rectangles that
+         * correspond to the layer data and can be used to restrict the
+         * compositing operation to only the area that's actually subsequently
+         * drawn. The views have the same size and are guaranteed to contain at
+         * least one rectangle and be mutually non-overlapping.
+         */
+        virtual void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes);
+
+        /**
          * @brief Draw a sub-range of visible layer data
          * @param dataIds           Data IDs to update, in order that matches
          *      the draw order. Same as the view passed to @ref doUpdate()
@@ -718,7 +769,11 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * the exact same views passed to @p dataIds, @p clipRectIds,
          * @p clipRectDataCounts, @p nodeOffsets, @p nodeSizes,
          * @p nodesEnabled, @p clipRectOffsets and @p clipRectSizes, see its
-         * documentation for their relations and constraints.
+         * documentation for their relations and constraints. If
+         * @ref LayerFeature::Composite is supported as well, it's guaranteed
+         * that @ref doComposite() was called before this function and at some
+         * point after @ref doUpdate(), and after drawing contents of all
+         * layers earlier in the top-level node and layer draw order.
          *
          * Like with @ref doUpdate(), the @p clipRectOffsets and
          * @p clipRectSizes are in the same coordinate system as @p nodeOffsets
