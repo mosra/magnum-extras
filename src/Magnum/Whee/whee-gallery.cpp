@@ -23,8 +23,11 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/Function.h>
+#include <Corrade/Containers/StridedArrayView.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 #include <Magnum/Platform/EmscriptenApplication.h>
@@ -35,10 +38,14 @@
 
 #include "Magnum/Whee/Anchor.h"
 #include "Magnum/Whee/Application.h"
+#include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/Button.h"
 #include "Magnum/Whee/Event.h"
+#include "Magnum/Whee/EventLayer.h"
+#include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Label.h"
 #include "Magnum/Whee/NodeFlags.h"
+#include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/Style.h"
 #include "Magnum/Whee/TextProperties.h"
 #include "Magnum/Whee/UserInterfaceGL.h"
@@ -58,10 +65,48 @@ class WheeGallery: public Platform::Application {
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
 
+        void popup();
+
         Whee::UserInterfaceGL _ui;
+        Whee::BaseLayerGL::Shared _backgroundBlurBaseLayerShared{NoCreate};
+        Whee::BaseLayerGL* _backgroundBlurBaseLayer;
 };
 
-WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Whee Gallery"_s).setSize({900, 600})}, _ui{{900, 600}, Vector2{windowSize()}, framebufferSize(), Whee::McssDarkStyle{}} {
+WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Whee Gallery"_s).setSize({900, 600})}, _ui{NoCreate, {900, 600}, Vector2{windowSize()}, framebufferSize()} {
+    /* Renderer with a compositing framebuffer enabled */
+    _ui.setRendererInstance(Containers::pointer<Whee::RendererGL>(Whee::RendererGL::Flag::CompositingFramebuffer));
+
+    /* Set a style. Has to be done after creating the renderer as it otherwise
+       adds its own. */
+    _ui.setStyle(Whee::McssDarkStyle{});
+
+    {
+        Whee::BaseLayerCommonStyleUniform commonStyleUniform;
+        commonStyleUniform
+            .setSmoothness(0.75f)
+            .setBackgroundBlurAlpha(0.95f);
+        Whee::BaseLayerStyleUniform styleUniforms[1];
+        styleUniforms[0]
+            .setCornerRadius({16.0f, 4.0f, 16.0f, 4.0f})
+            .setInnerOutlineCornerRadius({2.0f, 2.0f, 2.0f, 2.0f})
+            .setOutlineWidth({0.0f, 32.0f, 0.0f, 2.0f})
+            // .setColor(0x2f363fee_rgbaf)
+            .setColor(0xdcdcdcdc_rgbaf*0.8f)
+            // .setOutlineColor(0x282e36cc_rgbaf)
+            .setOutlineColor(0xefefefef_rgbaf*0.4f);
+        _backgroundBlurBaseLayerShared = Whee::BaseLayerGL::Shared{
+            Whee::BaseLayerGL::Shared::Configuration{1}
+                .setFlags(Whee::BaseLayerGL::Shared::Flag::BackgroundBlur)
+                .setBackgroundBlurRadius(31)}
+                ;
+        _backgroundBlurBaseLayerShared
+            .setStyle(commonStyleUniform, styleUniforms, {});
+
+        /* It's drawn before all other layers */
+        _backgroundBlurBaseLayer = &_ui.setLayerInstance(Containers::pointer<Whee::BaseLayerGL>(_ui.createLayer(_ui.baseLayer().handle()), _backgroundBlurBaseLayerShared));
+        _backgroundBlurBaseLayer->setBackgroundBlurPassCount(2);
+    }
+
     Whee::NodeHandle root = _ui.createNode({}, _ui.size());
 
     {
@@ -146,15 +191,42 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             Whee::LabelStyle::Dim, "Dim");
     }
 
+    popup();
+
     GL::Renderer::setClearColor(0x22272e_rgbf);
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 }
 
+void WheeGallery::popup() {
+    Whee::NodeHandle popup = _ui.createNode({180, 180}, {440, 240});
+    _backgroundBlurBaseLayer->create(0, popup);
+    _ui.eventLayer().onDrag(popup, [this, popup](const Vector2& offset){
+        _ui.setNodeOffset(popup, _ui.nodeOffset(popup) + offset);
+    });
+    _ui.eventLayer().onPress(popup, [this, popup]{
+        _ui.setNodeOrder(popup, Whee::NodeHandle::Null);
+    });
+
+    Whee::NodeHandle another = Whee::button({_ui, popup, {67, 170}, {128, 36}},
+        Whee::ButtonStyle::Success, "Another!");
+    _ui.eventLayer().onTapOrClick(another, [this]{
+        this->popup();
+    });
+
+    Whee::NodeHandle more = Whee::button({_ui, popup, {245, 170}, {128, 36}},
+        Whee::ButtonStyle::Primary, "More!");
+    _ui.eventLayer().onTapOrClick(more, [this]{
+        _backgroundBlurBaseLayer->setBackgroundBlurPassCount(_backgroundBlurBaseLayer->backgroundBlurPassCount()*2);
+    });
+}
+
 void WheeGallery::drawEvent() {
-    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color|GL::FramebufferClear::Depth);
+    _ui.renderer().compositingFramebuffer().clear(GL::FramebufferClear::Color);
 
     _ui.draw();
+
+    GL::AbstractFramebuffer::blit(_ui.renderer().compositingFramebuffer(), GL::defaultFramebuffer, GL::defaultFramebuffer.viewport(), GL::FramebufferBlit::Color);
 
     swapBuffers();
     if(_ui.state()) redraw();
