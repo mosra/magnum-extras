@@ -146,6 +146,7 @@ const struct {
     const char* frag;
     bool integerDirection;
     Float maxThreshold, meanThreshold, benchmarkEpsilon;
+    bool expectBrokenSwiftshader;
 } RenderCustom16Cutoff8Data[]{
     /* Version of BlurShaderGL before the linearly interpolated weights were
        added */
@@ -184,7 +185,7 @@ void main() {
     }
 })", false,
         /* Same as radius 8 in render() */
-        2.25f, 1.304f, 0.1f},
+        2.25f, 1.304f, 0.1f, true},
     /* Variant of "discrete" that calculates the coefficients on the fly
        instead of pulling them from a table */
     {"discrete, dynamically calculated coefficients", "#line " CORRADE_LINE_STRING R"(
@@ -232,7 +233,7 @@ void main() {
 })", false,
         /* The sampled Gaussian is slightly different from the binomial
            coefficients that are used in BlurShaderGL */
-        3.75f, 2.389f, 0.2f},
+        3.75f, 2.389f, 0.2f, false},
     /* Variant of "discrete" that uses texel fetch instead of sampling (so, no
        implicit sample interpolation). In theory could achieve the same perf as
        the interpolated version of the code in BlurShaderGL on hardware that
@@ -266,7 +267,7 @@ void main() {
     }
 })", true,
         /* Same as radius 8 in render() */
-        2.25f, 1.304f, 0.1f},
+        2.25f, 1.304f, 0.1f, true},
     /* Variant of "discrete" that doesn't have a loop. Unrolling the loop used
        to be considerably faster on certain GPUs in 2012, but not as much as
        also passing through the texture coordinates from the vertex shader (the
@@ -308,7 +309,7 @@ void main() {
         texture(textureData, textureCoordinates - 8.0*direction)*0.00245414;
 })", false,
         /* Same as radius 8 in render() */
-        2.25f, 1.304f, 0.1f},
+        2.25f, 1.304f, 0.1f, false},
     /* Variant of the above unrolled case together with calculating the
        coordinates in the vertex shader in order to avoid "dependent texture
        reads" in the fragment shader used to be considerably faster in 2012 */
@@ -362,7 +363,7 @@ void main() {
         texture(textureData, textureCoordinates[8].zw)*0.00245414;
 })", false,
         /* Same as radius 8 in render() */
-        2.25f, 1.304f, 0.1f},
+        2.25f, 1.304f, 0.1f, false},
 };
 
 const struct {
@@ -508,9 +509,26 @@ void BlurShaderGLTest::render() {
     if(data.flippedX)
         pixels = pixels.flipped<1>();
 
+    /* Only the trivial case with zero radius (that doesn't dynamically access
+       the arrays) and certain variants of renderCustom16Cutoff8() that don't
+       use constant arrays work, so it's most likely just SwiftShader being
+       utter crap once again. Not wasting any time trying to find
+       workarounds. */
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    bool expectBrokenSwiftshader = GL::Context::current().detectedDriver() >= GL::Context::DetectedDriver::SwiftShader && data.radius > 0;
+    CORRADE_EXPECT_FAIL_IF(expectBrokenSwiftshader,
+        "SwiftShader has broken dynamic indexing into constant arrays.");
+    #endif
+
     CORRADE_COMPARE_WITH(pixels,
         Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
         (DebugTools::CompareImageToFile{_importerManager, data.maxThreshold, data.meanThreshold}));
+
+    /* No point in testing anything else if the above comparison failed */
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    if(expectBrokenSwiftshader)
+        return;
+    #endif
 
     /* Overal brightness of the blurred image shouldn't be same as of the
        input, i.e. a sum of the convolution weights being 1 */
@@ -662,6 +680,14 @@ void BlurShaderGLTest::renderCustom16Cutoff8() {
         .bindTexture(_vertical)
         .draw(_square);
     MAGNUM_VERIFY_NO_GL_ERROR();
+
+    /* Only certain variants that don't use constant arrays work, so it's most
+       likely just SwiftShader being utter crap once again. Not wasting any
+       time trying to find workarounds. */
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    CORRADE_EXPECT_FAIL_IF(GL::Context::current().detectedDriver() >= GL::Context::DetectedDriver::SwiftShader && data.expectBrokenSwiftshader,
+        "SwiftShader has broken dynamic indexing into constant arrays.");
+    #endif
 
     CORRADE_COMPARE_WITH(_horizontalFramebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/blur-16.png"),
