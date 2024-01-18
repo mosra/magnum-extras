@@ -40,6 +40,7 @@
 #include <Magnum/DebugTools/CompareImage.h>
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureArray.h>
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/GL/OpenGLTester.h>
 #include <Magnum/Math/Vector2.h>
@@ -71,6 +72,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void constructMove();
 
     void drawNoStyleSet();
+    void drawNoTextureSet();
 
     void renderSetup();
     void renderTeardown();
@@ -79,6 +81,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void renderCustomOutlineWidth();
     void renderPadding();
     void renderChangeStyle();
+    void renderTextured();
 
     void renderOrDrawCompositeSetup();
     void renderOrDrawCompositeTeardown();
@@ -219,6 +222,34 @@ const struct {
 } RenderChangeStyleData[]{
     {"", false},
     {"partial update", true},
+};
+
+const struct {
+    const char* name;
+    const char* filename;
+    Containers::Optional<Vector3> offset;
+    Containers::Optional<Vector2> size;
+    BaseLayerStyleUniform styleItem;
+} RenderTexturedData[]{
+    {"default offset and size", "textured-default.png", {}, {},
+        BaseLayerStyleUniform{}},
+    {"", "textured.png",
+        /* The image is 160x106, want to render the bottom right 112x48 portion
+           of it to avoid nasty scaling, and to verify the offset is taken from
+           the right (bottom left) origin */
+        {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/160.0f}},
+        BaseLayerStyleUniform{}},
+    {"colored", "textured-colored.png",
+        /* Top left part of the image instead */
+        {{0.0f/160.0f, 58.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/160.0f}},
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setInnerOutlineCornerRadius(4.0f)
+            .setOutlineWidth(8.0f)
+            /* The outline shouldn't be multiplied with the texture, but the
+               gradient should */
+            .setColor(0x333333_rgbf, 0xffffff_rgbf)
+            .setOutlineColor(0xa5c9ea_rgbf)},
 };
 
 const struct {
@@ -418,7 +449,8 @@ BaseLayerGLTest::BaseLayerGLTest() {
               &BaseLayerGLTest::constructCopy,
               &BaseLayerGLTest::constructMove,
 
-              &BaseLayerGLTest::drawNoStyleSet});
+              &BaseLayerGLTest::drawNoStyleSet,
+              &BaseLayerGLTest::drawNoTextureSet});
 
     addInstancedTests({&BaseLayerGLTest::render},
         Containers::arraySize(RenderData),
@@ -438,6 +470,11 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addInstancedTests({&BaseLayerGLTest::renderChangeStyle},
         Containers::arraySize(RenderChangeStyleData),
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::renderTextured},
+        Containers::arraySize(RenderTexturedData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
@@ -552,6 +589,24 @@ void BaseLayerGLTest::drawNoStyleSet() {
     Error redirectError{&out};
     layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::BaseLayerGL::draw(): no style data was set\n");
+}
+
+void BaseLayerGLTest::drawNoTextureSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}
+        .addFlags(BaseLayer::Shared::Flag::Textured)};
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}},
+        {});
+
+    BaseLayerGL layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayerGL::draw(): no texture to draw with was set\n");
 }
 
 constexpr Vector2i RenderSize{128, 64};
@@ -859,6 +914,68 @@ void BaseLayerGLTest::renderChangeStyle() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/gradient.png"),
+        DebugTools::CompareImageToFile{_manager});
+}
+
+void BaseLayerGLTest::renderTextured() {
+    auto&& data = RenderTexturedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    /* Abusing the blur input image for a texture test */
+    Containers::Pointer<Trade::AbstractImporter> importer = _manager.loadAndInstantiate("AnyImageImporter");
+    CORRADE_VERIFY(importer->openFile(Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/blur-input.png")));
+
+    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+    CORRADE_VERIFY(image);
+
+    GL::Texture2DArray texture;
+    texture
+        .setMinificationFilter(GL::SamplerFilter::Linear)
+        .setMagnificationFilter(GL::SamplerFilter::Linear)
+        .setStorage(1, GL::textureFormat(image->format()), Vector3i{image->size(), 8})
+        .setSubImage(0, {0, 0, data.offset ? Int(data.offset->z()) : 0}, ImageView2D{*image});
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    BaseLayerGL::Shared layerShared{
+        BaseLayer::Shared::Configuration{2}
+            .addFlags(BaseLayer::Shared::Flag::Textured)};
+    layerShared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        /* To verify it's not always picking the first uniform */
+        {BaseLayerStyleUniform{}, data.styleItem},
+        {});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+    layer.setTexture(texture);
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    DataHandle nodeData = layer.create(1, node);
+    if(data.offset)
+        layer.setTextureCoordinates(nodeData, *data.offset, *data.size);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
         DebugTools::CompareImageToFile{_manager});
 }
 
