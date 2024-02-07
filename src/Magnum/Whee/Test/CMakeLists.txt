@@ -32,6 +32,7 @@ if(MAGNUM_BUILD_STATIC)
     find_package(MagnumPlugins COMPONENTS StbImageImporter StbTrueTypeFont)
 endif()
 
+corrade_add_test(WheeAbstractAnimatorTest AbstractAnimatorTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractLayerTest AbstractLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractLayouterTest AbstractLayouterTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractRendererTest AbstractRendererTest.cpp LIBRARIES MagnumWheeTestLib)
@@ -69,6 +70,7 @@ if(CORRADE_TARGET_EMSCRIPTEN)
     endif()
     # It allocates 1M data / nodes to test boundary conditions, needs more
     # memory
+    target_link_options(WheeAbstractAnimatorTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
     target_link_options(WheeAbstractLayerTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
     target_link_options(WheeAbstractLayouterTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
     target_link_options(WheeAbstractUserInterfaceTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
