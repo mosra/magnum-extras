@@ -95,4 +95,34 @@ Debug& operator<<(Debug& debug, const LayoutHandle value) {
     return debug;
 }
 
+Debug& operator<<(Debug& debug, const AnimatorHandle value) {
+    if(value == AnimatorHandle::Null)
+        return debug << "Whee::AnimatorHandle::Null";
+    return debug << "Whee::AnimatorHandle(" << Debug::nospace << Debug::hex << animatorHandleId(value) << Debug::nospace << "," << Debug::hex << animatorHandleGeneration(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const AnimatorDataHandle value) {
+    if(value == AnimatorDataHandle::Null)
+        return debug << "Whee::AnimatorDataHandle::Null";
+    return debug << "Whee::AnimatorDataHandle(" << Debug::nospace << Debug::hex << animatorDataHandleId(value) << Debug::nospace << "," << Debug::hex << animatorDataHandleGeneration(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const AnimationHandle value) {
+    if(value == AnimationHandle::Null)
+        return debug << "Whee::AnimationHandle::Null";
+
+    debug << "Whee::AnimationHandle(" << Debug::nospace;
+    if(animationHandleAnimator(value) == AnimatorHandle::Null)
+        debug << "Null,";
+    else
+        debug << "{" << Debug::nospace << Debug::hex << animationHandleAnimatorId(value) << Debug::nospace << "," << Debug::hex << animationHandleAnimatorGeneration(value) << Debug::nospace << "},";
+
+    if(animationHandleData(value) == AnimatorDataHandle::Null)
+        debug << "Null)";
+    else
+        debug << "{" << Debug::nospace << Debug::hex << animationHandleId(value) << Debug::nospace << "," << Debug::hex << animationHandleGeneration(value) << Debug::nospace << "})";
+
+    return debug;
+}
+
 }}

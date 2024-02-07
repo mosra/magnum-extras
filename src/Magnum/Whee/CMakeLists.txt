@@ -45,6 +45,7 @@ set(MagnumWhee_SRCS
     Widget.cpp)
 
 set(MagnumWhee_GracefulAssert_SRCS
+    AbstractAnimator.cpp
     AbstractLayer.cpp
     AbstractLayouter.cpp
     AbstractRenderer.cpp
@@ -58,6 +59,7 @@ set(MagnumWhee_GracefulAssert_SRCS
     UserInterface.cpp)
 
 set(MagnumWhee_HEADERS
+    AbstractAnimator.h
     AbstractLayer.h
     AbstractLayouter.h
     AbstractRenderer.h
