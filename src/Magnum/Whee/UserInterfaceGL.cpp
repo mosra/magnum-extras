@@ -26,6 +26,7 @@
 #include "UserInterfaceGL.h"
 
 #include <Corrade/Utility/Assert.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/Text/GlyphCache.h>
@@ -172,6 +173,10 @@ UserInterfaceGL& UserInterfaceGL::setBaseLayerInstance(Containers::Pointer<BaseL
 
 UserInterfaceGL& UserInterfaceGL::setTextLayerInstance(Containers::Pointer<TextLayerGL>&& instance) {
     return static_cast<UserInterfaceGL&>(UserInterface::setTextLayerInstance(Utility::move(instance)));
+}
+
+UserInterfaceGL& UserInterfaceGL::advanceAnimations(const Nanoseconds time) {
+    return static_cast<UserInterfaceGL&>(UserInterface::advanceAnimations(time));
 }
 
 }}

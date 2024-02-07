@@ -46,8 +46,8 @@ namespace Magnum { namespace Whee {
 Used to decide whether @ref AbstractUserInterface::clean() or
 @ref AbstractUserInterface::update() need to be called to refresh the internal
 state before the interface is drawn or an event is handled. See also
-@ref LayerState for layer-specific state and @ref LayouterState for
-layouter-specific state.
+@ref LayerState for layer-specific state, @ref LayouterState for
+layouter-specific state and @ref AnimatorState for animator-specific state.
 @see @ref UserInterfaceStates, @ref AbstractUserInterface::state()
 */
 enum class UserInterfaceState: UnsignedShort {
@@ -193,6 +193,16 @@ enum class UserInterfaceState: UnsignedShort {
      * is called.
      */
     NeedsRendererSizeSetup = 1 << 8,
+
+    /**
+     * @ref AbstractUserInterface::advanceAnimations() needs to be called to
+     * advance active animations. Set implicitly if any of the animators have
+     * @ref AnimatorState::NeedsAdvance set, is reset next time
+     * @ref AbstractUserInterface::advanceAnimations() is called if no
+     * animations are @ref AnimationState::Scheduled,
+     * @ref AnimationState::Playing or @ref AnimationState::Paused anymore.
+     */
+    NeedsAnimationAdvance = 1 << 9,
 };
 
 /**
@@ -307,8 +317,8 @@ CORRADE_ENUMSET_OPERATORS(NodeFlags)
 @brief Base for the main user interface
 @m_since_latest
 
-Doesn't contain any implicit layers or layouters. You'll most likely want to
-instantiate the @ref UserInterface subclass instead.
+Doesn't contain any implicit layers, layouters or animators. You'll most likely
+want to instantiate the @ref UserInterface subclass instead.
 
 @section Whee-AbstractUserInterface-dpi DPI awareness
 
@@ -492,6 +502,15 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * default no flags are set.
          */
         UserInterfaceStates state() const;
+
+        /**
+         * @brief Animation time
+         *
+         * Time value last passed to @ref advanceAnimations(). Initial value is
+         * @cpp 0_nsec @ce.
+         * @see @ref AbstractAnimator::time()
+         */
+        Nanoseconds animationTime() const;
 
         /** @{
          * @name Renderer management
@@ -940,6 +959,139 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          */
 
         /** @{
+         * @name Animator management
+         */
+
+        /**
+         * @brief Capacity of the animator storage
+         *
+         * Can be at most 256. If @ref createAnimator() is called and there's
+         * no free slots left, the internal storage gets grown.
+         * @see @ref animatorUsedCount()
+         */
+        std::size_t animatorCapacity() const;
+
+        /**
+         * @brief Count of used items in the animator storage
+         *
+         * Always at most @ref animatorCapacity(). Expired handles are counted
+         * among used as well. The operation is done with a
+         * @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
+         * @ref animatorCapacity().
+         */
+        std::size_t animatorUsedCount() const;
+
+        /**
+         * @brief Whether an animator handle is valid
+         *
+         * A handle is valid if it has been returned from @ref createAnimator()
+         * before and @ref removeAnimator() wasn't called on it yet. Note that
+         * a handle is valid even if the animator instance wasn't set with
+         * @ref setGenericAnimatorInstance() yet. For @ref AnimatorHandle::Null
+         * always returns @cpp false @ce.
+         */
+        bool isHandleValid(AnimatorHandle handle) const;
+
+        /**
+         * @brief Whether an animation handle is valid
+         *
+         * A shorthand for extracting an @ref AnimatorHandle from @p handle
+         * using @ref animationHandleAnimator(), calling
+         * @ref isHandleValid(AnimatorHandle) const on it, if it's valid and
+         * set then retrieving the particular animator instance using
+         * @ref animator() and then calling
+         * @ref AbstractAnimator::isHandleValid(AnimatorDataHandle) const with
+         * an @ref AnimatorDataHandle extracted from @p handle using
+         * @ref animationHandleData(). See these functions for more
+         * information. For @ref AnimationHandle::Null,
+         * @ref AnimatorHandle::Null or @ref AnimatorDataHandle::Null always
+         * returns @cpp false @ce.
+         */
+        bool isHandleValid(AnimationHandle handle) const;
+
+        /**
+         * @brief Create an animator
+         * @return New animator handle
+         *
+         * Allocates a new handle in a free slot in the internal storage or
+         * grows the storage if there's no free slots left. Expects that
+         * there's at most 256 animators. The returned handle is meant to be
+         * used to construct an @ref AbstractAnimator subclass and the instance
+         * then passed to @ref setGenericAnimatorInstance(). An animator can be
+         * removed again with @ref removeAnimator().
+         * @see @ref isHandleValid(AnimatorHandle) const,
+         *      @ref animatorCapacity(), @ref animatorUsedCount()
+         */
+        AnimatorHandle createAnimator();
+
+        /**
+         * @brief Set a generic animator instance
+         * @return Reference to @p instance
+         *
+         * Expects that @p instance was created with an @ref AnimatorHandle
+         * returned from @ref createAnimator() earlier, the handle is valid and
+         * @ref setGenericAnimatorInstance() wasn't called for the same handle
+         * yet.
+         *
+         * Internally, the instance is inserted into a list partitioned by
+         * animator type, which is done with a @f$ \mathcal{O}(n) @f$
+         * complexity where @f$ n @f$ is @ref animatorCapacity().
+         * @see @ref AbstractAnimator::handle(),
+         *      @ref isHandleValid(AnimatorHandle) const
+         */
+        AbstractGenericAnimator& setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance);
+        /** @overload */
+        template<class T> T& setGenericAnimatorInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>{Utility::move(instance)}));
+        }
+
+        /**
+         * @brief Animator instance
+         *
+         * Expects that @p handle is valid and that
+         * @ref setGenericAnimatorInstance() was called for it.
+         * @see @ref isHandleValid(AnimatorHandle) const
+         */
+        AbstractAnimator& animator(AnimatorHandle handle);
+        const AbstractAnimator& animator(AnimatorHandle handle) const; /**< @overload */
+
+        /**
+         * @brief Animator instance in a concrete type
+         *
+         * Expects that @p handle is valid and that
+         * @ref setGenericAnimatorInstance() was called for it. It's the user
+         * responsibility to ensure that @p T matches the actual instance type.
+         * @see @ref isHandleValid(AnimatorHandle) const
+         */
+        template<class T> T& animator(AnimatorHandle handle) {
+            return static_cast<T&>(animator(handle));
+        }
+        /** @overload */
+        template<class T> const T& animator(AnimatorHandle handle) const {
+            return static_cast<const T&>(animator(handle));
+        }
+
+        /**
+         * @brief Remove an animator
+         *
+         * Expects that @p handle is valid. After this call,
+         * @ref isHandleValid(AnimatorHandle) const returns @cpp false @ce for
+         * @p handle and @ref isHandleValid(AnimationHandle) const returns
+         * @cpp false @ce for all animations associated with @p handle.
+         *
+         * Internally, if the removed animator had an instance set, the
+         * instance is removed from a list partitioned by animator type, which
+         * is done with a @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
+         * @ref animatorCapacity().
+         * @see @ref clean()
+         */
+        void removeAnimator(AnimatorHandle handle);
+
+        /**
+         * @}
+         */
+
+        /** @{
          * @name Node management
          */
 
@@ -1279,6 +1431,28 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         AbstractUserInterface& clean();
 
         /**
+         * @brief Advance active animations
+         * @return Reference to self (for method chaining)
+         *
+         * Implicitly calls @ref clean(), should be called before any
+         * @ref updateRenderer(), @ref update() or @ref draw() for given frame.
+         * Expects that @p time is greater or equal to @ref animationTime(). If
+         * @ref state() contains @ref UserInterfaceState::NeedsAnimationAdvance,
+         * this function delegates to @ref AbstractAnimator::advance() on all
+         * animator instances that have @ref AnimatorState::NeedsAdvance set.
+         *
+         * Calling this function updates @ref animationTime(). Afterwards,
+         * @ref state() may still contain
+         * @ref UserInterfaceState::NeedsAnimationAdvance, signalling that
+         * animation advance is still needed the next fram. It may also have
+         * other states added depending on what all the animators touched, and
+         * a subsequent call to @ref draw() (or directly to @ref clean() and
+         * @ref update() before that) for given frame will take care of
+         * correctly updating the internal state.
+         */
+        AbstractUserInterface& advanceAnimations(Nanoseconds time);
+
+        /**
          * @brief Update renderer framebuffer sizes
          * @return Reference to self (for method chaining)
          *
@@ -1334,7 +1508,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      are not visible or have @ref NodeFlag::NoEvents or
          *      @ref NodeFlag::Disabled set on them or their parents
          *
-         * After calling this function, @ref state() is empty.
+         * After calling this function, @ref state() is empty apart from
+         * @ref UserInterfaceState::NeedsAnimationAdvance, which may be present
+         * if there are any animators for which @ref advanceAnimations() should
+         * be called.
          */
         AbstractUserInterface& update();
 
@@ -1590,6 +1767,12 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         NodeHandle pointerEventHoveredNode() const;
 
     private:
+        /* Used by set*AnimatorInstance() */
+        MAGNUM_WHEE_LOCAL AbstractAnimator& setAnimatorInstanceInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            Containers::Pointer<AbstractAnimator>&& instance);
         /* Used by removeNode() and clean() */
         MAGNUM_WHEE_LOCAL void removeNodeInternal(UnsignedInt id);
         /* Used by setNodeFlags(), addNodeFlags() and clearNodeFlags() */

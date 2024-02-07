@@ -169,6 +169,7 @@ class MAGNUM_WHEE_EXPORT UserInterface: public AbstractUserInterface {
         UserInterface& clean() {
             return static_cast<UserInterface&>(AbstractUserInterface::clean());
         }
+        UserInterface& advanceAnimations(Nanoseconds time);
         UserInterface& update() {
             return static_cast<UserInterface&>(AbstractUserInterface::update());
         }

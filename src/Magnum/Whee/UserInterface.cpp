@@ -29,6 +29,7 @@
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/GlyphCache.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Whee/BaseLayer.h"
@@ -118,6 +119,10 @@ const EventLayer& UserInterface::eventLayer() const {
 
 EventLayer& UserInterface::eventLayer() {
     return const_cast<EventLayer&>(const_cast<const UserInterface&>(*this).eventLayer());
+}
+
+UserInterface& UserInterface::advanceAnimations(const Nanoseconds time) {
+    return static_cast<UserInterface&>(AbstractUserInterface::advanceAnimations(time));
 }
 
 }}

@@ -262,6 +262,7 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
         UserInterfaceGL& clean() {
             return static_cast<UserInterfaceGL&>(UserInterface::clean());
         }
+        UserInterfaceGL& advanceAnimations(Nanoseconds time);
         UserInterfaceGL& update() {
             return static_cast<UserInterfaceGL&>(UserInterface::update());
         }

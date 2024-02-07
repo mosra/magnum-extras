@@ -31,8 +31,11 @@
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/Reference.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 
+#include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/AbstractLayouter.h"
 #include "Magnum/Whee/AbstractRenderer.h"
@@ -57,6 +60,7 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         _c(NeedsNodeUpdate)
         _c(NeedsNodeClean)
         _c(NeedsRendererSizeSetup)
+        _c(NeedsAnimationAdvance)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -81,7 +85,8 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         UserInterfaceState::NeedsDataAttachmentUpdate,
         /* Implied by NeedsDataAttachmentUpdate, has to be after */
         UserInterfaceState::NeedsDataUpdate,
-        UserInterfaceState::NeedsRendererSizeSetup
+        UserInterfaceState::NeedsRendererSizeSetup,
+        UserInterfaceState::NeedsAnimationAdvance
     });
 }
 
@@ -254,6 +259,67 @@ static_assert(
     offsetof(Layouter::Used, generation) == offsetof(Layouter::Free, generation),
     "Layouter::Used and Free layout not compatible");
 
+union Animator {
+    explicit Animator() noexcept: used{} {}
+    Animator(const Animator&&) = delete;
+    Animator(Animator&& other) noexcept: used{Utility::move(other.used)} {}
+    ~Animator() {
+        used.instance.~Pointer();
+    }
+    Animator& operator=(const Animator&&) = delete;
+    Animator& operator=(Animator&& other) noexcept {
+        Utility::swap(other.used, used);
+        return *this;
+    }
+
+    struct Used {
+        /* Except for the generation (and instance, which is reset during
+           removal), these have to be re-filled every time a handle is
+           recycled, so it doesn't make sense to initialize them to
+           anything. */
+
+        /* Animator instance. Null for newly created animators until
+           set*AnimatorInstance() is called, set back to null in
+           removeAnimator(). */
+        Containers::Pointer<AbstractAnimator> instance;
+
+        /* Together with index of this item in `animators` used for creating a
+           AnimatorHandle. Increased every time a handle reaches
+           removeAnimator(). Has to be initially non-zero to differentiate the
+           first ever handle (with index 0) from AnimatorHandle::Null. Once
+           wraps back to zero once the handle gets disabled. */
+        UnsignedByte generation = 1;
+
+        /* 7 byte free */
+    } used;
+
+    /* Used only if the Animator is among the free ones */
+    struct Free {
+        /* The instance pointer value has to be preserved in order to be able
+           to distinguish between used animators with set instances and others
+           (free or not set yet), which is used for iterating them in clean()
+           and update(). If free, the member is always null, to not cause
+           issues when moving & destructing. There's no other way to
+           distinguish free and used animators apart from walking the free
+           list. */
+        void* instance;
+
+        /* The generation value has to be preserved in order to increment it
+           next time it gets used */
+        UnsignedByte generation;
+
+        /* See State::firstFreeAnimator for more information. Has to be larger
+           than 8 bits in order to distinguish between index 255 and "no next
+           free layouter" (which is now 65535). */
+        UnsignedShort next;
+    } free;
+};
+
+static_assert(
+    offsetof(Animator::Used, instance) == offsetof(Animator::Free, instance) &&
+    offsetof(Animator::Used, generation) == offsetof(Animator::Free, generation),
+    "Animator::Used and Free layout not compatible");
+
 union Node {
     explicit Node() noexcept: used{} {}
 
@@ -373,6 +439,21 @@ struct AbstractUserInterface::State {
     UnsignedShort firstFreeLayouter = 0xffffu;
     UnsignedShort lastFreeLayouter = 0xffffu;
 
+    /* Animators, indexed by AnimatorHandle */
+    Containers::Array<Animator> animators;
+    /* Indices into the `animators` array. The `Animator` then has a `nextFree`
+       member containing the next free index. To avoid repeatedly reusing the
+       same handles and exhausting their generation counter too soon, new
+       animators get taken from the front and removed are put at the end. A
+       value with all bits set means there's no (first/next/last) free
+       animator. */
+    UnsignedShort firstFreeAnimator = 0xffffu;
+    UnsignedShort lastFreeAnimator = 0xffffu;
+
+    /* Animator instances, partitioned by type. Inserted into by
+       set*AnimatorInstance(), removed from by removeAnimator() */
+    Containers::Array<Containers::Reference<AbstractAnimator>> animatorInstances;
+
     /* Nodes, indexed by NodeHandle */
     Containers::Array<Node> nodes;
     /* Indices into the `nodes` array. The `Node` then has a `nextFree`
@@ -403,6 +484,9 @@ struct AbstractUserInterface::State {
 
     /* Tracks whether update() and clean() needs to do something */
     UserInterfaceStates state;
+
+    /* Used by advanceAnimations() */
+    Nanoseconds animationTime{Math::ZeroInit};
 
     /* Node on which a pointer press event was accepted and which will receive
        a pointer tap or click event on a release if it happens on its area.
@@ -574,7 +658,29 @@ UserInterfaceStates AbstractUserInterface::state() const {
         }
     }
 
+    /* Go through all animators and inherit the Needs* flags from them. Invalid
+       (removed) animators have instances set to nullptr as well, so this will
+       skip them. In contrast to layers and layouters, NeedsAnimationAdvance is
+       never set on state.state itself, it's always inherited. */
+    CORRADE_INTERNAL_ASSERT(!(state.state >= UserInterfaceState::NeedsAnimationAdvance));
+    for(const Animator& animator: state.animators) {
+        if(const AbstractAnimator* const instance = animator.used.instance.get()) {
+            const AnimatorStates animatorState = instance->state();
+            if(animatorState >= AnimatorState::NeedsAdvance)
+                states |= UserInterfaceState::NeedsAnimationAdvance;
+
+            /* There's no broader state than this so if it's set, we can stop
+               iterating further */
+            if(states == UserInterfaceState::NeedsAnimationAdvance)
+                break;
+        }
+    }
+
     return state.state|states;
+}
+
+Nanoseconds AbstractUserInterface::animationTime() const {
+    return _state->animationTime;
 }
 
 AbstractRenderer& AbstractUserInterface::setRendererInstance(Containers::Pointer<AbstractRenderer>&& instance) {
@@ -1131,6 +1237,200 @@ void AbstractUserInterface::removeLayouter(const LayouterHandle handle) {
     state.state |= UserInterfaceState::NeedsLayoutAssignmentUpdate;
 }
 
+std::size_t AbstractUserInterface::animatorCapacity() const {
+    return _state->animators.size();
+}
+
+std::size_t AbstractUserInterface::animatorUsedCount() const {
+    /* The "pointer" chasing in here is a bit nasty, but there's no other way
+       to know which animators are actually used and which not. The instance is
+       a nullptr for unused animators, yes, but it's also null for animators
+       that don't have it set yet. */
+    const State& state = *_state;
+    std::size_t free = 0;
+    UnsignedShort index = state.firstFreeAnimator;
+    /* C, FUCK your STUPID conversion rules. Why isn't ~UnsignedShort{} 65535?
+       Why it evaluates to -1?! Why UnsignedShort(~UnsignedShort{}) is the only
+       way to put it back to 16 bits? Why is everything so fucking awful?! Why
+       do you force me to use error-prone constants, FFS?! */
+    while(index != 0xffffu) {
+        index = state.animators[index].free.next;
+        ++free;
+    }
+    return state.animators.size() - free;
+}
+
+bool AbstractUserInterface::isHandleValid(const AnimatorHandle handle) const {
+    if(handle == AnimatorHandle::Null)
+        return false;
+    const UnsignedInt index = animatorHandleId(handle);
+    const State& state = *_state;
+    if(index >= state.animators.size())
+        return false;
+    /* Zero generation (i.e., where it wrapped around from 255) is also
+       invalid.
+
+       Note that this can still return true for manually crafted handles that
+       point to free nodes with correct generation counters. The only way to
+       detect that would be by either iterating the free list (slow) or by
+       keeping an additional bitfield marking free items. I don't think that's
+       necessary. */
+    const UnsignedInt generation = animatorHandleGeneration(handle);
+    return generation && generation == state.animators[index].used.generation;
+}
+
+bool AbstractUserInterface::isHandleValid(const AnimationHandle handle) const {
+    if(animationHandleData(handle) == AnimatorDataHandle::Null ||
+       animationHandleAnimator(handle) == AnimatorHandle::Null)
+        return false;
+    const UnsignedInt animatorIndex = animationHandleAnimatorId(handle);
+    const State& state = *_state;
+    if(animatorIndex >= state.animators.size())
+        return false;
+    const Animator& animator = state.animators[animatorIndex];
+    if(!animator.used.instance)
+        return false;
+    return animationHandleAnimatorGeneration(handle) == animator.used.generation && animator.used.instance->isHandleValid(animationHandleData(handle));
+}
+
+AnimatorHandle AbstractUserInterface::createAnimator() {
+    /* Find the first free animator if there is, update the free index to point
+       to the next one (or none) */
+    Animator* animator;
+    /* C, FUCK your STUPID conversion rules. Why isn't ~UnsignedShort{} 65535?
+       Why it evaluates to -1?! Why UnsignedShort(~UnsignedShort{}) is the only
+       way to put it back to 16 bits? Why is everything so fucking awful?! Why
+       do you force me to use error-prone constants, FFS?! */
+    State& state = *_state;
+    if(state.firstFreeAnimator != 0xffffu) {
+        animator = &state.animators[state.firstFreeAnimator];
+        /* If there's just one item in the list, make the list empty */
+        if(state.firstFreeAnimator == state.lastFreeAnimator) {
+            CORRADE_INTERNAL_ASSERT(animator->free.next == 0xffffu);
+            state.firstFreeAnimator = state.lastFreeAnimator = 0xffffu;
+        } else {
+            state.firstFreeAnimator = animator->free.next;
+        }
+
+    /* If there isn't, allocate a new one */
+    } else {
+        CORRADE_ASSERT(state.animators.size() < 1 << Implementation::AnimatorHandleIdBits,
+            "Whee::AbstractUserInterface::createAnimator(): can only have at most" << (1 << Implementation::AnimatorHandleIdBits) << "animators", {});
+        animator = &arrayAppend(state.animators, InPlaceInit);
+    }
+
+    /* In both above cases the generation is already set appropriately, either
+       initialized to 1, or incremented when it got remove()d (to mark existing
+       handles as invalid) */
+    const AnimatorHandle handle = animatorHandle((animator - state.animators), animator->used.generation);
+
+    return handle;
+}
+
+AbstractGenericAnimator& AbstractUserInterface::setGenericAnimatorInstance(Containers::Pointer<AbstractGenericAnimator>&& instance) {
+    AbstractAnimator& animator = setAnimatorInstanceInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::AbstractUserInterface::setGenericAnimatorInstance():",
+        #endif
+        Utility::move(instance));
+
+    return static_cast<AbstractGenericAnimator&>(animator);
+}
+
+AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    Containers::Pointer<AbstractAnimator>&& instance)
+{
+    State& state = *_state;
+    CORRADE_ASSERT(instance,
+        messagePrefix << "instance is null", *state.animators[0].used.instance);
+    const AnimatorHandle handle = instance->handle();
+    CORRADE_ASSERT(isHandleValid(handle),
+        messagePrefix << "invalid handle" << handle, *state.animators[0].used.instance);
+    const UnsignedInt id = animatorHandleId(handle);
+    CORRADE_ASSERT(!state.animators[id].used.instance,
+        messagePrefix << "instance for" << handle << "already set", *state.animators[0].used.instance);
+
+    /* Insert into the partitioned animator list */
+    Implementation::partitionedAnimatorsInsert(state.animatorInstances,
+        *instance);
+
+    /* Take over the instance */
+    Animator& animator = state.animators[id];
+    animator.used.instance = Utility::move(instance);
+
+    return *animator.used.instance;
+}
+
+const AbstractAnimator& AbstractUserInterface::animator(const AnimatorHandle handle) const {
+    const State& state = *_state;
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::animator(): invalid handle" << handle,
+        *state.animators[0].used.instance);
+    const UnsignedInt id = animatorHandleId(handle);
+    CORRADE_ASSERT(state.animators[id].used.instance,
+        "Whee::AbstractUserInterface::animator():" << handle << "has no instance set", *state.animators[0].used.instance);
+    return *state.animators[id].used.instance;
+}
+
+AbstractAnimator& AbstractUserInterface::animator(const AnimatorHandle handle) {
+    return const_cast<AbstractAnimator&>(const_cast<const AbstractUserInterface&>(*this).animator(handle));
+}
+
+void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::removeAnimator(): invalid handle" << handle, );
+    const UnsignedInt id = animatorHandleId(handle);
+    State& state = *_state;
+    Animator& animator = state.animators[id];
+
+    /* If the animator has an instance, find it in the partitioned instance
+       list and remove */
+    if(animator.used.instance)
+        Implementation::partitionedAnimatorsRemove(state.animatorInstances, *animator.used.instance);
+
+    /* Delete the instance. The instance being null then means that the
+       animator is either free or is newly created until set*AnimatorInstance()
+       is called, which is used for iterating them in clean() and update(). */
+    animator.used.instance = nullptr;
+
+    /* Increase the animator generation so existing handles pointing to this
+       animator are invalidated */
+    ++animator.used.generation;
+
+    /* Put the animator at the end of the free list (while they're allocated
+       from the front) to not exhaust the generation counter too fast. If the
+       free list is empty however, update also the index of the first free
+       animator.
+
+       Don't do this if the generation wrapped around. That makes it disabled,
+       i.e. impossible to be recycled later, to avoid aliasing old handles. */
+    if(animator.used.generation != 0) {
+        /* C, FUCK your STUPID conversion rules. Why isn't ~UnsignedShort{}
+           65535? Why it evaluates to -1?! Why UnsignedShort(~UnsignedShort{})
+           is the only way to put it back to 16 bits? Why is everything so
+           fucking awful?! Why do you force me to use error-prone constants,
+           FFS?! */
+        animator.free.next = 0xffffu;
+        if(state.lastFreeAnimator == 0xffffu) {
+            CORRADE_INTERNAL_ASSERT(
+                state.firstFreeAnimator == 0xffffu &&
+                state.lastFreeAnimator == 0xffffu);
+            state.firstFreeAnimator = id;
+        } else {
+            state.animators[state.lastFreeAnimator].free.next = id;
+        }
+        state.lastFreeAnimator = id;
+    }
+
+    /* Unlike layers or layouters, an animator being removed doesn't cause any
+       visual change -- it's just that things that used to change as a result
+       of an animation aren't changing anymore, which doesn't need any state
+       flag update */
+}
+
 std::size_t AbstractUserInterface::nodeCapacity() const {
     return _state->nodes.size();
 }
@@ -1632,8 +1932,41 @@ AbstractUserInterface& AbstractUserInterface::clean() {
 
     /* Unmark the UI as needing a clean() call, but keep the Update states
        including ones that bubbled up from layers. States that aren't a subset
-       of NeedsNodeClean, such as NeedsRendererSizeSetup, are unaffected. */
-    state.state = states & ~(UserInterfaceState::NeedsNodeClean & ~UserInterfaceState::NeedsNodeUpdate);
+       of NeedsNodeClean, such as NeedsRendererSizeSetup, are unaffected.
+       NeedsAnimationAdvance is only propagated from the animators in state(),
+       never present directly in _state->state, so clear it as well. */
+    state.state = states & ~((UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsAnimationAdvance) & ~UserInterfaceState::NeedsNodeUpdate);
+    return *this;
+}
+
+AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanoseconds time) {
+    State& state = *_state;
+    CORRADE_ASSERT(time >= state.animationTime,
+        "Whee::AbstractUserInterface::advanceAnimations(): expected a time at least" << state.animationTime << "but got" << time, *this);
+
+    /* Call clean implicitly in order to make the internal state ready for
+       animation advance, i.e. no stale nodes or data anywhere. Is a no-op if
+       there's nothing to clean. */
+    clean();
+
+    /* Get the state including what bubbles from animators, then go through
+       them only if there's something to advance */
+    const UserInterfaceStates states = this->state();
+    if(states >= UserInterfaceState::NeedsAnimationAdvance) {
+        /* Go through all generic animators and advance ones that need it */
+        for(AbstractAnimator& instance: state.animatorInstances) {
+            if(instance.state() & AnimatorState::NeedsAdvance)
+                static_cast<AbstractGenericAnimator&>(instance).advance(time);
+        }
+    }
+
+    /* Update current time. This is done even if no advance() was called. */
+    state.animationTime = time;
+
+    /* As the NeedsAnimatorAdvance state is implicitly propagated from the
+       animators, this function doesn't need to perform any additional state
+       logic. */
+
     return *this;
 }
 
@@ -1664,7 +1997,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
     /* Get the state after the clean call including what bubbles from layers.
        If there's nothing to update, bail. No other states should be left after
-       that. */
+       that -- NeedsAnimationAdvance is only propagated from the animators in
+       state(), never present directly in state.state. */
     const UserInterfaceStates states = this->state();
     State& state = *_state;
     if(!(states & UserInterfaceState::NeedsNodeUpdate)) {
@@ -2256,7 +2590,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* Unmark the UI as needing an update() call. No other states should be
        left after that, i.e. the UI should be ready for drawing and event
        processing. Not even NeedsRendererSizeSetup should be left, as that was
-       cleared by updateRenderer() that was called above. */
+       cleared by updateRenderer() that was called above; NeedsAnimationAdvance
+       is only propagated from the animators in state(), never present directly
+       in state.state. */
     state.state &= ~UserInterfaceState::NeedsNodeUpdate;
     CORRADE_INTERNAL_ASSERT(!state.state);
     return *this;

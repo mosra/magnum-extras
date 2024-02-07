@@ -37,8 +37,10 @@
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/Utility/Format.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector4.h>
 
+#include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/AbstractLayouter.h"
 #include "Magnum/Whee/AbstractRenderer.h"
@@ -92,6 +94,16 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void layouterRemoveInvalid();
     void layouterNoHandlesLeft();
 
+    void animator();
+    void animatorHandleRecycle();
+    void animatorHandleDisable();
+    void animatorHandleLastFree();
+    void animatorSetInstance();
+    void animatorSetInstanceInvalid();
+    void animatorGetInvalid();
+    void animatorRemoveInvalid();
+    void animatorNoHandlesLeft();
+
     void node();
     void nodeHandleRecycle();
     void nodeHandleDisable();
@@ -110,6 +122,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
 
     void layout();
 
+    void animation();
+
     void setSizeToLayers();
     void setSizeToRenderer();
     void setSizeZero();
@@ -125,13 +139,22 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void cleanRemoveNestedNodesRecycledHandleOrphanedCycle();
     void cleanRemoveAll();
 
+    void advanceAnimationsEmpty();
+    void advanceAnimationsNoOp();
+    void advanceAnimations();
+    void advanceAnimationsInvalidTime();
+
     void updateRecycledLayerWithoutInstance();
 
     /* Tests update() and clean() calls on both AbstractLayer and
        AbstractLayouter */
     void state();
+    /* Tests update() and clean() calls triggered by advanceAnimations() */
+    void stateAnimations();
+
     void statePropagateFromLayers();
     void statePropagateFromLayouters();
+    void statePropagateFromAnimators();
 
     void draw();
     void drawComposite();
@@ -170,6 +193,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventTapOrClickAllDataRemoved();
 };
 
+using namespace Math::Literals;
+
 const struct {
     const char* name;
     bool setSizeFirst;
@@ -205,6 +230,31 @@ const struct {
     {"with layouters, with implicit clean", true, false, true, false},
     {"with layouters, with implicit clean and no-op calls", true, false, true, true},
     {"with layouters, with implicit clean and renderer update", true, false, false, false},
+};
+
+const struct {
+    const char* name;
+    bool clean;
+    bool noOp;
+    bool runningAnimation;
+    UserInterfaceStates expectedInitialState;
+} StateAnimationsData[]{
+    {"",
+        true, false, false, {}},
+    {"with no-op calls",
+        true, false, false, {}},
+    {"with implicit clean",
+        false, false, false, {}},
+    {"with implicit clean and no-op calls",
+        false, true, false, {}},
+    {"running animation",
+        true, false, true, UserInterfaceState::NeedsAnimationAdvance},
+    {"running animation, with no-op calls",
+        true, false, true, UserInterfaceState::NeedsAnimationAdvance},
+    {"running animation, with implicit clean",
+        false, false, true, UserInterfaceState::NeedsAnimationAdvance},
+    {"running animation, with implicit clean and no-op calls",
+        false, true, true, UserInterfaceState::NeedsAnimationAdvance},
 };
 
 const struct {
@@ -527,6 +577,16 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::layouterRemoveInvalid,
               &AbstractUserInterfaceTest::layouterNoHandlesLeft,
 
+              &AbstractUserInterfaceTest::animator,
+              &AbstractUserInterfaceTest::animatorHandleRecycle,
+              &AbstractUserInterfaceTest::animatorHandleDisable,
+              &AbstractUserInterfaceTest::animatorHandleLastFree,
+              &AbstractUserInterfaceTest::animatorSetInstance,
+              &AbstractUserInterfaceTest::animatorSetInstanceInvalid,
+              &AbstractUserInterfaceTest::animatorGetInvalid,
+              &AbstractUserInterfaceTest::animatorRemoveInvalid,
+              &AbstractUserInterfaceTest::animatorNoHandlesLeft,
+
               &AbstractUserInterfaceTest::nodeOrder,
               &AbstractUserInterfaceTest::nodeOrderGetSetInvalid,
 
@@ -535,6 +595,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::dataAttachInvalid,
 
               &AbstractUserInterfaceTest::layout,
+
+              &AbstractUserInterfaceTest::animation,
 
               &AbstractUserInterfaceTest::setSizeToLayers,
               &AbstractUserInterfaceTest::setSizeToRenderer,
@@ -556,13 +618,22 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
                        &AbstractUserInterfaceTest::cleanRemoveAll},
         Containers::arraySize(CleanData));
 
-    addTests({&AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance});
+    addTests({&AbstractUserInterfaceTest::advanceAnimationsEmpty,
+              &AbstractUserInterfaceTest::advanceAnimationsNoOp,
+              &AbstractUserInterfaceTest::advanceAnimations,
+              &AbstractUserInterfaceTest::advanceAnimationsInvalidTime,
+
+              &AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance});
 
     addInstancedTests({&AbstractUserInterfaceTest::state},
         Containers::arraySize(StateData));
 
+    addInstancedTests({&AbstractUserInterfaceTest::stateAnimations},
+        Containers::arraySize(StateAnimationsData));
+
     addTests({&AbstractUserInterfaceTest::statePropagateFromLayers,
-              &AbstractUserInterfaceTest::statePropagateFromLayouters});
+              &AbstractUserInterfaceTest::statePropagateFromLayouters,
+              &AbstractUserInterfaceTest::statePropagateFromAnimators});
 
     addInstancedTests({&AbstractUserInterfaceTest::draw},
         Containers::arraySize(DrawData));
@@ -740,6 +811,9 @@ void AbstractUserInterfaceTest::constructNoCreate() {
     CORRADE_COMPARE(ui.size(), Vector2{});
     CORRADE_COMPARE(ui.windowSize(), Vector2{});
     CORRADE_COMPARE(ui.framebufferSize(), Vector2i{});
+
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.animationTime(), 0_nsec);
 
     CORRADE_VERIFY(!ui.hasRenderer());
 
@@ -1822,6 +1896,344 @@ void AbstractUserInterfaceTest::layouterNoHandlesLeft() {
         "Whee::AbstractUserInterface::createLayouter(): can only have at most 256 layouters\n");
 }
 
+void AbstractUserInterfaceTest::animator() {
+    AbstractUserInterface ui{{100, 100}};
+    CORRADE_COMPARE(ui.animatorCapacity(), 0);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+
+    AnimatorHandle first = ui.createAnimator();
+    CORRADE_COMPARE(first, animatorHandle(0, 1));
+    CORRADE_VERIFY(ui.isHandleValid(first));
+    CORRADE_COMPARE(ui.animatorCapacity(), 1);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+
+    AnimatorHandle second = ui.createAnimator();
+    CORRADE_COMPARE(second, animatorHandle(1, 1));
+    CORRADE_VERIFY(ui.isHandleValid(second));
+    CORRADE_COMPARE(ui.animatorCapacity(), 2);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 2);
+
+    AnimatorHandle third = ui.createAnimator();
+    CORRADE_COMPARE(third, animatorHandle(2, 1));
+    CORRADE_VERIFY(ui.isHandleValid(third));
+    CORRADE_COMPARE(ui.animatorCapacity(), 3);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 3);
+
+    AnimatorHandle fourth = ui.createAnimator();
+    CORRADE_COMPARE(fourth, animatorHandle(3, 1));
+    CORRADE_VERIFY(ui.isHandleValid(fourth));
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 4);
+
+    /* Removing from the middle of the list */
+    ui.removeAnimator(third);
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 3);
+    CORRADE_VERIFY(!ui.isHandleValid(third));
+
+    /* Removing from the back of the list */
+    ui.removeAnimator(fourth);
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 2);
+    CORRADE_VERIFY(!ui.isHandleValid(fourth));
+
+    /* Removing from the front of the list */
+    ui.removeAnimator(first);
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+    CORRADE_VERIFY(!ui.isHandleValid(third));
+
+    /* Removing the last animator */
+    ui.removeAnimator(second);
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 0);
+    CORRADE_VERIFY(!ui.isHandleValid(second));
+}
+
+void AbstractUserInterfaceTest::animatorHandleRecycle() {
+    AbstractUserInterface ui{{100, 100}};
+    AnimatorHandle first = ui.createAnimator();
+    AnimatorHandle second = ui.createAnimator();
+    AnimatorHandle third = ui.createAnimator();
+    AnimatorHandle fourth = ui.createAnimator();
+    CORRADE_COMPARE(first, animatorHandle(0, 1));
+    CORRADE_COMPARE(second, animatorHandle(1, 1));
+    CORRADE_COMPARE(third, animatorHandle(2, 1));
+    CORRADE_COMPARE(fourth, animatorHandle(3, 1));
+    CORRADE_VERIFY(ui.isHandleValid(first));
+    CORRADE_VERIFY(ui.isHandleValid(second));
+    CORRADE_VERIFY(ui.isHandleValid(third));
+    CORRADE_VERIFY(ui.isHandleValid(fourth));
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 4);
+
+    /* Remove three out of the four in an arbitrary order */
+    ui.removeAnimator(second);
+    ui.removeAnimator(fourth);
+    ui.removeAnimator(first);
+    CORRADE_VERIFY(!ui.isHandleValid(first));
+    CORRADE_VERIFY(!ui.isHandleValid(second));
+    CORRADE_VERIFY(ui.isHandleValid(third));
+    CORRADE_VERIFY(!ui.isHandleValid(fourth));
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 1);
+
+    /* Allocating new handles should recycle the handles in the order they were
+       removed (oldest first) */
+    AnimatorHandle second2 = ui.createAnimator();
+    AnimatorHandle fourth2 = ui.createAnimator();
+    AnimatorHandle first2 = ui.createAnimator();
+    CORRADE_COMPARE(first2, animatorHandle(0, 2));
+    CORRADE_COMPARE(second2, animatorHandle(1, 2));
+    CORRADE_COMPARE(fourth2, animatorHandle(3, 2));
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 4);
+
+    /* Old handles shouldn't get valid again */
+    CORRADE_VERIFY(!ui.isHandleValid(first));
+    CORRADE_VERIFY(ui.isHandleValid(first2));
+    CORRADE_VERIFY(!ui.isHandleValid(second));
+    CORRADE_VERIFY(ui.isHandleValid(second2));
+    CORRADE_VERIFY(!ui.isHandleValid(fourth));
+    CORRADE_VERIFY(ui.isHandleValid(fourth2));
+
+    /* Removing a single handle and creating a new one directly reuses it if
+       there's just one in the free list */
+    ui.removeAnimator(second2);
+    AnimatorHandle second3 = ui.createAnimator();
+    CORRADE_COMPARE(second3, animatorHandle(1, 3));
+    CORRADE_VERIFY(!ui.isHandleValid(second));
+    CORRADE_VERIFY(!ui.isHandleValid(second2));
+    CORRADE_VERIFY(ui.isHandleValid(second3));
+    CORRADE_COMPARE(ui.animatorCapacity(), 4);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 4);
+
+    /* Allocating a new handle with the free list empty will grow it */
+    AnimatorHandle fifth = ui.createAnimator();
+    CORRADE_COMPARE(fifth, animatorHandle(4, 1));
+    CORRADE_VERIFY(ui.isHandleValid(fifth));
+    CORRADE_COMPARE(ui.animatorCapacity(), 5);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 5);
+}
+
+void AbstractUserInterfaceTest::animatorHandleDisable() {
+    AbstractUserInterface ui{{100, 100}};
+
+    AnimatorHandle first = ui.createAnimator();
+    CORRADE_COMPARE(first, animatorHandle(0, 1));
+
+    for(std::size_t i = 0; i != (1 << Implementation::AnimatorHandleGenerationBits) - 1; ++i) {
+        AnimatorHandle second = ui.createAnimator();
+        CORRADE_COMPARE(second, animatorHandle(1, 1 + i));
+        ui.removeAnimator(second);
+    }
+
+    /* The generation for the second slot is exhausted so the handle is not
+       recycled */
+    CORRADE_COMPARE(ui.animatorCapacity(), 2);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 2);
+
+    /* It shouldn't think a handle from the second slot with generation 0 is
+       valid */
+    CORRADE_VERIFY(!ui.isHandleValid(animatorHandle(1, 0)));
+
+    /* There's nowhere to create a new handle from so the capacity is grown */
+    AnimatorHandle third = ui.createAnimator();
+    CORRADE_COMPARE(third, animatorHandle(2, 1));
+    CORRADE_COMPARE(ui.animatorCapacity(), 3);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 3);
+}
+
+void AbstractUserInterfaceTest::animatorHandleLastFree() {
+    AbstractUserInterface ui{{100, 100}};
+    AnimatorHandle first = ui.createAnimator();
+    AnimatorHandle second = ui.createAnimator();
+    for(std::size_t i = 0; i != (1 << Implementation::AnimatorHandleIdBits) - 3; ++i)
+        ui.createAnimator();
+    AnimatorHandle last = ui.createAnimator();
+    CORRADE_COMPARE(first, animatorHandle(0, 1));
+    CORRADE_COMPARE(second, animatorHandle(1, 1));
+    CORRADE_COMPARE(last, animatorHandle(255, 1));
+    CORRADE_COMPARE(ui.animatorCapacity(), 256);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 256);
+
+    /* Removing the last animator should lead to one being marked as free, not
+       0 due to 255 treated as "no more free animators" */
+    ui.removeAnimator(last);
+    CORRADE_COMPARE(ui.animatorCapacity(), 256);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 255);
+
+    /* Create a animator with ID 255 again */
+    last = ui.createAnimator();
+    CORRADE_COMPARE(last, animatorHandle(255, 2));
+
+    /* Removing the three animators (with the one with ID 255 being in the
+       middle) should mark all three as free, not just 2 due to 255 being
+       treated as "no more free animators" */
+    ui.removeAnimator(first);
+    ui.removeAnimator(last);
+    ui.removeAnimator(second);
+    CORRADE_COMPARE(ui.animatorCapacity(), 256);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 253);
+}
+
+void AbstractUserInterfaceTest::animatorSetInstance() {
+    int firstDestructed = 0;
+    int secondDestructed = 0;
+
+    {
+        AbstractUserInterface ui{{100, 100}};
+        AnimatorHandle first = ui.createAnimator();
+        AnimatorHandle second = ui.createAnimator();
+        AnimatorHandle third = ui.createAnimator();
+
+        struct GenericAnimator: AbstractGenericAnimator {
+            explicit GenericAnimator(AnimatorHandle handle, int& destructed): AbstractGenericAnimator{handle}, destructed(destructed) {}
+            ~GenericAnimator() {
+                ++destructed;
+            }
+            AnimatorFeatures doFeatures() const override { return {}; }
+            void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+
+            int& destructed;
+        };
+
+        Containers::Pointer<GenericAnimator> firstInstance{InPlaceInit, first, firstDestructed};
+        Containers::Pointer<GenericAnimator> secondInstance{InPlaceInit, second, secondDestructed};
+        /* Third deliberately doesn't have an instance set */
+        GenericAnimator* firstInstancePointer = firstInstance.get();
+        GenericAnimator* secondInstancePointer = secondInstance.get();
+        /* Set them in different order, shouldn't matter */
+        GenericAnimator& secondInstanceReference = ui.setGenericAnimatorInstance(Utility::move(secondInstance));
+        GenericAnimator& firstInstanceReference = ui.setGenericAnimatorInstance(Utility::move(firstInstance));
+        CORRADE_COMPARE(ui.animatorCapacity(), 3);
+        CORRADE_COMPARE(ui.animatorUsedCount(), 3);
+        CORRADE_COMPARE(&firstInstanceReference, firstInstancePointer);
+        CORRADE_COMPARE(&secondInstanceReference, secondInstancePointer);
+        CORRADE_COMPARE(&ui.animator(first), firstInstancePointer);
+        CORRADE_COMPARE(&ui.animator(second), secondInstancePointer);
+        CORRADE_COMPARE(&ui.animator<GenericAnimator>(first), firstInstancePointer);
+        CORRADE_COMPARE(&ui.animator<GenericAnimator>(second), secondInstancePointer);
+        CORRADE_COMPARE(firstDestructed, 0);
+        CORRADE_COMPARE(secondDestructed, 0);
+
+        /* Const overloads */
+        const AbstractUserInterface& cui = ui;
+        CORRADE_COMPARE(&cui.animator(first), firstInstancePointer);
+        CORRADE_COMPARE(&cui.animator(second), secondInstancePointer);
+        CORRADE_COMPARE(&cui.animator<GenericAnimator>(first), firstInstancePointer);
+        CORRADE_COMPARE(&cui.animator<GenericAnimator>(second), secondInstancePointer);
+
+        ui.removeAnimator(first);
+        CORRADE_COMPARE(firstDestructed, 1);
+        CORRADE_COMPARE(secondDestructed, 0);
+
+        /* Removing an animator that doesn't have any instance set shouldn't
+           affect the others in any way */
+        ui.removeAnimator(third);
+        CORRADE_COMPARE(firstDestructed, 1);
+        CORRADE_COMPARE(secondDestructed, 0);
+    }
+
+    /* The remaining animator should be deleted at destruction */
+    CORRADE_COMPARE(firstDestructed, 1);
+    CORRADE_COMPARE(secondDestructed, 1);
+}
+
+void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct GenericAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    AnimatorHandle handle = ui.createAnimator();
+    ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.setGenericAnimatorInstance(nullptr);
+    ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(AnimatorHandle(0xabcd)));
+    ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractUserInterface::setGenericAnimatorInstance(): instance is null\n"
+        "Whee::AbstractUserInterface::setGenericAnimatorInstance(): invalid handle Whee::AnimatorHandle(0xcd, 0xab)\n"
+        "Whee::AbstractUserInterface::setGenericAnimatorInstance(): instance for Whee::AnimatorHandle(0x0, 0x1) already set\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractUserInterfaceTest::animatorGetInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Animator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+    /* Need at least one animator to be present so animator() asserts can
+       return something */
+    ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+
+    const AbstractUserInterface& cui = ui;
+
+    AnimatorHandle handle = ui.createAnimator();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.animator(handle);
+    ui.animator(AnimatorHandle::Null);
+    /* Const overloads */
+    cui.animator(handle);
+    cui.animator(AnimatorHandle::Null);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractUserInterface::animator(): Whee::AnimatorHandle(0x1, 0x1) has no instance set\n"
+        "Whee::AbstractUserInterface::animator(): invalid handle Whee::AnimatorHandle::Null\n"
+        "Whee::AbstractUserInterface::animator(): Whee::AnimatorHandle(0x1, 0x1) has no instance set\n"
+        "Whee::AbstractUserInterface::animator(): invalid handle Whee::AnimatorHandle::Null\n");
+}
+
+void AbstractUserInterfaceTest::animatorRemoveInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.removeAnimator(AnimatorHandle::Null);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractUserInterface::removeAnimator(): invalid handle Whee::AnimatorHandle::Null\n");
+}
+
+void AbstractUserInterfaceTest::animatorNoHandlesLeft() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    AnimatorHandle handle;
+    for(std::size_t i = 0; i != 1 << Implementation::AnimatorHandleIdBits; ++i)
+        handle = ui.createAnimator();
+    CORRADE_COMPARE(handle, animatorHandle((1 << Implementation::AnimatorHandleIdBits) - 1, 1));
+
+    CORRADE_COMPARE(ui.animatorCapacity(), 1 << Implementation::AnimatorHandleIdBits);
+    CORRADE_COMPARE(ui.animatorUsedCount(), 1 << Implementation::AnimatorHandleIdBits);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.createAnimator();
+    /* Number is hardcoded in the expected message but not elsewhere in order
+       to give a heads-up when modifying the handle ID bit count */
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractUserInterface::createAnimator(): can only have at most 256 animators\n");
+}
+
 void AbstractUserInterfaceTest::node() {
     AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.nodeCapacity(), 0);
@@ -2555,6 +2967,45 @@ void AbstractUserInterfaceTest::layout() {
     CORRADE_VERIFY(!ui.isHandleValid(layoutHandle2));
 }
 
+void AbstractUserInterfaceTest::animation() {
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    AnimatorHandle animatorHandle = ui.createAnimator();
+
+    /* Animation handles tested thoroughly in AbstractAnimatorTest already */
+    struct Animator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::create;
+        using AbstractGenericAnimator::remove;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+    Containers::Pointer<Animator> animator{InPlaceInit, animatorHandle};
+    AnimationHandle animationHandle1 = animator->create(0_nsec, 1_nsec);
+    AnimationHandle animationHandle2 = animator->create(0_nsec, 1_nsec);
+
+    /* Not valid if the animator instance isn't set yet */
+    CORRADE_VERIFY(!ui.isHandleValid(animationHandle1));
+    CORRADE_VERIFY(!ui.isHandleValid(animationHandle1));
+
+    /* Valid when is */
+    ui.setGenericAnimatorInstance(Utility::move(animator));
+    CORRADE_VERIFY(ui.isHandleValid(animationHandle1));
+    CORRADE_VERIFY(ui.isHandleValid(animationHandle1));
+
+    /* Not valid when removed again */
+    ui.animator<Animator>(animatorHandle).remove(animationHandle1);
+    CORRADE_VERIFY(!ui.isHandleValid(animationHandle1));
+    CORRADE_VERIFY(ui.isHandleValid(animationHandle2));
+
+    /* Not valid anymore when the animator itself is removed */
+    ui.removeAnimator(animatorHandle);
+    CORRADE_VERIFY(!ui.isHandleValid(animationHandle1));
+    CORRADE_VERIFY(!ui.isHandleValid(animationHandle2));
+}
+
 void AbstractUserInterfaceTest::setSizeToLayers() {
     AbstractUserInterface ui{NoCreate};
 
@@ -3250,6 +3701,186 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
         CORRADE_COMPARE(ui.layer(layerHandle).usedCount(), 0);
     if(data.layouters)
         CORRADE_COMPARE(ui.layouter(layouterHandle).usedCount(), 0);
+}
+
+void AbstractUserInterfaceTest::advanceAnimationsEmpty() {
+    AbstractUserInterface ui{{100, 100}};
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.animationTime(), 0_nsec);
+
+    /* THere are no animations that actually need to be advanced but the
+       time should get updated nevertheless to catch accidental backward time
+       travel later */
+    ui.advanceAnimations(23_nsec);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.animationTime(), 23_nsec);
+}
+
+void AbstractUserInterfaceTest::advanceAnimationsNoOp() {
+    AbstractUserInterface ui{{100, 100}};
+
+    struct GenericAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doClean(Containers::BitArrayView) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+    };
+
+    GenericAnimator& animator = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+
+    /* An animation is present, but it's stopped and not scheduled for removal
+       so the animator doesn't need its advance() called */
+    AnimationHandle animation = animator.create(-30_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(animator.state(animation), AnimationState::Stopped);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.animationTime(), 0_nsec);
+
+    /* This doesn't call the animator, but updates the time */
+    ui.advanceAnimations(23_nsec);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.animationTime(), 23_nsec);
+}
+
+void AbstractUserInterfaceTest::advanceAnimations() {
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Call {
+        Advance,
+        Clean
+    };
+    struct GenericAnimator: AbstractGenericAnimator {
+        explicit GenericAnimator(AnimatorHandle handle, Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls): AbstractGenericAnimator{handle}, calls(calls) {}
+
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        void doClean(Containers::BitArrayView) override {
+            arrayAppend(calls, InPlaceInit, handle(), Clean);
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {
+            arrayAppend(calls, InPlaceInit, handle(), Advance);
+        }
+
+        Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls;
+    };
+
+    Containers::Array<Containers::Pair<AnimatorHandle, Call>> calls;
+
+    /*AnimatorHandle animatorWithoutInstance =*/ ui.createAnimator();
+    GenericAnimator& animator1 = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), calls));
+    GenericAnimator& animatorRemoved = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), calls));
+    GenericAnimator& animatorNoAdvanceNeeded = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), calls));
+    GenericAnimator& animator2 = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), calls));
+
+    /* It's important to remove an animator that has an instance already --
+       animators without an instance aren't even added to the list of animators
+       to process in advanceAnimations() */
+    ui.removeAnimator(animatorRemoved.handle());
+
+    /* One scheduled, one stopped, one playing */
+    animator1.create(5_nsec, 10_nsec);
+    animatorNoAdvanceNeeded.create(-50_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animator2.create(0_nsec, 10_nsec);
+    CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator2.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
+
+    /* Initially all animators are at 0 time. This changes if advance() is
+       called on them. */
+    CORRADE_COMPARE(animator1.time(), 0_nsec);
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animator2.time(), 0_nsec);
+
+    /* First advance. The scheduled animation isn't advanced yet (and there's
+       nothing else to call doAdvance() for), the playing is. */
+    ui.advanceAnimations(2_nsec);
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
+        {animator2.handle(), Advance},
+    })), TestSuite::Compare::Container);
+    CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator2.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
+
+    /* advance() wasn't even called on the second one */
+    CORRADE_COMPARE(animator1.time(), 2_nsec);
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animator2.time(), 2_nsec);
+
+    /* Second advance, the two get further advanced, the second gets also
+       cleaned */
+    calls = {};
+    ui.advanceAnimations(10_nsec);
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
+        {animator1.handle(), Advance},
+        {animator2.handle(), Advance},
+        {animator2.handle(), Clean},
+    })), TestSuite::Compare::Container);
+    CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator2.state(), AnimatorStates{});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
+
+    /* advance() wasn't even called on the second one now either */
+    CORRADE_COMPARE(animator1.time(), 10_nsec);
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animator2.time(), 10_nsec);
+
+    /* Third advance, only the first is advanced & cleaned */
+    calls = {};
+    ui.advanceAnimations(15_nsec);
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
+        {animator1.handle(), Advance},
+        {animator1.handle(), Clean},
+    })), TestSuite::Compare::Container);
+    CORRADE_COMPARE(animator1.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator2.state(), AnimatorStates{});
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* advance() wasn't even called on the last two */
+    CORRADE_COMPARE(animator1.time(), 15_nsec);
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animator2.time(), 10_nsec);
+
+    /* Fourth advance, nothing left to be done */
+    calls = {};
+    ui.advanceAnimations(20_nsec);
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
+    })), TestSuite::Compare::Container);
+    CORRADE_COMPARE(animator1.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator2.state(), AnimatorStates{});
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* advance() wasn't called on any */
+    CORRADE_COMPARE(animator1.time(), 15_nsec);
+    CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animator2.time(), 10_nsec);
+}
+
+void AbstractUserInterfaceTest::advanceAnimationsInvalidTime() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Same time should be okay */
+    ui.advanceAnimations(56_nsec);
+    ui.advanceAnimations(56_nsec);
+    CORRADE_COMPARE(ui.animationTime(), 56_nsec);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.advanceAnimations(55_nsec);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractUserInterface::advanceAnimations(): expected a time at least Nanoseconds(56) but got Nanoseconds(55)\n");
 }
 
 void AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance() {
@@ -5664,6 +6295,109 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
 }
 
+void AbstractUserInterfaceTest::stateAnimations() {
+    auto&& data = StateAnimationsData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Creating a layer sets no state flags */
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+
+        void doClean(Containers::BitArrayView) override {
+            ++cleanCallCount;
+        }
+
+        Int cleanCallCount = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Creating an animator sets no state flags */
+    struct Animator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        void doClean(Containers::BitArrayView) override {
+            ++cleanCallCount;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {
+            ++advanceCallCount;
+        }
+
+        Int cleanCallCount = 0;
+        Int advanceCallCount = 0;
+    };
+    Animator& animator = ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Calling clean() should be a no-op, not cleaning anything in the
+       layer or animator */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(animator.cleanCallCount, 0);
+    }
+
+    /* Calling advanceAnimations() should be a no-op, not calling anything in
+       the layer or the animator */
+    if(data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.advanceAnimations(0_nsec);
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(layer.cleanCallCount, 0);
+        CORRADE_COMPARE(animator.cleanCallCount, 0);
+        CORRADE_COMPARE(animator.advanceCallCount, 0);
+    }
+
+    /* Creating an animation sets a state flag */
+    if(data.runningAnimation) {
+        animator.create(0_nsec, 10_nsec);
+        CORRADE_COMPARE(ui.state(), data.expectedInitialState);
+    }
+
+    /* Creating & removing a node sets a state flag */
+    ui.removeNode(ui.createNode({}, {}));
+    CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeClean);
+
+    /* Calling clean() propagates that to the layer and node attachment
+       animators and leaves just state flags that trigger an update() later,
+       and potentially advanceAnimations() */
+    if(data.clean) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate);
+        CORRADE_COMPARE(layer.cleanCallCount, 1);
+        CORRADE_COMPARE(animator.cleanCallCount, 0);
+    }
+
+    /* Calling advanceAnimations() delegates to clean() if not already but
+       otherwise is a no-op if no animations are running -- the animator
+       doesn't need advancing */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        ui.advanceAnimations(0_nsec);
+    }
+    CORRADE_COMPARE(ui.state(), data.expectedInitialState|UserInterfaceState::NeedsNodeUpdate);
+    CORRADE_COMPARE(layer.cleanCallCount, 1);
+    CORRADE_COMPARE(animator.cleanCallCount, 0);
+    CORRADE_COMPARE(animator.advanceCallCount, data.runningAnimation ? 1 : 0);
+}
+
 void AbstractUserInterfaceTest::statePropagateFromLayers() {
     /* Tests more complex behavior of state propagation that isn't checked in
        the state() case above */
@@ -5808,6 +6542,40 @@ void AbstractUserInterfaceTest::statePropagateFromLayouters() {
     CORRADE_COMPARE(ui.layouter(layouter1).state(), LayouterState::NeedsAssignmentUpdate);
     CORRADE_COMPARE(ui.layouter(layouter2).state(), LayouterStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+}
+
+void AbstractUserInterfaceTest::statePropagateFromAnimators() {
+    /* Compared to statePropagateFromLayers() and statePropagateFromAnimators()
+       there (currently) isn't anything that would affect clean() or update(),
+       it's just a notification to run advanceAnimations() */
+
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    struct GenericAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+    /*AnimatorHandle animatorWithoutInstance =*/ ui.createAnimator();
+    GenericAnimator& animatorRemoved = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+    /*GenericAnimator& animator1 =*/ ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+    GenericAnimator& animator2 = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator()));
+
+    /* AnimatorState::NeedsAdvance on a removed animator isn't considered
+       (well, because the instance is gone), and the animator without an
+       instance is skipped. The "works correctly" aspect can't really be
+       observed, we can only check that it doesn't crash. */
+    animatorRemoved.create(10_nsec, 10_nsec);
+    ui.removeAnimator(animatorRemoved.handle());
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Create an animation in the second animator. It shouldn't stop at the
+       first animator when checking the state. */
+    animator2.create(10_nsec, 10_nsec);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
 }
 
 void AbstractUserInterfaceTest::draw() {

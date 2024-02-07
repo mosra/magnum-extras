@@ -72,6 +72,9 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
     void countOrderNodeDataForEventHandling();
 
     void compactDraws();
+
+    void partitionedAnimatorsInsert();
+    void partitionedAnimatorsRemove();
 };
 
 const struct {
@@ -423,7 +426,10 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
 
               &AbstractUserInterfaceImplementationTest::countOrderNodeDataForEventHandling,
 
-              &AbstractUserInterfaceImplementationTest::compactDraws});
+              &AbstractUserInterfaceImplementationTest::compactDraws,
+
+              &AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert,
+              &AbstractUserInterfaceImplementationTest::partitionedAnimatorsRemove});
 }
 
 void AbstractUserInterfaceImplementationTest::orderNodesBreadthFirst() {
@@ -2119,6 +2125,57 @@ void AbstractUserInterfaceImplementationTest::compactDraws() {
         {4, {0, 6777}, {1, 233}},
         {4, {6777, 2}, {233, 16}}
     })), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert() {
+    AbstractAnimator& animator1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef01});
+    AbstractAnimator& animator2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
+    AbstractAnimator& animator3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
+
+    Containers::Array<Containers::Reference<AbstractAnimator>> instances{InPlaceInit, {
+        animator1,
+        animator3
+    }};
+    Implementation::partitionedAnimatorsInsert(instances, animator2);
+
+    /* Containers::Reference has the same layout as a pointer, abuse that for
+       easy comparison */
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator1,
+        &animator3,
+        &animator2
+    }), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::partitionedAnimatorsRemove() {
+    AbstractAnimator& animator1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef01});
+    AbstractAnimator& animator2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
+    AbstractAnimator& animator3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
+
+    Containers::Array<Containers::Reference<AbstractAnimator>> instances{InPlaceInit, {
+        animator2,
+        animator3,
+        animator1
+    }};
+
+    /* Remove from the middle. Containers::Reference has the same layout as a
+       pointer, abuse that for easy comparison. */
+    Implementation::partitionedAnimatorsRemove(instances, animator3);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator2,
+        &animator1
+    }), TestSuite::Compare::Container);
+
+    /* Remove from the end */
+    Implementation::partitionedAnimatorsRemove(instances, animator1);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator2
+    }), TestSuite::Compare::Container);
+
+    /* Remove from the beginning */
+    Implementation::partitionedAnimatorsRemove(instances, animator2);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+    }), TestSuite::Compare::Container);
 }
 
 }}}}
