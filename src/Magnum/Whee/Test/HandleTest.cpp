@@ -61,6 +61,18 @@ struct HandleTest: TestSuite::Tester {
     void layout();
     void layoutInvalid();
     void debugLayout();
+
+    void animator();
+    void animatorInvalid();
+    void debugAnimator();
+
+    void animatorData();
+    void animatorDataInvalid();
+    void debugAnimatorData();
+
+    void animation();
+    void animationInvalid();
+    void debugAnimation();
 };
 
 HandleTest::HandleTest() {
@@ -90,7 +102,19 @@ HandleTest::HandleTest() {
 
               &HandleTest::layout,
               &HandleTest::layoutInvalid,
-              &HandleTest::debugLayout});
+              &HandleTest::debugLayout,
+
+              &HandleTest::animator,
+              &HandleTest::animatorInvalid,
+              &HandleTest::debugAnimator,
+
+              &HandleTest::animatorData,
+              &HandleTest::animatorDataInvalid,
+              &HandleTest::debugAnimatorData,
+
+              &HandleTest::animation,
+              &HandleTest::animationInvalid,
+              &HandleTest::debugAnimation});
 }
 
 void HandleTest::layer() {
@@ -383,6 +407,134 @@ void HandleTest::debugLayout() {
     std::ostringstream out;
     Debug{&out} << LayoutHandle::Null << layoutHandle(LayouterHandle::Null, layouterDataHandle(0xabcde, 0x12)) << layoutHandle(layouterHandle(0x34, 0x56), LayouterDataHandle::Null) << layoutHandle(layouterHandle(0x34, 0x56), 0xabcde, 0x12);
     CORRADE_COMPARE(out.str(), "Whee::LayoutHandle::Null Whee::LayoutHandle(Null, {0xabcde, 0x12}) Whee::LayoutHandle({0x34, 0x56}, Null) Whee::LayoutHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
+}
+
+void HandleTest::animator() {
+    CORRADE_COMPARE(AnimatorHandle::Null, AnimatorHandle{});
+    CORRADE_COMPARE(animatorHandle(0, 0), AnimatorHandle{});
+    CORRADE_COMPARE(animatorHandle(0xab, 0x12), AnimatorHandle(0x12ab));
+    CORRADE_COMPARE(animatorHandle(0xff, 0xff), AnimatorHandle(0xffff));
+    CORRADE_COMPARE(animatorHandleId(AnimatorHandle::Null), 0);
+    CORRADE_COMPARE(animatorHandleId(AnimatorHandle(0x12ab)), 0xab);
+    CORRADE_COMPARE(animatorHandleGeneration(AnimatorHandle::Null), 0);
+    CORRADE_COMPARE(animatorHandleGeneration(AnimatorHandle(0x12ab)), 0x12);
+
+    constexpr AnimatorHandle handle = animatorHandle(0xab, 0x12);
+    constexpr UnsignedInt id = animatorHandleId(handle);
+    constexpr UnsignedInt generation = animatorHandleGeneration(handle);
+    CORRADE_COMPARE(handle, AnimatorHandle(0x12ab));
+    CORRADE_COMPARE(id, 0xab);
+    CORRADE_COMPARE(generation, 0x12);
+}
+
+void HandleTest::animatorInvalid() {
+    CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animatorHandle(0x100, 0x1);
+    animatorHandle(0x1, 0x100);
+    CORRADE_COMPARE(out.str(),
+        "Whee::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
+        "Whee::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n");
+}
+
+void HandleTest::debugAnimator() {
+    std::ostringstream out;
+    Debug{&out} << AnimatorHandle::Null << animatorHandle(0x12, 0xab);
+    CORRADE_COMPARE(out.str(), "Whee::AnimatorHandle::Null Whee::AnimatorHandle(0x12, 0xab)\n");
+}
+
+void HandleTest::animatorData() {
+    CORRADE_COMPARE(AnimatorDataHandle::Null, AnimatorDataHandle{});
+    CORRADE_COMPARE(animatorDataHandle(0, 0), AnimatorDataHandle::Null);
+    CORRADE_COMPARE(animatorDataHandle(0xabcde, 0x123), AnimatorDataHandle(0x123abcde));
+    CORRADE_COMPARE(animatorDataHandle(0xfffff, 0xfff), AnimatorDataHandle(0xffffffff));
+    CORRADE_COMPARE(animatorDataHandleId(AnimatorDataHandle::Null), 0);
+    CORRADE_COMPARE(animatorDataHandleId(AnimatorDataHandle(0x123abcde)), 0xabcde);
+    CORRADE_COMPARE(animatorDataHandleGeneration(AnimatorDataHandle::Null), 0);
+    CORRADE_COMPARE(animatorDataHandleGeneration(AnimatorDataHandle(0x123abcde)), 0x123);
+
+    constexpr AnimatorDataHandle handle = animatorDataHandle(0xabcde, 0x123);
+    constexpr UnsignedInt id = animatorDataHandleId(handle);
+    constexpr UnsignedInt generation = animatorDataHandleGeneration(handle);
+    CORRADE_COMPARE(handle, AnimatorDataHandle(0x123abcde));
+    CORRADE_COMPARE(id, 0xabcde);
+    CORRADE_COMPARE(generation, 0x123);
+}
+
+void HandleTest::animatorDataInvalid() {
+    CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animatorDataHandle(0x100000, 0x1);
+    animatorDataHandle(0x1, 0x1000);
+    CORRADE_COMPARE(out.str(),
+        "Whee::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
+        "Whee::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+}
+
+void HandleTest::debugAnimatorData() {
+    std::ostringstream out;
+    Debug{&out} << AnimatorDataHandle::Null << animatorDataHandle(0x12345, 0xabc);
+    CORRADE_COMPARE(out.str(), "Whee::AnimatorDataHandle::Null Whee::AnimatorDataHandle(0x12345, 0xabc)\n");
+}
+
+void HandleTest::animation() {
+    CORRADE_COMPARE(AnimationHandle::Null, AnimationHandle{});
+    CORRADE_COMPARE(animationHandle(AnimatorHandle::Null, 0, 0), AnimationHandle::Null);
+    CORRADE_COMPARE(animationHandle(AnimatorHandle(0x12ab), 0x34567, 0xcde), AnimationHandle(0x12abcde34567));
+    CORRADE_COMPARE(animationHandle(AnimatorHandle(0xffff), 0xfffff, 0xfff), AnimationHandle(0xffffffffffff));
+    CORRADE_COMPARE(animationHandle(AnimatorHandle::Null, AnimatorDataHandle::Null), AnimationHandle::Null);
+    CORRADE_COMPARE(animationHandle(AnimatorHandle(0x12ab), AnimatorDataHandle(0xcde34567)), AnimationHandle(0x12abcde34567));
+    CORRADE_COMPARE(animationHandleAnimator(AnimationHandle::Null), AnimatorHandle::Null);
+    CORRADE_COMPARE(animationHandleAnimator(AnimationHandle(0x12abcde34567)), AnimatorHandle(0x12ab));
+    CORRADE_COMPARE(animationHandleData(AnimationHandle::Null), AnimatorDataHandle::Null);
+    CORRADE_COMPARE(animationHandleData(AnimationHandle(0x12abcde34567)), AnimatorDataHandle(0xcde34567));
+    CORRADE_COMPARE(animationHandleAnimatorId(AnimationHandle::Null), 0);
+    CORRADE_COMPARE(animationHandleAnimatorId(AnimationHandle(0x12abcde34567)), 0xab);
+    CORRADE_COMPARE(animationHandleAnimatorGeneration(AnimationHandle::Null), 0);
+    CORRADE_COMPARE(animationHandleAnimatorGeneration(AnimationHandle(0x12abcde34567)), 0x12);
+    CORRADE_COMPARE(animationHandleId(AnimationHandle::Null), 0);
+    CORRADE_COMPARE(animationHandleId(AnimationHandle(0x12abcde34567)), 0x34567);
+    CORRADE_COMPARE(animationHandleGeneration(AnimationHandle::Null), 0);
+    CORRADE_COMPARE(animationHandleGeneration(AnimationHandle(0x12abcde34567)), 0xcde);
+
+    constexpr AnimationHandle handle1 = animationHandle(AnimatorHandle(0x12ab), 0x34567, 0xcde);
+    constexpr AnimationHandle handle2 = animationHandle(AnimatorHandle(0x12ab), AnimatorDataHandle(0xcde34567));
+    constexpr AnimatorHandle animator = animationHandleAnimator(handle1);
+    constexpr AnimatorDataHandle data = animationHandleData(handle1);
+    constexpr UnsignedInt animatorId = animationHandleAnimatorId(handle1);
+    constexpr UnsignedInt animatorGeneration = animationHandleAnimatorGeneration(handle1);
+    constexpr UnsignedInt id = animationHandleId(handle1);
+    constexpr UnsignedInt generation = animationHandleGeneration(handle1);
+    CORRADE_COMPARE(handle1, AnimationHandle(0x12abcde34567));
+    CORRADE_COMPARE(handle2, AnimationHandle(0x12abcde34567));
+    CORRADE_COMPARE(animator, AnimatorHandle(0x12ab));
+    CORRADE_COMPARE(data, AnimatorDataHandle(0xcde34567));
+    CORRADE_COMPARE(animatorId, 0xab);
+    CORRADE_COMPARE(animatorGeneration, 0x12);
+    CORRADE_COMPARE(id, 0x34567);
+    CORRADE_COMPARE(generation, 0xcde);
+}
+
+void HandleTest::animationInvalid() {
+    CORRADE_SKIP_IF_NO_DEBUG_ASSERT();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animationHandle(AnimatorHandle::Null, 0x100000, 0x1);
+    animationHandle(AnimatorHandle::Null, 0x1, 0x1000);
+    CORRADE_COMPARE(out.str(),
+        "Whee::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
+        "Whee::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+}
+
+void HandleTest::debugAnimation() {
+    std::ostringstream out;
+    Debug{&out} << AnimationHandle::Null << animationHandle(AnimatorHandle::Null, animatorDataHandle(0xabcde, 0x12)) << animationHandle(animatorHandle(0x34, 0x56), AnimatorDataHandle::Null) << animationHandle(animatorHandle(0x34, 0x56), 0xabcde, 0x12);
+    CORRADE_COMPARE(out.str(), "Whee::AnimationHandle::Null Whee::AnimationHandle(Null, {0xabcde, 0x12}) Whee::AnimationHandle({0x34, 0x56}, Null) Whee::AnimationHandle({0x34, 0x56}, {0xabcde, 0x12})\n");
 }
 
 }}}}

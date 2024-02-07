@@ -27,6 +27,8 @@
 
 #include <cstring> /* std::memset() */
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/Utility/Algorithms.h>
@@ -1018,6 +1020,31 @@ UnsignedInt compactDrawsInPlace(const Containers::StridedArrayView1D<UnsignedByt
         considered has to be checked with all previous */
 
     return offset;
+}
+
+/* Insert into a partitioned animator list. The `instances` array is inserted
+   into at an appropriate place. */
+void partitionedAnimatorsInsert(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, AbstractAnimator& instance) {
+    arrayAppend(instances, InPlaceInit, instance);
+}
+
+/* Remove from the partitioned animator list. The `instance` is looked up in
+   the `instances` array and the item removed. */
+void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, const AbstractAnimator& instance) {
+    /* Yes, this is a linear search, but I don't expect there being that many
+       animators in total (the cap is 256) and that many being added and
+       removed all the time, so this should be fine. */
+    std::size_t found = ~std::size_t{};
+    for(std::size_t i = 0; i != instances.size(); ++i) {
+        if(&*instances[i] == &instance) {
+            found = i;
+            break;
+        }
+    }
+
+    /* The animator should always be in the list if it has an instance */
+    CORRADE_INTERNAL_ASSERT(found != ~std::size_t{});
+    arrayRemove(instances, found);
 }
 
 }}}}

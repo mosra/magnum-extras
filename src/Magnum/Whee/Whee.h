@@ -41,7 +41,12 @@ enum class NodeHandle: UnsignedInt;
 enum class LayoutHandle: UnsignedLong;
 enum class LayouterHandle: UnsignedShort;
 enum class LayouterDataHandle: UnsignedInt;
+enum class AnimationHandle: UnsignedLong;
+enum class AnimatorHandle: UnsignedShort;
+enum class AnimatorDataHandle: UnsignedInt;
 
+class AbstractAnimator;
+class AbstractGenericAnimator;
 class AbstractLayer;
 class AbstractLayouter;
 class AbstractRenderer;

@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Handle @ref Magnum::Whee::LayerHandle, @ref Magnum::Whee::LayerDataHandle, @ref Magnum::Whee::DataHandle, @ref Magnum::Whee::NodeHandle, @ref Magnum::Whee::LayouterHandle, @ref Magnum::Whee::LayouterDataHandle, @ref Magnum::Whee::LayoutHandle, function @ref Magnum::Whee::layerHandle(), @ref Magnum::Whee::layerHandleId(), @ref Magnum::Whee::layerHandleGeneration(), @ref Magnum::Whee::layerDataHandle(), @ref Magnum::Whee::layerDataHandleId(), @ref Magnum::Whee::layerDataHandleGeneration(), @ref Magnum::Whee::dataHandle(), @ref Magnum::Whee::dataHandleLayer(), @ref Magnum::Whee::dataHandleData(), @ref Magnum::Whee::dataHandleLayerId(), @ref Magnum::Whee::dataHandleLayerGeneration(), @ref Magnum::Whee::dataHandleId(), @ref Magnum::Whee::dataHandleGeneration(), @ref Magnum::Whee::nodeHandle(), @ref Magnum::Whee::nodeHandleId(), @ref Magnum::Whee::nodeHandleGeneration(), @ref Magnum::Whee::layouterHandle(), @ref Magnum::Whee::layouterHandleId(), @ref Magnum::Whee::layouterHandleGeneration(), @ref Magnum::Whee::layouterDataHandle(), @ref Magnum::Whee::layouterDataHandleId(), @ref Magnum::Whee::layouterDataHandleGeneration(), @ref Magnum::Whee::layoutHandle(), @ref Magnum::Whee::layoutHandleLayouter(), @ref Magnum::Whee::layoutHandleData(), @ref Magnum::Whee::layoutHandleLayouterId(), @ref Magnum::Whee::layoutHandleLayouterGeneration(), @ref Magnum::Whee::layoutHandleId(), @ref Magnum::Whee::layoutHandleGeneration()
+ * @brief Handle @ref Magnum::Whee::LayerHandle, @ref Magnum::Whee::LayerDataHandle, @ref Magnum::Whee::DataHandle, @ref Magnum::Whee::NodeHandle, @ref Magnum::Whee::LayouterHandle, @ref Magnum::Whee::LayouterDataHandle, @ref Magnum::Whee::LayoutHandle, @ref Magnum::Whee::AnimatorHandle, @ref Magnum::Whee::AnimatorDataHandle, @ref Magnum::Whee::AnimationHandle, function @ref Magnum::Whee::layerHandle(), @ref Magnum::Whee::layerHandleId(), @ref Magnum::Whee::layerHandleGeneration(), @ref Magnum::Whee::layerDataHandle(), @ref Magnum::Whee::layerDataHandleId(), @ref Magnum::Whee::layerDataHandleGeneration(), @ref Magnum::Whee::dataHandle(), @ref Magnum::Whee::dataHandleLayer(), @ref Magnum::Whee::dataHandleData(), @ref Magnum::Whee::dataHandleLayerId(), @ref Magnum::Whee::dataHandleLayerGeneration(), @ref Magnum::Whee::dataHandleId(), @ref Magnum::Whee::dataHandleGeneration(), @ref Magnum::Whee::nodeHandle(), @ref Magnum::Whee::nodeHandleId(), @ref Magnum::Whee::nodeHandleGeneration(), @ref Magnum::Whee::layouterHandle(), @ref Magnum::Whee::layouterHandleId(), @ref Magnum::Whee::layouterHandleGeneration(), @ref Magnum::Whee::layouterDataHandle(), @ref Magnum::Whee::layouterDataHandleId(), @ref Magnum::Whee::layouterDataHandleGeneration(), @ref Magnum::Whee::layoutHandle(), @ref Magnum::Whee::layoutHandleLayouter(), @ref Magnum::Whee::layoutHandleData(), @ref Magnum::Whee::layoutHandleLayouterId(), @ref Magnum::Whee::layoutHandleLayouterGeneration(), @ref Magnum::Whee::layoutHandleId(), @ref Magnum::Whee::layoutHandleGeneration(), @ref Magnum::Whee::animatorHandle(), @ref Magnum::Whee::animatorHandleId(), @ref Magnum::Whee::animatorHandleGeneration(), @ref Magnum::Whee::animatorDataHandle(), @ref Magnum::Whee::animatorDataHandleId(), @ref Magnum::Whee::animatorDataHandleGeneration(), @ref Magnum::Whee::animationHandle(), @ref Magnum::Whee::animationHandleAnimator(), @ref Magnum::Whee::animationHandleData(), @ref Magnum::Whee::animationHandleAnimatorId(), @ref Magnum::Whee::animationHandleAnimatorGeneration(), @ref Magnum::Whee::animationHandleId(), @ref Magnum::Whee::animationHandleGeneration()
  * @m_since_latest
  */
 
@@ -599,6 +599,264 @@ operation.
 */
 constexpr UnsignedInt layoutHandleGeneration(LayoutHandle handle) {
     return (UnsignedLong(handle) >> Implementation::LayouterDataHandleIdBits) & ((1 << Implementation::LayouterDataHandleGenerationBits) - 1);
+}
+
+namespace Implementation {
+    enum: UnsignedInt {
+        AnimatorHandleIdBits = 8,
+        AnimatorHandleGenerationBits = 8
+    };
+}
+
+/**
+@brief Animator handle
+@m_since_latest
+
+Uses 8 bits for storing an ID and 8 bits for a generation.
+@see @ref AbstractUserInterface::createAnimator(),
+    @ref AbstractUserInterface::removeAnimator(), @ref AbstractAnimator,
+    @ref animatorHandle(), @ref animatorHandleId(),
+    @ref animatorHandleGeneration()
+*/
+enum class AnimatorHandle: UnsignedShort {
+    Null = 0    /**< Null handle */
+};
+
+/**
+@debugoperatorenum{AnimatorHandle}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, AnimatorHandle value);
+
+/**
+@brief Compose an animator handle from an ID and a generation
+@m_since_latest
+
+Expects that the ID fits into 8 bits and the generation into 8 bits. Use
+@ref animatorHandleId() and @ref animatorHandleGeneration() for an inverse
+operation.
+*/
+constexpr AnimatorHandle animatorHandle(UnsignedInt id, UnsignedInt generation) {
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(id < (1 << Implementation::AnimatorHandleIdBits) && generation < (1 << Implementation::AnimatorHandleGenerationBits),
+        "Whee::animatorHandle(): expected index to fit into" << Implementation::AnimatorHandleIdBits << "bits and generation into" << Implementation::AnimatorHandleGenerationBits << Debug::nospace << ", got" << Debug::hex << id << "and" << Debug::hex << generation), AnimatorHandle(id|(generation << Implementation::AnimatorHandleIdBits)));
+}
+
+/**
+@brief Extract ID from an animator handle
+@m_since_latest
+
+For @ref AnimatorHandle::Null returns @cpp 0 @ce. Use
+@ref animatorHandleGeneration() for extracting the generation and
+@ref animatorHandle() for an inverse operation.
+*/
+constexpr UnsignedInt animatorHandleId(AnimatorHandle handle) {
+    return UnsignedInt(handle) & ((1 << Implementation::AnimatorHandleIdBits) - 1);
+}
+
+/**
+@brief Extract generation from an animator handle
+@m_since_latest
+
+For @ref AnimatorHandle::Null returns @cpp 0 @ce. Use @ref animatorHandleId()
+for extracting the ID and @ref animatorHandle() for an inverse operation.
+*/
+constexpr UnsignedInt animatorHandleGeneration(AnimatorHandle handle) {
+    return UnsignedInt(handle) >> Implementation::AnimatorHandleIdBits;
+}
+
+namespace Implementation {
+    enum: UnsignedInt {
+        AnimatorDataHandleIdBits = 20,
+        AnimatorDataHandleGenerationBits = 12
+    };
+}
+
+/**
+@brief Animator data handle
+@m_since_latest
+
+Uses 20 bits for storing an ID and 12 bits for a generation.
+@see @ref AbstractAnimator::create(), @ref AbstractAnimator::remove(),
+    @ref animatorDataHandle(), @ref animatorDataHandleId(),
+    @ref animatorDataHandleGeneration()
+*/
+enum class AnimatorDataHandle: UnsignedInt {
+    Null = 0    /**< Null handle */
+};
+
+/**
+@debugoperatorenum{AnimatorDataHandle}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, AnimatorDataHandle value);
+
+/**
+@brief Compose an animator data handle from an ID and a generation
+@m_since_latest
+
+Expects that the ID fits into 20 bits and the generation into 12 bits. Use
+@ref animatorDataHandleId() and @ref animatorDataHandleGeneration() for an
+inverse operation.
+*/
+constexpr AnimatorDataHandle animatorDataHandle(UnsignedInt id, UnsignedInt generation) {
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(id < (1 << Implementation::AnimatorDataHandleIdBits) && generation < (1 << Implementation::AnimatorDataHandleGenerationBits),
+        "Whee::animatorDataHandle(): expected index to fit into" << Implementation::AnimatorDataHandleIdBits << "bits and generation into" << Implementation::AnimatorDataHandleGenerationBits << Debug::nospace << ", got" << Debug::hex << id << "and" << Debug::hex << generation), AnimatorDataHandle(id|(generation << Implementation::AnimatorDataHandleIdBits)));
+}
+
+/**
+@brief Extract ID from an animator data handle
+@m_since_latest
+
+For @ref AnimatorDataHandle::Null returns @cpp 0 @ce. Use
+@ref animatorDataHandleGeneration() for extracting the generation and
+@ref animatorDataHandle() for an inverse operation.
+*/
+constexpr UnsignedInt animatorDataHandleId(AnimatorDataHandle handle) {
+    return UnsignedInt(handle) & ((1 << Implementation::AnimatorDataHandleIdBits) - 1);
+}
+
+/**
+@brief Extract generation from an animator data handle
+@m_since_latest
+
+For @ref AnimatorDataHandle::Null returns @cpp 0 @ce. Use
+@ref animatorDataHandleId() for extracting the ID and
+@ref animatorDataHandle() for an inverse operation.
+*/
+constexpr UnsignedInt animatorDataHandleGeneration(AnimatorDataHandle handle) {
+    return UnsignedInt(handle) >> Implementation::AnimatorDataHandleIdBits;
+}
+
+/**
+@brief Animation handle
+@m_since_latest
+
+A combination of an @ref AnimatorHandle and an @ref AnimatorDataHandle.
+Uses 8 bits for storing an animator ID, 8 bits for an animator generation, 20
+bits for storing an animator data ID and 12 bits for an animator data
+generation.
+@see @ref AbstractAnimator::create(), @ref AbstractAnimator::remove(),
+    @ref animationHandle(), @ref animationHandleId(),
+    @ref animationHandleGeneration()
+*/
+enum class AnimationHandle: UnsignedLong {
+    Null = 0    /**< Null handle */
+};
+
+/**
+@debugoperatorenum{AnimationHandle}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, AnimationHandle value);
+
+/**
+@brief Compose an animation handle from an animator handle, an animator data ID and an animator data generation
+@m_since_latest
+
+Expects that the ID fits into 20 bits and the generation into 12 bits. Use
+@ref animationHandleAnimator(), @ref animationHandleId() and
+@ref animationHandleGeneration() for an inverse operation.
+@see @ref animationHandle(AnimatorHandle, AnimatorDataHandle),
+    @ref animationHandleData(), @ref animationHandleAnimatorId(),
+    @ref animationHandleAnimatorGeneration()
+*/
+constexpr AnimationHandle animationHandle(AnimatorHandle animatorHandle, UnsignedInt id, UnsignedInt generation) {
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(id < (1 << Implementation::AnimatorDataHandleIdBits) && generation < (1 << Implementation::AnimatorDataHandleGenerationBits),
+        "Whee::animationHandle(): expected index to fit into" << Implementation::AnimatorDataHandleIdBits << "bits and generation into" << Implementation::AnimatorDataHandleGenerationBits << Debug::nospace << ", got" << Debug::hex << id << "and" << Debug::hex << generation), AnimationHandle(id|(UnsignedLong(generation) << Implementation::AnimatorDataHandleIdBits)|(UnsignedLong(animatorHandle) << (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits))));
+}
+
+/**
+@brief Compose a animation handle from an animator handle and an animator data handle
+@m_since_latest
+
+Use @ref animationHandleAnimator() and @ref animationHandleData() for the
+inverse operation.
+@see @ref animationHandle(AnimatorHandle, AnimatorDataHandle),
+    @ref animationHandleAnimatorId(), @ref animationHandleAnimatorGeneration(),
+    @ref animationHandleId(), @ref animationHandleGeneration()
+*/
+constexpr AnimationHandle animationHandle(AnimatorHandle animatorHandle, AnimatorDataHandle animatorDataHandle) {
+    return AnimationHandle((UnsignedLong(animatorHandle) << (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits))|UnsignedLong(animatorDataHandle));
+}
+
+/**
+@brief Extract animator handle from an animation handle
+@m_since_latest
+
+Use @ref animationHandleData() for extracting the animator data handle and
+@ref animationHandle(AnimatorHandle, AnimatorDataHandle) for an inverse
+operation.
+*/
+constexpr AnimatorHandle animationHandleAnimator(AnimationHandle handle) {
+    return AnimatorHandle(UnsignedLong(handle) >> (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits));
+}
+
+/**
+@brief Extract animator data handle from an animation handle
+@m_since_latest
+
+Use @ref animationHandleAnimator() for extracting the animator handle and
+@ref animationHandle(AnimatorHandle, AnimatorDataHandle) for an inverse
+operation.
+*/
+constexpr AnimatorDataHandle animationHandleData(AnimationHandle handle) {
+    return AnimatorDataHandle(UnsignedLong(handle));
+}
+
+/**
+@brief Extract animator ID from an animation handle
+@m_since_latest
+
+If the animator portion of the handle is @ref AnimatorHandle::Null, returns
+@cpp 0 @ce. Use @ref animationHandleAnimatorGeneration() for extracting the
+animator generation and @ref animatorHandle() together with
+@ref animationHandle() for an inverse operation.
+@see @ref animationHandleAnimator()
+*/
+constexpr UnsignedInt animationHandleAnimatorId(AnimationHandle handle) {
+    return (UnsignedLong(handle) >> (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits)) & ((1 << Implementation::AnimatorHandleIdBits) - 1);
+}
+
+/**
+@brief Extract animator generation from an animation handle
+@m_since_latest
+
+If the animator portion of the handle is @ref AnimatorHandle::Null, returns
+@cpp 0 @ce. Use @ref animationHandleAnimatorId() for extracting the ID and
+@ref animatorHandle() together with @ref animationHandle() for an inverse
+operation.
+@see @ref animationHandleAnimator()
+*/
+constexpr UnsignedInt animationHandleAnimatorGeneration(AnimationHandle handle) {
+    return (UnsignedLong(handle) >> (Implementation::AnimatorDataHandleIdBits + Implementation::AnimatorDataHandleGenerationBits + Implementation::AnimatorHandleIdBits)) & ((1 << Implementation::AnimatorHandleGenerationBits) - 1);
+}
+
+/**
+@brief Extract ID from an animation handle
+@m_since_latest
+
+If the animator data portion of the handle is @ref AnimatorDataHandle::Null,
+returns @cpp 0 @ce. Use @ref animationHandleGeneration() for extracting the
+generation and @ref animationHandle(AnimatorHandle, UnsignedInt, UnsignedInt)
+for an inverse operation.
+@see @ref animationHandleData()
+*/
+constexpr UnsignedInt animationHandleId(AnimationHandle handle) {
+    return UnsignedLong(handle) & ((1 << Implementation::AnimatorDataHandleIdBits) - 1);
+}
+
+/**
+@brief Extract generation from an animation handle
+@m_since_latest
+
+If the animator data portion of the handle is @ref AnimatorDataHandle::Null,
+returns @cpp 0 @ce. Use @ref animationHandleId() for extracting the ID and
+@ref animationHandle(AnimatorHandle, UnsignedInt, UnsignedInt) for an inverse
+operation.
+@see @ref animationHandleData()
+*/
+constexpr UnsignedInt animationHandleGeneration(AnimationHandle handle) {
+    return (UnsignedLong(handle) >> Implementation::AnimatorDataHandleIdBits) & ((1 << Implementation::AnimatorDataHandleGenerationBits) - 1);
 }
 
 }}
