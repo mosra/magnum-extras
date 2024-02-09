@@ -106,6 +106,58 @@ void NodeAnimator::doAdvance(Containers::BitArrayView active, const Containers::
     }
 }
 
+class StyleAnimator: public Whee::AbstractGenericAnimator {
+    public:
+        explicit StyleAnimator(Whee::AnimatorHandle handle, const Whee::BaseLayerCommonStyleUniform& commonStyle, Containers::ArrayView<const Whee::BaseLayerStyleUniform> styles, Whee::BaseLayer::Shared& shared): Whee::AbstractGenericAnimator{handle}, _commonStyle{commonStyle}, _styles{styles}, _shared(shared) {}
+
+        Whee::AnimationHandle create(UnsignedInt style, const Whee::BaseLayerStyleUniform& target, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, Whee::AnimationFlags flags = {});
+
+    private:
+        struct Data {
+            UnsignedInt style;
+            Whee::BaseLayerStyleUniform target;
+        };
+        Containers::Array<Data> _data;
+        const Whee::BaseLayerCommonStyleUniform& _commonStyle;
+        Containers::ArrayView<const Whee::BaseLayerStyleUniform> _styles;
+        Whee::BaseLayer::Shared& _shared;
+
+        Whee::AnimatorFeatures doFeatures() const override { return {}; }
+        void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override;
+};
+
+Whee::AnimationHandle StyleAnimator::create(UnsignedInt style, const Whee::BaseLayerStyleUniform& target, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount, Whee::AnimationFlags flags) {
+    const Whee::AnimationHandle handle = Whee::AbstractGenericAnimator::create(played, duration, repeatCount, flags);
+    const UnsignedInt id = Whee::animationHandleId(handle);
+    if(id >= _data.size())
+        arrayResize(_data, NoInit, id + 1);
+    _data[id].style = style;
+    _data[id].target = target;
+    return handle;
+}
+
+void StyleAnimator::doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+    // TODO yes, unconditionally copying and uploading all styles is nasty
+    Containers::Array<Whee::BaseLayerStyleUniform> animatedStyles{InPlaceInit, _styles};
+
+    for(std::size_t i = 0; i != active.size(); ++i) {
+        if(!active[i]) continue;
+
+        const Data& data = _data[i];
+        const Float factor = Animation::Easing::smoothstep(1.0f - factors[i]);
+        animatedStyles[data.style].topColor = Math::lerp(_styles[data.style].topColor, data.target.topColor, factor);
+        animatedStyles[data.style].bottomColor = Math::lerp(_styles[data.style].bottomColor, data.target.bottomColor, factor);
+        animatedStyles[data.style].outlineColor = Math::lerp(_styles[data.style].outlineColor, data.target.outlineColor, factor);
+        animatedStyles[data.style].outlineWidth = Math::lerp(_styles[data.style].outlineWidth, data.target.outlineWidth, factor);
+        animatedStyles[data.style].cornerRadius = Math::lerp(_styles[data.style].cornerRadius, data.target.cornerRadius, factor);
+        animatedStyles[data.style].innerOutlineCornerRadius = Math::lerp(_styles[data.style].innerOutlineCornerRadius, data.target.innerOutlineCornerRadius, factor);
+    }
+
+    // TODO yes, this needs an overload that uploads just the style list, and a
+    //  a sub-range of it
+    _shared.setStyle(_commonStyle, animatedStyles, {});
+}
+
 class WheeGallery: public Platform::Application {
     public:
         explicit WheeGallery(const Arguments& arguments);
@@ -122,8 +174,11 @@ class WheeGallery: public Platform::Application {
 
         Whee::BaseLayerGL::Shared _backgroundBlurBaseLayerShared{NoCreate};
         Whee::BaseLayerGL* _backgroundBlurBaseLayer;
+        Whee::BaseLayerCommonStyleUniform _backgroundBlurBaseLayerCommonStyleUniform;
+        Whee::BaseLayerStyleUniform _backgroundBlurBaseLayerStyleUniforms[1];
 
         NodeAnimator* _nodeAnimator;
+        StyleAnimator* _styleAnimator;
         Containers::Optional<Whee::Button> _clickMe;
 };
 
@@ -136,12 +191,10 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     _ui.setStyle(Whee::McssDarkStyle{});
 
     {
-        Whee::BaseLayerCommonStyleUniform commonStyleUniform;
-        commonStyleUniform
+        _backgroundBlurBaseLayerCommonStyleUniform
             .setSmoothness(0.75f)
             .setBackgroundBlurAlpha(0.95f);
-        Whee::BaseLayerStyleUniform styleUniforms[1];
-        styleUniforms[0]
+        _backgroundBlurBaseLayerStyleUniforms[0]
             .setCornerRadius({16.0f, 4.0f, 16.0f, 4.0f})
             .setInnerOutlineCornerRadius({2.0f, 2.0f, 2.0f, 2.0f})
             .setOutlineWidth({0.0f, 32.0f, 0.0f, 2.0f})
@@ -155,7 +208,7 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
                 .setBackgroundBlurRadius(31)}
                 ;
         _backgroundBlurBaseLayerShared
-            .setStyle(commonStyleUniform, styleUniforms, {});
+            .setStyle(_backgroundBlurBaseLayerCommonStyleUniform, _backgroundBlurBaseLayerStyleUniforms, {});
 
         /* It's drawn before all other layers */
         _backgroundBlurBaseLayer = &_ui.setLayerInstance(Containers::pointer<Whee::BaseLayerGL>(_ui.createLayer(_ui.baseLayer().handle()), _backgroundBlurBaseLayerShared));
@@ -163,6 +216,7 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     }
 
     _nodeAnimator = &_ui.setGenericAnimatorInstance(Containers::pointer<NodeAnimator>(_ui.createAnimator(), _ui));
+    _styleAnimator = &_ui.setGenericAnimatorInstance(Containers::pointer<StyleAnimator>(_ui.createAnimator(), _backgroundBlurBaseLayerCommonStyleUniform, _backgroundBlurBaseLayerStyleUniforms, _backgroundBlurBaseLayerShared));
 
     Whee::NodeHandle root = _ui.createNode({}, _ui.size());
 
@@ -302,6 +356,12 @@ void WheeGallery::popup() {
         _ui.setNodeOffset(popup, _ui.nodeOffset(popup) + offset);
     });
     _ui.eventLayer().onPress(popup, [this, popup]{
+        _styleAnimator->create(0,
+            Whee::BaseLayerStyleUniform{_backgroundBlurBaseLayerStyleUniforms[0]}
+                .setColor(0xdcdcdcdc_rgbaf*0.2f)
+                .setOutlineColor(0x3bd267_rgbf)
+                .setOutlineWidth({2.0f, 34.0f, 2.0f, 4.0f}),
+            now(), 1.0_sec);
         _ui.setNodeOrder(popup, Whee::NodeHandle::Null);
     });
 
@@ -314,7 +374,7 @@ void WheeGallery::popup() {
     Whee::NodeHandle more = Whee::button(_ui, popup, Whee::ButtonStyle::Primary, {128, 36}, "More!");
     _ui.setNodeOffset(more, {245, 170});
     _ui.eventLayer().onTapOrClick(more, [this]{
-        this->_backgroundBlurBaseLayer->setBackgroundBlurPassCount(this->_backgroundBlurBaseLayer->backgroundBlurPassCount()*2);
+        _backgroundBlurBaseLayer->setBackgroundBlurPassCount(_backgroundBlurBaseLayer->backgroundBlurPassCount()*2);
     });
 }
 
