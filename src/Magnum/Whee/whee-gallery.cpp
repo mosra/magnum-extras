@@ -44,6 +44,7 @@
 #include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/Anchor.h"
 #include "Magnum/Whee/Application.h"
+#include "Magnum/Whee/BaseLayerAnimator.h"
 #include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/Button.h"
 #include "Magnum/Whee/Event.h"
@@ -130,6 +131,7 @@ class WheeGallery: public Platform::Application {
         Whee::BaseLayerGL* _backgroundBlurBaseLayer;
 
         NodeAnimator* _nodeAnimator;
+        Whee::BaseLayerStyleAnimator* _backgroundBlurStyleAnimator;
         Containers::Optional<Whee::Button> _clickMe;
 };
 
@@ -148,7 +150,7 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
         commonStyleUniform
             .setSmoothness(0.75f)
             .setBackgroundBlurAlpha(0.95f);
-        Whee::BaseLayerStyleUniform styleUniforms[1];
+        Whee::BaseLayerStyleUniform styleUniforms[2];
         styleUniforms[0]
             .setCornerRadius({16.0f, 4.0f, 16.0f, 4.0f})
             .setInnerOutlineCornerRadius({2.0f, 2.0f, 2.0f, 2.0f})
@@ -157,8 +159,14 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             .setColor(0xdcdcdcdc_rgbaf*0.8f)
             // .setOutlineColor(0x282e36cc_rgbaf)
             .setOutlineColor(0xefefefef_rgbaf*0.4f);
+        /* A derived copy */
+        styleUniforms[1] = Whee::BaseLayerStyleUniform{styleUniforms[0]}
+            .setColor(0xdcdcdcdc_rgbaf*0.2f)
+            .setOutlineColor(0x3bd267_rgbf)
+            .setOutlineWidth({2.0f, 34.0f, 2.0f, 4.0f});
         _backgroundBlurBaseLayerShared = Whee::BaseLayerGL::Shared{
-            Whee::BaseLayerGL::Shared::Configuration{1}
+            Whee::BaseLayerGL::Shared::Configuration{2}
+                .setDynamicStyleCount(10)
                 .setFlags(Whee::BaseLayerSharedFlag::BackgroundBlur)
                 .setBackgroundBlurRadius(31)}
                 ;
@@ -170,7 +178,13 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
         _backgroundBlurBaseLayer->setBackgroundBlurPassCount(2);
     }
 
+
+    _backgroundBlurBaseLayer->setDynamicStyle(0, Whee::BaseLayerStyleUniform{}, {});
+
     _nodeAnimator = &_ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(_ui.createAnimator(), _ui));
+    Containers::Pointer<Whee::BaseLayerStyleAnimator> backgroundBlurStyleAnimator{InPlaceInit, _ui.createAnimator()};
+    _backgroundBlurBaseLayer->assignAnimator(*backgroundBlurStyleAnimator);
+    _backgroundBlurStyleAnimator = &_ui.setStyleAnimatorInstance(Utility::move(backgroundBlurStyleAnimator));
 
     Whee::NodeHandle root = _ui.createNode({}, _ui.size());
 
@@ -277,11 +291,28 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
 
 void WheeGallery::popup() {
     Whee::NodeHandle popup = _ui.createNode({180, 180}, {440, 240});
-    _backgroundBlurBaseLayer->create(0, popup);
+    Whee::DataHandle popupBackground = _backgroundBlurBaseLayer->create(0, popup);
     _ui.eventLayer().onDrag(popup, [this, popup](const Vector2& offset){
         _ui.setNodeOffset(popup, _ui.nodeOffset(popup) + offset);
     });
-    _ui.eventLayer().onPress(popup, [this, popup]{
+    _ui.eventLayer().onPress(popup, [this, popup, popupBackground]{
+        Nanoseconds delta;
+        if(_backgroundBlurBaseLayer->style(popupBackground) >= _backgroundBlurBaseLayer->shared().styleCount()) {
+            Whee::AnimationHandle animation = _backgroundBlurBaseLayer->dynamicStyleAnimation(_backgroundBlurBaseLayer->style(popupBackground) - _backgroundBlurBaseLayer->shared().styleCount());
+            delta = 1.3_sec - (now() - _backgroundBlurStyleAnimator->played(animation));
+            _backgroundBlurStyleAnimator->remove(animation);
+        }
+        _backgroundBlurStyleAnimator->create(0, 1, Animation::Easing::smoothstep, now() - delta, 1.3_sec, popupBackground);
+        _ui.setNodeOrder(popup, Whee::NodeHandle::Null);
+    });
+    _ui.eventLayer().onRelease(popup, [this, popup, popupBackground]{
+        Nanoseconds delta;
+        if(_backgroundBlurBaseLayer->style(popupBackground) >= _backgroundBlurBaseLayer->shared().styleCount()) {
+            Whee::AnimationHandle animation = _backgroundBlurBaseLayer->dynamicStyleAnimation(_backgroundBlurBaseLayer->style(popupBackground) - _backgroundBlurBaseLayer->shared().styleCount());
+            delta = 1.3_sec - (now() - _backgroundBlurStyleAnimator->played(animation));
+            _backgroundBlurStyleAnimator->remove(animation);
+        }
+        _backgroundBlurStyleAnimator->create(1, 0, Animation::Easing::smoothstep, now() - delta, 1.3_sec, popupBackground);
         _ui.setNodeOrder(popup, Whee::NodeHandle::Null);
     });
 
