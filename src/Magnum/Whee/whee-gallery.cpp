@@ -47,6 +47,7 @@
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Label.h"
+#include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/Style.h"
 #include "Magnum/Whee/TextProperties.h"
