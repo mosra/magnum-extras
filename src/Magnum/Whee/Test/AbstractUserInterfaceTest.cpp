@@ -140,6 +140,14 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
 
 const struct {
     const char* name;
+    bool layers;
+} CleanData[]{
+    {"", false},
+    {"layers", true}
+};
+
+const struct {
+    const char* name;
     bool clean;
     bool noOp;
 } StateData[]{
@@ -308,15 +316,20 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::setSizeZero,
               &AbstractUserInterfaceTest::setSizeNotCalledBeforeUpdate,
 
-              &AbstractUserInterfaceTest::cleanEmpty,
-              &AbstractUserInterfaceTest::cleanNoOp,
-              &AbstractUserInterfaceTest::cleanRemoveAttachedData,
-              &AbstractUserInterfaceTest::cleanRemoveNestedNodes,
-              &AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemoved,
-              &AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemovedDangling,
-              &AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle,
-              &AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycle,
-              &AbstractUserInterfaceTest::cleanRemoveAll});
+              &AbstractUserInterfaceTest::cleanEmpty});
+
+    addInstancedTests({&AbstractUserInterfaceTest::cleanNoOp,
+                       &AbstractUserInterfaceTest::cleanRemoveAttachedData,
+                       &AbstractUserInterfaceTest::cleanRemoveNestedNodes},
+        Containers::arraySize(CleanData));
+
+    addTests({&AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemoved,
+              &AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemovedDangling});
+
+    addInstancedTests({&AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle,
+                       &AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycle,
+                       &AbstractUserInterfaceTest::cleanRemoveAll},
+        Containers::arraySize(CleanData));
 
     addInstancedTests({&AbstractUserInterfaceTest::state},
         Containers::arraySize(StateData));
@@ -1810,93 +1823,118 @@ void AbstractUserInterfaceTest::cleanEmpty() {
 }
 
 void AbstractUserInterfaceTest::cleanNoOp() {
+    auto&& data = CleanData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle = ui.createLayer();
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
 
     /* Root and a nested node */
     NodeHandle root = ui.createNode({}, {});
     NodeHandle nested = ui.createNode(root, {}, {});
 
-    /* Data attached to the root node */
-    DataHandle data = ui.layer<Layer>(layerHandle).create(root);
+    /* GCC in Release mode complains that some of these may be used
+       uninitialized, MSVC as well. They aren't. */
+    LayerHandle layerHandle{};
+    DataHandle layerData{};
+    if(data.layers) {
+        layerHandle = ui.createLayer();
+
+        struct Layer: AbstractLayer {
+            using AbstractLayer::AbstractLayer;
+            using AbstractLayer::create;
+
+            LayerFeatures doFeatures() const override { return {}; }
+        };
+        ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
+
+        /* Data attached to the root node */
+        layerData = ui.layer<Layer>(layerHandle).create(root);
+    }
 
     /* Remove the nested node to create some "dirtiness" */
     ui.removeNode(nested);
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.layer(layerHandle).node(data), root);
+    if(data.layers)
+        CORRADE_COMPARE(ui.layer(layerHandle).node(layerData), root);
 
     /* Clean should make no change as there's nothing dangling to remove */
     ui.clean();
     CORRADE_VERIFY(ui.isHandleValid(root));
-    CORRADE_VERIFY(ui.isHandleValid(data));
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.layer(layerHandle).node(data), root);
+    if(data.layers) {
+        CORRADE_VERIFY(ui.isHandleValid(layerData));
+        CORRADE_COMPARE(ui.layer(layerHandle).node(layerData), root);
+    }
 }
 
 void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
+    auto&& data = CleanData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle1 = ui.createLayer();
-    LayerHandle layerHandle2 = ui.createLayer();
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle1));
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle2));
 
     /* Root and a nested node */
     NodeHandle root = ui.createNode({}, {});
     NodeHandle nested = ui.createNode(root, {}, {});
 
-    /* Data attached to both, from both layers, in random order */
-    DataHandle data1 = ui.layer<Layer>(layerHandle1).create(nested);
-    DataHandle data2 = ui.layer<Layer>(layerHandle2).create(root);
-    DataHandle data3 = ui.layer<Layer>(layerHandle1).create(root);
-    DataHandle data4 = ui.layer<Layer>(layerHandle2).create(nested);
+    /* GCC in Release mode complains that some of these may be used
+       uninitialized, MSVC as well. They aren't. */
+    LayerHandle layerHandle1{};
+    LayerHandle layerHandle2{};
+    DataHandle layerData1{};
+    DataHandle layerData2{};
+    DataHandle layerData3{};
+    DataHandle layerData4{};
+    if(data.layers) {
+        layerHandle1 = ui.createLayer();
+        layerHandle2 = ui.createLayer();
+
+        struct Layer: AbstractLayer {
+            using AbstractLayer::AbstractLayer;
+            using AbstractLayer::create;
+
+            LayerFeatures doFeatures() const override { return {}; }
+        };
+        ui.setLayerInstance(Containers::pointer<Layer>(layerHandle1));
+        ui.setLayerInstance(Containers::pointer<Layer>(layerHandle2));
+
+        /* Data attached to both, from both layers, in random order */
+        layerData1 = ui.layer<Layer>(layerHandle1).create(nested);
+        layerData2 = ui.layer<Layer>(layerHandle2).create(root);
+        layerData3 = ui.layer<Layer>(layerHandle1).create(root);
+        layerData4 = ui.layer<Layer>(layerHandle2).create(nested);
+    }
 
     /* Remove the nested node */
     ui.removeNode(nested);
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.layer(layerHandle1).usedCount(), 2);
-    CORRADE_COMPARE(ui.layer(layerHandle2).usedCount(), 2);
+    if(data.layers) {
+        CORRADE_COMPARE(ui.layer(layerHandle1).usedCount(), 2);
+        CORRADE_COMPARE(ui.layer(layerHandle2).usedCount(), 2);
+    }
 
     /* Clean removes the nested node data */
     ui.clean();
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
-    CORRADE_COMPARE(ui.layer(layerHandle1).usedCount(), 1);
-    CORRADE_COMPARE(ui.layer(layerHandle2).usedCount(), 1);
     CORRADE_VERIFY(ui.isHandleValid(root));
-    CORRADE_VERIFY(!ui.isHandleValid(data1));
-    CORRADE_VERIFY(ui.isHandleValid(data2));
-    CORRADE_VERIFY(ui.isHandleValid(data3));
-    CORRADE_VERIFY(!ui.isHandleValid(data4));
+    if(data.layers) {
+        CORRADE_COMPARE(ui.layer(layerHandle1).usedCount(), 1);
+        CORRADE_COMPARE(ui.layer(layerHandle2).usedCount(), 1);
+        CORRADE_VERIFY(!ui.isHandleValid(layerData1));
+        CORRADE_VERIFY(ui.isHandleValid(layerData2));
+        CORRADE_VERIFY(ui.isHandleValid(layerData3));
+        CORRADE_VERIFY(!ui.isHandleValid(layerData4));
+    }
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
+    auto&& data = CleanData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle = ui.createLayer();
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
 
     /* A nested node tree */
     NodeHandle root = ui.createNode({}, {});
@@ -1905,10 +1943,28 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
     NodeHandle first2 = ui.createNode(root, {}, {});
     NodeHandle second2 = ui.createNode(first1, {}, {});
 
-    /* Data attached to the leaf nodes */
-    DataHandle data1 = ui.layer<Layer>(layerHandle).create(second1);
-    DataHandle data2 = ui.layer<Layer>(layerHandle).create(first2);
-    DataHandle data3 = ui.layer<Layer>(layerHandle).create(second2);
+    /* GCC in Release mode complains that some of these may be used
+       uninitialized, MSVC as well. They aren't. */
+    LayerHandle layerHandle;
+    DataHandle layerData1{};
+    DataHandle layerData2{};
+    DataHandle layerData3{};
+    if(data.layers) {
+        layerHandle = ui.createLayer();
+
+        struct Layer: AbstractLayer {
+            using AbstractLayer::AbstractLayer;
+            using AbstractLayer::create;
+
+            LayerFeatures doFeatures() const override { return {}; }
+        };
+        ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
+
+        /* Data attached to the leaf nodes */
+        layerData1 = ui.layer<Layer>(layerHandle).create(second1);
+        layerData2 = ui.layer<Layer>(layerHandle).create(first2);
+        layerData3 = ui.layer<Layer>(layerHandle).create(second2);
+    }
 
     /* Remove the subtree */
     ui.removeNode(first1);
@@ -1923,9 +1979,11 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
     CORRADE_VERIFY(ui.isHandleValid(first2));
     CORRADE_VERIFY(!ui.isHandleValid(second1));
     CORRADE_VERIFY(!ui.isHandleValid(second2));
-    CORRADE_VERIFY(!ui.isHandleValid(data1));
-    CORRADE_VERIFY(ui.isHandleValid(data2));
-    CORRADE_VERIFY(!ui.isHandleValid(data3));
+    if(data.layers) {
+        CORRADE_VERIFY(!ui.isHandleValid(layerData1));
+        CORRADE_VERIFY(ui.isHandleValid(layerData2));
+        CORRADE_VERIFY(!ui.isHandleValid(layerData3));
+    }
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemoved() {
@@ -1969,25 +2027,35 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemovedDangling() {
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
+    auto&& data = CleanData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle = ui.createLayer();
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
 
     /* A nested node branch */
     NodeHandle root = ui.createNode({}, {});
     NodeHandle first = ui.createNode(root, {}, {});
     NodeHandle second = ui.createNode(first, {}, {});
 
-    /* Data attached to the leaf node */
-    DataHandle data = ui.layer<Layer>(layerHandle).create(second);
+    /* GCC in Release mode complains that some of these may be used
+       uninitialized, MSVC as well. They aren't. */
+    LayerHandle layerHandle;
+    DataHandle layerData{};
+    if(data.layers) {
+        layerHandle = ui.createLayer();
+
+        struct Layer: AbstractLayer {
+            using AbstractLayer::AbstractLayer;
+            using AbstractLayer::create;
+
+            LayerFeatures doFeatures() const override { return {}; }
+        };
+        ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
+
+        /* Data attached to the leaf node */
+        layerData = ui.layer<Layer>(layerHandle).create(second);
+    }
 
     /* Remove a subtree but then create a new node which recycles the same
        handle */
@@ -2003,23 +2071,18 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
     CORRADE_VERIFY(ui.isHandleValid(root));
     CORRADE_VERIFY(!ui.isHandleValid(first));
     CORRADE_VERIFY(ui.isHandleValid(first2));
-    CORRADE_VERIFY(!ui.isHandleValid(data));
+    if(data.layers)
+        CORRADE_VERIFY(!ui.isHandleValid(layerData));
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycle() {
+    auto&& data = CleanData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP("Ugh, this asserts.");
 
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle = ui.createLayer();
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
 
     /* A nested node branch */
     NodeHandle root = ui.createNode({}, {});
@@ -2027,8 +2090,24 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
     NodeHandle second = ui.createNode(first, {}, {});
     NodeHandle third = ui.createNode(second, {}, {});
 
-    /* Data attached to the leaf node */
-    DataHandle data = ui.layer<Layer>(layerHandle).create(third);
+    /* GCC in Release mode complains that some of these may be used
+       uninitialized, MSVC as well. They aren't. */
+    LayerHandle layerHandle;
+    DataHandle layerData{};
+    if(data.layers) {
+        layerHandle = ui.createLayer();
+
+        struct Layer: AbstractLayer {
+            using AbstractLayer::AbstractLayer;
+            using AbstractLayer::create;
+
+            LayerFeatures doFeatures() const override { return {}; }
+        };
+        ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
+
+        /* Data attached to the leaf node */
+        layerData = ui.layer<Layer>(layerHandle).create(third);
+    }
 
     /* Remove a subtree but then create a new node which recycles the same
        handle, and parent it to one of the (now dangling) nodes */
@@ -2044,40 +2123,52 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
     CORRADE_VERIFY(ui.isHandleValid(first2));
     CORRADE_VERIFY(!ui.isHandleValid(second));
     CORRADE_VERIFY(!ui.isHandleValid(third));
-    CORRADE_VERIFY(!ui.isHandleValid(data));
+    if(data.layers)
+        CORRADE_VERIFY(!ui.isHandleValid(layerData));
 }
 
 void AbstractUserInterfaceTest::cleanRemoveAll() {
+    auto&& data = CleanData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Event/framebuffer scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
-    LayerHandle layerHandle = ui.createLayer();
-
-    struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-        using AbstractLayer::create;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    };
-    ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
 
     /* A nested node branch */
     NodeHandle root = ui.createNode({}, {});
     NodeHandle first = ui.createNode(root, {}, {});
     NodeHandle second = ui.createNode(first, {}, {});
 
-    /* Data attached to the nested nodes */
-    ui.layer<Layer>(layerHandle).create(second);
-    ui.layer<Layer>(layerHandle).create(first);
+    /* GCC in Release mode complains that some of these may be used
+       uninitialized, MSVC as well. They aren't. */
+    LayerHandle layerHandle{};
+    if(data.layers) {
+        layerHandle = ui.createLayer();
+
+        struct Layer: AbstractLayer {
+            using AbstractLayer::AbstractLayer;
+            using AbstractLayer::create;
+
+            LayerFeatures doFeatures() const override { return {}; }
+        };
+        ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
+
+        /* Data attached to the nested nodes */
+        ui.layer<Layer>(layerHandle).create(second);
+        ui.layer<Layer>(layerHandle).create(first);
+    }
 
     /* Removing the top-level node */
     ui.removeNode(root);
     CORRADE_COMPARE(ui.nodeUsedCount(), 2);
-    CORRADE_COMPARE(ui.layer(layerHandle).usedCount(), 2);
+    if(data.layers)
+        CORRADE_COMPARE(ui.layer(layerHandle).usedCount(), 2);
 
     /* Clean should remove everything */
     ui.clean();
     CORRADE_COMPARE(ui.nodeUsedCount(), 0);
-    CORRADE_COMPARE(ui.layer(layerHandle).usedCount(), 0);
+    if(data.layers)
+        CORRADE_COMPARE(ui.layer(layerHandle).usedCount(), 0);
 }
 
 void AbstractUserInterfaceTest::state() {
