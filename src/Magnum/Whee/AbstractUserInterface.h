@@ -175,8 +175,8 @@ enum class UserInterfaceState: UnsignedShort {
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
-     * hierarchies of removed nodes, layouts assigned to those and data
-     * attached to those. Set implicitly after every
+     * hierarchies of removed nodes and data, layouts and animation assigned to
+     * those. Set implicitly after every
      * @ref AbstractUserInterface::removeNode() call, is reset to
      * @ref UserInterfaceState::NeedsNodeUpdate next time
      * @ref AbstractUserInterface::clean() is called. Implies
@@ -1088,6 +1088,21 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         void removeAnimator(AnimatorHandle handle);
 
         /**
+         * @brief Attach an animation to a node
+         *
+         * A shorthand for extracting a @ref AnimatorHandle from @p animation
+         * using @ref animationHandleAnimator(), retrieving the particular
+         * animator instance using @ref animator() and then calling
+         * @ref AbstractAnimator::attach(AnimatorDataHandle, NodeHandle) with a
+         * @ref AnimatorDataHandle extracted with @ref animationHandleData().
+         * See these functions for more information. In addition to
+         * @ref AbstractAnimator::attach(AnimatorDataHandle, NodeHandle), this
+         * function checks that @p node is either valid or
+         * @ref NodeHandle::Null.
+         */
+        void attachAnimation(NodeHandle node, AnimationHandle animation);
+
+        /**
          * @}
          */
 
@@ -1422,6 +1437,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Calls @ref AbstractLayouter::cleanNodes() with updated node
          *      generations, causing removal of layouts assigned to invalid
          *      nodes
+         * -    Calls @ref AbstractAnimator::cleanNodes() on all animators
+         *      supporting @ref AnimatorFeature::NodeAttachment with updated
+         *      node generations, causing removal of animations attached to
+         *      invalid nodes
          *
          * After calling this function, @ref state() doesn't contain
          * @ref UserInterfaceState::NeedsNodeClean anymore;

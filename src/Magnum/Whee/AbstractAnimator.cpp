@@ -26,6 +26,7 @@
 #include "AbstractAnimator.h"
 
 #include <Corrade/Containers/ArrayTuple.h>
+#include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
@@ -45,6 +46,7 @@ Debug& operator<<(Debug& debug, const AnimatorFeature value) {
     switch(value) {
         /* LCOV_EXCL_START */
         #define _c(value) case AnimatorFeature::value: return debug << "::" #value;
+        _c(NodeAttachment)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -54,6 +56,7 @@ Debug& operator<<(Debug& debug, const AnimatorFeature value) {
 
 Debug& operator<<(Debug& debug, const AnimatorFeatures value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::AnimatorFeatures{}", {
+        AnimatorFeature::NodeAttachment
     });
 }
 
@@ -184,6 +187,10 @@ struct AbstractAnimator::State {
     UnsignedInt firstFree = ~UnsignedInt{};
     UnsignedInt lastFree = ~UnsignedInt{};
 
+    /* Used only if AnimatorFeature::NodeAttachment is supported, has the same
+       size as `animations` */
+    Containers::Array<NodeHandle> nodes;
+
     Nanoseconds time{Math::ZeroInit};
 };
 
@@ -311,7 +318,13 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
         CORRADE_ASSERT(state.animations.size() < 1 << Implementation::AnimatorDataHandleIdBits,
             "Whee::AbstractAnimator::create(): can only have at most" << (1 << Implementation::AnimatorDataHandleIdBits) << "animations", {});
         animation = &arrayAppend(state.animations, InPlaceInit);
+        if(features() & AnimatorFeature::NodeAttachment) {
+            CORRADE_INTERNAL_ASSERT(state.nodes.size() == state.animations.size() - 1);
+            arrayAppend(state.nodes, NoInit, 1);
+        }
     }
+
+    const UnsignedInt id = animation - state.animations;
 
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
@@ -322,12 +335,13 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
     animation->used.played = played;
     animation->used.paused = Nanoseconds::max();
     animation->used.stopped = Nanoseconds::max();
+    if(features() & AnimatorFeature::NodeAttachment)
+        state.nodes[id] = NodeHandle::Null;
 
     /* Mark the animator as needing an advance() call if the new animation
        is being scheduled or played. Creation alone doesn't make it possible to
        make the animation paused, but if the animation is already stopped, mark
        it also to perform automatic removal. */
-    const UnsignedInt id = animation - state.animations;
     const AnimationState animationState = Whee::animationState(*animation, state.time);
     CORRADE_INTERNAL_ASSERT(animationState != AnimationState::Paused);
     if(animationState == AnimationState::Scheduled ||
@@ -340,6 +354,18 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
 
 AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const AnimationFlags flags) {
     return create(played, duration, 1, flags);
+}
+
+AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const NodeHandle node, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(features() >= AnimatorFeature::NodeAttachment,
+        "Whee::AbstractAnimator::create(): node attachment not supported", {});
+    const AnimationHandle handle = create(played, duration, repeatCount, flags);
+    _state->nodes[animationHandleId(handle)] = node;
+    return handle;
+}
+
+AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const NodeHandle node, const AnimationFlags flags) {
+    return create(played, duration, node, 1, flags);
 }
 
 void AbstractAnimator::remove(const AnimationHandle handle) {
@@ -370,6 +396,11 @@ void AbstractAnimator::removeInternal(const UnsignedInt id) {
     /* Set the animation duration to 0 to avoid falsely recognizing this item
        as used when directly iterating the list */
     animation.used.duration = 0_nsec;
+
+    /* Clear the node attachment to have null handles in the nodes() list for
+       freed animations */
+    if(features() & AnimatorFeature::NodeAttachment)
+        state.nodes[id] = NodeHandle::Null;
 
     /* Put the layout at the end of the free list (while they're allocated from
        the front) to not exhaust the generation counter too fast. If the free
@@ -520,6 +551,50 @@ Nanoseconds AbstractAnimator::stopped(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractAnimator::stopped(): invalid handle" << handle, {});
     return _state->animations[animatorDataHandleId(handle)].used.stopped;
+}
+
+void AbstractAnimator::attach(const AnimationHandle animation, const NodeHandle node) {
+    CORRADE_ASSERT(isHandleValid(animation),
+        "Whee::AbstractAnimator::attach(): invalid handle" << animation, );
+    attachInternal(animationHandleId(animation), node);
+}
+
+void AbstractAnimator::attach(const AnimatorDataHandle animation, const NodeHandle node) {
+    CORRADE_ASSERT(isHandleValid(animation),
+        "Whee::AbstractAnimator::attach(): invalid handle" << animation, );
+    attachInternal(animatorDataHandleId(animation), node);
+}
+
+void AbstractAnimator::attachInternal(const UnsignedInt id, const NodeHandle node) {
+    CORRADE_ASSERT(features() >= AnimatorFeature::NodeAttachment,
+        "Whee::AbstractAnimator::attach(): node attachment not supported", );
+    _state->nodes[id] = node;
+}
+
+NodeHandle AbstractAnimator::node(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractAnimator::node(): invalid handle" << handle, {});
+    return nodeInternal(animationHandleId(handle));
+}
+
+NodeHandle AbstractAnimator::node(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractAnimator::node(): invalid handle" << handle, {});
+    return nodeInternal(animatorDataHandleId(handle));
+}
+
+NodeHandle AbstractAnimator::nodeInternal(const UnsignedInt id) const {
+    CORRADE_ASSERT(features() >= AnimatorFeature::NodeAttachment,
+        "Whee::AbstractAnimator::node(): feature not supported", {});
+    return _state->nodes[id];
+}
+
+Containers::StridedArrayView1D<const NodeHandle> AbstractAnimator::nodes() const {
+    CORRADE_ASSERT(features() >= AnimatorFeature::NodeAttachment,
+        "Whee::AbstractAnimator::nodes(): feature not supported", {});
+    const State& state = *_state;
+    CORRADE_INTERNAL_ASSERT(state.nodes.size() == state.animations.size());
+    return state.nodes;
 }
 
 AnimationState AbstractAnimator::state(const AnimationHandle handle) const {
@@ -707,6 +782,40 @@ void AbstractAnimator::clean(const Containers::BitArrayView animationIdsToRemove
 }
 
 void AbstractAnimator::doClean(Containers::BitArrayView) {}
+
+void AbstractAnimator::cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations) {
+    CORRADE_ASSERT(features() >= AnimatorFeature::NodeAttachment,
+        "Whee::AbstractAnimator::cleanNodes(): feature not supported", );
+
+    State& state = *_state;
+    /** @todo have some bump allocator for this */
+    Containers::BitArray animationIdsToRemove{ValueInit, state.animations.size()};
+
+    CORRADE_INTERNAL_ASSERT(state.nodes.size() == state.animations.size());
+    for(std::size_t i = 0; i != state.nodes.size(); ++i) {
+        const NodeHandle node = state.nodes[i];
+
+        /* Skip animations that are free or that aren't attached to any node */
+        if(node == NodeHandle::Null)
+            continue;
+
+        /* For used & attached animations compare the generation of the node
+           they're attached to. If it differs, remove the animation and mark
+           the corresponding index so the implementation can do its own cleanup
+           in doClean(). */
+        /** @todo check that the ID is in bounds and if it's not, remove as
+            well? to avoid OOB access if the animation is accidentally attached
+            to a NodeHandle from a different UI instance that has more nodes */
+        if(nodeHandleGeneration(node) != nodeHandleGenerations[nodeHandleId(node)]) {
+            removeInternal(i);
+            animationIdsToRemove.set(i);
+        }
+    }
+
+    /* As removeInternal() was already called in the above loop, we don't need
+       to delegate to clean() but can call doClean() directly */
+    doClean(animationIdsToRemove);
+}
 
 Containers::Pair<bool, bool> AbstractAnimator::advance(const Nanoseconds time, const Containers::MutableBitArrayView active, const Containers::StridedArrayView1D<Float>& factors, const Containers::MutableBitArrayView remove) {
     State& state = *_state;

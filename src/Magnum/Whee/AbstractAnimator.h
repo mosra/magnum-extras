@@ -44,6 +44,14 @@ namespace Magnum { namespace Whee {
 @see @ref AnimatorFeatures, @ref AbstractAnimator::features()
 */
 enum class AnimatorFeature: UnsignedByte {
+    /**
+     * The animations may be attached to nodes and are meant to be
+     * automatically removed when given node is removed.
+     * @see @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags),
+     *      @ref AbstractAnimator::node(AnimationHandle) const,
+     *      @ref AbstractAnimator::cleanNodes()
+     */
+    NodeAttachment = 1 << 0,
 };
 
 /**
@@ -615,6 +623,78 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         Nanoseconds stopped(AnimatorDataHandle handle) const;
 
         /**
+         * @brief Attach an animation to a node
+         *
+         * Makes the @p animation handle tied to a particular @p node, meaning
+         * it'll get scheduled for removal during the next @ref cleanNodes()
+         * call when @ref AbstractUserInterface::removeNode() is called for
+         * @p node or any parent node.
+         *
+         * Expects that @p animation is valid and that the animator supports
+         * @ref AnimatorFeature::NodeAttachment. The @p node can be anything
+         * including @ref NodeHandle::Null, but if it's non-null and not valid
+         * the animation will be scheduled for deletion during the next
+         * @ref cleanNodes() call. If the @p animation is already attached to
+         * some node, this will overwrite the previous attachment --- i.e.,
+         * it's not possible to have the same animation attached to multiple
+         * nodes. The inverse, attaching multiple different animation handles
+         * to a single node, is supported however.
+         *
+         * Unlike with e.g. @ref AbstractLayer::attach(), calling this function
+         * does *not* cause any @ref AnimatorState to be set.
+         * @see @ref isHandleValid(AnimationHandle) const,
+         *      @ref create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags),
+         *      @ref AbstractUserInterface::attachAnimation(NodeHandle, AnimationHandle)
+         */
+        void attach(AnimationHandle animation, NodeHandle node);
+
+        /**
+         * @brief Attach an animation to a node assuming it belongs to this animator
+         *
+         * Like @ref attach(AnimationHandle, NodeHandle) but without checking
+         * that @p animation indeed belongs to this animator. See its
+         * documentation for more information.
+         */
+        void attach(AnimatorDataHandle animation, NodeHandle node);
+
+        /**
+         * @brief Node handle an animation is attached to
+         *
+         * Expects that @p handle is valid and that the animator supports
+         * @ref AnimatorFeature::NodeAttachment. If the animation isn't
+         * attached to any node, returns @ref NodeHandle::Null.
+         *
+         * The returned handle may be invalid if either the animation got
+         * attached to an invalid node in the first place or the node or any of
+         * its parents were removed and @ref AbstractUserInterface::clean()
+         * wasn't called since.
+         * @see @ref isHandleValid(AnimationHandle) const, @ref features()
+         */
+        NodeHandle node(AnimationHandle handle) const;
+
+        /**
+         * @brief Node handle an animation is attached to assuming the animation belongs to this animator
+         *
+         * Like @ref node(AnimationHandle) const but without checking that
+         * @p handle indeed belongs to this animator. See its documentation for
+         * more information.
+         * @see @ref animationHandleData()
+         */
+        NodeHandle node(AnimatorDataHandle handle) const;
+
+        /**
+         * @brief Node attachments for all animations
+         *
+         * Expects that the animator supports
+         * @ref AnimatorFeature::NodeAttachment. Meant to be used by animator
+         * implementations to map animation IDs to node handles if needed. Size
+         * of the returned view is the same as @ref capacity(). Items that are
+         * @ref NodeHandle::Null are either animations with no node attachments
+         * or corresponding to animations that are freed.
+         */
+        Containers::StridedArrayView1D<const NodeHandle> nodes() const;
+
+        /**
          * @brief Animation state
          *
          * Expects that @p handle is valid. Calculated based on the value of
@@ -779,6 +859,23 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         void clean(Containers::BitArrayView animationIdsToRemove);
 
         /**
+         * @brief Clean animations attached to no longer valid nodes
+         *
+         * Used internally from @ref AbstractUserInterface::clean(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave. Expects that
+         * the animator supports @ref AnimatorFeature::NodeAttachment, assumes
+         * that @p nodeHandleGenerations contains handle generation counters
+         * for all nodes, where the index is implicitly the handle ID. They're
+         * used to decide about node attachment validity, animations with
+         * invalid node attachments are then removed. Delegates to
+         * @ref doClean(), see its documentation for more information about the
+         * arguments.
+         */
+        void cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations);
+
+        /**
          * @brief Advance the animations
          * @param[in]  time     Time to which to advance
          * @param[out] active   Where to put a mask of active animations
@@ -846,6 +943,12 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * @ref AnimationState::Playing, the @ref AnimatorState::NeedsAdvance
          * flag is set. The subclass is meant to wrap this function in a public
          * API and perform appropriate initialization work there.
+         *
+         * If the animator advertises @ref AnimatorFeature::NodeAttachment, the
+         * node attachment is set to @ref NodeHandle::Null. Use
+         * @ref create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)
+         * to directly attach to a node, or call @ref attach(AnimationHandle, NodeHandle)
+         * to attach the animation afterwards.
          */
         AnimationHandle create(Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -856,6 +959,36 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * with @p repeatCount set to @cpp 1 @ce.
          */
         AnimationHandle create(Nanoseconds played, Nanoseconds duration, AnimationFlags flags);
+
+        /**
+         * @brief Create an animation attached to a node
+         * @param played        Time at which the animation is played. Use
+         *      @ref Nanoseconds::max() for creating a stopped animation.
+         * @param node          Node the animation is attached to. Use
+         *      @ref NodeHandle::Null to create an animation that isn't
+         *      attached to any node.
+         * @param duration      Duration of a single play of the animation
+         * @param repeatCount   Repeat count. Use @cpp 0 @ce for an
+         *      indefinitely repeating animation.
+         * @param flags         Flags
+         * @return New animation handle
+         *
+         * Expects that the animator supports
+         * @ref AnimatorFeature::NodeAttachment. Apart from that behaves the
+         * same as @ref create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags),
+         * see its documentation for more information. If @p node is not
+         * @ref NodeHandle::Null, directly attaches the created animation to
+         * given animation, equivalent to calling @ref attach(AnimationHandle, NodeHandle).
+         */
+        AnimationHandle create(Nanoseconds played, Nanoseconds duration, NodeHandle node, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation attached to a node
+         *
+         * Same as calling @ref create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)
+         * with @p repeatCount set to @cpp 1 @ce.
+         */
+        AnimationHandle create(Nanoseconds played, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
 
         /**
          * @brief Remove an animation
@@ -900,7 +1033,12 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * which is then called from
          * @ref AbstractUserInterface::advanceAnimations() whenever there are
          * any stopped animations that are meant to be removed, i.e. without
-         * the @ref AnimationFlag::KeepOncePlayed.
+         * the @ref AnimationFlag::KeepOncePlayed. It's also called from
+         * @ref cleanNodes(), which is called from
+         * @ref AbstractUserInterface::clean() (and transitively from
+         * @ref AbstractUserInterface::update()) whenever
+         * @ref UserInterfaceState::NeedsNodeClean or any of the states that
+         * imply it are present in @ref AbstractUserInterface::state().
          *
          * The @p animationIdsToRemove view has the same size as
          * @ref capacity() and is guaranteed to have bits set only for valid
@@ -918,6 +1056,8 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
            foo(AnimatorDataHandle) */
         MAGNUM_WHEE_LOCAL void removeInternal(UnsignedInt id);
         MAGNUM_WHEE_LOCAL void setFlagsInternal(UnsignedInt id, AnimationFlags flags);
+        MAGNUM_WHEE_LOCAL void attachInternal(UnsignedInt id, NodeHandle node);
+        MAGNUM_WHEE_LOCAL NodeHandle nodeInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL Float factorInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL void playInternal(UnsignedInt id, Nanoseconds time);
         MAGNUM_WHEE_LOCAL void pauseInternal(UnsignedInt id, Nanoseconds time);
