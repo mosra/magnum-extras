@@ -75,6 +75,7 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
 
     void partitionedAnimatorsInsert();
     void partitionedAnimatorsRemove();
+    void partitionedAnimatorsGet();
 };
 
 const struct {
@@ -429,7 +430,8 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
               &AbstractUserInterfaceImplementationTest::compactDraws,
 
               &AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert,
-              &AbstractUserInterfaceImplementationTest::partitionedAnimatorsRemove});
+              &AbstractUserInterfaceImplementationTest::partitionedAnimatorsRemove,
+              &AbstractUserInterfaceImplementationTest::partitionedAnimatorsGet});
 }
 
 void AbstractUserInterfaceImplementationTest::orderNodesBreadthFirst() {
@@ -2130,51 +2132,107 @@ void AbstractUserInterfaceImplementationTest::compactDraws() {
 void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert() {
     AbstractAnimator& animator1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef01});
     AbstractAnimator& animator2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
-    AbstractAnimator& animator3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
+    AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
+    AbstractAnimator& animatorNodeAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
+    AbstractAnimator& animatorNodeAttachment3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
 
     Containers::Array<Containers::Reference<AbstractAnimator>> instances{InPlaceInit, {
         animator1,
-        animator3
+        animatorNodeAttachment2,
+        animatorNodeAttachment1,
     }};
-    Implementation::partitionedAnimatorsInsert(instances, animator2);
+    UnsignedInt nodeAttachmentAnimatorOffset = 1;
 
-    /* Containers::Reference has the same layout as a pointer, abuse that for
-       easy comparison */
+    /* Insert a non-NodeAttachment animator. Containers::Reference has the same
+       layout as a pointer, abuse that for easy comparison. */
+    Implementation::partitionedAnimatorsInsert(instances, animator2, AnimatorFeatures{}, nodeAttachmentAnimatorOffset);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator1,
-        &animator3,
-        &animator2
+        &animator2,
+        &animatorNodeAttachment2,
+        &animatorNodeAttachment1
     }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+
+    /* Insert a NodeAttachment animator */
+    Implementation::partitionedAnimatorsInsert(instances, animatorNodeAttachment3, AnimatorFeature::NodeAttachment, nodeAttachmentAnimatorOffset);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator1,
+        &animator2,
+        &animatorNodeAttachment2,
+        &animatorNodeAttachment1,
+        &animatorNodeAttachment3
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
 }
 
 void AbstractUserInterfaceImplementationTest::partitionedAnimatorsRemove() {
     AbstractAnimator& animator1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef01});
     AbstractAnimator& animator2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
     AbstractAnimator& animator3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
+    AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
 
     Containers::Array<Containers::Reference<AbstractAnimator>> instances{InPlaceInit, {
         animator2,
         animator3,
-        animator1
+        animator1,
+        animatorNodeAttachment1
     }};
+    UnsignedInt nodeAttachmentAnimatorOffset = 3;
 
-    /* Remove from the middle. Containers::Reference has the same layout as a
-       pointer, abuse that for easy comparison. */
-    Implementation::partitionedAnimatorsRemove(instances, animator3);
+    /* Remove from the middle of the non-NodeAttachment partition.
+       Containers::Reference has the same layout as a pointer, abuse that for
+       easy comparison. */
+    Implementation::partitionedAnimatorsRemove(instances, animator3, AnimatorFeatures{}, nodeAttachmentAnimatorOffset);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator2,
-        &animator1
+        &animator1,
+        &animatorNodeAttachment1
     }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
 
-    /* Remove from the end */
-    Implementation::partitionedAnimatorsRemove(instances, animator1);
+    /* Remove from the end of the non-NodeAttachment partition */
+    Implementation::partitionedAnimatorsRemove(instances, animator1, AnimatorFeatures{}, nodeAttachmentAnimatorOffset);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator2,
+        &animatorNodeAttachment1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+
+    /* Remove a NodeAttachment animator */
+    Implementation::partitionedAnimatorsRemove(instances, animatorNodeAttachment1, AnimatorFeature::NodeAttachment, nodeAttachmentAnimatorOffset);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator2
     }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
 
-    /* Remove from the beginning */
-    Implementation::partitionedAnimatorsRemove(instances, animator2);
+    /* Remove from the beginning of the non-NodeAttachment partition */
+    Implementation::partitionedAnimatorsRemove(instances, animator2, AnimatorFeatures{}, nodeAttachmentAnimatorOffset);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 0);
+}
+
+void AbstractUserInterfaceImplementationTest::partitionedAnimatorsGet() {
+    AbstractAnimator& animator1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef01});
+    AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
+    AbstractAnimator& animatorNodeAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
+
+    Containers::Reference<AbstractAnimator> instances[]{
+        animator1,
+        animatorNodeAttachment2,
+        animatorNodeAttachment1
+    };
+    UnsignedInt nodeAttachmentAnimatorOffset = 1;
+
+    /* Containers::Reference has the same layout as a pointer, abuse that for
+       easy comparison */
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsNone(instances, nodeAttachmentAnimatorOffset)), Containers::arrayView<AbstractAnimator*>({
+        &animator1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsNodeAttachment(instances, nodeAttachmentAnimatorOffset)), Containers::arrayView<AbstractAnimator*>({
+        &animatorNodeAttachment2,
+        &animatorNodeAttachment1
     }), TestSuite::Compare::Container);
 }
 
