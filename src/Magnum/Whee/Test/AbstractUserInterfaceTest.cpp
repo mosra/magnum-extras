@@ -125,6 +125,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void cleanRemoveNestedNodesRecycledHandleOrphanedCycle();
     void cleanRemoveAll();
 
+    void updateRecycledLayerWithoutInstance();
+
     /* Tests update() and clean() calls on both AbstractLayer and
        AbstractLayouter */
     void state();
@@ -553,6 +555,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
                        &AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycle,
                        &AbstractUserInterfaceTest::cleanRemoveAll},
         Containers::arraySize(CleanData));
+
+    addTests({&AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance});
 
     addInstancedTests({&AbstractUserInterfaceTest::state},
         Containers::arraySize(StateData));
@@ -3246,6 +3250,37 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
         CORRADE_COMPARE(ui.layer(layerHandle).usedCount(), 0);
     if(data.layouters)
         CORRADE_COMPARE(ui.layouter(layouterHandle).usedCount(), 0);
+}
+
+void AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance() {
+    /* Verifies that the cached layer feature set is properly reset for freed
+       and recycled layers as otherwise it'd cause all sorts of issues in
+       internal state update */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct LayerCanDoAnything: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return ~LayerFeatures{}; }
+    };
+
+    /* Add two layers with all possible features and remove them */
+    LayerHandle removedLayer1 = ui.createLayer();
+    LayerHandle removedLayer2 = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<LayerCanDoAnything>(removedLayer1));
+    ui.setLayerInstance(Containers::pointer<LayerCanDoAnything>(removedLayer2));
+    ui.removeLayer(removedLayer1);
+    ui.removeLayer(removedLayer2);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+
+    /* A new layer should recycle the same memory location */
+    LayerHandle recycledLayer = ui.createLayer();
+    CORRADE_COMPARE(layerHandleId(recycledLayer), layerHandleId(removedLayer1));
+
+    /* Calling update() should not rely on the cached feature set from the
+       now-removed layer nor from the recycled-but-no-instance-set-yet layer */
+    ui.update();
 }
 
 void AbstractUserInterfaceTest::state() {
