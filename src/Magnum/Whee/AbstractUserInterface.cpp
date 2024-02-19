@@ -145,7 +145,8 @@ union Layer {
            the handle gets disabled. */
         UnsignedByte generation = 1;
 
-        /* Extracted from AbstractLayer for more direct access */
+        /* Extracted from AbstractLayer for more direct access. Filled in
+           setLayerInstance(), cleared in removeLayer(). */
         LayerFeatures features;
 
         /* Always meant to be non-null and valid. To make insert/remove
@@ -841,6 +842,9 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
        is either free or is newly created until setLayerInstance() is called,
        which is used for iterating them in clean() and update(). */
     layer.used.instance = nullptr;
+    /* Clear also the feature set, as that can be used by certain hot loops
+       without checking that given layer instance is actually present */
+    layer.used.features = {};
 
     /* Increase the layer generation so existing handles pointing to this layer
        are invalidated */
@@ -1992,6 +1996,10 @@ AbstractUserInterface& AbstractUserInterface::update() {
         }
         UnsignedInt drawLayerCount = 0;
         for(const Layer& layer: state.layers) {
+            /* This assumes that freed layers (or recycled layers without any
+               instance set yet) have the features cleared to an empty set
+               in removeLayer(). Otherwise it'd have to check for presence of
+               an instance as well. */
             if(layer.used.features & LayerFeature::Draw)
                 ++drawLayerCount;
         }
@@ -2145,6 +2153,10 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 const UnsignedInt layerId = layerHandleId(layer);
                 const Layer& layerItem = state.layers[layerId];
 
+                /* This assumes that freed layers (or recycled layers without
+                   any instance set yet) have the features cleared to an empty
+                   set in removeLayer(). Otherwise it'd have to check for
+                   presence of an instance as well. */
                 if(layerItem.used.features & LayerFeature::Event) {
                     Implementation::orderNodeDataForEventHandlingInto(
                         layer,
