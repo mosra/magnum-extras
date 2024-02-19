@@ -68,15 +68,25 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void createRemoveHandleDisable();
     void createNoHandlesLeft();
     void createInvalid();
+    void createNodeAttachment();
+    void createNodeAttachmentInvalidFeatures();
     void removeInvalid();
     void properties();
     void propertiesStateFactor();
     void propertiesInvalid();
+    void attachNode();
+    void attachNodeInvalid();
+    void attachNodeInvalidFeatures();
 
     void clean();
     void cleanEmpty();
     void cleanNotImplemented();
     void cleanInvalid();
+
+    void cleanNodes();
+    void cleanNodesEmpty();
+    void cleanNodesNotImplemented();
+    void cleanNodesInvalidFeatures();
 
     void playPauseStop();
     void playPauseStopInvalid();
@@ -92,6 +102,14 @@ struct AbstractAnimatorTest: TestSuite::Tester {
 };
 
 using namespace Math::Literals;
+
+const struct {
+    const char* name;
+    AnimatorFeatures features;
+} CreateRemoveData[]{
+    {"", {}},
+    {"NodeAttachment", AnimatorFeature::NodeAttachment},
+};
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
@@ -222,6 +240,14 @@ const struct {
 
 const struct {
     const char* name;
+    AnimatorFeatures features;
+} CleanData[]{
+    {"", {}},
+    {"node attachment", AnimatorFeature::NodeAttachment},
+};
+
+const struct {
+    const char* name;
     Containers::Optional<Nanoseconds> stopped;
     Nanoseconds paused;
     Nanoseconds resumed;
@@ -270,13 +296,17 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::constructCopy,
               &AbstractAnimatorTest::constructCopyGeneric,
               &AbstractAnimatorTest::constructMove,
-              &AbstractAnimatorTest::constructMoveGeneric,
+              &AbstractAnimatorTest::constructMoveGeneric});
 
-              &AbstractAnimatorTest::createRemove,
-              &AbstractAnimatorTest::createRemoveHandleRecycle,
-              &AbstractAnimatorTest::createRemoveHandleDisable,
+    addInstancedTests({&AbstractAnimatorTest::createRemove,
+                       &AbstractAnimatorTest::createRemoveHandleRecycle},
+        Containers::arraySize(CreateRemoveData));
+
+    addTests({&AbstractAnimatorTest::createRemoveHandleDisable,
               &AbstractAnimatorTest::createNoHandlesLeft,
               &AbstractAnimatorTest::createInvalid,
+              &AbstractAnimatorTest::createNodeAttachment,
+              &AbstractAnimatorTest::createNodeAttachmentInvalidFeatures,
               &AbstractAnimatorTest::removeInvalid,
               &AbstractAnimatorTest::properties});
 
@@ -284,11 +314,21 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
         Containers::arraySize(PropertiesStateFactorData));
 
     addTests({&AbstractAnimatorTest::propertiesInvalid,
+              &AbstractAnimatorTest::attachNode,
+              &AbstractAnimatorTest::attachNodeInvalid,
+              &AbstractAnimatorTest::attachNodeInvalidFeatures});
 
-              &AbstractAnimatorTest::clean,
-              &AbstractAnimatorTest::cleanEmpty,
+    addInstancedTests({&AbstractAnimatorTest::clean},
+        Containers::arraySize(CleanData));
+
+    addTests({&AbstractAnimatorTest::cleanEmpty,
               &AbstractAnimatorTest::cleanNotImplemented,
               &AbstractAnimatorTest::cleanInvalid,
+
+              &AbstractAnimatorTest::cleanNodes,
+              &AbstractAnimatorTest::cleanNodesEmpty,
+              &AbstractAnimatorTest::cleanNodesNotImplemented,
+              &AbstractAnimatorTest::cleanNodesInvalidFeatures,
 
               &AbstractAnimatorTest::playPauseStop,
               &AbstractAnimatorTest::playPauseStopInvalid});
@@ -307,14 +347,14 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
 
 void AbstractAnimatorTest::debugFeature() {
     std::ostringstream out;
-    Debug{&out} << AnimatorFeature(0xbe);
-    CORRADE_COMPARE(out.str(), "Whee::AnimatorFeature(0xbe)\n");
+    Debug{&out} << AnimatorFeature::NodeAttachment << AnimatorFeature(0xbe);
+    CORRADE_COMPARE(out.str(), "Whee::AnimatorFeature::NodeAttachment Whee::AnimatorFeature(0xbe)\n");
 }
 
 void AbstractAnimatorTest::debugFeatures() {
     std::ostringstream out;
-    Debug{&out} << AnimatorFeature(0xe0) << AnimatorFeatures{};
-    CORRADE_COMPARE(out.str(), "Whee::AnimatorFeature(0xe0) Whee::AnimatorFeatures{}\n");
+    Debug{&out} << (AnimatorFeature::NodeAttachment|AnimatorFeature(0xe0)) << AnimatorFeatures{};
+    CORRADE_COMPARE(out.str(), "Whee::AnimatorFeature::NodeAttachment|Whee::AnimatorFeature(0xe0) Whee::AnimatorFeatures{}\n");
 }
 
 void AbstractAnimatorTest::debugState() {
@@ -465,13 +505,20 @@ void AbstractAnimatorTest::constructMoveGeneric() {
 }
 
 void AbstractAnimatorTest::createRemove() {
-    struct: AbstractAnimator {
-        using AbstractAnimator::AbstractAnimator;
+    auto&& data = CreateRemoveData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct Animator: AbstractAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractAnimator{handle}, _features{features} {}
+
         using AbstractAnimator::create;
         using AbstractAnimator::remove;
 
-        AnimatorFeatures doFeatures() const override { return {}; }
-    } animator{animatorHandle(0xab, 0x12)};
+        AnimatorFeatures doFeatures() const override { return _features; }
+
+        private:
+            AnimatorFeatures _features;
+    } animator{animatorHandle(0xab, 0x12), data.features};
 
     AnimationHandle first = animator.create(1337_nsec, 37588_nsec);
     CORRADE_COMPARE(first, animationHandle(animator.handle(), 0, 1));
@@ -486,6 +533,8 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.played(first), 1337_nsec);
     CORRADE_COMPARE(animator.paused(first), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(first), Nanoseconds::max());
+    if(data.features & AnimatorFeature::NodeAttachment)
+        CORRADE_COMPARE(animator.node(first), NodeHandle::Null);
     /* Animation state() is tested thoroughly in animationState() */
     CORRADE_COMPARE(animator.state(first), AnimationState::Scheduled);
 
@@ -504,6 +553,8 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.played(animationHandleData(second)), -26_nsec);
     CORRADE_COMPARE(animator.paused(animationHandleData(second)), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(animationHandleData(second)), Nanoseconds::max());
+    if(data.features & AnimatorFeature::NodeAttachment)
+        CORRADE_COMPARE(animator.node(second), NodeHandle::Null);
     /* Animation state() is tested thoroughly in animationState() */
     CORRADE_COMPARE(animator.state(animationHandleData(second)), AnimationState::Playing);
 
@@ -521,6 +572,8 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.played(third), 111_nsec);
     CORRADE_COMPARE(animator.paused(third), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(third), Nanoseconds::max());
+    if(data.features & AnimatorFeature::NodeAttachment)
+        CORRADE_COMPARE(animator.node(third), NodeHandle::Null);
     /* Animation state() is tested thoroughly in animationState() */
     CORRADE_COMPARE(animator.state(third), AnimationState::Scheduled);
 
@@ -543,13 +596,20 @@ void AbstractAnimatorTest::createRemove() {
 }
 
 void AbstractAnimatorTest::createRemoveHandleRecycle() {
-    struct: AbstractAnimator {
-        using AbstractAnimator::AbstractAnimator;
+    auto&& data = CreateRemoveData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct Animator: AbstractAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractAnimator{handle}, _features{features} {}
+
         using AbstractAnimator::create;
         using AbstractAnimator::remove;
 
-        AnimatorFeatures doFeatures() const override { return {}; }
-    } animator{animatorHandle(0xab, 0x12)};
+        AnimatorFeatures doFeatures() const override { return _features; }
+
+        private:
+            AnimatorFeatures _features;
+    } animator{animatorHandle(0xab, 0x12), data.features};
 
     AnimationHandle first = animator.create(0_nsec, 12_nsec, 0, AnimationFlag::KeepOncePlayed);
     AnimationHandle second = animator.create(2_nsec, 1_nsec);
@@ -589,10 +649,28 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.played(fourth), 166_nsec);
     CORRADE_COMPARE(animator.paused(fourth), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(fourth), Nanoseconds::max());
+    if(data.features & AnimatorFeature::NodeAttachment) {
+        CORRADE_COMPARE(animator.node(first), NodeHandle::Null);
+        CORRADE_COMPARE(animator.node(second), NodeHandle::Null);
+        CORRADE_COMPARE(animator.node(third), NodeHandle::Null);
+        CORRADE_COMPARE(animator.node(fourth), NodeHandle::Null);
+    }
 
     /* Populate internals of some animations */
     animator.pause(first, 50_nsec);
     animator.stop(third, -30_nsec);
+    if(data.features & AnimatorFeature::NodeAttachment) {
+        animator.attach(second, NodeHandle(0xabc12345));
+        animator.attach(fourth, NodeHandle(0x123abcde));
+        CORRADE_COMPARE(animator.node(second), NodeHandle(0xabc12345));
+        CORRADE_COMPARE(animator.node(fourth), NodeHandle(0x123abcde));
+        CORRADE_COMPARE_AS(animator.nodes(), Containers::arrayView({
+            NodeHandle::Null,
+            NodeHandle(0xabc12345),
+            NodeHandle::Null,
+            NodeHandle(0x123abcde)
+        }), TestSuite::Compare::Container);
+    }
 
     /* Remove three out of the four in an arbitrary order */
     animator.remove(fourth);
@@ -606,6 +684,16 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.usedCount(), 1);
     CORRADE_COMPARE(animator.duration(second), 1_nsec);
     CORRADE_COMPARE(animator.played(second), 2_nsec);
+
+    /* Internally all attachments should be set to a null handle after
+       deletion */
+    if(data.features & AnimatorFeature::NodeAttachment)
+        CORRADE_COMPARE_AS(animator.nodes(), Containers::arrayView({
+            NodeHandle::Null,
+            NodeHandle(0xabc12345),
+            NodeHandle::Null,
+            NodeHandle::Null
+        }), TestSuite::Compare::Container);
 
     /* Allocating new handles should recycle the handles in the order they were
        removed (oldest first). Their properties should be cleared. */
@@ -641,6 +729,12 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.played(fourth2), 255_nsec);
     CORRADE_COMPARE(animator.paused(fourth2), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(fourth2), Nanoseconds::max());
+    if(data.features & AnimatorFeature::NodeAttachment) {
+        CORRADE_COMPARE(animator.node(first2), NodeHandle::Null);
+        CORRADE_COMPARE(animator.node(second), NodeHandle(0xabc12345));
+        CORRADE_COMPARE(animator.node(third2), NodeHandle::Null);
+        CORRADE_COMPARE(animator.node(fourth2), NodeHandle::Null);
+    }
 
     /* Old handles shouldn't get valid again */
     CORRADE_VERIFY(!animator.isHandleValid(first));
@@ -666,6 +760,8 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.played(third3), 12_nsec);
     CORRADE_COMPARE(animator.paused(third3), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(third3), Nanoseconds::max());
+    if(data.features & AnimatorFeature::NodeAttachment)
+        CORRADE_COMPARE(animator.node(third3), NodeHandle::Null);
 
     /* Allocating a new handle with the free list empty will grow it */
     AnimationHandle fifth = animator.create(2888_nsec, 8882_nsec);
@@ -679,6 +775,8 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.played(fifth), 2888_nsec);
     CORRADE_COMPARE(animator.paused(fifth), Nanoseconds::max());
     CORRADE_COMPARE(animator.stopped(fifth), Nanoseconds::max());
+    if(data.features & AnimatorFeature::NodeAttachment)
+        CORRADE_COMPARE(animator.node(fifth), NodeHandle::Null);
 }
 
 void AbstractAnimatorTest::createRemoveHandleDisable() {
@@ -757,6 +855,82 @@ void AbstractAnimatorTest::createInvalid() {
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractAnimator::create(): expected positive duration, got Nanoseconds(0)\n"
         "Whee::AbstractAnimator::create(): expected positive duration, got Nanoseconds(-1)\n");
+}
+
+void AbstractAnimatorTest::createNodeAttachment() {
+    /* Check just what the overload does on top of the base create(), to which
+       it delegates */
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+    } animator{animatorHandle(0, 1)};
+
+    /* Default overload */
+    AnimationHandle first = animator.create(15_nsec, 37_nsec, NodeHandle(0xabcde123), 155, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(animator.duration(first), 37_nsec);
+    CORRADE_COMPARE(animator.repeatCount(first), 155);
+    CORRADE_COMPARE(animator.flags(first), AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(animator.played(first), 15_nsec);
+    CORRADE_COMPARE(animator.paused(first), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(first), Nanoseconds::max());
+    CORRADE_COMPARE(animator.node(first), NodeHandle(0xabcde123));
+
+    /* Overload with implicit repeat count */
+    AnimationHandle second = animator.create(-655_nsec, 12_nsec, NodeHandle(0x12345abc), AnimationFlag(0xe0));
+    CORRADE_COMPARE(animator.duration(second), 12_nsec);
+    CORRADE_COMPARE(animator.repeatCount(second), 1);
+    CORRADE_COMPARE(animator.flags(second), AnimationFlag(0xe0));
+    CORRADE_COMPARE(animator.played(second), -655_nsec);
+    CORRADE_COMPARE(animator.paused(second), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(second), Nanoseconds::max());
+    CORRADE_COMPARE(animator.node(second), NodeHandle(0x12345abc));
+
+    /* Null handles should be accepted too */
+    AnimationHandle third = animator.create(12_nsec, 24_nsec, NodeHandle::Null, 0);
+    CORRADE_COMPARE(animator.duration(third), 24_nsec);
+    CORRADE_COMPARE(animator.repeatCount(third), 0);
+    CORRADE_COMPARE(animator.flags(third), AnimationFlags{});
+    CORRADE_COMPARE(animator.played(third), 12_nsec);
+    CORRADE_COMPARE(animator.node(third), NodeHandle::Null);
+
+    AnimationHandle fourth = animator.create(0_nsec, 1_nsec, NodeHandle::Null, AnimationFlag(0x10));
+    CORRADE_COMPARE(animator.duration(fourth), 1_nsec);
+    CORRADE_COMPARE(animator.repeatCount(fourth), 1);
+    CORRADE_COMPARE(animator.flags(fourth), AnimationFlag(0x10));
+    CORRADE_COMPARE(animator.played(fourth), 0_nsec);
+    CORRADE_COMPARE(animator.node(fourth), NodeHandle::Null);
+
+    /* The node attachments should be reflected here as well */
+    CORRADE_COMPARE_AS(animator.nodes(), Containers::arrayView({
+        NodeHandle(0xabcde123),
+        NodeHandle(0x12345abc),
+        NodeHandle::Null,
+        NodeHandle::Null
+    }), TestSuite::Compare::Container);
+}
+
+void AbstractAnimatorTest::createNodeAttachmentInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.create(0_nsec, 1_nsec, NodeHandle::Null, 1);
+    animator.create(0_nsec, 1_nsec, NodeHandle::Null, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractAnimator::create(): node attachment not supported\n"
+        "Whee::AbstractAnimator::create(): node attachment not supported\n");
 }
 
 void AbstractAnimatorTest::removeInvalid() {
@@ -987,13 +1161,146 @@ void AbstractAnimatorTest::propertiesInvalid() {
         TestSuite::Compare::String);
 }
 
-void AbstractAnimatorTest::clean() {
+void AbstractAnimatorTest::attachNode() {
+    /* Mostly the same as AbstractLayerTest::attach() */
+
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
-        using AbstractAnimator::remove;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+    } animator{animatorHandle(0xab, 0x12)};
+
+    /* Create animations that are stoppped to not affect animator state */
+    AnimationHandle first = animator.create(-10_nsec, 5_nsec, AnimationFlag::KeepOncePlayed);
+    AnimationHandle second = animator.create(-100_nsec, 50_nsec, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(animator.node(first), NodeHandle::Null);
+    CORRADE_COMPARE(animator.node(second), NodeHandle::Null);
+
+    NodeHandle nodeFirst = nodeHandle(2865, 0xcec);
+    NodeHandle nodeSecond = nodeHandle(9872, 0xbeb);
+    NodeHandle nodeThird = nodeHandle(12, 0x888);
+
+    /* Attaching shouldn't affect animator state */
+    animator.attach(first, nodeSecond);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.node(first), nodeSecond);
+
+    /* The attachment should be reflected in the view as well */
+    CORRADE_COMPARE_AS(animator.nodes(), Containers::arrayView({
+        nodeSecond,
+        NodeHandle::Null
+    }), TestSuite::Compare::Container);
+
+    /* Calling with the animator-specific handles should work too */
+    animator.attach(animationHandleData(second), nodeFirst);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.node(animationHandleData(second)), nodeFirst);
+
+    /* Attaching to a new node should overwrite the previous */
+    animator.attach(first, nodeThird);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.node(first), nodeThird);
+
+    /* Attaching two animations to the same node should work too */
+    animator.attach(second, nodeThird);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.node(first), nodeThird);
+    CORRADE_COMPARE(animator.node(second), nodeThird);
+
+    /* Detaching as well */
+    animator.attach(first, NodeHandle::Null);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.node(first), NodeHandle::Null);
+    CORRADE_COMPARE(animator.node(second), nodeThird);
+
+    /* The cleared attachment should be reflected in the view as well */
+    CORRADE_COMPARE_AS(animator.nodes(), Containers::arrayView({
+        NodeHandle::Null,
+        nodeThird
+    }), TestSuite::Compare::Container);
+}
+
+void AbstractAnimatorTest::attachNodeInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+    } animator{animatorHandle(0xab, 0x12)};
+
+    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.attach(AnimationHandle::Null, nodeHandle(2865, 0xcec));
+    animator.node(AnimationHandle::Null);
+    /* Valid animator, invalid data */
+    animator.attach(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), nodeHandle(2865, 0xcec));
+    animator.node(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    /* Invalid animator, valid data */
+    animator.attach(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), nodeHandle(2865, 0xcec));
+    animator.node(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    /* AnimatorDataHandle directly */
+    animator.attach(AnimatorDataHandle(0x123abcde), nodeHandle(2865, 0xcec));
+    animator.node(AnimatorDataHandle(0x123abcde));
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle::Null\n"
+        "Whee::AbstractAnimator::node(): invalid handle Whee::AnimationHandle::Null\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
+        "Whee::AbstractAnimator::node(): invalid handle Whee::AnimationHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Whee::AbstractAnimator::node(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Whee::AbstractAnimator::node(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractAnimatorTest::attachNodeInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
+    } animator{animatorHandle(0, 1)};
+
+    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.attach(handle, nodeHandle(2865, 0xcec));
+    animator.attach(animationHandleData(handle), nodeHandle(2865, 0xcec));
+    animator.node(handle);
+    animator.node(animationHandleData(handle));
+    animator.nodes();
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractAnimator::attach(): node attachment not supported\n"
+        "Whee::AbstractAnimator::attach(): node attachment not supported\n"
+        "Whee::AbstractAnimator::node(): feature not supported\n"
+        "Whee::AbstractAnimator::node(): feature not supported\n"
+        "Whee::AbstractAnimator::nodes(): feature not supported\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractAnimatorTest::clean() {
+    auto&& data = CleanData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct Animator: AbstractAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractAnimator{handle}, _features{features} {}
+
+        using AbstractAnimator::create;
+        using AbstractAnimator::remove;
+
+        AnimatorFeatures doFeatures() const override { return _features; }
         void doClean(Containers::BitArrayView animationIdsToRemove) override {
             ++called;
             CORRADE_COMPARE_AS(animationIdsToRemove, Containers::stridedArrayView({
@@ -1002,7 +1309,11 @@ void AbstractAnimatorTest::clean() {
         }
 
         Int called = 0;
-    } animator{animatorHandle(0, 1)};
+
+        private:
+            AnimatorFeatures _features;
+
+    } animator{animatorHandle(0, 1), data.features};
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -1014,9 +1325,15 @@ void AbstractAnimatorTest::clean() {
     AnimationHandle fourth = animator.create(0_nsec, 1_nsec);
     animator.remove(second);
 
+    /* Attach them if supported */
+    if(data.features >= AnimatorFeature::NodeAttachment) {
+        animator.attach(first, nodeHandle(0x1234, 1));
+        animator.attach(third, nodeHandle(0x5678, 1));
+        animator.attach(fourth, nodeHandle(0x9abc, 1));
+    }
+
     /* Call clean() */
-    UnsignedByte data[]{0x05};
-    animator.clean(Containers::BitArrayView{data, 0, 4});
+    animator.clean(Containers::BitArrayView{"\x05", 0, 4});
     CORRADE_COMPARE(animator.called, 1);
 
     /* Only the fourth data should stay afterwards */
@@ -1024,6 +1341,16 @@ void AbstractAnimatorTest::clean() {
     CORRADE_VERIFY(!animator.isHandleValid(second));
     CORRADE_VERIFY(!animator.isHandleValid(third));
     CORRADE_VERIFY(animator.isHandleValid(fourth));
+
+    /* The attachments should be cleared for removed animations */
+    if(data.features >= AnimatorFeature::NodeAttachment) {
+        CORRADE_COMPARE_AS(animator.nodes(), Containers::arrayView({
+            NodeHandle::Null,
+            NodeHandle::Null,
+            NodeHandle::Null,
+            nodeHandle(0x9abc, 1),
+        }), TestSuite::Compare::Container);
+    }
 }
 
 void AbstractAnimatorTest::cleanEmpty() {
@@ -1081,6 +1408,148 @@ void AbstractAnimatorTest::cleanInvalid() {
     UnsignedByte data[1]{};
     animator.clean(Containers::BitArrayView{data, 0, 2});
     CORRADE_COMPARE(out.str(), "Whee::AbstractAnimator::clean(): expected 3 bits but got 2\n");
+}
+
+void AbstractAnimatorTest::cleanNodes() {
+    /* Mostly the same as AbstractLayerTest::clean() */
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+        using AbstractAnimator::remove;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+        void doClean(Containers::BitArrayView dataIdsToRemove) override {
+            ++called;
+            CORRADE_COMPARE_AS(dataIdsToRemove, Containers::stridedArrayView({
+                true, false, false, true, false, true, false
+            }).sliceBit(0), TestSuite::Compare::Container);
+        }
+
+        Int called = 0;
+    } animator{animatorHandle(0, 1)};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    NodeHandle nodeFirst = nodeHandle(0, 0xcec);
+    NodeHandle nodeSecond = nodeHandle(1, 0xded);
+    NodeHandle nodeFourth = nodeHandle(3, 0xaba);
+    NodeHandle nodeEighth = nodeHandle(7, 0xfef);
+
+    /* Create seven animations to match the seven bits. Attach them to random
+       handles, leave one unassigned, attach two animations to one node. */
+    AnimationHandle first = animator.create(0_nsec, 1_nsec, nodeEighth);
+    AnimationHandle second = animator.create(0_nsec, 1_nsec);
+    AnimationHandle third = animator.create(0_nsec, 1_nsec, nodeSecond);
+    AnimationHandle fourth = animator.create(0_nsec, 1_nsec, nodeFirst);
+    AnimationHandle fifth = animator.create(0_nsec, 1_nsec, nodeFourth);
+    AnimationHandle sixth = animator.create(0_nsec, 1_nsec, nodeFirst);
+    AnimationHandle seventh = animator.create(0_nsec, 1_nsec, nodeFourth);
+
+    /* Remove two of them */
+    animator.remove(third);
+    animator.remove(seventh);
+
+    /* Call cleanNodes() with updated generation counters */
+    animator.cleanNodes(Containers::arrayView({
+        /* First node generation gets different, affecting fourth and sixth
+           animation */
+        UnsignedShort(nodeHandleGeneration(nodeFirst) + 1),
+        /* Second node generation gets different but since the third animation
+           is already removed it doesn't affect anything */
+        UnsignedShort(nodeHandleGeneration(nodeSecond) - 1),
+        /* Third node has no attachments so it can be arbitrary */
+        UnsignedShort{0xbeb},
+        /* Fourth node stays the same generation so the fifth animation stays.
+           Seventh animation is already removed so they aren't set for deletion
+           either. */
+        UnsignedShort(nodeHandleGeneration(nodeFourth)),
+        /* Fifth, sixth, seventh nodes have no attachments so they can be
+           arbitrary again */
+        UnsignedShort{0xaca},
+        UnsignedShort{0x808},
+        UnsignedShort{0xefe},
+        /* Eighth node is now a zero generation, i.e. disabled, which should
+           trigger removal of first animation */
+        UnsignedShort{},
+    }));
+    CORRADE_COMPARE(animator.called, 1);
+
+    /* Only the second and fifth data should stay afterwards */
+    CORRADE_VERIFY(!animator.isHandleValid(first));
+    CORRADE_VERIFY(animator.isHandleValid(second));
+    CORRADE_VERIFY(!animator.isHandleValid(third));
+    CORRADE_VERIFY(!animator.isHandleValid(fourth));
+    CORRADE_VERIFY(animator.isHandleValid(fifth));
+    CORRADE_VERIFY(!animator.isHandleValid(sixth));
+    CORRADE_VERIFY(!animator.isHandleValid(seventh));
+
+    /* The node attachments should be cleared for removed animations */
+    CORRADE_COMPARE_AS(animator.nodes(), Containers::arrayView({
+        NodeHandle::Null,
+        NodeHandle::Null,
+        NodeHandle::Null,
+        NodeHandle::Null,
+        nodeFourth,
+        NodeHandle::Null,
+        NodeHandle::Null,
+    }), TestSuite::Compare::Container);
+}
+
+void AbstractAnimatorTest::cleanNodesEmpty() {
+    /* Mostly the same as AbstractLayerTest::cleanEmpty() */
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+        void doClean(Containers::BitArrayView) override {
+            ++called;
+        }
+
+        Int called = 0;
+    } animator{animatorHandle(0, 1)};
+
+    /* It should call the implementation even with empty contents */
+    animator.cleanNodes({});
+    CORRADE_COMPARE(animator.called, 1);
+}
+
+void AbstractAnimatorTest::cleanNodesNotImplemented() {
+    /* Mostly the same as AbstractLayerTest::cleanNotImplemented() */
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+    } animator{animatorHandle(0, 1)};
+
+    animator.cleanNodes({});
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
+}
+
+void AbstractAnimatorTest::cleanNodesInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.cleanNodes({});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractAnimator::cleanNodes(): feature not supported\n");
 }
 
 void AbstractAnimatorTest::playPauseStop() {

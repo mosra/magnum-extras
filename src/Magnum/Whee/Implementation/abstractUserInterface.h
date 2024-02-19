@@ -35,6 +35,7 @@
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Functions.h>
 
+#include "Magnum/Whee/AbstractAnimator.h" /* AnimatorFeatures */
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Handle.h"
 
@@ -1022,27 +1023,64 @@ UnsignedInt compactDrawsInPlace(const Containers::StridedArrayView1D<UnsignedByt
     return offset;
 }
 
-/* Insert into a partitioned animator list. The `instances` array is inserted
-   into at an appropriate place. */
-void partitionedAnimatorsInsert(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, AbstractAnimator& instance) {
-    arrayAppend(instances, InPlaceInit, instance);
+/* Query a list of animators partitioned into the following groups:
+   - Animators with no NodeAttachment
+   - Animators with NodeAttachment */
+Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsNone(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const UnsignedInt nodeAttachmentAnimatorOffset) {
+    CORRADE_INTERNAL_ASSERT(nodeAttachmentAnimatorOffset <= instances.size());
+    return instances.prefix(nodeAttachmentAnimatorOffset);
+}
+Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsNodeAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const UnsignedInt nodeAttachmentAnimatorOffset) {
+    CORRADE_INTERNAL_ASSERT(nodeAttachmentAnimatorOffset <= instances.size());
+    return instances.exceptPrefix(nodeAttachmentAnimatorOffset);
 }
 
-/* Remove from the partitioned animator list. The `instance` is looked up in
-   the `instances` array and the item removed. */
-void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, const AbstractAnimator& instance) {
-    /* Yes, this is a linear search, but I don't expect there being that many
-       animators in total (the cap is 256) and that many being added and
-       removed all the time, so this should be fine. */
+/* Insert into the partitioned animator list and update the offsets
+   accordingly. The features are taken by value to not need to include the
+   whole AbstractAnimator here. */
+void partitionedAnimatorsInsert(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, AbstractAnimator& instance, const AnimatorFeatures features, UnsignedInt& nodeAttachmentAnimatorOffset) {
+    /* Find the slice the animator should be in and directly take that as an
+       oppportunity to update the offsets */
+    Containers::ArrayView<const Containers::Reference<AbstractAnimator>> slice;
+    if(features >= AnimatorFeature::NodeAttachment) {
+        slice = partitionedAnimatorsNodeAttachment(instances, nodeAttachmentAnimatorOffset);
+    } else {
+        slice = partitionedAnimatorsNone(instances, nodeAttachmentAnimatorOffset);
+        ++nodeAttachmentAnimatorOffset;
+    }
+
+    /* Insert at the end of given slice */
+    arrayInsert(instances, slice.end() - instances.begin(), instance);
+}
+
+/* Remove from the partitioned animator list and update the offsets
+   accordingly */
+void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, const AbstractAnimator& instance, const AnimatorFeatures features, UnsignedInt& nodeAttachmentAnimatorOffset) {
+    /* Find the slice the animator should be in and directly take that as an
+       oppportunity to update the offsets */
+    Containers::ArrayView<const Containers::Reference<AbstractAnimator>> slice;
+    if(features >= AnimatorFeature::NodeAttachment) {
+        slice = partitionedAnimatorsNodeAttachment(instances, nodeAttachmentAnimatorOffset);
+    } else {
+        slice = partitionedAnimatorsNone(instances, nodeAttachmentAnimatorOffset);
+        CORRADE_INTERNAL_ASSERT(nodeAttachmentAnimatorOffset != 0);
+        --nodeAttachmentAnimatorOffset;
+    }
+
+    /* Find the actual instance in given slice. Yes, this is a linear search,
+       but I don't expect there being that many animators in every slice (the
+       cap is 256) and that many being added and removed all the time, so this
+       should be fine. */
     std::size_t found = ~std::size_t{};
-    for(std::size_t i = 0; i != instances.size(); ++i) {
-        if(&*instances[i] == &instance) {
-            found = i;
+    for(const Containers::Reference<AbstractAnimator>& i: slice) {
+        if(&*i == &instance) {
+            found = &i - instances;
             break;
         }
     }
 
-    /* The animator should always be in the list if it has an instance */
+    /* Remove it from the array. The animator should always be in given slice
+       if it has an instance. */
     CORRADE_INTERNAL_ASSERT(found != ~std::size_t{});
     arrayRemove(instances, found);
 }

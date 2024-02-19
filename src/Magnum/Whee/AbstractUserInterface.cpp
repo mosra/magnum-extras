@@ -453,6 +453,7 @@ struct AbstractUserInterface::State {
     /* Animator instances, partitioned by type. Inserted into by
        set*AnimatorInstance(), removed from by removeAnimator() */
     Containers::Array<Containers::Reference<AbstractAnimator>> animatorInstances;
+    UnsignedInt animatorInstancesNodeAttachmentOffset;
 
     /* Nodes, indexed by NodeHandle */
     Containers::Array<Node> nodes;
@@ -1353,9 +1354,12 @@ AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(
     CORRADE_ASSERT(!state.animators[id].used.instance,
         messagePrefix << "instance for" << handle << "already set", *state.animators[0].used.instance);
 
-    /* Insert into the partitioned animator list */
+    /* Insert into the partitioned animator list based on what features are
+       supported */
     Implementation::partitionedAnimatorsInsert(state.animatorInstances,
-        *instance);
+        *instance,
+        instance->features(),
+        state.animatorInstancesNodeAttachmentOffset);
 
     /* Take over the instance */
     Animator& animator = state.animators[id];
@@ -1388,8 +1392,11 @@ void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
 
     /* If the animator has an instance, find it in the partitioned instance
        list and remove */
-    if(animator.used.instance)
-        Implementation::partitionedAnimatorsRemove(state.animatorInstances, *animator.used.instance);
+    if(const AbstractAnimator* const instance = animator.used.instance.get())
+        Implementation::partitionedAnimatorsRemove(state.animatorInstances,
+            *instance,
+            instance->features(),
+            state.animatorInstancesNodeAttachmentOffset);
 
     /* Delete the instance. The instance being null then means that the
        animator is either free or is newly created until set*AnimatorInstance()
@@ -1429,6 +1436,24 @@ void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
        visual change -- it's just that things that used to change as a result
        of an animation aren't changing anymore, which doesn't need any state
        flag update */
+}
+
+void AbstractUserInterface::attachAnimation(const NodeHandle node, const AnimationHandle animation) {
+    CORRADE_ASSERT(node == NodeHandle::Null || isHandleValid(node),
+        "Whee::AbstractUserInterface::attachAnimation(): invalid handle" << node, );
+    CORRADE_ASSERT(isHandleValid(animation),
+        "Whee::AbstractUserInterface::attachAnimation(): invalid handle" << animation, );
+    State& state = *_state;
+    AbstractAnimator& instance = *state.animators[animationHandleAnimatorId(animation)].used.instance;
+    CORRADE_ASSERT(instance.features() & AnimatorFeature::NodeAttachment,
+        "Whee::AbstractUserInterface::attachAnimation(): node attachment not supported by this animator", );
+    /** @todo this performs the animation handle & feature validity check
+        redundantly again, consider using some internal assert-less helper if
+        it proves to be a bottleneck */
+    instance.attach(animationHandleData(animation), node);
+
+    /* There's no state flag set by AbstractAnimator::attach(), nothing to do
+       here either */
 }
 
 std::size_t AbstractUserInterface::nodeCapacity() const {
@@ -1915,10 +1940,10 @@ AbstractUserInterface& AbstractUserInterface::clean() {
                 removeNodeInternal(id);
         }
 
-        /* 3. Next perform a clean for layouter node assignments and data node
-           attachments, keeping only layouts assigned to (remaining) valid node
-           handles and data that are either not attached or attached to valid
-           node handles. */
+        /* 3. Next perform a clean for layouter node assignments and data and
+           animation node attachments, keeping only layouts assigned to
+           (remaining) valid node handles and data/animations that are either
+           not attached or attached to valid node handles. */
         const Containers::StridedArrayView1D<const UnsignedShort> nodeGenerations = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::generation);
 
         /* In each layer remove data attached to invalid non-null nodes */
@@ -1928,6 +1953,11 @@ AbstractUserInterface& AbstractUserInterface::clean() {
         /* In each layouter remove layouts assigned to invalid nodes */
         for(Layouter& layouter: state.layouters) if(AbstractLayouter* const instance = layouter.used.instance.get())
             instance->cleanNodes(nodeGenerations);
+
+        /* For all animators with node attachments remove animations attached
+           to invalid non-null nodes */
+        for(AbstractAnimator& animator: Implementation::partitionedAnimatorsNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset))
+            animator.cleanNodes(nodeGenerations);
     }
 
     /* Unmark the UI as needing a clean() call, but keep the Update states
@@ -1953,8 +1983,15 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
        them only if there's something to advance */
     const UserInterfaceStates states = this->state();
     if(states >= UserInterfaceState::NeedsAnimationAdvance) {
-        /* Go through all generic animators and advance ones that need it */
-        for(AbstractAnimator& instance: state.animatorInstances) {
+        /* Go through all generic animators without NodeAttachment and advance
+           ones that need it */
+        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNone(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset)) {
+            if(instance.state() & AnimatorState::NeedsAdvance)
+                static_cast<AbstractGenericAnimator&>(instance).advance(time);
+        }
+
+        /* Then all generic animators with NodeAttachment */
+        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset)) {
             if(instance.state() & AnimatorState::NeedsAdvance)
                 static_cast<AbstractGenericAnimator&>(instance).advance(time);
         }
