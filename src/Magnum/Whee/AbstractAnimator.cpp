@@ -34,6 +34,7 @@
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Time.h>
 
+#include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/Handle.h"
 
 namespace Magnum { namespace Whee {
@@ -47,6 +48,7 @@ Debug& operator<<(Debug& debug, const AnimatorFeature value) {
         /* LCOV_EXCL_START */
         #define _c(value) case AnimatorFeature::value: return debug << "::" #value;
         _c(NodeAttachment)
+        _c(DataAttachment)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -56,7 +58,8 @@ Debug& operator<<(Debug& debug, const AnimatorFeature value) {
 
 Debug& operator<<(Debug& debug, const AnimatorFeatures value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::AnimatorFeatures{}", {
-        AnimatorFeature::NodeAttachment
+        AnimatorFeature::NodeAttachment,
+        AnimatorFeature::DataAttachment
     });
 }
 
@@ -177,7 +180,11 @@ struct AbstractAnimator::State {
     AnimatorHandle handle;
     AnimatorStates state;
 
-    /* 1 / 5 bytes free */
+    /* 1 byte free */
+
+    /* Used only if AnimatorFeature::DataAttachment is supported. Combined with
+       `layerData` to form DataHandles. */
+    LayerHandle layer = LayerHandle::Null;
 
     Containers::Array<Animation> animations;
     /* Indices in the `animations` array. The Animation then has a nextFree
@@ -190,6 +197,10 @@ struct AbstractAnimator::State {
     /* Used only if AnimatorFeature::NodeAttachment is supported, has the same
        size as `animations` */
     Containers::Array<NodeHandle> nodes;
+
+    /* Used only if AnimatorFeature::DataAttachment is supported, has the same
+       size as `animations`. Combined with `layer` to form DataHandles. */
+    Containers::Array<LayerDataHandle> layerData;
 
     Nanoseconds time{Math::ZeroInit};
 };
@@ -208,6 +219,26 @@ AbstractAnimator& AbstractAnimator::operator=(AbstractAnimator&&) noexcept = def
 
 AnimatorHandle AbstractAnimator::handle() const {
     return _state->handle;
+}
+
+AnimatorFeatures AbstractAnimator::features() const {
+    const AnimatorFeatures features = doFeatures();
+    CORRADE_ASSERT(!(features >= AnimatorFeature::NodeAttachment) ||
+                   !(features >= AnimatorFeature::DataAttachment),
+        "Whee::AbstractAnimator::features():" << AnimatorFeature::NodeAttachment << "and" << AnimatorFeature::DataAttachment << "are mutually exclusive", {});
+    return features;
+}
+
+LayerHandle AbstractAnimator::layer() const {
+    CORRADE_ASSERT(features() & AnimatorFeature::DataAttachment,
+        "Whee::AbstractAnimator::layer(): feature not supported", {});
+    return _state->layer;
+}
+
+void AbstractAnimator::setLayerInternal(const AbstractLayer& layer) {
+    /* Assumes the caller already verified presence of
+       AnimatorFeature::DataAttachment and that the layer isn't set yet */
+    _state->layer = layer.handle();
 }
 
 AnimatorStates AbstractAnimator::state() const {
@@ -322,6 +353,10 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
             CORRADE_INTERNAL_ASSERT(state.nodes.size() == state.animations.size() - 1);
             arrayAppend(state.nodes, NoInit, 1);
         }
+        if(features() & AnimatorFeature::DataAttachment) {
+            CORRADE_INTERNAL_ASSERT(state.layerData.size() == state.animations.size() - 1);
+            arrayAppend(state.layerData, NoInit, 1);
+        }
     }
 
     const UnsignedInt id = animation - state.animations;
@@ -337,6 +372,8 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
     animation->used.stopped = Nanoseconds::max();
     if(features() & AnimatorFeature::NodeAttachment)
         state.nodes[id] = NodeHandle::Null;
+    if(features() & AnimatorFeature::DataAttachment)
+        state.layerData[id] = LayerDataHandle::Null;
 
     /* Mark the animator as needing an advance() call if the new animation
        is being scheduled or played. Creation alone doesn't make it possible to
@@ -366,6 +403,38 @@ AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanosec
 
 AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const NodeHandle node, const AnimationFlags flags) {
     return create(played, duration, node, 1, flags);
+}
+
+AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
+        "Whee::AbstractAnimator::create(): data attachment not supported", {});
+    State& state = *_state;
+    CORRADE_ASSERT(state.layer != LayerHandle::Null,
+        "Whee::AbstractAnimator::create(): no layer set for data attachment", {});
+    CORRADE_ASSERT(data == DataHandle::Null || state.layer == dataHandleLayer(data),
+        "Whee::AbstractAnimator::create(): expected a data handle with" << state.layer << "but got" << data, {});
+    const AnimationHandle handle = create(played, duration, repeatCount, flags);
+    state.layerData[animationHandleId(handle)] = dataHandleData(data);
+    return handle;
+}
+
+AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
+    return create(played, duration, data, 1, flags);
+}
+
+AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
+    CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
+        "Whee::AbstractAnimator::create(): data attachment not supported", {});
+    State& state = *_state;
+    CORRADE_ASSERT(state.layer != LayerHandle::Null,
+        "Whee::AbstractAnimator::create(): no layer set for data attachment", {});
+    const AnimationHandle handle = create(played, duration, repeatCount, flags);
+    state.layerData[animationHandleId(handle)] = data;
+    return handle;
+}
+
+AnimationHandle AbstractAnimator::create(const Nanoseconds played, const Nanoseconds duration, const LayerDataHandle data, const AnimationFlags flags) {
+    return create(played, duration, data, 1, flags);
 }
 
 void AbstractAnimator::remove(const AnimationHandle handle) {
@@ -401,6 +470,8 @@ void AbstractAnimator::removeInternal(const UnsignedInt id) {
        freed animations */
     if(features() & AnimatorFeature::NodeAttachment)
         state.nodes[id] = NodeHandle::Null;
+    if(features() & AnimatorFeature::DataAttachment)
+        state.layerData[id] = LayerDataHandle::Null;
 
     /* Put the layout at the end of the free list (while they're allocated from
        the front) to not exhaust the generation counter too fast. If the free
@@ -595,6 +666,84 @@ Containers::StridedArrayView1D<const NodeHandle> AbstractAnimator::nodes() const
     const State& state = *_state;
     CORRADE_INTERNAL_ASSERT(state.nodes.size() == state.animations.size());
     return state.nodes;
+}
+
+void AbstractAnimator::attach(const AnimationHandle animation, const DataHandle data) {
+    CORRADE_ASSERT(isHandleValid(animation),
+        "Whee::AbstractAnimator::attach(): invalid handle" << animation, );
+    attachInternal(animationHandleId(animation), data);
+}
+
+void AbstractAnimator::attach(const AnimatorDataHandle animation, const DataHandle data) {
+    CORRADE_ASSERT(isHandleValid(animation),
+        "Whee::AbstractAnimator::attach(): invalid handle" << animation, );
+    attachInternal(animatorDataHandleId(animation), data);
+}
+
+void AbstractAnimator::attachInternal(const UnsignedInt id, const DataHandle data) {
+    CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
+        "Whee::AbstractAnimator::attach(): data attachment not supported", );
+    State& state = *_state;
+    CORRADE_ASSERT(state.layer != LayerHandle::Null,
+        "Whee::AbstractAnimator::attach(): no layer set for data attachment", );
+    CORRADE_ASSERT(data == DataHandle::Null || state.layer == dataHandleLayer(data),
+        "Whee::AbstractAnimator::attach(): expected a data handle with" << state.layer << "but got" << data, );
+    state.layerData[id] = dataHandleData(data);
+}
+
+void AbstractAnimator::attach(const AnimationHandle animation, const LayerDataHandle data) {
+    CORRADE_ASSERT(isHandleValid(animation),
+        "Whee::AbstractAnimator::attach(): invalid handle" << animation, );
+    attachInternal(animationHandleId(animation), data);
+}
+
+void AbstractAnimator::attach(const AnimatorDataHandle animation, const LayerDataHandle data) {
+    CORRADE_ASSERT(isHandleValid(animation),
+        "Whee::AbstractAnimator::attach(): invalid handle" << animation, );
+    attachInternal(animatorDataHandleId(animation), data);
+}
+
+void AbstractAnimator::attachInternal(const UnsignedInt id, const LayerDataHandle data) {
+    CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
+        "Whee::AbstractAnimator::attach(): data attachment not supported", );
+    State& state = *_state;
+    CORRADE_ASSERT(state.layer != LayerHandle::Null,
+        "Whee::AbstractAnimator::attach(): no layer set for data attachment", );
+    state.layerData[id] = data;
+}
+
+DataHandle AbstractAnimator::data(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractAnimator::data(): invalid handle" << handle, {});
+    return dataInternal(animationHandleId(handle));
+}
+
+DataHandle AbstractAnimator::data(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractAnimator::data(): invalid handle" << handle, {});
+    return dataInternal(animatorDataHandleId(handle));
+}
+
+DataHandle AbstractAnimator::dataInternal(const UnsignedInt id) const {
+    CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
+        "Whee::AbstractAnimator::data(): feature not supported", {});
+    const State& state = *_state;
+    const LayerDataHandle data = state.layerData[id];
+    if(data == LayerDataHandle::Null)
+        return DataHandle::Null;
+    /* attach() isn't possible to be called without a layer set, so the layer
+       should always be a non-null handle at this point */
+    const LayerHandle layer = state.layer;
+    CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null);
+    return dataHandle(layer, data);
+}
+
+Containers::StridedArrayView1D<const LayerDataHandle> AbstractAnimator::layerData() const {
+    CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
+        "Whee::AbstractAnimator::layerData(): feature not supported", {});
+    const State& state = *_state;
+    CORRADE_INTERNAL_ASSERT(state.layerData.size() == state.animations.size());
+    return state.layerData;
 }
 
 AnimationState AbstractAnimator::state(const AnimationHandle handle) const {
@@ -817,6 +966,42 @@ void AbstractAnimator::cleanNodes(const Containers::StridedArrayView1D<const Uns
     doClean(animationIdsToRemove);
 }
 
+void AbstractAnimator::cleanData(const Containers::StridedArrayView1D<const UnsignedShort>& dataHandleGenerations) {
+    CORRADE_ASSERT(features() >= AnimatorFeature::DataAttachment,
+        "Whee::AbstractAnimator::cleanData(): feature not supported", );
+    State& state = *_state;
+    CORRADE_ASSERT(state.layer != LayerHandle::Null,
+        "Whee::AbstractAnimator::cleanData(): no layer set for data attachment", );
+
+    /** @todo have some bump allocator for this */
+    Containers::BitArray animationIdsToRemove{ValueInit, state.animations.size()};
+
+    CORRADE_INTERNAL_ASSERT(state.layerData.size() == state.animations.size());
+    for(std::size_t i = 0; i != state.layerData.size(); ++i) {
+        const LayerDataHandle data = state.layerData[i];
+
+        /* Skip animations that are free or that aren't attached to any data */
+        if(data == LayerDataHandle::Null)
+            continue;
+
+        /* For used & attached animations compare the generation of the data
+           they're attached to. If it differs, remove the animation and mark
+           the corresponding index so the implementation can do its own cleanup
+           in doClean(). */
+        /** @todo check that the ID is in bounds and if it's not, remove as
+            well? to avoid OOB access if the animation is accidentally attached
+            to a LayerDataHandle from a different layer that has more data */
+        if(layerDataHandleGeneration(data) != dataHandleGenerations[layerDataHandleId(data)]) {
+            removeInternal(i);
+            animationIdsToRemove.set(i);
+        }
+    }
+
+    /* As removeInternal() was already called in the above loop, we don't need
+       to delegate to clean() but can call doClean() directly */
+    doClean(animationIdsToRemove);
+}
+
 Containers::Pair<bool, bool> AbstractAnimator::advance(const Nanoseconds time, const Containers::MutableBitArrayView active, const Containers::StridedArrayView1D<Float>& factors, const Containers::MutableBitArrayView remove) {
     State& state = *_state;
     CORRADE_ASSERT(active.size() == state.animations.size() &&
@@ -909,6 +1094,15 @@ AbstractGenericAnimator::AbstractGenericAnimator(AbstractGenericAnimator&&) noex
 AbstractGenericAnimator::~AbstractGenericAnimator() = default;
 
 AbstractGenericAnimator& AbstractGenericAnimator::operator=(AbstractGenericAnimator&&) noexcept = default;
+
+void AbstractGenericAnimator::setLayer(const AbstractLayer& layer) {
+    CORRADE_ASSERT(features() & AnimatorFeature::DataAttachment,
+        "Whee::AbstractGenericAnimator::setLayer(): feature not supported", );
+    CORRADE_ASSERT(this->layer() == LayerHandle::Null,
+        "Whee::AbstractGenericAnimator::setLayer(): layer already set to" << this->layer(), );
+
+    setLayerInternal(layer);
+}
 
 void AbstractGenericAnimator::advance(const Nanoseconds time) {
     /** @todo have some bump allocator for this (doesn't make sense to have it

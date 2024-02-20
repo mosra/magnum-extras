@@ -110,9 +110,10 @@ CORRADE_ENUMSET_OPERATORS(LayerFeatures)
 @brief Layer state
 @m_since_latest
 
-Used to decide whether @ref AbstractLayer::update() (called from
-@ref AbstractUserInterface::update()) need to be called to refresh the internal
-state before the interface is drawn or an event is handled. See
+Used to decide whether @ref AbstractLayer::cleanData() (called from
+@ref AbstractUserInterface::clean()) or @ref AbstractLayer::update() (called
+from @ref AbstractUserInterface::update()) need to be called to refresh the
+internal state before the interface is drawn or an event is handled. See
 @ref UserInterfaceState for interface-wide state.
 @see @ref LayerStates, @ref AbstractLayer::state()
 */
@@ -149,6 +150,15 @@ enum class LayerState: UnsignedByte {
      * @ref LayerState::NeedsUpdate.
      */
     NeedsAttachmentUpdate = NeedsUpdate|(1 << 1),
+
+    /**
+     * @ref AbstractLayer::cleanData() (which is called from
+     * @ref AbstractUserInterface::clean()) needs to be called to prune
+     * animations attached to removed data. Set implicitly after every
+     * @ref AbstractLayer::remove() call, is reset next time
+     * @ref AbstractLayer::cleanData() is called.
+     */
+    NeedsDataClean = 1 << 2
 };
 
 /**
@@ -374,6 +384,26 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         void cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations);
 
         /**
+         * @brief Clean animations attached to no longer valid data
+         *
+         * Used internally from @ref AbstractUserInterface::clean(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave. Expects that
+         * all @p animators expose @ref AnimatorFeature::DataAttachment and
+         * their @ref AbstractAnimator::layer() matches @ref handle(), and
+         * assumes that all such animators are passed together in a single
+         * call. Delegates to @ref AbstractAnimator::cleanData() for every
+         * animator, see its documentation for more information.
+         *
+         * Calling this function resets @ref LayerState::NeedsDataClean,
+         * however note that behavior of this function is independent of
+         * @ref state() --- it performs the clean always regardless of what
+         * flags are set.
+         */
+        void cleanData(const Containers::Iterable<AbstractAnimator>& animators);
+
+        /**
          * @brief Update visible layer data to given offsets and positions
          *
          * Used internally from @ref AbstractUserInterface::update(). Exposed
@@ -567,9 +597,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @p handle. See also @ref remove(LayerDataHandle) which is a simpler
          * operation if the data is already known to belong to this layer.
          *
-         * If @p handle is attached to a node, calling this function causes
-         * @ref LayerState::NeedsAttachmentUpdate to be set. Other than that,
-         * no flag is set to trigger a subsequent @ref cleanNodes() or
+         * Calling this function causes @ref LayerState::NeedsDataClean to be
+         * set. If @p handle is attached to a node, calling this function also
+         * causes @ref LayerState::NeedsAttachmentUpdate to be set. Other than
+         * that, no flag is set to trigger a subsequent @ref cleanNodes() or
          * @ref update() --- instead the subclass is meant to wrap this
          * function in a public API and perform appropriate cleanup work
          * directly there.
@@ -585,9 +616,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @p handle. See also @ref remove(DataHandle) which additionally
          * checks that the data belongs to this layer.
          *
-         * If @p handle is attached to a node, calling this function causes
-         * @ref LayerState::NeedsAttachmentUpdate to be set. Other than that,
-         * no flag is set to trigger a subsequent @ref cleanNodes() or
+         * Calling this function causes @ref LayerState::NeedsDataClean to be
+         * set. If @p handle is attached to a node, calling this function also
+         * causes @ref LayerState::NeedsAttachmentUpdate to be set. Other than
+         * that, no flag is set to trigger a subsequent @ref cleanNodes() or
          * @ref update() --- instead the subclass is meant to wrap this
          * function in a public API and perform appropriate cleanup work
          * directly there.

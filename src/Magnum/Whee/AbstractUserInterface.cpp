@@ -30,6 +30,7 @@
 #include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Reference.h>
 #include <Magnum/Math/Time.h>
@@ -58,6 +59,7 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         _c(NeedsLayoutUpdate)
         _c(NeedsLayoutAssignmentUpdate)
         _c(NeedsNodeUpdate)
+        _c(NeedsDataClean)
         _c(NeedsNodeClean)
         _c(NeedsRendererSizeSetup)
         _c(NeedsAnimationAdvance)
@@ -71,6 +73,8 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
 Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::UserInterfaceStates{}", {
         UserInterfaceState::NeedsNodeClean,
+        /* Implied by NeedsNodeClean, has to be after */
+        UserInterfaceState::NeedsDataClean,
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsNodeUpdate,
         /* Implied by NeedsNodeUpdate, has to be after */
@@ -160,7 +164,12 @@ union Layer {
         LayerHandle previous;
         LayerHandle next;
 
-        /* 2 bytes free */
+        /* Offset into the `State::animatorInstances` array for this layer.
+           While there can be at most 256 animators, the offset cannot be an
+           8-bit type as it would be impossible to distinguish for a layer
+           having no animators whether the remaining 256 animators are after it
+           (offset = 0) or before it (offset = 256). */
+        UnsignedShort dataAttachmentAnimatorOffset;
     } used;
 
     /* Used only if the Layer is among the free ones */
@@ -182,12 +191,19 @@ union Layer {
            than 8 bits in order to distinguish between index 255 and "no next
            free layer" (which is now 65535). */
         UnsignedShort next;
+
+        UnsignedShort:16;
+
+        /* Has to be preserved as it's a running offset maintained across both
+           used and free layers */
+        UnsignedShort dataAttachmentAnimatorOffset;
     } free;
 };
 
 static_assert(
     offsetof(Layer::Used, instance) == offsetof(Layer::Free, instance) &&
-    offsetof(Layer::Used, generation) == offsetof(Layer::Free, generation),
+    offsetof(Layer::Used, generation) == offsetof(Layer::Free, generation) &&
+    offsetof(Layer::Used, dataAttachmentAnimatorOffset) == offsetof(Layer::Free, dataAttachmentAnimatorOffset),
     "Layer::Used and Free layout not compatible");
 
 union Layouter {
@@ -451,7 +467,8 @@ struct AbstractUserInterface::State {
     UnsignedShort lastFreeAnimator = 0xffffu;
 
     /* Animator instances, partitioned by type. Inserted into by
-       set*AnimatorInstance(), removed from by removeAnimator() */
+       set*AnimatorInstance(), removed from by removeAnimator(), per-layer
+       data animator offsets are in `Layer::dataAttachmentAnimatorOffset`. */
     Containers::Array<Containers::Reference<AbstractAnimator>> animatorInstances;
     UnsignedInt animatorInstancesNodeAttachmentOffset;
 
@@ -644,17 +661,19 @@ UserInterfaceStates AbstractUserInterface::state() const {
        through all layers and inherit the Needs* flags from them. Invalid
        (removed) layers have instances set to nullptr as well, so this will
        skip them. */
-    if(!(state.state >= UserInterfaceState::NeedsDataAttachmentUpdate)) for(const Layer& layer: state.layers) {
+    if(!(state.state >= (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))) for(const Layer& layer: state.layers) {
         if(const AbstractLayer* const instance = layer.used.instance.get()) {
             const LayerStates layerState = instance->state();
             if(layerState >= LayerState::NeedsUpdate)
                 states |= UserInterfaceState::NeedsDataUpdate;
             if(layerState >= LayerState::NeedsAttachmentUpdate)
                 states |= UserInterfaceState::NeedsDataAttachmentUpdate;
+            if(layerState >= LayerState::NeedsDataClean)
+                states |= UserInterfaceState::NeedsDataClean;
 
             /* There's no broader state than this so if it's set, we can stop
                iterating further */
-            if(states == UserInterfaceState::NeedsDataAttachmentUpdate)
+            if(states == (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))
                 break;
         }
     }
@@ -877,6 +896,11 @@ LayerHandle AbstractUserInterface::createLayer(const LayerHandle before) {
     if(state.firstLayer == before)
         state.firstLayer = handle;
 
+    /* (Re)initialize running offsets for attached data animators */
+    Implementation::partitionedAnimatorsCreateLayer(state.animatorInstances,
+        stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset),
+        handle);
+
     return handle;
 }
 
@@ -944,6 +968,12 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
         else
             state.firstLayer = originalNext;
     }
+
+    /* Prune animators associated with the to-be-removed layer from the
+       list */
+    Implementation::partitionedAnimatorsRemoveLayer(state.animatorInstances,
+        stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset),
+        handle);
 
     /* Delete the instance. The instance being null then means that the layer
        is either free or is newly created until setLayerInstance() is called,
@@ -1353,13 +1383,17 @@ AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(
     const UnsignedInt id = animatorHandleId(handle);
     CORRADE_ASSERT(!state.animators[id].used.instance,
         messagePrefix << "instance for" << handle << "already set", *state.animators[0].used.instance);
+    CORRADE_ASSERT(!(instance->features() >= AnimatorFeature::DataAttachment) || instance->layer() != LayerHandle::Null,
+        messagePrefix << "no layer set for a data attachment animator", *state.animators[0].used.instance);
 
     /* Insert into the partitioned animator list based on what features are
        supported */
     Implementation::partitionedAnimatorsInsert(state.animatorInstances,
         *instance,
         instance->features(),
-        state.animatorInstancesNodeAttachmentOffset);
+        instance->features() >= AnimatorFeature::DataAttachment ? instance->layer() : LayerHandle::Null,
+        state.animatorInstancesNodeAttachmentOffset,
+        stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset));
 
     /* Take over the instance */
     Animator& animator = state.animators[id];
@@ -1396,7 +1430,9 @@ void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
         Implementation::partitionedAnimatorsRemove(state.animatorInstances,
             *instance,
             instance->features(),
-            state.animatorInstancesNodeAttachmentOffset);
+            instance->features() >= AnimatorFeature::DataAttachment ? instance->layer() : LayerHandle::Null,
+            state.animatorInstancesNodeAttachmentOffset,
+            stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset));
 
     /* Delete the instance. The instance being null then means that the
        animator is either free or is newly created until set*AnimatorInstance()
@@ -1451,6 +1487,28 @@ void AbstractUserInterface::attachAnimation(const NodeHandle node, const Animati
         redundantly again, consider using some internal assert-less helper if
         it proves to be a bottleneck */
     instance.attach(animationHandleData(animation), node);
+
+    /* There's no state flag set by AbstractAnimator::attach(), nothing to do
+       here either */
+}
+
+void AbstractUserInterface::attachAnimation(const DataHandle data, const AnimationHandle animation) {
+    CORRADE_ASSERT(data == DataHandle::Null || isHandleValid(data),
+        "Whee::AbstractUserInterface::attachAnimation(): invalid handle" << data, );
+    CORRADE_ASSERT(isHandleValid(animation),
+        "Whee::AbstractUserInterface::attachAnimation(): invalid handle" << animation, );
+    AbstractAnimator& instance = *_state->animators[animationHandleAnimatorId(animation)].used.instance;
+    CORRADE_ASSERT(instance.features() & AnimatorFeature::DataAttachment,
+        "Whee::AbstractUserInterface::attachAnimation(): data attachment not supported by this animator", );
+    /* The instance is enforced to have a layer set in set*AnimatorInstance()
+       already, no need to check that again here */
+    CORRADE_INTERNAL_ASSERT(instance.layer() != LayerHandle::Null);
+    CORRADE_ASSERT(data == DataHandle::Null || instance.layer() == dataHandleLayer(data),
+        "Whee::AbstractUserInterface::attachAnimation(): expected a data handle with" << instance.layer() << "but got" << data, );
+    /** @todo this performs the animation handle, feature & layer validity
+        check redundantly again, consider using some internal assert-less
+        helper if it proves to be a bottleneck */
+    instance.attach(animationHandleData(animation), data);
 
     /* There's no state flag set by AbstractAnimator::attach(), nothing to do
        here either */
@@ -1896,8 +1954,10 @@ AbstractUserInterface& AbstractUserInterface::clean() {
     /* Get the state including what bubbles from layers. If there's nothing to
        clean, bail. */
     const UserInterfaceStates states = this->state();
-    if(!(states >= UserInterfaceState::NeedsNodeClean))
+    if(!(states >= UserInterfaceState::NeedsDataClean)) {
+        CORRADE_INTERNAL_ASSERT(!(states >= UserInterfaceState::NeedsNodeClean));
         return *this;
+    }
 
     State& state = *_state;
 
@@ -1956,8 +2016,21 @@ AbstractUserInterface& AbstractUserInterface::clean() {
 
         /* For all animators with node attachments remove animations attached
            to invalid non-null nodes */
-        for(AbstractAnimator& animator: Implementation::partitionedAnimatorsNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset))
+        for(AbstractAnimator& animator: Implementation::partitionedAnimatorsNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset)))
             animator.cleanNodes(nodeGenerations);
+    }
+
+    /* If no data clean is needed, we don't need to iterate the layers to
+       discover which ones need it */
+    if(states >= UserInterfaceState::NeedsDataClean) {
+        /* Call cleanData() only on layers that themselves set
+           LayerState::NeedsDataClean or if UserInterfaceState::NeedsDataClean
+           is set on the UI itself (for example implied by NeedsNodeClean), it
+           doesn't make sense to do otherwise */
+        for(Layer& layer: state.layers) if(AbstractLayer* const instance = layer.used.instance.get()) {
+            if(state.state >= UserInterfaceState::NeedsDataClean || instance->state() >= LayerState::NeedsDataClean)
+                instance->cleanData(Implementation::partitionedAnimatorsDataAttachment(state.animatorInstances, stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset), instance->handle()));
+        }
     }
 
     /* Unmark the UI as needing a clean() call, but keep the Update states
@@ -1991,10 +2064,17 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
         }
 
         /* Then all generic animators with NodeAttachment */
-        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset)) {
+        const Containers::StridedArrayView1D<const UnsignedShort> dataAttachmentAnimatorOffsets = stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset);
+        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, dataAttachmentAnimatorOffsets)) {
             if(instance.state() & AnimatorState::NeedsAdvance)
                 static_cast<AbstractGenericAnimator&>(instance).advance(time);
         }
+
+        /* Then, for each layer all generic animators with DataAttachment */
+        for(std::size_t i = 0; i != state.layers.size(); ++i)
+            for(AbstractAnimator& instance: Implementation::partitionedAnimatorsDataAttachment(state.animatorInstances, dataAttachmentAnimatorOffsets, layerHandle(i, state.layers[i].used.generation)))
+                if(instance.state() & AnimatorState::NeedsAdvance)
+                    static_cast<AbstractGenericAnimator&>(instance).advance(time);
     }
 
     /* Update current time. This is done even if no advance() was called. */
