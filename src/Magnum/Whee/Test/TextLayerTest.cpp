@@ -516,7 +516,17 @@ void TextLayerTest::sharedAddFont() {
     shared.setGlyphCache(cache);
     CORRADE_COMPARE(shared.fontCount(), 0);
 
-    struct: Text::AbstractFont {
+    struct
+        /* MSVC 2017 (_MSC_VER == 191x) crashes at runtime accessing instance2
+           in the following case. Not a problem in MSVC 2015 or 2019+.
+            struct: SomeBase {
+            } instance1, instance2;
+           Simply naming the derived struct is enough to fix the crash, FFS. */
+        #if defined(CORRADE_TARGET_MSVC) && _MSC_VER >= 1910 && _MSC_VER < 1920
+        ThisNameAlonePreventsMSVC2017FromBlowingUp
+        #endif
+        : Text::AbstractFont
+    {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return false; }
         void doClose() override {}
