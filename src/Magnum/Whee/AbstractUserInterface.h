@@ -174,15 +174,26 @@ enum class UserInterfaceState: UnsignedShort {
     NeedsNodeUpdate = NeedsLayoutAssignmentUpdate|(1 << 6),
 
     /**
+     * @ref AbstractUserInterface::clean() needs to be called to prune
+     * animations attached to removed data. Set implicitly if any of the layers
+     * have @ref LayerState::NeedsDataClean set and transitively after every
+     * @ref AbstractUserInterface::removeNode() call, is reset next time
+     * @ref AbstractUserInterface::clean() is called. Implied by
+     * @ref UserInterfaceState::NeedsNodeClean.
+     */
+    NeedsDataClean = 1 << 7,
+
+    /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
      * hierarchies of removed nodes and data, layouts and animation assigned to
      * those. Set implicitly after every
      * @ref AbstractUserInterface::removeNode() call, is reset to
      * @ref UserInterfaceState::NeedsNodeUpdate next time
      * @ref AbstractUserInterface::clean() is called. Implies
-     * @ref UserInterfaceState::NeedsNodeUpdate.
+     * @ref UserInterfaceState::NeedsNodeUpdate and
+     * @relativeref{UserInterfaceState,NeedsDataClean}.
      */
-    NeedsNodeClean = NeedsNodeUpdate|(1 << 7),
+    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 8),
 
     /**
      * @ref AbstractUserInterface::updateRenderer() needs to be called to set
@@ -192,7 +203,7 @@ enum class UserInterfaceState: UnsignedShort {
      * point, is reset next time @ref AbstractUserInterface::updateRenderer()
      * is called.
      */
-    NeedsRendererSizeSetup = 1 << 8,
+    NeedsRendererSizeSetup = 1 << 9,
 
     /**
      * @ref AbstractUserInterface::advanceAnimations() needs to be called to
@@ -202,7 +213,7 @@ enum class UserInterfaceState: UnsignedShort {
      * animations are @ref AnimationState::Scheduled,
      * @ref AnimationState::Playing or @ref AnimationState::Paused anymore.
      */
-    NeedsAnimationAdvance = 1 << 9,
+    NeedsAnimationAdvance = 1 << 10,
 };
 
 /**
@@ -748,6 +759,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @p handle and @ref isHandleValid(DataHandle) const returns
          * @cpp false @ce for all data associated with @p handle.
          *
+         * Animators with @ref AnimatorFeature::DataAttachment that were
+         * associated with this layers are kept, but are excluded from any
+         * further processing in @ref clean() or @ref advanceAnimations().
+         * Calling @ref removeAnimator() on these is left to the user.
+         *
          * Calling this function causes
          * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set.
          * @see @ref clean()
@@ -1031,7 +1047,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Expects that @p instance was created with an @ref AnimatorHandle
          * returned from @ref createAnimator() earlier, the handle is valid and
          * @ref setGenericAnimatorInstance() wasn't called for the same handle
-         * yet.
+         * yet. Additionally, if @ref AnimatorFeature::DataAttachment is
+         * supported by @p instance, expects that
+         * @ref AbstractGenericAnimator::setLayer() has already been called on
+         * it.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
@@ -1101,6 +1120,27 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref NodeHandle::Null.
          */
         void attachAnimation(NodeHandle node, AnimationHandle animation);
+
+        /**
+         * @brief Attach an animation to a data
+         *
+         * A shorthand for extracting a @ref AnimatorHandle from @p animation
+         * using @ref animationHandleAnimator(), retrieving the particular
+         * animator instance using @ref animator() and then calling
+         * @ref AbstractAnimator::attach(AnimatorDataHandle, DataHandle) with a
+         * @ref AnimatorDataHandle extracted with @ref animationHandleData().
+         * See these functions for more information. In addition to
+         * @ref AbstractAnimator::attach(AnimatorDataHandle, DataHandle), this
+         * function checks that @p data is either valid with the layer portion
+         * matching @ref AbstractAnimator::layer() of given animator or
+         * @ref DataHandle::Null.
+         *
+         * Note that unlike @ref AbstractAnimator::attach(AnimationHandle, LayerDataHandle),
+         * here's no convenience function that would take a
+         * @ref LayerDataHandle as it wouldn't be able to provide any extra
+         * checks over calling the @ref AbstractAnimator API directly.
+         */
+        void attachAnimation(DataHandle data, AnimationHandle animation);
 
         /**
          * @}
@@ -1427,9 +1467,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * Called implicitly from @ref update() and subsequently also from
          * @ref draw() and all event processing functions. If @ref state()
-         * doesn't contain @ref UserInterfaceState::NeedsNodeClean, this
-         * function is a no-op, otherwise it performs a subset of the following
-         * depending on the state:
+         * contains neither @ref UserInterfaceState::NeedsNodeClean nor
+         * @ref UserInterfaceState::NeedsDataClean, this function is a no-op,
+         * otherwise it performs a subset of the following depending on the
+         * state:
          *
          * -    Removes nodes with an invalid (removed) parent node
          * -    Calls @ref AbstractLayer::cleanNodes() with updated node
@@ -1441,6 +1482,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      supporting @ref AnimatorFeature::NodeAttachment with updated
          *      node generations, causing removal of animations attached to
          *      invalid nodes
+         * -    For all layers marked with @ref LayerState::NeedsDataClean
+         *      calls @ref AbstractLayer::cleanData() with all animators
+         *      supporting @ref AnimatorFeature::DataAttachment associated with
+         *      given layer, causing removal of animations attached to invalid
+         *      data
          *
          * After calling this function, @ref state() doesn't contain
          * @ref UserInterfaceState::NeedsNodeClean anymore;

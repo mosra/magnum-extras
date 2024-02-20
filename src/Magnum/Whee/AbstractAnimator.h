@@ -46,12 +46,24 @@ namespace Magnum { namespace Whee {
 enum class AnimatorFeature: UnsignedByte {
     /**
      * The animations may be attached to nodes and are meant to be
-     * automatically removed when given node is removed.
+     * automatically removed when given node is removed. Mutually exclusive
+     * with @ref AnimatorFeature::DataAttachment.
      * @see @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags),
      *      @ref AbstractAnimator::node(AnimationHandle) const,
      *      @ref AbstractAnimator::cleanNodes()
      */
     NodeAttachment = 1 << 0,
+
+    /**
+     * The animations may be attached to layer data and are meant to be
+     * automatically removed when given data is removed. Mutually exclusive
+     * with @ref AnimatorFeature::NodeAttachment.
+     * @see @ref AbstractGenericAnimator::setLayer(),
+     *      @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
+     *      @ref AbstractAnimator::data(AnimationHandle) const,
+     *      @ref AbstractAnimator::cleanData()
+     */
+    DataAttachment = 1 << 1,
 };
 
 /**
@@ -287,7 +299,19 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         AnimatorHandle handle() const;
 
         /** @brief Features exposed by an animator */
-        AnimatorFeatures features() const { return doFeatures(); }
+        AnimatorFeatures features() const;
+
+        /**
+         * @brief Layer handle a data animator is associated with
+         *
+         * Expects that the animator supports
+         * @ref AnimatorFeature::DataAttachment. If the animator isn't an
+         * @ref AbstractGenericAnimator
+         * @ref AbstractGenericAnimator::setLayer() wasn't called yet, returns
+         * @ref LayerHandle::Null.
+         * @see @ref features()
+         */
+        LayerHandle layer() const;
 
         /**
          * @brief Animator state
@@ -695,6 +719,105 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         Containers::StridedArrayView1D<const NodeHandle> nodes() const;
 
         /**
+         * @brief Attach an animation to a data
+         *
+         * Makes the @p animation handle tied to a particular @p data, meaning
+         * it'll get scheduled for removal during the next @ref cleanData()
+         * call when @ref AbstractLayer::remove() is called for @p data or when
+         * it gets removed as a consequence of a node removal.
+         *
+         * Expects that @p animation is valid and that the animator supports
+         * @ref AnimatorFeature::DataAttachment. The @p data is expected to be
+         * either @ref DataHandle::Null or with the layer part matching
+         * @ref layer(). Other than that it can be anything but if it's not
+         * @ref DataHandle::Null and not valid the animation will be scheduled
+         * for deletion during the next @ref cleanData() call. If the
+         * @p animation is already attached to some data, this will overwrite
+         * the previous attachment --- i.e., it's not possible to have the same
+         * animation attached to multiple data. The inverse, attaching multiple
+         * different animation handles to a single data, is supported however.
+         *
+         * Unlike with e.g. @ref AbstractLayer::attach(), calling this function
+         * does *not* cause any @ref AnimatorState to be set.
+         * @see @ref isHandleValid(AnimationHandle) const,
+         *      @ref dataHandleLayer(),
+         *      @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
+         *      @ref AbstractUserInterface::attachAnimation(DataHandle, AnimationHandle)
+         */
+        void attach(AnimationHandle animation, DataHandle data);
+
+        /**
+         * @brief Attach an animation to a data assuming the animation belongs to this animator
+         *
+         * Like @ref attach(AnimationHandle, DataHandle) but without checking
+         * that @p animation indeed belongs to this animator. See its
+         * documentation for more information.
+         */
+        void attach(AnimatorDataHandle animation, DataHandle data);
+
+        /**
+         * @brief Attach an animation to a data assuming the data belongs to a layer registered with this animator
+         *
+         * Like @ref attach(AnimationHandle, DataHandle) but without checking
+         * that @p data is indeed coming from @ref layer(). See its
+         * documentation for more information. Calling this function with
+         * @ref LayerDataHandle::Null is equivalent to calling
+         * @ref attach(AnimationHandle, DataHandle) with @ref DataHandle::Null.
+         */
+        void attach(AnimationHandle animation, LayerDataHandle data);
+
+        /**
+         * @brief Attach an animation to a data assuming the animation belongs to this animator and the data belongs to a layer registered with this animator
+         *
+         * Like @ref attach(AnimationHandle, DataHandle) but without checking
+         * that @p animation indeed belongs to this animator and that
+         * that @p data is indeed coming from @ref layer(). See its
+         * documentation for more information. Calling this function with
+         * @ref LayerDataHandle::Null is equivalent to calling
+         * @ref attach(AnimationHandle, DataHandle) with @ref DataHandle::Null.
+         */
+        void attach(AnimatorDataHandle animation, LayerDataHandle data);
+
+        /**
+         * @brief Data handle an animation is attached to
+         *
+         * Expects that @p handle is valid and that the animator supports
+         * @ref AnimatorFeature::DataAttachment. If the animation isn't
+         * attached to any data, returns @ref DataHandle::Null, otherwise the
+         * layer portion of the handle is always equal to @ref layer().
+         *
+         * The returned handle may be invalid if either the animation got
+         * attached to an invalid data in the first place or the data was
+         * removed and @ref AbstractUserInterface::clean() wasn't called since.
+         * @see @ref isHandleValid(AnimationHandle) const, @ref features()
+         */
+        DataHandle data(AnimationHandle handle) const;
+
+        /**
+         * @brief Data handle an animation is attached to assuming the animation belongs to this animator
+         *
+         * Like @ref data(AnimationHandle) const but without checking that
+         * @p handle indeed belongs to this animator. See its documentation for
+         * more information.
+         * @see @ref animationHandleData()
+         */
+        DataHandle data(AnimatorDataHandle handle) const;
+
+        /**
+         * @brief Layer data attachments for all animations
+         *
+         * Expects that the animator supports
+         * @ref AnimatorFeature::DataAttachment. Meant to be used by animator
+         * implementations to map animation IDs to data handles if needed. Size
+         * of the returned view is the same as @ref capacity(). Items that are
+         * @ref LayerDataHandle::Null are either animations with no data
+         * attachments or corresponding to animations that are freed. Use
+         * @ref dataHandle(LayerHandle, LayerDataHandle) with @ref layer() to
+         * convert given handle to a @ref DataHandle if needed.
+         */
+        Containers::StridedArrayView1D<const LayerDataHandle> layerData() const;
+
+        /**
          * @brief Animation state
          *
          * Expects that @p handle is valid. Calculated based on the value of
@@ -876,6 +999,23 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         void cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations);
 
         /**
+         * @brief Clean animations attached to no longer valid data
+         *
+         * Used internally from @ref AbstractUserInterface::clean(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave. Expects that
+         * the animator supports @ref AnimatorFeature::DataAttachment, assumes
+         * that @p dataHandleGenerations contains handle generation counters
+         * for all data in layer matching @ref layer(), where the index is
+         * implicitly the handle ID. They're used to decide about data
+         * attachment validity, animations with invalid data attachments are
+         * then removed. Delegates to @ref clean() and subsequently
+         * @ref doClean(), see their documentation for more information.
+         */
+        void cleanData(const Containers::StridedArrayView1D<const UnsignedShort>& dataHandleGenerations);
+
+        /**
          * @brief Advance the animations
          * @param[in]  time     Time to which to advance
          * @param[out] active   Where to put a mask of active animations
@@ -945,10 +1085,15 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * API and perform appropriate initialization work there.
          *
          * If the animator advertises @ref AnimatorFeature::NodeAttachment, the
-         * node attachment is set to @ref NodeHandle::Null. Use
+         * node attachment is set to @ref NodeHandle::Null; if the animator
+         * advertises @ref AnimatorFeature::DataAttachment, the data attachment
+         * is set to @ref DataHandle::Null. Use
          * @ref create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags)
-         * to directly attach to a node, or call @ref attach(AnimationHandle, NodeHandle)
-         * to attach the animation afterwards.
+         * / @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
+         * to directly attach to a node / data, or call
+         * @ref attach(AnimationHandle, NodeHandle) /
+         * @ref attach(AnimationHandle, DataHandle) to attach the animation
+         * afterwards.
          */
         AnimationHandle create(Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
@@ -991,6 +1136,61 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         AnimationHandle create(Nanoseconds played, Nanoseconds duration, NodeHandle node, AnimationFlags flags);
 
         /**
+         * @brief Create an animation attached to a data
+         * @param played        Time at which the animation is played. Use
+         *      @ref Nanoseconds::max() for creating a stopped animation.
+         * @param duration      Duration of a single play of the animation
+         * @param data          Data the animation is attached to. Use
+         *      @ref DataHandle::Null to create an animation that isn't
+         *      attached to any data.
+         * @param repeatCount   Repeat count. Use @cpp 0 @ce for an
+         *      indefinitely repeating animation.
+         * @param flags         Flags
+         * @return New animation handle
+         *
+         * Expects that the animator supports
+         * @ref AnimatorFeature::DataAttachment, that @ref layer() isn't
+         * @ref LayerHandle::Null and that @p data is either
+         * @ref DataHandle::Null or the layer part of it matches @ref layer().
+         * Apart from that behaves the same as
+         * @ref create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags),
+         * see its documentation for more information. If @p data is not
+         * @ref DataHandle::Null, directly attaches the created animation to
+         * given data, equivalent to calling @ref attach(AnimationHandle, DataHandle).
+         * @see @ref dataHandleLayer()
+         */
+        AnimationHandle create(Nanoseconds played, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation attached to a data
+         *
+         * Same as calling @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
+         * with @p repeatCount set to @cpp 1 @ce.
+         */
+        AnimationHandle create(Nanoseconds played, Nanoseconds duration, DataHandle data, AnimationFlags flags);
+
+        /**
+         * @brief Create an animation attached to a data assuming the data belongs to the layer the animator is registered with
+         *
+         * Compared to @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
+         * also requires that @ref layer() isn't @ref LayerHandle::Null but
+         * then assumes the @p data is coming from a layer with a handle equal
+         * to @ref layer(). Calling this function with
+         * @ref LayerDataHandle::Null is equivalent to calling
+         * @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
+         * with @ref DataHandle::Null.
+         */
+        AnimationHandle create(Nanoseconds played, Nanoseconds duration, LayerDataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
+
+        /**
+         * @brief Create an animation attached to a data assuming the data belongs to the layer the animator is registered with
+         *
+         * Same as calling @ref create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags)
+         * with @p repeatCount set to @cpp 1 @ce.
+         */
+        AnimationHandle create(Nanoseconds played, Nanoseconds duration, LayerDataHandle data, AnimationFlags flags);
+
+        /**
          * @brief Remove an animation
          *
          * Expects that @p handle is valid. After this call,
@@ -1020,6 +1220,14 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          */
         void remove(AnimatorDataHandle handle);
 
+    #ifdef DOXYGEN_GENERATING_OUTPUT
+    private:
+    #else
+    protected:
+    #endif
+        /* Used by AbstractGenericAnimator::setLayer() */
+        MAGNUM_WHEE_LOCAL void setLayerInternal(const AbstractLayer& layer);
+
     private:
         /** @brief Implementation for @ref features() */
         virtual AnimatorFeatures doFeatures() const = 0;
@@ -1034,11 +1242,12 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * @ref AbstractUserInterface::advanceAnimations() whenever there are
          * any stopped animations that are meant to be removed, i.e. without
          * the @ref AnimationFlag::KeepOncePlayed. It's also called from
-         * @ref cleanNodes(), which is called from
+         * @ref cleanNodes() / @ref cleanData(), which is called from
          * @ref AbstractUserInterface::clean() (and transitively from
          * @ref AbstractUserInterface::update()) whenever
-         * @ref UserInterfaceState::NeedsNodeClean or any of the states that
-         * imply it are present in @ref AbstractUserInterface::state().
+         * @ref UserInterfaceState::NeedsNodeClean /
+         * @relativeref{UserInterfaceState,NeedsDataClean} or any of the states
+         * that imply it are present in @ref AbstractUserInterface::state().
          *
          * The @p animationIdsToRemove view has the same size as
          * @ref capacity() and is guaranteed to have bits set only for valid
@@ -1058,6 +1267,9 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         MAGNUM_WHEE_LOCAL void setFlagsInternal(UnsignedInt id, AnimationFlags flags);
         MAGNUM_WHEE_LOCAL void attachInternal(UnsignedInt id, NodeHandle node);
         MAGNUM_WHEE_LOCAL NodeHandle nodeInternal(UnsignedInt id) const;
+        MAGNUM_WHEE_LOCAL void attachInternal(UnsignedInt id, DataHandle data);
+        MAGNUM_WHEE_LOCAL void attachInternal(UnsignedInt id, LayerDataHandle data);
+        MAGNUM_WHEE_LOCAL DataHandle dataInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL Float factorInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL void playInternal(UnsignedInt id, Nanoseconds time);
         MAGNUM_WHEE_LOCAL void pauseInternal(UnsignedInt id, Nanoseconds time);
@@ -1108,6 +1320,29 @@ class MAGNUM_WHEE_EXPORT AbstractGenericAnimator: public AbstractAnimator {
          * information.
          */
         void advance(Nanoseconds time);
+
+    protected:
+        /**
+         * @brief Set a layer associated with this animator
+         *
+         * Expects that the animator supports
+         * @ref AnimatorFeature::DataAttachment and that this function hasn't
+         * been called yet. Saves @ref AbstractLayer::handle() of @p layer into
+         * @ref layer(), making it possible to call
+         * @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
+         * @ref create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags),
+         * @ref attach(AnimationHandle, DataHandle),
+         * @ref attach(AnimationHandle, LayerDataHandle),
+         * @ref attach(AnimatorDataHandle, DataHandle) and
+         * @ref attach(AnimatorDataHandle, LayerDataHandle).
+         *
+         * A concrete subclass exposing @ref AnimatorFeature::DataAttachment is
+         * meant to wrap this function in a public API, optionally restricting
+         * to a more concrete layer type, and performing any needed
+         * initialization work there, or alternatively taking an appropriately
+         * typed layer in a constructor and passing it to this function.
+         */
+        void setLayer(const AbstractLayer& layer);
 
     private:
         /**

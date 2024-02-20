@@ -126,6 +126,9 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void animationAttachNode();
     void animationAttachNodeInvalid();
     void animationAttachNodeInvalidFeatures();
+    void animationAttachData();
+    void animationAttachDataInvalid();
+    void animationAttachDataInvalidFeatures();
 
     void setSizeToLayers();
     void setSizeToRenderer();
@@ -141,6 +144,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void cleanRemoveNestedNodesRecycledHandle();
     void cleanRemoveNestedNodesRecycledHandleOrphanedCycle();
     void cleanRemoveAll();
+
+    void cleanRecycledLayerWithAnimators();
 
     void advanceAnimationsEmpty();
     void advanceAnimationsNoOp();
@@ -208,51 +213,62 @@ const struct {
 
 const struct {
     const char* name;
-    bool layers, layouters, nodeAttachmentAnimators;
+    bool layers, layouters, nodeAttachmentAnimators, dataAttachmentAnimators;
 } CleanData[]{
-    {"", false, false, false},
-    {"layers", true, false, false},
-    {"layouters", false, true, false},
-    {"node attachment animators", false, false, true},
-    {"all", true, true, true},
+    {"", false, false, false, false},
+    {"layers", true, false, false, false},
+    {"layouters", false, true, false, false},
+    {"node attachment animators", false, false, true, false},
+    /* Layers need to be enabled as well to have something to attach to */
+    {"data attachment animators", true, false, false, true},
+    {"all", true, true, true, true},
 };
 
 const struct {
     const char* name;
     bool layouters;
     bool nodeAttachmentAnimators;
+    bool dataAttachmentAnimators;
     bool clean;
     bool updateRenderer;
     bool noOp;
 } StateData[]{
     {"",
-        false, false, true, true, false},
+        false, false, false, true, true, false},
     {"with no-op calls",
-        false, false, true, true, true},
+        false, false, false, true, true, true},
     {"with implicit clean",
-        false, false, false, true, false},
+        false, false, false, false, true, false},
     {"with implicit clean and no-op calls",
-        false, false, false, true, true},
+        false, false, false, false, true, true},
     {"with implicit clean and renderer update",
-        false, false, false, false, false},
+        false, false, false, false, false, false},
     {"with layouters",
-        true, false, true, true, false},
+        true, false, false, true, true, false},
     {"with layouters, with no-op calls",
-        true, false, true, true, true},
+        true, false, false, true, true, true},
     {"with layouters, with implicit clean",
-        true, false, false, true, false},
+        true, false, false, false, true, false},
     {"with layouters, with implicit clean and no-op calls",
-        true, false, false, true, true},
+        true, false, false, false, true, true},
     {"with layouters, with implicit clean and renderer update",
-        true, false, false, false, false},
+        true, false, false, false, false, false},
     {"with node attachment animators",
-        false, true, true, true, false},
+        false, true, false, true, true, false},
     {"with node attachment animators, with no-op calls",
-        false, true, true, true, true},
+        false, true, false, true, true, true},
     {"with node attachment animators, with implicit clean",
-        false, true, false, true, false},
+        false, true, false, false, true, false},
     {"with node attachment animators, with implicit clean and no-op calls",
-        false, true, false, true, true},
+        false, true, false, false, true, true},
+    {"with data attachment animators",
+        false, false, true, true, true, false},
+    {"with data attachment animators, with no-op calls",
+        false, false, true, true, true, true},
+    {"with data attachment animators, with implicit clean",
+        false, false, true, false, true, false},
+    {"with data attachment animators, with implicit clean and no-op calls",
+        false, false, true, false, true, true},
 };
 
 const struct {
@@ -492,6 +508,20 @@ const struct {
 
 const struct {
     const char* name;
+    bool release;
+    bool move;
+    bool clean;
+    bool update;
+} EventCaptureCleanUpdateData[]{
+    {"release, clean + update before", true, false, true, true},
+    {"release, clean before", true, false, true, false},
+    {"release, update before", true, false, false, true},
+    {"release", true, false, false, false},
+    {"move", false, true, false, false},
+};
+
+const struct {
+    const char* name;
     NodeFlags flags;
     bool clearOrder;
     bool release;
@@ -623,6 +653,9 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::animationAttachNode,
               &AbstractUserInterfaceTest::animationAttachNodeInvalid,
               &AbstractUserInterfaceTest::animationAttachNodeInvalidFeatures,
+              &AbstractUserInterfaceTest::animationAttachData,
+              &AbstractUserInterfaceTest::animationAttachDataInvalid,
+              &AbstractUserInterfaceTest::animationAttachDataInvalidFeatures,
 
               &AbstractUserInterfaceTest::setSizeToLayers,
               &AbstractUserInterfaceTest::setSizeToRenderer,
@@ -644,7 +677,9 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
                        &AbstractUserInterfaceTest::cleanRemoveAll},
         Containers::arraySize(CleanData));
 
-    addTests({&AbstractUserInterfaceTest::advanceAnimationsEmpty,
+    addTests({&AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators,
+
+              &AbstractUserInterfaceTest::advanceAnimationsEmpty,
               &AbstractUserInterfaceTest::advanceAnimationsNoOp,
               &AbstractUserInterfaceTest::advanceAnimations,
               &AbstractUserInterfaceTest::advanceAnimationsInvalidTime,
@@ -702,7 +737,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
         Containers::arraySize(EventNodeRemovedData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved},
-        Containers::arraySize(UpdateData));
+        Containers::arraySize(CleanUpdateData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventCapture},
         Containers::arraySize(EventLayouterData));
@@ -722,7 +757,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
         Containers::arraySize(EventCaptureNodeRemovedData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventCaptureAllDataRemoved},
-        Containers::arraySize(EventCaptureUpdateData));
+        Containers::arraySize(EventCaptureCleanUpdateData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClick},
         Containers::arraySize(EventLayouterData));
@@ -734,7 +769,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
         Containers::arraySize(EventNodeRemovedData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved},
-        Containers::arraySize(UpdateData));
+        Containers::arraySize(CleanUpdateData));
 }
 
 void AbstractUserInterfaceTest::debugNodeFlag() {
@@ -820,11 +855,18 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
         Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean\n");
 
+    /* NeedsNodeClean is a superset of NeedsDataClean, so only one should be
+       printed */
+    } {
+        std::ostringstream out;
+        Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsDataClean);
+        CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean\n");
+
     /* NeedsNodeClean is a superset of all others, so it should be printed
        alone */
     } {
         std::ostringstream out;
-        Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
+        Debug{&out} << (UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsDataClean|UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(out.str(), "Whee::UserInterfaceState::NeedsNodeClean\n");
     }
 }
@@ -2176,6 +2218,15 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
         void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
 
+    struct GenericDataAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+
     AbstractUserInterface ui{{100, 100}};
 
     AnimatorHandle handle = ui.createAnimator();
@@ -2186,10 +2237,12 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
     ui.setGenericAnimatorInstance(nullptr);
     ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(AnimatorHandle(0xabcd)));
     ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
+    ui.setGenericAnimatorInstance(Containers::pointer<GenericDataAnimator>(ui.createAnimator()));
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractUserInterface::setGenericAnimatorInstance(): instance is null\n"
         "Whee::AbstractUserInterface::setGenericAnimatorInstance(): invalid handle Whee::AnimatorHandle(0xcd, 0xab)\n"
-        "Whee::AbstractUserInterface::setGenericAnimatorInstance(): instance for Whee::AnimatorHandle(0x0, 0x1) already set\n",
+        "Whee::AbstractUserInterface::setGenericAnimatorInstance(): instance for Whee::AnimatorHandle(0x0, 0x1) already set\n"
+        "Whee::AbstractUserInterface::setGenericAnimatorInstance(): no layer set for a data attachment animator\n",
         TestSuite::Compare::String);
 }
 
@@ -3107,7 +3160,11 @@ void AbstractUserInterfaceTest::animationAttachNodeInvalidFeatures() {
         using AbstractGenericAnimator::AbstractGenericAnimator;
         using AbstractGenericAnimator::create;
 
-        AnimatorFeatures doFeatures() const override { return {}; }
+        AnimatorFeatures doFeatures() const override {
+            /* Not using DataAttachment as it would need also a layer to be
+               set up, etc. Not worth the pain. */
+            return {};
+        }
         void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
     };
     ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
@@ -3119,6 +3176,137 @@ void AbstractUserInterfaceTest::animationAttachNodeInvalidFeatures() {
     ui.attachAnimation(node, handle);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractUserInterface::attachAnimation(): node attachment not supported by this animator\n");
+}
+
+void AbstractUserInterfaceTest::animationAttachData() {
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    DataHandle data = layer.create();
+
+    struct Animator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+    Containers::Pointer<Animator> instance{InPlaceInit, ui.createAnimator()};
+    instance->setLayer(layer);
+    Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+
+    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
+    CORRADE_COMPARE(animator.data(handle), DataHandle::Null);
+
+    ui.attachAnimation(data, handle);
+    CORRADE_COMPARE(animator.data(handle), data);
+
+    /* The animation attachments aren't removed immediately, only during next
+       clean() -- tested in cleanRemoveAttachedData() below */
+    layer.remove(data);
+    CORRADE_COMPARE(animator.data(handle), data);
+
+    /* Attaching to a null data should work also, it resets the attachment */
+    ui.attachAnimation(DataHandle::Null, handle);
+    CORRADE_COMPARE(animator.data(handle), DataHandle::Null);
+
+    /* There's no LayerDataHandle overload as that would not add anything
+       useful (i.e., no extra checks) on top of calling
+       AbstractAnimator::attach() directly */
+}
+
+void AbstractUserInterfaceTest::animationAttachDataInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+    Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    struct Animator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+    Containers::Pointer<Animator> instance{InPlaceInit, ui.createAnimator()};
+    instance->setLayer(layer1);
+    Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+
+    AnimationHandle animation = animator.create(0_nsec, 1_nsec);
+
+    DataHandle dataLayer1 = layer1.create();
+    DataHandle dataLayer2 = layer2.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.attachAnimation(dataHandle(layer1.handle(), 0xabcde, 0x123), animation);
+    ui.attachAnimation(dataLayer1, AnimationHandle::Null);
+    ui.attachAnimation(dataLayer1, AnimationHandle(0x12abcde34567));
+    ui.attachAnimation(dataLayer2, animation);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractUserInterface::attachAnimation(): invalid handle Whee::DataHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
+        "Whee::AbstractUserInterface::attachAnimation(): invalid handle Whee::AnimationHandle::Null\n"
+        "Whee::AbstractUserInterface::attachAnimation(): invalid handle Whee::AnimationHandle({0xab, 0x12}, {0x34567, 0xcde})\n"
+        "Whee::AbstractUserInterface::attachAnimation(): expected a data handle with Whee::LayerHandle(0x0, 0x1) but got Whee::DataHandle({0x1, 0x1}, {0x0, 0x1})\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractUserInterfaceTest::animationAttachDataInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    struct Animator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            /* Not DataAttachment */
+            return AnimatorFeature::NodeAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+    Animator& animator = ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+
+    DataHandle data = layer.create();
+    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.attachAnimation(data, handle);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractUserInterface::attachAnimation(): data attachment not supported by this animator\n");
 }
 
 void AbstractUserInterfaceTest::setSizeToLayers() {
@@ -3344,10 +3532,12 @@ void AbstractUserInterfaceTest::cleanNoOp() {
        uninitialized, MSVC as well. They aren't. */
     LayerHandle layerHandle{};
     LayouterHandle layouterHandle{};
-    AnimatorHandle animatorHandle{};
+    AnimatorHandle animatorHandle1{};
+    AnimatorHandle animatorHandle2{};
     DataHandle layerData{};
     LayoutHandle layouterData{};
-    AnimationHandle animatorData{};
+    AnimationHandle animatorData1{};
+    AnimationHandle animatorData2{};
     if(data.layers) {
         layerHandle = ui.createLayer();
 
@@ -3377,7 +3567,7 @@ void AbstractUserInterfaceTest::cleanNoOp() {
         layouterData = ui.layouter<Layouter>(layouterHandle).add(root);
     }
     if(data.nodeAttachmentAnimators) {
-        animatorHandle = ui.createAnimator();
+        animatorHandle1 = ui.createAnimator();
 
         struct Animator: AbstractGenericAnimator {
             using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -3388,10 +3578,30 @@ void AbstractUserInterfaceTest::cleanNoOp() {
             }
             void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
+        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
-        /* Data attached to the root node */
-        animatorData = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec, root);
+        /* Animation attached to the root node */
+        animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, root);
+    }
+    if(data.dataAttachmentAnimators) {
+        animatorHandle2 = ui.createAnimator();
+
+        struct Animator: AbstractGenericAnimator {
+            using AbstractGenericAnimator::AbstractGenericAnimator;
+            using AbstractGenericAnimator::setLayer;
+            using AbstractGenericAnimator::create;
+
+            AnimatorFeatures doFeatures() const override {
+                return AnimatorFeature::DataAttachment;
+            }
+            void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        };
+        Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
+        instance->setLayer(ui.layer(layerHandle));
+        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+
+        /* Animation attached to data attached to the root node */
+        animatorData2 = animator.create(0_nsec, 1_nsec, layerData);
     }
 
     /* Remove the nested node to create some "dirtiness" */
@@ -3402,7 +3612,9 @@ void AbstractUserInterfaceTest::cleanNoOp() {
     if(data.layouters)
         CORRADE_COMPARE(ui.layouter(layouterHandle).node(layouterData), root);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator(animatorHandle).node(animatorData), root);
+        CORRADE_COMPARE(ui.animator(animatorHandle1).node(animatorData1), root);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator(animatorHandle2).data(animatorData2), layerData);
 
     /* Clean should make no change as there's nothing dangling to remove */
     ui.clean();
@@ -3417,8 +3629,12 @@ void AbstractUserInterfaceTest::cleanNoOp() {
         CORRADE_COMPARE(ui.layouter(layouterHandle).node(layouterData), root);
     }
     if(data.nodeAttachmentAnimators) {
-        CORRADE_VERIFY(ui.isHandleValid(animatorData));
-        CORRADE_COMPARE(ui.animator(animatorHandle).node(animatorData), root);
+        CORRADE_VERIFY(ui.isHandleValid(animatorData1));
+        CORRADE_COMPARE(ui.animator(animatorHandle1).node(animatorData1), root);
+    }
+    if(data.dataAttachmentAnimators) {
+        CORRADE_VERIFY(ui.isHandleValid(animatorData2));
+        CORRADE_COMPARE(ui.animator(animatorHandle2).data(animatorData2), layerData);
     }
 }
 
@@ -3442,6 +3658,8 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
     AnimatorHandle animatorHandle1{};
     AnimatorHandle animatorHandle2{};
     AnimatorHandle animatorHandle3{};
+    AnimatorHandle animatorHandle4{};
+    AnimatorHandle animatorHandle5{};
     DataHandle layerData1{};
     DataHandle layerData2{};
     DataHandle layerData3{};
@@ -3455,6 +3673,10 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
     AnimationHandle animatorData3{};
     AnimationHandle animatorData4{};
     AnimationHandle animatorData5{};
+    AnimationHandle animatorData6{};
+    AnimationHandle animatorData7{};
+    AnimationHandle animatorData8{};
+    AnimationHandle animatorData9{};
     if(data.layers) {
         layerHandle1 = ui.createLayer();
         layerHandle2 = ui.createLayer();
@@ -3493,14 +3715,21 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
         layouterData3 = ui.layouter<Layouter>(layouterHandle1).add(root);
         layouterData4 = ui.layouter<Layouter>(layouterHandle2).add(nested);
     }
-    if(data.nodeAttachmentAnimators) {
-        animatorHandle1 = ui.createAnimator();
+    if(data.nodeAttachmentAnimators || data.dataAttachmentAnimators) {
         animatorHandle2 = ui.createAnimator();
-        animatorHandle3 = ui.createAnimator();
+        if(data.nodeAttachmentAnimators) {
+            animatorHandle1 = ui.createAnimator();
+            animatorHandle3 = ui.createAnimator();
+        }
+        if(data.dataAttachmentAnimators) {
+            animatorHandle4 = ui.createAnimator();
+            animatorHandle5 = ui.createAnimator();
+        }
 
         struct Animator: AbstractGenericAnimator {
             explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractGenericAnimator{handle}, _features{features} {}
 
+            using AbstractGenericAnimator::setLayer;
             using AbstractGenericAnimator::create;
 
             AnimatorFeatures doFeatures() const override { return _features; }
@@ -3508,19 +3737,37 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
             private:
                 AnimatorFeatures _features;
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1, AnimatorFeature::NodeAttachment));
+        if(data.nodeAttachmentAnimators) {
+            ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1, AnimatorFeature::NodeAttachment));
+            ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle3, AnimatorFeature::NodeAttachment));
+
+            /* Animations attached to both nodes, from both animators, in
+               random order */
+            animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, nested);
+            animatorData2 = ui.animator<Animator>(animatorHandle3).create(0_nsec, 1_nsec, root);
+            animatorData4 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, root);
+            animatorData5 = ui.animator<Animator>(animatorHandle3).create(0_nsec, 1_nsec, nested);
+        }
+
         /* This one has no node attachment, should be skipped in clean() */
         ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle2, AnimatorFeatures{}));
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle3, AnimatorFeature::NodeAttachment));
-
-        /* Animations attached to both, from all three animators, in random
-           order */
-        animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, nested);
-        animatorData2 = ui.animator<Animator>(animatorHandle3).create(0_nsec, 1_nsec, root);
-        /* This animator has no node attachment */
         animatorData3 = ui.animator<Animator>(animatorHandle2).create(0_nsec, 1_nsec);
-        animatorData4 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, root);
-        animatorData5 = ui.animator<Animator>(animatorHandle3).create(0_nsec, 1_nsec, nested);
+
+        if(data.dataAttachmentAnimators) {
+            Containers::Pointer<Animator> instanceLayer1{InPlaceInit, animatorHandle4, AnimatorFeature::DataAttachment};
+            Containers::Pointer<Animator> instanceLayer2{InPlaceInit, animatorHandle5, AnimatorFeature::DataAttachment};
+            instanceLayer1->setLayer(ui.layer(layerHandle1));
+            instanceLayer2->setLayer(ui.layer(layerHandle2));
+            Animator& animatorLayer1 = ui.setGenericAnimatorInstance(Utility::move(instanceLayer1));
+            Animator& animatorLayer2 = ui.setGenericAnimatorInstance(Utility::move(instanceLayer2));
+
+            /* Animation attached to data from both animators, in random order,
+               two animations to one data in one case */
+            animatorData6 = animatorLayer1.create(0_nsec, 1_nsec, layerData3);
+            animatorData7 = animatorLayer1.create(0_nsec, 1_nsec, layerData1);
+            animatorData8 = animatorLayer2.create(0_nsec, 1_nsec, layerData4);
+            animatorData9 = animatorLayer2.create(0_nsec, 1_nsec, layerData4);
+        }
     }
 
     /* Remove the nested node */
@@ -3560,15 +3807,25 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
         CORRADE_VERIFY(ui.isHandleValid(layouterData3));
         CORRADE_VERIFY(!ui.isHandleValid(layouterData4));
     }
-    if(data.nodeAttachmentAnimators) {
-        CORRADE_COMPARE(ui.animator(animatorHandle1).usedCount(), 1);
+    if(data.nodeAttachmentAnimators || data.dataAttachmentAnimators) {
         CORRADE_COMPARE(ui.animator(animatorHandle2).usedCount(), 1);
-        CORRADE_COMPARE(ui.animator(animatorHandle3).usedCount(), 1);
-        CORRADE_VERIFY(!ui.isHandleValid(animatorData1));
-        CORRADE_VERIFY(ui.isHandleValid(animatorData2));
         CORRADE_VERIFY(ui.isHandleValid(animatorData3));
-        CORRADE_VERIFY(ui.isHandleValid(animatorData4));
-        CORRADE_VERIFY(!ui.isHandleValid(animatorData5));
+        if(data.nodeAttachmentAnimators) {
+            CORRADE_COMPARE(ui.animator(animatorHandle1).usedCount(), 1);
+            CORRADE_COMPARE(ui.animator(animatorHandle3).usedCount(), 1);
+            CORRADE_VERIFY(!ui.isHandleValid(animatorData1));
+            CORRADE_VERIFY(ui.isHandleValid(animatorData2));
+            CORRADE_VERIFY(ui.isHandleValid(animatorData4));
+            CORRADE_VERIFY(!ui.isHandleValid(animatorData5));
+        }
+        if(data.dataAttachmentAnimators) {
+            CORRADE_COMPARE(ui.animator(animatorHandle4).usedCount(), 1);
+            CORRADE_COMPARE(ui.animator(animatorHandle5).usedCount(), 0);
+            CORRADE_VERIFY(ui.isHandleValid(animatorData6));
+            CORRADE_VERIFY(!ui.isHandleValid(animatorData7));
+            CORRADE_VERIFY(!ui.isHandleValid(animatorData8));
+            CORRADE_VERIFY(!ui.isHandleValid(animatorData9));
+        }
     }
 }
 
@@ -3588,9 +3845,10 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
 
     /* GCC in Release mode complains that some of these may be used
        uninitialized, MSVC as well. They aren't. */
-    LayerHandle layerHandle;
+    LayerHandle layerHandle{};
     LayouterHandle layouterHandle;
-    AnimatorHandle animatorHandle;
+    AnimatorHandle animatorHandle1{};
+    AnimatorHandle animatorHandle2;
     DataHandle layerData1{};
     DataHandle layerData2{};
     DataHandle layerData3{};
@@ -3600,6 +3858,9 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
     AnimationHandle animatorData1{};
     AnimationHandle animatorData2{};
     AnimationHandle animatorData3{};
+    AnimationHandle animatorData4{};
+    AnimationHandle animatorData5{};
+    AnimationHandle animatorData6{};
     if(data.layers) {
         layerHandle = ui.createLayer();
 
@@ -3633,7 +3894,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
         layouterData3 = ui.layouter<Layouter>(layouterHandle).add(second2);
     }
     if(data.nodeAttachmentAnimators) {
-        animatorHandle = ui.createAnimator();
+        animatorHandle1 = ui.createAnimator();
 
         struct Animator: AbstractGenericAnimator {
             using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -3644,12 +3905,34 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
             }
             void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
+        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
         /* Animations attached to the leaf nodes */
-        animatorData1 = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec, second1);
-        animatorData2 = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec, first2);
-        animatorData3 = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec, second2);
+        animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, second1);
+        animatorData2 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, first2);
+        animatorData3 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, second2);
+    }
+    if(data.dataAttachmentAnimators) {
+        animatorHandle2 = ui.createAnimator();
+
+        struct Animator: AbstractGenericAnimator {
+            using AbstractGenericAnimator::AbstractGenericAnimator;
+            using AbstractGenericAnimator::setLayer;
+            using AbstractGenericAnimator::create;
+
+            AnimatorFeatures doFeatures() const override {
+                return AnimatorFeature::DataAttachment;
+            }
+            void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        };
+        Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
+        instance->setLayer(ui.layer(layerHandle));
+        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+
+        /* Animations attached to data attached to the leaf nodes */
+        animatorData4 = animator.create(0_nsec, 1_nsec, layerData1);
+        animatorData5 = animator.create(0_nsec, 1_nsec, layerData2);
+        animatorData6 = animator.create(0_nsec, 1_nsec, layerData3);
     }
 
     /* Remove the subtree */
@@ -3679,6 +3962,11 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
         CORRADE_VERIFY(!ui.isHandleValid(animatorData1));
         CORRADE_VERIFY(ui.isHandleValid(animatorData2));
         CORRADE_VERIFY(!ui.isHandleValid(animatorData3));
+    }
+    if(data.dataAttachmentAnimators) {
+        CORRADE_VERIFY(!ui.isHandleValid(animatorData4));
+        CORRADE_VERIFY(ui.isHandleValid(animatorData5));
+        CORRADE_VERIFY(!ui.isHandleValid(animatorData6));
     }
 }
 
@@ -3736,12 +4024,14 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
 
     /* GCC in Release mode complains that some of these may be used
        uninitialized, MSVC as well. They aren't. */
-    LayerHandle layerHandle;
+    LayerHandle layerHandle{};
     LayouterHandle layouterHandle;
-    AnimatorHandle animatorHandle;
+    AnimatorHandle animatorHandle1{};
+    AnimatorHandle animatorHandle2;
     DataHandle layerData{};
     LayoutHandle layouterData{};
-    AnimationHandle animatorData{};
+    AnimationHandle animatorData1{};
+    AnimationHandle animatorData2{};
     if(data.layers) {
         layerHandle = ui.createLayer();
 
@@ -3771,7 +4061,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
         layouterData = ui.layouter<Layouter>(layouterHandle).add(second);
     }
     if(data.nodeAttachmentAnimators) {
-        animatorHandle = ui.createAnimator();
+        animatorHandle1 = ui.createAnimator();
 
         struct Animator: AbstractGenericAnimator {
             using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -3782,10 +4072,30 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
             }
             void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
+        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
         /* Animation attached to the leaf node */
-        animatorData = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec, second);
+        animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, second);
+    }
+    if(data.dataAttachmentAnimators) {
+        animatorHandle2 = ui.createAnimator();
+
+        struct Animator: AbstractGenericAnimator {
+            using AbstractGenericAnimator::AbstractGenericAnimator;
+            using AbstractGenericAnimator::setLayer;
+            using AbstractGenericAnimator::create;
+
+            AnimatorFeatures doFeatures() const override {
+                return AnimatorFeature::DataAttachment;
+            }
+            void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        };
+        Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
+        instance->setLayer(ui.layer(layerHandle));
+        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+
+        /* Animation attached to the data attached to the leaf node */
+        animatorData2 = animator.create(0_nsec, 1_nsec, layerData);
     }
 
     /* Remove a subtree but then create a new node which recycles the same
@@ -3807,7 +4117,9 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
     if(data.layouters)
         CORRADE_VERIFY(!ui.isHandleValid(layouterData));
     if(data.nodeAttachmentAnimators)
-        CORRADE_VERIFY(!ui.isHandleValid(animatorData));
+        CORRADE_VERIFY(!ui.isHandleValid(animatorData1));
+    if(data.dataAttachmentAnimators)
+        CORRADE_VERIFY(!ui.isHandleValid(animatorData2));
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycle() {
@@ -3829,10 +4141,12 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
        uninitialized, MSVC as well. They aren't. */
     LayerHandle layerHandle;
     LayouterHandle layouterHandle;
-    AnimatorHandle animatorHandle;
+    AnimatorHandle animatorHandle1;
+    AnimatorHandle animatorHandle2;
     DataHandle layerData{};
     LayoutHandle layouterData;
-    AnimationHandle animatorData;
+    AnimationHandle animatorData1;
+    AnimationHandle animatorData2;
     if(data.layers) {
         layerHandle = ui.createLayer();
 
@@ -3862,7 +4176,7 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
         layouterData = ui.layouter<Layouter>(layouterHandle).add(third);
     }
     if(data.nodeAttachmentAnimators) {
-        animatorHandle = ui.createAnimator();
+        animatorHandle1 = ui.createAnimator();
 
         struct Animator: AbstractGenericAnimator {
             using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -3873,10 +4187,30 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
             }
             void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
+        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
         /* Animation attached to the leaf node */
-        animatorData = ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec, third);
+        animatorData1 = ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, third);
+    }
+    if(data.dataAttachmentAnimators) {
+        animatorHandle2 = ui.createAnimator();
+
+        struct Animator: AbstractGenericAnimator {
+            using AbstractGenericAnimator::AbstractGenericAnimator;
+            using AbstractGenericAnimator::setLayer;
+            using AbstractGenericAnimator::create;
+
+            AnimatorFeatures doFeatures() const override {
+                return AnimatorFeature::DataAttachment;
+            }
+            void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        };
+        Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
+        instance->setLayer(ui.layer(layerHandle));
+        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+
+        /* Animation attached to the data attached to the leaf node */
+        animatorData2 = animator.create(0_nsec, 1_nsec, layerData);
     }
 
     /* Remove a subtree but then create a new node which recycles the same
@@ -3898,7 +4232,9 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
     if(data.layouters)
         CORRADE_VERIFY(!ui.isHandleValid(layouterData));
     if(data.nodeAttachmentAnimators)
-        CORRADE_VERIFY(!ui.isHandleValid(animatorData));
+        CORRADE_VERIFY(!ui.isHandleValid(animatorData1));
+    if(data.dataAttachmentAnimators)
+        CORRADE_VERIFY(!ui.isHandleValid(animatorData2));
 }
 
 void AbstractUserInterfaceTest::cleanRemoveAll() {
@@ -3916,8 +4252,11 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
     /* GCC in Release mode complains that some of these may be used
        uninitialized, MSVC as well. They aren't. */
     LayerHandle layerHandle{};
+    DataHandle layerData1{};
+    DataHandle layerData2{};
     LayouterHandle layouterHandle{};
-    AnimatorHandle animatorHandle{};
+    AnimatorHandle animatorHandle1{};
+    AnimatorHandle animatorHandle2{};
     if(data.layers) {
         layerHandle = ui.createLayer();
 
@@ -3930,8 +4269,8 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
         ui.setLayerInstance(Containers::pointer<Layer>(layerHandle));
 
         /* Data attached to the nested nodes */
-        ui.layer<Layer>(layerHandle).create(second);
-        ui.layer<Layer>(layerHandle).create(first);
+        layerData1 = ui.layer<Layer>(layerHandle).create(second);
+        layerData2 = ui.layer<Layer>(layerHandle).create(first);
     }
     if(data.layouters) {
         layouterHandle = ui.createLayouter();
@@ -3949,7 +4288,7 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
         ui.layouter<Layouter>(layouterHandle).add(first);
     }
     if(data.nodeAttachmentAnimators) {
-        animatorHandle = ui.createAnimator();
+        animatorHandle1 = ui.createAnimator();
 
         struct Animator: AbstractGenericAnimator {
             using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -3960,11 +4299,32 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
             }
             void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
         };
-        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle));
+        ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animatorHandle1));
 
-        /* Data attached to the nested nodes */
-        ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec, second);
-        ui.animator<Animator>(animatorHandle).create(0_nsec, 1_nsec, first);
+        /* Animations attached to the nested nodes */
+        ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, second);
+        ui.animator<Animator>(animatorHandle1).create(0_nsec, 1_nsec, first);
+    }
+    if(data.dataAttachmentAnimators) {
+        animatorHandle2 = ui.createAnimator();
+
+        struct Animator: AbstractGenericAnimator {
+            using AbstractGenericAnimator::AbstractGenericAnimator;
+            using AbstractGenericAnimator::setLayer;
+            using AbstractGenericAnimator::create;
+
+            AnimatorFeatures doFeatures() const override {
+                return AnimatorFeature::DataAttachment;
+            }
+            void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        };
+        Containers::Pointer<Animator> instance{InPlaceInit, animatorHandle2};
+        instance->setLayer(ui.layer(layerHandle));
+        Animator& animator = ui.setGenericAnimatorInstance(Utility::move(instance));
+
+        /* Data attached to the data attached to the nested nodes */
+        animator.create(0_nsec, 1_nsec, layerData1);
+        animator.create(0_nsec, 1_nsec, layerData2);
     }
 
     /* Removing the top-level node */
@@ -3975,7 +4335,9 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
     if(data.layouters)
         CORRADE_COMPARE(ui.layouter(layouterHandle).usedCount(), 2);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator(animatorHandle).usedCount(), 2);
+        CORRADE_COMPARE(ui.animator(animatorHandle1).usedCount(), 2);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator(animatorHandle2).usedCount(), 2);
 
     /* Clean should remove everything */
     ui.clean();
@@ -3985,7 +4347,92 @@ void AbstractUserInterfaceTest::cleanRemoveAll() {
     if(data.layouters)
         CORRADE_COMPARE(ui.layouter(layouterHandle).usedCount(), 0);
     if(data.nodeAttachmentAnimators)
-        CORRADE_COMPARE(ui.animator(animatorHandle).usedCount(), 0);
+        CORRADE_COMPARE(ui.animator(animatorHandle1).usedCount(), 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator(animatorHandle2).usedCount(), 0);
+}
+
+void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
+    /* Removing a layer with associated animators should remove those instances
+       from the internal list to prevent weird behavior during next clean()
+       etc. */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+
+    Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    struct GenericAnimator: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+        void doClean(Containers::BitArrayView) override {
+            ++cleanCallCount;
+        }
+
+        Int cleanCallCount = 0;
+    };
+    Containers::Pointer<GenericAnimator> instance11{InPlaceInit, ui.createAnimator()};
+    Containers::Pointer<GenericAnimator> instance12{InPlaceInit, ui.createAnimator()};
+    Containers::Pointer<GenericAnimator> instance21{InPlaceInit, ui.createAnimator()};
+    instance11->setLayer(layer1);
+    instance12->setLayer(layer1);
+    instance21->setLayer(layer2);
+    GenericAnimator& animator11 = ui.setGenericAnimatorInstance(Utility::move(instance11));
+    GenericAnimator& animator12 = ui.setGenericAnimatorInstance(Utility::move(instance12));
+    GenericAnimator& animator21 = ui.setGenericAnimatorInstance(Utility::move(instance21));
+
+    /* Create and immediately remove a node to trigger NeedsNodeClean, which
+       implies NeedsDataClean on all animators */
+    ui.removeNode(ui.createNode({}, {}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+
+    /* clean() then calls doClean() on all three */
+    ui.clean();
+    CORRADE_COMPARE(animator11.cleanCallCount, 1);
+    CORRADE_COMPARE(animator12.cleanCallCount, 1);
+    CORRADE_COMPARE(animator21.cleanCallCount, 1);
+
+    /* Remove the first layer and recycle its slot for a new one */
+    LayerHandle layer1Handle = layer1.handle();
+    ui.removeLayer(layer1Handle);
+    Layer& layer1Again = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    CORRADE_COMPARE(layerHandleId(layer1Again.handle()), layerHandleId(layer1Handle));
+
+    /* Triggering NeedsNodeClean should then cause doClean() to be only called
+       on the animator associated with the remaining layer */
+    ui.removeNode(ui.createNode({}, {}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+
+    ui.clean();
+    CORRADE_COMPARE(animator11.cleanCallCount, 1);
+    CORRADE_COMPARE(animator12.cleanCallCount, 1);
+    CORRADE_COMPARE(animator21.cleanCallCount, 2);
+
+    /* Remove the last layer and recycle its slot for a new one */
+    LayerHandle layer2Handle = layer2.handle();
+    ui.removeLayer(layer2Handle);
+    Layer& layer2Again = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    CORRADE_COMPARE(layerHandleId(layer2Again.handle()), layerHandleId(layer2Handle));
+
+    /* This should cause doClean() to not be called on any animator anymore */
+    ui.removeNode(ui.createNode({}, {}));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
+
+    ui.clean();
+    CORRADE_COMPARE(animator11.cleanCallCount, 1);
+    CORRADE_COMPARE(animator12.cleanCallCount, 1);
+    CORRADE_COMPARE(animator21.cleanCallCount, 2);
 }
 
 void AbstractUserInterfaceTest::advanceAnimationsEmpty() {
@@ -4036,6 +4483,15 @@ void AbstractUserInterfaceTest::advanceAnimationsNoOp() {
 void AbstractUserInterfaceTest::advanceAnimations() {
     AbstractUserInterface ui{{100, 100}};
 
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    };
+    /*Layer& layer1 =*/ ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    Layer& layer2 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    Layer& layer3 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
     enum Call {
         Advance,
         Clean
@@ -4044,6 +4500,7 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         explicit GenericAnimator(AnimatorHandle handle, AnimatorFeatures features, Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls): AbstractGenericAnimator{handle}, calls(calls), _features{features} {}
 
         using AbstractGenericAnimator::create;
+        using AbstractGenericAnimator::setLayer;
 
         AnimatorFeatures doFeatures() const override { return _features; }
         void doClean(Containers::BitArrayView) override {
@@ -4069,24 +4526,38 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     GenericAnimator& animatorNodeAttachmentNoAdvanceNeeded = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment, calls));
     GenericAnimator& animatorNodeAttachment = ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(ui.createAnimator(), AnimatorFeature::NodeAttachment, calls));
 
+    Containers::Pointer<GenericAnimator> animatorLayer2DataAttachmentNoAdvanceNeededInstance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment, calls};
+    animatorLayer2DataAttachmentNoAdvanceNeededInstance->setLayer(layer2);
+    GenericAnimator& animatorLayer2DataAttachmentNoAdvanceNeeded = ui.setGenericAnimatorInstance(Utility::move(animatorLayer2DataAttachmentNoAdvanceNeededInstance));
+
+    Containers::Pointer<GenericAnimator> animatorLayer3DataAttachmentInstance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment, calls};
+    animatorLayer3DataAttachmentInstance->setLayer(layer3);
+    GenericAnimator& animatorLayer3DataAttachment = ui.setGenericAnimatorInstance(Utility::move(animatorLayer3DataAttachmentInstance));
+
     /* It's important to remove an animator that has an instance already --
        animators without an instance aren't even added to the list of animators
        to process in advanceAnimations() */
     ui.removeAnimator(animatorRemoved.handle());
 
     /* One scheduled, one stopped, one playing with empty AnimatorFeatures;
-       then one stopped and one playing with NodeAttachment */
+       then one stopped and one playing with both NodeAttachment and
+       DataAttachment */
     animator1.create(5_nsec, 10_nsec);
     animatorNoAdvanceNeeded.create(-50_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animator2.create(0_nsec, 10_nsec);
     /* Not attaching these to any node, should work even then */
     animatorNodeAttachmentNoAdvanceNeeded.create(-50_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
     animatorNodeAttachment.create(5_nsec, 10_nsec);
+    /* Not attaching these to any data, should work even then */
+    animatorLayer2DataAttachmentNoAdvanceNeeded.create(-50_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animatorLayer3DataAttachment.create(5_nsec, 10_nsec);
     CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animator2.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNodeAttachment.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
 
     /* Initially all animators are at 0 time. This changes if advance() is
@@ -4096,6 +4567,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animator2.time(), 0_nsec);
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorNodeAttachment.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 0_nsec);
 
     /* First advance. The scheduled animations aren't advanced yet (and there's
        nothing else to call doAdvance() for), the playing is. */
@@ -4108,16 +4581,20 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animator2.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNodeAttachment.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
 
-    /* advance() wasn't even called on the second and fourth one */
+    /* advance() wasn't even called on the second, fourth and sixth one */
     CORRADE_COMPARE(animator1.time(), 2_nsec);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animator2.time(), 2_nsec);
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorNodeAttachment.time(), 2_nsec);
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 2_nsec);
 
-    /* Second advance, the three get further advanced, the second gets also
+    /* Second advance, the four get further advanced, the second gets also
        cleaned */
     calls = {};
     ui.advanceAnimations(10_nsec);
@@ -4126,22 +4603,29 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         {animator2.handle(), Advance},
         {animator2.handle(), Clean},
         {animatorNodeAttachment.handle(), Advance},
+        {animatorLayer3DataAttachment.handle(), Advance},
     })), TestSuite::Compare::Container);
     CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animator2.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNodeAttachment.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
 
-    /* advance() wasn't even called on the second and fourth one now either */
+    /* advance() wasn't even called on the second, fourth and sixth one now
+       either */
     CORRADE_COMPARE(animator1.time(), 10_nsec);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animator2.time(), 10_nsec);
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorNodeAttachment.time(), 10_nsec);
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 10_nsec);
 
-    /* Third advance, only the first and fifth is advanced & cleaned */
+    /* Third advance, only the first, fifth, seventh and ninth is advanced &
+       cleaned */
     calls = {};
     ui.advanceAnimations(15_nsec);
     CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
@@ -4149,20 +4633,26 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         {animator1.handle(), Clean},
         {animatorNodeAttachment.handle(), Advance},
         {animatorNodeAttachment.handle(), Clean},
+        {animatorLayer3DataAttachment.handle(), Advance},
+        {animatorLayer3DataAttachment.handle(), Clean},
     })), TestSuite::Compare::Container);
     CORRADE_COMPARE(animator1.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animator2.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNodeAttachment.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
-    /* advance() wasn't even called on the second, third and fourth */
+    /* advance() wasn't even called on the second, third, fourth and sixth */
     CORRADE_COMPARE(animator1.time(), 15_nsec);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animator2.time(), 10_nsec);
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorNodeAttachment.time(), 15_nsec);
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 15_nsec);
 
     /* Fourth advance, nothing left to be done */
     calls = {};
@@ -4174,6 +4664,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animator2.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNodeAttachment.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* advance() wasn't called on any */
@@ -4182,6 +4674,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animator2.time(), 10_nsec);
     CORRADE_COMPARE(animatorNodeAttachmentNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorNodeAttachment.time(), 15_nsec);
+    CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 15_nsec);
 }
 
 void AbstractUserInterfaceTest::advanceAnimationsInvalidTime() {
@@ -4692,6 +5186,7 @@ void AbstractUserInterfaceTest::state() {
         explicit AttachmentAnimator(AnimatorHandle handle, AnimatorFeatures features): AbstractGenericAnimator{handle}, _features{features} {}
 
         using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
         using AbstractGenericAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return _features; }
@@ -4713,21 +5208,41 @@ void AbstractUserInterfaceTest::state() {
     };
 
     /* Creating animators sets no state flags */
-    AnimatorHandle animator{}, nodeAttachmentAnimator{};
-    if(data.nodeAttachmentAnimators) {
+    AnimatorHandle animator{}, nodeAttachmentAnimator{}, dataAttachmentAnimator{};
+    if(data.nodeAttachmentAnimators || data.dataAttachmentAnimators) {
         animator = ui.createAnimator();
-        nodeAttachmentAnimator = ui.createAnimator();
         ui.setGenericAnimatorInstance(Containers::pointer<Animator>(animator));
-        ui.setGenericAnimatorInstance(Containers::pointer<AttachmentAnimator>(nodeAttachmentAnimator, AnimatorFeature::NodeAttachment));
+        if(data.nodeAttachmentAnimators) {
+            nodeAttachmentAnimator = ui.createAnimator();
+            ui.setGenericAnimatorInstance(Containers::pointer<AttachmentAnimator>(nodeAttachmentAnimator, AnimatorFeature::NodeAttachment));
+        }
+        if(data.dataAttachmentAnimators) {
+            dataAttachmentAnimator = ui.createAnimator();
+            Containers::Pointer<AttachmentAnimator> instance{InPlaceInit, dataAttachmentAnimator, AnimatorFeature::DataAttachment};
+            instance->setLayer(ui.layer(layer));
+            ui.setGenericAnimatorInstance(Utility::move(instance));
+        }
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
         /* Creating (stopped) animations sets no state flags, independently of
-           whether they're attacheable at all, attached to nodes or not
+           whether they're attacheable at all, attached to nodes / data or not
            attached */
         /*AnimationHandle animation =*/ ui.animator<Animator>(animator).create(-10_nsec, 1_nsec, AnimationFlag::KeepOncePlayed);
-        /*AnimationHandle animation1 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, node, AnimationFlag::KeepOncePlayed);
-        /*AnimationHandle animation2 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, NodeHandle::Null, AnimationFlag::KeepOncePlayed);
-        /*AnimationHandle animation3 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, nested1, AnimationFlag::KeepOncePlayed);
+        /* One is attached to a node, one to nothing, one to a nested node.
+           Both first and third get removed when `node` is removed. */
+        if(data.nodeAttachmentAnimators) {
+            /*AnimationHandle animation1 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, node, AnimationFlag::KeepOncePlayed);
+            /*AnimationHandle animation2 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, NodeHandle::Null, AnimationFlag::KeepOncePlayed);
+            /*AnimationHandle animation3 =*/ ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).create(-10_nsec, 1_nsec, nested1, AnimationFlag::KeepOncePlayed);
+        }
+        if(data.dataAttachmentAnimators) {
+            /* One is attached to a data not attached to any node, one to
+               nothing, one to a nested node. The first gets removed when
+               removing the data directly, the third when removing `node`. */
+            /*AnimationHandle animation1 =*/ ui.animator<AttachmentAnimator>(dataAttachmentAnimator).create(-10_nsec, 1_nsec, dataNotAttached, AnimationFlag::KeepOncePlayed);
+            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).create(-10_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).create(-10_nsec, 1_nsec, dataNested2, AnimationFlag::KeepOncePlayed);
+        }
     }
 
     /* Calling clean() should be a no-op, not calling anything in the
@@ -4746,6 +5261,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() should be a no-op, not calling anything in the
@@ -4767,6 +5284,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Attaching the data sets flags. Order doesn't matter, as internally it's
@@ -4792,6 +5311,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() rebuilds internal state, calls doUpdate() on the layer,
@@ -4846,6 +5367,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Setting a renderer instance propagates the size to it without setting
        any state flag */
@@ -4896,6 +5419,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling updateRenderer() should setup renderer framebuffers again */
@@ -4923,6 +5448,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Marking the layer with NeedsUpdate propagates to the UI-wide state */
     ui.layer(layer).setNeedsUpdate();
@@ -4944,6 +5471,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() reuploads the exact same data and resets the flag, but
@@ -5000,6 +5529,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Changing a node size sets a state flag to update layout. In this case it
        causes the nested2 node to get culled:
@@ -5034,6 +5565,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() calls layouters and reuploads the data except for the
@@ -5157,6 +5690,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Changing a node offset sets a state flag to update layout and
        recalculate nested node offsets, except for nested2 that's still culled.
@@ -5191,6 +5726,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() calls layouters, recalculates absoute offsets, uploads
@@ -5314,6 +5851,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Setting a Hidden flag sets a state flag */
     ui.addNodeFlags(node, NodeFlag::Hidden);
@@ -5335,6 +5874,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() rebuilds internal state without the hidden hierarchy,
@@ -5450,6 +5991,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Setting a Hidden flag that's already set should be a no-op,
        independently of what other flags get added */
@@ -5476,6 +6019,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() calls layouters with previous data, reuploads the
@@ -5596,6 +6141,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Resetting a Hidden flag that's not there should be a no-op,
        independently of what other flags get cleared */
@@ -5679,6 +6226,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Setting a Disabled flag that's already there should be a no-op */
     ui.addNodeFlags(node, NodeFlag::Disabled);
@@ -5712,6 +6261,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
@@ -5768,6 +6319,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Clearing also the NoEvents flag sets a state flag to update also the
        event-related masks. */
@@ -5790,6 +6343,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() rebuilds internal masks of nodes enabled for events, so
@@ -5847,6 +6402,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Resetting a NoEvents flag that's not there should be a no-op */
     ui.clearNodeFlags(node, NodeFlag::NoEvents);
@@ -5877,6 +6434,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() uploads the full data including the no-longer-clipped
@@ -5932,6 +6491,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Resetting a Clip flag that's not there should be a no-op, independently
        of what other flags get cleared */
@@ -5958,6 +6519,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() reuploads the previous data again and resets the state
@@ -6012,6 +6575,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Calling clearNodeOrder() sets a state flag */
     ui.clearNodeOrder(another1);
@@ -6033,6 +6598,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() calls the one remaining layouter, uploads data in
@@ -6118,6 +6685,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     /* Calling clearNodeOrder() on a node that isn't in the order is a no-op */
     ui.clearNodeOrder(another1);
@@ -6144,6 +6713,8 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
     /* Calling update() calls the layouters the same way as before the another1
@@ -6265,6 +6836,8 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
     if(data.layouters) {
         /* Removing a layout marks the layouter with NeedsAssignmentUpdate,
@@ -6377,22 +6950,136 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
-    /* Removing a non-attached data does no change to the layer state and thus
-       neither to the UI-wide state */
-    ui.layer<Layer>(layer).remove(dataNotAttached);
+    /* Add one more layer with an attached animator to check data & layer
+       removal behavior, should set no state flags again */
+    LayerHandle anotherLayer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(anotherLayer));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    /* GCC in Release mode complains that some of these may be used
+       uninitialized, MSVC as well. They aren't. */
+    AnimatorHandle anotherDataAttachmentAnimator{};
+    if(data.dataAttachmentAnimators) {
+        anotherDataAttachmentAnimator = ui.createAnimator();
+        Containers::Pointer<AttachmentAnimator> instance{InPlaceInit, anotherDataAttachmentAnimator, AnimatorFeature::DataAttachment};
+        instance->setLayer(ui.layer(anotherLayer));
+        ui.setGenericAnimatorInstance(Utility::move(instance));
+    }
+
+    /* Removing data that's not attached to any node marks the layer with
+       NeedsDataClean, which is then propagated to the UI-wide state */
+    ui.layer<Layer>(layer).remove(dataNotAttached);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean);
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
 
-    /* Removing attached data marks the layer with NeedsAttachmentUpdate,
-       which is then propagated to the UI-wide state */
+    /* Calling clean() removes animations attached to the removed data and
+       resets the states to not require clean() anymore */
+    if(data.clean) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+
+            bool expectedAnimationIdsToRemove[]{
+                /* animation1 was attached to `dataNotAttached` */
+                true, false, false
+            };
+            if(data.dataAttachmentAnimators)
+                ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
+
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(ui.layer(layer).usedCount(), 4);
+        if(data.layouters) {
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        }
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
+        if(data.nodeAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators) {
+            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 2);
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 1);
+            /* The layer this animator is associated with doesn't have
+               NeedsDataClean set, so clean() shouldn't be called for it */
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 0);
+        }
+    }
+
+    /* Calling update() calls clean() if wasn't done above already but
+       otherwise it's a no-op */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+
+        bool expectedAnimationIdsToRemove[]{
+            /* animation1 was attached to `dataNotAttached` */
+            true, false, false
+        };
+        if(data.dataAttachmentAnimators)
+            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
+
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
+    if(data.nodeAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators) {
+        CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 2);
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 1);
+        /* The layer this animator is associated with doesn't have
+           NeedsDataClean set, so clean() shouldn't be called for it */
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 0);
+    }
+
+    /* Removing attached data marks the layer with both NeedsDataClean and
+       NeedsAttachmentUpdate, which is then propagated to the UI-wide state */
     ui.layer<Layer>(layer).remove(dataNode);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataClean|UserInterfaceState::NeedsDataAttachmentUpdate);
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
 
+    /* Calling clean() calls animator clean (with an empty mask because no
+       animations were attached to this data) and resets the states to not
+       require clean() anymore */
+    if(data.clean) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+
+            bool expectedAnimationIdsToRemove[]{
+                false, false, false
+            };
+            if(data.dataAttachmentAnimators)
+                ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
+
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+        CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
+        if(data.nodeAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators) {
+            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 2);
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 2);
+            /* The layer this animator is associated with doesn't have
+               NeedsDataClean set, so clean() shouldn't be called for it */
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 0);
+        }
+    }
+
     /* Calling update() then uploads remaining data and resets the remaining
-       state flag. Layouts don't get updated. */
+       state flag; also calls clean() if wasn't done above already. Layouts
+       don't get updated. */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         UnsignedInt expectedDataIds[]{
@@ -6427,10 +7114,19 @@ void AbstractUserInterfaceTest::state() {
             true, true, true, true, false, false, false
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        for(LayerHandle i: {layer, anotherLayer}) {
+            ui.layer<Layer>(i).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+            ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
+            ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        }
+
+        bool expectedAnimationIdsToRemove[]{
+            false, false, false
+        };
+        if(data.dataAttachmentAnimators)
+            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedAnimationIdsToRemove;
+
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -6445,8 +7141,17 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators) {
+        CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 2);
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 2);
+        /* The layer this animator is associated with doesn't have
+           NeedsDataClean set, so clean() shouldn't be called for it */
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 0);
+    }
 
     /* Removing a node sets a state flag */
     ui.removeNode(node);
@@ -6486,14 +7191,23 @@ void AbstractUserInterfaceTest::state() {
                 true, false, false, false, true
             };
             ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
+            /* The second layer doesn't have anything */
+            ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
 
             bool expectedNodeAttachmentAnimationIdsToRemove[]{
                 /* animation1 and animation3 were attached to `node` and
                    `nested1`, which got removed */
                 true, false, true
             };
+            bool expectedDataAttachmentAnimationIdsToRemove[]{
+                /* animation3 was attached to `dataNested2` which was attached
+                   to `nested2`, which got removed */
+                false, false, true
+            };
             if(data.nodeAttachmentAnimators)
                 ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).expectedAnimationIdsToRemove = expectedNodeAttachmentAnimationIdsToRemove;
+            if(data.dataAttachmentAnimators)
+                ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedDataAttachmentAnimationIdsToRemove;
 
             ui.clean();
         }
@@ -6509,9 +7223,19 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators) {
             CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+        }
+        if(data.dataAttachmentAnimators) {
+            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+            /* In this case NeedsDataClean is implied by NeedsNodeClean
+               globally and thus clean() *does* get called for this one as
+               well */
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 1);
         }
     }
 
@@ -6598,18 +7322,27 @@ void AbstractUserInterfaceTest::state() {
         };
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
-        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        for(LayerHandle i: {layer, anotherLayer}) {
+            ui.layer<Layer>(i).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+            ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
+            ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        }
 
         bool expectedNodeAttachmentAnimationIdsToRemove[]{
             /* animation1 and animation3 were attached to `node` and
                 `nested1`, which got removed */
             true, false, true
         };
+        bool expectedDataAttachmentAnimationIdsToRemove[]{
+            /* animation3 was attached to `dataNested2` which was attached
+                to `nested2`, which got removed */
+            false, false, true
+        };
         if(data.nodeAttachmentAnimators)
             ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).expectedAnimationIdsToRemove = expectedNodeAttachmentAnimationIdsToRemove;
+        if(data.dataAttachmentAnimators)
+            ui.animator<AttachmentAnimator>(dataAttachmentAnimator).expectedAnimationIdsToRemove = expectedDataAttachmentAnimationIdsToRemove;
 
         ui.update();
     }
@@ -6629,9 +7362,18 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
     if(data.nodeAttachmentAnimators) {
         CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+    }
+    if(data.dataAttachmentAnimators) {
+        CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+        /* In this case NeedsDataClean is implied by NeedsNodeClean globally
+           and thus clean() *does* get called for this one as well */
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 1);
     }
 
     /* Removing a layouter sets a state flag */
@@ -6653,6 +7395,8 @@ void AbstractUserInterfaceTest::state() {
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
             CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
+            CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
+            CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
         }
 
         /* Calling update() then resets the remaining state flag. There's no
@@ -6693,10 +7437,12 @@ void AbstractUserInterfaceTest::state() {
                 {{}, {}}
             };
             ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
-            ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
-            ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
             ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
-            ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+            for(LayerHandle i: {layer, anotherLayer}) {
+                ui.layer<Layer>(i).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+                ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
+                ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+            }
 
             ui.update();
         }
@@ -6709,17 +7455,17 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17);
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 3);
         if(data.nodeAttachmentAnimators) {
             CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
         }
+        if(data.dataAttachmentAnimators) {
+            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+        }
     }
-
-    /* Add one more layer to check layer removal behavior, should set no state
-       flags again */
-    LayerHandle anotherLayer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(anotherLayer));
-    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Removing a layer sets a state flag */
     ui.removeLayer(layer);
@@ -6737,11 +7483,15 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 1);
         }
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
+        CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2 + (data.layouters ? 1 : 0));
         if(data.nodeAttachmentAnimators) {
             CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+        }
+        if(data.dataAttachmentAnimators) {
+            CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
         }
     }
 
@@ -6791,11 +7541,19 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView<UnsignedInt>({
         }), TestSuite::Compare::Container);
     }
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
+    CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 3 + (data.layouters ? 1 : 0));
     if(data.nodeAttachmentAnimators) {
         CORRADE_COMPARE(ui.animator(nodeAttachmentAnimator).usedCount(), 1);
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 1);
+    }
+    if(data.dataAttachmentAnimators) {
+        CORRADE_COMPARE(ui.animator(dataAttachmentAnimator).usedCount(), 1);
+        /* The layer the animator was associated with is gone but the animator
+           stays. It's just not used for anything anymore. */
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 3);
+        /* The other animator isn't cleaned or affected in any other way */
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(anotherDataAttachmentAnimator).cleanCallCount, 1);
     }
 }
 
@@ -6969,10 +7727,12 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     ui.addNodeFlags(node, NodeFlag::Hidden);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
-    /* Removing a data doesn't result in any state flag on the layer */
+    /* Having the UI marked with NeedsNodeUpdate shouldn't prevent the
+       NeedsDataClean from a later layer from being propagated to the UI-wide
+       state */
     ui.layer<Layer>(layer2).remove(data2);
-    CORRADE_COMPARE(ui.layer(layer2).state(), LayerStates{});
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+    CORRADE_COMPARE(ui.layer(layer2).state(), LayerState::NeedsDataClean);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataClean);
 }
 
 void AbstractUserInterfaceTest::statePropagateFromLayouters() {
@@ -9363,7 +10123,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
 }
 
 void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
-    auto&& data = UpdateData[testCaseInstanceId()];
+    auto&& data = CleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Event scaling doesn't affect these tests */
@@ -9423,7 +10183,15 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
        that the clean() / update() can't discover on its own, only actually
        firing the event can. */
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
+
+    if(data.clean) {
+        ui.clean();
+
+        /* Same as above, the node stays hovered */
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+    }
 
     if(data.update) {
         ui.update();
@@ -11406,7 +12174,7 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
 }
 
 void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
-    auto&& data = EventCaptureUpdateData[testCaseInstanceId()];
+    auto&& data = EventCaptureCleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Event scaling doesn't affect these tests */
@@ -11470,7 +12238,14 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
        events -- also something that the clean() / update() can't discover on
        its own, only actually firing the event can. */
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
+
+    if(data.clean) {
+        ui.clean();
+
+        /* Same as above, the node stays captured */
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
+    }
 
     if(data.update) {
         ui.update();
@@ -12179,7 +12954,7 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeRemoved() {
 }
 
 void AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved() {
-    auto&& data = UpdateData[testCaseInstanceId()];
+    auto&& data = CleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* Event scaling doesn't affect these tests */
@@ -12241,7 +13016,15 @@ void AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved() {
        events -- also something that the clean() / update() can't discover on
        its own, only actually firing the event can. */
     CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean);
+
+    if(data.clean) {
+        ui.clean();
+
+        /* Same as above, the node stays pressed */
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+    }
 
     if(data.update) {
         ui.update();

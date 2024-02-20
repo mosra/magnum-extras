@@ -29,8 +29,10 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/StridedArrayView.h>
 
+#include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 
@@ -83,6 +85,7 @@ Debug& operator<<(Debug& debug, const LayerState value) {
         #define _c(value) case LayerState::value: return debug << "::" #value;
         _c(NeedsUpdate)
         _c(NeedsAttachmentUpdate)
+        _c(NeedsDataClean)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -94,7 +97,8 @@ Debug& operator<<(Debug& debug, const LayerStates value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::LayerStates{}", {
         LayerState::NeedsAttachmentUpdate,
         /* Implied by NeedsAttachmentUpdate, has to be after */
-        LayerState::NeedsUpdate
+        LayerState::NeedsUpdate,
+        LayerState::NeedsDataClean
     });
 }
 
@@ -268,6 +272,10 @@ void AbstractLayer::remove(const DataHandle handle) {
         "Whee::AbstractLayer::remove(): invalid handle" << handle, );
 
     State& state = *_state;
+    /* Mark the layer as needing a cleanData() call for any associated
+       animators */
+    state.state |= LayerState::NeedsDataClean;
+
     /* If the data was attached to a node, mark the layer also as needing a
        update() call to refresh node data attachment state, which also bubbles
        up to the UI itself */
@@ -285,6 +293,10 @@ void AbstractLayer::remove(const LayerDataHandle handle) {
         "Whee::AbstractLayer::remove(): invalid handle" << handle, );
 
     State& state = *_state;
+    /* Mark the layer as needing a cleanData() call for any associated
+       animators */
+    state.state |= LayerState::NeedsDataClean;
+
     /* If the data was attached to a node, mark the layer also as needing a
        update() call to refresh node data attachment state, which also bubbles
        up to the UI itself */
@@ -402,6 +414,24 @@ void AbstractLayer::cleanNodes(const Containers::StridedArrayView1D<const Unsign
 }
 
 void AbstractLayer::doClean(Containers::BitArrayView) {}
+
+void AbstractLayer::cleanData(const Containers::Iterable<AbstractAnimator>& animators) {
+    State& state = *_state;
+    const Containers::StridedArrayView1D<const UnsignedShort> dataGenerations = stridedArrayView(state.data).slice(&Data::used).slice(&Data::Used::generation);
+
+    for(AbstractAnimator& animator: animators) {
+        CORRADE_ASSERT(animator.features() & AnimatorFeature::DataAttachment,
+            "Whee::AbstractLayer::cleanData(): data attachment not supported by an animator", );
+        CORRADE_ASSERT(animator.layer() != LayerHandle::Null,
+            "Whee::AbstractLayer::cleanData(): animator has no layer set for data attachment", );
+        CORRADE_ASSERT(animator.layer() == handle(),
+            "Whee::AbstractLayer::cleanData(): expected an animator associated with" << handle() << "but got" << animator.layer(), );
+
+        animator.cleanData(dataGenerations);
+    }
+
+    state.state &= ~LayerState::NeedsDataClean;
+}
 
 void AbstractLayer::update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     CORRADE_ASSERT(clipRectIds.size() == clipRectDataCounts.size(),

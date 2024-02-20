@@ -26,6 +26,7 @@
 #include <sstream>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
@@ -33,8 +34,10 @@
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/DebugStl.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 
+#include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/AbstractRenderer.h"
 #include "Magnum/Whee/Event.h"
@@ -75,6 +78,12 @@ struct AbstractLayerTest: TestSuite::Tester {
     void cleanNodesEmpty();
     void cleanNodesNotImplemented();
 
+    void cleanDataAnimators();
+    void cleanDataAnimatorsEmpty();
+    void cleanDataAnimatorsInvalidFeatures();
+    void cleanDataAnimatorsLayerNotSet();
+    void cleanDataAnimatorsInvalidLayer();
+
     void update();
     void updateEmpty();
     void updateNotImplemented();
@@ -100,6 +109,8 @@ struct AbstractLayerTest: TestSuite::Tester {
     void pointerEventOutOfRange();
     void pointerEventAlreadyAccepted();
 };
+
+using namespace Math::Literals;
 
 AbstractLayerTest::AbstractLayerTest() {
     addTests({&AbstractLayerTest::debugFeature,
@@ -131,6 +142,12 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::cleanNodes,
               &AbstractLayerTest::cleanNodesEmpty,
               &AbstractLayerTest::cleanNodesNotImplemented,
+
+              &AbstractLayerTest::cleanDataAnimators,
+              &AbstractLayerTest::cleanDataAnimatorsEmpty,
+              &AbstractLayerTest::cleanDataAnimatorsInvalidFeatures,
+              &AbstractLayerTest::cleanDataAnimatorsLayerNotSet,
+              &AbstractLayerTest::cleanDataAnimatorsInvalidLayer,
 
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateEmpty,
@@ -305,7 +322,7 @@ void AbstractLayerTest::createRemove() {
     layer.remove(first);
     CORRADE_VERIFY(!layer.isHandleValid(first));
     CORRADE_VERIFY(layer.isHandleValid(second));
-    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 1);
 
@@ -313,7 +330,7 @@ void AbstractLayerTest::createRemove() {
     layer.remove(dataHandleData(second));
     CORRADE_VERIFY(!layer.isHandleValid(first));
     CORRADE_VERIFY(!layer.isHandleValid(second));
-    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 0);
 }
@@ -818,6 +835,226 @@ void AbstractLayerTest::cleanNodesNotImplemented() {
     CORRADE_VERIFY(true);
 }
 
+void AbstractLayerTest::cleanDataAnimators() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+        using AbstractLayer::remove;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            ++called;
+            CORRADE_COMPARE_AS(animationIdsToRemove, Containers::stridedArrayView({
+                /* First and third is attached to removed data, fourth is not
+                   attached to anything. fifth was attached to an invalid
+                   handle in the first place */
+                true, false, true, false, true
+            }).sliceBit(0), TestSuite::Compare::Container);
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+
+        Int called = 0;
+    } animator1{animatorHandle(1, 1)};
+    animator1.setLayer(layer);
+
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractGenericAnimator::create;
+        using AbstractGenericAnimator::remove;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            ++called;
+            CORRADE_COMPARE_AS(animationIdsToRemove, Containers::stridedArrayView({
+                /* Second is attached to removed data, the third is already
+                   removed at this point; fourth is recreated with a different
+                   handle generation */
+                false, true, false, true
+            }).sliceBit(0), TestSuite::Compare::Container);
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+
+        Int called = 0;
+    } animator2{animatorHandle(1, 1)};
+    animator2.setLayer(layer);
+
+    /* Seventh data unused, sixth unused and removed. Fifth data attached to by
+       both animators and removed. Fourth data is removed and then recreated
+       with the same handle ID, which should cause the now-stale assignment to
+       get removed as well. */
+    DataHandle first = layer.create();
+    DataHandle second = layer.create();
+    DataHandle third = layer.create();
+    DataHandle fourth = layer.create();
+    DataHandle fifth = layer.create();
+    DataHandle sixth = layer.create();
+    /*DataHandle seventh =*/ layer.create();
+    layer.remove(fourth);
+    layer.remove(fifth);
+    layer.remove(sixth);
+    DataHandle fourth2 = layer.create();
+    CORRADE_COMPARE(dataHandleId(fourth2), dataHandleId(fourth));
+
+    /* Two animations attached to the same data (which get removed), one
+       animation not attached to anything, one animation attached to an already
+       invalid handle */
+    AnimationHandle animation11 = animator1.create(0_nsec, 1_nsec, fifth);
+    AnimationHandle animation12 = animator1.create(0_nsec, 1_nsec, third);
+    AnimationHandle animation13 = animator1.create(0_nsec, 1_nsec, fifth);
+    AnimationHandle animation14 = animator1.create(0_nsec, 1_nsec);
+    /* The ID however has to be in range, otherwise it'll assert on an OOB
+       access */
+    /** @todo this might be possible to hit in practice (accidentally attaching
+        to a LayerDataHandle from a different layer that has more items), have
+        some graceful handling? */
+    AnimationHandle animation15 = animator1.create(0_nsec, 1_nsec, layerDataHandle(5, 0x12));
+
+    /* One animation attached to the same data as in the first animator, one
+       animation attached but then removed */
+    AnimationHandle animation21 = animator2.create(0_nsec, 1_nsec, second);
+    AnimationHandle animation22 = animator2.create(0_nsec, 1_nsec, fifth);
+    AnimationHandle animation23 = animator2.create(0_nsec, 1_nsec, first);
+    AnimationHandle animation24 = animator2.create(0_nsec, 1_nsec, fourth);
+    animator2.remove(animation23);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    layer.cleanData({animator1, animator2});
+    CORRADE_VERIFY(!animator1.isHandleValid(animation11));
+    CORRADE_VERIFY(animator1.isHandleValid(animation12));
+    CORRADE_VERIFY(!animator1.isHandleValid(animation13));
+    CORRADE_VERIFY(animator1.isHandleValid(animation14));
+    CORRADE_VERIFY(!animator1.isHandleValid(animation15));
+    CORRADE_VERIFY(animator2.isHandleValid(animation21));
+    CORRADE_VERIFY(!animator2.isHandleValid(animation22));
+    CORRADE_VERIFY(!animator2.isHandleValid(animation23));
+    CORRADE_VERIFY(!animator2.isHandleValid(animation24));
+    CORRADE_COMPARE(animator1.called, 1);
+    CORRADE_COMPARE(animator2.called, 1);
+}
+
+void AbstractLayerTest::cleanDataAnimatorsEmpty() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    /* It shouldn't crash or anything */
+    layer.cleanData({});
+    CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::cleanDataAnimatorsInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator1{animatorHandle(0, 1)};
+    animator1.setLayer(layer);
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+    } animator2{animatorHandle(1, 3)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.cleanData({animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::cleanData(): data attachment not supported by an animator\n");
+}
+
+void AbstractLayerTest::cleanDataAnimatorsLayerNotSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator1{animatorHandle(0, 1)};
+    animator1.setLayer(layer);
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator2{animatorHandle(1, 3)};
+    /* Second animator layer not set */
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.cleanData({animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::cleanData(): animator has no layer set for data attachment\n");
+}
+
+void AbstractLayerTest::cleanDataAnimatorsInvalidLayer() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer1{layerHandle(0xab, 0x12)}, layer2{layerHandle(0xcd, 0x34)};
+
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator1{animatorHandle(0, 1)}, animator2{animatorHandle(1, 3)};
+    animator1.setLayer(layer1);
+    animator2.setLayer(layer2);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer1.cleanData({animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::cleanData(): expected an animator associated with Whee::LayerHandle(0xab, 0x12) but got Whee::LayerHandle(0xcd, 0x34)\n");
+}
+
 void AbstractLayerTest::update() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1103,30 +1340,39 @@ void AbstractLayerTest::state() {
     layer.update({}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* remove() adds nothing on its own */
+    /* remove() adds NeedsDataClean */
     layer.remove(data1);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
+
+    /* cleanNodes() is a no-op, doesn't affect this flag. Passing the matching
+       generation to not make it remove any data. */
+    layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
+
+    /* cleanData() then resets NeedsDataClean. Passing no animators is a valid
+       case as not every layer may have any attached. */
+    layer.cleanData({});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* remove() adds NeedsAttachmentUpdate if the data were attached */
     layer.remove(data2);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets one */
     layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
+
+    /* cleanData() the other */
+    layer.cleanData({});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing the other overload */
     layer.remove(dataHandleData(data3));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
 
-    /* cleanNodes() (no-op in this case) doesn't remove any flags on its own */
-    CORRADE_COMPARE(layer.usedCount(), 1);
-    layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
-    CORRADE_COMPARE(layer.usedCount(), 1);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
-
-    /* Only update() does */
+    /* update() and cleanData() then resets it */
     layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    layer.cleanData({});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* cleanNodes() that removes a data doesn't set any flags either */

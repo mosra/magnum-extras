@@ -40,6 +40,7 @@
 #include <Magnum/Math/Time.h>
 
 #include "Magnum/Whee/AbstractAnimator.h"
+#include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/Handle.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
@@ -63,6 +64,12 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void constructMove();
     void constructMoveGeneric();
 
+    void featuresMutuallyExclusive();
+
+    void genericSetLayer();
+    void genericSetLayerInvalid();
+    void genericSetLayerInvalidFeatures();
+
     void createRemove();
     void createRemoveHandleRecycle();
     void createRemoveHandleDisable();
@@ -70,6 +77,10 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void createInvalid();
     void createNodeAttachment();
     void createNodeAttachmentInvalidFeatures();
+    void createDataAttachment();
+    void createDataAttachmentNoLayerSet();
+    void createDataAttachmentInvalidLayer();
+    void createDataAttachmentInvalidFeatures();
     void removeInvalid();
     void properties();
     void propertiesStateFactor();
@@ -77,6 +88,11 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void attachNode();
     void attachNodeInvalid();
     void attachNodeInvalidFeatures();
+    void attachData();
+    void attachDataInvalid();
+    void attachDataNoLayerSet();
+    void attachDataInvalidLayer();
+    void attachDataInvalidFeatures();
 
     void clean();
     void cleanEmpty();
@@ -87,6 +103,12 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void cleanNodesEmpty();
     void cleanNodesNotImplemented();
     void cleanNodesInvalidFeatures();
+
+    void cleanData();
+    void cleanDataEmpty();
+    void cleanDataNotImplemented();
+    void cleanDataInvalidFeatures();
+    void cleanDataNoLayerSet();
 
     void playPauseStop();
     void playPauseStopInvalid();
@@ -109,6 +131,7 @@ const struct {
 } CreateRemoveData[]{
     {"", {}},
     {"NodeAttachment", AnimatorFeature::NodeAttachment},
+    {"DataAttachment", AnimatorFeature::DataAttachment},
 };
 
 const struct {
@@ -244,6 +267,7 @@ const struct {
 } CleanData[]{
     {"", {}},
     {"node attachment", AnimatorFeature::NodeAttachment},
+    {"data attachment", AnimatorFeature::DataAttachment},
 };
 
 const struct {
@@ -296,7 +320,13 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::constructCopy,
               &AbstractAnimatorTest::constructCopyGeneric,
               &AbstractAnimatorTest::constructMove,
-              &AbstractAnimatorTest::constructMoveGeneric});
+              &AbstractAnimatorTest::constructMoveGeneric,
+
+              &AbstractAnimatorTest::featuresMutuallyExclusive,
+
+              &AbstractAnimatorTest::genericSetLayer,
+              &AbstractAnimatorTest::genericSetLayerInvalid,
+              &AbstractAnimatorTest::genericSetLayerInvalidFeatures});
 
     addInstancedTests({&AbstractAnimatorTest::createRemove,
                        &AbstractAnimatorTest::createRemoveHandleRecycle},
@@ -307,6 +337,10 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::createInvalid,
               &AbstractAnimatorTest::createNodeAttachment,
               &AbstractAnimatorTest::createNodeAttachmentInvalidFeatures,
+              &AbstractAnimatorTest::createDataAttachment,
+              &AbstractAnimatorTest::createDataAttachmentNoLayerSet,
+              &AbstractAnimatorTest::createDataAttachmentInvalidLayer,
+              &AbstractAnimatorTest::createDataAttachmentInvalidFeatures,
               &AbstractAnimatorTest::removeInvalid,
               &AbstractAnimatorTest::properties});
 
@@ -316,7 +350,12 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
     addTests({&AbstractAnimatorTest::propertiesInvalid,
               &AbstractAnimatorTest::attachNode,
               &AbstractAnimatorTest::attachNodeInvalid,
-              &AbstractAnimatorTest::attachNodeInvalidFeatures});
+              &AbstractAnimatorTest::attachNodeInvalidFeatures,
+              &AbstractAnimatorTest::attachData,
+              &AbstractAnimatorTest::attachDataInvalid,
+              &AbstractAnimatorTest::attachDataNoLayerSet,
+              &AbstractAnimatorTest::attachDataInvalidLayer,
+              &AbstractAnimatorTest::attachDataInvalidFeatures});
 
     addInstancedTests({&AbstractAnimatorTest::clean},
         Containers::arraySize(CleanData));
@@ -329,6 +368,12 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::cleanNodesEmpty,
               &AbstractAnimatorTest::cleanNodesNotImplemented,
               &AbstractAnimatorTest::cleanNodesInvalidFeatures,
+
+              &AbstractAnimatorTest::cleanData,
+              &AbstractAnimatorTest::cleanDataEmpty,
+              &AbstractAnimatorTest::cleanDataNotImplemented,
+              &AbstractAnimatorTest::cleanDataInvalidFeatures,
+              &AbstractAnimatorTest::cleanDataNoLayerSet,
 
               &AbstractAnimatorTest::playPauseStop,
               &AbstractAnimatorTest::playPauseStopInvalid});
@@ -504,6 +549,101 @@ void AbstractAnimatorTest::constructMoveGeneric() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Animator>::value);
 }
 
+void AbstractAnimatorTest::featuresMutuallyExclusive() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment|AnimatorFeature::DataAttachment;
+        }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.features();
+    CORRADE_COMPARE(out.str(), "Whee::AbstractAnimator::features(): Whee::AnimatorFeature::NodeAttachment and Whee::AnimatorFeature::DataAttachment are mutually exclusive\n");
+}
+
+void AbstractAnimatorTest::genericSetLayer() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+    CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
+
+    animator.setLayer(layer);
+    CORRADE_COMPARE(animator.layer(), layer.handle());
+}
+
+void AbstractAnimatorTest::genericSetLayerInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+
+    /* First time it passes */
+    animator.setLayer(layer);
+    CORRADE_COMPARE(animator.layer(), layer.handle());
+
+    /* Second time it asserts, even if the layer is the same */
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.setLayer(layer);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractGenericAnimator::setLayer(): layer already set to Whee::LayerHandle(0xab, 0x12)\n");
+}
+
+void AbstractAnimatorTest::genericSetLayerInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            /* Not DataAttachment */
+            return AnimatorFeature::NodeAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.setLayer(layer);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractGenericAnimator::setLayer(): feature not supported\n");
+}
+
 void AbstractAnimatorTest::createRemove() {
     auto&& data = CreateRemoveData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -535,6 +675,8 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.stopped(first), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
         CORRADE_COMPARE(animator.node(first), NodeHandle::Null);
+    if(data.features & AnimatorFeature::DataAttachment)
+        CORRADE_COMPARE(animator.data(first), DataHandle::Null);
     /* Animation state() is tested thoroughly in animationState() */
     CORRADE_COMPARE(animator.state(first), AnimationState::Scheduled);
 
@@ -555,6 +697,8 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.stopped(animationHandleData(second)), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
         CORRADE_COMPARE(animator.node(second), NodeHandle::Null);
+    if(data.features & AnimatorFeature::DataAttachment)
+        CORRADE_COMPARE(animator.data(second), DataHandle::Null);
     /* Animation state() is tested thoroughly in animationState() */
     CORRADE_COMPARE(animator.state(animationHandleData(second)), AnimationState::Playing);
 
@@ -574,6 +718,8 @@ void AbstractAnimatorTest::createRemove() {
     CORRADE_COMPARE(animator.stopped(third), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
         CORRADE_COMPARE(animator.node(third), NodeHandle::Null);
+    if(data.features & AnimatorFeature::DataAttachment)
+        CORRADE_COMPARE(animator.data(third), DataHandle::Null);
     /* Animation state() is tested thoroughly in animationState() */
     CORRADE_COMPARE(animator.state(third), AnimationState::Scheduled);
 
@@ -599,17 +745,34 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     auto&& data = CreateRemoveData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    struct Animator: AbstractAnimator {
-        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractAnimator{handle}, _features{features} {}
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
 
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct Animator: AbstractGenericAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractGenericAnimator{handle}, _features{features} {}
+
+        using AbstractGenericAnimator::setLayer;
         using AbstractAnimator::create;
         using AbstractAnimator::remove;
 
         AnimatorFeatures doFeatures() const override { return _features; }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
 
         private:
             AnimatorFeatures _features;
     } animator{animatorHandle(0xab, 0x12), data.features};
+    if(data.features & AnimatorFeature::DataAttachment)
+        animator.setLayer(layer);
+
+    /* The actual intricancies of node/data attachment are tested in
+       createNodeAttachment*() / createDataAttachment*() and
+       attachNode*() / attachData*(), here it mainly just verifies that the
+       assignment gets reset during recycle */
 
     AnimationHandle first = animator.create(0_nsec, 12_nsec, 0, AnimationFlag::KeepOncePlayed);
     AnimationHandle second = animator.create(2_nsec, 1_nsec);
@@ -655,6 +818,12 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
         CORRADE_COMPARE(animator.node(third), NodeHandle::Null);
         CORRADE_COMPARE(animator.node(fourth), NodeHandle::Null);
     }
+    if(data.features & AnimatorFeature::DataAttachment) {
+        CORRADE_COMPARE(animator.data(first), DataHandle::Null);
+        CORRADE_COMPARE(animator.data(second), DataHandle::Null);
+        CORRADE_COMPARE(animator.data(third), DataHandle::Null);
+        CORRADE_COMPARE(animator.data(fourth), DataHandle::Null);
+    }
 
     /* Populate internals of some animations */
     animator.pause(first, 50_nsec);
@@ -669,6 +838,18 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
             NodeHandle(0xabc12345),
             NodeHandle::Null,
             NodeHandle(0x123abcde)
+        }), TestSuite::Compare::Container);
+    }
+    if(data.features & AnimatorFeature::DataAttachment) {
+        animator.attach(second, LayerDataHandle(0xabc12345));
+        animator.attach(fourth, LayerDataHandle(0x123abcde));
+        CORRADE_COMPARE(dataHandleData(animator.data(second)), LayerDataHandle(0xabc12345));
+        CORRADE_COMPARE(dataHandleData(animator.data(fourth)), LayerDataHandle(0x123abcde));
+        CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+            LayerDataHandle::Null,
+            LayerDataHandle(0xabc12345),
+            LayerDataHandle::Null,
+            LayerDataHandle(0x123abcde)
         }), TestSuite::Compare::Container);
     }
 
@@ -693,6 +874,13 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
             NodeHandle(0xabc12345),
             NodeHandle::Null,
             NodeHandle::Null
+        }), TestSuite::Compare::Container);
+    if(data.features & AnimatorFeature::DataAttachment)
+        CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+            LayerDataHandle::Null,
+            LayerDataHandle(0xabc12345),
+            LayerDataHandle::Null,
+            LayerDataHandle::Null
         }), TestSuite::Compare::Container);
 
     /* Allocating new handles should recycle the handles in the order they were
@@ -735,6 +923,12 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
         CORRADE_COMPARE(animator.node(third2), NodeHandle::Null);
         CORRADE_COMPARE(animator.node(fourth2), NodeHandle::Null);
     }
+    if(data.features & AnimatorFeature::DataAttachment) {
+        CORRADE_COMPARE(dataHandleData(animator.data(first2)), LayerDataHandle::Null);
+        CORRADE_COMPARE(dataHandleData(animator.data(second)), LayerDataHandle(0xabc12345));
+        CORRADE_COMPARE(dataHandleData(animator.data(third2)), LayerDataHandle::Null);
+        CORRADE_COMPARE(dataHandleData(animator.data(fourth2)), LayerDataHandle::Null);
+    }
 
     /* Old handles shouldn't get valid again */
     CORRADE_VERIFY(!animator.isHandleValid(first));
@@ -762,6 +956,8 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.stopped(third3), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
         CORRADE_COMPARE(animator.node(third3), NodeHandle::Null);
+    if(data.features & AnimatorFeature::DataAttachment)
+        CORRADE_COMPARE(animator.data(third3), DataHandle::Null);
 
     /* Allocating a new handle with the free list empty will grow it */
     AnimationHandle fifth = animator.create(2888_nsec, 8882_nsec);
@@ -777,6 +973,8 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(animator.stopped(fifth), Nanoseconds::max());
     if(data.features & AnimatorFeature::NodeAttachment)
         CORRADE_COMPARE(animator.node(fifth), NodeHandle::Null);
+    if(data.features & AnimatorFeature::DataAttachment)
+        CORRADE_COMPARE(animator.data(fifth), DataHandle::Null);
 }
 
 void AbstractAnimatorTest::createRemoveHandleDisable() {
@@ -921,7 +1119,10 @@ void AbstractAnimatorTest::createNodeAttachmentInvalidFeatures() {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
 
-        AnimatorFeatures doFeatures() const override { return {}; }
+        AnimatorFeatures doFeatures() const override {
+            /* Not NodeAttachment */
+            return AnimatorFeature::DataAttachment;
+        }
     } animator{animatorHandle(0, 1)};
 
     std::ostringstream out;
@@ -931,6 +1132,200 @@ void AbstractAnimatorTest::createNodeAttachmentInvalidFeatures() {
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractAnimator::create(): node attachment not supported\n"
         "Whee::AbstractAnimator::create(): node attachment not supported\n");
+}
+
+void AbstractAnimatorTest::createDataAttachment() {
+    /* Check just what the overload does on top of the base create(), to which
+       it delegates */
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+    animator.setLayer(layer);
+
+    /* Default overload */
+    AnimationHandle first = animator.create(15_nsec, 37_nsec, dataHandle(animator.layer(), LayerDataHandle(0xabcde123)), 155, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(animator.duration(first), 37_nsec);
+    CORRADE_COMPARE(animator.repeatCount(first), 155);
+    CORRADE_COMPARE(animator.flags(first), AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(animator.played(first), 15_nsec);
+    CORRADE_COMPARE(animator.paused(first), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(first), Nanoseconds::max());
+    CORRADE_COMPARE(animator.data(first), dataHandle(animator.layer(), LayerDataHandle(0xabcde123)));
+
+    /* LayerDataHandle variant */
+    AnimationHandle second = animator.create(-37_nsec, 122_nsec, LayerDataHandle(0x123abcde), 12, AnimationFlag(0xc0));
+    CORRADE_COMPARE(animator.duration(second), 122_nsec);
+    CORRADE_COMPARE(animator.repeatCount(second), 12);
+    CORRADE_COMPARE(animator.flags(second), AnimationFlag(0xc0));
+    CORRADE_COMPARE(animator.played(second), -37_nsec);
+    CORRADE_COMPARE(animator.paused(second), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(second), Nanoseconds::max());
+    CORRADE_COMPARE(animator.data(second), dataHandle(animator.layer(), LayerDataHandle(0x123abcde)));
+
+    /* Overload with implicit repeat count */
+    AnimationHandle third = animator.create(-655_nsec, 12_nsec, dataHandle(animator.layer(), LayerDataHandle(0x12345abc)), AnimationFlag(0xe0));
+    CORRADE_COMPARE(animator.duration(third), 12_nsec);
+    CORRADE_COMPARE(animator.repeatCount(third), 1);
+    CORRADE_COMPARE(animator.flags(third), AnimationFlag(0xe0));
+    CORRADE_COMPARE(animator.played(third), -655_nsec);
+    CORRADE_COMPARE(animator.paused(third), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(third), Nanoseconds::max());
+    CORRADE_COMPARE(animator.data(third), dataHandle(animator.layer(), LayerDataHandle(0x12345abc)));
+
+    /* LayerDataHandle variant */
+    AnimationHandle fourth = animator.create(3_nsec, 777_nsec, LayerDataHandle(0xabc12345), AnimationFlag(0x70));
+    CORRADE_COMPARE(animator.duration(fourth), 777_nsec);
+    CORRADE_COMPARE(animator.repeatCount(fourth), 1);
+    CORRADE_COMPARE(animator.flags(fourth), AnimationFlag(0x70));
+    CORRADE_COMPARE(animator.played(fourth), 3_nsec);
+    CORRADE_COMPARE(animator.paused(fourth), Nanoseconds::max());
+    CORRADE_COMPARE(animator.stopped(fourth), Nanoseconds::max());
+    CORRADE_COMPARE(animator.data(fourth), dataHandle(animator.layer(), LayerDataHandle(0xabc12345)));
+
+    /* Null handles should be accepted too */
+    AnimationHandle fifth1 = animator.create(12_nsec, 24_nsec, DataHandle::Null, 0);
+    AnimationHandle fifth2 = animator.create(12_nsec, 24_nsec, LayerDataHandle::Null, 0);
+    CORRADE_COMPARE(animator.duration(fifth1), 24_nsec);
+    CORRADE_COMPARE(animator.duration(fifth2), 24_nsec);
+    CORRADE_COMPARE(animator.repeatCount(fifth1), 0);
+    CORRADE_COMPARE(animator.repeatCount(fifth2), 0);
+    CORRADE_COMPARE(animator.flags(fifth1), AnimationFlags{});
+    CORRADE_COMPARE(animator.flags(fifth2), AnimationFlags{});
+    CORRADE_COMPARE(animator.played(fifth1), 12_nsec);
+    CORRADE_COMPARE(animator.played(fifth2), 12_nsec);
+    CORRADE_COMPARE(animator.data(fifth1), DataHandle::Null);
+    CORRADE_COMPARE(animator.data(fifth2), DataHandle::Null);
+
+    AnimationHandle sixth1 = animator.create(0_nsec, 1_nsec, DataHandle::Null, AnimationFlag(0x10));
+    AnimationHandle sixth2 = animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, AnimationFlag(0x10));
+    CORRADE_COMPARE(animator.duration(sixth1), 1_nsec);
+    CORRADE_COMPARE(animator.duration(sixth2), 1_nsec);
+    CORRADE_COMPARE(animator.repeatCount(sixth1), 1);
+    CORRADE_COMPARE(animator.repeatCount(sixth2), 1);
+    CORRADE_COMPARE(animator.flags(sixth1), AnimationFlag(0x10));
+    CORRADE_COMPARE(animator.flags(sixth2), AnimationFlag(0x10));
+    CORRADE_COMPARE(animator.played(sixth1), 0_nsec);
+    CORRADE_COMPARE(animator.played(sixth2), 0_nsec);
+    CORRADE_COMPARE(animator.data(sixth1), DataHandle::Null);
+    CORRADE_COMPARE(animator.data(sixth2), DataHandle::Null);
+
+    /* The data attachments should be reflected here as well */
+    CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+        LayerDataHandle(0xabcde123),
+        LayerDataHandle(0x123abcde),
+        LayerDataHandle(0x12345abc),
+        LayerDataHandle(0xabc12345),
+        LayerDataHandle::Null,
+        LayerDataHandle::Null,
+        LayerDataHandle::Null,
+        LayerDataHandle::Null
+    }), TestSuite::Compare::Container);
+}
+
+void AbstractAnimatorTest::createDataAttachmentNoLayerSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.create(0_nsec, 1_nsec, DataHandle::Null, 1);
+    animator.create(0_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+    /* These don't work either even though there's no layer portion to compare,
+       for consistency */
+    animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, 1);
+    animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractAnimator::create(): no layer set for data attachment\n"
+        "Whee::AbstractAnimator::create(): no layer set for data attachment\n"
+        "Whee::AbstractAnimator::create(): no layer set for data attachment\n"
+        "Whee::AbstractAnimator::create(): no layer set for data attachment\n");
+}
+
+void AbstractAnimatorTest::createDataAttachmentInvalidLayer() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+    animator.setLayer(layer);
+
+    /* Creating an animation with just a LayerDataHandle works even though
+       there's no such data in the layer */
+    animator.create(0_nsec, 1_nsec, layerDataHandle(0xabcde, 0x123), 1);
+    animator.create(0_nsec, 1_nsec, layerDataHandle(0xabcde, 0x123), AnimationFlag::KeepOncePlayed);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.create(0_nsec, 1_nsec, dataHandle(layerHandle(0xab, 0x13), 0xabcde, 0x123), 1);
+    animator.create(0_nsec, 1_nsec, dataHandle(layerHandle(0xab, 0x13), 0xabcde, 0x123), AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractAnimator::create(): expected a data handle with Whee::LayerHandle(0xab, 0x12) but got Whee::DataHandle({0xab, 0x13}, {0xabcde, 0x123})\n"
+        "Whee::AbstractAnimator::create(): expected a data handle with Whee::LayerHandle(0xab, 0x12) but got Whee::DataHandle({0xab, 0x13}, {0xabcde, 0x123})\n");
+}
+
+void AbstractAnimatorTest::createDataAttachmentInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            /* Not DataAttachment */
+            return AnimatorFeature::NodeAttachment;
+        }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.create(0_nsec, 1_nsec, DataHandle::Null, 1);
+    animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, 1);
+    animator.create(0_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+    animator.create(0_nsec, 1_nsec, LayerDataHandle::Null, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractAnimator::create(): data attachment not supported\n"
+        "Whee::AbstractAnimator::create(): data attachment not supported\n"
+        "Whee::AbstractAnimator::create(): data attachment not supported\n"
+        "Whee::AbstractAnimator::create(): data attachment not supported\n");
 }
 
 void AbstractAnimatorTest::removeInvalid() {
@@ -1269,7 +1664,10 @@ void AbstractAnimatorTest::attachNodeInvalidFeatures() {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
 
-        AnimatorFeatures doFeatures() const override { return {}; }
+        AnimatorFeatures doFeatures() const override {
+            /* Not NodeAttachment */
+            return AnimatorFeature::DataAttachment;
+        }
     } animator{animatorHandle(0, 1)};
 
     AnimationHandle handle = animator.create(0_nsec, 1_nsec);
@@ -1290,13 +1688,267 @@ void AbstractAnimatorTest::attachNodeInvalidFeatures() {
         TestSuite::Compare::String);
 }
 
+void AbstractAnimatorTest::attachData() {
+    /* Expands on attachData() with additional variants for DataHandle vs
+       LayerDataHandle */
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0xab, 0x12)};
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xcd, 0x34)};
+    animator.setLayer(layer);
+
+    /* Create animations that are stoppped to not affect animator state */
+    AnimationHandle first = animator.create(-10_nsec, 5_nsec, AnimationFlag::KeepOncePlayed);
+    AnimationHandle second = animator.create(-100_nsec, 50_nsec, AnimationFlag::KeepOncePlayed);
+    CORRADE_COMPARE(animator.data(first), DataHandle::Null);
+    CORRADE_COMPARE(animator.data(second), DataHandle::Null);
+
+    DataHandle dataFirst = dataHandle(animator.layer(), 2865, 0xcec);
+    DataHandle dataSecond = dataHandle(animator.layer(), 9872, 0xbeb);
+    DataHandle dataThird = dataHandle(animator.layer(), 12, 0x888);
+
+    /* Attaching shouldn't affect animator state */
+    animator.attach(first, dataSecond);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.data(first), dataSecond);
+
+    /* The attachment should be reflected in the view as well */
+    CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+        dataHandleData(dataSecond),
+        LayerDataHandle::Null
+    }), TestSuite::Compare::Container);
+
+    /* Calling with the animator-specific handles should work too */
+    animator.attach(animationHandleData(second), dataFirst);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.data(animationHandleData(second)), dataFirst);
+
+    /* Attaching to a new data should overwrite the previous */
+    animator.attach(first, dataThird);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.data(first), dataThird);
+
+    /* Attaching two animations to the same node should work too */
+    animator.attach(second, dataThird);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.data(first), dataThird);
+    CORRADE_COMPARE(animator.data(second), dataThird);
+
+    /* Detaching as well */
+    animator.attach(first, DataHandle::Null);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.data(first), DataHandle::Null);
+    CORRADE_COMPARE(animator.data(second), dataThird);
+
+    /* The cleared attachment should be reflected in the view as well */
+    CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+        LayerDataHandle::Null,
+        dataHandleData(dataThird)
+    }), TestSuite::Compare::Container);
+
+    /* Verify the LayerDataHandle overloads work too */
+    animator.attach(first, dataHandleData(dataSecond));
+    animator.attach(second, LayerDataHandle::Null);
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.data(first), dataSecond);
+    CORRADE_COMPARE(animator.data(second), DataHandle::Null);
+    CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+        dataHandleData(dataSecond),
+        LayerDataHandle::Null
+    }), TestSuite::Compare::Container);
+
+    /* And the AnimatorDataHandle + LayerDataHandle overloads also */
+    animator.attach(animationHandleData(first), LayerDataHandle::Null);
+    animator.attach(animationHandleData(second), dataHandleData(dataFirst));
+    CORRADE_COMPARE(animator.state(), AnimatorStates{});
+    CORRADE_COMPARE(animator.data(first), DataHandle::Null);
+    CORRADE_COMPARE(animator.data(second), dataFirst);
+    CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+        LayerDataHandle::Null,
+        dataHandleData(dataFirst)
+    }), TestSuite::Compare::Container);
+}
+
+void AbstractAnimatorTest::attachDataInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator{animatorHandle(0xab, 0x12)};
+
+    /* Don't need to call setLayer() here as the animation handle validity is
+       checked as the first thing, before everything else */
+
+    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.attach(AnimationHandle::Null, dataHandle(animator.layer(), 2865, 0xcec));
+    animator.attach(AnimationHandle::Null, layerDataHandle(2865, 0xcec));
+    animator.data(AnimationHandle::Null);
+    /* Valid animator, invalid data */
+    animator.attach(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), dataHandle(animator.layer(), 2865, 0xcec));
+    animator.attach(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)), layerDataHandle(2865, 0xcec));
+    animator.data(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
+    /* Invalid animator, valid data */
+    animator.attach(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), dataHandle(animator.layer(), 2865, 0xcec));
+    animator.attach(animationHandle(AnimatorHandle::Null, animationHandleData(handle)), layerDataHandle(2865, 0xcec));
+    animator.data(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
+    /* AnimatorDataHandle directly */
+    animator.attach(AnimatorDataHandle(0x123abcde), dataHandle(animator.layer(), 2865, 0xcec));
+    animator.attach(AnimatorDataHandle(0x123abcde), layerDataHandle(2865, 0xcec));
+    animator.data(AnimatorDataHandle(0x123abcde));
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle::Null\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle::Null\n"
+        "Whee::AbstractAnimator::data(): invalid handle Whee::AnimationHandle::Null\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
+        "Whee::AbstractAnimator::data(): invalid handle Whee::AnimationHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Whee::AbstractAnimator::data(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Whee::AbstractAnimator::attach(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
+        "Whee::AbstractAnimator::data(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractAnimatorTest::attachDataNoLayerSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator{animatorHandle(0xab, 0x12)};
+
+    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
+
+    /* Querying the attachment works in this case, it returns null */
+    CORRADE_COMPARE(animator.data(handle), DataHandle::Null);
+    CORRADE_COMPARE(animator.data(animationHandleData(handle)), DataHandle::Null);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.attach(handle, dataHandle(animator.layer(), 2865, 0xcec));
+    animator.attach(handle, layerDataHandle(2865, 0xcec));
+    animator.attach(animationHandleData(handle), dataHandle(animator.layer(), 2865, 0xcec));
+    animator.attach(animationHandleData(handle), layerDataHandle(2865, 0xcec));
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractAnimator::attach(): no layer set for data attachment\n"
+        "Whee::AbstractAnimator::attach(): no layer set for data attachment\n"
+        "Whee::AbstractAnimator::attach(): no layer set for data attachment\n"
+        "Whee::AbstractAnimator::attach(): no layer set for data attachment\n");
+}
+
+void AbstractAnimatorTest::attachDataInvalidLayer() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+    animator.setLayer(layer);
+
+    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
+
+    /* Attaching to just a LayerDataHandle works even though there's no such
+       data in the layer */
+    animator.attach(handle, layerDataHandle(0xabcde, 0x123));
+    animator.attach(animationHandleData(handle), layerDataHandle(0xabcde, 0x123));
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.attach(handle, dataHandle(layerHandle(0xab, 0x13), 0xabcde, 0x123));
+    animator.attach(animationHandleData(handle), dataHandle(layerHandle(0xab, 0x13), 0xabcde, 0x123));
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractAnimator::attach(): expected a data handle with Whee::LayerHandle(0xab, 0x12) but got Whee::DataHandle({0xab, 0x13}, {0xabcde, 0x123})\n"
+        "Whee::AbstractAnimator::attach(): expected a data handle with Whee::LayerHandle(0xab, 0x12) but got Whee::DataHandle({0xab, 0x13}, {0xabcde, 0x123})\n");
+}
+
+void AbstractAnimatorTest::attachDataInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+        using AbstractAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            /* Not DataAttachment */
+            return AnimatorFeature::NodeAttachment;
+        }
+    } animator{animatorHandle(0, 1)};
+
+    AnimationHandle handle = animator.create(0_nsec, 1_nsec);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.attach(handle, DataHandle::Null);
+    animator.attach(handle, LayerDataHandle::Null);
+    animator.attach(animationHandleData(handle), DataHandle::Null);
+    animator.attach(animationHandleData(handle), LayerDataHandle::Null);
+    animator.data(handle);
+    animator.data(animationHandleData(handle));
+    animator.layerData();
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractAnimator::attach(): data attachment not supported\n"
+        "Whee::AbstractAnimator::attach(): data attachment not supported\n"
+        "Whee::AbstractAnimator::attach(): data attachment not supported\n"
+        "Whee::AbstractAnimator::attach(): data attachment not supported\n"
+        "Whee::AbstractAnimator::data(): feature not supported\n"
+        "Whee::AbstractAnimator::data(): feature not supported\n"
+        "Whee::AbstractAnimator::layerData(): feature not supported\n",
+        TestSuite::Compare::String);
+}
+
 void AbstractAnimatorTest::clean() {
     auto&& data = CleanData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    struct Animator: AbstractAnimator {
-        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractAnimator{handle}, _features{features} {}
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct Animator: AbstractGenericAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractGenericAnimator{handle}, _features{features} {}
 
+        using AbstractGenericAnimator::setLayer;
         using AbstractAnimator::create;
         using AbstractAnimator::remove;
 
@@ -1307,6 +1959,7 @@ void AbstractAnimatorTest::clean() {
                 true, false, true, false
             }).sliceBit(0), TestSuite::Compare::Container);
         }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
 
         Int called = 0;
 
@@ -1314,6 +1967,14 @@ void AbstractAnimatorTest::clean() {
             AnimatorFeatures _features;
 
     } animator{animatorHandle(0, 1), data.features};
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+    if(data.features >= AnimatorFeature::DataAttachment)
+        animator.setLayer(layer);
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -1330,6 +1991,10 @@ void AbstractAnimatorTest::clean() {
         animator.attach(first, nodeHandle(0x1234, 1));
         animator.attach(third, nodeHandle(0x5678, 1));
         animator.attach(fourth, nodeHandle(0x9abc, 1));
+    } else if(data.features >= AnimatorFeature::DataAttachment) {
+        animator.attach(first, layerDataHandle(0x1234, 1));
+        animator.attach(third, layerDataHandle(0x5678, 1));
+        animator.attach(fourth, layerDataHandle(0x9abc, 1));
     }
 
     /* Call clean() */
@@ -1349,6 +2014,13 @@ void AbstractAnimatorTest::clean() {
             NodeHandle::Null,
             NodeHandle::Null,
             nodeHandle(0x9abc, 1),
+        }), TestSuite::Compare::Container);
+    } else if(data.features >= AnimatorFeature::DataAttachment) {
+        CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+            LayerDataHandle::Null,
+            LayerDataHandle::Null,
+            LayerDataHandle::Null,
+            layerDataHandle(0x9abc, 1),
         }), TestSuite::Compare::Container);
     }
 }
@@ -1550,6 +2222,206 @@ void AbstractAnimatorTest::cleanNodesInvalidFeatures() {
     Error redirectError{&out};
     animator.cleanNodes({});
     CORRADE_COMPARE(out.str(), "Whee::AbstractAnimator::cleanNodes(): feature not supported\n");
+}
+
+void AbstractAnimatorTest::cleanData() {
+    /* Like cleanNodes(), just handling data instead */
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+        using AbstractAnimator::create;
+        using AbstractAnimator::remove;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doClean(Containers::BitArrayView dataIdsToRemove) override {
+            ++called;
+            CORRADE_COMPARE_AS(dataIdsToRemove, Containers::stridedArrayView({
+                true, false, false, true, false, true, false
+            }).sliceBit(0), TestSuite::Compare::Container);
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+
+        Int called = 0;
+    } animator{animatorHandle(0, 1)};
+
+    /* Has to be called to actually be able to attach the data or clean them,
+       but other than that doesn't affect the results in any way */
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+    animator.setLayer(layer);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    LayerDataHandle dataFirst = layerDataHandle(0, 0xcec);
+    LayerDataHandle dataSecond = layerDataHandle(1, 0xded);
+    LayerDataHandle dataFourth = layerDataHandle(3, 0xaba);
+    LayerDataHandle dataEighth = layerDataHandle(7, 0xfef);
+
+    /* Create seven animations to match the seven bits. Attach them to random
+       handles, leave one unassigned, attach two animations to one data. */
+    AnimationHandle first = animator.create(0_nsec, 1_nsec, dataEighth);
+    AnimationHandle second = animator.create(0_nsec, 1_nsec);
+    AnimationHandle third = animator.create(0_nsec, 1_nsec, dataSecond);
+    AnimationHandle fourth = animator.create(0_nsec, 1_nsec, dataFirst);
+    AnimationHandle fifth = animator.create(0_nsec, 1_nsec, dataFourth);
+    AnimationHandle sixth = animator.create(0_nsec, 1_nsec, dataFirst);
+    AnimationHandle seventh = animator.create(0_nsec, 1_nsec, dataFourth);
+
+    /* Remove two of them */
+    animator.remove(third);
+    animator.remove(seventh);
+
+    /* Call cleanData() with updated generation counters */
+    animator.cleanData(Containers::arrayView({
+        /* First data generation gets different, affecting fourth and sixth
+           animation */
+        UnsignedShort(layerDataHandleGeneration(dataFirst) + 1),
+        /* Second data generation gets different but since the third animation
+           is already removed it doesn't affect anything */
+        UnsignedShort(layerDataHandleGeneration(dataSecond) - 1),
+        /* Third data has no attachments so it can be arbitrary */
+        UnsignedShort{0xbeb},
+        /* Fourth data stays the same generation so the fifth animation stays.
+           Seventh animation is already removed so they aren't set for deletion
+           either. */
+        UnsignedShort(layerDataHandleGeneration(dataFourth)),
+        /* Fifth, sixth, seventh data have no attachments so they can be
+           arbitrary again */
+        UnsignedShort{0xaca},
+        UnsignedShort{0x808},
+        UnsignedShort{0xefe},
+        /* Eighth data is now a zero generation, i.e. disabled, which should
+           trigger removal of first animation */
+        UnsignedShort{},
+    }));
+    CORRADE_COMPARE(animator.called, 1);
+
+    /* Only the second and fifth data should stay afterwards */
+    CORRADE_VERIFY(!animator.isHandleValid(first));
+    CORRADE_VERIFY(animator.isHandleValid(second));
+    CORRADE_VERIFY(!animator.isHandleValid(third));
+    CORRADE_VERIFY(!animator.isHandleValid(fourth));
+    CORRADE_VERIFY(animator.isHandleValid(fifth));
+    CORRADE_VERIFY(!animator.isHandleValid(sixth));
+    CORRADE_VERIFY(!animator.isHandleValid(seventh));
+
+    /* The data attachments should be cleared for removed animations */
+    CORRADE_COMPARE_AS(animator.layerData(), Containers::arrayView({
+        LayerDataHandle::Null,
+        LayerDataHandle::Null,
+        LayerDataHandle::Null,
+        LayerDataHandle::Null,
+        dataFourth,
+        LayerDataHandle::Null,
+        LayerDataHandle::Null,
+    }), TestSuite::Compare::Container);
+}
+
+void AbstractAnimatorTest::cleanDataEmpty() {
+    /* Like cleanNodesEmpty(), just handling data instead */
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doClean(Containers::BitArrayView) override {
+            ++called;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+
+        Int called = 0;
+    } animator{animatorHandle(0, 1)};
+
+    /* Has to be called to actually be able to clean the data, but other than
+       that doesn't affect the results in any way */
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+    animator.setLayer(layer);
+
+    /* It should call the implementation even with empty contents */
+    animator.cleanData({});
+    CORRADE_COMPARE(animator.called, 1);
+}
+
+void AbstractAnimatorTest::cleanDataNotImplemented() {
+    /* Like cleanNodesNotImplemented(), just handling data instead */
+
+    /* Using AbstractGenericAnimator in order to access setLayer(), other than
+       that it's testing the base AbstractAnimator APIs */
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::setLayer;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+
+    /* Has to be called to actually be able to clean the data, but other than
+       that doesn't affect the results in any way */
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+    animator.setLayer(layer);
+
+    animator.cleanData({});
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
+}
+
+void AbstractAnimatorTest::cleanDataInvalidFeatures() {
+    /* Like cleanNodesInvalidFeatures(), just handling data instead */
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.cleanData({});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractAnimator::cleanData(): feature not supported\n");
+}
+
+void AbstractAnimatorTest::cleanDataNoLayerSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractAnimator {
+        using AbstractAnimator::AbstractAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.cleanData({});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractAnimator::cleanData(): no layer set for data attachment\n");
 }
 
 void AbstractAnimatorTest::playPauseStop() {
