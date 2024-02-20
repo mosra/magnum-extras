@@ -1903,7 +1903,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     data.layerDataHandleOverloads ?
         layer.remove(dataHandleData(fourth)) :
         layer.remove(fourth);
-    CORRADE_COMPARE(layer.state(), data.state);
+    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 5u
     }), TestSuite::Compare::Container);
@@ -1941,7 +1941,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
                 .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
     }
 
-    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean|LayerState::NeedsUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 1u, 7u, 6u, 4u, 5u
     }), TestSuite::Compare::Container);
@@ -3139,7 +3139,7 @@ void TextLayerTest::updateCleanDataOrder() {
     /* Removing a text marks the corresponding run as unused, the next update()
        then recompacts it */
     layer.remove(data7);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 0xffffffffu, 6u, 7u
     }), TestSuite::Compare::Container);
