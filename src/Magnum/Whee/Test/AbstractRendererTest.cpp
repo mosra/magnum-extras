@@ -181,7 +181,17 @@ void AbstractRendererTest::setupFramebuffers() {
 void AbstractRendererTest::setupFramebuffersInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct: AbstractRenderer {
+    struct
+        /* MSVC 2017 (_MSC_VER == 191x) crashes at runtime accessing instance2
+           in the following case. Not a problem in MSVC 2015 or 2019+.
+            struct: SomeBase {
+            } instance1, instance2;
+           Simply naming the derived struct is enough to fix the crash, FFS. */
+        #if defined(CORRADE_TARGET_MSVC) && _MSC_VER >= 1910 && _MSC_VER < 1920
+        ThisNameAlonePreventsMSVC2017FromBlowingUp
+        #endif
+        : AbstractRenderer
+    {
         RendererFeatures doFeatures() const override { return {}; }
         void doSetupFramebuffers(const Vector2i&) override {}
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
@@ -294,7 +304,17 @@ void AbstractRendererTest::transition() {
 void AbstractRendererTest::transitionInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    struct: AbstractRenderer {
+    struct
+        /* MSVC 2017 (_MSC_VER == 191x) crashes at runtime accessing instance2
+           in the following case. Not a problem in MSVC 2015 or 2019+.
+            struct: SomeBase {
+            } instance1, instance2;
+           Simply naming the derived struct is enough to fix the crash, FFS. */
+        #if defined(CORRADE_TARGET_MSVC) && _MSC_VER >= 1910 && _MSC_VER < 1920
+        ThisNameAlonePreventsMSVC2017FromBlowingUp
+        #endif
+        : AbstractRenderer
+    {
         RendererFeatures doFeatures() const override { return {}; }
         void doSetupFramebuffers(const Vector2i&) override {}
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
