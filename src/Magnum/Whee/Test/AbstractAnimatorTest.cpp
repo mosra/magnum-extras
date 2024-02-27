@@ -38,10 +38,12 @@
 #include <Corrade/Utility/Format.h>
 #include <Magnum/Math/Constants.h>
 #include <Magnum/Math/Time.h>
+#include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
 
@@ -55,14 +57,19 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void debugAnimationFlag();
     void debugAnimationFlags();
     void debugAnimationState();
+    void debugNodeAnimation();
+    void debugNodeAnimations();
 
     void construct();
     void constructGeneric();
+    void constructNode();
     void constructInvalidHandle();
     void constructCopy();
     void constructCopyGeneric();
+    void constructCopyNode();
     void constructMove();
     void constructMoveGeneric();
+    void constructMoveNode();
 
     void featuresMutuallyExclusive();
 
@@ -119,6 +126,8 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void advanceInvalid();
 
     void advanceGeneric();
+    void advanceNode();
+    void advanceNodeInvalid();
 
     void state();
 };
@@ -313,14 +322,19 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::debugAnimationFlag,
               &AbstractAnimatorTest::debugAnimationFlags,
               &AbstractAnimatorTest::debugAnimationState,
+              &AbstractAnimatorTest::debugNodeAnimation,
+              &AbstractAnimatorTest::debugNodeAnimations,
 
               &AbstractAnimatorTest::construct,
               &AbstractAnimatorTest::constructGeneric,
+              &AbstractAnimatorTest::constructNode,
               &AbstractAnimatorTest::constructInvalidHandle,
               &AbstractAnimatorTest::constructCopy,
               &AbstractAnimatorTest::constructCopyGeneric,
+              &AbstractAnimatorTest::constructCopyNode,
               &AbstractAnimatorTest::constructMove,
               &AbstractAnimatorTest::constructMoveGeneric,
+              &AbstractAnimatorTest::constructMoveNode,
 
               &AbstractAnimatorTest::featuresMutuallyExclusive,
 
@@ -386,6 +400,8 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::advanceInvalid,
 
               &AbstractAnimatorTest::advanceGeneric,
+              &AbstractAnimatorTest::advanceNode,
+              &AbstractAnimatorTest::advanceNodeInvalid,
 
               &AbstractAnimatorTest::state});
 }
@@ -432,6 +448,18 @@ void AbstractAnimatorTest::debugAnimationState() {
     CORRADE_COMPARE(out.str(), "Whee::AnimationState::Paused Whee::AnimationState(0xbe)\n");
 }
 
+void AbstractAnimatorTest::debugNodeAnimation() {
+    std::ostringstream out;
+    Debug{&out} << NodeAnimation::Enabled << NodeAnimation(0xbe);
+    CORRADE_COMPARE(out.str(), "Whee::NodeAnimation::Enabled Whee::NodeAnimation(0xbe)\n");
+}
+
+void AbstractAnimatorTest::debugNodeAnimations() {
+    std::ostringstream out;
+    Debug{&out} << (NodeAnimation::OffsetSize|NodeAnimation(0xe0)) << NodeAnimations{};
+    CORRADE_COMPARE(out.str(), "Whee::NodeAnimation::OffsetSize|Whee::NodeAnimation(0xe0) Whee::NodeAnimations{}\n");
+}
+
 void AbstractAnimatorTest::construct() {
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
@@ -462,6 +490,20 @@ void AbstractAnimatorTest::constructGeneric() {
     } animator{animatorHandle(0xab, 0x12)};
 
     CORRADE_COMPARE(animator.features(), AnimatorFeatures{0xbc});
+    CORRADE_COMPARE(animator.handle(), animatorHandle(0xab, 0x12));
+    /* The rest is the same as in construct() */
+}
+
+void AbstractAnimatorTest::constructNode() {
+    struct: AbstractNodeAnimator {
+        using AbstractNodeAnimator::AbstractNodeAnimator;
+
+        NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+            return {};
+        }
+    } animator{animatorHandle(0xab, 0x12)};
+
+    CORRADE_COMPARE(animator.features(), AnimatorFeature::NodeAttachment);
     CORRADE_COMPARE(animator.handle(), animatorHandle(0xab, 0x12));
     /* The rest is the same as in construct() */
 }
@@ -505,6 +547,20 @@ void AbstractAnimatorTest::constructCopyGeneric() {
     CORRADE_VERIFY(!std::is_copy_assignable<Animator>{});
 }
 
+void AbstractAnimatorTest::constructCopyNode() {
+    struct Animator: AbstractNodeAnimator {
+        using AbstractNodeAnimator::AbstractNodeAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+            return {};
+        }
+    };
+
+    CORRADE_VERIFY(!std::is_copy_constructible<Animator>{});
+    CORRADE_VERIFY(!std::is_copy_assignable<Animator>{});
+}
+
 void AbstractAnimatorTest::constructMove() {
     struct Animator: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
@@ -533,6 +589,30 @@ void AbstractAnimatorTest::constructMoveGeneric() {
 
         AnimatorFeatures doFeatures() const override { return {}; }
         void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    };
+
+    /* Just verify that the subclass doesn't have the moves broken */
+    Animator a{animatorHandle(0xab, 0x12)};
+
+    Animator b{Utility::move(a)};
+    CORRADE_COMPARE(b.handle(), animatorHandle(0xab, 0x12));
+
+    Animator c{animatorHandle(0xcd, 0x34)};
+    c = Utility::move(b);
+    CORRADE_COMPARE(c.handle(), animatorHandle(0xab, 0x12));
+
+    CORRADE_VERIFY(std::is_nothrow_move_constructible<Animator>::value);
+    CORRADE_VERIFY(std::is_nothrow_move_assignable<Animator>::value);
+}
+
+void AbstractAnimatorTest::constructMoveNode() {
+    struct Animator: AbstractNodeAnimator {
+        using AbstractNodeAnimator::AbstractNodeAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+            return {};
+        }
     };
 
     /* Just verify that the subclass doesn't have the moves broken */
@@ -3250,6 +3330,172 @@ void AbstractAnimatorTest::advanceGeneric() {
     }
     CORRADE_COMPARE(animator.advanceCallCount, 2);
     CORRADE_COMPARE(animator.cleanCallCount, 1);
+}
+
+void AbstractAnimatorTest::advanceNode() {
+    struct: AbstractNodeAnimator {
+        using AbstractNodeAnimator::AbstractNodeAnimator;
+        using AbstractNodeAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+            CORRADE_COMPARE_AS(active,
+                expectedActive,
+                TestSuite::Compare::Container);
+            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
+                CORRADE_ITERATION(i);
+                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+            }
+            /* We're not touching the output in any way, just verify it was
+               passed through correctly */
+            CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
+                {1.0f, 2.0f},
+                {3.0f, 4.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
+                {5.0f, 6.0f},
+                {8.0f, 8.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeFlags, Containers::stridedArrayView({
+                NodeFlags{},
+                NodeFlag::Clip|NodeFlag::Disabled,
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodesRemove, Containers::stridedArrayView({
+                false,
+                true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            ++advanceCallCount;
+
+            return NodeAnimations{0xc0};
+        }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            CORRADE_COMPARE_AS(animationIdsToRemove,
+                expectedAnimationIdsToRemove,
+                TestSuite::Compare::Container);
+            ++cleanCallCount;
+        }
+
+        Containers::StridedBitArrayView1D expectedActive;
+        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
+        Containers::StridedArrayView1D<const Float> expectedFactors;
+        Int advanceCallCount = 0;
+        Int cleanCallCount = 0;
+    } animator{animatorHandle(0, 1)};
+
+    Vector2 nodeOffsets[]{
+        {1.0f, 2.0f},
+        {3.0f, 4.0f},
+    };
+    Vector2 nodeSizes[]{
+        {5.0f, 6.0f},
+        {8.0f, 8.0f},
+    };
+    NodeFlags nodeFlags[]{
+        {},
+        NodeFlag::Clip|NodeFlag::Disabled,
+    };
+    Containers::BitArray nodesRemove{ValueInit, 2};
+    nodesRemove.set(1);
+
+    /* The mask and factor calculation is thoroughly tested in advance() and
+       propertiesStateFactor(), so just create some non-trivial state to verify
+       it gets correctly passed through. */
+
+    /* Call to advance(5) advances the first, nothing to clean */
+    animator.create(0_nsec, 10_nsec);
+    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animator.create(6_nsec, 4_nsec);
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            false
+        };
+        Float factors[]{
+            0.5f,
+            0.0f, /* unused */
+            0.0f, /* unused */
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = {};
+        CORRADE_COMPARE(animator.advance(5_nsec, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{0xc0});
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 1);
+    CORRADE_COMPARE(animator.cleanCallCount, 0);
+
+    /* Call to advance(10) advances the first and last to end, both get
+       cleaned afterwards */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            true
+        };
+        Float factors[]{
+            1.0f,
+            0.0f, /* unused */
+            1.0f,
+        };
+        bool animationIdsToRemove[]{
+            true,
+            false,
+            true
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
+        CORRADE_COMPARE(animator.advance(10_nsec, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{0xc0});
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+
+    /* Call to advance(20) does nothing */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        animator.expectedActive = {};
+        animator.expectedFactors = {};
+        animator.expectedAnimationIdsToRemove = {};
+        CORRADE_COMPARE(animator.advance(20_nsec, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{});
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+}
+
+void AbstractAnimatorTest::advanceNodeInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractNodeAnimator {
+        using AbstractNodeAnimator::AbstractNodeAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
+            CORRADE_FAIL("This shouldn't be called.");
+            return {};
+        }
+    } animator{animatorHandle(0, 1)};
+
+    Containers::BitArray nodesEnabled{NoInit, 3};
+    Containers::BitArray nodesEnabledInvalid{NoInit, 4};
+    Vector2 nodeOffsetsSizes[3];
+    Vector2 nodeOffsetsSizesInvalid[4];
+    NodeFlags nodeFlags[3];
+    NodeFlags nodeFlagsInvalid[4];
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.advance(0_nsec, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabledInvalid);
+    animator.advance(0_nsec, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlagsInvalid, nodesEnabled);
+    animator.advance(0_nsec, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeFlags, nodesEnabled);
+    animator.advance(0_nsec, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 3 and 4\n"
+        "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 4 and 3\n"
+        "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 4, 3 and 3\n"
+        "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 4, 3, 3 and 3\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractAnimatorTest::state() {

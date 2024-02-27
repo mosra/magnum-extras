@@ -444,7 +444,13 @@ struct AbstractUserInterface::State {
        set*AnimatorInstance(), removed from by removeAnimator(), per-layer
        data animator offsets are in `Layer::dataAttachmentAnimatorOffset`. */
     Containers::Array<Containers::Reference<AbstractAnimator>> animatorInstances;
+    /* Offset after which either AbstractGenericAnimator or
+       AbstractNodeAnimator instances with AnimatorFeature::NodeAttachment
+       are */
     UnsignedInt animatorInstancesNodeAttachmentOffset;
+    /* Offset after which AbstractNodeAnimator instances with
+       AnimatorFeature::NodeAttachment are */
+    UnsignedInt animatorInstancesNodeOffset;
 
     /* Nodes, indexed by NodeHandle */
     Containers::Array<Node> nodes;
@@ -1337,16 +1343,31 @@ AbstractGenericAnimator& AbstractUserInterface::setGenericAnimatorInstance(Conta
         #ifndef CORRADE_NO_ASSERT
         "Whee::AbstractUserInterface::setGenericAnimatorInstance():",
         #endif
-        Utility::move(instance));
+        Utility::move(instance), Int(Implementation::AnimatorType::Generic));
 
     return static_cast<AbstractGenericAnimator&>(animator);
+}
+
+AbstractNodeAnimator& AbstractUserInterface::setNodeAnimatorInstance(Containers::Pointer<AbstractNodeAnimator>&& instance) {
+    /* Null instance checked in setAnimatorInstanceInternal() below, avoid
+       accessing it here */
+    CORRADE_ASSERT(!instance || instance->features() >= AnimatorFeature::NodeAttachment,
+        "Whee::AbstractUserInterface::setNodeAnimatorInstance():" << AnimatorFeature::NodeAttachment << "not advertised for a node animator", *instance);
+
+    AbstractAnimator& animator = setAnimatorInstanceInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::AbstractUserInterface::setNodeAnimatorInstance():",
+        #endif
+        Utility::move(instance), Int(Implementation::AnimatorType::Node));
+
+    return static_cast<AbstractNodeAnimator&>(animator);
 }
 
 AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(
     #ifndef CORRADE_NO_ASSERT
     const char* const messagePrefix,
     #endif
-    Containers::Pointer<AbstractAnimator>&& instance)
+    Containers::Pointer<AbstractAnimator>&& instance, const Int type)
 {
     State& state = *_state;
     CORRADE_ASSERT(instance,
@@ -1364,9 +1385,11 @@ AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(
        supported */
     Implementation::partitionedAnimatorsInsert(state.animatorInstances,
         *instance,
+        Implementation::AnimatorType(type),
         instance->features(),
         instance->features() >= AnimatorFeature::DataAttachment ? instance->layer() : LayerHandle::Null,
         state.animatorInstancesNodeAttachmentOffset,
+        state.animatorInstancesNodeOffset,
         stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset));
 
     /* Take over the instance */
@@ -1406,6 +1429,7 @@ void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
             instance->features(),
             instance->features() >= AnimatorFeature::DataAttachment ? instance->layer() : LayerHandle::Null,
             state.animatorInstancesNodeAttachmentOffset,
+            state.animatorInstancesNodeOffset,
             stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset));
 
     /* Delete the instance. The instance being null then means that the
@@ -1659,24 +1683,28 @@ void AbstractUserInterface::removeNode(const NodeHandle handle) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::removeNode(): invalid handle" << handle, );
 
-    /* If this was a root node, remove it from the visible list (in case it
-       was there) */
-    State& state = *_state;
-    const UnsignedInt id = nodeHandleId(handle);
-    if(nodeHandleGeneration(state.nodes[id].used.parentOrOrder) == 0)
-        /** @todo call some internal API instead, this repeats all asserts */
-        clearNodeOrder(handle);
-
-    removeNodeInternal(id);
+    removeNodeInternal(nodeHandleId(handle));
 
     /* Mark the UI as needing a clean() call to refresh node state */
-    state.state |= UserInterfaceState::NeedsNodeClean;
+    _state->state |= UserInterfaceState::NeedsNodeClean;
+}
+
+inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
+    const Node& node = _state->nodes[id];
+
+    /* If this was a root node, remove it from the visible list (in case it
+       was there) */
+    if(nodeHandleGeneration(node.used.parentOrOrder) == 0)
+        /** @todo call some internal API instead, this repeats all asserts */
+        clearNodeOrder(nodeHandle(id, node.used.generation));
+
+    removeNestedNodeInternal(id);
 }
 
 /* This doesn't handle removal of root nodes from the order list (in case it
-   was there), as it's just needed for removeNode() but not clean() where
-   only nested nodes with invalid parents are removed */
-inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
+   was there), as it's just needed for removeNodeInternal() but not clean()
+   where only nested nodes with invalid parents are removed */
+void AbstractUserInterface::removeNestedNodeInternal(const UnsignedInt id) {
     State& state = *_state;
     Node& node = state.nodes[id];
 
@@ -1971,7 +1999,7 @@ AbstractUserInterface& AbstractUserInterface::clean() {
         for(const UnsignedInt id: nodeIds.exceptPrefix(1)) {
             const Node& node = state.nodes[id];
             if(nodeHandleGeneration(node.used.parentOrOrder) != 0 && !isHandleValid(node.used.parentOrOrder))
-                removeNodeInternal(id);
+                removeNestedNodeInternal(id);
         }
 
         /* 3. Next perform a clean for layouter node assignments and data and
@@ -1990,7 +2018,7 @@ AbstractUserInterface& AbstractUserInterface::clean() {
 
         /* For all animators with node attachments remove animations attached
            to invalid non-null nodes */
-        for(AbstractAnimator& animator: Implementation::partitionedAnimatorsNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset)))
+        for(AbstractAnimator& animator: Implementation::partitionedAnimatorsAnyNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset)))
             animator.cleanNodes(nodeGenerations);
     }
 
@@ -2030,8 +2058,8 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
        them only if there's something to advance */
     const UserInterfaceStates states = this->state();
     if(states >= UserInterfaceState::NeedsAnimationAdvance) {
-        /* Go through all generic animators without NodeAttachment and advance
-           ones that need it */
+        /* Go through all generic animators with neither NodeAttachment nor
+           DataAttachment and advance ones that need it */
         for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNone(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset)) {
             if(instance.state() & AnimatorState::NeedsAdvance)
                 static_cast<AbstractGenericAnimator&>(instance).advance(time);
@@ -2039,7 +2067,7 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
 
         /* Then all generic animators with NodeAttachment */
         const Containers::StridedArrayView1D<const UnsignedShort> dataAttachmentAnimatorOffsets = stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset);
-        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, dataAttachmentAnimatorOffsets)) {
+        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsGenericNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, state.animatorInstancesNodeOffset, dataAttachmentAnimatorOffsets)) {
             if(instance.state() & AnimatorState::NeedsAdvance)
                 static_cast<AbstractGenericAnimator&>(instance).advance(time);
         }
@@ -2049,6 +2077,33 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
             for(AbstractAnimator& instance: Implementation::partitionedAnimatorsDataAttachment(state.animatorInstances, dataAttachmentAnimatorOffsets, layerHandle(i, state.layers[i].used.generation)))
                 if(instance.state() & AnimatorState::NeedsAdvance)
                     static_cast<AbstractGenericAnimator&>(instance).advance(time);
+
+        /* After that, all AbstractNodeAnimator instances, remembering what all
+           they modified */
+        const Containers::StridedArrayView1D<Vector2> nodeOffsets = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::offset);
+        const Containers::StridedArrayView1D<Vector2> nodeSizes = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size);
+        const Containers::StridedArrayView1D<NodeFlags> nodeFlags = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags);
+        /** @todo some bump allocator for this */
+        Containers::BitArray nodesRemove{ValueInit, state.nodes.size()};
+        NodeAnimations nodeAnimations;
+        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNodeNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, state.animatorInstancesNodeOffset, dataAttachmentAnimatorOffsets)) {
+            if(instance.state() & AnimatorState::NeedsAdvance)
+                nodeAnimations |= static_cast<AbstractNodeAnimator&>(instance).advance(time, nodeOffsets, nodeSizes, nodeFlags, nodesRemove);
+        }
+
+        /* Propagate to the global state */
+        if(nodeAnimations >= NodeAnimation::OffsetSize)
+            state.state |= UserInterfaceState::NeedsLayoutUpdate;
+        if(nodeAnimations >= NodeAnimation::Enabled)
+            state.state |= UserInterfaceState::NeedsNodeEnabledUpdate;
+        if(nodeAnimations >= NodeAnimation::Clip)
+            state.state |= UserInterfaceState::NeedsNodeClipUpdate;
+        if(nodeAnimations >= NodeAnimation::Removal) {
+            state.state |= UserInterfaceState::NeedsNodeClean;
+            /** @todo some way to efficiently iterate set bits */
+            for(std::size_t i = 0; i != nodesRemove.size(); ++i)
+                if(nodesRemove[i]) removeNodeInternal(i);
+        }
     }
 
     /* Update current time. This is done even if no advance() was called. */

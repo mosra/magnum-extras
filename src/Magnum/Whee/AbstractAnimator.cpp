@@ -120,6 +120,32 @@ Debug& operator<<(Debug& debug, const AnimationState value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
+Debug& operator<<(Debug& debug, const NodeAnimation value) {
+    debug << "Whee::NodeAnimation" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case NodeAnimation::value: return debug << "::" #value;
+        _c(OffsetSize)
+        _c(Enabled)
+        _c(Clip)
+        _c(Removal)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const NodeAnimations value) {
+    return Containers::enumSetDebugOutput(debug, value, "Whee::NodeAnimations{}", {
+        NodeAnimation::OffsetSize,
+        NodeAnimation::Enabled,
+        NodeAnimation::Clip,
+        NodeAnimation::Removal
+    });
+}
+
 namespace {
 
 union Animation {
@@ -1122,6 +1148,45 @@ void AbstractGenericAnimator::advance(const Nanoseconds time) {
         doAdvance(active, factors);
     if(advanceCleanNeeded.second())
         clean(remove);
+}
+
+AbstractNodeAnimator::AbstractNodeAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}
+
+AbstractNodeAnimator::AbstractNodeAnimator(AbstractNodeAnimator&&) noexcept = default;
+
+AbstractNodeAnimator::~AbstractNodeAnimator() = default;
+
+AbstractNodeAnimator& AbstractNodeAnimator::operator=(AbstractNodeAnimator&&) noexcept = default;
+
+AnimatorFeatures AbstractNodeAnimator::doFeatures() const {
+    return AnimatorFeature::NodeAttachment;
+}
+
+NodeAnimations AbstractNodeAnimator::advance(const Nanoseconds time, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
+    CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size() &&
+                   nodeFlags.size() == nodeSizes.size() &&
+                   nodesRemove.size() == nodeSizes.size(),
+        "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeFlags.size() << "and" << nodesRemove.size(), {});
+
+    /** @todo have some bump allocator for this (doesn't make sense to have it
+        as a persistent allocation as the memory could be shared among several
+        animators) */
+    Containers::ArrayView<Float> factors;
+    Containers::MutableBitArrayView active;
+    Containers::MutableBitArrayView remove;
+    const Containers::ArrayTuple storage{
+        {NoInit, capacity(), factors},
+        {ValueInit, capacity(), active},
+        {ValueInit, capacity(), remove},
+    };
+    const Containers::Pair<bool, bool> advanceCleanNeeded = AbstractAnimator::advance(time, active, factors, remove);
+
+    NodeAnimations animations;
+    if(advanceCleanNeeded.first())
+        animations = doAdvance(active, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove);
+    if(advanceCleanNeeded.second())
+        clean(remove);
+    return animations;
 }
 
 }}
