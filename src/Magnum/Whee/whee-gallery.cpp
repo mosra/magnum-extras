@@ -62,49 +62,52 @@ Nanoseconds now() {
     return Nanoseconds{std::chrono::steady_clock::now()};
 }
 
-class NodeAnimator: public Whee::AbstractGenericAnimator {
+class NodeAnimator: public Whee::AbstractNodeAnimator {
     public:
-        explicit NodeAnimator(Whee::AnimatorHandle handle, Whee::AbstractUserInterface& ui): Whee::AbstractGenericAnimator{handle}, _ui(ui) {}
+        explicit NodeAnimator(Whee::AnimatorHandle handle, Whee::AbstractUserInterface& ui): Whee::AbstractNodeAnimator{handle}, _ui(ui) {}
 
         Whee::AnimationHandle create(Whee::NodeHandle node, const Vector2& offset, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, Whee::AnimationFlags flags = {});
 
     private:
         struct Data {
-            Whee::NodeHandle node;
             Vector2 initialOffset, initialSize;
             Vector2 offset;
         };
         Containers::Array<Data> _data;
         Whee::AbstractUserInterface& _ui;
 
-        Whee::AnimatorFeatures doFeatures() const override { return {}; }
-        void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override;
+        Whee::NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Whee::NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override;
 };
 
 Whee::AnimationHandle NodeAnimator::create(Whee::NodeHandle node, const Vector2& offset, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount, Whee::AnimationFlags flags) {
     // TODO figure out how to handle multiple animations on the same node -- find it, replace and continue from where it was before?
     // TODO or should the user side handle that? such as a Button containing animation handles that it then replaces? but that'd mean it'd have to be stateful always :(
 
-    const Whee::AnimationHandle handle = Whee::AbstractGenericAnimator::create(played, duration, repeatCount, flags);
+    const Whee::AnimationHandle handle = Whee::AbstractNodeAnimator::create(played, duration, node, repeatCount, flags);
     const UnsignedInt id = Whee::animationHandleId(handle);
     if(id >= _data.size())
         arrayResize(_data, NoInit, id + 1);
-    _data[id].node = node;
+    // TODO ugh, don't access the UI like this
     _data[id].initialOffset = _ui.nodeOffset(node);
     _data[id].initialSize = _ui.nodeSize(node);
     _data[id].offset = offset;
     return handle;
 }
 
-void NodeAnimator::doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+Whee::NodeAnimations NodeAnimator::doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Whee::NodeFlags>&, Containers::MutableBitArrayView) {
+    Containers::StridedArrayView1D<const Whee::NodeHandle> nodes = this->nodes();
+
     for(std::size_t i = 0; i != active.size(); ++i) {
         if(!active[i]) continue;
 
         const Data& data = _data[i];
         const Vector2 offset = data.offset*Animation::Easing::bounceIn(1.0f - factors[i]);
-        _ui.setNodeOffset(data.node, data.initialOffset - offset);
-        _ui.setNodeSize(data.node, data.initialSize + 2*offset);
+        const UnsignedInt nodeId = nodeHandleId(nodes[i]);
+        nodeOffsets[nodeId] = data.initialOffset - offset;
+        nodeSizes[nodeId] = data.initialSize + 2*offset;
     }
+
+    return Whee::NodeAnimation::OffsetSize;
 }
 
 class StyleAnimator: public Whee::AbstractGenericAnimator {
@@ -216,7 +219,7 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
         _backgroundBlurBaseLayer->setBackgroundBlurPassCount(2);
     }
 
-    _nodeAnimator = &_ui.setGenericAnimatorInstance(Containers::pointer<NodeAnimator>(_ui.createAnimator(), _ui));
+    _nodeAnimator = &_ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(_ui.createAnimator(), _ui));
     _styleAnimator = &_ui.setGenericAnimatorInstance(Containers::pointer<StyleAnimator>(_ui.createAnimator(), _backgroundBlurBaseLayerCommonStyleUniform, _backgroundBlurBaseLayerStyleUniforms, _backgroundBlurBaseLayerShared));
 
     Whee::NodeHandle root = _ui.createNode({}, _ui.size());
