@@ -2145,75 +2145,84 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert() {
     AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
     AbstractAnimator& animatorNodeAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
     AbstractAnimator& animatorNodeAttachment3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
-    AbstractAnimator& animatorLayer0DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef06});
-    AbstractAnimator& animatorLayer0DataAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef07});
-    AbstractAnimator& animatorLayer2DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef08});
-    AbstractAnimator& animatorLayer3DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef09});
-    AbstractAnimator& animatorLayer4DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef0a});
-    AbstractAnimator& animatorLayer4DataAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef0b});
+    AbstractAnimator& animatorNode1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef06});
+    AbstractAnimator& animatorNode2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef07});
+    AbstractAnimator& animatorLayer0DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef08});
+    AbstractAnimator& animatorLayer0DataAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef09});
+    AbstractAnimator& animatorLayer2DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef0a});
+    AbstractAnimator& animatorLayer3DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef0b});
+    AbstractAnimator& animatorLayer4DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef0c});
+    AbstractAnimator& animatorLayer4DataAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef0d});
 
     Containers::Array<Containers::Reference<AbstractAnimator>> instances{InPlaceInit, {
         animator1,
         animatorNodeAttachment2,
         animatorNodeAttachment1,
+        animatorNode1,
         animatorLayer0DataAttachment2,
         animatorLayer0DataAttachment1,
         animatorLayer3DataAttachment1,
         animatorLayer4DataAttachment1
     }};
     UnsignedInt nodeAttachmentAnimatorOffset = 1;
+    UnsignedInt nodeAnimatorOffset = 3;
     UnsignedShort dataAttachmentAnimatorOffsets[]{
-        3, /* Layer 0 has two attachments */
-        5, /* Layer 1 has none */
-        5, /* Layer 2 has none */
-        5, /* Layer 3 has one */
-        6, /* Layer 4 has one (i.e., until the end of the instance list) */
+        4, /* Layer 0 has two attachments */
+        6, /* Layer 1 has none */
+        6, /* Layer 2 has none */
+        6, /* Layer 3 has one */
+        7, /* Layer 4 has one (i.e., until the end of the instance list) */
     };
 
     /* Insert a non-*Attachment animator. Containers::Reference has the same
        layout as a pointer, abuse that for easy comparison. */
-    Implementation::partitionedAnimatorsInsert(instances, animator2, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
+    Implementation::partitionedAnimatorsInsert(instances, animator2, Implementation::AnimatorType::Generic, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator1,
         &animator2,
         &animatorNodeAttachment2,
         &animatorNodeAttachment1,
+        &animatorNode1,
         &animatorLayer0DataAttachment2,
         &animatorLayer0DataAttachment1,
         &animatorLayer3DataAttachment1,
         &animatorLayer4DataAttachment1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
-    CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
-        4, 6, 6, 6, 7
-    }), TestSuite::Compare::Container);
-
-    /* Insert a NodeAttachment animator */
-    Implementation::partitionedAnimatorsInsert(instances, animatorNodeAttachment3, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
-    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
-        &animator1,
-        &animator2,
-        &animatorNodeAttachment2,
-        &animatorNodeAttachment1,
-        &animatorNodeAttachment3,
-        &animatorLayer0DataAttachment2,
-        &animatorLayer0DataAttachment1,
-        &animatorLayer3DataAttachment1,
-        &animatorLayer4DataAttachment1
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 4);
     CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
         5, 7, 7, 7, 8
     }), TestSuite::Compare::Container);
 
-    /* Insert a DataAttachment animator into a layer that's empty so far */
-    Implementation::partitionedAnimatorsInsert(instances, animatorLayer2DataAttachment1, AnimatorFeature::DataAttachment, layerHandle(2, 0xbc), nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
+    /* Insert a NodeAttachment animator */
+    Implementation::partitionedAnimatorsInsert(instances, animatorNodeAttachment3, Implementation::AnimatorType::Generic, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator1,
         &animator2,
         &animatorNodeAttachment2,
         &animatorNodeAttachment1,
         &animatorNodeAttachment3,
+        &animatorNode1,
+        &animatorLayer0DataAttachment2,
+        &animatorLayer0DataAttachment1,
+        &animatorLayer3DataAttachment1,
+        &animatorLayer4DataAttachment1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 5);
+    CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
+        6, 8, 8, 8, 9
+    }), TestSuite::Compare::Container);
+
+    /* Insert a DataAttachment animator into a layer that's empty so far */
+    Implementation::partitionedAnimatorsInsert(instances, animatorLayer2DataAttachment1, Implementation::AnimatorType::Generic, AnimatorFeature::DataAttachment, layerHandle(2, 0xbc), nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator1,
+        &animator2,
+        &animatorNodeAttachment2,
+        &animatorNodeAttachment1,
+        &animatorNodeAttachment3,
+        &animatorNode1,
         &animatorLayer0DataAttachment2,
         &animatorLayer0DataAttachment1,
         &animatorLayer2DataAttachment1,
@@ -2221,18 +2230,20 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert() {
         &animatorLayer4DataAttachment1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 5);
     CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
-        5, 7, 7, 8, 9
+        6, 8, 8, 9, 10
     }), TestSuite::Compare::Container);
 
     /* Insert a DataAttachment animator into the last layer */
-    Implementation::partitionedAnimatorsInsert(instances, animatorLayer4DataAttachment2, AnimatorFeature::DataAttachment, layerHandle(4, 0x66), nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
+    Implementation::partitionedAnimatorsInsert(instances, animatorLayer4DataAttachment2, Implementation::AnimatorType::Generic, AnimatorFeature::DataAttachment, layerHandle(4, 0x66), nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator1,
         &animator2,
         &animatorNodeAttachment2,
         &animatorNodeAttachment1,
         &animatorNodeAttachment3,
+        &animatorNode1,
         &animatorLayer0DataAttachment2,
         &animatorLayer0DataAttachment1,
         &animatorLayer2DataAttachment1,
@@ -2241,8 +2252,32 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert() {
         &animatorLayer4DataAttachment2
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 5);
     CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
-        5, 7, 7, 8, 9
+        6, 8, 8, 9, 10
+    }), TestSuite::Compare::Container);
+
+    /* Insert an AbstractNodeAnimator */
+    Implementation::partitionedAnimatorsInsert(instances, animatorNode2, Implementation::AnimatorType::Node, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator1,
+        &animator2,
+        &animatorNodeAttachment2,
+        &animatorNodeAttachment1,
+        &animatorNodeAttachment3,
+        &animatorNode1,
+        &animatorNode2,
+        &animatorLayer0DataAttachment2,
+        &animatorLayer0DataAttachment1,
+        &animatorLayer2DataAttachment1,
+        &animatorLayer3DataAttachment1,
+        &animatorLayer4DataAttachment1,
+        &animatorLayer4DataAttachment2
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 5);
+    CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
+        7, 9, 9, 10, 11
     }), TestSuite::Compare::Container);
 }
 
@@ -2252,6 +2287,7 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsertNoLayers
     AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
     AbstractAnimator& animatorNodeAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
     AbstractAnimator& animatorNodeAttachment3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
+    AbstractAnimator& animatorNode1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef06});
 
     Containers::Array<Containers::Reference<AbstractAnimator>> instances{InPlaceInit, {
         animator1,
@@ -2259,10 +2295,11 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsertNoLayers
         animatorNodeAttachment1,
     }};
     UnsignedInt nodeAttachmentAnimatorOffset = 1;
+    UnsignedInt nodeAnimatorOffset = 3;
 
     /* Insert a non-NodeAttachment animator. Containers::Reference has the same
        layout as a pointer, abuse that for easy comparison. */
-    Implementation::partitionedAnimatorsInsert(instances, animator2, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, {});
+    Implementation::partitionedAnimatorsInsert(instances, animator2, Implementation::AnimatorType::Generic, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {});
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator1,
         &animator2,
@@ -2270,9 +2307,10 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsertNoLayers
         &animatorNodeAttachment1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 4);
 
     /* Insert a NodeAttachment animator */
-    Implementation::partitionedAnimatorsInsert(instances, animatorNodeAttachment3, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, {});
+    Implementation::partitionedAnimatorsInsert(instances, animatorNodeAttachment3, Implementation::AnimatorType::Generic, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {});
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator1,
         &animator2,
@@ -2281,6 +2319,20 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsertNoLayers
         &animatorNodeAttachment3
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 5);
+
+    /* Insert an AbstractNodeAnimator */
+    Implementation::partitionedAnimatorsInsert(instances, animatorNode1, Implementation::AnimatorType::Node, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {});
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator1,
+        &animator2,
+        &animatorNodeAttachment2,
+        &animatorNodeAttachment1,
+        &animatorNodeAttachment3,
+        &animatorNode1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 5);
 }
 
 void AbstractUserInterfaceImplementationTest::partitionedAnimatorsRemove() {
@@ -2288,110 +2340,146 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsRemove() {
     AbstractAnimator& animator2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
     AbstractAnimator& animator3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
     AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
-    AbstractAnimator& animatorLayer0DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
-    AbstractAnimator& animatorLayer2DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef06});
-    AbstractAnimator& animatorLayer2DataAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef07});
-    AbstractAnimator& animatorLayer3DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef08});
+    AbstractAnimator& animatorNode1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
+    AbstractAnimator& animatorNode2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef06});
+    AbstractAnimator& animatorLayer0DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef07});
+    AbstractAnimator& animatorLayer2DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef08});
+    AbstractAnimator& animatorLayer2DataAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef09});
+    AbstractAnimator& animatorLayer3DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef0a});
 
     Containers::Array<Containers::Reference<AbstractAnimator>> instances{InPlaceInit, {
         animator2,
         animator3,
         animator1,
         animatorNodeAttachment1,
+        animatorNode2,
+        animatorNode1,
         animatorLayer0DataAttachment1,
         animatorLayer2DataAttachment2,
         animatorLayer2DataAttachment1,
         animatorLayer3DataAttachment1
     }};
     UnsignedInt nodeAttachmentAnimatorOffset = 3;
+    UnsignedInt nodeAnimatorOffset = 4;
     UnsignedShort dataAttachmentAnimatorOffsets[]{
-        4, /* Layer 0 has one attachment */
-        5, /* Layer 1 has none */
-        5, /* Layer 2 has two */
-        7, /* Layer 3 has one (i.e., until the end of the instance list) */
+        6, /* Layer 0 has one attachment */
+        7, /* Layer 1 has none */
+        7, /* Layer 2 has two */
+        9, /* Layer 3 has one (i.e., until the end of the instance list) */
     };
 
     /* Remove from the middle of the non-NodeAttachment partition.
        Containers::Reference has the same layout as a pointer, abuse that for
        easy comparison. */
-    Implementation::partitionedAnimatorsRemove(instances, animator3, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
+    Implementation::partitionedAnimatorsRemove(instances, animator3, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator2,
         &animator1,
         &animatorNodeAttachment1,
+        &animatorNode2,
+        &animatorNode1,
         &animatorLayer0DataAttachment1,
         &animatorLayer2DataAttachment2,
         &animatorLayer2DataAttachment1,
         &animatorLayer3DataAttachment1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 3);
+    CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
+        5, 6, 6, 8
+    }), TestSuite::Compare::Container);
+
+    /* Remove from the end of the non-NodeAttachment partition */
+    Implementation::partitionedAnimatorsRemove(instances, animator1, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator2,
+        &animatorNodeAttachment1,
+        &animatorNode2,
+        &animatorNode1,
+        &animatorLayer0DataAttachment1,
+        &animatorLayer2DataAttachment2,
+        &animatorLayer2DataAttachment1,
+        &animatorLayer3DataAttachment1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+    CORRADE_COMPARE(nodeAnimatorOffset, 2);
+    CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
+        4, 5, 5, 7
+    }), TestSuite::Compare::Container);
+
+    /* Remove an AbstractNodeAnimator */
+    Implementation::partitionedAnimatorsRemove(instances, animatorNode2, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator2,
+        &animatorNodeAttachment1,
+        &animatorNode1,
+        &animatorLayer0DataAttachment1,
+        &animatorLayer2DataAttachment2,
+        &animatorLayer2DataAttachment1,
+        &animatorLayer3DataAttachment1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+    CORRADE_COMPARE(nodeAnimatorOffset, 2);
     CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
         3, 4, 4, 6
     }), TestSuite::Compare::Container);
 
-    /* Remove from the end of the non-NodeAttachment partition */
-    Implementation::partitionedAnimatorsRemove(instances, animator1, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
+    /* Remove a NodeAttachment animator */
+    Implementation::partitionedAnimatorsRemove(instances, animatorNodeAttachment1, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator2,
-        &animatorNodeAttachment1,
+        &animatorNode1,
         &animatorLayer0DataAttachment1,
         &animatorLayer2DataAttachment2,
         &animatorLayer2DataAttachment1,
         &animatorLayer3DataAttachment1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+    CORRADE_COMPARE(nodeAnimatorOffset, 1);
     CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
         2, 3, 3, 5
     }), TestSuite::Compare::Container);
 
-    /* Remove a NodeAttachment animator */
-    Implementation::partitionedAnimatorsRemove(instances, animatorNodeAttachment1, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
+    /* Remove a DataAttachment animator */
+    Implementation::partitionedAnimatorsRemove(instances, animatorLayer2DataAttachment1, AnimatorFeature::DataAttachment, layerHandle(2, 0xac), nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator2,
+        &animatorNode1,
         &animatorLayer0DataAttachment1,
         &animatorLayer2DataAttachment2,
-        &animatorLayer2DataAttachment1,
         &animatorLayer3DataAttachment1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+    CORRADE_COMPARE(nodeAnimatorOffset, 1);
     CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
-        1, 2, 2, 4
+        2, 3, 3, 4
     }), TestSuite::Compare::Container);
 
-    /* Remove a DataAttachment animator */
-    Implementation::partitionedAnimatorsRemove(instances, animatorLayer2DataAttachment1, AnimatorFeature::DataAttachment, layerHandle(2, 0xac), nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
+    /* Remove from the beginning of the non-NodeAttachment partition */
+    Implementation::partitionedAnimatorsRemove(instances, animator2, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
-        &animator2,
+        &animatorNode1,
         &animatorLayer0DataAttachment1,
         &animatorLayer2DataAttachment2,
         &animatorLayer3DataAttachment1
     }), TestSuite::Compare::Container);
-    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 0);
+    CORRADE_COMPARE(nodeAnimatorOffset, 0);
     CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
         1, 2, 2, 3
     }), TestSuite::Compare::Container);
 
-    /* Remove from the beginning of the non-NodeAttachment partition */
-    Implementation::partitionedAnimatorsRemove(instances, animator2, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
-    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
-        &animatorLayer0DataAttachment1,
-        &animatorLayer2DataAttachment2,
-        &animatorLayer3DataAttachment1
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 0);
-    CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
-        0, 1, 1, 2
-    }), TestSuite::Compare::Container);
-
     /* Remove a DataAttachment animator from the last layer */
-    Implementation::partitionedAnimatorsRemove(instances, animatorLayer3DataAttachment1, AnimatorFeature::DataAttachment, layerHandle(3, 0xac), nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets);
+    Implementation::partitionedAnimatorsRemove(instances, animatorLayer3DataAttachment1, AnimatorFeature::DataAttachment, layerHandle(3, 0xac), nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animatorNode1,
         &animatorLayer0DataAttachment1,
         &animatorLayer2DataAttachment2
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 0);
+    CORRADE_COMPARE(nodeAnimatorOffset, 0);
     CORRADE_COMPARE_AS(Containers::arrayView(dataAttachmentAnimatorOffsets), Containers::arrayView<UnsignedShort>({
-        0, 1, 1, 2
+        1, 2, 2, 3
     }), TestSuite::Compare::Container);
 }
 
@@ -2400,72 +2488,95 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsRemoveNoLayers
     AbstractAnimator& animator2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
     AbstractAnimator& animator3 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
     AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
+    AbstractAnimator& animatorNode1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
 
     Containers::Array<Containers::Reference<AbstractAnimator>> instances{InPlaceInit, {
         animator2,
         animator3,
         animator1,
-        animatorNodeAttachment1
+        animatorNodeAttachment1,
+        animatorNode1
     }};
     UnsignedInt nodeAttachmentAnimatorOffset = 3;
+    UnsignedInt nodeAnimatorOffset = 4;
 
     /* Remove from the middle of the non-NodeAttachment partition.
        Containers::Reference has the same layout as a pointer, abuse that for
        easy comparison. */
-    Implementation::partitionedAnimatorsRemove(instances, animator3, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, {});
+    Implementation::partitionedAnimatorsRemove(instances, animator3, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {});
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator2,
         &animator1,
-        &animatorNodeAttachment1
+        &animatorNodeAttachment1,
+        &animatorNode1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 2);
+    CORRADE_COMPARE(nodeAnimatorOffset, 3);
 
     /* Remove from the end of the non-*Attachment partition */
-    Implementation::partitionedAnimatorsRemove(instances, animator1, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, {});
+    Implementation::partitionedAnimatorsRemove(instances, animator1, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {});
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator2,
-        &animatorNodeAttachment1
+        &animatorNodeAttachment1,
+        &animatorNode1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+    CORRADE_COMPARE(nodeAnimatorOffset, 2);
 
     /* Remove a NodeAttachment animator */
-    Implementation::partitionedAnimatorsRemove(instances, animatorNodeAttachment1, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, {});
+    Implementation::partitionedAnimatorsRemove(instances, animatorNodeAttachment1, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {});
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
+        &animator2,
+        &animatorNode1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+    CORRADE_COMPARE(nodeAnimatorOffset, 1);
+
+    /* Remove an AbstractNodeAnimator */
+    Implementation::partitionedAnimatorsRemove(instances, animatorNode1, AnimatorFeature::NodeAttachment, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {});
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
         &animator2
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 1);
+    CORRADE_COMPARE(nodeAnimatorOffset, 1);
 
     /* Remove from the beginning of the non-*Attachment partition */
-    Implementation::partitionedAnimatorsRemove(instances, animator2, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, {});
+    Implementation::partitionedAnimatorsRemove(instances, animator2, AnimatorFeatures{}, LayerHandle::Null, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {});
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator*>(instances), Containers::arrayView<AbstractAnimator*>({
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE(nodeAttachmentAnimatorOffset, 0);
+    CORRADE_COMPARE(nodeAnimatorOffset, 0);
 }
 
 void AbstractUserInterfaceImplementationTest::partitionedAnimatorsGet() {
     AbstractAnimator& animator1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef01});
     AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
     AbstractAnimator& animatorNodeAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
-    AbstractAnimator& animatorLayer0DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
-    AbstractAnimator& animatorLayer2DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
-    AbstractAnimator& animatorLayer2DataAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef06});
-    AbstractAnimator& animatorLayer3DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef07});
+    AbstractAnimator& animatorNode1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
+    AbstractAnimator& animatorNode2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
+    AbstractAnimator& animatorLayer0DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef06});
+    AbstractAnimator& animatorLayer2DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef07});
+    AbstractAnimator& animatorLayer2DataAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef08});
+    AbstractAnimator& animatorLayer3DataAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef09});
 
     Containers::Reference<AbstractAnimator> instances[]{
         animator1,
         animatorNodeAttachment2,
         animatorNodeAttachment1,
+        animatorNode2,
+        animatorNode1,
         animatorLayer0DataAttachment1,
         animatorLayer2DataAttachment2,
         animatorLayer2DataAttachment1,
         animatorLayer3DataAttachment1
     };
     UnsignedInt nodeAttachmentAnimatorOffset = 1;
+    UnsignedInt nodeAnimatorOffset = 3;
     UnsignedShort dataAttachmentAnimatorOffsets[]{
-        3, /* Layer 0 has one attachment */
-        4, /* Layer 1 has none */
-        4, /* Layer 2 has two */
-        6, /* Layer 3 has one (i.e., until the end of the instance list) */
+        5, /* Layer 0 has one attachment */
+        6, /* Layer 1 has none */
+        6, /* Layer 2 has two */
+        8, /* Layer 3 has one (i.e., until the end of the instance list) */
     };
 
     /* Containers::Reference has the same layout as a pointer, abuse that for
@@ -2473,9 +2584,19 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsGet() {
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsNone(instances, nodeAttachmentAnimatorOffset)), Containers::arrayView<AbstractAnimator*>({
         &animator1
     }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsNodeAttachment(instances, nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets)), Containers::arrayView<AbstractAnimator*>({
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsAnyNodeAttachment(instances, nodeAttachmentAnimatorOffset, dataAttachmentAnimatorOffsets)), Containers::arrayView<AbstractAnimator*>({
+        &animatorNodeAttachment2,
+        &animatorNodeAttachment1,
+        &animatorNode2,
+        &animatorNode1,
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsGenericNodeAttachment(instances, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets)), Containers::arrayView<AbstractAnimator*>({
         &animatorNodeAttachment2,
         &animatorNodeAttachment1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsNodeNodeAttachment(instances, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, dataAttachmentAnimatorOffsets)), Containers::arrayView<AbstractAnimator*>({
+        &animatorNode2,
+        &animatorNode1
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsDataAttachment(instances, dataAttachmentAnimatorOffsets, layerHandle(0, 0xac))), Containers::arrayView<AbstractAnimator*>({
         &animatorLayer0DataAttachment1
@@ -2495,22 +2616,37 @@ void AbstractUserInterfaceImplementationTest::partitionedAnimatorsGetNoLayers() 
     AbstractAnimator& animator1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef01});
     AbstractAnimator& animatorNodeAttachment1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef02});
     AbstractAnimator& animatorNodeAttachment2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef03});
+    AbstractAnimator& animatorNode1 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef04});
+    AbstractAnimator& animatorNode2 = *reinterpret_cast<AbstractAnimator*>(std::size_t{0xabcdef05});
 
     Containers::Reference<AbstractAnimator> instances[]{
         animator1,
         animatorNodeAttachment2,
-        animatorNodeAttachment1
+        animatorNodeAttachment1,
+        animatorNode2,
+        animatorNode1
     };
     UnsignedInt nodeAttachmentAnimatorOffset = 1;
+    UnsignedInt nodeAnimatorOffset = 3;
 
     /* Containers::Reference has the same layout as a pointer, abuse that for
        easy comparison */
     CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsNone(instances, nodeAttachmentAnimatorOffset)), Containers::arrayView<AbstractAnimator*>({
         &animator1
     }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsNodeAttachment(instances, nodeAttachmentAnimatorOffset, {})), Containers::arrayView<AbstractAnimator*>({
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsAnyNodeAttachment(instances, nodeAttachmentAnimatorOffset, {})), Containers::arrayView<AbstractAnimator*>({
+        &animatorNodeAttachment2,
+        &animatorNodeAttachment1,
+        &animatorNode2,
+        &animatorNode1,
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsGenericNodeAttachment(instances, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {})), Containers::arrayView<AbstractAnimator*>({
         &animatorNodeAttachment2,
         &animatorNodeAttachment1
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayCast<AbstractAnimator* const>(Implementation::partitionedAnimatorsNodeNodeAttachment(instances, nodeAttachmentAnimatorOffset, nodeAnimatorOffset, {})), Containers::arrayView<AbstractAnimator*>({
+        &animatorNode2,
+        &animatorNode1
     }), TestSuite::Compare::Container);
 }
 

@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::AbstractAnimator, @ref Magnum::Whee::AbstractGenericAnimator, enum @ref Magnum::Whee::AnimatorFeature, @ref Magnum::Whee::AnimatorState, @ref Magnum::Whee::AnimationFlag, @ref Magnum::Whee::AnimationState, enum set @ref Magnum::Whee::AnimatorFeatures, @ref Magnum::Whee::AnimatorStates, @ref Magnum::Whee::AnimationFlags
+ * @brief Class @ref Magnum::Whee::AbstractAnimator, @ref Magnum::Whee::AbstractGenericAnimator, @ref Magnum::Whee::AbstractNodeAnimator, enum @ref Magnum::Whee::AnimatorFeature, @ref Magnum::Whee::AnimatorState, @ref Magnum::Whee::AnimationFlag, @ref Magnum::Whee::AnimationState, @ref Magnum::Whee::NodeAnimation, enum set @ref Magnum::Whee::AnimatorFeatures, @ref Magnum::Whee::AnimatorStates, @ref Magnum::Whee::AnimationFlags, @ref Magnum::Whee::NodeAnimations
  * @m_since_latest
  */
 
@@ -47,7 +47,8 @@ enum class AnimatorFeature: UnsignedByte {
     /**
      * The animations may be attached to nodes and are meant to be
      * automatically removed when given node is removed. Mutually exclusive
-     * with @ref AnimatorFeature::DataAttachment.
+     * with @ref AnimatorFeature::DataAttachment, is expected to be always
+     * advertised on @ref AbstractNodeAnimator subclasses.
      * @see @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, NodeHandle, UnsignedInt, AnimationFlags),
      *      @ref AbstractAnimator::node(AnimationHandle) const,
      *      @ref AbstractAnimator::cleanNodes()
@@ -1363,6 +1364,179 @@ class MAGNUM_WHEE_EXPORT AbstractGenericAnimator: public AbstractAnimator {
          * at least one @p active bit set.
          */
         virtual void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) = 0;
+};
+
+/**
+@brief Node properties that are being animated
+@m_since_latest
+
+Depending on which of these are returned from
+@ref AbstractNodeAnimator::advance(), causes various @ref UserInterfaceState
+flags to be set after an @ref AbstractUserInterface::advanceAnimations() call.
+@see @ref NodeAnimations
+*/
+enum class NodeAnimation: UnsignedByte {
+    /**
+     * Node offset or size. Equivalently to calling
+     * @ref AbstractUserInterface::setNodeOffset() /
+     * @relativeref{AbstractUserInterface,setNodeSize()}, causes
+     * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
+     */
+    OffsetSize = 1 << 0,
+
+    /**
+     * @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled being added or
+     * cleared. Equivalently to calling
+     * @ref AbstractUserInterface::setNodeFlags() with these, causes
+     * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
+     */
+    Enabled = 1 << 1,
+
+    /**
+     * @ref NodeFlag::Clip being added or cleared. Equivalently to calling
+     * @ref AbstractUserInterface::setNodeFlags() with that flag, causes
+     * @ref UserInterfaceState::NeedsNodeClipUpdate to be set.
+     */
+    Clip = 1 << 2,
+
+    /**
+     * Scheduling a node for removal. Equivalently to calling
+     * @ref AbstractUserInterface::removeNode(), causes
+     * @ref UserInterfaceState::NeedsNodeClean to be set.
+     */
+    Removal = 1 << 3
+};
+
+/**
+@debugoperatorenum{NodeAnimation}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, NodeAnimation value);
+
+/**
+@brief Set of node properties that are being animated
+@m_since_latest
+
+@see @ref NodeAnimations, @ref AbstractNodeAnimator::advance()
+*/
+typedef Containers::EnumSet<NodeAnimation> NodeAnimations;
+
+/**
+@debugoperatorenum{NodeAnimations}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, NodeAnimations value);
+
+CORRADE_ENUMSET_OPERATORS(NodeAnimations)
+
+/**
+@brief Base for node animators
+@m_since_latest
+
+@see @ref AbstractUserInterface::setNodeAnimatorInstance()
+*/
+class MAGNUM_WHEE_EXPORT AbstractNodeAnimator: public AbstractAnimator {
+    public:
+        /**
+         * @brief Constructor
+         * @param handle    Handle returned by
+         *      @ref AbstractUserInterface::createAnimator()
+         */
+        explicit AbstractNodeAnimator(AnimatorHandle handle);
+
+        /** @brief Copying is not allowed */
+        AbstractNodeAnimator(const AbstractNodeAnimator&) = delete;
+
+        /** @copydoc AbstractAnimator::AbstractAnimator(AbstractAnimator&&) */
+        AbstractNodeAnimator(AbstractNodeAnimator&&) noexcept;
+
+        ~AbstractNodeAnimator();
+
+        /** @brief Copying is not allowed */
+        AbstractNodeAnimator& operator=(const AbstractNodeAnimator&) = delete;
+
+        /** @brief Move assignment */
+        AbstractNodeAnimator& operator=(AbstractNodeAnimator&&) noexcept;
+
+        /**
+         * @brief Advance the animations
+         *
+         * Used internally from @ref AbstractUserInterface::advanceAnimations().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave. Expects that
+         * @p nodeOffsets, @p nodeSizes, @p nodeFlags and @p nodesRemove have
+         * the same size, the views should be large enough to contain any valid
+         * node ID. Delegates into @ref AbstractAnimator::advance() and
+         * subsequently to @ref doAdvance() and @ref clean(), see their
+         * documentation for more information.
+         */
+        NodeAnimations advance(Nanoseconds time, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
+
+    protected:
+        /**
+         * @brief Implementation for @ref features()
+         *
+         * Exposes @ref AnimatorFeature::NodeAttachment. If a subclass override
+         * exposes additional features, it's expected to OR them with this
+         * function.
+         */
+        AnimatorFeatures doFeatures() const override;
+
+    private:
+        /**
+         * @brief Advance the animations
+         * @param[in] active            Animation IDs that are active
+         * @param[in] factors           Interpolation factors indexed by
+         *      animation ID
+         * @param[in,out] nodeOffsets   Node offsets to animate indexed by node
+         *      ID
+         * @param[in,out] nodeSizes     Node sizes to animate indexed by node
+         *      ID
+         * @param[in,out] nodeFlags     Node flags to animate indexed by node
+         *      ID
+         * @param[out] nodesRemove      Which nodes to remove as a consequence
+         *      of the animation
+         * @return Node properties that were affected by the animation
+         *
+         * Implementation for @ref advance(), which is called from
+         * @ref AbstractUserInterface::advanceAnimations() whenever
+         * @ref AnimatorState::NeedsAdvance is present in @ref state().
+         *
+         * The @p active and @p factors views are guaranteed to have the same
+         * size as @ref capacity(). The @p factors array is guaranteed to
+         * contain values in the @f$ [0, 1] @f$ range for animations that have
+         * a corresponding bit set in @p active, calculated equivalently to
+         * @ref factor(AnimationHandle) const, and may contain random or
+         * uninitialized values for others. This function is always called with
+         * at least one @p active bit set.
+         *
+         * Node handles corresponding to animation IDs are available in
+         * @ref nodes(), node IDs can be then extracted from the handles using
+         * @ref nodeHandleId(). The node IDs then index into the
+         * @p nodeOffsets, @p nodeSizes, @p nodeFlags and @p nodesRemove views.
+         * The @p nodeOffsets, @p nodeSizes, @p nodeFlags and @p nodesRemove
+         * have the same size and are guaranteed to contain any valid node ID.
+         *
+         * The @p nodeOffsets, @p nodeSizes and @p nodeFlags are views directly
+         * onto the actual node properties exposed by
+         * @ref AbstractUserInterface::nodeOffset(),
+         * @relativeref{AbstractUserInterface,nodeSize()} and
+         * @relativeref{AbstractUserInterface,nodeFlags()}. The @p nodesRemove
+         * is all zeros initially before getting passed to the first node
+         * animator, subsequent animators get it in the state it was left in by
+         * the previous. The implementation is expected to only modify values
+         * that correspond to node IDs for active animations, returning a set
+         * of @ref NodeAnimation values depending on what got changed. The
+         * return value is subsequently used to set corresponding
+         * @ref UserInterfaceState flags to trigger internal state update and
+         * failing to correctly advertise what was modified may lead to strange
+         * behavior. On the other hand, conservatively returning more
+         * @ref NodeAnimation values than was actually modified may lead to the
+         * internal state update doing a lot of otherwise unnecessary work
+         * every frame, negatively affecting performance.
+         */
+        virtual NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) = 0;
 };
 
 }}
