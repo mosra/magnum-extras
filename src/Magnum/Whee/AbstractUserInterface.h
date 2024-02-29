@@ -917,8 +917,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * A handle is valid if it has been returned from @ref createAnimator()
          * before and @ref removeAnimator() wasn't called on it yet. Note that
          * a handle is valid even if the animator instance wasn't set with
-         * @ref setGenericAnimatorInstance() or @ref setNodeAnimatorInstance()
-         * yet. For @ref AnimatorHandle::Null always returns @cpp false @ce.
+         * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance() or
+         * @ref setDataAnimatorInstance() yet. For @ref AnimatorHandle::Null
+         * always returns @cpp false @ce.
          */
         bool isHandleValid(AnimatorHandle handle) const;
 
@@ -947,9 +948,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * grows the storage if there's no free slots left. Expects that
          * there's at most 256 animators. The returned handle is meant to be
          * used to construct an @ref AbstractAnimator subclass and the instance
-         * then passed to @ref setGenericAnimatorInstance() or
-         * @ref setNodeAnimatorInstance(). An animator can be removed again
-         * with @ref removeAnimator().
+         * then passed to @ref setGenericAnimatorInstance(),
+         * @ref setNodeAnimatorInstance() or @ref setDataAnimatorInstance(). An
+         * animator can be removed again with @ref removeAnimator().
          * @see @ref isHandleValid(AnimatorHandle) const,
          *      @ref animatorCapacity(), @ref animatorUsedCount()
          */
@@ -961,11 +962,12 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * Expects that @p instance was created with an @ref AnimatorHandle
          * returned from @ref createAnimator() earlier, the handle is valid and
-         * neither @ref setGenericAnimatorInstance() nor
-         * @ref setNodeAnimatorInstance() was called for the same handle yet.
-         * Additionally, if @ref AnimatorFeature::DataAttachment is supported
-         * by @p instance, expects that @ref AbstractGenericAnimator::setLayer()
-         * has already been called on it.
+         * none of @ref setGenericAnimatorInstance(),
+         * @ref setNodeAnimatorInstance() or @ref setDataAnimatorInstance() was
+         * called for the same handle yet. Additionally, if
+         * @ref AnimatorFeature::DataAttachment is supported by @p instance,
+         * expects that @ref AbstractGenericAnimator::setLayer() has already
+         * been called on it.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
@@ -985,10 +987,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * Expects that @p instance was created with an @ref AnimatorHandle
          * returned from @ref createAnimator() earlier, the handle is valid and
-         * neither @ref setGenericAnimatorInstance() nor
-         * @ref setNodeAnimatorInstance() was called for the same handle yet.
-         * The @ref AbstractNodeAnimator is expected to advertise
-         * @ref AnimatorFeature::NodeAttachment.
+         * none of @ref setGenericAnimatorInstance(),
+         * @ref setNodeAnimatorInstance() or @ref setDataAnimatorInstance() was
+         * called for the same handle yet. The @ref AbstractNodeAnimator is
+         * expected to advertise @ref AnimatorFeature::NodeAttachment.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
@@ -1003,11 +1005,37 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         }
 
         /**
+         * @brief Set a data animator instance
+         * @return Reference to @p instance
+         *
+         * Expects that @p instance was created with an @ref AnimatorHandle
+         * returned from @ref createAnimator() earlier, the handle is valid and
+         * none of @ref setGenericAnimatorInstance(),
+         * @ref setNodeAnimatorInstance() or @ref setDataAnimatorInstance() was
+         * called for the same handle yet. The @ref AbstractDataAnimator is
+         * expected to advertise @ref AnimatorFeature::DataAttachment and it's
+         * expected that
+         * @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const has
+         * already been called with it.
+         *
+         * Internally, the instance is inserted into a list partitioned by
+         * animator type, which is done with a @f$ \mathcal{O}(n) @f$
+         * complexity where @f$ n @f$ is @ref animatorCapacity().
+         * @see @ref AbstractAnimator::handle(),
+         *      @ref isHandleValid(AnimatorHandle) const
+         */
+        AbstractDataAnimator& setDataAnimatorInstance(Containers::Pointer<AbstractDataAnimator>&& instance);
+        /** @overload */
+        template<class T> T& setDataAnimatorInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setDataAnimatorInstance(Containers::Pointer<AbstractDataAnimator>{Utility::move(instance)}));
+        }
+
+        /**
          * @brief Animator instance
          *
-         * Expects that @p handle is valid and that either
-         * @ref setGenericAnimatorInstance() or @ref setNodeAnimatorInstance()
-         * was called for it.
+         * Expects that @p handle is valid and that one of
+         * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance() or
+         * @ref setDataAnimatorInstance() was called for it.
          * @see @ref isHandleValid(AnimatorHandle) const
          */
         AbstractAnimator& animator(AnimatorHandle handle);
@@ -1016,10 +1044,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Animator instance in a concrete type
          *
-         * Expects that @p handle is valid and that either
-         * @ref setGenericAnimatorInstance() or @ref setNodeAnimatorInstance()
-         * was called for it. It's the user responsibility to ensure that @p T
-         * matches the actual instance type.
+         * Expects that @p handle is valid and that one of
+         * @ref setGenericAnimatorInstance(), @ref setNodeAnimatorInstance() or
+         * @ref setDataAnimatorInstance() was called for it. It's the user
+         * responsibility to ensure that @p T matches the actual instance type.
          * @see @ref isHandleValid(AnimatorHandle) const
          */
         template<class T> T& animator(AnimatorHandle handle) {

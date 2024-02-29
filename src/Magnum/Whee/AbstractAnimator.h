@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::AbstractAnimator, @ref Magnum::Whee::AbstractGenericAnimator, @ref Magnum::Whee::AbstractNodeAnimator, enum @ref Magnum::Whee::AnimatorFeature, @ref Magnum::Whee::AnimatorState, @ref Magnum::Whee::AnimationFlag, @ref Magnum::Whee::AnimationState, @ref Magnum::Whee::NodeAnimation, enum set @ref Magnum::Whee::AnimatorFeatures, @ref Magnum::Whee::AnimatorStates, @ref Magnum::Whee::AnimationFlags, @ref Magnum::Whee::NodeAnimations
+ * @brief Class @ref Magnum::Whee::AbstractAnimator, @ref Magnum::Whee::AbstractGenericAnimator, @ref Magnum::Whee::AbstractNodeAnimator, @ref Magnum::Whee::AbstractDataAnimator, enum @ref Magnum::Whee::AnimatorFeature, @ref Magnum::Whee::AnimatorState, @ref Magnum::Whee::AnimationFlag, @ref Magnum::Whee::AnimationState, @ref Magnum::Whee::NodeAnimation, enum set @ref Magnum::Whee::AnimatorFeatures, @ref Magnum::Whee::AnimatorStates, @ref Magnum::Whee::AnimationFlags, @ref Magnum::Whee::NodeAnimations
  * @m_since_latest
  */
 
@@ -60,6 +60,7 @@ enum class AnimatorFeature: UnsignedByte {
      * automatically removed when given data is removed. Mutually exclusive
      * with @ref AnimatorFeature::NodeAttachment.
      * @see @ref AbstractGenericAnimator::setLayer(),
+     *      @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const,
      *      @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
      *      @ref AbstractAnimator::data(AnimationHandle) const,
      *      @ref AbstractAnimator::cleanData()
@@ -307,9 +308,10 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          *
          * Expects that the animator supports
          * @ref AnimatorFeature::DataAttachment. If the animator isn't an
-         * @ref AbstractGenericAnimator
-         * @ref AbstractGenericAnimator::setLayer() wasn't called yet, returns
-         * @ref LayerHandle::Null.
+         * @ref AbstractGenericAnimator or an @ref AbstractDataAnimator and
+         * @ref AbstractGenericAnimator::setLayer() or
+         * @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const wasn't
+         * called yet, returns @ref LayerHandle::Null.
          * @see @ref features()
          */
         LayerHandle layer() const;
@@ -1226,10 +1228,14 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
     #else
     protected:
     #endif
-        /* Used by AbstractGenericAnimator::setLayer() */
+        /* Used by AbstractGenericAnimator::setLayer() and
+           AbstractLayer::setAnimator() */
         MAGNUM_WHEE_LOCAL void setLayerInternal(const AbstractLayer& layer);
 
     private:
+        /* Calls setLayerInternal() (yeah, it's ew, sorry) */
+        friend AbstractLayer;
+
         /** @brief Implementation for @ref features() */
         virtual AnimatorFeatures doFeatures() const = 0;
 
@@ -1342,6 +1348,10 @@ class MAGNUM_WHEE_EXPORT AbstractGenericAnimator: public AbstractAnimator {
          * to a more concrete layer type, and performing any needed
          * initialization work there, or alternatively taking an appropriately
          * typed layer in a constructor and passing it to this function.
+         *
+         * A corresponding API for an @ref AbstractDataAnimator is
+         * @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const, where
+         * the layer has the control over a concrete animator type instead.
          */
         void setLayer(const AbstractLayer& layer);
 
@@ -1537,6 +1547,48 @@ class MAGNUM_WHEE_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * every frame, negatively affecting performance.
          */
         virtual NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) = 0;
+};
+
+/**
+@brief Base for data animators
+@m_since_latest
+
+@see @ref AbstractUserInterface::setDataAnimatorInstance(),
+    @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const,
+    @ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&)
+*/
+class MAGNUM_WHEE_EXPORT AbstractDataAnimator: public AbstractAnimator {
+    public:
+        /**
+         * @brief Constructor
+         * @param handle    Handle returned by
+         *      @ref AbstractUserInterface::createAnimator()
+         */
+        explicit AbstractDataAnimator(AnimatorHandle handle);
+
+        /** @brief Copying is not allowed */
+        AbstractDataAnimator(const AbstractDataAnimator&) = delete;
+
+        /** @copydoc AbstractAnimator::AbstractAnimator(AbstractAnimator&&) */
+        AbstractDataAnimator(AbstractDataAnimator&&) noexcept;
+
+        ~AbstractDataAnimator();
+
+        /** @brief Copying is not allowed */
+        AbstractDataAnimator& operator=(const AbstractDataAnimator&) = delete;
+
+        /** @brief Move assignment */
+        AbstractDataAnimator& operator=(AbstractDataAnimator&&) noexcept;
+
+    protected:
+        /**
+         * @brief Implementation for @ref features()
+         *
+         * Exposes @ref AnimatorFeature::DataAttachment. If a subclass override
+         * exposes additional features, it's expected to OR them with this
+         * function.
+         */
+        AnimatorFeatures doFeatures() const override;
 };
 
 }}
