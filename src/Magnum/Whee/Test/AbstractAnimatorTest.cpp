@@ -63,13 +63,16 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void construct();
     void constructGeneric();
     void constructNode();
+    void constructData();
     void constructInvalidHandle();
     void constructCopy();
     void constructCopyGeneric();
     void constructCopyNode();
+    void constructCopyData();
     void constructMove();
     void constructMoveGeneric();
     void constructMoveNode();
+    void constructMoveData();
 
     void featuresMutuallyExclusive();
 
@@ -328,13 +331,16 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
               &AbstractAnimatorTest::construct,
               &AbstractAnimatorTest::constructGeneric,
               &AbstractAnimatorTest::constructNode,
+              &AbstractAnimatorTest::constructData,
               &AbstractAnimatorTest::constructInvalidHandle,
               &AbstractAnimatorTest::constructCopy,
               &AbstractAnimatorTest::constructCopyGeneric,
               &AbstractAnimatorTest::constructCopyNode,
+              &AbstractAnimatorTest::constructCopyData,
               &AbstractAnimatorTest::constructMove,
               &AbstractAnimatorTest::constructMoveGeneric,
               &AbstractAnimatorTest::constructMoveNode,
+              &AbstractAnimatorTest::constructMoveData,
 
               &AbstractAnimatorTest::featuresMutuallyExclusive,
 
@@ -508,6 +514,14 @@ void AbstractAnimatorTest::constructNode() {
     /* The rest is the same as in construct() */
 }
 
+void AbstractAnimatorTest::constructData() {
+     AbstractDataAnimator animator{animatorHandle(0xab, 0x12)};
+
+    CORRADE_COMPARE(animator.features(), AnimatorFeature::DataAttachment);
+    CORRADE_COMPARE(animator.handle(), animatorHandle(0xab, 0x12));
+    /* The rest is the same as in construct() */
+}
+
 void AbstractAnimatorTest::constructInvalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -555,6 +569,17 @@ void AbstractAnimatorTest::constructCopyNode() {
         NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
+    };
+
+    CORRADE_VERIFY(!std::is_copy_constructible<Animator>{});
+    CORRADE_VERIFY(!std::is_copy_assignable<Animator>{});
+}
+
+void AbstractAnimatorTest::constructCopyData() {
+    struct Animator: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
     };
 
     CORRADE_VERIFY(!std::is_copy_constructible<Animator>{});
@@ -613,6 +638,27 @@ void AbstractAnimatorTest::constructMoveNode() {
         NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
             return {};
         }
+    };
+
+    /* Just verify that the subclass doesn't have the moves broken */
+    Animator a{animatorHandle(0xab, 0x12)};
+
+    Animator b{Utility::move(a)};
+    CORRADE_COMPARE(b.handle(), animatorHandle(0xab, 0x12));
+
+    Animator c{animatorHandle(0xcd, 0x34)};
+    c = Utility::move(b);
+    CORRADE_COMPARE(c.handle(), animatorHandle(0xab, 0x12));
+
+    CORRADE_VERIFY(std::is_nothrow_move_constructible<Animator>::value);
+    CORRADE_VERIFY(std::is_nothrow_move_assignable<Animator>::value);
+}
+
+void AbstractAnimatorTest::constructMoveData() {
+    struct Animator: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
     };
 
     /* Just verify that the subclass doesn't have the moves broken */

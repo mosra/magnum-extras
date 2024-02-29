@@ -74,6 +74,10 @@ struct AbstractLayerTest: TestSuite::Tester {
     void setSizeNotSupported();
     void setSizeNotImplemented();
 
+    void setDataAnimator();
+    void setDataAnimatorNotSupported();
+    void setDataAnimatorInvalid();
+
     void cleanNodes();
     void cleanNodesEmpty();
     void cleanNodesNotImplemented();
@@ -83,6 +87,14 @@ struct AbstractLayerTest: TestSuite::Tester {
     void cleanDataAnimatorsInvalidFeatures();
     void cleanDataAnimatorsLayerNotSet();
     void cleanDataAnimatorsInvalidLayer();
+
+    void advanceDataAnimations();
+    void advanceDataAnimationsEmpty();
+    void advanceDataAnimationsNotSupported();
+    void advanceDataAnimationsNotImplemented();
+    void advanceDataAnimationsInvalidFeatures();
+    void advanceDataAnimationsLayerNotSet();
+    void advanceDataAnimationsInvalidLayer();
 
     void update();
     void updateEmpty();
@@ -139,6 +151,10 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::setSizeNotSupported,
               &AbstractLayerTest::setSizeNotImplemented,
 
+              &AbstractLayerTest::setDataAnimator,
+              &AbstractLayerTest::setDataAnimatorNotSupported,
+              &AbstractLayerTest::setDataAnimatorInvalid,
+
               &AbstractLayerTest::cleanNodes,
               &AbstractLayerTest::cleanNodesEmpty,
               &AbstractLayerTest::cleanNodesNotImplemented,
@@ -148,6 +164,14 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::cleanDataAnimatorsInvalidFeatures,
               &AbstractLayerTest::cleanDataAnimatorsLayerNotSet,
               &AbstractLayerTest::cleanDataAnimatorsInvalidLayer,
+
+              &AbstractLayerTest::advanceDataAnimations,
+              &AbstractLayerTest::advanceDataAnimationsEmpty,
+              &AbstractLayerTest::advanceDataAnimationsNotSupported,
+              &AbstractLayerTest::advanceDataAnimationsNotImplemented,
+              &AbstractLayerTest::advanceDataAnimationsInvalidFeatures,
+              &AbstractLayerTest::advanceDataAnimationsLayerNotSet,
+              &AbstractLayerTest::advanceDataAnimationsInvalidLayer,
 
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateEmpty,
@@ -183,8 +207,8 @@ void AbstractLayerTest::debugFeature() {
 
 void AbstractLayerTest::debugFeatures() {
     std::ostringstream out;
-    Debug{&out} << (LayerFeature::Draw|LayerFeature(0xe0)) << LayerFeatures{};
-    CORRADE_COMPARE(out.str(), "Whee::LayerFeature::Draw|Whee::LayerFeature(0xe0) Whee::LayerFeatures{}\n");
+    Debug{&out} << (LayerFeature::Draw|LayerFeature(0x80)) << LayerFeatures{};
+    CORRADE_COMPARE(out.str(), "Whee::LayerFeature::Draw|Whee::LayerFeature(0x80) Whee::LayerFeatures{}\n");
 }
 
 void AbstractLayerTest::debugFeaturesSupersets() {
@@ -729,6 +753,85 @@ void AbstractLayerTest::setSizeNotImplemented() {
     CORRADE_VERIFY(true);
 }
 
+void AbstractLayerTest::setDataAnimator() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+    } layer{layerHandle(0xab, 0x12)};
+
+    struct: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator{animatorHandle(0xcd, 0x34)};
+    CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
+
+    layer.setAnimator(animator);
+    CORRADE_COMPARE(animator.layer(), layer.handle());
+}
+
+void AbstractLayerTest::setDataAnimatorNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setAnimator(animator);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::setAnimator(): data animation not supported\n");
+}
+
+void AbstractLayerTest::setDataAnimatorInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+    } layer{layerHandle(0xab, 0x12)};
+
+    struct Animator: AbstractDataAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractDataAnimator{handle}, _features{features} {}
+
+        AnimatorFeatures doFeatures() const override { return _features; }
+
+        private:
+            AnimatorFeatures _features;
+    } animatorNoDataAttachment{animatorHandle(0, 1), {}},
+      animatorAlreadyAssociated{animatorHandle(1, 2), AnimatorFeature::DataAttachment};
+
+    layer.setAnimator(animatorAlreadyAssociated);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setAnimator(animatorNoDataAttachment);
+    layer.setAnimator(animatorAlreadyAssociated);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::setAnimator(): data attachment not supported by the animator\n"
+        "Whee::AbstractLayer::setAnimator(): animator already associated with Whee::LayerHandle(0xab, 0x12)\n",
+        TestSuite::Compare::String);
+}
+
 void AbstractLayerTest::cleanNodes() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1053,6 +1156,176 @@ void AbstractLayerTest::cleanDataAnimatorsInvalidLayer() {
     Error redirectError{&out};
     layer1.cleanData({animator1, animator2});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::cleanData(): expected an animator associated with Whee::LayerHandle(0xab, 0x12) but got Whee::LayerHandle(0xcd, 0x34)\n");
+}
+
+void AbstractLayerTest::advanceDataAnimations() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+
+        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators) override {
+            CORRADE_COMPARE(time, 476_nsec);
+            CORRADE_COMPARE(animators.size(), 2);
+            CORRADE_COMPARE(animators[0].handle(), animatorHandle(0xab, 0x12));
+            CORRADE_COMPARE(animators[1].handle(), animatorHandle(0xcd, 0x34));
+            ++advanceCalled;
+        }
+
+        Int advanceCalled = 0;
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator1{animatorHandle(0xab, 0x12)},
+      animator2{animatorHandle(0xcd, 0x34)};
+    layer.setAnimator(animator1);
+    layer.setAnimator(animator2);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    layer.advanceAnimations(476_nsec, {animator1, animator2});
+    CORRADE_COMPARE(layer.advanceCalled, 1);
+}
+
+void AbstractLayerTest::advanceDataAnimationsEmpty() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+        void doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&) override {}
+    } layer{layerHandle(0, 1)};
+
+    /* It shouldn't crash or anything */
+    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractDataAnimator>{});
+    CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::advanceDataAnimationsNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractDataAnimator>{});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data animation not supported\n");
+}
+
+void AbstractLayerTest::advanceDataAnimationsNotImplemented() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractDataAnimator>{});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data animation advertised but not implemented\n");
+}
+
+void AbstractLayerTest::advanceDataAnimationsInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+    } layer{layerHandle(0, 1)};
+
+    struct Animator: AbstractDataAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractDataAnimator{handle}, _features{features} {}
+
+        AnimatorFeatures doFeatures() const override { return _features; }
+
+        private:
+            AnimatorFeatures _features;
+    } animator1{animatorHandle(0, 1), AnimatorFeature::DataAttachment},
+      animator2{animatorHandle(1, 3), AnimatorFeature::NodeAttachment};
+    layer.setAnimator(animator1);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, {animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
+}
+
+void AbstractLayerTest::advanceDataAnimationsLayerNotSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator1{animatorHandle(0, 1)}, animator2{animatorHandle(1, 3)};
+   layer.setAnimator(animator1);
+    /* Second animator layer not set */
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, {animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
+}
+
+void AbstractLayerTest::advanceDataAnimationsInvalidLayer() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+    } layer1{layerHandle(0xab, 0x12)}, layer2{layerHandle(0xcd, 0x34)};
+
+    struct: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator1{animatorHandle(0, 1)}, animator2{animatorHandle(1, 3)};
+    layer1.setAnimator(animator1);
+    layer2.setAnimator(animator2);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer1.advanceAnimations(0_nsec, {animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with Whee::LayerHandle(0xab, 0x12) but got Whee::LayerHandle(0xcd, 0x34)\n");
 }
 
 void AbstractLayerTest::update() {

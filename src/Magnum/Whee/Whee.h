@@ -51,6 +51,7 @@ typedef Containers::EnumSet<NodeFlag> NodeFlags;
 class AbstractAnimator;
 class AbstractGenericAnimator;
 class AbstractNodeAnimator;
+class AbstractDataAnimator;
 class AbstractLayer;
 class AbstractLayouter;
 class AbstractRenderer;

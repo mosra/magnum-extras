@@ -31,6 +31,7 @@
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Magnum/Math/Time.h>
 
 #include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/Event.h"
@@ -55,6 +56,7 @@ Debug& operator<<(Debug& debug, const LayerFeature value) {
         _c(DrawUsesScissor)
         _c(Composite)
         _c(Event)
+        _c(AnimateData)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -73,7 +75,8 @@ Debug& operator<<(Debug& debug, const LayerFeatures value) {
         LayerFeature::DrawUsesScissor, /* superset of Draw */
         LayerFeature::Composite, /* superset of Draw */
         LayerFeature::Draw,
-        LayerFeature::Event
+        LayerFeature::Event,
+        LayerFeature::AnimateData
     });
 }
 
@@ -341,6 +344,17 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
        clean() below doesn't set any state after calling removeInternal(). */
 }
 
+void AbstractLayer::setAnimator(AbstractDataAnimator& animator) const {
+    CORRADE_ASSERT(features() & LayerFeature::AnimateData,
+        "Whee::AbstractLayer::setAnimator(): data animation not supported", );
+    CORRADE_ASSERT(animator.features() & AnimatorFeature::DataAttachment,
+        "Whee::AbstractLayer::setAnimator(): data attachment not supported by the animator", );
+    CORRADE_ASSERT(animator.layer() == LayerHandle::Null,
+        "Whee::AbstractLayer::setAnimator(): animator already associated with" << animator.layer(), );
+
+    animator.setLayerInternal(*this);
+}
+
 void AbstractLayer::attach(DataHandle data, NodeHandle node) {
     CORRADE_ASSERT(isHandleValid(data),
         "Whee::AbstractLayer::attach(): invalid handle" << data, );
@@ -431,6 +445,28 @@ void AbstractLayer::cleanData(const Containers::Iterable<AbstractAnimator>& anim
     }
 
     state.state &= ~LayerState::NeedsDataClean;
+}
+
+void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators) {
+    CORRADE_ASSERT(features() & LayerFeature::AnimateData,
+        "Whee::AbstractLayer::advanceAnimations(): data animation not supported", );
+
+    #ifndef CORRADE_NO_ASSERT
+    for(const AbstractDataAnimator& animator: animators) {
+        CORRADE_ASSERT(animator.features() & AnimatorFeature::DataAttachment,
+            "Whee::AbstractLayer::advanceAnimations(): data attachment not supported by an animator", );
+        CORRADE_ASSERT(animator.layer() != LayerHandle::Null,
+            "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment", );
+        CORRADE_ASSERT(animator.layer() == handle(),
+            "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with" << handle() << "but got" << animator.layer(), );
+    }
+    #endif
+
+    doAdvanceAnimations(time, animators);
+}
+
+void AbstractLayer::doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&) {
+    CORRADE_ASSERT_UNREACHABLE("Whee::AbstractLayer::advanceAnimations(): data animation advertised but not implemented", );
 }
 
 void AbstractLayer::update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {

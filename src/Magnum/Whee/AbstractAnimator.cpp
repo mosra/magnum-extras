@@ -1189,4 +1189,16 @@ NodeAnimations AbstractNodeAnimator::advance(const Nanoseconds time, const Conta
     return animations;
 }
 
+AbstractDataAnimator::AbstractDataAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}
+
+AbstractDataAnimator::AbstractDataAnimator(AbstractDataAnimator&&) noexcept = default;
+
+AbstractDataAnimator::~AbstractDataAnimator() = default;
+
+AbstractDataAnimator& AbstractDataAnimator::operator=(AbstractDataAnimator&&) noexcept = default;
+
+AnimatorFeatures AbstractDataAnimator::doFeatures() const {
+    return AnimatorFeature::DataAttachment;
+}
+
 }}
