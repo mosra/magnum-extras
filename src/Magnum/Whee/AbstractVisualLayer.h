@@ -180,42 +180,42 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const
          */
-        void setTransitionedStyle(AbstractUserInterface& ui, DataHandle handle, UnsignedInt style);
+        void setTransitionedStyle(const AbstractUserInterface& ui, DataHandle handle, UnsignedInt style);
 
         /**
          * @brief Set data style index in a concrete enum type, potentially transitioning it based on user interface state
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref setTransitionedStyle(AbstractUserInterface&, DataHandle, UnsignedInt).
+         * @ref setTransitionedStyle(const AbstractUserInterface&, DataHandle, UnsignedInt).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
             #endif
-        > void setTransitionedStyle(AbstractUserInterface& ui, DataHandle handle, StyleIndex style) {
+        > void setTransitionedStyle(const AbstractUserInterface& ui, DataHandle handle, StyleIndex style) {
             setTransitionedStyle(ui, handle, UnsignedInt(style));
         }
 
         /**
          * @brief Set data style index assuming it belongs to this layer, potentially transitioning it based on user interface state
          *
-         * Like @ref setTransitionedStyle(AbstractUserInterface&, DataHandle, UnsignedInt) but without
+         * Like @ref setTransitionedStyle(const AbstractUserInterface&, DataHandle, UnsignedInt) but without
          * checking that @p handle indeed belongs to this layer. See its
          * documentation for more information.
          */
-        void setTransitionedStyle(AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
+        void setTransitionedStyle(const AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
 
         /**
          * @brief Set data style index in a concrete enum type assuming it belongs to this layer, potentially transitioning it based on user interface state
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref setTransitionedStyle(AbstractUserInterface&, LayerDataHandle, UnsignedInt).
+         * @ref setTransitionedStyle(const AbstractUserInterface&, LayerDataHandle, UnsignedInt).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
             #endif
-        > void setTransitionedStyle(AbstractUserInterface& ui, LayerDataHandle handle, StyleIndex style) {
+        > void setTransitionedStyle(const AbstractUserInterface& ui, LayerDataHandle handle, StyleIndex style) {
             setTransitionedStyle(ui, handle, UnsignedInt(style));
         }
 
@@ -242,7 +242,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
 
     private:
         MAGNUM_WHEE_LOCAL void setStyleInternal(UnsignedInt id, UnsignedInt style);
-        MAGNUM_WHEE_LOCAL void setTransitionedStyleInternal(AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
+        MAGNUM_WHEE_LOCAL void setTransitionedStyleInternal(const AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
 
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */

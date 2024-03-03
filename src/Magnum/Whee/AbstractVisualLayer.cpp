@@ -142,7 +142,7 @@ void AbstractVisualLayer::setStyleInternal(const UnsignedInt id, const UnsignedI
     setNeedsUpdate();
 }
 
-void AbstractVisualLayer::setTransitionedStyle(AbstractUserInterface& ui, const DataHandle handle, const UnsignedInt style) {
+void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const DataHandle handle, const UnsignedInt style) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractVisualLayer::setTransitionedStyle(): invalid handle" << handle, );
     CORRADE_ASSERT(style < _state->shared.styleCount,
@@ -150,7 +150,7 @@ void AbstractVisualLayer::setTransitionedStyle(AbstractUserInterface& ui, const 
     setTransitionedStyleInternal(ui, dataHandleData(handle), style);
 }
 
-void AbstractVisualLayer::setTransitionedStyle(AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
+void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractVisualLayer::setTransitionedStyle(): invalid handle" << handle, );
     CORRADE_ASSERT(style < _state->shared.styleCount,
@@ -158,7 +158,7 @@ void AbstractVisualLayer::setTransitionedStyle(AbstractUserInterface& ui, const 
     setTransitionedStyleInternal(ui, handle, style);
 }
 
-void AbstractVisualLayer::setTransitionedStyleInternal(AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
+void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterface& ui, const LayerDataHandle handle, const UnsignedInt style) {
     State& state = *_state;
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
 
