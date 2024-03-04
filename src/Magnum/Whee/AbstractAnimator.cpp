@@ -949,11 +949,15 @@ void AbstractAnimator::clean(const Containers::BitArrayView animationIdsToRemove
     #endif
     CORRADE_ASSERT(animationIdsToRemove.size() == state.animations.size(),
         "Whee::AbstractAnimator::clean(): expected" << state.animations.size() << "bits but got" << animationIdsToRemove.size(), );
+
+    /* Call into the implementation before removing the animations in order to
+       still have node / data attachments for the implementation to use */
+    doClean(animationIdsToRemove);
+
     /** @todo some way to efficiently iterate set bits */
     for(std::size_t i = 0; i != animationIdsToRemove.size(); ++i) {
         if(animationIdsToRemove[i]) removeInternal(i);
     }
-    doClean(animationIdsToRemove);
 }
 
 void AbstractAnimator::doClean(Containers::BitArrayView) {}
@@ -988,7 +992,11 @@ void AbstractAnimator::cleanNodes(const Containers::StridedArrayView1D<const Uns
     }
 
     /* As removeInternal() was already called in the above loop, we don't need
-       to delegate to clean() but can call doClean() directly */
+       to delegate to clean() but can call doClean() directly. Also, compared to
+       clean(), the implementation is called _after_ the animations are
+       removed, not before, because it's assumed that at this point the node
+       handles are invalid anyway, so it doesn't make sense to access them
+       from the implementation. */
     doClean(animationIdsToRemove);
 }
 
@@ -1024,7 +1032,11 @@ void AbstractAnimator::cleanData(const Containers::StridedArrayView1D<const Unsi
     }
 
     /* As removeInternal() was already called in the above loop, we don't need
-       to delegate to clean() but can call doClean() directly */
+       to delegate to clean() but can call doClean() directly. Also, compared to
+       clean(), the implementation is called _after_ the animations are
+       removed, not before, because it's assumed that at this point the node
+       handles are invalid anyway, so it doesn't make sense to access them
+       from the implementation. */
     doClean(animationIdsToRemove);
 }
 

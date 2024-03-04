@@ -1251,13 +1251,24 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * which is then called from
          * @ref AbstractUserInterface::advanceAnimations() whenever there are
          * any stopped animations that are meant to be removed, i.e. without
-         * the @ref AnimationFlag::KeepOncePlayed. It's also called from
-         * @ref cleanNodes() / @ref cleanData(), which is called from
+         * the @ref AnimationFlag::KeepOncePlayed. If the animator supports
+         * @ref AnimatorFeature::NodeAttachment /
+         * @relativeref{AnimatorFeature,DataAttachment}, attachments of
+         * to-be-removed animations accessible via @ref nodes() /
+         * @ref layerData(), are still preserved when this function is called,
+         * and set to null only afterwards.
+         *
+         * This function is also called from @ref cleanNodes() /
+         * @ref cleanData(), which is called from
          * @ref AbstractUserInterface::clean() (and transitively from
          * @ref AbstractUserInterface::update()) whenever
          * @ref UserInterfaceState::NeedsNodeClean /
          * @relativeref{UserInterfaceState,NeedsDataClean} or any of the states
-         * that imply it are present in @ref AbstractUserInterface::state().
+         * that imply it are present in @ref AbstractUserInterface::state(). In
+         * that case however, node / data attachments of to-be-removed
+         * animations are already set to null when this function is called, as
+         * it's assumed @ref cleanNodes() / @ref cleanData() is called when
+         * the handles are already invalid.
          *
          * The @p animationIdsToRemove view has the same size as
          * @ref capacity() and is guaranteed to have bits set only for valid
