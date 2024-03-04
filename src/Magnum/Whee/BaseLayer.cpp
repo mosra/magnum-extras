@@ -63,7 +63,13 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flags value) {
     });
 }
 
-BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {}
+BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {
+    #ifndef CORRADE_NO_ASSERT
+    const State& s = static_cast<const State&>(*_state);
+    #endif
+    CORRADE_ASSERT(s.styleCount + s.dynamicStyleCount,
+        "Whee::BaseLayer::Shared: expected non-zero total style count", );
+}
 
 BaseLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
 
@@ -82,8 +88,11 @@ void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& comm
     /* Allocation done before the asserts so if they fail in a graceful assert
        build, we don't hit another assert in Utility::copy(styleToUniform) in
        the setStyle() below */
-    if(state.styles.isEmpty())
+    if(state.styles.isEmpty()) {
         state.styles = Containers::Array<Implementation::BaseLayerStyle>{NoInit, state.styleCount};
+        if(state.dynamicStyleCount)
+            state.styleUniforms = Containers::Array<BaseLayerStyleUniform>{NoInit, state.styleUniformCount};
+    }
     CORRADE_ASSERT(uniforms.size() == state.styleUniformCount,
         "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleUniformCount << "uniforms, got" << uniforms.size(), );
     CORRADE_ASSERT(stylePadding.isEmpty() || stylePadding.size() == state.styleCount,
@@ -95,7 +104,15 @@ void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& comm
     } else {
         Utility::copy(stylePadding, stridedArrayView(state.styles).slice(&Implementation::BaseLayerStyle::padding));
     }
-    doSetStyle(commonUniform, uniforms);
+
+    /* If there are dynamic styles, the layers will combine them with the
+       static styles and upload to a single buffer, so just copy them to an
+       array for the layers to reuse */
+    if(state.dynamicStyleCount) {
+        state.commonStyleUniform = commonUniform;
+        Utility::copy(uniforms, state.styleUniforms);
+        ++state.styleUniformUpdateStamp;
+    } else doSetStyle(commonUniform, uniforms);
 }
 
 BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePadding) {
@@ -126,8 +143,7 @@ BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform
 }
 
 BaseLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {
-    CORRADE_ASSERT(styleUniformCount, "Whee::BaseLayer::Shared::Configuration: expected non-zero style uniform count", );
-    CORRADE_ASSERT(styleCount, "Whee::BaseLayer::Shared::Configuration: expected non-zero style count", );
+    CORRADE_ASSERT(!styleUniformCount == !styleCount, "Whee::BaseLayer::Shared::Configuration: expected style uniform and style count to be either both zero or both non-zero, got" << styleUniformCount << "and" << styleCount, );
 }
 
 BaseLayer::Shared::Configuration& BaseLayer::Shared::Configuration::setBackgroundBlurRadius(const UnsignedInt radius, const Float cutoff) {
@@ -164,13 +180,36 @@ void BaseLayer::setBackgroundBlurPassCount(UnsignedInt count) {
     state.backgroundBlurPassCount = count;
 }
 
+Containers::ArrayView<const BaseLayerStyleUniform> BaseLayer::dynamicStyleUniforms() const {
+    return static_cast<const State&>(*_state).dynamicStyleUniforms;
+}
+
+Containers::StridedArrayView1D<const Vector4> BaseLayer::dynamicStylePaddings() const {
+    return static_cast<const State&>(*_state).dynamicStylePaddings;
+}
+
+void BaseLayer::setDynamicStyle(const UnsignedInt id, const BaseLayerStyleUniform& uniform, const Vector4& padding) {
+    auto& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyleUniforms.size(),
+        "Whee::BaseLayer::setDynamicStyle(): index" << id << "out of range for" << state.dynamicStyleUniforms.size() << "dynamic styles", );
+    state.dynamicStyleUniforms[id] = uniform;
+    state.dynamicStyleChanged = true;
+
+    /* Mark the layer as changed only if the padding actually changes,
+       otherwise it's not needed to trigger an update() */
+    if(state.dynamicStylePaddings[id] != padding) {
+        state.dynamicStylePaddings[id] = padding;
+        setNeedsUpdate();
+    }
+}
+
 DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const Vector4& outlineWidth, const NodeHandle node) {
     State& state = static_cast<State&>(*_state);
     #ifndef CORRADE_NO_ASSERT
     auto& sharedState = static_cast<Shared::State&>(state.shared);
     #endif
-    CORRADE_ASSERT(style < sharedState.styleCount,
-        "Whee::BaseLayer::create(): style" << style << "out of range for" << sharedState.styleCount << "styles", {});
+    CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
+        "Whee::BaseLayer::create(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
 
     const DataHandle handle = AbstractLayer::create(node);
     const UnsignedInt id = dataHandleId(handle);
@@ -404,7 +443,13 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
            |   |
            |   |
            2---3 */
-        const Vector4 padding = sharedState.styles[data.calculatedStyle].padding + data.padding;
+        Vector4 padding = data.padding;
+        if(data.calculatedStyle < sharedState.styleCount)
+            padding += sharedState.styles[data.calculatedStyle].padding;
+        else {
+            CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
+            padding += state.dynamicStylePaddings[data.calculatedStyle - sharedState.styleCount];
+        }
         const Vector2 offset = nodeOffsets[nodeId];
         const Vector2 min = offset + padding.xy();
         const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
@@ -418,7 +463,11 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             vertex.centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{j});
             vertex.outlineWidth = data.outlineWidth;
             vertex.color = data.color;
-            vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
+            /* For dynamic styles the uniform mapping is implicit and they're
+               placed right after all non-dynamic styles */
+            vertex.styleUniform = data.calculatedStyle < sharedState.styleCount ?
+                sharedState.styles[data.calculatedStyle].uniform :
+                sharedState.styleUniformCount + data.calculatedStyle - sharedState.styleCount;
         }
     }
 

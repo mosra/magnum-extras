@@ -84,6 +84,8 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void renderChangeStyle();
     void renderTextured();
 
+    void renderDynamicStyles();
+
     void renderOrDrawCompositeSetup();
     void renderOrDrawCompositeTeardown();
 
@@ -104,6 +106,14 @@ struct BaseLayerGLTest: GL::OpenGLTester {
 };
 
 using namespace Math::Literals;
+
+const struct {
+    const char* name;
+    UnsignedInt dynamicStyleCount;
+} DrawNoStyleSetData[]{
+    {"", 0},
+    {"dynamic styles", 5}
+};
 
 const struct {
     const char* name;
@@ -251,6 +261,87 @@ const struct {
                gradient should */
             .setColor(0x333333_rgbf, 0xffffff_rgbf)
             .setOutlineColor(0xa5c9ea_rgbf)},
+};
+
+const struct {
+    const char* name;
+    const char* filename;
+    UnsignedInt styleIndex;
+    BaseLayerStyleUniform styleItem;
+    Float leftPadding;
+    Containers::Optional<BaseLayerStyleUniform> dynamicStyleItem;
+    Float dynamicLeftPadding;
+    bool secondaryStyleUpload;
+    bool secondaryDynamicStyleUpload;
+} RenderDynamicStylesData[]{
+    {"default, static", "default.png", 1,
+        BaseLayerStyleUniform{}, 0.0f,
+        {}, 0.0f,
+        false, false},
+    {"default, dynamic with no upload", "default.png", 5,
+        BaseLayerStyleUniform{}, 0.0f,
+        {}, 0.0f,
+        false, false},
+    {"default, dynamic", "default.png", 5,
+        BaseLayerStyleUniform{}, 0.0f,
+        BaseLayerStyleUniform{}, 0.0f,
+        false, false},
+    {"styled, static", "outline-gradient.png", 1,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 0.0f,
+        {}, 0.0f,
+        false, false},
+    {"styled, static with padding", "outline-gradient.png", 1,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 128.0f,
+        {}, 0.0f,
+        false, false},
+    {"styled, dynamic", "outline-gradient.png", 5,
+        BaseLayerStyleUniform{}, 0.0f,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 0.0f,
+        false, false},
+    {"styled, dynamic with padding", "outline-gradient.png", 5,
+        BaseLayerStyleUniform{}, 0.0f,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 128.0f,
+        false, false},
+    {"styled, static, secondary upload", "outline-gradient.png", 1,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 0.0f,
+        {}, 0.0f,
+        true, false},
+    {"styled, static, secondary dynamic upload", "outline-gradient.png", 1,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 0.0f,
+        BaseLayerStyleUniform{}, 0.0f,
+        false, true},
+    {"styled, dynamic, secondary upload", "outline-gradient.png", 5,
+        BaseLayerStyleUniform{}, 0.0f,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 0.0f,
+        false, true},
+    {"styled, dynamic, secondary static upload", "outline-gradient.png", 5,
+        BaseLayerStyleUniform{}, 0.0f,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 0.0f,
+        true, false},
 };
 
 const struct {
@@ -448,10 +539,12 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
               &BaseLayerGLTest::construct,
               &BaseLayerGLTest::constructCopy,
-              &BaseLayerGLTest::constructMove,
+              &BaseLayerGLTest::constructMove});
 
-              &BaseLayerGLTest::drawNoStyleSet,
-              &BaseLayerGLTest::drawNoTextureSet});
+    addInstancedTests({&BaseLayerGLTest::drawNoStyleSet},
+        Containers::arraySize(DrawNoStyleSetData));
+
+    addTests({&BaseLayerGLTest::drawNoTextureSet});
 
     addInstancedTests({&BaseLayerGLTest::render},
         Containers::arraySize(RenderData),
@@ -476,6 +569,11 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addInstancedTests({&BaseLayerGLTest::renderTextured},
         Containers::arraySize(RenderTexturedData),
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::renderDynamicStyles},
+        Containers::arraySize(RenderDynamicStylesData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
@@ -581,9 +679,13 @@ void BaseLayerGLTest::constructMove() {
 }
 
 void BaseLayerGLTest::drawNoStyleSet() {
+    auto&& data = DrawNoStyleSetData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3}};
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3}
+        .setDynamicStyleCount(data.dynamicStyleCount)};
     BaseLayerGL layer{layerHandle(0, 1), shared};
 
     std::ostringstream out;
@@ -962,6 +1064,98 @@ void BaseLayerGLTest::renderTextured() {
         layer.setTextureCoordinates(nodeData, *data.offset, *data.size);
 
     ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+        DebugTools::CompareImageToFile{_manager});
+}
+
+void BaseLayerGLTest::renderDynamicStyles() {
+    auto&& data = RenderDynamicStylesData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    BaseLayerGL::Shared layerShared{
+        BaseLayer::Shared::Configuration{3, 4}
+            .setDynamicStyleCount(2)
+    };
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+
+    /* If the style is being uploaded second time, upload just a default state
+       at first */
+    if(data.secondaryStyleUpload) {
+        layerShared.setStyle(BaseLayerCommonStyleUniform{},
+            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+            /** @todo if this isn't set to a matching mapping on the first
+                upload already, there's nothing to trigger layer update() that
+                would update the style->uniform mappings before the next
+                draw */
+            {1, 2, 0, 1},
+            {});
+    } else {
+        layerShared.setStyle(BaseLayerCommonStyleUniform{},
+            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, data.styleItem},
+            {1, 2, 0, 1},
+            {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
+    }
+
+    if(data.dynamicStyleItem) {
+        /* Again, if the dynamic style  is being uploaded second time, upload
+           just a default state at first */
+        if(data.secondaryDynamicStyleUpload) {
+            layer.setDynamicStyle(1,
+                BaseLayerStyleUniform{},
+                {});
+        } else {
+            layer.setDynamicStyle(1,
+                *data.dynamicStyleItem,
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
+        }
+    }
+
+    /* Undo the padding coming from the style to have the result always the
+       same */
+    NodeHandle node = ui.createNode(
+        {8.0f - data.leftPadding - data.dynamicLeftPadding, 8.0f},
+        {112.0f + data.leftPadding + data.dynamicLeftPadding, 48.0f});
+    layer.create(data.styleIndex, node);
+
+    /* If there's a secondary upload, draw & clear to force the first upload */
+    if(data.secondaryStyleUpload || data.secondaryDynamicStyleUpload) {
+        ui.draw();
+        _framebuffer.clear(GL::FramebufferClear::Color);
+    }
+
+    /* Upload the actual style data only second time if desired */
+    if(data.secondaryStyleUpload) {
+        layerShared.setStyle(BaseLayerCommonStyleUniform{},
+            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, data.styleItem},
+            {1, 2, 0, 1},
+            {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
+    }
+    if(data.secondaryDynamicStyleUpload) {
+        layer.setDynamicStyle(1,
+            *data.dynamicStyleItem,
+            {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
+    }
+
+    ui.draw();
+    /** @todo expose the dynamicStyleChanged bit in a public API and verify
+        it got reset here */
 
     MAGNUM_VERIFY_NO_GL_ERROR();
 

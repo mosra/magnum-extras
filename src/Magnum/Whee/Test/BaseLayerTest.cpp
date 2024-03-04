@@ -38,7 +38,8 @@
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
-#include "Magnum/Whee/Implementation/baseLayerState.h" /* for updateDataOrder() */
+/* for dynamicStyle(), updateDataOrder() */
+#include "Magnum/Whee/Implementation/baseLayerState.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
 
@@ -71,7 +72,7 @@ struct BaseLayerTest: TestSuite::Tester {
 
     void sharedConfigurationConstruct();
     void sharedConfigurationConstructSameStyleUniformCount();
-    void sharedConfigurationConstructZeroStyleCount();
+    void sharedConfigurationConstructZeroStyleOrUniformCount();
     void sharedConfigurationConstructCopy();
 
     void sharedConfigurationSetters();
@@ -81,6 +82,7 @@ struct BaseLayerTest: TestSuite::Tester {
     void sharedConstructNoCreate();
     void sharedConstructCopy();
     void sharedConstructMove();
+    void sharedConstructZeroStyleCount();
 
     void sharedSetStyle();
     void sharedSetStyleImplicitPadding();
@@ -95,6 +97,10 @@ struct BaseLayerTest: TestSuite::Tester {
 
     void backgroundBlurPassCount();
     void backgroundBlurPassCountInvalid();
+
+    void dynamicStyle();
+    void dynamicStyleNoDynamicStyles();
+    void dynamicStyleInvalid();
 
     template<class T> void createRemove();
     void setColor();
@@ -112,26 +118,56 @@ struct BaseLayerTest: TestSuite::Tester {
 
 const struct {
     const char* name;
+    UnsignedInt dynamicStyleCount;
+} SharedSetStyleData[]{
+    {"", 0},
+    {"dynamic styles", 17}
+};
+
+const struct {
+    const char* name;
+    Vector4 padding1, padding2;
+    LayerStates expectedStates;
+} DynamicStyleData[]{
+    {"default padding", {}, {}, {}},
+    {"non-zero padding",
+        {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
+        LayerState::NeedsUpdate},
+};
+
+const struct {
+    const char* name;
     bool emptyUpdate, textured;
+    UnsignedInt styleCount, dynamicStyleCount;
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
 } UpdateDataOrderData[]{
-    {"empty update", true, false,
+    {"empty update", true, false, 5, 0,
         {}, {}, {}, {}},
-    {"empty update, textured", true, true,
+    {"empty update, textured", true, true, 5, 0,
         {}, {}, {}, {}},
-    {"", false, false,
+    {"", false, false, 5, 0,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
-    {"textured", false, true,
+    {"textured", false, true, 5, 0,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
-    {"padding from style", false, false,
+    {"padding from style", false, false, 5, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}},
-    {"padding from data", false, false,
+    {"padding from data", false, false, 5, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {}, {2.0f, 0.5f, 1.0f, 1.5f}},
-    {"padding from both style and data", false, false,
+    {"padding from both style and data", false, false, 5, 0,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}},
+    {"unused dynamic styles", false, false, 5, 17,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
+    {"dynamic styles", false, false, 2, 3,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
+    {"dynamic styles, padding from dynamic style", false, false, 2, 3,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}},
+    {"dynamic styles, padding from both dynamic style and data", false, false, 2, 3,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}},
 };
@@ -147,13 +183,33 @@ const struct {
     NodeHandle node;
     LayerStates state;
     bool layerDataHandleOverloads;
+    UnsignedInt styleCount, dynamicStyleCount;
 } CreateRemoveData[]{
     {"create",
-        NodeHandle::Null, LayerStates{}, false},
+        NodeHandle::Null, LayerStates{}, false, 38, 0},
     {"create and attach",
-        nodeHandle(9872, 0xbeb), LayerState::NeedsAttachmentUpdate, false},
+        nodeHandle(9872, 0xbeb), LayerState::NeedsAttachmentUpdate, false, 38, 0},
     {"LayerDataHandle overloads",
-        NodeHandle::Null, LayerStates{}, true},
+        NodeHandle::Null, LayerStates{}, true, 38, 0},
+    {"dynamic styles",
+        /* The lowest style index is 17 in this case, so all are dynamic */
+        NodeHandle::Null, LayerStates{}, false, 7, 31},
+};
+
+const struct {
+    const char* name;
+    UnsignedInt styleCount, dynamicStyleCount;
+} StyleOutOfRangeData[]{
+    {"", 3, 0},
+    {"dynamic styles", 1, 2},
+};
+
+const struct {
+    const char* name;
+    UnsignedInt dynamicStyleCount;
+} UpdateNoStyleSetData[]{
+    {"", 0},
+    {"dynamic styles", 5}
 };
 
 BaseLayerTest::BaseLayerTest() {
@@ -184,7 +240,7 @@ BaseLayerTest::BaseLayerTest() {
 
               &BaseLayerTest::sharedConfigurationConstruct,
               &BaseLayerTest::sharedConfigurationConstructSameStyleUniformCount,
-              &BaseLayerTest::sharedConfigurationConstructZeroStyleCount,
+              &BaseLayerTest::sharedConfigurationConstructZeroStyleOrUniformCount,
               &BaseLayerTest::sharedConfigurationConstructCopy,
 
               &BaseLayerTest::sharedConfigurationSetters,
@@ -194,20 +250,28 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::sharedConstructNoCreate,
               &BaseLayerTest::sharedConstructCopy,
               &BaseLayerTest::sharedConstructMove,
+              &BaseLayerTest::sharedConstructZeroStyleCount});
 
-              &BaseLayerTest::sharedSetStyle,
-              &BaseLayerTest::sharedSetStyleImplicitPadding,
-              &BaseLayerTest::sharedSetStyleInvalidSize,
-              &BaseLayerTest::sharedSetStyleImplicitMapping,
-              &BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding,
-              &BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize,
+    addInstancedTests({&BaseLayerTest::sharedSetStyle,
+                       &BaseLayerTest::sharedSetStyleImplicitPadding,
+                       &BaseLayerTest::sharedSetStyleInvalidSize,
+                       &BaseLayerTest::sharedSetStyleImplicitMapping,
+                       &BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding,
+                       &BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize},
+        Containers::arraySize(SharedSetStyleData));
 
-              &BaseLayerTest::construct,
+    addTests({&BaseLayerTest::construct,
               &BaseLayerTest::constructCopy,
               &BaseLayerTest::constructMove,
 
               &BaseLayerTest::backgroundBlurPassCount,
               &BaseLayerTest::backgroundBlurPassCountInvalid});
+
+    addInstancedTests({&BaseLayerTest::dynamicStyle},
+        Containers::arraySize(DynamicStyleData));
+
+    addTests({&BaseLayerTest::dynamicStyleNoDynamicStyles,
+              &BaseLayerTest::dynamicStyleInvalid});
 
     addInstancedTests<BaseLayerTest>({&BaseLayerTest::createRemove<UnsignedInt>,
                                       &BaseLayerTest::createRemove<Enum>},
@@ -219,13 +283,16 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::setTextureCoordinates,
               &BaseLayerTest::setTextureCoordinatesInvalid,
 
-              &BaseLayerTest::invalidHandle,
-              &BaseLayerTest::styleOutOfRange});
+              &BaseLayerTest::invalidHandle});
+
+    addInstancedTests({&BaseLayerTest::styleOutOfRange},
+        Containers::arraySize(StyleOutOfRangeData));
 
     addInstancedTests({&BaseLayerTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
 
-    addTests({&BaseLayerTest::updateNoStyleSet});
+    addInstancedTests({&BaseLayerTest::updateNoStyleSet},
+        Containers::arraySize(UpdateNoStyleSetData));
 }
 
 using namespace Math::Literals;
@@ -593,16 +660,21 @@ void BaseLayerTest::sharedConfigurationConstructSameStyleUniformCount() {
     CORRADE_COMPARE(configuration.styleCount(), 3);
 }
 
-void BaseLayerTest::sharedConfigurationConstructZeroStyleCount() {
+void BaseLayerTest::sharedConfigurationConstructZeroStyleOrUniformCount() {
     CORRADE_SKIP_IF_NO_ASSERT();
+
+    /* Both being zero is fine */
+    BaseLayer::Shared::Configuration{0, 0};
+    BaseLayer::Shared::Configuration{0};
 
     std::ostringstream out;
     Error redirectError{&out};
     BaseLayer::Shared::Configuration{0, 4};
     BaseLayer::Shared::Configuration{4, 0};
-    CORRADE_COMPARE(out.str(),
-        "Whee::BaseLayer::Shared::Configuration: expected non-zero style uniform count\n"
-        "Whee::BaseLayer::Shared::Configuration: expected non-zero style count\n");
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::BaseLayer::Shared::Configuration: expected style uniform and style count to be either both zero or both non-zero, got 0 and 4\n"
+        "Whee::BaseLayer::Shared::Configuration: expected style uniform and style count to be either both zero or both non-zero, got 4 and 0\n",
+        TestSuite::Compare::String);
 }
 
 void BaseLayerTest::sharedConfigurationConstructCopy() {
@@ -625,15 +697,18 @@ void BaseLayerTest::sharedConfigurationConstructCopy() {
 
 void BaseLayerTest::sharedConfigurationSetters() {
     BaseLayer::Shared::Configuration configuration{3, 5};
+    CORRADE_COMPARE(configuration.dynamicStyleCount(), 0);
     CORRADE_COMPARE(configuration.flags(), BaseLayer::Shared::Flags{});
     CORRADE_COMPARE(configuration.backgroundBlurRadius(), 4);
     CORRADE_COMPARE(configuration.backgroundBlurCutoff(), 0.5f/255.0f);
 
     configuration
+        .setDynamicStyleCount(9)
         .setFlags(BaseLayer::Shared::Flag::BackgroundBlur)
         .addFlags(BaseLayer::Shared::Flag(0xe0))
         .clearFlags(BaseLayer::Shared::Flag(0x70))
         .setBackgroundBlurRadius(16, 0.1f);
+    CORRADE_COMPARE(configuration.dynamicStyleCount(), 9);
     CORRADE_COMPARE(configuration.flags(), BaseLayer::Shared::Flag::BackgroundBlur|BaseLayer::Shared::Flag(0x80));
     CORRADE_COMPARE(configuration.backgroundBlurRadius(), 16);
     CORRADE_COMPARE(configuration.backgroundBlurCutoff(), 0.1f);
@@ -661,11 +736,12 @@ void BaseLayerTest::sharedConstruct() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(4)
         .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
     };
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
-    CORRADE_COMPARE(shared.dynamicStyleCount(), 0);
+    CORRADE_COMPARE(shared.dynamicStyleCount(), 4);
     CORRADE_COMPARE(shared.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
 }
 
@@ -706,24 +782,49 @@ void BaseLayerTest::sharedConstructMove() {
     };
 
     Shared a{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(4)
         .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)};
 
     Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleUniformCount(), 3);
     CORRADE_COMPARE(b.styleCount(), 5);
+    CORRADE_COMPARE(b.dynamicStyleCount(), 4);
     CORRADE_COMPARE(b.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
 
     Shared c{BaseLayer::Shared::Configuration{5, 7}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleUniformCount(), 3);
     CORRADE_COMPARE(c.styleCount(), 5);
+    CORRADE_COMPARE(c.dynamicStyleCount(), 4);
     CORRADE_COMPARE(c.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
 }
 
+void BaseLayerTest::sharedConstructZeroStyleCount() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: BaseLayer::Shared {
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    };
+
+    /* Zero style count or dynamic style count is fine on its own */
+    Shared{Shared::Configuration{0}.setDynamicStyleCount(1)};
+    Shared{Shared::Configuration{1}.setDynamicStyleCount(0)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    Shared{Shared::Configuration{0}.setDynamicStyleCount(0)};
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared: expected non-zero total style count\n");
+}
+
 void BaseLayerTest::sharedSetStyle() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct Shared: BaseLayer::Shared {
         explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
         State& state() { return static_cast<State&>(*_state); }
@@ -736,12 +837,16 @@ void BaseLayerTest::sharedSetStyle() {
         }
 
         Int setStyleCalled = 0;
-    } shared{BaseLayer::Shared::Configuration{3, 5}};
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
-    /* By default the shared.state().styles array is empty, it gets only filled
-       during the setStyle() call. The empty state is used to detect whether
-       setStyle() was called at all when calling update(). */
+    /* By default the shared.state().styles array (and styleUniforms, for
+       dynamic styles) is empty, it gets only filled during the setStyle()
+       call. The empty state is used to detect whether setStyle() was called at
+       all when calling update(). */
     CORRADE_VERIFY(shared.state().styles.isEmpty());
+    CORRADE_VERIFY(shared.state().styleUniforms.isEmpty());
 
     shared.setStyle(
         BaseLayerCommonStyleUniform{}
@@ -756,7 +861,17 @@ void BaseLayerTest::sharedSetStyle() {
          {2.0f, 1.0f, 4.0f, 3.0f},
          {1.0f, 3.0f, 2.0f, 4.0f},
          {4.0f, 1.0f, 3.0f, 2.0f}});
-    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    if(data.dynamicStyleCount == 0) {
+        CORRADE_COMPARE(shared.setStyleCalled, 1);
+    } else {
+        CORRADE_COMPARE(shared.setStyleCalled, 0);
+        /* If there are dynamic styles, it's copied into an internal array
+           instead of calling doSetStyle(). The following is thus checking the
+           same as doSetStyle() but on the internal array. */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
+        CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
+        CORRADE_COMPARE(shared.state().styleUniforms[1].outlineColor, 0xc0ffee_rgbf);
+    }
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::uniform), Containers::stridedArrayView({
         2u, 1u, 0u, 0u, 1u
     }), TestSuite::Compare::Container);
@@ -770,6 +885,9 @@ void BaseLayerTest::sharedSetStyle() {
 }
 
 void BaseLayerTest::sharedSetStyleImplicitPadding() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct Shared: BaseLayer::Shared {
         explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
         State& state() { return static_cast<State&>(*_state); }
@@ -782,7 +900,9 @@ void BaseLayerTest::sharedSetStyleImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{BaseLayer::Shared::Configuration{3, 5}};
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -796,7 +916,17 @@ void BaseLayerTest::sharedSetStyleImplicitPadding() {
          BaseLayerStyleUniform{}},
         {2, 1, 0, 0, 1},
         {});
-    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    if(data.dynamicStyleCount == 0) {
+        CORRADE_COMPARE(shared.setStyleCalled, 1);
+    } else {
+        CORRADE_COMPARE(shared.setStyleCalled, 0);
+        /* If there are dynamic styles, it's copied into an internal array
+           instead of calling doSetStyle(). The following is thus checking the
+           same as doSetStyle() but on the internal array. */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
+        CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
+        CORRADE_COMPARE(shared.state().styleUniforms[1].outlineColor, 0xc0ffee_rgbf);
+    }
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::uniform), Containers::stridedArrayView({
         2u, 1u, 0u, 0u, 1u
     }), TestSuite::Compare::Container);
@@ -842,13 +972,20 @@ void BaseLayerTest::sharedSetStyleImplicitPadding() {
 }
 
 void BaseLayerTest::sharedSetStyleInvalidSize() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: BaseLayer::Shared {
         explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{3, 5}};
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        /* The checks should all deal with just the shared style count, not be
+           dependent on this */
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -871,6 +1008,9 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
 }
 
 void BaseLayerTest::sharedSetStyleImplicitMapping() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct Shared: BaseLayer::Shared {
         explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
         State& state() { return static_cast<State&>(*_state); }
@@ -883,7 +1023,9 @@ void BaseLayerTest::sharedSetStyleImplicitMapping() {
         }
 
         Int setStyleCalled = 0;
-    } shared{BaseLayer::Shared::Configuration{3}};
+    } shared{BaseLayer::Shared::Configuration{3}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     shared.setStyle(
         BaseLayerCommonStyleUniform{}
@@ -895,7 +1037,17 @@ void BaseLayerTest::sharedSetStyleImplicitMapping() {
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f}});
-    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    if(data.dynamicStyleCount == 0) {
+        CORRADE_COMPARE(shared.setStyleCalled, 1);
+    } else {
+        CORRADE_COMPARE(shared.setStyleCalled, 0);
+        /* If there are dynamic styles, it's copied into an internal array
+           instead of calling doSetStyle(). The following is thus checking the
+           same as doSetStyle() but on the internal array. */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
+        CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
+        CORRADE_COMPARE(shared.state().styleUniforms[1].outlineColor, 0xc0ffee_rgbf);
+    }
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::uniform), Containers::stridedArrayView({
         0u, 1u, 2u
     }), TestSuite::Compare::Container);
@@ -907,6 +1059,9 @@ void BaseLayerTest::sharedSetStyleImplicitMapping() {
 }
 
 void BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct Shared: BaseLayer::Shared {
         explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
         State& state() { return static_cast<State&>(*_state); }
@@ -919,7 +1074,9 @@ void BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{BaseLayer::Shared::Configuration{3}};
+    } shared{BaseLayer::Shared::Configuration{3}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -932,7 +1089,17 @@ void BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
             .setOutlineColor(0xc0ffee_rgbf),
          BaseLayerStyleUniform{}},
         {});
-    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    if(data.dynamicStyleCount == 0) {
+        CORRADE_COMPARE(shared.setStyleCalled, 1);
+    } else {
+        CORRADE_COMPARE(shared.setStyleCalled, 0);
+        /* If there are dynamic styles, it's copied into an internal array
+           instead of calling doSetStyle(). The following is thus checking the
+           same as doSetStyle() but on the internal array. */
+        CORRADE_COMPARE(shared.state().commonStyleUniform.smoothness, 3.14f);
+        CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
+        CORRADE_COMPARE(shared.state().styleUniforms[1].outlineColor, 0xc0ffee_rgbf);
+    }
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::BaseLayerStyle::uniform), Containers::stridedArrayView({
         0u, 1u, 2u
     }), TestSuite::Compare::Container);
@@ -970,13 +1137,20 @@ void BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
 }
 
 void BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: BaseLayer::Shared {
         explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{3, 5}};
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        /* The checks should all deal with just the shared style count, not be
+           dependent on this */
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -1086,6 +1260,122 @@ void BaseLayerTest::backgroundBlurPassCountInvalid() {
         TestSuite::Compare::String);
 }
 
+void BaseLayerTest::dynamicStyle() {
+    auto&& data = DynamicStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{12, 2}
+        .setDynamicStyleCount(3)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+
+        BaseLayer::State& stateData() {
+            return static_cast<BaseLayer::State&>(*_state);
+        }
+    } layer{layerHandle(0, 1), shared};
+
+    /* All styles should be set to their defaults initially. Checking just a
+       subset of the properties, should be enough. */
+    CORRADE_COMPARE_AS(stridedArrayView(layer.dynamicStyleUniforms()).slice(&BaseLayerStyleUniform::bottomColor), Containers::arrayView({
+        0xffffffff_rgbaf,
+        0xffffffff_rgbaf,
+        0xffffffff_rgbaf
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.dynamicStyleUniforms()).slice(&BaseLayerStyleUniform::cornerRadius), Containers::arrayView({
+        Vector4{0.0f},
+        Vector4{0.0f},
+        Vector4{0.0f}
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(layer.dynamicStylePaddings(), Containers::arrayView({
+        Vector4{0.0f},
+        Vector4{0.0f},
+        Vector4{0.0f}
+    }), TestSuite::Compare::Container);
+    /* The state bit is also set initially in order to trigger the first ever
+       upload */
+    /** @todo expose the dynamicStyleChanged bit in a public API instead */
+    CORRADE_VERIFY(layer.stateData().dynamicStyleChanged);
+    /* LayerState isn't however, there isn't anything to update apart from
+       updating once some data get created */
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting a style should change these and flip the state bit on again */
+    layer.stateData().dynamicStyleChanged = false;
+    layer.setDynamicStyle(1,
+        BaseLayerStyleUniform{}
+            .setColor(0xff3366_rgbf, 0x11223344_rgbaf)
+            .setCornerRadius(4.0f),
+        data.padding1);
+    layer.setDynamicStyle(2,
+        BaseLayerStyleUniform{}
+            .setColor(0x11223344_rgbaf, 0xff3366_rgbf)
+            .setCornerRadius(1.0f),
+        data.padding2);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.dynamicStyleUniforms()).slice(&BaseLayerStyleUniform::bottomColor), Containers::arrayView({
+        0xffffffff_rgbaf,
+        0x11223344_rgbaf,
+        0xff3366ff_rgbaf
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.dynamicStyleUniforms()).slice(&BaseLayerStyleUniform::cornerRadius), Containers::arrayView({
+        Vector4{0.0f},
+        Vector4{4.0f},
+        Vector4{1.0f}
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(layer.dynamicStylePaddings(), Containers::arrayView({
+        Vector4{0.0f},
+        data.padding1,
+        data.padding2
+    }), TestSuite::Compare::Container);
+    /** @todo expose the dynamicStyleChanged bit in a public API instead */
+    CORRADE_VERIFY(layer.stateData().dynamicStyleChanged);
+    /* NeedsUpdate is set if the padding got changed, to regenerate the data */
+    CORRADE_COMPARE(layer.state(), data.expectedStates);
+}
+
+void BaseLayerTest::dynamicStyleNoDynamicStyles() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{12, 2}};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    CORRADE_COMPARE(layer.dynamicStyleUniforms().size(), 0);
+    CORRADE_COMPARE(layer.dynamicStylePaddings().size(), 0);
+}
+
+void BaseLayerTest::dynamicStyleInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{12, 7}
+        /* Making sure it's less than both style count and uniform count to
+           verify it's not checked against those */
+        .setDynamicStyleCount(3)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setDynamicStyle(3, BaseLayerStyleUniform{}, {});
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::setDynamicStyle(): index 3 out of range for 3 dynamic styles\n");
+}
+
 template<class T> void BaseLayerTest::createRemove() {
     auto&& data = CreateRemoveData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -1095,7 +1385,9 @@ template<class T> void BaseLayerTest::createRemove() {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{12, 38}};
+    } shared{BaseLayer::Shared::Configuration{12, data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     /* Not setting any padding via style -- tested in setPadding() instead */
 
@@ -1391,6 +1683,9 @@ void BaseLayerTest::invalidHandle() {
 }
 
 void BaseLayerTest::styleOutOfRange() {
+    auto&& data = StyleOutOfRangeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     /* In this case the uniform count is higher than the style count, which is
@@ -1400,7 +1695,9 @@ void BaseLayerTest::styleOutOfRange() {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{6, 3}};
+    } shared{BaseLayer::Shared::Configuration{6, data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1421,9 +1718,11 @@ void BaseLayerTest::updateDataOrder() {
        get filled with correct contents and in correct order. The actual visual
        output is checked in BaseLayerGLTest. */
 
-    BaseLayer::Shared::Configuration configuration{3, 5};
+    BaseLayer::Shared::Configuration configuration{3, data.styleCount};
     if(data.textured)
         configuration.addFlags(BaseLayer::Shared::Flag::Textured);
+    if(data.dynamicStyleCount)
+        configuration.setDynamicStyleCount(data.dynamicStyleCount);
 
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
@@ -1431,13 +1730,22 @@ void BaseLayerTest::updateDataOrder() {
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{configuration};
 
-    shared.setStyle(
-        BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
-        /* Style 4 doesn't get used (gets transitioned to 2), use a weird
-           uniform index and padding to verify it doesn't get picked */
-        {1, 2, 0, 1, 666},
-        {{}, {}, data.paddingFromStyle, {}, Vector4{666}});
+    if(data.styleCount == 5) {
+        shared.setStyle(
+            BaseLayerCommonStyleUniform{},
+            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+            /* Style 4 doesn't get used (gets transitioned to 2), use a weird
+               uniform index and padding to verify it doesn't get picked */
+            {1, 2, 0, 1, 666},
+            {{}, {}, data.paddingFromStyle, {}, Vector4{666}});
+    } else if(data.styleCount == 2) {
+        shared.setStyle(
+            BaseLayerCommonStyleUniform{},
+            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+            {1, 2},
+            {{}, {}});
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
     shared.setStyleTransition(
         nullptr,
         nullptr,
@@ -1461,7 +1769,8 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(0);                                                    /* 0 */
     layer.create(0);                                                    /* 1 */
     layer.create(0);                                                    /* 2 */
-    /* Node 6 is disabled, so style 4 should get transitioned to 2 */
+    /* Node 6 is disabled, so style 4 should get transitioned to 2 if not
+       dynamic */
     DataHandle data3 = layer.create(4, 0xff3366_rgbf, {1.0f, 2.0f, 3.0f, 4.0f}, node6);
     layer.create(0);                                                    /* 4 */
     layer.create(0);                                                    /* 5 */
@@ -1475,6 +1784,13 @@ void BaseLayerTest::updateDataOrder() {
 
     if(data.textured)
         layer.setTextureCoordinates(data7, {0.25f, 0.5f, 37.0f}, {0.5f, 0.125f});
+
+    if(data.styleCount < 5 && data.dynamicStyleCount) {
+        /* Dynamic style 2 is style 4, which is used by data3 (so the same case
+           as with padding from non-dynamic style or from data) */
+        CORRADE_COMPARE(data.styleCount + 2, 4);
+        layer.setDynamicStyle(2, BaseLayerStyleUniform{}, data.paddingFromStyle);
+    }
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
@@ -1531,8 +1847,14 @@ void BaseLayerTest::updateDataOrder() {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(vertices[3*4 + i].color, 0xff3366_rgbf);
         CORRADE_COMPARE(vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
-        /* Created with style 2, which is mapped to uniform 0 */
-        CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 0);
+        /* Created with style 4, which if not dynamic is transitioned to 2 as
+           the node is disabled, which is mapped to uniform 0. If dynamic, it's
+           implicitly `uniformCount + (id - styleCount)`, thus 5. */
+        if(data.styleCount == 5)
+            CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 0);
+        else if(data.styleCount == 2)
+            CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 5);
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
         CORRADE_COMPARE(vertices[7*4 + i].color, 0x112233_rgbf);
         CORRADE_COMPARE(vertices[7*4 + i].outlineWidth, Vector4{2.0f});
@@ -1541,8 +1863,14 @@ void BaseLayerTest::updateDataOrder() {
 
         CORRADE_COMPARE(vertices[9*4 + i].color, 0x663399_rgbf);
         CORRADE_COMPARE(vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
-        /* Created with style 3, which is mapped to uniform 1 */
-        CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 1);
+        /* Created with style 3, which if not dynamic is mapped to uniform 1.
+           If dynamic, it's implicitly `uniformCount + (id - styleCount)`, thus
+           4. */
+        if(data.styleCount == 5)
+            CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 1);
+        else if(data.styleCount == 2)
+            CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 4);
+        else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }
 
     Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::BaseLayerVertex::position);
@@ -1606,13 +1934,20 @@ void BaseLayerTest::updateDataOrder() {
 }
 
 void BaseLayerTest::updateNoStyleSet() {
+    auto&& data = UpdateNoStyleSetData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{1}};
+    } shared{BaseLayer::Shared::Configuration{1}
+        /* The check should work correctly even with dynamic styles, where
+           different state gets filled */
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}

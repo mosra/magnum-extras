@@ -312,11 +312,14 @@ struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
     explicit State(Shared& self, const Configuration& configuration): BaseLayer::Shared::State{self, configuration}, shader{
         (flags & Flag::BackgroundBlur ? BaseShaderGL::Flag::BackgroundBlur : BaseShaderGL::Flags{})|
         (flags & Flag::Textured ? BaseShaderGL::Flag::Textured : BaseShaderGL::Flags{}),
-        configuration.styleUniformCount()} {}
+        configuration.styleUniformCount() + configuration.dynamicStyleCount()} {}
 
     BaseShaderGL shader;
     /* The buffer is NoCreate'd at first to be able to detect whether
-       setStyle() was called at all */
+       setStyle() was called at all -- it's created in doSetStyle(). In case
+       dynamic styles are present, this buffer is unused and each layer has its
+       own copy instead. Detection of whether setStyle() was called is then
+       done by checking the styleUniforms array, which is empty at first. */
     GL::Buffer styleBuffer{NoCreate};
 
     /* These are created only if Flag::BackgroundBlur is enabled */
@@ -374,7 +377,10 @@ BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUni
 }
 
 void BaseLayerGL::Shared::doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms) {
+    /* This function should get called only if the dynamic style count is 0 */
     auto& state = static_cast<State&>(*_state);
+    CORRADE_INTERNAL_ASSERT(state.dynamicStyleCount == 0);
+
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     if(!state.styleBuffer.id()) {
@@ -387,7 +393,13 @@ void BaseLayerGL::Shared::doSetStyle(const BaseLayerCommonStyleUniform& commonUn
 }
 
 struct BaseLayerGL::State: BaseLayer::State {
-    explicit State(Shared::State& shared): BaseLayer::State{shared} {}
+    explicit State(Shared::State& shared): BaseLayer::State{shared} {
+        if(shared.dynamicStyleCount) {
+            styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform};
+            /** @todo check if DynamicDraw has any effect on perf */
+            styleBuffer.setData({nullptr, sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*(shared.styleUniformCount + shared.dynamicStyleCount)}, GL::BufferUsage::DynamicDraw);
+        }
+    }
 
     GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array}, indexBuffer{GL::Buffer::TargetHint::ElementArray};
     GL::Mesh mesh;
@@ -396,6 +408,13 @@ struct BaseLayerGL::State: BaseLayer::State {
 
     /* Used only if Flag::Textured is enabled */
     GL::Texture2DArray texture{NoCreate};
+
+    /* Used only if shared.dynamicStyleCount is non-zero, in which case it's
+       created right in the constructor above. Compared to the shared style
+       buffer it cannot be created on the first style upload, since that
+       happens in doDraw(), and creating a GL object inside a draw loop feels
+       extremely nasty. */
+    GL::Buffer styleBuffer{NoCreate};
 };
 
 BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState._state))} {
@@ -511,12 +530,32 @@ void BaseLayerGL::doComposite(AbstractRenderer& renderer, const Containers::Stri
 void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const std::size_t clipRectOffset, const std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
-    CORRADE_ASSERT(sharedState.styleBuffer.id(),
+    /* With dynamic styles, Shared::setStyle() fills styleUniforms instead of
+       creating the styleBuffer */
+    CORRADE_ASSERT(
+        (!sharedState.dynamicStyleCount && sharedState.styleBuffer.id()) ||
+        (sharedState.dynamicStyleCount && !sharedState.styleUniforms.isEmpty()),
         "Whee::BaseLayerGL::draw(): no style data was set", );
     CORRADE_ASSERT(!(sharedState.flags & Shared::Flag::Textured) || state.texture.id(),
         "Whee::BaseLayerGL::draw(): no texture to draw with was set", );
 
-    sharedState.shader.bindStyleBuffer(sharedState.styleBuffer);
+    /* If there are dynamic styles, update & bind the layer-specific buffer
+       that contains them */
+    if(sharedState.dynamicStyleCount) {
+        if(sharedState.styleUniformUpdateStamp != state.styleUniformUpdateStamp) {
+            state.styleBuffer.setSubData(0, {&sharedState.commonStyleUniform, 1});
+            state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform), sharedState.styleUniforms);
+            state.styleUniformUpdateStamp = sharedState.styleUniformUpdateStamp;
+        }
+        if(state.dynamicStyleChanged) {
+            state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*sharedState.styleUniformCount, state.dynamicStyleUniforms);
+            state.dynamicStyleChanged = false;
+        }
+        sharedState.shader.bindStyleBuffer(state.styleBuffer);
+
+    /* Otherwise bind the shared buffer */
+    } else sharedState.shader.bindStyleBuffer(sharedState.styleBuffer);
+
     if(sharedState.flags & Shared::Flag::Textured)
         sharedState.shader.bindTexture(state.texture);
     if(sharedState.flags & Shared::Flag::BackgroundBlur)
