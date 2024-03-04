@@ -2127,6 +2127,26 @@ void AbstractAnimatorTest::clean() {
         AnimatorFeatures doFeatures() const override { return _features; }
         void doClean(Containers::BitArrayView animationIdsToRemove) override {
             ++called;
+
+            /* The attachments should still be valid at this point, even though
+               the animations get removed, to make it possible for the
+               implementation to do cleanup based on those */
+            if(_features >= AnimatorFeature::NodeAttachment) {
+                CORRADE_COMPARE_AS(nodes(), Containers::arrayView({
+                    nodeHandle(0x1234, 1),
+                    NodeHandle::Null,
+                    nodeHandle(0x5678, 1),
+                    nodeHandle(0x9abc, 1),
+                }), TestSuite::Compare::Container);
+            } else if(_features >= AnimatorFeature::DataAttachment) {
+                CORRADE_COMPARE_AS(layerData(), Containers::arrayView({
+                    layerDataHandle(0x1234, 1),
+                    LayerDataHandle::Null,
+                    layerDataHandle(0x5678, 1),
+                    layerDataHandle(0x9abc, 1),
+                }), TestSuite::Compare::Container);
+            }
+
             CORRADE_COMPARE_AS(animationIdsToRemove, Containers::stridedArrayView({
                 true, false, true, false
             }).sliceBit(0), TestSuite::Compare::Container);
@@ -2267,6 +2287,22 @@ void AbstractAnimatorTest::cleanNodes() {
         }
         void doClean(Containers::BitArrayView dataIdsToRemove) override {
             ++called;
+
+            /* Compared to regular clean(), the node attachments should be
+               cleared for removed animations at this point already as
+               cleanData() is meant to be called at a point where the original
+               nodes don't exist anymore, thus keeping invalid handles wouldn't
+               make sense */
+            CORRADE_COMPARE_AS(nodes(), Containers::arrayView({
+                NodeHandle::Null,
+                NodeHandle::Null,
+                NodeHandle::Null,
+                NodeHandle::Null,
+                nodeHandle(3, 0xaba),
+                NodeHandle::Null,
+                NodeHandle::Null,
+            }), TestSuite::Compare::Container);
+
             CORRADE_COMPARE_AS(dataIdsToRemove, Containers::stridedArrayView({
                 true, false, false, true, false, true, false
             }).sliceBit(0), TestSuite::Compare::Container);
@@ -2412,6 +2448,22 @@ void AbstractAnimatorTest::cleanData() {
         }
         void doClean(Containers::BitArrayView dataIdsToRemove) override {
             ++called;
+
+            /* Compared to regular clean(), the data attachments should be
+               cleared for removed animations at this point already as
+               cleanData() is meant to be called at a point where the original
+               data don't exist anymore, thus keeping invalid handles wouldn't
+               make sense */
+            CORRADE_COMPARE_AS(layerData(), Containers::arrayView({
+                LayerDataHandle::Null,
+                LayerDataHandle::Null,
+                LayerDataHandle::Null,
+                LayerDataHandle::Null,
+                layerDataHandle(3, 0xaba),
+                LayerDataHandle::Null,
+                LayerDataHandle::Null,
+            }), TestSuite::Compare::Container);
+
             CORRADE_COMPARE_AS(dataIdsToRemove, Containers::stridedArrayView({
                 true, false, false, true, false, true, false
             }).sliceBit(0), TestSuite::Compare::Container);
