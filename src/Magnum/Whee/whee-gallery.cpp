@@ -112,54 +112,83 @@ Whee::NodeAnimations NodeAnimator::doAdvance(Containers::BitArrayView active, co
 
 class StyleAnimator: public Whee::AbstractGenericAnimator {
     public:
-        explicit StyleAnimator(Whee::AnimatorHandle handle, const Whee::BaseLayerCommonStyleUniform& commonStyle, Containers::ArrayView<const Whee::BaseLayerStyleUniform> styles, Whee::BaseLayer::Shared& shared): Whee::AbstractGenericAnimator{handle}, _commonStyle{commonStyle}, _styles{styles}, _shared(shared) {}
+        explicit StyleAnimator(Whee::AnimatorHandle handle, Containers::ArrayView<const Whee::BaseLayerStyleUniform> styles, Whee::BaseLayer& layer): Whee::AbstractGenericAnimator{handle}, _styles{styles}, _layer(layer) {
+            setLayer(layer);
+        }
 
-        Whee::AnimationHandle create(UnsignedInt style, const Whee::BaseLayerStyleUniform& target, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, Whee::AnimationFlags flags = {});
+        Whee::AnimationHandle create(Whee::DataHandle data, const Whee::BaseLayerStyleUniform& target, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, Whee::AnimationFlags flags = {});
 
     private:
         struct Data {
-            UnsignedInt style;
+            UnsignedInt targetStyle, dynamicStyle;
+            Whee::BaseLayerStyleUniform source;
             Whee::BaseLayerStyleUniform target;
         };
         Containers::Array<Data> _data;
-        const Whee::BaseLayerCommonStyleUniform& _commonStyle;
         Containers::ArrayView<const Whee::BaseLayerStyleUniform> _styles;
-        Whee::BaseLayer::Shared& _shared;
+        Whee::BaseLayer& _layer;
 
-        Whee::AnimatorFeatures doFeatures() const override { return {}; }
+        Whee::AnimatorFeatures doFeatures() const override {
+            return Whee::AnimatorFeature::DataAttachment;
+        }
         void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override;
+        void doClean(Containers::BitArrayView animationIdsToRemove) override;
 };
 
-Whee::AnimationHandle StyleAnimator::create(UnsignedInt style, const Whee::BaseLayerStyleUniform& target, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount, Whee::AnimationFlags flags) {
-    const Whee::AnimationHandle handle = Whee::AbstractGenericAnimator::create(played, duration, repeatCount, flags);
+Whee::AnimationHandle StyleAnimator::create(Whee::DataHandle data, const Whee::BaseLayerStyleUniform& target, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount, Whee::AnimationFlags flags) {
+    const Whee::AnimationHandle handle = Whee::AbstractGenericAnimator::create(played, duration, data, repeatCount, flags);
     const UnsignedInt id = Whee::animationHandleId(handle);
     if(id >= _data.size())
         arrayResize(_data, NoInit, id + 1);
-    _data[id].style = style;
+    // TODO yeah so this crashes if the target style is already dynamic, what to do????
+    _data[id].targetStyle = Math::min(_layer.style(data), UnsignedInt(_styles.size() - 1));
+    _data[id].dynamicStyle = *_layer.allocateDynamicStyle();
+    _data[id].source = _styles[_data[id].targetStyle];
     _data[id].target = target;
     return handle;
 }
 
 void StyleAnimator::doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
-    // TODO yes, unconditionally copying and uploading all styles is nasty
-    Containers::Array<Whee::BaseLayerStyleUniform> animatedStyles{InPlaceInit, _styles};
+    Containers::StridedArrayView1D<const Whee::LayerDataHandle> layerData = this->layerData();
 
     for(std::size_t i = 0; i != active.size(); ++i) {
         if(!active[i]) continue;
 
         const Data& data = _data[i];
-        const Float factor = Animation::Easing::smoothstep(1.0f - factors[i]);
-        animatedStyles[data.style].topColor = Math::lerp(_styles[data.style].topColor, data.target.topColor, factor);
-        animatedStyles[data.style].bottomColor = Math::lerp(_styles[data.style].bottomColor, data.target.bottomColor, factor);
-        animatedStyles[data.style].outlineColor = Math::lerp(_styles[data.style].outlineColor, data.target.outlineColor, factor);
-        animatedStyles[data.style].outlineWidth = Math::lerp(_styles[data.style].outlineWidth, data.target.outlineWidth, factor);
-        animatedStyles[data.style].cornerRadius = Math::lerp(_styles[data.style].cornerRadius, data.target.cornerRadius, factor);
-        animatedStyles[data.style].innerOutlineCornerRadius = Math::lerp(_styles[data.style].innerOutlineCornerRadius, data.target.innerOutlineCornerRadius, factor);
-    }
 
-    // TODO yes, this needs an overload that uploads just the style list, and a
-    //  a sub-range of it
-    _shared.setStyle(_commonStyle, animatedStyles, {});
+        // TODO eugh this sum
+        if(_layer.style(layerData[i]) != _layer.shared().styleCount() + data.dynamicStyle)
+            _layer.setStyle(layerData[i], _layer.shared().styleCount() + data.dynamicStyle);
+
+        const Float factor = Animation::Easing::smoothstep(1.0f - factors[i]);
+        Whee::BaseLayerStyleUniform out;
+        out.topColor = Math::lerp(data.source.topColor,
+                                  data.target.topColor, factor);
+        out.bottomColor = Math::lerp(data.source.bottomColor,
+                                     data.target.bottomColor, factor);
+        out.outlineColor = Math::lerp(data.source.outlineColor,
+                                      data.target.outlineColor, factor);
+        out.outlineWidth = Math::lerp(data.source.outlineWidth,
+                                      data.target.outlineWidth, factor);
+        out.cornerRadius = Math::lerp(data.source.cornerRadius,
+                                      data.target.cornerRadius, factor);
+        out.innerOutlineCornerRadius = Math::lerp(
+            data.source.innerOutlineCornerRadius,
+            data.target.innerOutlineCornerRadius, factor);
+
+        _layer.setDynamicStyle(data.dynamicStyle, out, {});
+    }
+}
+
+void StyleAnimator::doClean(Containers::BitArrayView animationIdsToRemove) {
+    Containers::StridedArrayView1D<const Whee::LayerDataHandle> layerData = this->layerData();
+
+    for(std::size_t i = 0; i != animationIdsToRemove.size(); ++i) {
+        if(!animationIdsToRemove[i]) continue;
+
+        _layer.setStyle(layerData[i], _data[i].targetStyle);
+        _layer.recycleDynamicStyle(_data[i].dynamicStyle);
+    }
 }
 
 class WheeGallery: public Platform::Application {
@@ -178,7 +207,6 @@ class WheeGallery: public Platform::Application {
 
         Whee::BaseLayerGL::Shared _backgroundBlurBaseLayerShared{NoCreate};
         Whee::BaseLayerGL* _backgroundBlurBaseLayer;
-        Whee::BaseLayerCommonStyleUniform _backgroundBlurBaseLayerCommonStyleUniform;
         Whee::BaseLayerStyleUniform _backgroundBlurBaseLayerStyleUniforms[1];
 
         NodeAnimator* _nodeAnimator;
@@ -195,7 +223,8 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     _ui.setStyle(Whee::McssDarkStyle{});
 
     {
-        _backgroundBlurBaseLayerCommonStyleUniform
+        Whee::BaseLayerCommonStyleUniform commonStyleUniform;
+        commonStyleUniform
             .setSmoothness(0.75f)
             .setBackgroundBlurAlpha(0.95f);
         _backgroundBlurBaseLayerStyleUniforms[0]
@@ -208,19 +237,23 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             .setOutlineColor(0xefefefef_rgbaf*0.4f);
         _backgroundBlurBaseLayerShared = Whee::BaseLayerGL::Shared{
             Whee::BaseLayerGL::Shared::Configuration{1}
+                .setDynamicStyleCount(10)
                 .setFlags(Whee::BaseLayerGL::Shared::Flag::BackgroundBlur)
                 .setBackgroundBlurRadius(31)}
                 ;
         _backgroundBlurBaseLayerShared
-            .setStyle(_backgroundBlurBaseLayerCommonStyleUniform, _backgroundBlurBaseLayerStyleUniforms, {});
+            .setStyle(commonStyleUniform, _backgroundBlurBaseLayerStyleUniforms, {});
 
         /* It's drawn before all other layers */
         _backgroundBlurBaseLayer = &_ui.setLayerInstance(Containers::pointer<Whee::BaseLayerGL>(_ui.createLayer(_ui.baseLayer().handle()), _backgroundBlurBaseLayerShared));
         _backgroundBlurBaseLayer->setBackgroundBlurPassCount(2);
     }
 
+
+    _backgroundBlurBaseLayer->setDynamicStyle(0, Whee::BaseLayerStyleUniform{}, {});
+
     _nodeAnimator = &_ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(_ui.createAnimator(), _ui));
-    _styleAnimator = &_ui.setGenericAnimatorInstance(Containers::pointer<StyleAnimator>(_ui.createAnimator(), _backgroundBlurBaseLayerCommonStyleUniform, _backgroundBlurBaseLayerStyleUniforms, _backgroundBlurBaseLayerShared));
+    _styleAnimator = &_ui.setGenericAnimatorInstance(Containers::pointer<StyleAnimator>(_ui.createAnimator(), _backgroundBlurBaseLayerStyleUniforms, *_backgroundBlurBaseLayer));
 
     Whee::NodeHandle root = _ui.createNode({}, _ui.size());
 
@@ -355,12 +388,12 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
 
 void WheeGallery::popup() {
     Whee::NodeHandle popup = _ui.createNode({180, 180}, {440, 240});
-    _backgroundBlurBaseLayer->create(0, popup);
+    Whee::DataHandle popupBackground = _backgroundBlurBaseLayer->create(0, popup);
     _ui.eventLayer().onDrag(popup, [this, popup](const Vector2& offset){
         _ui.setNodeOffset(popup, _ui.nodeOffset(popup) + offset);
     });
-    _ui.eventLayer().onPress(popup, [this, popup]{
-        _styleAnimator->create(0,
+    _ui.eventLayer().onPress(popup, [this, popup, popupBackground]{
+        _styleAnimator->create(popupBackground,
             Whee::BaseLayerStyleUniform{_backgroundBlurBaseLayerStyleUniforms[0]}
                 .setColor(0xdcdcdcdc_rgbaf*0.2f)
                 .setOutlineColor(0x3bd267_rgbf)
