@@ -1138,8 +1138,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         }
 
         /* Print messages about ignored attributes / levels */
-        for(UnsignedInt i = 0; i != meshData->attributeCount(); ++i) {
-            const Trade::MeshAttribute name = meshData->attributeName(i);
+        for(UnsignedInt j = 0; j != meshData->attributeCount(); ++j) {
+            const Trade::MeshAttribute name = meshData->attributeName(j);
             if(Trade::isMeshAttributeCustom(name)) {
                 if(const Containers::String stringName = importer.meshAttributeName(name))
                     Warning{} << "Mesh" << meshName << "has a custom mesh attribute" << stringName << Debug::nospace << ", ignoring";
@@ -1148,7 +1148,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
                 continue;
             }
 
-            const VertexFormat format = meshData->attributeFormat(i);
+            const VertexFormat format = meshData->attributeFormat(j);
             if(isVertexFormatImplementationSpecific(format))
                 Warning{} << "Mesh" << meshName << "has" << name << "of format" << format << Debug::nospace << ", ignoring";
         }
