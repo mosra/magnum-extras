@@ -81,6 +81,9 @@ namespace Magnum {
 -   Added `MAGNUM_PLAYER_STATIC_PLUGINS` CMake option for linking static
     plugins to the @ref magnum-player "magnum-player" application. See
     @ref building-extras-features for more information.
+-   Fixed most remaining warnings on MSVC, in particular those related to
+    "conversion from T to void * of greater size" (see
+    [mosra/magnum#544](https://github.com/mosra/magnum/issues/544)).
 
 @subsection changelog-extras-latest-deprecated Deprecated APIs
 

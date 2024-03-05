@@ -50,7 +50,7 @@ Debug& operator<<(Debug& debug, const WidgetFlag value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "Ui::WidgetFlag(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
+    return debug << "Ui::WidgetFlag(" << Debug::nospace << Debug::hex << UnsignedInt(value) << Debug::nospace << ")";
 }
 
 Debug& operator<<(Debug& debug, const WidgetFlags value) {

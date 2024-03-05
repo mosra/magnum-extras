@@ -504,7 +504,7 @@ Debug& operator<<(Debug& debug, const Type value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "Ui::Type(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
+    return debug << "Ui::Type(" << Debug::nospace << Debug::hex << UnsignedInt(value) << Debug::nospace << ")";
 }
 
 Debug& operator<<(Debug& debug, const State value) {
@@ -521,7 +521,7 @@ Debug& operator<<(Debug& debug, const State value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "Ui::State(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
+    return debug << "Ui::State(" << Debug::nospace << Debug::hex << UnsignedInt(value) << Debug::nospace << ")";
 }
 
 Debug& operator<<(Debug& debug, const Style value) {
@@ -540,7 +540,7 @@ Debug& operator<<(Debug& debug, const Style value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "Ui::Style(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
+    return debug << "Ui::Style(" << Debug::nospace << Debug::hex << UnsignedInt(value) << Debug::nospace << ")";
 }
 
 StyleConfiguration::StyleConfiguration() {

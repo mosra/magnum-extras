@@ -42,7 +42,7 @@ Debug& operator<<(Debug& debug, const PlaneFlag value) {
         /* LCOV_EXCL_STOP */
     }
 
-    return debug << "Ui::PlaneFlag(" << Debug::nospace << reinterpret_cast<void*>(UnsignedInt(value)) << Debug::nospace << ")";
+    return debug << "Ui::PlaneFlag(" << Debug::nospace << Debug::hex << UnsignedInt(value) << Debug::nospace << ")";
 }
 
 Debug& operator<<(Debug& debug, const PlaneFlags value) {
