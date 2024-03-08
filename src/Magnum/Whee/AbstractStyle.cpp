@@ -183,9 +183,9 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
         const Vector3i cacheSize = textLayerGlyphCacheSize(features);
         CORRADE_ASSERT(
             cache.format() == textLayerGlyphCacheFormat() &&
-            cache.size() == cacheSize &&
-            cache.padding() == textLayerGlyphCachePadding(),
-            "Whee::AbstractStyle::apply(): style has a" << textLayerGlyphCacheFormat() << "glyph cache of size" << Debug::packed << cacheSize << "and padding" << Debug::packed << textLayerGlyphCachePadding() << "but the text layer has" << cache.format() << Debug::nospace << "," << Debug::packed << cache.size() << "and" << Debug::packed << cache.padding(), {});
+            (cache.size() >= cacheSize).all() &&
+            (cache.padding() >= textLayerGlyphCachePadding()).all(),
+            "Whee::AbstractStyle::apply(): style wants a" << textLayerGlyphCacheFormat() << "glyph cache of size at least" << Debug::packed << cacheSize << "and padding at least" << Debug::packed << textLayerGlyphCachePadding() << "but the text layer has" << cache.format() << Debug::nospace << "," << Debug::packed << cache.size() << "and" << Debug::packed << cache.padding(), {});
 
         CORRADE_ASSERT(fontManager,
             "Whee::AbstractStyle::apply(): fontManager has to be specified for applying a text layer style", {});

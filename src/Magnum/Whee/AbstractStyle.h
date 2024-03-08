@@ -269,15 +269,16 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * matching @p features. Additionally, if @ref StyleFeature::TextLayer
          * is present in @p features, expects that the @ref TextLayer::Shared
          * instance has a glyph cache set that matches
-         * @ref textLayerGlyphCacheFormat(), @ref textLayerGlyphCacheSize() for
-         * @p features and @ref textLayerGlyphCachePadding(), and that
-         * @p fontManager is not @cpp nullptr @ce; and if
-         * @ref StyleFeature::TextLayerImages is present in @p features,
-         * expects that either the @ref TextLayer is already present in the
-         * user interface or that @ref StyleFeature::TextLayer is included in
-         * @p features as well, and that @p importerManager is not
-         * @cpp nullptr @ce. Returns @cpp true @ce on success, prints a message
-         * to @relativeref{Magnum,Error} and returns @cpp false @ce if some
+         * @ref textLayerGlyphCacheFormat(), has size at least
+         * @ref textLayerGlyphCacheSize() for @p features and padding at least
+         * @ref textLayerGlyphCachePadding() and that @p fontManager is not
+         * @cpp nullptr @ce; and if @ref StyleFeature::TextLayerImages is
+         * present in @p features, expects that either the @ref TextLayer is
+         * already present in the user interface or that
+         * @ref StyleFeature::TextLayer is included in @p features as well, and
+         * that @p importerManager is not @cpp nullptr @ce. Returns
+         * @cpp true @ce on success, prints a message to
+         * @relativeref{Magnum,Error} and returns @cpp false @ce if some
          * run-time error happened during style preparation, such as a plugin
          * not being found or external data failing to load.
          */
@@ -379,10 +380,10 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @ref textLayerStyleCount() matching @p features. Additionally, if
          * @ref StyleFeature::TextLayer is present in @p features, the
          * @ref TextLayer::Shared instance is guaranteed to have a glyph cache
-         * set that matches @ref textLayerGlyphCacheFormat(),
-         * @ref textLayerGlyphCacheSize() for @p features and
-         * @ref textLayerGlyphCachePadding(), and @p fontManager is guaranteed
-         * to not be @cpp nullptr @ce; and if
+         * set that matches @ref textLayerGlyphCacheFormat(), with a size at
+         * least @ref textLayerGlyphCacheSize() for @p features and padding at
+         * least @ref textLayerGlyphCachePadding(), and @p fontManager is
+         * guaranteed to not be @cpp nullptr @ce; and if
          * @ref StyleFeature::TextLayerImages is present in @p features, the
          * @p importerManager is guaranteed to not be @cpp nullptr @ce.
          */
