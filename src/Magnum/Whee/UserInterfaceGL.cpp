@@ -96,7 +96,8 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         state.baseLayerShared = BaseLayerGL::Shared{
             BaseLayer::Shared::Configuration{
                 style.baseLayerStyleUniformCount(),
-                style.baseLayerStyleCount()}};
+                style.baseLayerStyleCount()}
+                    .setDynamicStyleCount(style.baseLayerDynamicStyleCount())};
         setBaseLayerInstance(Containers::pointer<BaseLayerGL>(createLayer(), state.baseLayerShared));
     }
     if(features >= StyleFeature::TextLayer) {
@@ -105,7 +106,8 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         state.textLayerShared = TextLayerGL::Shared{
             TextLayer::Shared::Configuration{
                 style.textLayerStyleUniformCount(),
-                style.textLayerStyleCount()}};
+                style.textLayerStyleCount()}
+                    .setDynamicStyleCount(style.textLayerDynamicStyleCount())};
         setTextLayerInstance(Containers::pointer<TextLayerGL>(createLayer(), state.textLayerShared));
 
         /* Create a local font plugin manager if external wasn't passed. If the
