@@ -265,8 +265,10 @@ void UserInterfaceGLTest::setStyle() {
         }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
+        UnsignedInt doBaseLayerDynamicStyleCount() const override { return 11; }
         UnsignedInt doTextLayerStyleUniformCount() const override { return 2; }
         UnsignedInt doTextLayerStyleCount() const override { return 4; }
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return 13; }
         PixelFormat doTextLayerGlyphCacheFormat() const override { return PixelFormat::R16F; }
         /** @todo test the array size once supported */
         Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override {
@@ -319,12 +321,14 @@ void UserInterfaceGLTest::setStyle() {
         CORRADE_VERIFY(ui.hasBaseLayer());
         CORRADE_COMPARE(ui.baseLayer().shared().styleUniformCount(), 3);
         CORRADE_COMPARE(ui.baseLayer().shared().styleCount(), 5);
+        CORRADE_COMPARE(ui.baseLayer().shared().dynamicStyleCount(), 11);
     }
 
     if(data.expectedFeatures & StyleFeature::TextLayer) {
         CORRADE_VERIFY(ui.hasTextLayer());
         CORRADE_COMPARE(ui.textLayer().shared().styleUniformCount(), 2);
         CORRADE_COMPARE(ui.textLayer().shared().styleCount(), 4);
+        CORRADE_COMPARE(ui.textLayer().shared().dynamicStyleCount(), 13);
 
         CORRADE_VERIFY(ui.textLayer().shared().hasGlyphCache());
         CORRADE_COMPARE(ui.textLayer().shared().glyphCache().format(), PixelFormat::R16F);
