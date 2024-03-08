@@ -57,12 +57,15 @@ struct AbstractStyleTest: TestSuite::Tester {
     void styleCountNotImplemented();
     void styleCountNotImplementedDefaults();
 
+    void setBaseLayerDynamicStyleCount();
+
     void textLayerGlyphCacheProperties();
     void textLayerGlyphCachePropertiesNotSupported();
     void textLayerGlyphCachePropertiesNotImplemented();
     void textLayerGlyphCachePropertiesNotImplementedDefaults();
     void textLayerGlyphCacheSizeNoTextFeature();
     void textLayerGlyphCacheSizeFeaturesNotSupported();
+    void setTextLayerDynamicStyleCount();
     void setTextLayerGlyphCacheSize();
 
     void apply();
@@ -122,12 +125,15 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::styleCountNotImplemented,
               &AbstractStyleTest::styleCountNotImplementedDefaults,
 
+              &AbstractStyleTest::setBaseLayerDynamicStyleCount,
+
               &AbstractStyleTest::textLayerGlyphCacheProperties,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotImplemented,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotImplementedDefaults,
               &AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature,
               &AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported,
+              &AbstractStyleTest::setTextLayerDynamicStyleCount,
               &AbstractStyleTest::setTextLayerGlyphCacheSize});
 
     addInstancedTests({&AbstractStyleTest::apply},
@@ -211,14 +217,18 @@ void AbstractStyleTest::styleCount() {
         }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
+        UnsignedInt doBaseLayerDynamicStyleCount() const override { return 11; }
         UnsignedInt doTextLayerStyleUniformCount() const override { return 7; }
         UnsignedInt doTextLayerStyleCount() const override { return 9; }
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return 13; }
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
     CORRADE_COMPARE(style.baseLayerStyleUniformCount(), 3);
     CORRADE_COMPARE(style.baseLayerStyleCount(), 5);
+    CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 11);
     CORRADE_COMPARE(style.textLayerStyleUniformCount(), 7);
     CORRADE_COMPARE(style.textLayerStyleCount(), 9);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 13);
 }
 
 void AbstractStyleTest::styleCountNotSupported() {
@@ -234,11 +244,19 @@ void AbstractStyleTest::styleCountNotSupported() {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
+        UnsignedInt doBaseLayerDynamicStyleCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
         UnsignedInt doTextLayerStyleUniformCount() const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
         UnsignedInt doTextLayerStyleCount() const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+        UnsignedInt doTextLayerDynamicStyleCount() const override {
             CORRADE_FAIL("This shouldn't get called.");
             return {};
         }
@@ -252,13 +270,17 @@ void AbstractStyleTest::styleCountNotSupported() {
     Error redirectError{&out};
     style.baseLayerStyleUniformCount();
     style.baseLayerStyleCount();
+    style.baseLayerDynamicStyleCount();
     style.textLayerStyleUniformCount();
     style.textLayerStyleCount();
+    style.textLayerDynamicStyleCount();
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractStyle::baseLayerStyleUniformCount(): feature not supported\n"
         "Whee::AbstractStyle::baseLayerStyleCount(): feature not supported\n"
+        "Whee::AbstractStyle::baseLayerDynamicStyleCount(): feature not supported\n"
         "Whee::AbstractStyle::textLayerStyleUniformCount(): feature not supported\n"
-        "Whee::AbstractStyle::textLayerStyleCount(): feature not supported\n",
+        "Whee::AbstractStyle::textLayerStyleCount(): feature not supported\n"
+        "Whee::AbstractStyle::textLayerDynamicStyleCount(): feature not supported\n",
         TestSuite::Compare::String);
 }
 
@@ -271,6 +293,9 @@ void AbstractStyleTest::styleCountNotImplemented() {
         }
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
+
+    /* *DynamicStyleCount() has a default implementation, tested in
+       styleCountNotImplementedDefaults() below */
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -302,10 +327,38 @@ void AbstractStyleTest::styleCountNotImplementedDefaults() {
         bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
     } style;
 
+    CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 0);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 0);
+
     /* With baseLayerStyleCount() / textLayerStyleCount() not implemented it
        would assert, tested above */
     CORRADE_COMPARE(style.baseLayerStyleUniformCount(), 17);
     CORRADE_COMPARE(style.textLayerStyleUniformCount(), 35);
+}
+
+void AbstractStyleTest::setBaseLayerDynamicStyleCount() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer;
+        }
+        UnsignedInt doBaseLayerDynamicStyleCount() const override { return 9; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    /* By default it returns what the style says */
+    CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 9);
+
+    /* Setting a new value */
+    style.setBaseLayerDynamicStyleCount(11);
+    CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 11);
+
+    /* Setting a new but smaller value than before */
+    style.setBaseLayerDynamicStyleCount(10);
+    CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 10);
+
+    /* Setting a value smaller than what style says picks the style instead */
+    style.setBaseLayerDynamicStyleCount(3);
+    CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 9);
 }
 
 void AbstractStyleTest::textLayerGlyphCacheProperties() {
@@ -431,6 +484,31 @@ void AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::textLayerGlyphCacheSize(): Whee::StyleFeature::BaseLayer|Whee::StyleFeature::TextLayer not a subset of supported Whee::StyleFeature::TextLayer\n");
 }
 
+void AbstractStyleTest::setTextLayerDynamicStyleCount() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::TextLayer;
+        }
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    /* By default it returns what the style says */
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 9);
+
+    /* Setting a new value */
+    style.setTextLayerDynamicStyleCount(11);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 11);
+
+    /* Setting a new but smaller value than before */
+    style.setTextLayerDynamicStyleCount(10);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 10);
+
+    /* Setting a value smaller than what style says picks the style instead */
+    style.setTextLayerDynamicStyleCount(3);
+    CORRADE_COMPARE(style.textLayerDynamicStyleCount(), 9);
+}
+
 void AbstractStyleTest::setTextLayerGlyphCacheSize() {
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
@@ -495,7 +573,9 @@ void AbstractStyleTest::apply() {
         explicit LayerSharedBase(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } sharedBase{BaseLayer::Shared::Configuration{3, 5}};
+    } sharedBase{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
 
     struct LayerBase: BaseLayer {
         explicit LayerBase(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -514,7 +594,9 @@ void AbstractStyleTest::apply() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } sharedText{TextLayer::Shared::Configuration{2, 4}};
+    } sharedText{TextLayer::Shared::Configuration{2, 4}
+        .setDynamicStyleCount(9)
+    };
     sharedText.setGlyphCache(cache);
 
     struct LayerText: TextLayer {
@@ -540,8 +622,10 @@ void AbstractStyleTest::apply() {
         }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
+        UnsignedInt doBaseLayerDynamicStyleCount() const override { return 11; }
         UnsignedInt doTextLayerStyleUniformCount() const override { return 2; }
         UnsignedInt doTextLayerStyleCount() const override { return 4; }
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return 9; }
         PixelFormat doTextLayerGlyphCacheFormat() const override { return PixelFormat::R16F; }
         Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return {16, 24, 2}; }
         Vector2i doTextLayerGlyphCachePadding() const override { return {3, 1}; }
@@ -655,7 +739,9 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{3, 5}};
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -667,29 +753,47 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
     ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
     struct Style: AbstractStyle {
-        Style(UnsignedInt styleUniformCount, UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {}
+        Style(UnsignedInt styleUniformCount, UnsignedInt styleCount, UnsignedInt dynamicStyleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount}, _dynamicStyleCount{dynamicStyleCount} {}
 
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return _styleUniformCount; }
         UnsignedInt doBaseLayerStyleCount() const override { return _styleCount; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
+        UnsignedInt doBaseLayerDynamicStyleCount() const override { return _dynamicStyleCount; }
+        bool doApply(UserInterface& ui, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL_IF(
+                ui.baseLayer().shared().styleCount() != _styleCount ||
+                ui.baseLayer().shared().styleUniformCount() != _styleUniformCount ||
+                ui.baseLayer().shared().dynamicStyleCount() < _dynamicStyleCount,
+                "This shouldn't get called.");
+            return true;
         }
 
-        UnsignedInt _styleUniformCount, _styleCount;
+        UnsignedInt _styleUniformCount, _styleCount, _dynamicStyleCount;
     };
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
+    /* Applying a style with a smaller or equal dynamic style count is
+       alright */
+    CORRADE_VERIFY(Style{3, 5, 11}
+        .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr));
+    CORRADE_VERIFY(Style{3, 5, 10}
+        .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr));
+
     std::ostringstream out;
     Error redirectError{&out};
-    Style{4, 5}.apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
-    Style{3, 4}.apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(),
-        "Whee::AbstractStyle::apply(): style has 4 uniforms and 5 styles but the base layer has 3 and 5\n"
-        "Whee::AbstractStyle::apply(): style has 3 uniforms and 4 styles but the base layer has 3 and 5\n");
+    Style{4, 5, 11}
+        .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
+    Style{3, 4, 11}
+        .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
+    Style{3, 5, 12}
+        .apply(ui, StyleFeature::BaseLayer, nullptr, nullptr);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractStyle::apply(): style wants 4 uniforms, 5 styles and at least 11 dynamic styles but the base layer has 3, 5 and 11\n"
+        "Whee::AbstractStyle::apply(): style wants 3 uniforms, 4 styles and at least 11 dynamic styles but the base layer has 3, 5 and 11\n"
+        "Whee::AbstractStyle::apply(): style wants 3 uniforms, 5 styles and at least 12 dynamic styles but the base layer has 3, 5 and 11\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractStyleTest::applyTextLayerNotPresent() {
@@ -731,11 +835,23 @@ void AbstractStyleTest::applyTextLayerNotPresent() {
 void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, Vector2i{16}};
+
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
+        using TextLayer::Shared::setGlyphCache;
+
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
+    } shared{TextLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(11)
+    };
+    shared.setGlyphCache(cache);
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -747,29 +863,48 @@ void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
     ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
     struct Style: AbstractStyle {
-        Style(UnsignedInt styleUniformCount, UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {}
+        Style(UnsignedInt styleUniformCount, UnsignedInt styleCount, UnsignedInt dynamicStyleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount}, _dynamicStyleCount{dynamicStyleCount} {}
 
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
         UnsignedInt doTextLayerStyleUniformCount() const override { return _styleUniformCount; }
         UnsignedInt doTextLayerStyleCount() const override { return _styleCount; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
+        UnsignedInt doTextLayerDynamicStyleCount() const override { return _dynamicStyleCount; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return {16, 16, 1}; }
+        bool doApply(UserInterface& ui, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL_IF(
+                ui.textLayer().shared().styleCount() != _styleCount ||
+                ui.textLayer().shared().styleUniformCount() != _styleUniformCount ||
+                ui.textLayer().shared().dynamicStyleCount() < _dynamicStyleCount,
+                "This shouldn't get called.");
+            return true;
         }
 
-        UnsignedInt _styleUniformCount, _styleCount;
+        UnsignedInt _styleUniformCount, _styleCount, _dynamicStyleCount;
     };
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
+    /* Applying a style with a smaller or equal dynamic style count is
+       alright */
+    CORRADE_VERIFY(Style{3, 5, 11}
+        .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
+    CORRADE_VERIFY(Style{3, 5, 10}
+        .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
+
     std::ostringstream out;
     Error redirectError{&out};
-    Style{4, 5}.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    Style{3, 4}.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    CORRADE_COMPARE(out.str(),
-        "Whee::AbstractStyle::apply(): style has 4 uniforms and 5 styles but the text layer has 3 and 5\n"
-        "Whee::AbstractStyle::apply(): style has 3 uniforms and 4 styles but the text layer has 3 and 5\n");
+    Style{4, 5, 11}
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
+    Style{3, 4, 11}
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
+    Style{3, 5, 12}
+        .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractStyle::apply(): style wants 4 uniforms, 5 styles and at least 11 dynamic styles but the text layer has 3, 5 and 11\n"
+        "Whee::AbstractStyle::apply(): style wants 3 uniforms, 4 styles and at least 11 dynamic styles but the text layer has 3, 5 and 11\n"
+        "Whee::AbstractStyle::apply(): style wants 3 uniforms, 5 styles and at least 12 dynamic styles but the text layer has 3, 5 and 11\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractStyleTest::applyTextLayerNoGlyphCache() {
