@@ -93,6 +93,21 @@ UnsignedInt AbstractStyle::doBaseLayerStyleCount() const {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractStyle::baseLayerStyleCount(): feature advertised but not implemented", {});
 }
 
+UnsignedInt AbstractStyle::baseLayerDynamicStyleCount() const {
+    CORRADE_ASSERT(features() >= StyleFeature::BaseLayer,
+        "Whee::AbstractStyle::baseLayerDynamicStyleCount(): feature not supported", {});
+    return Math::max(doBaseLayerDynamicStyleCount(), _baseLayerDynamicStyleCount);
+}
+
+UnsignedInt AbstractStyle::doBaseLayerDynamicStyleCount() const {
+    return 0;
+}
+
+AbstractStyle& AbstractStyle::setBaseLayerDynamicStyleCount(const UnsignedInt count) {
+    _baseLayerDynamicStyleCount = count;
+    return *this;
+}
+
 UnsignedInt AbstractStyle::textLayerStyleUniformCount() const {
     CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
         "Whee::AbstractStyle::textLayerStyleUniformCount(): feature not supported", {});
@@ -111,6 +126,21 @@ UnsignedInt AbstractStyle::textLayerStyleCount() const {
 
 UnsignedInt AbstractStyle::doTextLayerStyleCount() const {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractStyle::textLayerStyleCount(): feature advertised but not implemented", {});
+}
+
+UnsignedInt AbstractStyle::textLayerDynamicStyleCount() const {
+    CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
+        "Whee::AbstractStyle::textLayerDynamicStyleCount(): feature not supported", {});
+    return Math::max(doTextLayerDynamicStyleCount(), _textLayerDynamicStyleCount);
+}
+
+UnsignedInt AbstractStyle::doTextLayerDynamicStyleCount() const {
+    return 0;
+}
+
+AbstractStyle& AbstractStyle::setTextLayerDynamicStyleCount(const UnsignedInt count) {
+    _textLayerDynamicStyleCount = count;
+    return *this;
 }
 
 PixelFormat AbstractStyle::textLayerGlyphCacheFormat() const {
@@ -165,8 +195,9 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
         const BaseLayer::Shared& shared = ui.baseLayer().shared();
         CORRADE_ASSERT(
             shared.styleUniformCount() == baseLayerStyleUniformCount() &&
-            shared.styleCount() == baseLayerStyleCount(),
-            "Whee::AbstractStyle::apply(): style has" << baseLayerStyleUniformCount() << "uniforms and" << baseLayerStyleCount() << "styles but the base layer has" << shared.styleUniformCount() << "and" << shared.styleCount(), {});
+            shared.styleCount() == baseLayerStyleCount() &&
+            shared.dynamicStyleCount() >= baseLayerDynamicStyleCount(),
+            "Whee::AbstractStyle::apply(): style wants" << baseLayerStyleUniformCount() << "uniforms," << baseLayerStyleCount() << "styles and at least" << baseLayerDynamicStyleCount() << "dynamic styles but the base layer has" << shared.styleUniformCount() << Debug::nospace << "," << shared.styleCount() << "and" << shared.dynamicStyleCount(), {});
     }
     if(features >= StyleFeature::TextLayer) {
         CORRADE_ASSERT(ui.hasTextLayer(),
@@ -174,8 +205,9 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
         const TextLayer::Shared& shared = ui.textLayer().shared();
         CORRADE_ASSERT(
             shared.styleUniformCount() == textLayerStyleUniformCount() &&
-            shared.styleCount() == textLayerStyleCount(),
-            "Whee::AbstractStyle::apply(): style has" << textLayerStyleUniformCount() << "uniforms and" << textLayerStyleCount() << "styles but the text layer has" << shared.styleUniformCount() << "and" << shared.styleCount(), {});
+            shared.styleCount() == textLayerStyleCount() &&
+            shared.dynamicStyleCount() >= textLayerDynamicStyleCount(),
+            "Whee::AbstractStyle::apply(): style wants" << textLayerStyleUniformCount() << "uniforms," << textLayerStyleCount() << "styles and at least" << textLayerDynamicStyleCount() << "dynamic styles but the text layer has" << shared.styleUniformCount() << Debug::nospace << "," << shared.styleCount() << "and" << shared.dynamicStyleCount(), {});
 
         CORRADE_ASSERT(shared.hasGlyphCache(),
             "Whee::AbstractStyle::apply(): glyph cache not present in the text layer", {});
