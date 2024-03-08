@@ -844,9 +844,12 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
         PixelFormat doTextLayerGlyphCacheFormat() const override { return _format; }
         Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override { return _size; }
         Vector2i doTextLayerGlyphCachePadding() const override { return _padding; }
-        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_FAIL("This shouldn't get called.");
-            return {};
+        bool doApply(UserInterface& ui, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL_IF(
+                (ui.textLayer().shared().glyphCache().size() < _size).any() ||
+                (ui.textLayer().shared().glyphCache().padding() < _padding).any(),
+                "This shouldn't get called.");
+            return true;
         }
 
         PixelFormat _format;
@@ -857,27 +860,41 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
+    /* Applying a style with a smaller or equal size or padding is alright */
+    CORRADE_VERIFY(Style{PixelFormat::RG16F, {3, 5, 2}, {4, 1}}
+        .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
+    CORRADE_VERIFY(Style{PixelFormat::RG16F, {3, 5, 2}, {4, 0}}
+        .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
+    CORRADE_VERIFY(Style{PixelFormat::RG16F, {3, 5, 2}, {3, 1}}
+        .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
+    CORRADE_VERIFY(Style{PixelFormat::RG16F, {3, 5, 1}, {4, 1}}
+        .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
+    CORRADE_VERIFY(Style{PixelFormat::RG16F, {3, 4, 2}, {4, 1}}
+        .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
+    CORRADE_VERIFY(Style{PixelFormat::RG16F, {2, 5, 2}, {4, 1}}
+        .apply(ui, StyleFeature::TextLayer, nullptr, &_fontManager));
+
     std::ostringstream out;
     Error redirectError{&out};
     Style{PixelFormat::R8Unorm, {3, 5, 2}, {4, 1}}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{PixelFormat::RG16F, {4, 5, 2}, {4, 1}}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    Style{PixelFormat::RG16F, {3, 4, 2}, {4, 1}}
+    Style{PixelFormat::RG16F, {3, 6, 2}, {4, 1}}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    Style{PixelFormat::RG16F, {3, 5, 4}, {4, 1}}
+    Style{PixelFormat::RG16F, {3, 5, 3}, {4, 1}}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
-    Style{PixelFormat::RG16F, {3, 5, 2}, {3, 1}}
+    Style{PixelFormat::RG16F, {3, 5, 2}, {5, 1}}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     Style{PixelFormat::RG16F, {3, 5, 2}, {4, 2}}
         .apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
     CORRADE_COMPARE_AS(out.str(),
-        "Whee::AbstractStyle::apply(): style has a PixelFormat::R8Unorm glyph cache of size {3, 5, 2} and padding {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
-       "Whee::AbstractStyle::apply(): style has a PixelFormat::RG16F glyph cache of size {4, 5, 2} and padding {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
-       "Whee::AbstractStyle::apply(): style has a PixelFormat::RG16F glyph cache of size {3, 4, 2} and padding {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
-       "Whee::AbstractStyle::apply(): style has a PixelFormat::RG16F glyph cache of size {3, 5, 4} and padding {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
-       "Whee::AbstractStyle::apply(): style has a PixelFormat::RG16F glyph cache of size {3, 5, 2} and padding {3, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
-       "Whee::AbstractStyle::apply(): style has a PixelFormat::RG16F glyph cache of size {3, 5, 2} and padding {4, 2} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n",
+        "Whee::AbstractStyle::apply(): style wants a PixelFormat::R8Unorm glyph cache of size at least {3, 5, 2} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
+       "Whee::AbstractStyle::apply(): style wants a PixelFormat::RG16F glyph cache of size at least {4, 5, 2} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
+       "Whee::AbstractStyle::apply(): style wants a PixelFormat::RG16F glyph cache of size at least {3, 6, 2} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
+       "Whee::AbstractStyle::apply(): style wants a PixelFormat::RG16F glyph cache of size at least {3, 5, 3} and padding at least {4, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
+       "Whee::AbstractStyle::apply(): style wants a PixelFormat::RG16F glyph cache of size at least {3, 5, 2} and padding at least {5, 1} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n"
+       "Whee::AbstractStyle::apply(): style wants a PixelFormat::RG16F glyph cache of size at least {3, 5, 2} and padding at least {4, 2} but the text layer has PixelFormat::RG16F, {3, 5, 2} and {4, 1}\n",
         TestSuite::Compare::String);
 }
 
