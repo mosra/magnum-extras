@@ -30,6 +30,7 @@
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
+#include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/EventLayer.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
@@ -76,9 +77,16 @@ struct EventLayerTest: TestSuite::Tester {
     void connectMemberFunctionScoped();
 
     void tapOrClick();
+    void tapOrClickPressRelease();
+    void tapOrClickFromUserInterface();
+
     void middleClick();
+
     void rightClick();
+
     void drag();
+    void dragPress();
+    void dragFromUserInterface();
 
     void remove();
     void removeScoped();
@@ -297,9 +305,16 @@ EventLayerTest::EventLayerTest() {
         Containers::arraySize(ConnectData));
 
     addTests({&EventLayerTest::tapOrClick,
+              &EventLayerTest::tapOrClickPressRelease,
+              &EventLayerTest::tapOrClickFromUserInterface,
+
               &EventLayerTest::middleClick,
+
               &EventLayerTest::rightClick,
+
               &EventLayerTest::drag,
+              &EventLayerTest::dragPress,
+              &EventLayerTest::dragFromUserInterface,
 
               &EventLayerTest::remove,
               &EventLayerTest::removeScoped,
@@ -1333,6 +1348,144 @@ void EventLayerTest::tapOrClick() {
     }
 }
 
+void EventLayerTest::tapOrClickPressRelease() {
+    EventLayer layer{layerHandle(0, 1)};
+
+    Int called = 0;
+    DataHandle handle = layer.onTapOrClick(nodeHandle(0, 1), [&called]{
+        ++called;
+    });
+
+    /* The press event should get accepted for mouse left, finger or pen to
+       prevent it from being propagated further if no other data accepts it.
+       The handler shouldn't get called though. */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::MouseMiddle};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::MouseRight};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Finger};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Pen};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Eraser};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+
+    /* Similarly for release */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::MouseMiddle};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::MouseRight};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Finger};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Pen};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Eraser};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+
+    /* Any other than press, release or tapOrClick event shouldn't get
+       accepted */
+    } {
+        PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
+        layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
+        layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    }
+}
+
+void EventLayerTest::tapOrClickFromUserInterface() {
+    /* "Integration" test to verify onTapOrClick() behavior with the whole
+       event pipeline in AbstractUserInterface */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    /* A node below the one that should react to the tap or click event,
+       accepting presses. Shouldn't get considered at all. */
+    Int belowCalled = 0;
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    layer.onPress(nodeBelow, [&belowCalled]{
+        ++belowCalled;
+    });
+
+    Int called = 0;
+    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+    layer.onTapOrClick(node, [&called]{
+        ++called;
+    });
+
+    /* A press should be accepted but not resulting in the handler being
+       called */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
+        CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A release should be accepted as well, resulting in the handler being
+       called */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+    }
+}
+
 void EventLayerTest::middleClick() {
     EventLayer layer{layerHandle(0, 1)};
 
@@ -1516,6 +1669,139 @@ void EventLayerTest::drag() {
         PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
+    }
+}
+
+void EventLayerTest::dragPress() {
+    EventLayer layer{layerHandle(0, 1)};
+
+    Int called = 0;
+    DataHandle handle = layer.onDrag(nodeHandle(0, 1), [&called](const Vector2&){
+        ++called;
+    });
+
+    /* The press event should get accepted for mouse left, finger or pen to
+       prevent it from being propagated further if no other data accepts it.
+       The handler shouldn't get called though. */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::MouseMiddle};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::MouseRight};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Finger};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Pen};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::Eraser};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+
+    /* Any other than press or move event shouldn't get accepted */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerTapOrClickEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
+        layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
+        layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    }
+}
+
+void EventLayerTest::dragFromUserInterface() {
+    /* "Integration" test to verify onDrag() behavior with the whole event
+       pipeline in AbstractUserInterface */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    /* A node below the one that should react to the drag event, accepting
+       presses. Shouldn't get considered at all. */
+    Int belowCalled = 0;
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    layer.onPress(nodeBelow, [&belowCalled]{
+        ++belowCalled;
+    });
+
+    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+
+    Int called = 0;
+    layer.onDrag(node, [&called](const Vector2&){
+        ++called;
+    });
+
+    /* A move alone with a button pressed should be accepted even though it
+       doesn't cause any node to get registered as pressed or captured */
+    {
+        PointerMoveEvent event{{}, Pointer::Finger};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* Another move without a button pressed should be ignored */
+    } {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A press should be accepted but not resulting in the handler being
+       called */
+    } {
+        PointerEvent event{Pointer::Pen};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A move after a press should then  */
+    } {
+        PointerMoveEvent event{{}, Pointer::Pen};
+        CORRADE_VERIFY(ui.pointerMoveEvent({45, 60}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
+        CORRADE_COMPARE(called, 2);
+        CORRADE_COMPARE(belowCalled, 0);
     }
 }
 

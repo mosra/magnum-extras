@@ -188,7 +188,24 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
     if(data.eventType == Implementation::EventType::Press && (event.type() == Pointer::MouseLeft || event.type() == Pointer::Finger || event.type() == Pointer::Pen)) {
         reinterpret_cast<void(*)(Implementation::EventConnectionData::Storage&)>(data.connection.call)(data.connection.storage);
         event.setAccepted();
+        return;
     }
+
+    /* Accept a press that precedes a tap/click or drag. Otherwise it could get
+       propagated further, causing the subsequent release or move to get called
+       on some entirely other node. */
+    if((data.eventType == Implementation::EventType::Drag || data.eventType == Implementation::EventType::TapOrClick) && (event.type() == Pointer::MouseLeft || event.type() == Pointer::Finger || event.type() == Pointer::Pen))
+        event.setAccepted();
+}
+
+void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
+    Data& data = _state->data[dataId];
+
+    /* Accept a release that precedes a tap/click. Otherwise it could get
+       propagated further, causing the subsequent tap/click to not get called
+       at all. */
+    if(data.eventType == Implementation::EventType::TapOrClick && (event.type() == Pointer::MouseLeft || event.type() == Pointer::Finger || event.type() == Pointer::Pen))
+        event.setAccepted();
 }
 
 void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent& event) {
