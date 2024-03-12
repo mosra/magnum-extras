@@ -145,8 +145,9 @@ union Layer {
            (offset = 0) or before it (offset = 256). */
         UnsignedShort dataAttachmentAnimatorOffset;
         UnsignedShort dataAnimatorOffset;
+        UnsignedShort styleAnimatorOffset;
 
-        /* 2 / 6 bytes free */
+        /* 0 / 4 bytes free */
     } used;
 
     /* Used only if the Layer is among the free ones */
@@ -175,6 +176,7 @@ union Layer {
            used and free layers */
         UnsignedShort dataAttachmentAnimatorOffset;
         UnsignedShort dataAnimatorOffset;
+        UnsignedShort styleAnimatorOffset;
     } free;
 };
 
@@ -182,7 +184,8 @@ static_assert(
     offsetof(Layer::Used, instance) == offsetof(Layer::Free, instance) &&
     offsetof(Layer::Used, generation) == offsetof(Layer::Free, generation) &&
     offsetof(Layer::Used, dataAttachmentAnimatorOffset) == offsetof(Layer::Free, dataAttachmentAnimatorOffset) &&
-    offsetof(Layer::Used, dataAnimatorOffset) == offsetof(Layer::Free, dataAnimatorOffset),
+    offsetof(Layer::Used, dataAnimatorOffset) == offsetof(Layer::Free, dataAnimatorOffset) &&
+    offsetof(Layer::Used, styleAnimatorOffset) == offsetof(Layer::Free, styleAnimatorOffset),
     "Layer::Used and Free layout not compatible");
 
 union Layouter {
@@ -885,6 +888,7 @@ LayerHandle AbstractUserInterface::createLayer(const LayerHandle before) {
     Implementation::partitionedAnimatorsCreateLayer(state.animatorInstances,
         stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset),
         stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAnimatorOffset),
+        stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::styleAnimatorOffset),
         handle);
 
     return handle;
@@ -960,6 +964,7 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
     Implementation::partitionedAnimatorsRemoveLayer(state.animatorInstances,
         stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset),
         stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAnimatorOffset),
+        stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::styleAnimatorOffset),
         handle);
 
     /* Delete the instance. The instance being null then means that the layer
@@ -1385,6 +1390,21 @@ AbstractDataAnimator& AbstractUserInterface::setDataAnimatorInstance(Containers:
     return static_cast<AbstractDataAnimator&>(animator);
 }
 
+AbstractStyleAnimator& AbstractUserInterface::setStyleAnimatorInstance(Containers::Pointer<AbstractStyleAnimator>&& instance) {
+    /* Null instance checked in setAnimatorInstanceInternal() below, avoid
+       accessing it here */
+    CORRADE_ASSERT(!instance || instance->features() >= AnimatorFeature::DataAttachment,
+        "Whee::AbstractUserInterface::setStyleAnimatorInstance():" << AnimatorFeature::DataAttachment << "not advertised for a style animator", *instance);
+
+    AbstractAnimator& animator = setAnimatorInstanceInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::AbstractUserInterface::setStyleAnimatorInstance():",
+        #endif
+        Utility::move(instance), Int(Implementation::AnimatorType::Style));
+
+    return static_cast<AbstractStyleAnimator&>(animator);
+}
+
 AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(
     #ifndef CORRADE_NO_ASSERT
     const char* const messagePrefix,
@@ -1413,7 +1433,8 @@ AbstractAnimator& AbstractUserInterface::setAnimatorInstanceInternal(
         state.animatorInstancesNodeAttachmentOffset,
         state.animatorInstancesNodeOffset,
         stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset),
-        stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAnimatorOffset));
+        stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAnimatorOffset),
+        stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::styleAnimatorOffset));
 
     /* Take over the instance */
     Animator& animator = state.animators[id];
@@ -1454,7 +1475,8 @@ void AbstractUserInterface::removeAnimator(const AnimatorHandle handle) {
             state.animatorInstancesNodeAttachmentOffset,
             state.animatorInstancesNodeOffset,
             stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset),
-            stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAnimatorOffset));
+            stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAnimatorOffset),
+            stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::styleAnimatorOffset));
 
     /* Delete the instance. The instance being null then means that the
        animator is either free or is newly created until set*AnimatorInstance()
@@ -2098,8 +2120,9 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
 
         /* Then, for each layer all generic animators with DataAttachment */
         const Containers::StridedArrayView1D<const UnsignedShort> dataAnimatorOffsets = stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAnimatorOffset);
+        const Containers::StridedArrayView1D<const UnsignedShort> styleAnimatorOffsets = stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::styleAnimatorOffset);
         for(std::size_t i = 0; i != state.layers.size(); ++i)
-            for(AbstractAnimator& instance: Implementation::partitionedAnimatorsGenericDataAttachment(state.animatorInstances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, layerHandle(i, state.layers[i].used.generation)))
+            for(AbstractAnimator& instance: Implementation::partitionedAnimatorsGenericDataAttachment(state.animatorInstances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, styleAnimatorOffsets, layerHandle(i, state.layers[i].used.generation)))
                 if(instance.state() & AnimatorState::NeedsAdvance)
                     static_cast<AbstractGenericAnimator&>(instance).advance(time);
 
@@ -2135,13 +2158,23 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
             Layer& layer = state.layers[i];
 
             /* ... all AbstractDataAnimator instances */
-            const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> dataAnimators = Implementation::partitionedAnimatorsDataDataAttachment(state.animatorInstances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, layerHandle(i, layer.used.generation));
+            const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> dataAnimators = Implementation::partitionedAnimatorsDataDataAttachment(state.animatorInstances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, styleAnimatorOffsets, layerHandle(i, layer.used.generation));
             if(!dataAnimators.isEmpty()) {
                 /* If there are any animators partitioned for this layer, it
                    implies that the layer supports data animation */
                 CORRADE_INTERNAL_ASSERT(layer.used.features >= LayerFeature::AnimateData);
                 /* The cast is a bit ew, yeah */
                 state.layers[i].used.instance->advanceAnimations(time, Containers::arrayView(reinterpret_cast<Containers::Reference<AbstractDataAnimator>*>(const_cast<Containers::Reference<AbstractAnimator>*>(dataAnimators.data())), dataAnimators.size()));
+            }
+
+            /* ... and all AbstractStyleAnimator instances */
+            const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> styleAnimators = Implementation::partitionedAnimatorsStyleDataAttachment(state.animatorInstances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, styleAnimatorOffsets, layerHandle(i, layer.used.generation));
+            if(!styleAnimators.isEmpty()) {
+                /* If there are any animators partitioned for this layer, it
+                   implies that the layer supports style animation */
+                CORRADE_INTERNAL_ASSERT(layer.used.features >= LayerFeature::AnimateStyles);
+                /* The cast is a bit ew, yeah */
+                state.layers[i].used.instance->advanceAnimations(time, Containers::arrayView(reinterpret_cast<Containers::Reference<AbstractStyleAnimator>*>(const_cast<Containers::Reference<AbstractAnimator>*>(styleAnimators.data())), styleAnimators.size()));
             }
         }
     }

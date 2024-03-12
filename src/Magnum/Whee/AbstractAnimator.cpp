@@ -1201,4 +1201,16 @@ AnimatorFeatures AbstractDataAnimator::doFeatures() const {
     return AnimatorFeature::DataAttachment;
 }
 
+AbstractStyleAnimator::AbstractStyleAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}
+
+AbstractStyleAnimator::AbstractStyleAnimator(AbstractStyleAnimator&&) noexcept = default;
+
+AbstractStyleAnimator::~AbstractStyleAnimator() = default;
+
+AbstractStyleAnimator& AbstractStyleAnimator::operator=(AbstractStyleAnimator&&) noexcept = default;
+
+AnimatorFeatures AbstractStyleAnimator::doFeatures() const {
+    return AnimatorFeature::DataAttachment;
+}
+
 }}

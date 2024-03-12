@@ -75,8 +75,11 @@ struct AbstractLayerTest: TestSuite::Tester {
     void setSizeNotImplemented();
 
     void setDataAnimator();
+    void setStyleAnimator();
     void setDataAnimatorNotSupported();
+    void setStyleAnimatorNotSupported();
     void setDataAnimatorInvalid();
+    void setStyleAnimatorInvalid();
 
     void cleanNodes();
     void cleanNodesEmpty();
@@ -89,12 +92,19 @@ struct AbstractLayerTest: TestSuite::Tester {
     void cleanDataAnimatorsInvalidLayer();
 
     void advanceDataAnimations();
+    void advanceStyleAnimations();
     void advanceDataAnimationsEmpty();
+    void advanceStyleAnimationsEmpty();
     void advanceDataAnimationsNotSupported();
+    void advanceStyleAnimationsNotSupported();
     void advanceDataAnimationsNotImplemented();
+    void advanceStyleAnimationsNotImplemented();
     void advanceDataAnimationsInvalidFeatures();
+    void advanceStyleAnimationsInvalidFeatures();
     void advanceDataAnimationsLayerNotSet();
+    void advanceStyleAnimationsLayerNotSet();
     void advanceDataAnimationsInvalidLayer();
+    void advanceStyleAnimationsInvalidLayer();
 
     void update();
     void updateEmpty();
@@ -152,8 +162,11 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::setSizeNotImplemented,
 
               &AbstractLayerTest::setDataAnimator,
+              &AbstractLayerTest::setStyleAnimator,
               &AbstractLayerTest::setDataAnimatorNotSupported,
+              &AbstractLayerTest::setStyleAnimatorNotSupported,
               &AbstractLayerTest::setDataAnimatorInvalid,
+              &AbstractLayerTest::setStyleAnimatorInvalid,
 
               &AbstractLayerTest::cleanNodes,
               &AbstractLayerTest::cleanNodesEmpty,
@@ -166,12 +179,19 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::cleanDataAnimatorsInvalidLayer,
 
               &AbstractLayerTest::advanceDataAnimations,
+              &AbstractLayerTest::advanceStyleAnimations,
               &AbstractLayerTest::advanceDataAnimationsEmpty,
+              &AbstractLayerTest::advanceStyleAnimationsEmpty,
               &AbstractLayerTest::advanceDataAnimationsNotSupported,
+              &AbstractLayerTest::advanceStyleAnimationsNotSupported,
               &AbstractLayerTest::advanceDataAnimationsNotImplemented,
+              &AbstractLayerTest::advanceStyleAnimationsNotImplemented,
               &AbstractLayerTest::advanceDataAnimationsInvalidFeatures,
+              &AbstractLayerTest::advanceStyleAnimationsInvalidFeatures,
               &AbstractLayerTest::advanceDataAnimationsLayerNotSet,
+              &AbstractLayerTest::advanceStyleAnimationsLayerNotSet,
               &AbstractLayerTest::advanceDataAnimationsInvalidLayer,
+              &AbstractLayerTest::advanceStyleAnimationsInvalidLayer,
 
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateEmpty,
@@ -776,6 +796,29 @@ void AbstractLayerTest::setDataAnimator() {
     CORRADE_COMPARE(animator.layer(), layer.handle());
 }
 
+void AbstractLayerTest::setStyleAnimator() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+    } layer{layerHandle(0xab, 0x12)};
+
+    struct: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator{animatorHandle(0xcd, 0x34)};
+    CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
+
+    layer.setAnimator(animator);
+    CORRADE_COMPARE(animator.layer(), layer.handle());
+}
+
 void AbstractLayerTest::setDataAnimatorNotSupported() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -798,6 +841,28 @@ void AbstractLayerTest::setDataAnimatorNotSupported() {
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::setAnimator(): data animation not supported\n");
 }
 
+void AbstractLayerTest::setStyleAnimatorNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+    } animator{animatorHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setAnimator(animator);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::setAnimator(): style animation not supported\n");
+}
+
 void AbstractLayerTest::setDataAnimatorInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -812,6 +877,40 @@ void AbstractLayerTest::setDataAnimatorInvalid() {
 
     struct Animator: AbstractDataAnimator {
         explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractDataAnimator{handle}, _features{features} {}
+
+        AnimatorFeatures doFeatures() const override { return _features; }
+
+        private:
+            AnimatorFeatures _features;
+    } animatorNoDataAttachment{animatorHandle(0, 1), {}},
+      animatorAlreadyAssociated{animatorHandle(1, 2), AnimatorFeature::DataAttachment};
+
+    layer.setAnimator(animatorAlreadyAssociated);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setAnimator(animatorNoDataAttachment);
+    layer.setAnimator(animatorAlreadyAssociated);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::setAnimator(): data attachment not supported by the animator\n"
+        "Whee::AbstractLayer::setAnimator(): animator already associated with Whee::LayerHandle(0xab, 0x12)\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::setStyleAnimatorInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+    } layer{layerHandle(0xab, 0x12)};
+
+    struct Animator: AbstractStyleAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractStyleAnimator{handle}, _features{features} {}
 
         AnimatorFeatures doFeatures() const override { return _features; }
 
@@ -1196,6 +1295,44 @@ void AbstractLayerTest::advanceDataAnimations() {
     CORRADE_COMPARE(layer.advanceCalled, 1);
 }
 
+void AbstractLayerTest::advanceStyleAnimations() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+
+        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
+            CORRADE_COMPARE(time, 476_nsec);
+            CORRADE_COMPARE(animators.size(), 2);
+            CORRADE_COMPARE(animators[0].handle(), animatorHandle(0xab, 0x12));
+            CORRADE_COMPARE(animators[1].handle(), animatorHandle(0xcd, 0x34));
+            ++advanceCalled;
+        }
+
+        Int advanceCalled = 0;
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator1{animatorHandle(0xab, 0x12)},
+      animator2{animatorHandle(0xcd, 0x34)};
+    layer.setAnimator(animator1);
+    layer.setAnimator(animator2);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    layer.advanceAnimations(476_nsec, {animator1, animator2});
+    CORRADE_COMPARE(layer.advanceCalled, 1);
+}
+
 void AbstractLayerTest::advanceDataAnimationsEmpty() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -1211,19 +1348,55 @@ void AbstractLayerTest::advanceDataAnimationsEmpty() {
     CORRADE_VERIFY(true);
 }
 
+void AbstractLayerTest::advanceStyleAnimationsEmpty() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+        void doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&) override {}
+    } layer{layerHandle(0, 1)};
+
+    /* It shouldn't crash or anything */
+    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractStyleAnimator>{});
+    CORRADE_VERIFY(true);
+}
+
 void AbstractLayerTest::advanceDataAnimationsNotSupported() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
 
-        LayerFeatures doFeatures() const override { return {}; }
+        LayerFeatures doFeatures() const override {
+            /* Not AnimateData */
+            return LayerFeature::AnimateStyles;
+        }
     } layer{layerHandle(0, 1)};
 
     std::ostringstream out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractDataAnimator>{});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data animation not supported\n");
+}
+
+void AbstractLayerTest::advanceStyleAnimationsNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            /* Not AnimateStyles */
+            return LayerFeature::AnimateData;
+        }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractStyleAnimator>{});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): style animation not supported\n");
 }
 
 void AbstractLayerTest::advanceDataAnimationsNotImplemented() {
@@ -1235,12 +1408,35 @@ void AbstractLayerTest::advanceDataAnimationsNotImplemented() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateData;
         }
+        void doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&) override {
+            CORRADE_FAIL("This shouldn't be called");
+        }
     } layer{layerHandle(0, 1)};
 
     std::ostringstream out;
     Error redirectError{&out};
     layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractDataAnimator>{});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data animation advertised but not implemented\n");
+}
+
+void AbstractLayerTest::advanceStyleAnimationsNotImplemented() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+        void doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&) override {
+            CORRADE_FAIL("This shouldn't be called");
+        }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractStyleAnimator>{});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): style animation advertised but not implemented\n");
 }
 
 void AbstractLayerTest::advanceDataAnimationsInvalidFeatures() {
@@ -1257,6 +1453,35 @@ void AbstractLayerTest::advanceDataAnimationsInvalidFeatures() {
 
     struct Animator: AbstractDataAnimator {
         explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractDataAnimator{handle}, _features{features} {}
+
+        AnimatorFeatures doFeatures() const override { return _features; }
+
+        private:
+            AnimatorFeatures _features;
+    } animator1{animatorHandle(0, 1), AnimatorFeature::DataAttachment},
+      animator2{animatorHandle(1, 3), AnimatorFeature::NodeAttachment};
+    layer.setAnimator(animator1);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, {animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
+}
+
+void AbstractLayerTest::advanceStyleAnimationsInvalidFeatures() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+    } layer{layerHandle(0, 1)};
+
+    struct Animator: AbstractStyleAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractStyleAnimator{handle}, _features{features} {}
 
         AnimatorFeatures doFeatures() const override { return _features; }
 
@@ -1300,6 +1525,34 @@ void AbstractLayerTest::advanceDataAnimationsLayerNotSet() {
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
 }
 
+void AbstractLayerTest::advanceStyleAnimationsLayerNotSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator1{animatorHandle(0, 1)}, animator2{animatorHandle(1, 3)};
+   layer.setAnimator(animator1);
+    /* Second animator layer not set */
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, {animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
+}
+
 void AbstractLayerTest::advanceDataAnimationsInvalidLayer() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -1314,6 +1567,34 @@ void AbstractLayerTest::advanceDataAnimationsInvalidLayer() {
 
     struct: AbstractDataAnimator {
         using AbstractDataAnimator::AbstractDataAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator1{animatorHandle(0, 1)}, animator2{animatorHandle(1, 3)};
+    layer1.setAnimator(animator1);
+    layer2.setAnimator(animator2);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer1.advanceAnimations(0_nsec, {animator1, animator2});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with Whee::LayerHandle(0xab, 0x12) but got Whee::LayerHandle(0xcd, 0x34)\n");
+}
+
+void AbstractLayerTest::advanceStyleAnimationsInvalidLayer() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+    } layer1{layerHandle(0xab, 0x12)}, layer2{layerHandle(0xcd, 0x34)};
+
+    struct: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
 
         AnimatorFeatures doFeatures() const override {
             return AnimatorFeature::DataAttachment;
