@@ -28,6 +28,7 @@
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/Containers/StridedArrayView.h>
@@ -36,11 +37,13 @@
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Swizzle.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/Direction.h>
 #include <Magnum/Text/Feature.h>
 #include <Magnum/Text/Renderer.h>
 
+#include "Magnum/Whee/TextLayerAnimator.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/TextProperties.h"
@@ -265,6 +268,15 @@ TextLayer::State::State(Shared::State& shared): AbstractVisualLayer::State{share
 TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
 
 TextLayer::TextLayer(const LayerHandle handle, Shared& shared): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*shared._state))} {}
+
+TextLayer& TextLayer::setAnimator(TextLayerStyleAnimator& animator) {
+    CORRADE_ASSERT(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount,
+        "Whee::TextLayer::setAnimator(): can't animate a layer with zero dynamic styles", *this);
+
+    AbstractLayer::setAnimator(animator);
+    animator.setLayerInstance(*this, &_state->shared);
+    return *this;
+}
 
 Containers::ArrayView<const TextLayerStyleUniform> TextLayer::dynamicStyleUniforms() const {
     return static_cast<const State&>(*_state).dynamicStyleUniforms;
@@ -740,7 +752,7 @@ void TextLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding)
 }
 
 LayerFeatures TextLayer::doFeatures() const {
-    return AbstractVisualLayer::doFeatures()|LayerFeature::Draw;
+    return AbstractVisualLayer::doFeatures()|(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount ? LayerFeature::AnimateStyles : LayerFeatures{})|LayerFeature::Draw;
 }
 
 LayerStates TextLayer::doState() const {
@@ -772,6 +784,25 @@ void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
     /* Data removal doesn't need anything to be reuploaded to continue working
        correctly, thus setNeedsUpdate() isn't called, and neither is in
        remove(). See a comment there for more information. */
+}
+
+void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) {
+    auto& state = static_cast<State&>(*_state);
+
+    TextLayerStyleAnimations animations;
+    for(AbstractStyleAnimator& animator: animators) {
+        if(!(animator.state() >= AnimatorState::NeedsAdvance))
+            continue;
+
+        animations |= static_cast<TextLayerStyleAnimator&>(animator).advance(time, state.dynamicStyleUniforms, stridedArrayView(state.dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding), stridedArrayView(state.data).slice(&Implementation::TextLayerData::style));
+    }
+
+    if(animations & (TextLayerStyleAnimation::Style|TextLayerStyleAnimation::Padding))
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    if(animations >= TextLayerStyleAnimation::Uniform) {
+        setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+        state.dynamicStyleChanged = true;
+    }
 }
 
 void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
