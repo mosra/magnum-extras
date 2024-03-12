@@ -1055,47 +1055,61 @@ Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitioned
 
     return instances.slice(dataAttachmentAnimatorOffsets[layerId], dataAttachmentAnimatorOffsets[layerId + 1]);
 }
-Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsGenericDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& dataAnimatorOffsets, const LayerHandle layer) {
+Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsGenericDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& /*styleAnimatorOffsets*/, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
     CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size() && dataAttachmentAnimatorOffsets[layerId] <= dataAnimatorOffsets[layerId]);
     return instances.slice(dataAttachmentAnimatorOffsets[layerId], dataAnimatorOffsets[layerId]);
 }
-Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsDataDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& dataAnimatorOffsets, const LayerHandle layer) {
+Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsDataDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& /*dataAttachmentAnimatorOffsets*/, const Containers::StridedArrayView1D<const UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& styleAnimatorOffsets, const LayerHandle layer) {
+    const UnsignedInt layerId = layerHandleId(layer);
+    CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAnimatorOffsets.size());
+    CORRADE_INTERNAL_ASSERT(dataAnimatorOffsets[layerId] <= styleAnimatorOffsets[layerId]);
+    return instances.slice(dataAnimatorOffsets[layerId], styleAnimatorOffsets[layerId]);
+}
+Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsStyleDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& /*dataAnimatorOffsets*/, const Containers::StridedArrayView1D<const UnsignedShort>& styleAnimatorOffsets, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
     CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size());
     const std::size_t end = layerId == dataAttachmentAnimatorOffsets.size() - 1 ?
         instances.size() : dataAttachmentAnimatorOffsets[layerId + 1];
-    CORRADE_INTERNAL_ASSERT(dataAnimatorOffsets[layerId] <= end);
-    return instances.slice(dataAnimatorOffsets[layerId], end);
+    CORRADE_INTERNAL_ASSERT(styleAnimatorOffsets[layerId] <= end);
+    return instances.slice(styleAnimatorOffsets[layerId], end);
 }
 
 enum class AnimatorType {
     Generic,
     Node,
-    Data
+    Data,
+    Style
 };
 
 /* Insert into the partitioned animator list and update the offsets
    accordingly. The features and layer are taken by value to not need to
    include the whole AbstractAnimator here. */
-void partitionedAnimatorsInsert(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, AbstractAnimator& instance, const AnimatorType type, const AnimatorFeatures features, const LayerHandle layer, UnsignedInt& nodeAttachmentAnimatorOffset, UnsignedInt& nodeAnimatorOffset, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets) {
+void partitionedAnimatorsInsert(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, AbstractAnimator& instance, const AnimatorType type, const AnimatorFeatures features, const LayerHandle layer, UnsignedInt& nodeAttachmentAnimatorOffset, UnsignedInt& nodeAnimatorOffset, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& styleAnimatorOffsets) {
     /* Find the slice the animator should be in and directly take that as an
        oppportunity to update the offsets */
-    std::size_t dataAttachmentAnimatorOffsetUpdateOffset, dataAnimatorOffsetUpdateOffset;
+    std::size_t dataAttachmentAnimatorOffsetUpdateOffset, dataAnimatorOffsetUpdateOffset, styleAnimatorOffsetUpdateOffset;
     Containers::ArrayView<const Containers::Reference<AbstractAnimator>> slice;
     if(features >= AnimatorFeature::DataAttachment) {
         dataAttachmentAnimatorOffsetUpdateOffset = layerHandleId(layer) + 1;
-        if(type == AnimatorType::Data) {
-            slice = partitionedAnimatorsDataDataAttachment(instances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, layer);
+        if(type == AnimatorType::Style) {
+            slice = partitionedAnimatorsStyleDataAttachment(instances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, styleAnimatorOffsets, layer);
             dataAnimatorOffsetUpdateOffset = layerHandleId(layer) + 1;
+            styleAnimatorOffsetUpdateOffset = layerHandleId(layer) + 1;
+        } else if(type == AnimatorType::Data) {
+            slice = partitionedAnimatorsDataDataAttachment(instances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, styleAnimatorOffsets, layer);
+            dataAnimatorOffsetUpdateOffset = layerHandleId(layer) + 1;
+            styleAnimatorOffsetUpdateOffset = layerHandleId(layer);
         } else {
             CORRADE_INTERNAL_ASSERT(type == AnimatorType::Generic);
-            slice = partitionedAnimatorsGenericDataAttachment(instances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, layer);
+            slice = partitionedAnimatorsGenericDataAttachment(instances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, styleAnimatorOffsets, layer);
             dataAnimatorOffsetUpdateOffset = layerHandleId(layer);
+            styleAnimatorOffsetUpdateOffset = layerHandleId(layer);
         }
     } else {
         dataAttachmentAnimatorOffsetUpdateOffset = 0;
         dataAnimatorOffsetUpdateOffset = 0;
+        styleAnimatorOffsetUpdateOffset = 0;
         CORRADE_INTERNAL_ASSERT(layer == LayerHandle::Null);
         if(features >= AnimatorFeature::NodeAttachment) {
             if(type == AnimatorType::Node) {
@@ -1116,6 +1130,8 @@ void partitionedAnimatorsInsert(Containers::Array<Containers::Reference<Abstract
         ++i;
     for(UnsignedShort& i: dataAnimatorOffsets.exceptPrefix(dataAnimatorOffsetUpdateOffset))
         ++i;
+    for(UnsignedShort& i: styleAnimatorOffsets.exceptPrefix(styleAnimatorOffsetUpdateOffset))
+        ++i;
 
     /* Insert at the end of given slice */
     arrayInsert(instances, slice.end() - instances.begin(), instance);
@@ -1123,7 +1139,7 @@ void partitionedAnimatorsInsert(Containers::Array<Containers::Reference<Abstract
 
 /* Remove from the partitioned animator list and update the offsets
    accordingly */
-void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, const AbstractAnimator& instance, const AnimatorFeatures features, const LayerHandle layer, UnsignedInt& nodeAttachmentAnimatorOffset, UnsignedInt& nodeAnimatorOffset, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets) {
+void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, const AbstractAnimator& instance, const AnimatorFeatures features, const LayerHandle layer, UnsignedInt& nodeAttachmentAnimatorOffset, UnsignedInt& nodeAnimatorOffset, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& styleAnimatorOffsets) {
     /* Find the slice the animator should be in and directly take that as an
        oppportunity to update the offsets */
     std::size_t dataAttachmentAnimatorOffsetUpdateOffset;
@@ -1150,6 +1166,10 @@ void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<Abstract
         CORRADE_INTERNAL_ASSERT(i != 0);
         --i;
     }
+    for(UnsignedShort& i: styleAnimatorOffsets.exceptPrefix(dataAttachmentAnimatorOffsetUpdateOffset)) {
+        CORRADE_INTERNAL_ASSERT(i != 0);
+        --i;
+    }
 
     /* Find the actual instance in given slice. Yes, this is a linear search,
        but I don't expect there being that many animators in every slice (the
@@ -1163,10 +1183,17 @@ void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<Abstract
         }
     }
 
-    /* If the instance was found before AbstractDataAnimators for given layer,
-       decrement the corresponding offset as well */
-    if(features >= AnimatorFeature::DataAttachment && found < dataAnimatorOffsets[layerHandleId(layer)])
-        --dataAnimatorOffsets[layerHandleId(layer)];
+    /* If the instance was found before AbstractDataAnimators /
+       AbstractStyleAnimators for given layer, decrement the corresponding
+       offset as well */
+    if(features >= AnimatorFeature::DataAttachment) {
+        if(found < dataAnimatorOffsets[layerHandleId(layer)]) {
+            CORRADE_INTERNAL_ASSERT(dataAnimatorOffsets[layerHandleId(layer)] <= styleAnimatorOffsets[layerHandleId(layer)]);
+            --styleAnimatorOffsets[layerHandleId(layer)];
+            --dataAnimatorOffsets[layerHandleId(layer)];
+        } else if(found < styleAnimatorOffsets[layerHandleId(layer)])
+            --styleAnimatorOffsets[layerHandleId(layer)];
+    }
 
     /* If the instance was found before AbstractNodeAnimators, decrement that
        offset as well */
@@ -1179,7 +1206,7 @@ void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<Abstract
     arrayRemove(instances, found);
 }
 
-void partitionedAnimatorsCreateLayer(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets, const LayerHandle layer) {
+void partitionedAnimatorsCreateLayer(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& styleAnimatorOffsets, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
     CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size());
 
@@ -1188,21 +1215,24 @@ void partitionedAnimatorsCreateLayer(const Containers::ArrayView<const Container
     if(layerId == dataAttachmentAnimatorOffsets.size() - 1) {
         dataAttachmentAnimatorOffsets[layerId] = instances.size();
         dataAnimatorOffsets[layerId] = instances.size();
+        styleAnimatorOffsets[layerId] = instances.size();
     /* Otherwise it should already have a correct value, ensured by
        partitionedAnimatorsRemoveLayer() and subsequent Insert() / Remove()
        calls */
     } else CORRADE_INTERNAL_ASSERT(
         dataAttachmentAnimatorOffsets[layerId] == dataAttachmentAnimatorOffsets[layerId + 1] &&
-        dataAnimatorOffsets[layerId] == dataAttachmentAnimatorOffsets[layerId + 1]);
+        dataAnimatorOffsets[layerId] == dataAttachmentAnimatorOffsets[layerId + 1] &&
+        styleAnimatorOffsets[layerId] == dataAttachmentAnimatorOffsets[layerId + 1]);
 }
 
-void partitionedAnimatorsRemoveLayer(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets, const LayerHandle layer) {
+void partitionedAnimatorsRemoveLayer(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& styleAnimatorOffsets, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
     CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size());
 
-    /* There are no animators in this layer anymore, do the data animator
-       offset is the same as the data attachment animator offset */
+    /* There are no animators in this layer anymore, do the data / style
+       animator offset is the same as the data attachment animator offset */
     dataAnimatorOffsets[layerId] = dataAttachmentAnimatorOffsets[layerId];
+    styleAnimatorOffsets[layerId] = dataAttachmentAnimatorOffsets[layerId];
 
     /* Remove all instances that belonged to this layer, and update all offsets
        after to exclude the now-removed range */
@@ -1211,6 +1241,8 @@ void partitionedAnimatorsRemoveLayer(Containers::Array<Containers::Reference<Abs
     for(UnsignedShort& i: dataAttachmentAnimatorOffsets.exceptPrefix(layerId + 1))
         i -= count;
     for(UnsignedShort& i: dataAnimatorOffsets.exceptPrefix(layerId + 1))
+        i -= count;
+    for(UnsignedShort& i: styleAnimatorOffsets.exceptPrefix(layerId + 1))
         i -= count;
 }
 
