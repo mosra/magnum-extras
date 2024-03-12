@@ -183,6 +183,11 @@ if(MAGNUM_BUILD_GL_TESTS)
         endif()
     endif()
 
+    corrade_add_test(WheeBaseLayerGLBenchmark BaseLayerGLBenchmark.cpp
+        LIBRARIES
+            MagnumWhee
+            Magnum::OpenGLTester)
+
     corrade_add_test(WheeBlurShaderGLTest BlurShaderGLTest.cpp
         LIBRARIES
             # There are no asserts used but we need to use a symbol that's only
