@@ -372,6 +372,9 @@ const struct {
 } BenchmarkData[]{
     {"radius 16, limit 0", 16, 0.0f, 0.0f},
     {"radius 16, limit 0.5/255", 16, 0.5f/255.0f, 0.1f},
+    {"radius 8, limit 0.5/255", 8, 0.5f/255.0f, 0.1f},
+    {"radius 4, limit 0", 4, 0.0f, 0.1f},
+    {"radius 0, limit 0", 0, 0.0f, 0.0f},
 };
 
 BlurShaderGLTest::BlurShaderGLTest() {
