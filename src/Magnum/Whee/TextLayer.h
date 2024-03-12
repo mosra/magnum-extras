@@ -203,7 +203,8 @@ Draws text laid out using the @ref Text library. You'll most likely instantiate
 the class through @ref TextLayerGL, which contains a concrete OpenGL
 implementation.
 @see @ref UserInterface::textLayer(),
-    @ref UserInterface::setTextLayerInstance(), @ref StyleFeature::TextLayer
+    @ref UserInterface::setTextLayerInstance(), @ref StyleFeature::TextLayer,
+    @ref TextLayerStyleAnimator
 */
 class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
     public:
@@ -216,6 +217,17 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          */
         inline Shared& shared();
         inline const Shared& shared() const; /**< @overload */
+
+        /**
+         * @brief Set this layer to be associated with a style animator
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref Shared::dynamicStyleCount() is non-zero and that
+         * given @p animator wasn't passed to @ref setAnimator() on any layer
+         * yet. On the other hand, it's possible to associate multiple
+         * different animators with the same layer.
+         */
+        TextLayer& setAnimator(TextLayerStyleAnimator& animator);
 
         /**
          * @brief Dynamic style uniforms
@@ -883,6 +895,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
         void doClean(Containers::BitArrayView dataIdsToRemove) override;
+        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
 };
 
 /**
@@ -1132,6 +1145,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
     protected:
     #endif
         friend TextLayer;
+        friend TextLayerStyleAnimator;
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
