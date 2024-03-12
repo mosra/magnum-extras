@@ -277,7 +277,7 @@ const struct {
     bool runningAnimation;
     UserInterfaceStates expectedInitialState, expectedAdvanceState;
     Containers::Optional<NodeAnimations> nodeAnimations1, nodeAnimations2;
-    bool dataAnimations;
+    bool dataAnimations, styleAnimations;
     Vector2 expectedNodeOffsetsAnimator2[2], expectedNodeOffsetsLayer[2];
     NodeFlags expectedNodeFlagsAnimator2[2];
     bool expectedNodesRemoveAnimator2[2], expectedNodesEnabledLayer[2];
@@ -287,7 +287,7 @@ const struct {
 } StateAnimationsData[]{
     {"",
         true, false, false, {}, {},
-        {}, {}, false,
+        {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -296,7 +296,7 @@ const struct {
         true, true, false, false},
     {"with no-op calls",
         true, false, false, {}, {},
-        {}, {}, false,
+        {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -305,7 +305,7 @@ const struct {
         true, true, false, false},
     {"with implicit clean",
         false, false, false, {}, {},
-        {}, {}, false,
+        {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -314,7 +314,7 @@ const struct {
         true, true, false, false},
     {"with implicit clean and no-op calls",
         false, true, false, {}, {},
-        {}, {}, false,
+        {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -323,7 +323,7 @@ const struct {
         true, true, false, false},
     {"running animation",
         true, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
-        {}, {}, false,
+        {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -332,7 +332,7 @@ const struct {
         true, true, false, false},
     {"running animation, with no-op calls",
         true, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
-        {}, {}, false,
+        {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -341,7 +341,7 @@ const struct {
         true, true, false, false},
     {"running animation, with implicit clean",
         false, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
-        {}, {}, false,
+        {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -350,7 +350,7 @@ const struct {
         true, true, false, false},
     {"running animation, with implicit clean and no-op calls",
         false, true, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
-        {}, {}, false,
+        {}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -359,7 +359,7 @@ const struct {
         true, true, false, false},
     {"two node animators doing nothing",
         true, false, false, {}, {},
-        NodeAnimations{}, NodeAnimations{}, false,
+        NodeAnimations{}, NodeAnimations{}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -368,7 +368,7 @@ const struct {
         true, true, false, false},
     {"first node animator moving nodes",
         true, false, false, {}, UserInterfaceState::NeedsLayoutUpdate,
-        NodeAnimations{NodeAnimation::OffsetSize}, NodeAnimations{}, false,
+        NodeAnimations{NodeAnimation::OffsetSize}, NodeAnimations{}, false, false,
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -377,7 +377,7 @@ const struct {
         true, true, false, true},
     {"second node animator moving nodes",
         true, false, false, {}, UserInterfaceState::NeedsLayoutUpdate,
-        NodeAnimations{}, NodeAnimations{NodeAnimation::OffsetSize}, false,
+        NodeAnimations{}, NodeAnimations{NodeAnimation::OffsetSize}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{0.0f, 1.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -386,7 +386,7 @@ const struct {
         true, true, false, true},
     {"first node animator changing node enablement, second doing nothing",
         true, false, false, {}, UserInterfaceState::NeedsNodeEnabledUpdate,
-        NodeAnimations{NodeAnimation::Enabled}, NodeAnimations{}, false,
+        NodeAnimations{NodeAnimation::Enabled}, NodeAnimations{}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, {}},
@@ -395,7 +395,7 @@ const struct {
         true, true, false, true},
     {"node animator changing node clip state",
         true, false, false, {}, UserInterfaceState::NeedsNodeClipUpdate,
-        NodeAnimations{NodeAnimation::Clip}, {}, false,
+        NodeAnimations{NodeAnimation::Clip}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -404,7 +404,7 @@ const struct {
         true, true, false, true},
     {"node animator removing a node",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
-        NodeAnimations{NodeAnimation::Removal}, {}, false,
+        NodeAnimations{NodeAnimation::Removal}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -413,7 +413,7 @@ const struct {
         true, false, true, true},
     {"node animator removing a node, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsNodeClean,
-        NodeAnimations{NodeAnimation::Removal}, {}, false,
+        NodeAnimations{NodeAnimation::Removal}, {}, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -422,7 +422,7 @@ const struct {
         true, false, true, true},
     {"two node animators doing parts of everything",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
-        NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, NodeAnimations{NodeAnimation::Removal}, false,
+        NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, NodeAnimations{NodeAnimation::Removal}, false, false,
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {{1.0f, 2.0f}, {2.0f, 3.0f}},
         {NodeFlag::Clip, NodeFlag::Clip},
@@ -432,7 +432,7 @@ const struct {
     {"two node animators doing parts of everything, the other way around",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
         NodeAnimations{NodeAnimation::Removal},
-        NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, false,
+        NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, false, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{0.0f, 1.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -441,7 +441,7 @@ const struct {
         true, false, true, true},
     {"data animator",
         true, false, false, {}, UserInterfaceState::NeedsDataUpdate,
-        {}, {}, true,
+        {}, {}, true, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -450,7 +450,7 @@ const struct {
         true, true, false, true},
     {"data animator, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsDataUpdate,
-        {}, {}, true,
+        {}, {}, true, false,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -459,7 +459,34 @@ const struct {
         true, true, false, true},
     {"data animator, with implicit clean and no-op calls",
         false, true, false, {}, UserInterfaceState::NeedsDataUpdate,
-        {}, {}, true,
+        {}, {}, true, false,
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {NodeFlag::Clip, NodeFlag::Disabled},
+        {false, false}, {true, false},
+        {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
+        true, true, false, true},
+    {"style animator",
+        true, false, false, {}, UserInterfaceState::NeedsDataUpdate,
+        {}, {}, false, true,
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {NodeFlag::Clip, NodeFlag::Disabled},
+        {false, false}, {true, false},
+        {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
+        true, true, false, true},
+    {"style animator, with implicit clean",
+        false, false, false, {}, UserInterfaceState::NeedsDataUpdate,
+        {}, {}, false, true,
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {{1.0f, 2.0f}, {3.0f, 4.0f}},
+        {NodeFlag::Clip, NodeFlag::Disabled},
+        {false, false}, {true, false},
+        {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
+        true, true, false, true},
+    {"style animator, with implicit clean and no-op calls",
+        false, true, false, {}, UserInterfaceState::NeedsDataUpdate,
+        {}, {}, false, true,
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {{1.0f, 2.0f}, {3.0f, 4.0f}},
         {NodeFlag::Clip, NodeFlag::Disabled},
@@ -2298,6 +2325,7 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
     int secondDestructed = 0;
     int fourthDestructed = 0;
     int fifthDestructed = 0;
+    int sixthDestructed = 0;
 
     {
         AbstractUserInterface ui{{100, 100}};
@@ -2307,7 +2335,7 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
             using AbstractLayer::setAnimator;
 
             LayerFeatures doFeatures() const override {
-                return LayerFeature::AnimateData;
+                return LayerFeature::AnimateData|LayerFeature::AnimateStyles;
             }
         };
         Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
@@ -2317,6 +2345,7 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
         AnimatorHandle third = ui.createAnimator();
         AnimatorHandle fourth = ui.createAnimator();
         AnimatorHandle fifth = ui.createAnimator();
+        AnimatorHandle sixth = ui.createAnimator();
 
         struct GenericAnimator: AbstractGenericAnimator {
             explicit GenericAnimator(AnimatorHandle handle, int& destructed): AbstractGenericAnimator{handle}, destructed(destructed) {}
@@ -2352,40 +2381,60 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
 
             int& destructed;
         };
+        struct StyleAnimator: AbstractStyleAnimator {
+            explicit StyleAnimator(AnimatorHandle handle, int& destructed): AbstractStyleAnimator{handle}, destructed(destructed) {}
+            ~StyleAnimator() {
+                ++destructed;
+            }
+
+            AnimatorFeatures doFeatures() const override {
+                return AnimatorFeature::DataAttachment;
+            }
+
+            int& destructed;
+        };
 
         Containers::Pointer<GenericAnimator> firstInstance{InPlaceInit, first, firstDestructed};
         Containers::Pointer<NodeAnimator> secondInstance{InPlaceInit, second, secondDestructed};
         /* Third deliberately doesn't have an instance set */
         Containers::Pointer<GenericAnimator> fourthInstance{InPlaceInit, fourth, fourthDestructed};
         Containers::Pointer<DataAnimator> fifthInstance{InPlaceInit, fifth, fifthDestructed};
+        Containers::Pointer<StyleAnimator> sixthInstance{InPlaceInit, sixth, sixthDestructed};
         layer.setAnimator(*fifthInstance);
+        layer.setAnimator(*sixthInstance);
         GenericAnimator* firstInstancePointer = firstInstance.get();
         NodeAnimator* secondInstancePointer = secondInstance.get();
         GenericAnimator* fourthInstancePointer = fourthInstance.get();
         DataAnimator* fifthInstancePointer = fifthInstance.get();
+        StyleAnimator* sixthInstancePointer = sixthInstance.get();
         /* Set them in different order, shouldn't matter */
         GenericAnimator& fourthInstanceReference = ui.setGenericAnimatorInstance(Utility::move(fourthInstance));
+        StyleAnimator& sixthInstanceReference = ui.setStyleAnimatorInstance(Utility::move(sixthInstance));
         NodeAnimator& secondInstanceReference = ui.setNodeAnimatorInstance(Utility::move(secondInstance));
         DataAnimator& fifthInstanceReference = ui.setDataAnimatorInstance(Utility::move(fifthInstance));
         GenericAnimator& firstInstanceReference = ui.setGenericAnimatorInstance(Utility::move(firstInstance));
-        CORRADE_COMPARE(ui.animatorCapacity(), 5);
-        CORRADE_COMPARE(ui.animatorUsedCount(), 5);
+        CORRADE_COMPARE(ui.animatorCapacity(), 6);
+        CORRADE_COMPARE(ui.animatorUsedCount(), 6);
         CORRADE_COMPARE(&firstInstanceReference, firstInstancePointer);
         CORRADE_COMPARE(&secondInstanceReference, secondInstancePointer);
         CORRADE_COMPARE(&fourthInstanceReference, fourthInstancePointer);
         CORRADE_COMPARE(&fifthInstanceReference, fifthInstancePointer);
+        CORRADE_COMPARE(&sixthInstanceReference, sixthInstancePointer);
         CORRADE_COMPARE(&ui.animator(first), firstInstancePointer);
         CORRADE_COMPARE(&ui.animator(second), secondInstancePointer);
         CORRADE_COMPARE(&ui.animator(fourth), fourthInstancePointer);
         CORRADE_COMPARE(&ui.animator(fifth), fifthInstancePointer);
+        CORRADE_COMPARE(&ui.animator(sixth), sixthInstancePointer);
         CORRADE_COMPARE(&ui.animator<GenericAnimator>(first), firstInstancePointer);
         CORRADE_COMPARE(&ui.animator<NodeAnimator>(second), secondInstancePointer);
         CORRADE_COMPARE(&ui.animator<GenericAnimator>(fourth), fourthInstancePointer);
         CORRADE_COMPARE(&ui.animator<DataAnimator>(fifth), fifthInstancePointer);
+        CORRADE_COMPARE(&ui.animator<StyleAnimator>(sixth), sixthInstancePointer);
         CORRADE_COMPARE(firstDestructed, 0);
         CORRADE_COMPARE(secondDestructed, 0);
         CORRADE_COMPARE(fourthDestructed, 0);
         CORRADE_COMPARE(fifthDestructed, 0);
+        CORRADE_COMPARE(sixthDestructed, 0);
 
         /* Const overloads */
         const AbstractUserInterface& cui = ui;
@@ -2393,16 +2442,19 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
         CORRADE_COMPARE(&cui.animator(second), secondInstancePointer);
         CORRADE_COMPARE(&cui.animator(fourth), fourthInstancePointer);
         CORRADE_COMPARE(&cui.animator(fifth), fifthInstancePointer);
+        CORRADE_COMPARE(&cui.animator(sixth), sixthInstancePointer);
         CORRADE_COMPARE(&cui.animator<GenericAnimator>(first), firstInstancePointer);
         CORRADE_COMPARE(&cui.animator<NodeAnimator>(second), secondInstancePointer);
         CORRADE_COMPARE(&cui.animator<GenericAnimator>(fourth), fourthInstancePointer);
         CORRADE_COMPARE(&cui.animator<DataAnimator>(fifth), fifthInstancePointer);
+        CORRADE_COMPARE(&cui.animator<StyleAnimator>(sixth), sixthInstancePointer);
 
         ui.removeAnimator(first);
         CORRADE_COMPARE(firstDestructed, 1);
         CORRADE_COMPARE(secondDestructed, 0);
         CORRADE_COMPARE(fourthDestructed, 0);
         CORRADE_COMPARE(fifthDestructed, 0);
+        CORRADE_COMPARE(sixthDestructed, 0);
 
         /* Removing an animator that doesn't have any instance set shouldn't
            affect the others in any way */
@@ -2411,6 +2463,7 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
         CORRADE_COMPARE(secondDestructed, 0);
         CORRADE_COMPARE(fourthDestructed, 0);
         CORRADE_COMPARE(fifthDestructed, 0);
+        CORRADE_COMPARE(sixthDestructed, 0);
     }
 
     /* The remaining animators should be deleted at destruction */
@@ -2418,6 +2471,7 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
     CORRADE_COMPARE(secondDestructed, 1);
     CORRADE_COMPARE(fourthDestructed, 1);
     CORRADE_COMPARE(fifthDestructed, 1);
+    CORRADE_COMPARE(sixthDestructed, 1);
 }
 
 void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
@@ -2462,6 +2516,20 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
         AnimatorFeatures doFeatures() const override { return {}; }
     };
 
+    struct StyleAnimator: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    };
+
+    struct StyleAnimatorWithoutFeature: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+    };
+
     AbstractUserInterface ui{{100, 100}};
 
     AnimatorHandle handle = ui.createAnimator();
@@ -2472,22 +2540,28 @@ void AbstractUserInterfaceTest::animatorSetInstanceInvalid() {
     ui.setGenericAnimatorInstance(nullptr);
     ui.setNodeAnimatorInstance(nullptr);
     ui.setDataAnimatorInstance(nullptr);
+    ui.setStyleAnimatorInstance(nullptr);
     ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(AnimatorHandle(0xabcd)));
     ui.setGenericAnimatorInstance(Containers::pointer<GenericAnimator>(handle));
     ui.setGenericAnimatorInstance(Containers::pointer<GenericDataAnimator>(ui.createAnimator()));
     ui.setDataAnimatorInstance(Containers::pointer<DataAnimator>(ui.createAnimator()));
+    ui.setStyleAnimatorInstance(Containers::pointer<StyleAnimator>(ui.createAnimator()));
     ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimatorWithoutFeature>(ui.createAnimator()));
     ui.setDataAnimatorInstance(Containers::pointer<DataAnimatorWithoutFeature>(ui.createAnimator()));
+    ui.setStyleAnimatorInstance(Containers::pointer<StyleAnimatorWithoutFeature>(ui.createAnimator()));
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractUserInterface::setGenericAnimatorInstance(): instance is null\n"
         "Whee::AbstractUserInterface::setNodeAnimatorInstance(): instance is null\n"
         "Whee::AbstractUserInterface::setDataAnimatorInstance(): instance is null\n"
+        "Whee::AbstractUserInterface::setStyleAnimatorInstance(): instance is null\n"
         "Whee::AbstractUserInterface::setGenericAnimatorInstance(): invalid handle Whee::AnimatorHandle(0xcd, 0xab)\n"
         "Whee::AbstractUserInterface::setGenericAnimatorInstance(): instance for Whee::AnimatorHandle(0x0, 0x1) already set\n"
         "Whee::AbstractUserInterface::setGenericAnimatorInstance(): no layer set for a data attachment animator\n"
         "Whee::AbstractUserInterface::setDataAnimatorInstance(): no layer set for a data attachment animator\n"
+        "Whee::AbstractUserInterface::setStyleAnimatorInstance(): no layer set for a data attachment animator\n"
         "Whee::AbstractUserInterface::setNodeAnimatorInstance(): Whee::AnimatorFeature::NodeAttachment not advertised for a node animator\n"
-        "Whee::AbstractUserInterface::setDataAnimatorInstance(): Whee::AnimatorFeature::DataAttachment not advertised for a data animator\n",
+        "Whee::AbstractUserInterface::setDataAnimatorInstance(): Whee::AnimatorFeature::DataAttachment not advertised for a data animator\n"
+        "Whee::AbstractUserInterface::setStyleAnimatorInstance(): Whee::AnimatorFeature::DataAttachment not advertised for a style animator\n",
         TestSuite::Compare::String);
 }
 
@@ -4609,17 +4683,17 @@ void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
 
         LayerFeatures doFeatures() const override { return {}; }
     };
-    struct LayerAnimatingData: AbstractLayer {
+    struct LayerAnimatingDataStyles: AbstractLayer {
         using AbstractLayer::AbstractLayer;
         using AbstractLayer::setAnimator;
 
         LayerFeatures doFeatures() const override {
-            return LayerFeature::AnimateData;
+            return LayerFeature::AnimateData|LayerFeature::AnimateStyles;
         }
     };
 
     Layer& layer1 = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-    LayerAnimatingData& layer2 = ui.setLayerInstance(Containers::pointer<LayerAnimatingData>(ui.createLayer()));
+    LayerAnimatingDataStyles& layer2 = ui.setLayerInstance(Containers::pointer<LayerAnimatingDataStyles>(ui.createLayer()));
 
     struct GenericAnimator: AbstractGenericAnimator {
         using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -4647,18 +4721,33 @@ void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
 
         Int cleanCallCount = 0;
     };
+    struct StyleAnimator: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doClean(Containers::BitArrayView) override {
+            ++cleanCallCount;
+        }
+
+        Int cleanCallCount = 0;
+    };
     Containers::Pointer<GenericAnimator> instance11{InPlaceInit, ui.createAnimator()};
     Containers::Pointer<GenericAnimator> instance12{InPlaceInit, ui.createAnimator()};
     Containers::Pointer<DataAnimator> instance21{InPlaceInit, ui.createAnimator()};
     Containers::Pointer<GenericAnimator> instance22{InPlaceInit, ui.createAnimator()};
+    Containers::Pointer<StyleAnimator> instance23{InPlaceInit, ui.createAnimator()};
     instance11->setLayer(layer1);
     instance12->setLayer(layer1);
     layer2.setAnimator(*instance21);
     instance22->setLayer(layer2);
+    layer2.setAnimator(*instance23);
     GenericAnimator& animator11 = ui.setGenericAnimatorInstance(Utility::move(instance11));
     GenericAnimator& animator12 = ui.setGenericAnimatorInstance(Utility::move(instance12));
     DataAnimator& animator21 = ui.setDataAnimatorInstance(Utility::move(instance21));
     GenericAnimator& animator22 = ui.setGenericAnimatorInstance(Utility::move(instance22));
+    StyleAnimator& animator23 = ui.setStyleAnimatorInstance(Utility::move(instance23));
 
     /* Create and immediately remove a node to trigger NeedsNodeClean, which
        implies NeedsDataClean on all animators */
@@ -4671,6 +4760,7 @@ void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
     CORRADE_COMPARE(animator12.cleanCallCount, 1);
     CORRADE_COMPARE(animator21.cleanCallCount, 1);
     CORRADE_COMPARE(animator22.cleanCallCount, 1);
+    CORRADE_COMPARE(animator23.cleanCallCount, 1);
 
     /* Remove the first layer and recycle its slot for a new one */
     LayerHandle layer1Handle = layer1.handle();
@@ -4688,6 +4778,7 @@ void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
     CORRADE_COMPARE(animator12.cleanCallCount, 1);
     CORRADE_COMPARE(animator21.cleanCallCount, 2);
     CORRADE_COMPARE(animator22.cleanCallCount, 2);
+    CORRADE_COMPARE(animator23.cleanCallCount, 2);
 
     /* Remove the last layer and recycle its slot for a new one */
     LayerHandle layer2Handle = layer2.handle();
@@ -4704,6 +4795,7 @@ void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
     CORRADE_COMPARE(animator12.cleanCallCount, 1);
     CORRADE_COMPARE(animator21.cleanCallCount, 2);
     CORRADE_COMPARE(animator22.cleanCallCount, 2);
+    CORRADE_COMPARE(animator23.cleanCallCount, 2);
 }
 
 void AbstractUserInterfaceTest::advanceAnimationsEmpty() {
@@ -4834,23 +4926,65 @@ void AbstractUserInterfaceTest::advanceAnimations() {
 
         Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls;
     };
-    struct LayerAnimatingData: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
+    struct StyleAnimator: AbstractStyleAnimator {
+        explicit StyleAnimator(AnimatorHandle handle, Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls): AbstractStyleAnimator{handle}, calls(calls) {}
+
+        using AbstractStyleAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doClean(Containers::BitArrayView) override {
+            arrayAppend(calls, InPlaceInit, handle(), Clean);
+        }
+        /* Called by the layer. Not strictly necessary in order to test things
+           but shows how a real implementation would look like. */
+        void advance(Nanoseconds time) {
+            CORRADE_COMPARE(capacity(), 1);
+            Float factors[1];
+            UnsignedByte activeData[1]{};
+            UnsignedByte removeData[1]{};
+            Containers::MutableBitArrayView active{activeData, 0, 1};
+            Containers::MutableBitArrayView remove{removeData, 0, 1};
+            const Containers::Pair<bool, bool> advanceCleanNeeded = AbstractAnimator::advance(time, active, factors, remove);
+
+            if(advanceCleanNeeded.first())
+                arrayAppend(calls, InPlaceInit, handle(), Advance);
+            if(advanceCleanNeeded.second())
+                clean(remove);
+        }
+
+        Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls;
+    };
+    struct LayerAnimatingDataStyles: AbstractLayer {
+        explicit LayerAnimatingDataStyles(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, _features{features} {}
 
         void setAnimator(DataAnimator& animator) const {
             AbstractLayer::setAnimator(animator);
         }
+        void setAnimator(StyleAnimator& animator) const {
+            AbstractLayer::setAnimator(animator);
+        }
 
         LayerFeatures doFeatures() const override {
-            return LayerFeature::AnimateData;
+            return _features;
         }
         void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators) override {
             for(AbstractDataAnimator& animator: animators)
                 if(animator.state() >= AnimatorState::NeedsAdvance)
                     static_cast<DataAnimator&>(animator).advance(time);
         }
+        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
+            for(AbstractStyleAnimator& animator: animators)
+                if(animator.state() >= AnimatorState::NeedsAdvance)
+                    static_cast<StyleAnimator&>(animator).advance(time);
+        }
+
+        private:
+            LayerFeatures _features;
     };
-    LayerAnimatingData& layer3 = ui.setLayerInstance(Containers::pointer<LayerAnimatingData>(ui.createLayer()));
+    LayerAnimatingDataStyles& layer3 = ui.setLayerInstance(Containers::pointer<LayerAnimatingDataStyles>(ui.createLayer(), LayerFeature::AnimateData));
+    LayerAnimatingDataStyles& layer4 = ui.setLayerInstance(Containers::pointer<LayerAnimatingDataStyles>(ui.createLayer(), LayerFeature::AnimateStyles));
 
     Containers::Array<Containers::Pair<AnimatorHandle, Call>> calls;
 
@@ -4868,7 +5002,7 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     animatorLayer2DataAttachmentNoAdvanceNeededInstance->setLayer(layer2);
     GenericAnimator& animatorLayer2DataAttachmentNoAdvanceNeeded = ui.setGenericAnimatorInstance(Utility::move(animatorLayer2DataAttachmentNoAdvanceNeededInstance));
 
-    /* Layer 3 has both generic and data animators associated */
+    /* Layer 3 has generic and data animators associated */
     Containers::Pointer<GenericAnimator> animatorLayer3DataAttachmentInstance{InPlaceInit, ui.createAnimator(), AnimatorFeature::DataAttachment, calls};
     Containers::Pointer<DataAnimator> animatorLayer3DataNoAdvanceNeededInstance{InPlaceInit, ui.createAnimator(), calls};
     Containers::Pointer<DataAnimator> animatorLayer3DataInstance{InPlaceInit, ui.createAnimator(), calls};
@@ -4878,6 +5012,14 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     GenericAnimator& animatorLayer3DataAttachment = ui.setGenericAnimatorInstance(Utility::move(animatorLayer3DataAttachmentInstance));
     DataAnimator& animatorLayer3DataNoAdvanceNeeded = ui.setDataAnimatorInstance(Utility::move(animatorLayer3DataNoAdvanceNeededInstance));
     DataAnimator& animatorLayer3Data = ui.setDataAnimatorInstance(Utility::move(animatorLayer3DataInstance));
+
+    /* Layer 4 has style animators associated */
+    Containers::Pointer<StyleAnimator> animatorLayer4StyleNoAdvanceNeededInstance{InPlaceInit, ui.createAnimator(), calls};
+    Containers::Pointer<StyleAnimator> animatorLayer4StyleInstance{InPlaceInit, ui.createAnimator(), calls};
+    layer4.setAnimator(*animatorLayer4StyleNoAdvanceNeededInstance);
+    layer4.setAnimator(*animatorLayer4StyleInstance);
+    StyleAnimator& animatorLayer4StyleNoAdvanceNeeded = ui.setStyleAnimatorInstance(Utility::move(animatorLayer4StyleNoAdvanceNeededInstance));
+    StyleAnimator& animatorLayer4Style = ui.setStyleAnimatorInstance(Utility::move(animatorLayer4StyleInstance));
 
     /* It's important to remove an animator that has an instance already --
        animators without an instance aren't even added to the list of animators
@@ -4900,6 +5042,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     animatorLayer3DataAttachment.create(5_nsec, 10_nsec);
     animatorLayer3DataNoAdvanceNeeded.create(-50_nsec, 10_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
     animatorLayer3Data.create(5_nsec, 10_nsec, DataHandle::Null);
+    animatorLayer4StyleNoAdvanceNeeded.create(-50_nsec, 10_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+    animatorLayer4Style.create(5_nsec, 10_nsec, DataHandle::Null);
     CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animator2.state(), AnimatorState::NeedsAdvance);
@@ -4911,6 +5055,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorLayer3Data.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer4Style.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
 
     /* Initially all animators are at 0 time. This changes if advance() is
@@ -4926,6 +5072,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 0_nsec);
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorLayer3Data.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer4Style.time(), 0_nsec);
 
     /* First advance. The scheduled animations aren't advanced yet (and there's
        nothing else to call doAdvance() for), the playing is. */
@@ -4944,10 +5092,12 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorLayer3Data.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer4Style.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
 
-    /* advance() wasn't even called on the second, fourth, sixth, eighth and
-       tenth one */
+    /* advance() wasn't even called on the second, fourth, sixth, eighth,
+       tenth and twelfth one */
     CORRADE_COMPARE(animator1.time(), 2_nsec);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animator2.time(), 2_nsec);
@@ -4959,8 +5109,10 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 2_nsec);
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorLayer3Data.time(), 2_nsec);
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer4Style.time(), 2_nsec);
 
-    /* Second advance, the six get further advanced, the second gets also
+    /* Second advance, the seven get further advanced, the second gets also
        cleaned */
     calls = {};
     ui.advanceAnimations(10_nsec);
@@ -4972,8 +5124,10 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         {animatorLayer3DataAttachment.handle(), Advance},
         /* All generic animators get executed first, then node animators */
         {animatorNode.handle(), Advance},
-        /* And then data animators */
+        /* Then data animators */
         {animatorLayer3Data.handle(), Advance},
+        /* And then (another layer) style animators */
+        {animatorLayer4Style.handle(), Advance},
     })), TestSuite::Compare::Container);
     CORRADE_COMPARE(animator1.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
@@ -4986,10 +5140,12 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorLayer3Data.state(), AnimatorState::NeedsAdvance);
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer4Style.state(), AnimatorState::NeedsAdvance);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsAnimationAdvance);
 
-    /* advance() wasn't even called on the second, fourth, sixth, eighth and
-       tenth one now either */
+    /* advance() wasn't even called on the second, fourth, sixth, eighth, tenth
+       and twelfth one now either */
     CORRADE_COMPARE(animator1.time(), 10_nsec);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animator2.time(), 10_nsec);
@@ -5001,9 +5157,11 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 10_nsec);
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorLayer3Data.time(), 10_nsec);
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer4Style.time(), 10_nsec);
 
-    /* Third advance, only the first, fifth, seventh, ninth and eleventh is
-       advanced & cleaned */
+    /* Third advance, only the first, fifth, seventh, ninth, eleventh and
+       thirteenth is advanced & cleaned */
     calls = {};
     ui.advanceAnimations(15_nsec);
     CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<AnimatorHandle, Call>>({
@@ -5016,9 +5174,12 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         /* All generic animators get executed first, then node animators */
         {animatorNode.handle(), Advance},
         {animatorNode.handle(), Clean},
-        /* And then data animators */
+        /* Then data animators */
         {animatorLayer3Data.handle(), Advance},
         {animatorLayer3Data.handle(), Clean},
+        /* And then (another layer) style animators */
+        {animatorLayer4Style.handle(), Advance},
+        {animatorLayer4Style.handle(), Clean},
     })), TestSuite::Compare::Container);
     CORRADE_COMPARE(animator1.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorNoAdvanceNeeded.state(), AnimatorStates{});
@@ -5031,10 +5192,12 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorLayer3Data.state(), AnimatorState{});
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer4Style.state(), AnimatorState{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* advance() wasn't even called on the second, third, fourth, sixth,
-       eighth and tenth */
+       eighth, tenth and twelfth */
     CORRADE_COMPARE(animator1.time(), 15_nsec);
     CORRADE_COMPARE(animatorNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animator2.time(), 10_nsec);
@@ -5045,7 +5208,11 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer2DataAttachmentNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 15_nsec);
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 15_nsec);
+    CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorLayer3Data.time(), 15_nsec);
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer4Style.time(), 15_nsec);
 
     /* Fourth advance, nothing left to be done */
     calls = {};
@@ -5063,6 +5230,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.state(), AnimatorStates{});
     CORRADE_COMPARE(animatorLayer3Data.state(), AnimatorState{});
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.state(), AnimatorStates{});
+    CORRADE_COMPARE(animatorLayer4Style.state(), AnimatorState{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* advance() wasn't called on any */
@@ -5077,6 +5246,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3DataAttachment.time(), 15_nsec);
     CORRADE_COMPARE(animatorLayer3DataNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorLayer3Data.time(), 15_nsec);
+    CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.time(), 0_nsec);
+    CORRADE_COMPARE(animatorLayer4Style.time(), 15_nsec);
 }
 
 void AbstractUserInterfaceTest::advanceAnimationsInvalidTime() {
@@ -7973,7 +8144,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override {
-            return LayerFeature::AnimateData;
+            return LayerFeature::AnimateData|LayerFeature::AnimateStyles;
         }
 
         void doClean(Containers::BitArrayView) override {
@@ -8010,6 +8181,16 @@ void AbstractUserInterfaceTest::stateAnimations() {
                     setNeedsUpdate();
                 }
         }
+        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
+            for(AbstractStyleAnimator& animator: animators)
+                if(animator.state() & AnimatorState::NeedsAdvance) {
+                    CORRADE_COMPARE(time, 5_nsec);
+                    ++advanceStyleAnimationsCallCount;
+                    /* This triggers NeedsDataUpdate in order to make the
+                       animation actually do something */
+                    setNeedsUpdate();
+                }
+        }
 
         Containers::StridedArrayView1D<const Vector2> expectedNodeOffsets;
         Containers::StridedArrayView1D<const bool> expectedNodesEnabled;
@@ -8018,6 +8199,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         Int cleanCallCount = 0;
         Int updateCallCount = 0;
         Int advanceDataAnimationsCallCount = 0;
+        Int advanceStyleAnimationsCallCount = 0;
     };
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -8117,11 +8299,25 @@ void AbstractUserInterfaceTest::stateAnimations() {
 
         Int cleanCallCount = 0;
     };
+    struct StyleAnimator: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+        using AbstractStyleAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void doClean(Containers::BitArrayView) override {
+            ++cleanCallCount;
+        }
+
+        Int cleanCallCount = 0;
+    };
     Animator& animator = ui.setGenericAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
     /* GCC in Release mode complains that some of these may be used
        uninitialized, MSVC as well. They aren't. */
     NodeAnimator *nodeAnimator1{}, *nodeAnimator2{};
     DataAnimator* dataAnimator{};
+    StyleAnimator* styleAnimator{};
     if(data.nodeAnimations1)
         nodeAnimator1 = &ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimations1));
     if(data.nodeAnimations2)
@@ -8130,6 +8326,11 @@ void AbstractUserInterfaceTest::stateAnimations() {
         Containers::Pointer<DataAnimator> instance{InPlaceInit, ui.createAnimator()};
         layer.setAnimator(*instance);
         dataAnimator = &ui.setDataAnimatorInstance(Utility::move(instance));
+    }
+    if(data.styleAnimations) {
+        Containers::Pointer<StyleAnimator> instance{InPlaceInit, ui.createAnimator()};
+        layer.setAnimator(*instance);
+        styleAnimator = &ui.setStyleAnimatorInstance(Utility::move(instance));
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
@@ -8149,6 +8350,8 @@ void AbstractUserInterfaceTest::stateAnimations() {
             CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 0);
         if(data.dataAnimations)
             CORRADE_COMPARE(dataAnimator->cleanCallCount, 0);
+        if(data.styleAnimations)
+            CORRADE_COMPARE(styleAnimator->cleanCallCount, 0);
     }
 
     /* Calling advanceAnimations() should be a no-op, not calling anything in
@@ -8173,6 +8376,10 @@ void AbstractUserInterfaceTest::stateAnimations() {
         if(data.dataAnimations) {
             CORRADE_COMPARE(dataAnimator->cleanCallCount, 0);
             CORRADE_COMPARE(layer.advanceDataAnimationsCallCount, 0);
+        }
+        if(data.styleAnimations) {
+            CORRADE_COMPARE(styleAnimator->cleanCallCount, 0);
+            CORRADE_COMPARE(layer.advanceStyleAnimationsCallCount, 0);
         }
     }
 
@@ -8203,6 +8410,8 @@ void AbstractUserInterfaceTest::stateAnimations() {
             CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1);
         if(data.dataAnimations)
             CORRADE_COMPARE(dataAnimator->cleanCallCount, 1);
+        if(data.styleAnimations)
+            CORRADE_COMPARE(styleAnimator->cleanCallCount, 1);
     }
 
     /* Calling advanceAnimations() delegates to clean() if not already but
@@ -8227,6 +8436,10 @@ void AbstractUserInterfaceTest::stateAnimations() {
     if(data.dataAnimations) {
         CORRADE_COMPARE(dataAnimator->cleanCallCount, 1);
         CORRADE_COMPARE(layer.advanceDataAnimationsCallCount, 0);
+    }
+    if(data.styleAnimations) {
+        CORRADE_COMPARE(styleAnimator->cleanCallCount, 1);
+        CORRADE_COMPARE(layer.advanceStyleAnimationsCallCount, 0);
     }
 
     /* Create two nodes and two data, trigger an update to clean the state
@@ -8270,11 +8483,13 @@ void AbstractUserInterfaceTest::stateAnimations() {
         CORRADE_COMPARE(nodeAnimator2->cleanCallCount, 1);
     if(data.dataAnimations)
         CORRADE_COMPARE(dataAnimator->cleanCallCount, 1);
+    if(data.styleAnimations)
+        CORRADE_COMPARE(styleAnimator->cleanCallCount, 1);
 
     /* Attach animations to the nodes and data. Should set a state flag to
        trigger animation advance. GCC in Release mode complains that some of
        these may be used uninitialized, MSVC as well. They aren't. */
-    AnimationHandle nodeAnimation1{}, nodeAnimation2{}, dataAnimation1{}, dataAnimation2{};
+    AnimationHandle nodeAnimation1{}, nodeAnimation2{}, dataAnimation1{}, dataAnimation2{}, styleAnimation1{}, styleAnimation2{};
     if(data.nodeAnimations1)
         nodeAnimation1 = nodeAnimator1->create(0_nsec, 10_nsec, node2);
     if(data.nodeAnimations2)
@@ -8283,7 +8498,11 @@ void AbstractUserInterfaceTest::stateAnimations() {
         dataAnimation1 = dataAnimator->create(0_nsec, 10_nsec, data1);
         dataAnimation2 = dataAnimator->create(0_nsec, 10_nsec, data2);
     }
-    CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations ?
+    if(data.styleAnimations) {
+        styleAnimation2 = styleAnimator->create(0_nsec, 10_nsec, data1);
+        styleAnimation1 = styleAnimator->create(0_nsec, 10_nsec, data2);
+    }
+    CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations || data.styleAnimations ?
         UserInterfaceState::NeedsAnimationAdvance : UserInterfaceStates{}));
 
     /* Advancing the animation then may set other flags */
@@ -8312,14 +8531,18 @@ void AbstractUserInterfaceTest::stateAnimations() {
             nodeAnimator2->expectedNodesRemove = data.expectedNodesRemoveAnimator2;
         }
         if(data.dataAnimations) {
-            /* Nothing is verified for the node animator, except for the time
+            /* Nothing is verified for the data animator, except for the time
+               value, which is always just 5 nsec */
+        }
+        if(data.styleAnimations) {
+            /* Nothing is verified for the style animator, except for the time
                value, which is always just 5 nsec */
         }
 
         ui.advanceAnimations(5_nsec);
     }
     CORRADE_COMPARE(ui.state(), data.expectedAdvanceState|
-        (data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations ?
+        (data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations || data.styleAnimations ?
             UserInterfaceState::NeedsAnimationAdvance : UserInterfaceStates{}));
     CORRADE_COMPARE(layer.cleanCallCount, 1);
     CORRADE_COMPARE(animator.cleanCallCount, 0);
@@ -8337,6 +8560,10 @@ void AbstractUserInterfaceTest::stateAnimations() {
     if(data.dataAnimations) {
         CORRADE_COMPARE(dataAnimator->cleanCallCount, 1);
         CORRADE_COMPARE(layer.advanceDataAnimationsCallCount, 1);
+    }
+    if(data.styleAnimations) {
+        CORRADE_COMPARE(styleAnimator->cleanCallCount, 1);
+        CORRADE_COMPARE(layer.advanceStyleAnimationsCallCount, 1);
     }
 
     /* If NeedsNodeClean was set, a clean() call then performs clean of
@@ -8366,6 +8593,11 @@ void AbstractUserInterfaceTest::stateAnimations() {
             CORRADE_COMPARE(ui.isHandleValid(dataAnimation1), data.expectedNode1Valid);
             CORRADE_COMPARE(ui.isHandleValid(dataAnimation2), data.expectedNode2Valid);
         }
+        if(data.styleAnimations) {
+            CORRADE_COMPARE(styleAnimator->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
+            CORRADE_COMPARE(ui.isHandleValid(styleAnimation2), data.expectedNode1Valid);
+            CORRADE_COMPARE(ui.isHandleValid(styleAnimation1), data.expectedNode2Valid);
+        }
     }
 
     /* An update() then performs appropriate update in the layer */
@@ -8382,7 +8614,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
 
         ui.update();
     }
-    CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations ?
+    CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations || data.styleAnimations ?
         UserInterfaceState::NeedsAnimationAdvance : UserInterfaceStates{}));
     CORRADE_COMPARE(layer.cleanCallCount, 1 + data.expectedCleanAfterAnimation);
     CORRADE_COMPARE(layer.updateCallCount, 1 + data.expectedUpdateAfterAnimation);
@@ -8403,6 +8635,11 @@ void AbstractUserInterfaceTest::stateAnimations() {
         CORRADE_COMPARE(dataAnimator->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
         CORRADE_COMPARE(ui.isHandleValid(dataAnimation1), data.expectedNode1Valid);
         CORRADE_COMPARE(ui.isHandleValid(dataAnimation2), data.expectedNode2Valid);
+    }
+    if(data.styleAnimations) {
+        CORRADE_COMPARE(styleAnimator->cleanCallCount, 1 + data.expectedCleanAfterAnimation);
+        CORRADE_COMPARE(ui.isHandleValid(styleAnimation2), data.expectedNode1Valid);
+        CORRADE_COMPARE(ui.isHandleValid(styleAnimation1), data.expectedNode2Valid);
     }
 }
 

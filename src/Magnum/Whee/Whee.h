@@ -52,6 +52,7 @@ class AbstractAnimator;
 class AbstractGenericAnimator;
 class AbstractNodeAnimator;
 class AbstractDataAnimator;
+class AbstractStyleAnimator;
 class AbstractLayer;
 class AbstractLayouter;
 class AbstractRenderer;

@@ -89,6 +89,13 @@ enum class LayerFeature: UnsignedByte {
      * animating data using @ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&).
      */
     AnimateData = 1 << 5,
+
+    /**
+     * Associating style animators using
+     * @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const and
+     * animating styles using @ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&).
+     */
+    AnimateStyles = 1 << 6,
 };
 
 /**
@@ -427,6 +434,22 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         void advanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators);
 
         /**
+         * @brief Advance style animations associated with this layer
+         *
+         * Used internally from @ref AbstractUserInterface::advanceAnimations().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave. Expects that
+         * all @p animators expose @ref AnimatorFeature::DataAttachment and
+         * their @ref AbstractAnimator::layer() matches @ref handle(), in other
+         * words that they were passed to
+         * @ref setAnimator(AbstractStyleAnimator&) const earlier. Delegates to
+         * @ref doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&),
+         * see its documentation for more information.
+         */
+        void advanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators);
+
+        /**
          * @brief Update visible layer data to given offsets and positions
          *
          * Used internally from @ref AbstractUserInterface::update(). Exposed
@@ -672,11 +695,41 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * to be able to safely cast back to that type in
          * @ref doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&).
          *
-         * A corresponding API for an @ref AbstractGenericAnimator is
-         * @ref AbstractGenericAnimator::setLayer(), where the animator has the
-         * control over a concrete layer type instead.
+         * See @ref setAnimator(AbstractStyleAnimator&) const for style
+         * animators, a corresponding API for an @ref AbstractGenericAnimator
+         * is @ref AbstractGenericAnimator::setLayer(), where the animator has
+         * the control over a concrete layer type instead.
          */
         void setAnimator(AbstractDataAnimator& animator) const;
+
+        /**
+         * @brief Set this layer to be associated with a style animator
+         *
+         * Expects that the layer supports @ref LayerFeature::AnimateStyles,
+         * the animator supports @ref AnimatorFeature::DataAttachment and that
+         * this function hasn't been called on given @p animator yet. On the
+         * other hand, it's possible to associate multiple different animators
+         * with the same layer. Saves @ref handle() into
+         * @ref AbstractAnimator::layer(), making it possible to call
+         * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
+         * @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags),
+         * @ref AbstractAnimator::attach(AnimationHandle, DataHandle),
+         * @ref AbstractAnimator::attach(AnimationHandle, LayerDataHandle),
+         * @ref AbstractAnimator::attach(AnimatorDataHandle, DataHandle) and
+         * @ref AbstractAnimator::attach(AnimatorDataHandle, LayerDataHandle)
+         * and pass the @p animator to @ref advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&).
+         *
+         * A concrete layer implementation is meant to wrap this function in a
+         * public API, restricting to a more concrete animator type, in order
+         * to be able to safely cast back to that type in
+         * @ref doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&).
+         **
+         * See @ref setAnimator(AbstractDataAnimator&) const for data
+         * animators, a corresponding API for an @ref AbstractGenericAnimator
+         * is @ref AbstractGenericAnimator::setLayer(), where the animator has
+         * the control over a concrete layer type instead.
+         */
+        void setAnimator(AbstractStyleAnimator& animator) const;
 
     private:
         /** @brief Implementation for @ref features() */
@@ -743,6 +796,26 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * order to call a concrete layer-specific advance function.
          */
         virtual void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators);
+
+        /**
+         * @brief Advance style animations associated with this layer
+         *
+         * Implementation for @ref advanceAnimations(), which is called from
+         * @ref AbstractUserInterface::advanceAnimations() whenever
+         * @ref UserInterfaceState::NeedsAnimationAdvance is present in
+         * @ref AbstractUserInterface::state() and there are animators
+         * associated with given layer.
+         *
+         * The @p animators are all guaranteed to support
+         * @ref AnimatorFeature::DataAttachment, with their
+         * @ref AbstractAnimator::layer() matching @ref handle(), in other
+         * words that they were passed to
+         * @ref setAnimator(AbstractStyleAnimator&) const earlier. Assuming the
+         * layer implementation publicizes @ref setAnimator() with a restricted
+         * type, the animators can then be safely cast back to that type in
+         * order to call a concrete layer-specific advance function.
+         */
+        virtual void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators);
 
         /**
          * @brief Update visible layer data to given offsets and positions
