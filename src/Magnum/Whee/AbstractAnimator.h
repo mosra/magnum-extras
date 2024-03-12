@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::AbstractAnimator, @ref Magnum::Whee::AbstractGenericAnimator, @ref Magnum::Whee::AbstractNodeAnimator, @ref Magnum::Whee::AbstractDataAnimator, enum @ref Magnum::Whee::AnimatorFeature, @ref Magnum::Whee::AnimatorState, @ref Magnum::Whee::AnimationFlag, @ref Magnum::Whee::AnimationState, @ref Magnum::Whee::NodeAnimation, enum set @ref Magnum::Whee::AnimatorFeatures, @ref Magnum::Whee::AnimatorStates, @ref Magnum::Whee::AnimationFlags, @ref Magnum::Whee::NodeAnimations
+ * @brief Class @ref Magnum::Whee::AbstractAnimator, @ref Magnum::Whee::AbstractGenericAnimator, @ref Magnum::Whee::AbstractNodeAnimator, @ref Magnum::Whee::AbstractDataAnimator, @ref Magnum::Whee::AbstractStyleAnimator, enum @ref Magnum::Whee::AnimatorFeature, @ref Magnum::Whee::AnimatorState, @ref Magnum::Whee::AnimationFlag, @ref Magnum::Whee::AnimationState, @ref Magnum::Whee::NodeAnimation, enum set @ref Magnum::Whee::AnimatorFeatures, @ref Magnum::Whee::AnimatorStates, @ref Magnum::Whee::AnimationFlags, @ref Magnum::Whee::NodeAnimations
  * @m_since_latest
  */
 
@@ -61,6 +61,7 @@ enum class AnimatorFeature: UnsignedByte {
      * with @ref AnimatorFeature::NodeAttachment.
      * @see @ref AbstractGenericAnimator::setLayer(),
      *      @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const,
+     *      @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const,
      *      @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
      *      @ref AbstractAnimator::data(AnimationHandle) const,
      *      @ref AbstractAnimator::cleanData()
@@ -1586,6 +1587,48 @@ class MAGNUM_WHEE_EXPORT AbstractDataAnimator: public AbstractAnimator {
 
         /** @brief Move assignment */
         AbstractDataAnimator& operator=(AbstractDataAnimator&&) noexcept;
+
+    protected:
+        /**
+         * @brief Implementation for @ref features()
+         *
+         * Exposes @ref AnimatorFeature::DataAttachment. If a subclass override
+         * exposes additional features, it's expected to OR them with this
+         * function.
+         */
+        AnimatorFeatures doFeatures() const override;
+};
+
+/**
+@brief Base for style animators
+@m_since_latest
+
+@see @ref AbstractUserInterface::setStyleAnimatorInstance(),
+    @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const,
+    @ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&)
+*/
+class MAGNUM_WHEE_EXPORT AbstractStyleAnimator: public AbstractAnimator {
+    public:
+        /**
+         * @brief Constructor
+         * @param handle    Handle returned by
+         *      @ref AbstractUserInterface::createAnimator()
+         */
+        explicit AbstractStyleAnimator(AnimatorHandle handle);
+
+        /** @brief Copying is not allowed */
+        AbstractStyleAnimator(const AbstractStyleAnimator&) = delete;
+
+        /** @copydoc AbstractAnimator::AbstractAnimator(AbstractAnimator&&) */
+        AbstractStyleAnimator(AbstractStyleAnimator&&) noexcept;
+
+        ~AbstractStyleAnimator();
+
+        /** @brief Copying is not allowed */
+        AbstractStyleAnimator& operator=(const AbstractStyleAnimator&) = delete;
+
+        /** @brief Move assignment */
+        AbstractStyleAnimator& operator=(AbstractStyleAnimator&&) noexcept;
 
     protected:
         /**
