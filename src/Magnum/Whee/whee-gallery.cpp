@@ -41,6 +41,7 @@
 #include <Magnum/Text/Alignment.h>
 
 #include "Magnum/Whee/AbstractAnimator.h"
+#include "Magnum/Whee/BaseLayerAnimator.h"
 #include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/Button.h"
 #include "Magnum/Whee/EventLayer.h"
@@ -110,87 +111,6 @@ Whee::NodeAnimations NodeAnimator::doAdvance(Containers::BitArrayView active, co
     return Whee::NodeAnimation::OffsetSize;
 }
 
-class StyleAnimator: public Whee::AbstractGenericAnimator {
-    public:
-        explicit StyleAnimator(Whee::AnimatorHandle handle, Containers::ArrayView<const Whee::BaseLayerStyleUniform> styles, Whee::BaseLayer& layer): Whee::AbstractGenericAnimator{handle}, _styles{styles}, _layer(layer) {
-            setLayer(layer);
-        }
-
-        Whee::AnimationHandle create(Whee::DataHandle data, const Whee::BaseLayerStyleUniform& target, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, Whee::AnimationFlags flags = {});
-
-    private:
-        struct Data {
-            UnsignedInt targetStyle, dynamicStyle;
-            Whee::BaseLayerStyleUniform source;
-            Whee::BaseLayerStyleUniform target;
-        };
-        Containers::Array<Data> _data;
-        Containers::ArrayView<const Whee::BaseLayerStyleUniform> _styles;
-        Whee::BaseLayer& _layer;
-
-        Whee::AnimatorFeatures doFeatures() const override {
-            return Whee::AnimatorFeature::DataAttachment;
-        }
-        void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override;
-        void doClean(Containers::BitArrayView animationIdsToRemove) override;
-};
-
-Whee::AnimationHandle StyleAnimator::create(Whee::DataHandle data, const Whee::BaseLayerStyleUniform& target, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount, Whee::AnimationFlags flags) {
-    const Whee::AnimationHandle handle = Whee::AbstractGenericAnimator::create(played, duration, data, repeatCount, flags);
-    const UnsignedInt id = Whee::animationHandleId(handle);
-    if(id >= _data.size())
-        arrayResize(_data, NoInit, id + 1);
-    // TODO yeah so this crashes if the target style is already dynamic, what to do????
-    _data[id].targetStyle = Math::min(_layer.style(data), UnsignedInt(_styles.size() - 1));
-    _data[id].dynamicStyle = *_layer.allocateDynamicStyle();
-    _data[id].source = _styles[_data[id].targetStyle];
-    _data[id].target = target;
-    return handle;
-}
-
-void StyleAnimator::doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
-    Containers::StridedArrayView1D<const Whee::LayerDataHandle> layerData = this->layerData();
-
-    for(std::size_t i = 0; i != active.size(); ++i) {
-        if(!active[i]) continue;
-
-        const Data& data = _data[i];
-
-        // TODO eugh this sum
-        if(_layer.style(layerData[i]) != _layer.shared().styleCount() + data.dynamicStyle)
-            _layer.setStyle(layerData[i], _layer.shared().styleCount() + data.dynamicStyle);
-
-        const Float factor = Animation::Easing::smoothstep(1.0f - factors[i]);
-        Whee::BaseLayerStyleUniform out;
-        out.topColor = Math::lerp(data.source.topColor,
-                                  data.target.topColor, factor);
-        out.bottomColor = Math::lerp(data.source.bottomColor,
-                                     data.target.bottomColor, factor);
-        out.outlineColor = Math::lerp(data.source.outlineColor,
-                                      data.target.outlineColor, factor);
-        out.outlineWidth = Math::lerp(data.source.outlineWidth,
-                                      data.target.outlineWidth, factor);
-        out.cornerRadius = Math::lerp(data.source.cornerRadius,
-                                      data.target.cornerRadius, factor);
-        out.innerOutlineCornerRadius = Math::lerp(
-            data.source.innerOutlineCornerRadius,
-            data.target.innerOutlineCornerRadius, factor);
-
-        _layer.setDynamicStyle(data.dynamicStyle, out, {});
-    }
-}
-
-void StyleAnimator::doClean(Containers::BitArrayView animationIdsToRemove) {
-    Containers::StridedArrayView1D<const Whee::LayerDataHandle> layerData = this->layerData();
-
-    for(std::size_t i = 0; i != animationIdsToRemove.size(); ++i) {
-        if(!animationIdsToRemove[i]) continue;
-
-        _layer.setStyle(layerData[i], _data[i].targetStyle);
-        _layer.recycleDynamicStyle(_data[i].dynamicStyle);
-    }
-}
-
 class WheeGallery: public Platform::Application {
     public:
         explicit WheeGallery(const Arguments& arguments);
@@ -207,10 +127,9 @@ class WheeGallery: public Platform::Application {
 
         Whee::BaseLayerGL::Shared _backgroundBlurBaseLayerShared{NoCreate};
         Whee::BaseLayerGL* _backgroundBlurBaseLayer;
-        Whee::BaseLayerStyleUniform _backgroundBlurBaseLayerStyleUniforms[1];
 
         NodeAnimator* _nodeAnimator;
-        StyleAnimator* _styleAnimator;
+        Whee::BaseLayerStyleAnimator* _styleAnimator;
         Containers::Optional<Whee::Button> _clickMe;
 };
 
@@ -227,7 +146,8 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
         commonStyleUniform
             .setSmoothness(0.75f)
             .setBackgroundBlurAlpha(0.95f);
-        _backgroundBlurBaseLayerStyleUniforms[0]
+        Whee::BaseLayerStyleUniform styleUniforms[2];
+        styleUniforms[0]
             .setCornerRadius({16.0f, 4.0f, 16.0f, 4.0f})
             .setInnerOutlineCornerRadius({2.0f, 2.0f, 2.0f, 2.0f})
             .setOutlineWidth({0.0f, 32.0f, 0.0f, 2.0f})
@@ -235,14 +155,19 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             .setColor(0xdcdcdcdc_rgbaf*0.8f)
             // .setOutlineColor(0x282e36cc_rgbaf)
             .setOutlineColor(0xefefefef_rgbaf*0.4f);
+        /* A derived copy */
+        styleUniforms[1] = Whee::BaseLayerStyleUniform{styleUniforms[0]}
+            .setColor(0xdcdcdcdc_rgbaf*0.2f)
+            .setOutlineColor(0x3bd267_rgbf)
+            .setOutlineWidth({2.0f, 34.0f, 2.0f, 4.0f});
         _backgroundBlurBaseLayerShared = Whee::BaseLayerGL::Shared{
-            Whee::BaseLayerGL::Shared::Configuration{1}
+            Whee::BaseLayerGL::Shared::Configuration{2}
                 .setDynamicStyleCount(10)
                 .setFlags(Whee::BaseLayerGL::Shared::Flag::BackgroundBlur)
                 .setBackgroundBlurRadius(31)}
                 ;
         _backgroundBlurBaseLayerShared
-            .setStyle(commonStyleUniform, _backgroundBlurBaseLayerStyleUniforms, {});
+            .setStyle(commonStyleUniform, styleUniforms, {});
 
         /* It's drawn before all other layers */
         _backgroundBlurBaseLayer = &_ui.setLayerInstance(Containers::pointer<Whee::BaseLayerGL>(_ui.createLayer(_ui.baseLayer().handle()), _backgroundBlurBaseLayerShared));
@@ -253,7 +178,9 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     _backgroundBlurBaseLayer->setDynamicStyle(0, Whee::BaseLayerStyleUniform{}, {});
 
     _nodeAnimator = &_ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(_ui.createAnimator(), _ui));
-    _styleAnimator = &_ui.setGenericAnimatorInstance(Containers::pointer<StyleAnimator>(_ui.createAnimator(), _backgroundBlurBaseLayerStyleUniforms, *_backgroundBlurBaseLayer));
+    Containers::Pointer<Whee::BaseLayerStyleAnimator> styleAnimator{InPlaceInit, _ui.createAnimator()};
+    _backgroundBlurBaseLayer->setAnimator(*styleAnimator);
+    _styleAnimator = &_ui.setStyleAnimatorInstance(Utility::move(styleAnimator));
 
     Whee::NodeHandle root = _ui.createNode({}, _ui.size());
 
@@ -393,12 +320,7 @@ void WheeGallery::popup() {
         _ui.setNodeOffset(popup, _ui.nodeOffset(popup) + offset);
     });
     _ui.eventLayer().onPress(popup, [this, popup, popupBackground]{
-        _styleAnimator->create(popupBackground,
-            Whee::BaseLayerStyleUniform{_backgroundBlurBaseLayerStyleUniforms[0]}
-                .setColor(0xdcdcdcdc_rgbaf*0.2f)
-                .setOutlineColor(0x3bd267_rgbf)
-                .setOutlineWidth({2.0f, 34.0f, 2.0f, 4.0f}),
-            now(), 1.0_sec);
+        _styleAnimator->create(0, 1, Animation::Easing::backInOut, now(), 1.3_sec, popupBackground);
         _ui.setNodeOrder(popup, Whee::NodeHandle::Null);
     });
 
