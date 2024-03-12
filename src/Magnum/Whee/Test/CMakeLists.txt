@@ -63,6 +63,7 @@ if(MAGNUM_BUILD_STATIC)
 endif()
 
 corrade_add_test(WheeTextLayerTest TextLayerTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeTextLayerStyleAnimatorTest TextLayerStyleAnimatorTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeTextPropertiesTest TextPropertiesTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeUserInterfaceTest UserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeWidgetTest WidgetTest.cpp LIBRARIES MagnumWhee)

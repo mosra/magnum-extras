@@ -60,6 +60,7 @@ set(MagnumWhee_GracefulAssert_SRCS
     BaseLayerAnimator.cpp
     EventLayer.cpp
     TextLayer.cpp
+    TextLayerAnimator.cpp
     TextProperties.cpp
     UserInterface.cpp)
 
@@ -82,6 +83,7 @@ set(MagnumWhee_HEADERS
     Style.h
     Style.hpp
     TextLayer.h
+    TextLayerAnimator.h
     TextProperties.h
     UserInterface.h
     Whee.h

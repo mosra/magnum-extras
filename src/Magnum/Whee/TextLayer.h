@@ -203,7 +203,8 @@ Draws text laid out using the @ref Text library. You'll most likely instantiate
 the class through @ref TextLayerGL, which contains a concrete OpenGL
 implementation.
 @see @ref UserInterface::textLayer(),
-    @ref UserInterface::setTextLayerInstance(), @ref StyleFeature::TextLayer
+    @ref UserInterface::setTextLayerInstance(), @ref StyleFeature::TextLayer,
+    @ref TextLayerStyleAnimator
 */
 class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
     public:
@@ -272,6 +273,16 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *      @ref allocateDynamicStyle(), @ref recycleDynamicStyle()
          */
         void setDynamicStyle(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, const Vector4& padding);
+
+        /**
+         * @brief Set this layer to be associated with a style animator
+         *
+         * Expects that @ref Shared::dynamicStyleCount() is non-zero and that
+         * this function hasn't been called with on animator yet. On the other
+         * hand, it's possible to associate multiple different animators with
+         * the same layer.
+         */
+        void setAnimator(TextLayerStyleAnimator& animator);
 
         /**
          * @brief Create a text
@@ -838,6 +849,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
 
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
+        LayerFeatures doFeatures() const override;
         void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
 
     private:
@@ -861,6 +873,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
         void doClean(Containers::BitArrayView dataIdsToRemove) override;
+        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
 };
 
 /**
@@ -1108,6 +1121,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
     protected:
     #endif
         friend TextLayer;
+        friend TextLayerStyleAnimator;
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
