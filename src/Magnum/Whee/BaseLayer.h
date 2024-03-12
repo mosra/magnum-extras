@@ -378,7 +378,8 @@ Draws quads with a color gradient, variable rounded corners and outline. You'll
 most likely instantiate the class through @ref BaseLayerGL, which contains a
 concrete OpenGL implementation.
 @see @ref UserInterface::baseLayer(),
-    @ref UserInterface::setBaseLayerInstance(), @ref StyleFeature::BaseLayer
+    @ref UserInterface::setBaseLayerInstance(), @ref StyleFeature::BaseLayer,
+    @ref BaseLayerStyleAnimator
 */
 class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
     public:
@@ -465,6 +466,16 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          *      @ref allocateDynamicStyle(), @ref recycleDynamicStyle()
          */
         void setDynamicStyle(UnsignedInt id, const BaseLayerStyleUniform& uniform, const Vector4& padding);
+
+        /**
+         * @brief Set this layer to be associated with a style animator
+         *
+         * Expects that @ref Shared::dynamicStyleCount() is non-zero and that
+         * this function hasn't been called with on animator yet. On the other
+         * hand, it's possible to associate multiple different animators with
+         * the same layer.
+         */
+        void setAnimator(BaseLayerStyleAnimator& animator);
 
         /**
          * @brief Create a quad
@@ -898,6 +909,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
 
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
+        LayerFeatures doFeatures() const override;
         void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
 
     private:
@@ -907,6 +919,10 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         MAGNUM_WHEE_LOCAL Vector3 textureCoordinateOffsetInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL Vector2 textureCoordinateSizeInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL void setTextureCoordinatesInternal(UnsignedInt id, const Vector3& offset, const Vector2& size);
+
+        /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
+           tests causes linker errors */
+        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
 };
 
 /**
@@ -1040,6 +1056,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     #endif
         struct State;
         friend BaseLayer;
+        friend BaseLayerStyleAnimator;
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */

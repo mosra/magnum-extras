@@ -29,12 +29,15 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Swizzle.h>
+#include <Magnum/Math/Time.h>
 
+#include "Magnum/Whee/BaseLayerAnimator.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/baseLayerState.h"
@@ -201,6 +204,14 @@ void BaseLayer::setDynamicStyle(const UnsignedInt id, const BaseLayerStyleUnifor
         state.dynamicStylePaddings[id] = padding;
         setNeedsUpdate();
     }
+}
+
+void BaseLayer::setAnimator(BaseLayerStyleAnimator& animator) {
+    CORRADE_ASSERT(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount,
+        "Whee::BaseLayer::setAnimator(): can't animate a layer with zero dynamic styles", );
+
+    AbstractLayer::setAnimator(animator);
+    animator.setLayerInstance(*this, &_state->shared);
 }
 
 DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const Vector4& outlineWidth, const NodeHandle node) {
@@ -385,6 +396,27 @@ void BaseLayer::setTextureCoordinatesInternal(const UnsignedInt id, const Vector
     data.textureCoordinateOffset = offset;
     data.textureCoordinateSize = size;
     setNeedsUpdate();
+}
+
+LayerFeatures BaseLayer::doFeatures() const {
+    return AbstractVisualLayer::doFeatures()|(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount ? LayerFeature::AnimateStyles : LayerFeatures{});
+}
+
+void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) {
+    auto& state = static_cast<State&>(*_state);
+
+    BaseLayerStyleAnimations animations;
+    for(AbstractStyleAnimator& animator: animators) {
+        if(!(animator.state() >= AnimatorState::NeedsAdvance))
+            continue;
+
+        animations |= static_cast<BaseLayerStyleAnimator&>(animator).advance(time, state.dynamicStyleUniforms, state.dynamicStylePaddings, stridedArrayView(state.data).slice(&Implementation::BaseLayerData::style));
+    }
+
+    if(animations & (BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Padding))
+        setNeedsUpdate();
+    if(animations >= BaseLayerStyleAnimation::Uniform)
+        state.dynamicStyleChanged = true;
 }
 
 void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {

@@ -112,6 +112,8 @@ struct BaseLayerTest: TestSuite::Tester {
     void invalidHandle();
     void styleOutOfRange();
 
+    /* advanceAnimations() tested in BaseLayerStyleAnimatorTest */
+
     void updateDataOrder();
     void updateNoStyleSet();
 };
