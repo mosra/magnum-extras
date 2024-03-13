@@ -1154,6 +1154,10 @@ void AbstractUserInterfaceTest::renderer() {
     auto&& data = RendererData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
+    /* State flags from setSize() affecting node clip state are tested
+       thoroughly in state(). Here there are no nodes, which makes them not
+       being set at all. */
+
     int destructed = 0;
     int setupCalled = 0;
 
@@ -3623,6 +3627,10 @@ void AbstractUserInterfaceTest::animationAttachDataInvalidFeatures() {
 void AbstractUserInterfaceTest::setSizeToLayers() {
     AbstractUserInterface ui{NoCreate};
 
+    /* State flags from setSize() affecting node clip state are tested
+       thoroughly in state(). Here there are no nodes, which makes them not
+       being set at all. */
+
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, LayerFeatures features, Containers::Array<Containers::Triple<LayerHandle, Vector2, Vector2i>>& calls): AbstractLayer{handle}, features{features}, calls(calls) {}
 
@@ -5945,11 +5953,13 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
 
-    /* Calling setSize() sets a state flag. Other interactions between
-       setRendererInstance() and setSize() is tested thoroughly in
-       renderer() and setSizeToRenderer() instead. */
-    ui.setSize({165.0f, 156.0f}, {376.0f, 234.0f}, {17, 35});
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup);
+    /* Calling setSize() with all values different sets state flags to update
+       the renderer and the clip state. Other interactions between
+       setRendererInstance(), setSize() and layer instances are tested
+       thoroughly in renderer(), setSizeToRenderer() and setSizeToLayers()
+       instead. */
+    ui.setSize({4.0f, 5.0f}, {376.0f, 234.0f}, {17, 35});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup|UserInterfaceState::NeedsNodeClipUpdate);
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
 
@@ -5959,7 +5969,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup|UserInterfaceState::NeedsNodeClipUpdate);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -5975,14 +5985,49 @@ void AbstractUserInterfaceTest::state() {
     /* Calling updateRenderer() should setup renderer framebuffers again */
     if(data.updateRenderer) {
         ui.updateRenderer();
-        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
         CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
     }
 
-    /* Calling update() should delegate to updateRenderer() if needed but other
-       than that do nothing else on any layer or layouter */
-    ui.update();
+    /* Calling update() should delegate to updateRenderer() if needed and then
+       refresh the cull state in all layers. It doesn't call anything in the
+       layouters. */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1)
+        };
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* node */
+            {},                           /* another1 */
+            {},                           /* another2 */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},                           /* nested2 */
+            {},                           /* invisible */
+            {},                           /* notInOrder */
+        };
+        bool expectedNodesEnabled[]{
+            /* Only node and nested1 is visible (and enabled) now */
+            true, false, false, true, false, false, false
+        };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 2}, /* node and nested1 */
+            /* the rest is invisible */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{2.0f, 1.0f}, {2.0f, 4.0f}}, /* This is clipped to the UI size */
+            {{}, {}},
+            {{}, {}}
+        };
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        ui.update();
+    }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
@@ -5994,7 +6039,99 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
+    if(data.nodeAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+
+    /* Calling setSize() with just the UI size being different but window and
+       framebuffer size being the same causes just the cull state update to be
+       set */
+    ui.setSize({165.0f, 156.0f}, {376.0f, 234.0f}, {17, 35});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
+    CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
+
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+        if(data.layouters) {
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        }
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
+        if(data.nodeAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+    }
+
+    /* Calling updateRenderer() should be a no-op */
+    if(data.updateRenderer) {
+        ui.updateRenderer();
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
+        CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
+    }
+
+    /* Calling update() resets back to the "everything visible" state like
+       before. It doesn't call the layouters. */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+            dataHandleId(dataNested2),
+            dataHandleId(dataAnother1),
+        };
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another1 */
+            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
+            {},                           /* invisible */
+            {},                           /* notInOrder */
+        };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible and notInOrder */
+            true, true, true, true, true, false, false
+        };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 3}, /* node and all children */
+            {1, 1}  /* another1, unclipped */
+            /* another2 has no data */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{2.0f, 1.0f}, {3.0f, 5.0f}},
+            {{}, {}},
+            {{}, {}}
+        };
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
+    CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
+    if(data.layouters) {
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+        }), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6017,7 +6154,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6075,7 +6212,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6111,7 +6248,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6236,7 +6373,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6272,7 +6409,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6397,7 +6534,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6420,7 +6557,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6537,7 +6674,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6565,7 +6702,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6687,7 +6824,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6718,7 +6855,7 @@ void AbstractUserInterfaceTest::state() {
             }), TestSuite::Compare::Container);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
     }
 
     /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
@@ -6772,7 +6909,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6807,7 +6944,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6865,7 +7002,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6889,7 +7026,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6948,7 +7085,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6980,7 +7117,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7037,7 +7174,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7065,7 +7202,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7121,7 +7258,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7144,7 +7281,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7231,7 +7368,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7259,7 +7396,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7382,7 +7519,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7496,7 +7633,7 @@ void AbstractUserInterfaceTest::state() {
             layouterHandleId(layouter2), layouterHandleId(layouter1),
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7544,7 +7681,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
@@ -7573,7 +7710,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
     if(data.nodeAttachmentAnimators)
@@ -7610,7 +7747,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
@@ -7687,7 +7824,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
     if(data.nodeAttachmentAnimators)
@@ -7769,7 +7906,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators) {
@@ -7908,7 +8045,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
     if(data.nodeAttachmentAnimators) {
@@ -7941,7 +8078,7 @@ void AbstractUserInterfaceTest::state() {
                 layouterHandleId(layouter2),
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
+            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18);
             CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
             CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
         }
@@ -8001,7 +8138,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 19);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 3);
         if(data.nodeAttachmentAnimators) {
