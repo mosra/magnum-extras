@@ -108,7 +108,10 @@ enum class UserInterfaceState: UnsignedShort {
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
-     * visible node set after node flags changed. Set implicitly after every
+     * visible node set after the user interface size or node flags changed.
+     * Set implicitly after every @relativeref{AbstractUserInterface,setSize()}
+     * call that changes the user interface size if any nodes were already
+     * created and after every
      * @relativeref{AbstractUserInterface,setNodeFlags()},
      * @relativeref{AbstractUserInterface,addNodeFlags()} and
      * @relativeref{AbstractUserInterface,clearNodeFlags()} that changes the
@@ -396,7 +399,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * Calling this function with new values will update the event position
          * scaling accordingly. If @p size or @p framebufferSize changes,
-         * @ref AbstractLayer::setSize() is called on all layers. If a renderer
+         * @ref AbstractLayer::setSize() is called on all layers. If @p size
+         * changes and any nodes were already created,
+         * @ref UserInterfaceState::NeedsNodeClipUpdate is set. If a renderer
          * instance is set and this function is called for the first time,
          * @ref AbstractRenderer::setupFramebuffers() is called to make the
          * renderer populate its internal state. On subsequent calls to this

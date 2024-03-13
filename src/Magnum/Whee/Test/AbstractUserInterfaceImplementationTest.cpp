@@ -149,12 +149,13 @@ const struct {
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
+    Vector2 uiOffset, uiSize;
     Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> nodeIdsChildrenCount;
     Containers::Array<Containers::Triple<Vector2, Vector2, NodeFlags>> nodeOffsetsSizesFlags;
     Containers::Array<bool> expectedVisible;
     Containers::Array<Containers::Triple<Vector2, Vector2, UnsignedInt>> expectedClipRects;
 } CullVisibleNodesClipRectsData[]{
-    {"single non-clipping node", {InPlaceInit, {
+    {"single non-clipping node", {}, {100.0f, 100.0f}, {InPlaceInit, {
             {0, 0},
         }}, {InPlaceInit, {
             {{3.0f, 4.0f}, {5.0f, 6.0f}, {}},
@@ -164,7 +165,7 @@ const struct {
             /* Verifies that no OOB access happens internally */
             {{}, {}, 1}
         }}},
-    {"single clipping node", {InPlaceInit, {
+    {"single clipping node", {}, {100.0f, 100.0f}, {InPlaceInit, {
             {0, 0},
         }}, {InPlaceInit, {
             {{3.0f, 4.0f}, {5.0f, 6.0f}, NodeFlag::Clip},
@@ -174,7 +175,27 @@ const struct {
             /* Verifies that no OOB access happens internally here as well */
             {{3.0f, 4.0f}, {5.0f, 6.0f}, 1}
         }}},
-    {"multiple non-clipping top-level nodes", {InPlaceInit, {
+    {"single non-clipping node overlapping window edges", {4.0f, 5.0f}, {1.0f, 1.0f}, {InPlaceInit, {
+            {0, 0},
+        }}, {InPlaceInit, {
+            {{3.0f, 4.0f}, {5.0f, 6.0f}, {}},
+        }}, {InPlaceInit, {
+            true
+        }}, {InPlaceInit, {
+            /* Should be empty, not the window offset/size */
+            {{}, {}, 1}
+        }}},
+    {"single clipping node overlapping window edges", {4.0f, 5.0f}, {10.0f, 1.0f}, {InPlaceInit, {
+            {0, 0},
+        }}, {InPlaceInit, {
+            {{3.0f, 4.0f}, {5.0f, 6.0f}, NodeFlag::Clip},
+        }}, {InPlaceInit, {
+            true
+        }}, {InPlaceInit, {
+            /* Gets joined with the window rect */
+            {{4.0f, 5.0f}, {4.0f, 1.0f}, 1}
+        }}},
+    {"multiple non-clipping top-level nodes", {}, {100.0f, 100.0f}, {InPlaceInit, {
             {0, 0},
             {2, 0},
             {3, 0}, /* clips */
@@ -190,14 +211,15 @@ const struct {
             true, true, true, true, true
         }}, {InPlaceInit, {
             /* These shouldn't get merged together as they are separate draw
-               calls as well */
+               calls as well. All should be empty, not the window
+               offset/size. */
             {{}, {}, 1},
             {{}, {}, 1},
             {{0.0f, 1.0f}, {2.0f, 3.0f}, 1},
             {{}, {}, 1},
             {{}, {}, 1}
         }}},
-    {"skip a fully culled clipping node including children", {InPlaceInit, {
+    {"skip a fully culled clipping node including children", {}, {100.0f, 100.0f}, {InPlaceInit, {
             {2, 3},         /* clips */
                 {3, 2},     /* culled, clips */
                     {0, 0}, /* culled */
@@ -218,7 +240,7 @@ const struct {
         }}, {InPlaceInit, {
             {{1.0f, 2.0f}, {1.0f, 1.0f}, 4},
         }}},
-    {"return to parent clip rect", {InPlaceInit, {
+    {"return to parent clip rect", {}, {100.0f, 100.0f}, {InPlaceInit, {
             {2, 3},     /* clips */
                 {3, 0},
                 {0, 0}, /* clips */
@@ -242,7 +264,7 @@ const struct {
             /* Same as the first clip rect */
             {{1.0f, 1.0f}, {7.0f, 3.0f}, 1},
         }}},
-    {"return to parent clip rect, invisible node", {InPlaceInit, {
+    {"return to parent clip rect, invisible node", {}, {100.0f, 100.0f}, {InPlaceInit, {
             {2, 3},     /* clips */
                 {3, 0},
                 {0, 0}, /* clips */
@@ -266,9 +288,9 @@ const struct {
             {{1.0f, 1.0f}, {4.5f, 3.0f}, 2},
             {{4.0f, 2.0f}, {1.0f, 1.0f}, 1},
             {{1.0f, 1.0f}, {4.5f, 3.0f}, 1}, /* node 1 is invisible */
-            {{}, {}, 1}
+            {{}, {}, 1} /* should be empty, not the window offset/size */
         }}},
-    {"return to parent clip rect, invisible node at the end", {InPlaceInit, {
+    {"return to parent clip rect, invisible node at the end", {}, {100.0f, 100.0f}, {InPlaceInit, {
             {2, 3},     /* clips */
                 {3, 0},
                 {0, 0}, /* clips */
@@ -295,22 +317,50 @@ const struct {
 
 const struct {
     const char* name;
-    Vector2 offset;
-    Vector2 size;
+    Vector2 uiOffset, uiSize;
+    Vector2 clipNodeOffset, clipNodeSize;
+    NodeFlags clipNodeFlags;
+    Vector2 clipRectOffset, clipRectSize;
     bool allVisible;
 } CullVisibleNodesEdgesData[]{
-    {"", { 1.0f,  1.0f}, {7.0f, 7.0f}, false},
-    {"touching edges", {0.0f, 0.0f}, {9.0f, 9.0f}, false},
-    {"touching everything", {-0.01f, -0.01f}, {9.02f, 9.02f}, true}
+    {"",
+        {-3.0f, -3.0f}, {16.0f, 16.0f},
+        {1.0f, 1.0f}, {7.0f, 7.0f}, {},
+        {}, {}, true},
+    {"clipping node",
+        {-3.0f, -3.0f}, {16.0f, 16.0f},
+        {1.0f, 1.0f}, {7.0f, 7.0f}, NodeFlag::Clip,
+        {1.0f, 1.0f}, {7.0f, 7.0f}, false},
+    {"clipping node, touching edges",
+        {-3.0f, -3.0f}, {16.0f, 16.0f},
+        {0.0f, 0.0f}, {9.0f, 9.0f}, NodeFlag::Clip,
+        {0.0f, 0.0f}, {9.0f, 9.0f}, false},
+    {"clipping node, touching everything",
+        {-3.0f, -3.0f}, {16.0f, 16.0f},
+        {-0.01f, -0.01f}, {9.02f, 9.02f}, NodeFlag::Clip,
+        {-0.01f, -0.01f}, {9.02f, 9.02f}, true},
+    {"culled by window edges",
+        {1.0f, 1.0f}, {7.0f, 7.0f},
+        {1.0f, 1.0f}, {7.0f, 7.0f}, {},
+        {}, {}, false},
+    {"culled by window edges, touching edges",
+        {0.0f, 0.0f}, {9.0f, 9.0f},
+        {1.0f, 1.0f}, {7.0f, 7.0f}, {},
+        {}, {}, false},
+    {"culled by window edges, touching everything",
+        {-0.01f, -0.01f}, {9.02f, 9.02f},
+        {1.0f, 1.0f}, {7.0f, 7.0f}, {},
+        {}, {}, true},
 };
 
 const struct {
     const char* name;
+    Vector2 uiOffset, uiSize;
     NodeFlags flags[15];
     bool visible[15];
     Containers::Array<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipRects;
 } CullVisibleNodesData[]{
-    {"all clipping", {
+    {"all clipping", {}, {100.0f, 100.0f}, {
         NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 0-3 */
         NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 4-7 */
         NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 8-11 */
@@ -343,7 +393,7 @@ const struct {
         {{14.0f, 1.0f}, { 1.0f, 3.0f}, 3}, /* Node 5 (top-level), including
                                               hidden 9, 8 */
     }}},
-    {"no clipping", {
+    {"no clipping", {}, {100.0f, 100.0f}, {
         {},             {},             {},             {},             /* 0-3 */
         {},             {},             {},             {},             /* 4-7 */
         {},             {},             {},             {},             /* 8-11 */
@@ -356,7 +406,34 @@ const struct {
         {{}, {}, 11}, /* Top-level node 7 */
         {{}, {}, 3},  /* Top-level node 5 */
     }}},
-    {"special cases", {
+    {"no clipping, culled by window edges", {2.0f, 0.0f}, {100.0f, 6.0f}, {
+        {},             {},             {},             {},             /* 0-3 */
+        {},             {},             {},             {},             /* 4-7 */
+        {},             {},             {},             {},             /* 8-11 */
+        {},             {},             {},                             /* 12-14 */
+    }, {
+        false, /* 0, outside of the window area */
+        true,  /* 1 */
+        true,  /* 2 */
+        false, /* 3, outside of the window area */
+        true,  /* 4 */
+        true,  /* 5 */
+        true,  /* 6, child of a culled node but because it doesn't clip it's
+                     still partially visible in the window area */
+        true,  /* 7 */
+        true,  /* 8 */
+        true,  /* 9 */
+        true,  /* 10 */
+        true,  /* 11 */
+        true,  /* 12 */
+        true,  /* 13 */
+        true,  /* 14 */
+    }, {InPlaceInit, {
+        {{}, {}, 1},  /* Top-level node 3 */
+        {{}, {}, 11}, /* Top-level node 7 */
+        {{}, {}, 3},  /* Top-level node 5 */
+    }}},
+    {"special cases", {}, {100.0f, 100.0f}, {
         {},             {},             {},             {},             /* 0-3 */
         {},             {},             {},             NodeFlag::Clip, /* 4-7 */
         NodeFlag::Clip, {},             {},             {},             /* 8-11 */
@@ -1349,13 +1426,15 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesClipRects() {
     UnsignedByte visibleNodeMaskStorage[1];
     Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, data.nodeIdsChildrenCount.size()};
 
-    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[8];
+    /* One more item for the stack root, which is the whole UI offset + size */
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[8 + 1];
     Containers::Triple<Vector2, Vector2, UnsignedInt> clipRects[8];
     UnsignedInt count = Implementation::cullVisibleNodesInto(
+        data.uiOffset, data.uiSize,
         stridedArrayView(data.nodeOffsetsSizesFlags).slice(&Containers::Triple<Vector2, Vector2, NodeFlags>::first),
         stridedArrayView(data.nodeOffsetsSizesFlags).slice(&Containers::Triple<Vector2, Vector2, NodeFlags>::second),
         stridedArrayView(data.nodeOffsetsSizesFlags).slice(&Containers::Triple<Vector2, Vector2, NodeFlags>::third),
-        Containers::arrayView(clipStack).prefix(data.nodeIdsChildrenCount.size()),
+        Containers::arrayView(clipStack).prefix(data.nodeIdsChildrenCount.size() + 1),
         stridedArrayView(data.nodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
         stridedArrayView(data.nodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
         visibleNodeMask,
@@ -1453,7 +1532,9 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
         {{-3.0f,  0.0f}, {3.0f, 9.0f}, {}}, /* 31, outside left top + bottom */
         {{ 9.0f,  0.0f}, {3.0f, 9.0f}, {}}, /* 32, outside right top + bottom */
         {{ 0.0f,  9.0f}, {9.0f, 3.0f}, {}}, /* 33, outside bottom left + right */
-        {data.offset, data.size, NodeFlag::Clip}, /* 34, clip node */
+        {data.clipNodeOffset,
+         data.clipNodeSize,
+         data.clipNodeFlags},               /* 34, clip node */
     };
 
     /* Children after the parent */
@@ -1472,9 +1553,11 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
     UnsignedInt visibleNodeMaskStorage[2];
     Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, Containers::arraySize(nodeOffsetsSizesFlags)};
 
-    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[Containers::arraySize(nodeOffsetsSizesFlags)];
+    /* One more item for the stack root, which is the whole UI offset + size */
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[Containers::arraySize(nodeOffsetsSizesFlags) + 1];
     Containers::Triple<Vector2, Vector2, UnsignedInt> clipRects[Containers::arraySize(nodeOffsetsSizesFlags)];
     UnsignedInt count = Implementation::cullVisibleNodesInto(
+        data.uiOffset, data.uiSize,
         Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::offset),
         Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::size),
         Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::flags),
@@ -1514,7 +1597,7 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
     CORRADE_COMPARE_AS(count, Containers::arraySize(clipRects),
         TestSuite::Compare::LessOrEqual);
     CORRADE_COMPARE_AS(Containers::arrayView(clipRects).prefix(count), (Containers::arrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>>({
-        {data.offset, data.size, 35u}
+        {data.clipRectOffset, data.clipRectSize, 35u}
     })), TestSuite::Compare::Container);
 }
 
@@ -1591,9 +1674,11 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
     UnsignedShort visibleNodeMaskStorage[1];
     Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, Containers::arraySize(nodeOffsetsSizes)};
 
-    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[Containers::arraySize(nodeOffsetsSizes)];
+    /* One more item for the stack root, which is the whole UI offset + size */
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[Containers::arraySize(nodeOffsetsSizes) + 1];
     Containers::Triple<Vector2, Vector2, UnsignedInt> clipRects[Containers::arraySize(nodeOffsetsSizes)];
     UnsignedInt count = Implementation::cullVisibleNodesInto(
+        data.uiOffset, data.uiSize,
         Containers::stridedArrayView(nodeOffsetsSizes).slice(&Node::offset),
         Containers::stridedArrayView(nodeOffsetsSizes).slice(&Node::size),
         Containers::arrayView(data.flags),
@@ -1626,12 +1711,15 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesNoTopLevelNodes() 
     Vector2 nodeSizes[3];
     NodeFlags nodeFlags[3];
     UnsignedByte visibleNodeMaskData[1]{0xff};
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[1];
     Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskData, 0, 3};
     UnsignedInt count = Implementation::cullVisibleNodesInto(
+        /* A non-zero UI size so it doesn't just clip all for no reason */
+        {}, {100.0f, 100.0f},
         absoluteNodeOffsets,
         nodeSizes,
         nodeFlags,
-        nullptr,
+        clipStack,
         nullptr,
         nullptr,
         visibleNodeMask,
