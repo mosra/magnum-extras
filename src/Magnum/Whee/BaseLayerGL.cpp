@@ -73,7 +73,9 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
     public:
         enum Flag: UnsignedByte {
             Textured = 1 << 0,
-            BackgroundBlur = 1 << 1
+            BackgroundBlur = 1 << 1,
+            NoRoundedCorners = 1 << 2,
+            NoOutline = 1 << 3
         };
 
         typedef Containers::EnumSet<Flag> Flags;
@@ -152,6 +154,7 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
     vert.addSource(Utility::format("#define STYLE_COUNT {}\n", styleCount))
         .addSource(flags & Flag::BackgroundBlur ? "#define BACKGROUND_BLUR\n"_s : ""_s)
         .addSource(flags & Flag::Textured ? "#define TEXTURED\n"_s : ""_s)
+        .addSource(flags & Flag::NoOutline ? "#define NO_OUTLINE\n"_s : ""_s)
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("BaseShader.vert"_s));
 
@@ -159,6 +162,8 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
     frag.addSource(Utility::format("#define STYLE_COUNT {}\n", styleCount))
         .addSource(flags & Flag::BackgroundBlur ? "#define BACKGROUND_BLUR\n"_s : ""_s)
         .addSource(flags & Flag::Textured ? "#define TEXTURED\n"_s : ""_s)
+        .addSource(flags & Flag::NoRoundedCorners ? "#define NO_ROUNDED_CORNERS\n"_s : ""_s)
+        .addSource(flags & Flag::NoOutline ? "#define NO_OUTLINE\n"_s : ""_s)
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("BaseShader.frag"_s));
 
@@ -327,8 +332,12 @@ struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
 
 
 BaseLayerGL::Shared::State::State(Shared& self, const Configuration& configuration): BaseLayer::Shared::State{self, configuration}, shader{
-    (flags & Flag::BackgroundBlur ? BaseShaderGL::Flag::BackgroundBlur : BaseShaderGL::Flags{})|
-    (flags & Flag::Textured ? BaseShaderGL::Flag::Textured : BaseShaderGL::Flags{}),
+    #define _c(flag) (flags & Flag::flag ? BaseShaderGL::Flag::flag : BaseShaderGL::Flags{})
+    _c(BackgroundBlur)|
+    _c(Textured)|
+    _c(NoRoundedCorners)|
+    _c(NoOutline),
+    #undef _c
     configuration.styleUniformCount()}
 {
     if(configuration.flags() & Flag::BackgroundBlur) {

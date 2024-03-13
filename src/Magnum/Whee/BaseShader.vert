@@ -30,7 +30,9 @@ uniform highp mat3 transformationProjectionMatrix;
 
 layout(location = 0) in highp vec2 position;
 layout(location = 1) in mediump vec2 centerDistance;
+#ifndef NO_OUTLINE
 layout(location = 2) in mediump vec4 outlineWidth;
+#endif
 layout(location = 3) in lowp vec4 color;
 layout(location = 4) in mediump uint style;
 #ifdef TEXTURED
@@ -52,7 +54,9 @@ out highp vec2 backgroundBlurTextureCoordinates;
 void main() {
     interpolatedStyle = style;
     halfQuadSize = abs(centerDistance);
+    #ifndef NO_OUTLINE
     interpolatedOutlineWidth = outlineWidth;
+    #endif
     interpolatedColor = color;
     normalizedQuadPosition = sign(centerDistance);
     #ifdef TEXTURED

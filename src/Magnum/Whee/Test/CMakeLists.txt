@@ -157,6 +157,7 @@ if(MAGNUM_BUILD_GL_TESTS)
             BaseLayerTestFiles/composite-background-blur-75-colored.png
             BaseLayerTestFiles/composite-default-50.png
             BaseLayerTestFiles/default.png
+            BaseLayerTestFiles/default-smooth.png
             BaseLayerTestFiles/draw-order.png
             BaseLayerTestFiles/draw-order-composite-background-blur.png
             BaseLayerTestFiles/draw-order-composite-default.png

@@ -42,7 +42,9 @@ layout(std140
 };
 
 #define style_smoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.x
+#ifndef NO_OUTLINE
 #define style_innerOutlineSmoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.y
+#endif
 #define style_backgroundBlurAlpha smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.z
 
 #ifdef TEXTURED
@@ -61,7 +63,9 @@ uniform lowp sampler2D backgroundBlurTextureData;
 
 flat in mediump uint interpolatedStyle;
 flat in mediump vec2 halfQuadSize;
+#ifndef NO_OUTLINE
 flat in mediump vec4 interpolatedOutlineWidth;
+#endif
 in mediump vec4 interpolatedColor;
 in mediump vec2 normalizedQuadPosition; /* -1 to +1 in both coordinates */
 #ifdef TEXTURED
@@ -78,6 +82,7 @@ void main() {
 
     lowp float dist;
     {
+        #ifndef NO_ROUNDED_CORNERS
         /* Rounded corner centers */
         mediump vec4 radius = styles[interpolatedStyle].cornerRadius;
         mediump vec2 c0 = vec2(-halfQuadSize.x + radius[0], -halfQuadSize.y + radius[0]);
@@ -94,12 +99,15 @@ void main() {
             dist = (radius[2] - distance(position, c2));
         else if(position.x > c3.x && position.y > c3.y)
             dist = (radius[3] - distance(position, c3));
-        else {
+        else
+        #endif
+        {
             lowp vec2 edgeDistance = halfQuadSize - abs(position);
             dist = min(edgeDistance.x, edgeDistance.y);
         }
     }
 
+    #ifndef NO_OUTLINE
     lowp float outlineDist;
     {
         mediump vec4 outlineWidth = styles[interpolatedStyle].outlineWidth + interpolatedOutlineWidth;
@@ -107,6 +115,7 @@ void main() {
             -halfQuadSize + outlineWidth.xy,
             +halfQuadSize - outlineWidth.zw);
 
+        #ifndef NO_ROUNDED_CORNERS
         /* Outline rounded corner centers */
         mediump vec4 radius = styles[interpolatedStyle].outlineCornerRadius;
         mediump vec2 c0 = vec2(outlineQuadSize.x + radius[0], outlineQuadSize.y + radius[0]);
@@ -123,7 +132,9 @@ void main() {
             outlineDist = (radius[2] - distance(position, c2));
         else if(position.x > c3.x && position.y > c3.y)
             outlineDist = (radius[3] - distance(position, c3));
-        else {
+        else
+        #endif
+        {
             lowp vec4 edgeDistance = vec4(
                 position - outlineQuadSize.xy,
                 outlineQuadSize.zw - position);
@@ -132,6 +143,7 @@ void main() {
                 min(edgeDistance.z, edgeDistance.w));
         }
     }
+    #endif
 
     /* Gradient, optionally textured */
     lowp vec4 gradientColor = mix(
@@ -142,10 +154,14 @@ void main() {
     gradientColor *= texture(textureData, interpolatedTextureCoordinates);
     #endif
 
+    #ifndef NO_OUTLINE
     /* Transition to outline color */
     lowp float innerOutlineSmoothness = style_innerOutlineSmoothness;
     lowp vec4 outlineColor = styles[interpolatedStyle].outlineColor;
     lowp vec4 color = mix(outlineColor, gradientColor, smoothstep(-innerOutlineSmoothness, +innerOutlineSmoothness, outlineDist));
+    #else
+    lowp vec4 color = gradientColor;
+    #endif
 
     #ifdef BACKGROUND_BLUR
     /* The blurred background color is first multiplied with the background

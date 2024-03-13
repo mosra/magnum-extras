@@ -53,8 +53,23 @@ struct BaseLayerGLBenchmark: GL::OpenGLTester {
 
 using namespace Math::Literals;
 
+const struct {
+    const char* name;
+    BaseLayerGL::Shared::Flags flags;
+} FragmentData[]{
+    {"", {}},
+    {"no rounded corners",
+        BaseLayerGL::Shared::Flag::NoRoundedCorners},
+    {"no outline",
+        BaseLayerGL::Shared::Flag::NoOutline},
+    {"no rounded corners or outline",
+        BaseLayerGL::Shared::Flag::NoRoundedCorners|
+        BaseLayerGL::Shared::Flag::NoOutline},
+};
+
 BaseLayerGLBenchmark::BaseLayerGLBenchmark() {
-    addBenchmarks({&BaseLayerGLBenchmark::fragment}, 10,
+    addInstancedBenchmarks({&BaseLayerGLBenchmark::fragment}, 10,
+        Containers::arraySize(FragmentData),
         &BaseLayerGLBenchmark::setup,
         &BaseLayerGLBenchmark::teardown,
         BenchmarkType::GpuTime);
@@ -88,13 +103,18 @@ void BaseLayerGLBenchmark::teardown() {
 }
 
 void BaseLayerGLBenchmark::fragment() {
+    auto&& data = FragmentData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Renders a single data over the whole size to benchmark mainly the
        fragment shader invocation */
 
     AbstractUserInterface ui{BenchmarkSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}};
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}
+        .setFlags(data.flags)
+    };
     shared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
             .setColor(0xff3366_rgbf)
