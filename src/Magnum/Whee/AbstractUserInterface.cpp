@@ -584,8 +584,9 @@ AbstractUserInterface& AbstractUserInterface::setSize(const Vector2& size, const
     CORRADE_ASSERT(size.product() && windowSize.product() && framebufferSize.product(),
         "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got" << size << Debug::nospace << "," << windowSize << "and" << framebufferSize, *this);
     State& state = *_state;
+    const bool sizeDifferent = state.size != size;
     const bool framebufferSizeDifferent = state.framebufferSize != framebufferSize;
-    const bool sizeOrFramebufferSizeDifferent = state.size != size || framebufferSizeDifferent;
+    const bool sizeOrFramebufferSizeDifferent = sizeDifferent || framebufferSizeDifferent;
     state.size = size;
     state.windowSize = windowSize;
     state.framebufferSize = framebufferSize;
@@ -603,6 +604,19 @@ AbstractUserInterface& AbstractUserInterface::setSize(const Vector2& size, const
         else
             state.state |= UserInterfaceState::NeedsRendererSizeSetup;
     }
+
+    /* If the size is different, set a state flag to recalculate the set of
+       visible nodes. I.e., some might now be outside of the UI area and
+       hidden, some might be newly visible.
+
+       Do this only if there are actually some nodes already. Otherwise it'd
+       mean the state flag gets set upon construction with a size already,
+       which isn't good. (This will also set it if all nodes are freed, but
+       checking nodeUsedCount() which is an O(n) operation is a less efficient
+       behavior than needlessly triggering a state update that's going to be a
+       no-op anyway.) */
+    if(sizeDifferent && state.nodes.size())
+        state.state |= UserInterfaceState::NeedsNodeClipUpdate;
 
     /* If the size or framebuffer size is different, set it on all existing
        layers that have an instance (so, also aren't freed) and support
@@ -2306,7 +2320,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
            from scratch for each layer so zero-initializing is done inside
            orderVisibleNodeDataInto() instead. */
         {NoInit, state.nodes.size() + 1, visibleNodeDataOffsets},
-        {NoInit, state.nodes.size(), clipStack},
+        /* One more item for the stack root, which is the whole UI size */
+        {NoInit, state.nodes.size() + 1, clipStack},
         {NoInit, dataCount, visibleNodeDataIds},
     };
 
@@ -2484,12 +2499,18 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* If no clip update is needed, the `state.visibleNodeMask` is all
        up-to-date */
     if(states >= UserInterfaceState::NeedsNodeClipUpdate) {
-        /* 9. Cull / clip the visible nodes based on their clip rects */
+        /* 9. Cull / clip the visible nodes based on their clip rects and the
+           offset + size of the whole UI (window / screen area) */
         state.clipRectCount = Implementation::cullVisibleNodesInto(
+            /** @todo might be useful to make the offset configurable as well,
+                for example when the UI is always occupying just a part of the
+                window to get the nodes outside of that rectangle culled as
+                well */
+            {}, state.size,
             state.absoluteNodeOffsets,
             state.nodeSizes,
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
-            clipStack.prefix(state.visibleNodeIds.size()),
+            clipStack.prefix(state.visibleNodeIds.size() + 1),
             state.visibleNodeIds,
             state.visibleNodeChildrenCounts,
             state.visibleNodeMask,

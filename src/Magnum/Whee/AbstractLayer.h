@@ -748,9 +748,9 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * already set at the time the function is called. Called only if
          * @ref LayerFeature::Draw is supported. The implementation is expected
          * to update its internal rendering state such as projection matrices
-         * and other framebuffer-related state. If the size change led to a
-         * change in node positioning, the implementation can expect a followup
-         * @ref doUpdate() call with up-to-date node positions and sizes.
+         * and other framebuffer-related state. If any nodes are already
+         * created, the implementation can expect a followup @ref doUpdate()
+         * call with up-to-date node positions and sizes.
          *
          * Default implementation does nothing.
          */
