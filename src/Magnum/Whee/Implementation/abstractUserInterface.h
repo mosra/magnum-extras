@@ -572,11 +572,12 @@ void fillLayoutUpdateMasksInto(const Containers::StridedArrayView2D<const Layout
    a list of clip rects and count of nodes affected by them.
 
    The `clipStack` array is temporary storage. */
-UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& absoluteNodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::MutableBitArrayView visibleNodeMask, const Containers::StridedArrayView1D<Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<Vector2>& clipRectSizes, const Containers::StridedArrayView1D<UnsignedInt>& clipRectNodeCounts) {
+UnsignedInt cullVisibleNodesInto(const Vector2& uiOffset, const Vector2& uiSize, const Containers::StridedArrayView1D<const Vector2>& absoluteNodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::MutableBitArrayView visibleNodeMask, const Containers::StridedArrayView1D<Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<Vector2>& clipRectSizes, const Containers::StridedArrayView1D<UnsignedInt>& clipRectNodeCounts) {
     CORRADE_INTERNAL_ASSERT(
         nodeSizes.size() == absoluteNodeOffsets.size() &&
         nodeFlags.size() == absoluteNodeOffsets.size() &&
-        clipStack.size() == visibleNodeIds.size() &&
+        /* One more item for the actual UI offset + size */
+        clipStack.size() == visibleNodeIds.size() + 1 &&
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
         visibleNodeMask.size() == absoluteNodeOffsets.size() &&
         clipRectSizes.size() == clipRectOffsets.size() &&
@@ -591,7 +592,17 @@ UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vect
     if(visibleNodeIds.isEmpty())
         return 0;
 
-    /* Initially there's no clip rect */
+    /* The initial item on the clip stack is the UI clip rect. That one is
+       used for culling away nodes out of the window / screen / ... area, but
+       isn't included in the output list of clip rects -- instead, nodes
+       clipped only by the UI are marked with a clip rect that has a zero
+       offset and size. */
+    std::size_t clipStackDepth = 1;
+    clipStack[0] = {uiOffset, uiOffset + uiSize, UnsignedInt(visibleNodeIds.size())};
+
+    /* The initial clip rect is with zero offset and size, indicating that
+       nothing is clipped (apart from the implicit window / screen / ...
+       clipping) */
     clipRectOffsets[0] = {};
     clipRectSizes[0] = {};
     clipRectNodeCounts[0] = 0;
@@ -599,7 +610,6 @@ UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vect
     /* Filter the visible node list and keep only nodes that are at least
        partially visible in the intersection of all parent clip rects */
     std::size_t i = 0;
-    std::size_t clipStackDepth = 0;
     std::size_t clipRectsOffset = 0;
     std::size_t topLevelNodeEnd = visibleNodeChildrenCounts[0] + 1;
     while(i != visibleNodeIds.size()) {
@@ -610,24 +620,18 @@ UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vect
         const Vector2 min = absoluteNodeOffsets[nodeId];
         const Vector2 max = min + size;
 
-        /* If there's no clip rect, the node is visible */
-        bool visible;
-        Vector2 parentMin{NoInit}, parentMax{NoInit};
-        if(clipStackDepth == 0) {
-            visible = true;
+        /* There's always at least the UI clip rect in the clip stack, which we
+           can check against */
+        CORRADE_INTERNAL_DEBUG_ASSERT(clipStackDepth != 0);
+        const Vector2 parentMin = clipStack[clipStackDepth - 1].first();
+        const Vector2 parentMax = clipStack[clipStackDepth - 1].second();
 
-        /* Otherwise check against the clip rect */
-        } else {
-            parentMin = clipStack[clipStackDepth - 1].first();
-            parentMax = clipStack[clipStackDepth - 1].second();
-
-            /* The node is visible if the clip rects overlap at least a bit.
-               Logic follows Math::intersects() for Range. */
-            /** @todo can't test & intersection calculation be done as a single
-                operation? */
-            visible = (parentMax > min).all() &&
-                      (parentMin < max).all();
-        }
+        /* The node is visible if the clip rects overlap at least a bit. Logic
+           follows Math::intersects() for Range. */
+        /** @todo can't test & intersection calculation be done as a single
+            operation? */
+        bool visible = (parentMax > min).all() &&
+                       (parentMin < max).all();
 
         /* If the node is a clipping node, decide about a clip rect for its
            children */
@@ -641,26 +645,10 @@ UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vect
             /* For a visible node, put the clip rect intersection onto the
                stack for children nodes */
             if(visible) {
-                /* If there's a parent clip rect, calculate the clip rect
-                   intersection. Logic follows Math::intersect() for Range. */
-                if(clipStackDepth == 0) {
-                    clipStack[clipStackDepth].first() = min;
-                    clipStack[clipStackDepth].second() = max;
-                } else {
-                    /* GCC in a Release build spits out a useless "maybe
-                       uninitialized" warning due to the NoInit even though it
-                       cannot happen -- the variables *are* initialized if
-                       `visible && clipStackDepth != 0`. */
-                    #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG)
-                    #pragma GCC diagnostic push
-                    #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-                    #endif
-                    clipStack[clipStackDepth].first() = Math::max(parentMin, min);
-                    clipStack[clipStackDepth].second() = Math::min(parentMax, max);
-                    #if defined(CORRADE_TARGET_GCC) && !defined(CORRADE_TARGET_CLANG)
-                    #pragma GCC diagnostic pop
-                    #endif
-                }
+                /* Calculate the clip rect intersection. Logic follows
+                   Math::intersect() for Range. */
+                clipStack[clipStackDepth].first() = Math::max(parentMin, min);
+                clipStack[clipStackDepth].second() = Math::min(parentMax, max);
 
                 /* If the previous clip rect affected no nodes, replace it,
                    otherwise move to the next one. */
@@ -725,13 +713,16 @@ UnsignedInt cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vect
             CORRADE_INTERNAL_DEBUG_ASSERT(clipRectNodeCounts[clipRectsOffset]);
             ++clipRectsOffset;
 
-            /* If there's no clip rect available, use the "none" rect */
-            if(!clipStackDepth) {
+            /* If there's no non-implicit clip rect available, use the "none"
+               rect */
+            if(clipStackDepth == 1) {
                 clipRectOffsets[clipRectsOffset] = {};
                 clipRectSizes[clipRectsOffset] = {};
 
             /* Otherwise go back to the parent clip rect */
             } else {
+                CORRADE_INTERNAL_DEBUG_ASSERT(clipStackDepth > 1);
+
                 clipRectOffsets[clipRectsOffset] =
                     clipStack[clipStackDepth - 1].first();
                 clipRectSizes[clipRectsOffset] =
