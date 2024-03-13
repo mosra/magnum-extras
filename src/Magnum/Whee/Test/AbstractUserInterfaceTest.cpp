@@ -9539,7 +9539,7 @@ void AbstractUserInterfaceTest::drawRendererTransitions() {
     Layer& layerWithBlending = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), LayerFeature::DrawUsesBlending, called));
 
     NodeHandle topLevel = ui.createNode({}, {100, 50});
-    NodeHandle topLevelChild = ui.createNode(topLevel, {}, {0, 50});
+    NodeHandle topLevelChild = ui.createNode(topLevel, {}, {50, 50});
     NodeHandle topLevelHidden = ui.createNode(topLevel, {}, {50, 50}, NodeFlag::Hidden);
     /* Composited & drawn first, transitioning from Initial, enabling
        scissor for the draw but not compositing */
@@ -9553,7 +9553,7 @@ void AbstractUserInterfaceTest::drawRendererTransitions() {
     NodeHandle anotherTopLevel = ui.createNode({0, 50}, {100, 50});
     /* This one gets drawn third, with no transition */
     layerWithBlendingScissor.create(anotherTopLevel);
-    NodeHandle anotherTopLevelChild = ui.createNode(anotherTopLevel, {}, {0, 50});
+    NodeHandle anotherTopLevelChild = ui.createNode(anotherTopLevel, {}, {50, 50});
     /* Drawn fourth, transitioning to Scissor no longer enabled */
     layerWithBlending.create(anotherTopLevelChild);
 
