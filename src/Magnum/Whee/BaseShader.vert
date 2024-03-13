@@ -75,11 +75,14 @@ void main() {
     #ifndef NO_OUTLINE_WIDTH
     /* Calculate the outline quad size here already to save a vec4 load in each
        fragment shader invocation */
-    mediump vec4 combinedOutlineWidth = styles[interpolatedStyle].outlineWidth + outlineWidth;
+    mediump vec4 combinedOutlineWidth = styles[style].outlineWidth + outlineWidth;
     outlineQuadSize = vec4(-halfQuadSize + combinedOutlineWidth.xy,
                            +halfQuadSize - combinedOutlineWidth.zw);
     #endif
-    interpolatedColor = color;
+    /* Calculate the gradient here already to save two vec4 loads in each
+       fragment shader invocation */
+    interpolatedColor = (centerDistance.y > 0.0 ? styles[style].bottomColor :
+                                                  styles[style].topColor)*color;
     normalizedQuadPosition = sign(centerDistance);
     #ifdef TEXTURED
     interpolatedTextureCoordinates = textureCoordinates;
