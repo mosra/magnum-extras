@@ -64,7 +64,7 @@ uniform lowp sampler2D backgroundBlurTextureData;
 flat in mediump uint interpolatedStyle;
 flat in mediump vec2 halfQuadSize;
 #ifndef NO_OUTLINE
-flat in mediump vec4 interpolatedOutlineWidth;
+flat in mediump vec4 outlineQuadSize;
 #endif
 in mediump vec4 interpolatedColor;
 in mediump vec2 normalizedQuadPosition; /* -1 to +1 in both coordinates */
@@ -110,11 +110,6 @@ void main() {
     #ifndef NO_OUTLINE
     lowp float outlineDist;
     {
-        mediump vec4 outlineWidth = styles[interpolatedStyle].outlineWidth + interpolatedOutlineWidth;
-        mediump vec4 outlineQuadSize = vec4(
-            -halfQuadSize + outlineWidth.xy,
-            +halfQuadSize - outlineWidth.zw);
-
         #ifndef NO_ROUNDED_CORNERS
         /* Outline rounded corner centers */
         mediump vec4 radius = styles[interpolatedStyle].outlineCornerRadius;
