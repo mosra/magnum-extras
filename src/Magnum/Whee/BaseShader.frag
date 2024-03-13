@@ -141,10 +141,7 @@ void main() {
     #endif
 
     /* Gradient, optionally textured */
-    lowp vec4 gradientColor = mix(
-        styles[interpolatedStyle].topColor,
-        styles[interpolatedStyle].bottomColor,
-        (normalizedQuadPosition.y + 1.0)*0.5)*interpolatedColor;
+    lowp vec4 gradientColor = interpolatedColor;
     #ifdef TEXTURED
     gradientColor *= texture(textureData, interpolatedTextureCoordinates);
     #endif
