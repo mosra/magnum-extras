@@ -56,9 +56,17 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     UnsignedInt dynamicStyleCount;
+    BaseLayerGL::Shared::Flags flags;
 } FragmentData[]{
-    {"", 0},
-    {"dynamic styles", 1}
+    {"", 0, {}},
+    {"dynamic styles", 1, {}},
+    {"no rounded corners", 0,
+        BaseLayerGL::Shared::Flag::NoRoundedCorners},
+    {"no outline", 0,
+        BaseLayerGL::Shared::Flag::NoOutline},
+    {"no rounded corners or outline", 0,
+        BaseLayerGL::Shared::Flag::NoRoundedCorners|
+        BaseLayerGL::Shared::Flag::NoOutline},
 };
 
 BaseLayerGLBenchmark::BaseLayerGLBenchmark() {
@@ -108,6 +116,7 @@ void BaseLayerGLBenchmark::fragment() {
 
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}
         .setDynamicStyleCount(data.dynamicStyleCount)
+        .setFlags(data.flags)
     };
     shared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
