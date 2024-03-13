@@ -1531,20 +1531,23 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
 
         /* Several nested children */
         {7, 10},
-            {11, 1}, /* Zero size, so gets skipped and its child also */
+            {11, 1}, /* Zero size, so gets skipped and its child also (if
+                        it clips) */
                 {14, 0},
-            {13, 0}, /* Zero width */
-            {12, 0}, /* Zero height */
+            {13, 0}, /* Zero width, skipped if clips */
+            {12, 0}, /* Zero height, skipped if clips */
             {2, 5},
-                {0, 1}, /* Visible in 2 but not in 7 */
+                {0, 1}, /* Visible in 2 but not in 7, skipped if 7 clips */
                     /* Extends back to 7 but still gets skipped without testing
-                       because it's fully clipped by 0 */
+                       because it's fully clipped by 0 (if it clips) */
                     {6, 0},
                 {10, 0},
-                {1, 1}, /* Visible in the top-level rect but not the parent */
-                    {4, 0}, /* Gets skipped without testing */
+                {1, 1}, /* Visible in the top-level rect but not the parent,
+                           skipped if clips */
+                    {4, 0}, /* If parent clips, gets skipped without testing */
 
-        /* Two invisible children */
+        /* Two children are outside of the node rect, get skipped if the node
+           clips */
         {5, 2},
             {9, 0},
             {8, 0},
