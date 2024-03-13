@@ -121,7 +121,8 @@ struct BaseLayerCommonStyleUniform {
      *
      * In layout units, i.e. setting the value to @cpp 1.0f @ce will make the
      * smoothing extend 1 layout unit on each side of the edge. Default value
-     * is @cpp 0.0f @ce.
+     * is @cpp 0.0f @ce. Not used if @ref BaseLayer::Shared::Flag::NoOutline is
+     * enabled.
      */
     Float innerOutlineSmoothness;
 
@@ -341,7 +342,7 @@ struct BaseLayerStyleUniform {
      * Default value is @cpp 0xffffffff_srgbf @ce. Visible only if
      * @ref outlineWidth is non-zero on at least one side or if the difference
      * between @ref cornerRadius and @ref innerOutlineCornerRadius makes it
-     * show.
+     * show. Not used if @ref BaseLayer::Shared::Flag::NoOutline is enabled.
      */
     Color4 outlineColor;
 
@@ -349,7 +350,8 @@ struct BaseLayerStyleUniform {
      * @brief Outline width
      *
      * In order left, top, right, bottom. Default value is @cpp 0.0f @ce for
-     * all sides.
+     * all sides. Not used if @ref BaseLayer::Shared::Flag::NoOutline is
+     * enabled.
      */
     Vector4 outlineWidth;
 
@@ -357,7 +359,8 @@ struct BaseLayerStyleUniform {
      * @brief Corner radius
      *
      * In order top left, bottom left, top right, bottom right. Default value
-     * is @cpp 0.0f @ce for all sides.
+     * is @cpp 0.0f @ce for all sides. Not used if
+     * @ref BaseLayer::Shared::Flag::NoRoundedCorners is enabled.
      */
     Vector4 cornerRadius;
 
@@ -365,7 +368,9 @@ struct BaseLayerStyleUniform {
      * @brief Inner outline corner radius
      *
      * In order top left, bottom left, top right, bottom right. Default value
-     * is @cpp 0.0f @ce for all sides.
+     * is @cpp 0.0f @ce for all sides. Not used if
+     * @ref BaseLayer::Shared::Flag::NoOutline or
+     * @relativeref{BaseLayer::Shared,Flag::NoRoundedCorners} is enabled.
      */
     Vector4 innerOutlineCornerRadius;
 };
@@ -682,7 +687,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * right, bottom and is added to
          * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
          * specified in @ref create() already, the custom outline width is a
-         * zero vector, i.e. not affecting the style in any way.
+         * zero vector, i.e. not affecting the style in any way. Has no visual
+         * effect if @ref BaseLayer::Shared::Flag::NoOutline is enabled.
          *
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const
@@ -695,7 +701,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid. The @p width is added to
          * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
          * specified in @ref create() already, the custom outline width is
-         * zero, i.e. not affecting the style in any way.
+         * zero, i.e. not affecting the style in any way. Has no visual effect
+         * if @ref BaseLayer::Shared::Flag::NoOutline is enabled.
          *
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const
@@ -921,7 +928,38 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha to achieve
              * additional effects.
              */
-            BackgroundBlur = 1 << 1
+            BackgroundBlur = 1 << 1,
+
+            /**
+             * Disable support for rounded corners. If set, the
+             * @ref BaseLayerStyleUniform::cornerRadius and
+             * @relativeref{BaseLayerStyleUniform,innerOutlineCornerRadius}
+             * fields are not used and the behavior is the same as if they were
+             * both set to @cpp 0.0f @ce. Can result in rendering performance
+             * improvement, useful for example when @ref Flag::Textured is
+             * enabled and the layer is used just to draw (alpha blended)
+             * images, or if a particular widget style doesn't use rounded
+             * corners at all.
+             * @see @ref Flag::NoOutline
+             */
+            NoRoundedCorners = 1 << 2,
+
+            /**
+             * Disable support for rounded corners. If set, the
+             * @ref BaseLayerCommonStyleUniform::innerOutlineSmoothness,
+             * @ref BaseLayerStyleUniform::outlineColor,
+             * @relativeref{BaseLayerStyleUniform,outlineWidth} and
+             * @relativeref{BaseLayerStyleUniform,innerOutlineCornerRadius}
+             * fields are not used and @ref BaseLayer::setOutlineWidth() has no
+             * effect. The behavior is then the same as if the outline width
+             * was set to @cpp 0.0f @ce on all sides both in the style and for
+             * all data. Can result in rendering performance improvement,
+             * useful for example when @ref Flag::Textured is enabled and the
+             * layer is used just to draw (alpha blended) images, or if a
+             * particular widget style doesn't use outlines at all.
+             * @see @ref Flag::NoRoundedCorners
+             */
+            NoOutline = 1 << 3
         };
 
         /**

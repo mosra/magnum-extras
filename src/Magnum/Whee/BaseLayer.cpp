@@ -49,6 +49,8 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
         #define _c(value) case BaseLayer::Shared::Flag::value: return debug << "::" #value;
         _c(Textured)
         _c(BackgroundBlur)
+        _c(NoRoundedCorners)
+        _c(NoOutline)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -59,7 +61,9 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
 Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flags value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::BaseLayer::Shared::Flags{}", {
         BaseLayer::Shared::Flag::Textured,
-        BaseLayer::Shared::Flag::BackgroundBlur
+        BaseLayer::Shared::Flag::BackgroundBlur,
+        BaseLayer::Shared::Flag::NoRoundedCorners,
+        BaseLayer::Shared::Flag::NoOutline
     });
 }
 
