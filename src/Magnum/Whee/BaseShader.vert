@@ -23,6 +23,24 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+struct StyleEntry {
+    lowp vec4 topColor;
+    lowp vec4 bottomColor;
+    lowp vec4 outlineColor;
+    mediump vec4 outlineWidth; /* left, top, right, bottom */
+    mediump vec4 cornerRadius; /* top left, bottom left, top right, bottom right */
+    mediump vec4 outlineCornerRadius;
+};
+
+layout(std140
+    #ifdef EXPLICIT_BINDING
+    , binding = 0
+    #endif
+) uniform Style {
+    lowp vec4 smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved;
+    StyleEntry styles[STYLE_COUNT];
+};
+
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
@@ -41,7 +59,7 @@ layout(location = 5) in mediump vec3 textureCoordinates;
 
 flat out mediump uint interpolatedStyle;
 flat out mediump vec2 halfQuadSize;
-flat out mediump vec4 interpolatedOutlineWidth;
+flat out mediump vec4 outlineQuadSize;
 out lowp vec4 interpolatedColor;
 out mediump vec2 normalizedQuadPosition;
 #ifdef TEXTURED
@@ -55,7 +73,11 @@ void main() {
     interpolatedStyle = style;
     halfQuadSize = abs(centerDistance);
     #ifndef NO_OUTLINE
-    interpolatedOutlineWidth = outlineWidth;
+    /* Calculate the outline quad size here already to save a vec4 load in each
+       fragment shader invocation */
+    mediump vec4 combinedOutlineWidth = styles[style].outlineWidth + outlineWidth;
+    outlineQuadSize = vec4(-halfQuadSize + combinedOutlineWidth.xy,
+                           +halfQuadSize - combinedOutlineWidth.zw);
     #endif
     interpolatedColor = color;
     normalizedQuadPosition = sign(centerDistance);
