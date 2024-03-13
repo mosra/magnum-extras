@@ -111,56 +111,61 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     const char* filename;
+    BaseLayerGL::Shared::Flags flags;
     BaseLayerCommonStyleUniform styleUniformCommon;
     BaseLayerStyleUniform styleUniform;
 } RenderData[]{
-    {"default", "default.png",
+    {"default", "default.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}},
-    {"gradient", "gradient.png",
+    {"default, smooth", "default-smooth.png", {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}},
+    {"gradient", "gradient.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
-    {"rounded corners, all same, default smoothness", "rounded-corners-same-hard.png",
+    {"rounded corners, all same, default smoothness", "rounded-corners-same-hard.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setCornerRadius(24.0f)},
-    {"rounded corners, all same", "rounded-corners-same.png",
+    {"rounded corners, all same", "rounded-corners-same.png", {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
             .setCornerRadius(24.0f)},
-    {"rounded corners, different", "rounded-corners-different.png",
+    {"rounded corners, different", "rounded-corners-different.png", {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
             /* Top left, bottom left, top right, bottom right; one radius is
                more than half of the height, one is zero */
             .setCornerRadius({4.0f, 44.0f, 24.0f, 0.0f})},
-    {"outline, default color", "default.png",
+    {"outline, default color", "default.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setOutlineWidth(8.0f)},
-    {"outline, all sides same", "outline-same.png",
+    {"outline, all sides same", "outline-same.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setOutlineWidth(8.0f)},
-    {"outline, different", "outline-different.png",
+    {"outline, different", "outline-different.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             /* Left, top, right, bottom; one side is going over the center,
                one is zero */
             .setOutlineWidth({8.0f, 4.0f, 0.0f, 32.0f})},
-    {"outline, rounded corners inside", "outline-rounded-corners-inside.png",
+    {"outline, rounded corners inside", "outline-rounded-corners-inside.png", {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
-    {"outline, rounded corners, different", "outline-rounded-corners-both-different.png",
+    {"outline, rounded corners, different", "outline-rounded-corners-both-different.png", {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -173,7 +178,7 @@ const struct {
             .setInnerOutlineCornerRadius({18.0f, 6.0f, 0.0f, 18.0f})
             /* Left, top, right, bottom  */
             .setOutlineWidth({18.0f, 8.0f, 0.0f, 4.0f})},
-    {"outline, rounded corners, different inner and outer smoothness", "outline-rounded-corners-different-smoothness.png",
+    {"outline, rounded corners, different inner and outer smoothness", "outline-rounded-corners-different-smoothness.png", {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f, 8.0f),
         BaseLayerStyleUniform{}
@@ -181,22 +186,56 @@ const struct {
             .setCornerRadius(16.0f)
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
-    {"outline with gradient", "outline-gradient.png",
+    {"outline with gradient", "outline-gradient.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f)},
+    {"outline, rounded corners inside, no rounded corners", "outline-same.png",
+        BaseLayerGL::Shared::Flag::NoRoundedCorners,
+        BaseLayerCommonStyleUniform{},
+            /* Smoothness omitted to match the other image */
+        BaseLayerStyleUniform{}
+            .setOutlineColor(0x7f7f7f_rgbf)
+            .setInnerOutlineCornerRadius(8.0f)
+            .setOutlineWidth(8.0f)},
+    {"outline, rounded corners, different inner and outer smoothness, no outline", "rounded-corners-same.png",
+        BaseLayerGL::Shared::Flag::NoOutline,
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f, 8.0f),
+        BaseLayerStyleUniform{}
+            .setOutlineColor(0x7f7f7f_rgbf)
+            /* Increased from 16 to match the other image */
+            .setCornerRadius(24.0f)
+            .setInnerOutlineCornerRadius(8.0f)
+            .setOutlineWidth(8.0f)},
+    {"outline, rounded corners, different inner and outer smoothness, no rounded corners, no outline", "default-smooth.png",
+        BaseLayerGL::Shared::Flag::NoRoundedCorners|BaseLayerGL::Shared::Flag::NoOutline,
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f, 8.0f),
+        BaseLayerStyleUniform{}
+            .setOutlineColor(0x7f7f7f_rgbf)
+            .setCornerRadius(16.0f)
+            .setInnerOutlineCornerRadius(8.0f)
+            .setOutlineWidth(8.0f)},
 };
 
 const struct {
     const char* name;
+    const char* filename;
     bool setLater;
     bool partialUpdate;
+    BaseLayerGL::Shared::Flags flags;
 } RenderCustomColorOutlineWidthData[]{
-    {"", false, false},
-    {"set later", true, false},
-    {"set later, partial update", true, true},
+    {"", "outline-same.png",
+        false, false, {}},
+    {"set later", "outline-same.png",
+        true, false, {}},
+    {"set later, partial update", "outline-same.png",
+        true, true, {}},
+    {"no outline", "default.png",
+        false, false, BaseLayerGL::Shared::Flag::NoOutline}
 };
 
 const struct {
@@ -708,7 +747,9 @@ void BaseLayerGLTest::render() {
     };
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{
         UnsignedInt(Containers::arraySize(styleUniforms)),
-        UnsignedInt(Containers::arraySize(styleToUniform))}};
+        UnsignedInt(Containers::arraySize(styleToUniform))}
+            .setFlags(data.flags)
+    };
     /* The (lack of any) effect of padding on rendered output is tested
        thoroughly in renderPadding() */
     layerShared.setStyle(data.styleUniformCommon,
@@ -800,14 +841,17 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
     auto&& data = RenderCustomColorOutlineWidthData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    /* Basically the same as the "outline, all sides same" case in render(),
-       except that the width is additionally taken from the per-vertex data as
-       well */
+    /* Like the "outline, all sides same" case in render(), except that the
+       width is additionally taken from the per-vertex data as well. And tests
+       that the custom outline specified in the data isn't taken into account
+       in any way when outlines are disabled. */
 
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}
+        .setFlags(data.flags)
+    };
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
@@ -851,7 +895,7 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/outline-same.png"),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
         DebugTools::CompareImageToFile{_manager});
 }
 
