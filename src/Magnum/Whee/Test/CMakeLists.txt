@@ -245,6 +245,11 @@ if(MAGNUM_BUILD_GL_TESTS)
         endif()
     endif()
 
+    corrade_add_test(WheeTextLayerGLBenchmark TextLayerGLBenchmark.cpp
+        LIBRARIES
+            MagnumWhee
+            Magnum::OpenGLTester)
+
     corrade_add_test(WheeUserInterfaceGLTest UserInterfaceGLTest.cpp
         LIBRARIES
             MagnumWheeTestLib
