@@ -116,12 +116,12 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
     });
 
     GL::Shader vert{version, GL::Shader::Type::Vertex};
-    vert.addSource(rs.getString("compatibility.glsl"_s))
+    vert.addSource(Utility::format("#define STYLE_COUNT {}\n", styleCount))
+        .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("TextShader.vert"_s));
 
     GL::Shader frag{version, GL::Shader::Type::Fragment};
-    frag.addSource(Utility::format("#define STYLE_COUNT {}\n", styleCount))
-        .addSource(rs.getString("compatibility.glsl"_s))
+    frag.addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("TextShader.frag"_s));
 
     CORRADE_INTERNAL_ASSERT(vert.compile() && frag.compile());
