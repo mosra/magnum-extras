@@ -23,6 +23,22 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+struct StyleEntry {
+    lowp vec4 color;
+};
+
+layout(std140
+    #ifdef EXPLICIT_BINDING
+    , binding = 0
+    #endif
+) uniform Style {
+    /* Reserved so users set up the style data from a placeholder
+       TextLayerStyleCommon and TextLayerStyleItem[] instead of just items
+       alone, which would make future code adapting rather error-prone */
+    lowp vec4 reserved;
+    StyleEntry styles[STYLE_COUNT];
+};
+
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
@@ -35,12 +51,12 @@ layout(location = 3) in mediump uint style;
 
 out mediump vec3 interpolatedTextureCoordinates;
 out lowp vec4 interpolatedColor;
-flat out mediump uint interpolatedStyle;
 
 void main() {
     interpolatedTextureCoordinates = textureCoordinates;
-    interpolatedColor = color;
-    interpolatedStyle = style;
+    /* Calculate the combined color here already to save a vec4 load in each
+       fragment shader invocation */
+    interpolatedColor = styles[style].color*color;
 
     gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
 }
