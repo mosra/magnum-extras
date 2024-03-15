@@ -49,8 +49,8 @@ layout(location = 1) in mediump vec3 textureCoordinates;
 layout(location = 2) in lowp vec4 color;
 layout(location = 3) in mediump uint style;
 
-out mediump vec3 interpolatedTextureCoordinates;
-out lowp vec4 interpolatedColor;
+NOPERSPECTIVE out mediump vec3 interpolatedTextureCoordinates;
+NOPERSPECTIVE out lowp vec4 interpolatedColor;
 
 void main() {
     interpolatedTextureCoordinates = textureCoordinates;

@@ -28,8 +28,8 @@ layout(binding = 0)
 #endif
 uniform lowp sampler2D glyphTextureData;
 
-in mediump vec3 interpolatedTextureCoordinates;
-in lowp vec4 interpolatedColor;
+NOPERSPECTIVE in mediump vec3 interpolatedTextureCoordinates;
+NOPERSPECTIVE in lowp vec4 interpolatedColor;
 
 out lowp vec4 fragmentColor;
 
