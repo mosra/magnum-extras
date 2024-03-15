@@ -23,22 +23,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-struct StyleEntry {
-    lowp vec4 color;
-};
-
-layout(std140
-    #ifdef EXPLICIT_BINDING
-    , binding = 0
-    #endif
-) uniform Style {
-    /* Reserved so users set up the style data from a placeholder
-       TextLayerStyleCommon and TextLayerStyleItem[] instead of just items
-       alone, which would make future code adapting rather error-prone */
-    lowp vec4 reserved;
-    StyleEntry styles[STYLE_COUNT];
-};
-
 #ifdef EXPLICIT_BINDING
 layout(binding = 0)
 #endif
@@ -46,10 +30,9 @@ uniform lowp sampler2D glyphTextureData;
 
 in mediump vec3 interpolatedTextureCoordinates;
 in lowp vec4 interpolatedColor;
-flat in mediump uint interpolatedStyle;
 
 out lowp vec4 fragmentColor;
 
 void main() {
-    fragmentColor = styles[interpolatedStyle].color*interpolatedColor*texture(glyphTextureData, interpolatedTextureCoordinates.xy).r;
+    fragmentColor = interpolatedColor*texture(glyphTextureData, interpolatedTextureCoordinates.xy).r;
 }
