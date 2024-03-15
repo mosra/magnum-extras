@@ -60,13 +60,13 @@ layout(location = 5) in mediump vec3 textureCoordinates;
 flat out mediump uint interpolatedStyle;
 flat out mediump vec2 halfQuadSize;
 flat out mediump vec4 outlineQuadSize;
-out lowp vec4 interpolatedColor;
-out mediump vec2 interpolatedCenterDistance;
+NOPERSPECTIVE out lowp vec4 interpolatedColor;
+NOPERSPECTIVE out mediump vec2 interpolatedCenterDistance;
 #ifdef TEXTURED
-out mediump vec3 interpolatedTextureCoordinates;
+NOPERSPECTIVE out mediump vec3 interpolatedTextureCoordinates;
 #endif
 #ifdef BACKGROUND_BLUR
-out highp vec2 backgroundBlurTextureCoordinates;
+NOPERSPECTIVE out highp vec2 backgroundBlurTextureCoordinates;
 #endif
 
 void main() {
