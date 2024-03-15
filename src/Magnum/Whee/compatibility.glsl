@@ -42,3 +42,14 @@
         #define EXPLICIT_UNIFORM_LOCATION
     #endif
 #endif
+
+/* This is added compared to Magnum/Shaders/compatibility.glsl. Since UI is 2D,
+   noperspective is useful a lot, and it helps quite significantly. */
+#if defined(GL_ES) && defined(GL_NV_shader_noperspective_interpolation)
+    #extension GL_NV_shader_noperspective_interpolation: require
+#endif
+#if !defined(GL_ES) || defined(GL_NV_shader_noperspective_interpolation)
+    #define NOPERSPECTIVE noperspective
+#else
+    #define NOPERSPECTIVE
+#endif
