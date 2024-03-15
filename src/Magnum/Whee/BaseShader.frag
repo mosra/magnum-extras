@@ -66,13 +66,13 @@ flat in mediump vec2 halfQuadSize;
 #ifndef NO_OUTLINE
 flat in mediump vec4 outlineQuadSize;
 #endif
-in mediump vec4 interpolatedColor;
-in mediump vec2 interpolatedCenterDistance;
+NOPERSPECTIVE in mediump vec4 interpolatedColor;
+NOPERSPECTIVE in mediump vec2 interpolatedCenterDistance;
 #ifdef TEXTURED
-in mediump vec3 interpolatedTextureCoordinates;
+NOPERSPECTIVE in mediump vec3 interpolatedTextureCoordinates;
 #endif
 #ifdef BACKGROUND_BLUR
-in highp vec2 backgroundBlurTextureCoordinates;
+NOPERSPECTIVE in highp vec2 backgroundBlurTextureCoordinates;
 #endif
 
 out lowp vec4 fragmentColor;
