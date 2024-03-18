@@ -1891,7 +1891,13 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 const Layer& layerItem = state.layers[i];
 
                 if(const AbstractLayer* const instance = layerItem.used.instance.get()) {
-                    const bool isDrawing = layerItem.used.features >= LayerFeature::Draw;
+                    /* The `state.dataToDrawOffsets` etc views that are sliced
+                       below are filled only for the layers that support
+                       LayerFeature::Draw, and are sized to separately draw all
+                       top level nodes. Thus, if there are no top level nodes,
+                       nothing is drawn, the views are empty and so we
+                       shouldn't attempt to slice them. */
+                    const bool isDrawingAnything = visibleTopLevelNodeCount && layerItem.used.features >= LayerFeature::Draw;
 
                     const Containers::Pair<UnsignedInt, UnsignedInt> out = Implementation::orderVisibleNodeDataInto(
                         state.visibleNodeIds,
@@ -1908,22 +1914,23 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         state.dataToUpdateClipRectDataCounts,
                         offset,
                         clipRectOffset,
-                        /* If the layer has LayerFeature::Draw, it also
+                        /* If the layer has LayerFeature::Draw and there are
+                           actually some top-level nodes to be drawn, it also
                            populates the draw call list for all top-level
                            nodes. This has to be interleaved with other layers
                            (thus the every() "sparsening") in order to be first
                            by the top-level node and then by layer. If the
                            layer doesn't draw anything, these aren't used. */
-                        isDrawing ? stridedArrayView(state.dataToDrawOffsets)
+                        isDrawingAnything ? stridedArrayView(state.dataToDrawOffsets)
                             .exceptPrefix(drawLayerOrder[i])
                             .every(drawLayerCount) : nullptr,
-                        isDrawing ? stridedArrayView(state.dataToDrawSizes)
+                        isDrawingAnything ? stridedArrayView(state.dataToDrawSizes)
                             .exceptPrefix(drawLayerOrder[i])
                             .every(drawLayerCount) : nullptr,
-                        isDrawing ? stridedArrayView(state.dataToDrawClipRectOffsets)
+                        isDrawingAnything ? stridedArrayView(state.dataToDrawClipRectOffsets)
                             .exceptPrefix(drawLayerOrder[i])
                             .every(drawLayerCount) : nullptr,
-                        isDrawing ? stridedArrayView(state.dataToDrawClipRectSizes)
+                        isDrawingAnything ? stridedArrayView(state.dataToDrawClipRectSizes)
                             .exceptPrefix(drawLayerOrder[i])
                             .every(drawLayerCount) : nullptr);
                     offset = out.first();
@@ -1933,7 +1940,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                        next interleaved position for the next. Also save the
                        matching layer index to have the draw information
                        complete. */
-                    if(isDrawing) {
+                    if(isDrawingAnything) {
                         for(UnsignedByte& j: stridedArrayView(state.dataToDrawLayerIds)
                             .exceptPrefix(drawLayerOrder[i])
                             .every(drawLayerCount)
