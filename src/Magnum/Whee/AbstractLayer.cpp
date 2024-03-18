@@ -271,6 +271,16 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
        clean() below *unsets* NeedsClean instead of setting it. */
 }
 
+void AbstractLayer::setSize(const Vector2& size, const Vector2i& framebufferSize) {
+    CORRADE_ASSERT(features() & LayerFeature::Draw,
+        "Whee::AbstractLayer::setSize():" << LayerFeature::Draw << "not supported", );
+    CORRADE_ASSERT(size.product() && framebufferSize.product(),
+        "Whee::AbstractLayer::setSize(): expected non-zero sizes, got" << size << "and" << framebufferSize, );
+    doSetSize(size, framebufferSize);
+}
+
+void AbstractLayer::doSetSize(const Vector2&, const Vector2i&) {}
+
 void AbstractLayer::clean(const Containers::BitArrayView dataIdsToRemove) {
     CORRADE_ASSERT(dataIdsToRemove.size() == _state->data.size(),
         "Whee::AbstractLayer::clean(): expected" << _state->data.size() << "bits but got" << dataIdsToRemove.size(), );
