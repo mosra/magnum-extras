@@ -25,6 +25,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/Utility/Algorithms.h>
@@ -259,14 +260,14 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
    `dataToDrawLayerIds[j]`, with their total count being the return value of
    this function.
 
-   The `nodeIdsToVisibleNodes` and `previousDataToUpdateLayerOffsets` arrays
-   are temporary storage. The `visibleNodeDataOffsets` and
+   The `visibleNodeMask` and `previousDataToUpdateLayerOffsets` arrays are
+   temporary storage. The `visibleNodeMask`, `visibleNodeDataOffsets` and
    `dataToUpdateLayerOffsets` arrays are expected to be zero-initialized. */
-UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::StridedArrayView1D<const DataHandle>& data, const Containers::StridedArrayView1D<const LayerHandle>& layersNext, const LayerHandle firstLayer, const Containers::StridedArrayView1D<const LayerFeatures>& layerFeatures, const Containers::ArrayView<UnsignedInt> nodeIdsToVisibleNodes, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<DataHandle> visibleNodeData, const Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets, const Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateNodeIds, const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
+UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::StridedArrayView1D<const DataHandle>& data, const Containers::StridedArrayView1D<const LayerHandle>& layersNext, const LayerHandle firstLayer, const Containers::StridedArrayView1D<const LayerFeatures>& layerFeatures, const Containers::MutableBitArrayView visibleNodeMask, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<DataHandle> visibleNodeData, const Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets, const Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateNodeIds, const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
     CORRADE_INTERNAL_ASSERT(
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
         data.size() == dataNodes.size() &&
-        visibleNodeDataOffsets.size() == visibleNodeIds.size() + 1 &&
+        visibleNodeDataOffsets.size() == visibleNodeMask.size() + 1 &&
         visibleNodeData.size() == dataNodes.size() &&
         dataToUpdateLayerOffsets.size() == layersNext.size() + 1 &&
         previousDataToUpdateLayerOffsets.size() == layersNext.size() + 1 &&
@@ -287,30 +288,25 @@ UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const 
         return 0;
     }
 
-    /* Create an inverse map from node ID to the `visibleNodeIds` array. Nodes
-       that are not present in the array (not included in the draw order, or
-       invalid handles) and hidden nodes stay marked with ~UnsignedInt{}. */
-    /** @todo Utility::fill() */
-    for(UnsignedInt& i: nodeIdsToVisibleNodes)
-        i = ~UnsignedInt{};
-    for(std::size_t i = 0; i != visibleNodeIds.size(); ++i) {
-        CORRADE_INTERNAL_DEBUG_ASSERT(visibleNodeIds[i] < nodeIdsToVisibleNodes.size());
-        nodeIdsToVisibleNodes[visibleNodeIds[i]] = i;
-    }
+    /* Create a bitmask for all visible nodes IDs. Nodes that are not present
+       in the array (not included in the draw order, or invalid handles) and
+       hidden nodes stay with the bits set to zero. */
+    for(const UnsignedInt& i: visibleNodeIds)
+        visibleNodeMask.set(i);
 
     /* Count how much data belongs to each visible node, skipping the first
        element ...*/
     for(const NodeHandle node: dataNodes) {
-        const UnsignedInt index = nodeIdsToVisibleNodes[nodeHandleId(node)];
-        if(index != ~UnsignedInt{})
-            ++visibleNodeDataOffsets[index + 1];
+        const UnsignedInt id = nodeHandleId(node);
+        if(visibleNodeMask[id])
+            ++visibleNodeDataOffsets[id + 1];
     }
 
     /* ... then convert the counts to a running offset. Now
        `[visibleNodeDataOffsets[i + 1], visibleNodeDataOffsets[i + 2])` is a
        range in which the `visibleNodeData` array contains a list of data
-       handles for visible node at position `i`. The last element (containing
-       the end offset) is omitted at this step. */
+       handles for visible node with ID `i`. The last element (containing the
+       end offset) is omitted at this step. */
     UnsignedInt visibleNodeDataCount = 0;
     for(UnsignedInt& i: visibleNodeDataOffsets) {
         const UnsignedInt nextOffset = visibleNodeDataCount + i;
@@ -323,14 +319,14 @@ UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const 
        process, thus now
        `[visibleNodeDataOffsets[i], visibleNodeDataOffsets[i + 1])` is a range
        in which the `visibleNodeData` array contains a list of data handles for
-       visible node at position `i`. The last array element is now containing
-       the end offset. */
+       visible node with ID `i`. The last array element is now containing the
+       end offset. */
     for(std::size_t i = 0; i != data.size(); ++i) {
         const DataHandle handle = data[i];
         const NodeHandle node = dataNodes[i];
-        const UnsignedInt index = nodeIdsToVisibleNodes[nodeHandleId(node)];
-        if(index != ~UnsignedInt{})
-            visibleNodeData[visibleNodeDataOffsets[index + 1]++] = handle;
+        const UnsignedInt id = nodeHandleId(node);
+        if(visibleNodeMask[id])
+            visibleNodeData[visibleNodeDataOffsets[id + 1]++] = handle;
     }
 
     /* Count how much data there is for each layer, skipping the first element
@@ -378,7 +374,7 @@ UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const 
         for(UnsignedInt i = 0, iMax = visibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1; i != iMax; ++i) {
             const UnsignedInt visibleNodeId = visibleNodeIds[visibleTopLevelNodeIndex + i];
 
-            for(UnsignedInt j = visibleNodeDataOffsets[visibleTopLevelNodeIndex + i], jMax = visibleNodeDataOffsets[visibleTopLevelNodeIndex + i + 1]; j != jMax; ++j) {
+            for(UnsignedInt j = visibleNodeDataOffsets[visibleNodeId], jMax = visibleNodeDataOffsets[visibleNodeId + 1]; j != jMax; ++j) {
                 const DataHandle handle = visibleNodeData[j];
                 const UnsignedInt offset = dataToUpdateLayerOffsets[dataHandleLayerId(handle) + 1]++;
                 dataToUpdateIds[offset] = dataHandleId(handle);
