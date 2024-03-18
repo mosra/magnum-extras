@@ -89,6 +89,33 @@ class PointerEvent {
         Vector2 position() const { return _position; }
 
         /**
+         * @brief Whether the event is captured on a node
+         *
+         * On a press event is always implicitly @cpp true @ce, on a release
+         * event is @cpp true @ce only if the event happens on a captured node.
+         */
+        bool isCaptured() const { return _captured; }
+
+        /**
+         * @brief Set whether to capture the event on a node
+         *
+         * By default, after a pointer press event, a node captures all
+         * following pointer events until and including a pointer release, even
+         * if they happen outside of the node area.
+         *
+         * If capture is disabled, the events are always sent to the actual
+         * node under the pointer. Which means that for example a node can
+         * receive a pointer press event without a corresponding release later,
+         * or a release alone.
+         *
+         * Calling this function only makes sense on a pointer press event, it
+         * has no effect on a pointer release event.
+         */
+        void setCaptured(bool captured) {
+            _captured = captured;
+        }
+
+        /**
          * @brief Whether the event is accepted
          *
          * Implicitly @cpp false @ce.
@@ -110,6 +137,7 @@ class PointerEvent {
         Vector2 _position;
         Pointer _type;
         bool _accepted = false;
+        bool _captured = false;
 };
 
 }}

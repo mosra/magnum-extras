@@ -444,14 +444,19 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *      be less than @ref capacity() and point to a valid data.
          * @param event             Event data, with
          *      @ref PointerEvent::position() relative to the node to which the
-         *      data is attached
+         *      data is attached. The position is guaranteed to be within the
+         *      area of the node.
          *
          * Implementation for @ref pointerPressEvent(), which is called from
-         * @ref AbstractUserInterface::pointerPressEvent(). It's guaranteed
-         * that @ref doUpdate() was called before this function with up-to-date
-         * data for @p dataId. If the implementation handles the event, it's
-         * expected to call @ref PointerEvent::setAccepted() on it to prevent
-         * it from being propagated further.
+         * @ref AbstractUserInterface::pointerPressEvent(). See its
+         * documentation for more information about pointer event behavior,
+         * especially event capture. It's guaranteed that @ref doUpdate() was
+         * called before this function with up-to-date data for @p dataId.
+         *
+         * If the implementation handles the event, it's expected to call
+         * @ref PointerEvent::setAccepted() on it to prevent it from being
+         * propagated further. To disable implicit pointer event capture, call
+         * @ref PointerEvent::setCaptured().
          *
          * Default implementation does nothing, i.e. the @p event gets
          * implicitly propagated further.
@@ -464,14 +469,20 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *      be less than @ref capacity() and point to a valid data.
          * @param event             Event data, with
          *      @ref PointerEvent::position() relative to the node to which the
-         *      data is attached
+         *      data is attached. If pointer event capture is active, the
+         *      position can be outside of the area of the node.
          *
          * Implementation for @ref pointerReleaseEvent(), which is called from
-         * @ref AbstractUserInterface::pointerReleaseEvent(). It's guaranteed
-         * that @ref doUpdate() was called before this function with up-to-date
-         * data for @p dataId. If the implementation handles the event, it's
-         * expected to call @ref PointerEvent::setAccepted() on it to prevent
-         * it from being propagated further.
+         * @ref AbstractUserInterface::pointerReleaseEvent(). See its
+         * documentation for more information about pointer event behavior,
+         * especially event capture. It's guaranteed that @ref doUpdate() was
+         * called before this function with up-to-date data for @p dataId.
+         *
+         * If the implementation handles the event, it's expected to call
+         * @ref PointerEvent::setAccepted() on it to prevent
+         * it from being propagated further. Pointer capture is implicitly
+         * released after this event, thus calling
+         * @ref PointerEvent::setCaptured() has no effect.
          *
          * Default implementation does nothing, i.e. the @p event gets
          * implicitly propagated further.

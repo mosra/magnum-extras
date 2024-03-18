@@ -807,6 +807,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Partitions node data attachments by the layer and then by draw
          *      order
          * -    Calls @ref AbstractLayer::update() with the partitioned data
+         * -    Resets @ref pointerEventCapturedNode() if the node no longer
+         *      exists or is not visible
          *
          * After calling this function, @ref state() is empty.
          */
@@ -836,31 +838,75 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * any visible event handling node at given position and thus the event
          * should be propagated further.
          *
+         * The node that accepted the event implicitly captures all further
+         * pointer events until and including a @ref pointerReleaseEvent() even
+         * if they happen outside of its area, unless
+         * @ref PointerEvent::setCaptured() is called by the implementation to
+         * disable this behavior. Any node that was already captured when
+         * calling this function is ignored.
+         *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
-         *      @ref PointerEvent::setAccepted(), @ref pointerReleaseEvent()
+         *      @ref PointerEvent::setAccepted(),
+         *      @ref pointerEventCapturedNode()
          */
         bool pointerPressEvent(const Vector2& globalPosition, PointerEvent& event);
 
         /**
          * @brief Handle a pointer release event
          *
-         * Implicitly calls @ref update() and @ref clean(). Finds the
-         * front-most nodes under @p globalPosition and then backtracks to
-         * parent nodes. For each such node calls
-         * @ref AbstractLayer::pointerReleaseEvent() on all data belonging to
-         * layers that support @ref LayerFeature::Event until one of them
-         * accepts the event. For each call the event position is made relative
-         * to the node to which the data is attached. Returns @cpp true @ce if
-         * the event was accepted, @cpp false @ce if it wasn't or there wasn't
-         * any visible event handling node at given position and thus the event
-         * should be propagated further.
+         * Implicitly calls @ref update() and @ref clean().
+         *
+         * If a node was captured by a previous @ref pointerPressEvent(),
+         * @ref pointerReleaseEvent() wasn't called yet and the node wasn't
+         * removed since, calls @ref AbstractLayer::pointerReleaseEvent() on
+         * that node even if it happens outside of its area, with the event
+         * position made relative to the node. Returns @cpp true @ce if the
+         * event was accepted by the captured node, @cpp false @ce if it wasn't
+         * and thus the event should be propagated further. The capture is
+         * implicitly released after calling this function independently of
+         * whether @ref PointerEvent::setCaptured() was set by the
+         * implementation.
+         *
+         * Otherwise, if a node wasn't captured, finds the front-most nodes
+         * under @p globalPosition and then backtracks to parent nodes. For
+         * each such node calls @ref AbstractLayer::pointerReleaseEvent() on
+         * all data belonging to layers that support @ref LayerFeature::Event
+         * until one of them accepts the event. For each call the event
+         * position is made relative to the node to which the data is
+         * attached. Returns @cpp true @ce if the event was accepted,
+         * @cpp false @ce if it wasn't or there wasn't any visible event
+         * handling node at given position and thus the event should be
+         * propagated further.
          *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
-         *      @ref PointerEvent::setAccepted(), @ref pointerPressEvent()
+         *      @ref PointerEvent::setAccepted(),
+         *      @ref pointerEventCapturedNode()
          */
         bool pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event);
+
+        /**
+         * @brief Node captured by last pointer event
+         *
+         * Returns handle of a node that captured the last
+         * @ref pointerPressEvent(). The captured node then receives all
+         * following pointer events until and including a
+         * @ref pointerReleaseEvent(), which implicitly releases the capture
+         * again.
+         *
+         * If no pointer press event was called yet, if the event wasn't
+         * accepted by any node, if the capture was disabled with
+         * @ref PointerEvent::setCaptured() or if a @ref pointerReleaseEvent()
+         * was called since, returns @ref NodeHandle::Null. It also becomes
+         * @ref NodeHandle::Null if the node, any of its parents or data
+         * attached to the node were removed or hidden and @ref update() was
+         * called since.
+         *
+         * The returned handle may be invalid if the node or any of its parents
+         * were removed and @ref update() wasn't called since.
+         */
+        NodeHandle pointerEventCapturedNode() const;
 
     private:
         /* Used by removeNode() and clean() */
@@ -869,9 +915,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         MAGNUM_WHEE_LOCAL void setNodeFlagsInternal(UnsignedInt id, NodeFlags flags);
         /* Used by setNodeOrder() and clearNodeOrder() */
         MAGNUM_WHEE_LOCAL void clearNodeOrderInternal(NodeHandle handle);
-        /* Used by *Event() functions */
-        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL bool callEvent(const Vector2& globalPosition, UnsignedInt visibleNodeIndex, Event& event);
-        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL bool callEvent(const Vector2& globalPosition, Event& event);
+        /* Used by *Event() functions, returns a NodeHandle and a corresponding
+           DataHandle on which an event was accepted */
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL Containers::Pair<NodeHandle, DataHandle> callEvent(const Vector2& globalPosition, UnsignedInt visibleNodeIndex, Event& event);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL Containers::Pair<NodeHandle, DataHandle> callEvent(const Vector2& globalPosition, Event& event);
 
         struct State;
         Containers::Pointer<State> _state;
