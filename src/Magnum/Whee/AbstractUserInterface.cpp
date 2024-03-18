@@ -335,6 +335,8 @@ struct AbstractUserInterface::State {
     Containers::ArrayView<UnsignedByte> dataToDrawLayerIds;
     Containers::ArrayView<UnsignedInt> dataToDrawOffsets;
     Containers::ArrayView<UnsignedInt> dataToDrawSizes;
+    /* Indexed by node ID in order to make it possible to look up node data by
+       node ID, however contains data only for visible nodes */
     Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets;
     Containers::ArrayView<DataHandle> visibleNodeEventData;
     UnsignedInt drawCount = 0;
@@ -1190,7 +1192,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess;
-    Containers::ArrayView<UnsignedInt> nodeIdsToVisibleNodes;
+    Containers::MutableBitArrayView visibleNodeMask;
     Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets;
     Containers::ArrayView<DataHandle> visibleNodeData;
     Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets;
@@ -1199,7 +1201,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
         {NoInit, state.nodes.size(), children},
         {NoInit, state.nodes.size(), parentsToProcess},
-        {NoInit, state.nodes.size(), nodeIdsToVisibleNodes},
+        {ValueInit, state.nodes.size(), visibleNodeMask},
         /* Running data offset (+1) for each item */
         {ValueInit, state.nodes.size() + 1, visibleNodeDataOffsets},
         {NoInit, state.data.size(), visibleNodeData},
@@ -1269,12 +1271,9 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.data.size(), state.dataToDrawOffsets},
             {NoInit, state.data.size(), state.dataToDrawSizes},
             /* Running data offset (+1) for each item */
-            {ValueInit, state.visibleNodeIds.size() + 1, state.visibleNodeEventDataOffsets},
+            {ValueInit, state.nodes.size() + 1, state.visibleNodeEventDataOffsets},
             {NoInit, state.data.size(), state.visibleNodeEventData},
         };
-
-        /* Brittle, ha? */
-        visibleNodeDataOffsets = visibleNodeDataOffsets.prefix(state.visibleNodeIds.size() + 1);
 
         /* 5. Order data assignments of visible nodes so each layer is a
            contiguous range, and inside the layer the order follows the visible
@@ -1287,7 +1286,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::next),
             state.firstLayer,
             stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::features),
-            nodeIdsToVisibleNodes,
+            visibleNodeMask,
             visibleNodeDataOffsets,
             visibleNodeData,
             state.dataToUpdateLayerOffsets,
@@ -1397,7 +1396,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
 
     /* Only if children didn't handle the event, look into this node data */
     const Vector2 position = globalPosition - nodeOffset;
-    for(UnsignedInt j = state.visibleNodeEventDataOffsets[visibleNodeIndex], jMax = state.visibleNodeEventDataOffsets[visibleNodeIndex + 1]; j != jMax; ++j) {
+    for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
         const DataHandle data = state.visibleNodeEventData[j];
         event.setPosition(position);
         ((*state.layers[dataHandleLayerId(data)].used.instance).*function)(dataHandleId(data), event);
