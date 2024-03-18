@@ -53,20 +53,34 @@ struct BaseLayerGLBenchmark: GL::OpenGLTester {
 
 using namespace Math::Literals;
 
+constexpr Vector2i BenchmarkSize{2048, 2048};
+
 const struct {
     const char* name;
     UnsignedInt dynamicStyleCount;
+    Float cornerRadius, outlineWidth;
     BaseLayerGL::Shared::Flags flags;
 } FragmentData[]{
-    {"", 0, {}},
-    {"dynamic styles", 1, {}},
-    {"no rounded corners", 0,
+    {"default",
+        0, 0.0f, 0.0f, {}},
+    {"default, dynamic styles",
+        1, 0.0f, 0.0f, {}},
+    {"no rounded corners",
+        0, 0.0f, 0.0f,
         BaseLayerGL::Shared::Flag::NoRoundedCorners},
-    {"no outline", 0,
+    {"no outline",
+        0, 0.0f, 0.0f,
         BaseLayerGL::Shared::Flag::NoOutline},
-    {"no rounded corners or outline", 0,
+    {"no rounded corners or outline",
+        0, 0.0f, 0.0f,
         BaseLayerGL::Shared::Flag::NoRoundedCorners|
         BaseLayerGL::Shared::Flag::NoOutline},
+    {"just rounded corners",
+        0, BenchmarkSize.x()*0.5f, 0.0f, {}},
+    {"just outline",
+        0, 0.0f, BenchmarkSize.x()*0.5f, {}},
+    {"just rounded corners and outline",
+        0, BenchmarkSize.x()*0.5f, BenchmarkSize.x()*0.5f, {}},
 };
 
 BaseLayerGLBenchmark::BaseLayerGLBenchmark() {
@@ -76,8 +90,6 @@ BaseLayerGLBenchmark::BaseLayerGLBenchmark() {
         &BaseLayerGLBenchmark::teardown,
         BenchmarkType::GpuTime);
 }
-
-constexpr Vector2i BenchmarkSize{2048, 2048};
 
 void BaseLayerGLBenchmark::setup() {
     _color = GL::Texture2D{};
@@ -120,7 +132,12 @@ void BaseLayerGLBenchmark::fragment() {
     };
     shared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
-            .setColor(0xff3366_rgbf)
+            /* Draw either the base or the outline with the desired color to
+               make sure it's doing the expected thing */
+            .setColor(data.outlineWidth ? 0xffffff_rgbf : 0xff3366_rgbf)
+            .setOutlineColor(data.outlineWidth ? 0xff3366_rgbf : 0xffffff_rgbf)
+            .setCornerRadius(data.cornerRadius)
+            .setOutlineWidth(data.outlineWidth)
     }, {});
 
     BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), shared));
