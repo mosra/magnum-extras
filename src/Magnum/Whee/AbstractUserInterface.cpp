@@ -318,6 +318,12 @@ struct AbstractUserInterface::State {
     /* Node data assignments, in no particular order */
     Containers::Array<Data> data;
 
+    /* Set by setSize(), checked in update(), used for event scaling and
+       passing to layers */
+    Vector2 size;
+    Vector2 windowSize;
+    Vector2i framebufferSize;
+
     /* Tracks whether update() and clean() needs to do something */
     UserInterfaceStates state;
 
@@ -342,11 +348,11 @@ struct AbstractUserInterface::State {
     /** @todo instead of capturing a single data, etc., same as in the capture
         data above */
     DataHandle pointerEventHoveredData = DataHandle::Null;
-    /* Position of the previous pointer event. NullOpt if there was no pointer
-       event yet. */
+    /* Position of the previous pointer event, scaled to the UI size. NullOpt
+       if there was no pointer event yet. */
     /** @todo maintain previous position per pointer type? i.e., mouse, pen and
         finger independently? */
-    Containers::Optional<Vector2> pointerEventPreviousGlobalPosition;
+    Containers::Optional<Vector2> pointerEventPreviousGlobalPositionScaled;
 
     /* Data for updates, event handling and drawing, repopulated by clean() and
        update() */
@@ -369,13 +375,58 @@ struct AbstractUserInterface::State {
     UnsignedInt drawCount = 0;
 };
 
-AbstractUserInterface::AbstractUserInterface(): _state{InPlaceInit} {}
+AbstractUserInterface::AbstractUserInterface(NoCreateT): _state{InPlaceInit} {}
+
+AbstractUserInterface::AbstractUserInterface(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize): AbstractUserInterface{NoCreate} {
+    setSize(size, windowSize, framebufferSize);
+}
+
+AbstractUserInterface::AbstractUserInterface(const Vector2i& size): AbstractUserInterface{Vector2{size}, Vector2{size}, size} {}
 
 AbstractUserInterface::AbstractUserInterface(AbstractUserInterface&&) noexcept = default;
 
 AbstractUserInterface& AbstractUserInterface::operator=(AbstractUserInterface&&) noexcept = default;
 
 AbstractUserInterface::~AbstractUserInterface() = default;
+
+Vector2 AbstractUserInterface::size() const {
+    return _state->size;
+}
+
+Vector2 AbstractUserInterface::windowSize() const {
+    return _state->windowSize;
+}
+
+Vector2i AbstractUserInterface::framebufferSize() const {
+    return _state->framebufferSize;
+}
+
+AbstractUserInterface& AbstractUserInterface::setSize(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize) {
+    CORRADE_ASSERT(size.product() && windowSize.product() && framebufferSize.product(),
+        "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got" << size << Debug::nospace << "," << windowSize << "and" << framebufferSize, *this);
+    State& state = *_state;
+    const bool sizeOrFramebufferSizeDifferent = state.size != size || state.framebufferSize != framebufferSize;
+    state.size = size;
+    state.windowSize = windowSize;
+    state.framebufferSize = framebufferSize;
+
+    /* If the size or framebuffer size is different, set it on all existing
+       layers that have an instance (so, also aren't freed) and support
+       drawing. Layers that don't have an instance set yet will get it proxied
+       directly in their setLayerInstance() call. */
+    if(sizeOrFramebufferSizeDifferent) for(std::size_t i = 0; i != state.layers.size(); ++i) {
+        Layer& layer = state.layers[i];
+        AbstractLayer* const instance = layer.used.instance.get();
+        if(layer.used.features & LayerFeature::Draw && instance)
+            instance->setSize(size, framebufferSize);
+    }
+
+    return *this;
+}
+
+AbstractUserInterface& AbstractUserInterface::setSize(const Vector2i& size) {
+    return setSize(Vector2{size}, Vector2{size}, size);
+}
 
 UserInterfaceStates AbstractUserInterface::state() const {
     const State& state = *_state;
@@ -555,6 +606,11 @@ void AbstractUserInterface::setLayerInstance(Containers::Pointer<AbstractLayer>&
     Layer& layer = state.layers[id];
     layer.used.features = instance->features();
     layer.used.instance = Utility::move(instance);
+
+    /* If the size is already set, immediately proxy it to the layer. If it
+       isn't, it gets done during the next setSize() call. */
+    if(!state.size.isZero() && layer.used.features & LayerFeature::Draw)
+        layer.used.instance->setSize(state.size, state.framebufferSize);
 }
 
 const AbstractLayer& AbstractUserInterface::layer(const LayerHandle handle) const {
@@ -1234,6 +1290,13 @@ AbstractUserInterface& AbstractUserInterface::update() {
         return *this;
     }
 
+    /* Asserting only if there's actually something to update to avoid having
+       to go through this assertion every frame. Which means it will not fire
+       for a completely empty UI, but that's fine since that doesn't render
+       anything anyway. */
+    CORRADE_ASSERT(!state.size.isZero(),
+        "Whee::AbstractUserInterface::update(): user interface size wasn't set", *this);
+
     /* Single allocation for all temporary data */
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
@@ -1442,20 +1505,19 @@ AbstractUserInterface& AbstractUserInterface::draw() {
     return *this;
 }
 
-template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Containers::Pair<NodeHandle, DataHandle> AbstractUserInterface::callEvent(const Vector2& globalPosition, UnsignedInt visibleNodeIndex, Event& event) {
+template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Containers::Pair<NodeHandle, DataHandle> AbstractUserInterface::callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event) {
     /* Remember the initial event capture state to reset it after each
        non-accepted event handler call. The accept state should be initially
        false as we exit once it becomes true. */
     CORRADE_INTERNAL_ASSERT(!event._accepted);
     const bool captured = event._captured;
-
     State& state = *_state;
     const UnsignedInt nodeId = state.visibleNodeIds[visibleNodeIndex];
 
     /* If the position is outside the node, we got nothing */
     const Vector2 nodeOffset = state.absoluteNodeOffsets[nodeId];
-    if((globalPosition < nodeOffset).any() ||
-       (globalPosition >= nodeOffset + state.nodes[nodeId].used.size).any())
+    if((globalPositionScaled < nodeOffset).any() ||
+       (globalPositionScaled >= nodeOffset + state.nodes[nodeId].used.size).any())
         return {};
 
     /* If the position is inside, recurse into *direct* children. If the event
@@ -1464,13 +1526,13 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Conta
         particular subtrees, to not have to do complex hit testing when there's
         nothing to call anyway? especially for move events and such */
     for(UnsignedInt i = 1, iMax = state.visibleNodeChildrenCounts[visibleNodeIndex] + 1; i != iMax; i += state.visibleNodeChildrenCounts[visibleNodeIndex + i] + 1) {
-        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<Event, function>(globalPosition, visibleNodeIndex + i, event);
+        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<Event, function>(globalPositionScaled, visibleNodeIndex + i, event);
         if(called.first() != NodeHandle::Null)
             return called;
     }
 
     /* Only if children didn't handle the event, look into this node data */
-    const Vector2 position = globalPosition - nodeOffset;
+    const Vector2 position = globalPositionScaled - nodeOffset;
     for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
         const DataHandle data = state.visibleNodeEventData[j];
         event._position = position;
@@ -1487,13 +1549,13 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Conta
     return {};
 }
 
-template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Containers::Pair<NodeHandle, DataHandle> AbstractUserInterface::callEvent(const Vector2& globalPosition, Event& event) {
+template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Containers::Pair<NodeHandle, DataHandle> AbstractUserInterface::callEvent(const Vector2& globalPositionScaled, Event& event) {
     /* Call update implicitly in order to make the internal state ready for
        event processing. Is a no-op if there's nothing to update or clean. */
     update();
 
     for(const UnsignedInt visibleTopLevelNodeIndex: _state->visibleFrontToBackTopLevelNodeIndices) {
-        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<Event, function>(globalPosition, visibleTopLevelNodeIndex, event);
+        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<Event, function>(globalPositionScaled, visibleTopLevelNodeIndex, event);
         if(called.first() != NodeHandle::Null)
             return called;
     }
@@ -1510,7 +1572,11 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     /* Press event has isCaptured() set always */
     event._captured = true;
 
-    const Containers::Pair<NodeHandle, DataHandle> called = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPosition, event);
+    /* This will be invalid if setSize() wasn't called yet, but callEvent() has
+       a call to update() inside which will then assert */
+    const Vector2 globalPositionScaled = globalPosition*state.size/state.windowSize;
+
+    const Containers::Pair<NodeHandle, DataHandle> called = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, event);
 
     /* If the event was accepted and capture is desired, remember the concrete
        node and data it got called on */
@@ -1522,7 +1588,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     }
 
     /* Update the last relative position with this one */
-    state.pointerEventPreviousGlobalPosition = globalPosition;
+    state.pointerEventPreviousGlobalPositionScaled = globalPositionScaled;
 
     return event._accepted;
 }
@@ -1535,10 +1601,12 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
        the update() gets called only later in callEvent(). */
     update();
 
+    State& state = *_state;
+    const Vector2 globalPositionScaled = globalPosition*state.size/state.windowSize;
+
     /* If there's a node capturing pointer events, call the event on it
        directly. Given that update() was called, these should be both either
        null or both valid. */
-    State& state = *_state;
     if(state.pointerEventCapturedNode != NodeHandle::Null) {
         CORRADE_INTERNAL_ASSERT(isHandleValid(state.pointerEventCapturedNode) &&
                                 isHandleValid(state.pointerEventCapturedData));
@@ -1546,7 +1614,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         /* Called on a captured node, so isCaptured() should be true */
         event._captured = true;
 
-        const Vector2 position = globalPosition - state.absoluteNodeOffsets[nodeHandleId(state.pointerEventCapturedNode)];
+        const Vector2 position = globalPositionScaled - state.absoluteNodeOffsets[nodeHandleId(state.pointerEventCapturedNode)];
         event._position = position;
         state.layers[dataHandleLayerId(state.pointerEventCapturedData)].used.instance->pointerReleaseEvent(dataHandleId(state.pointerEventCapturedData), event);
 
@@ -1555,7 +1623,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         /* Not called on a captured node, isCaptured() should be false */
         event._captured = false;
 
-        callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPosition, event);
+        callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPositionScaled, event);
     }
 
     /* After a release, there should be no captured node anymore */
@@ -1563,7 +1631,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
     state.pointerEventCapturedData = DataHandle::Null;
 
     /* Update the last relative position with this one */
-    state.pointerEventPreviousGlobalPosition = globalPosition;
+    state.pointerEventPreviousGlobalPositionScaled = globalPositionScaled;
 
     return event._accepted;
 }
@@ -1576,12 +1644,14 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
        the update() gets called only later in callEvent(). */
     update();
 
+    State& state = *_state;
+    const Vector2 globalPositionScaled = globalPosition*state.size/state.windowSize;
+
     /* Fill in position relative to the previous event, if there was any. Since
        the value is event-relative and not node-relative, it doesn't need any
        further updates in the callEvent() code. */
-    State& state = *_state;
-    event._relativePosition = state.pointerEventPreviousGlobalPosition ?
-        globalPosition - *state.pointerEventPreviousGlobalPosition : Vector2{};
+    event._relativePosition = state.pointerEventPreviousGlobalPositionScaled ?
+        globalPositionScaled - *state.pointerEventPreviousGlobalPositionScaled : Vector2{};
 
     /* If there's a node capturing pointer events, call the event on it
        directly. Given that update() was called, these should be both either
@@ -1597,7 +1667,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         event._captured = true;
 
         const UnsignedInt nodeId = nodeHandleId(state.pointerEventCapturedNode);
-        const Vector2 position = globalPosition - state.absoluteNodeOffsets[nodeId];
+        const Vector2 position = globalPositionScaled - state.absoluteNodeOffsets[nodeId];
         event._position = position;
 
         AbstractLayer& instance = *state.layers[dataHandleLayerId(state.pointerEventCapturedData)].used.instance;
@@ -1612,7 +1682,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         /* Not called on a captured node, isCaptured() should be false */
         event._captured = false;
 
-        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(globalPosition, event);
+        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(globalPositionScaled, event);
         calledNode = called.first();
         calledData = called.second();
         moveAccepted = event._accepted;
@@ -1630,7 +1700,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         const UnsignedInt capturedNodeId = nodeHandleId(state.pointerEventCapturedNode);
         const Vector2 capturedNodeMin = state.absoluteNodeOffsets[capturedNodeId];
         const Vector2 capturedNodeMax = capturedNodeMin + state.nodes[capturedNodeId].used.size;
-        const bool inside = (globalPosition >= capturedNodeMin).all() && (globalPosition < capturedNodeMax).all();
+        const bool inside = (globalPositionScaled >= capturedNodeMin).all() && (globalPositionScaled < capturedNodeMax).all();
 
         /* Call Leave if the captured node was previously hovered and the
            pointer is now outside or was not accepted */
@@ -1702,7 +1772,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         if(state.pointerEventCapturedData != callLeaveOnData)
             event._captured = false;
         event._relativePosition = {};
-        event._position = globalPosition - state.absoluteNodeOffsets[nodeHandleId(callLeaveOnNode)];
+        event._position = globalPositionScaled - state.absoluteNodeOffsets[nodeHandleId(callLeaveOnNode)];
         state.layers[dataHandleLayerId(callLeaveOnData)].used.instance->pointerLeaveEvent(dataHandleId(callLeaveOnData), event);
 
         if(state.pointerEventCapturedData != callLeaveOnData)
@@ -1717,7 +1787,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         event._relativePosition = {};
         /* The position should already be set to this value, doing that
             again to be self-documenting */
-        event._position = globalPosition - state.absoluteNodeOffsets[nodeHandleId(callEnterOnNode)];
+        event._position = globalPositionScaled - state.absoluteNodeOffsets[nodeHandleId(callEnterOnNode)];
         state.layers[dataHandleLayerId(callEnterOnData)].used.instance->pointerEnterEvent(dataHandleId(callEnterOnData), event);
     }
 
@@ -1739,7 +1809,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
     }
 
     /* Update the last relative position with this one */
-    state.pointerEventPreviousGlobalPosition = globalPosition;
+    state.pointerEventPreviousGlobalPositionScaled = globalPositionScaled;
 
     return moveAccepted;
 }

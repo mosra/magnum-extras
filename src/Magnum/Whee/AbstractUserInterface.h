@@ -215,11 +215,79 @@ CORRADE_ENUMSET_OPERATORS(NodeFlags)
 /**
 @brief Base for the main user interface
 @m_since_latest
+
+@section Whee-AbstractUserInterface-dpi DPI awareness
+
+There are three separate concepts for DPI-aware UI rendering:
+
+-   UI size --- size of the user interface to which all widgets are positioned
+-   Window size --- size of the window to which all input events are related
+-   Framebuffer size --- size of the framebuffer the UI is being rendered to
+
+Depending on the platform and use case, each of these three values can be
+different. For example, a game menu screen can have the UI size the same
+regardless of window size. Or on Retina macOS you can have different window and
+framebuffer size and the UI size might be related to window size but
+independent on the framebuffer size.
+
+When using for example @ref Platform::Sdl2Application or other `*Application`
+implementations, you usually have three values at your disposal ---
+@ref Platform::Sdl2Application::windowSize() "windowSize()",
+@ref Platform::Sdl2Application::framebufferSize() "framebufferSize()" and
+@ref Platform::Sdl2Application::dpiScaling() "dpiScaling()". If you want the UI
+to have the same layout and just scale on bigger window sizes, pass a fixed
+value to the UI size:
+
+@snippet Whee-sdl2.cpp AbstractUserInterface-dpi-fixed
+
+If you want the UI to get more room with larger window sizes and behave
+properly with different DPI scaling values, pass a ratio of window size and DPI
+scaling to the UI size:
+
+@snippet Whee-sdl2.cpp AbstractUserInterface-dpi-ratio
+
+Finally, to gracefully deal with extremely small or extremely large windows,
+you can apply @ref Math::clamp() on top with some defined bounds. Windows
+outside of the reasonable size range will then get a scaled version of the UI
+at boundary size:
+
+@snippet Whee-sdl2.cpp AbstractUserInterface-dpi-clamp
 */
 class MAGNUM_WHEE_EXPORT AbstractUserInterface {
     public:
-        /** @brief Constructor */
-        explicit AbstractUserInterface();
+        /**
+         * @brief Construct without creating the user interface with concrete parameters
+         *
+         * You're expected to call @ref setSize() afterwards in order to define
+         * scaling of event coordinates, node positions and projection matrices
+         * for drawing.
+         */
+        explicit AbstractUserInterface(NoCreateT);
+
+        /**
+         * @brief Construct
+         * @param size                  Size of the user interface to which
+         *      everything is positioned
+         * @param windowSize            Size of the window to which all input
+         *      events are related
+         * @param framebufferSize       Size of the window framebuffer. On
+         *      some platforms with HiDPI screens may be different from window
+         *      size.
+         *
+         * Equivalent to constructing with @ref AbstractUserInterface(NoCreateT)
+         * and then calling @ref setSize(const Vector2&, const Vector2&, const Vector2i&).
+         * See its documentation for more information.
+         */
+        explicit AbstractUserInterface(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize);
+
+        /**
+         * @brief Construct with an unscaled size
+         *
+         * Delegates to @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
+         * with all sizes set to @p size. Doing so assumes that the coordinate
+         * system in which events are passed matches framebuffer size.
+         */
+        explicit AbstractUserInterface(const Vector2i& size);
 
         /** @brief Copying is not allowed */
         AbstractUserInterface(const AbstractUserInterface&) = delete;
@@ -239,6 +307,79 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         AbstractUserInterface& operator=(AbstractUserInterface&&) noexcept;
 
         ~AbstractUserInterface();
+
+        /**
+         * @brief User interface size
+         *
+         * Node positioning is in respect to this size. If @ref setSize() or
+         * @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
+         * wasn't called yet, initial value is a zero vector.
+         */
+        Vector2 size() const;
+
+        /**
+         * @brief Window size
+         *
+         * Global event position in @ref pointerPressEvent(),
+         * @ref pointerReleaseEvent() and @ref pointerMoveEvent() is in respect
+         * to this size. If @ref setSize() or @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
+         * wasn't called yet, initial value is a zero vector.
+         */
+        Vector2 windowSize() const;
+
+        /**
+         * @brief Framebuffer size
+         *
+         * Rendering performed by layers is in respect to this size. If
+         * @ref setSize() or
+         * @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
+         * wasn't called yet, initial value is a zero vector.
+         */
+        Vector2i framebufferSize() const;
+
+        /**
+         * @brief Set user interface size
+         * @param size                  Size of the user interface to which
+         *      everything is positioned
+         * @param windowSize            Size of the window to which all input
+         *      events are related
+         * @param framebufferSize       Size of the window framebuffer. On
+         *      some platforms with HiDPI screens may be different from window
+         *      size.
+         * @return Reference to self (for method chaining)
+         *
+         * All sizes are expected to be non-zero, origin is top left for all.
+         *
+         * After calling this function, the @ref pointerPressEvent(),
+         * @ref pointerReleaseEvent() and @ref pointerMoveEvent() functions
+         * take the global event position with respect to @p windowSize, which
+         * is then rescaled to match @p size when exposed through
+         * @ref PointerEvent. The @p size and @p framebufferSize is passed
+         * through to @ref AbstractLayer::setSize() to all layers with
+         * @ref LayerFeature::Draw so they can set appropriate projection and
+         * other framebuffer-related properties.
+         *
+         * There's no default size and this function is expected to be called
+         * before the first @ref update() happens, either directly or through
+         * the @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
+         * constructor. It's allowed to call this function for the first time
+         * even after node, layers or data were created.
+         *
+         * Calling this function with new values will update the event position
+         * scaling accordingly. @ref AbstractLayer::setSize() is called only if
+         * @p size or @p framebufferSize changes.
+         */
+        AbstractUserInterface& setSize(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize);
+
+        /**
+         * @brief Set unscaled user interface size
+         * @return Reference to self (for method chaining)
+         *
+         * Calls @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
+         * with all sizes set to @p size. Doing so assumes that the coordinate
+         * system in which events are passed matches framebuffer size.
+         */
+        AbstractUserInterface& setSize(const Vector2i& size);
 
         /**
          * @brief User interface state
@@ -372,6 +513,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Expects that @p instance was created with a @ref LayerHandle
          * returned from @ref createLayer() earlier, the handle is valid and
          * @ref setLayerInstance() wasn't called for the same handle yet.
+         *
+         * Calls @ref AbstractLayer::setSize() on the layer, unless neither
+         * @ref setSize() nor @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
+         * was called yet.
          * @see @ref AbstractLayer::handle(),
          *      @ref isHandleValid(LayerHandle) const
          */
@@ -792,6 +937,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Update node hierarchy, data order and data contents for drawing and event processing
          * @return Reference to self (for method chaining)
          *
+         * Expects that either @ref setSize() was called or the
+         * @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
+         * constructor was used.
+         *
          * Implicitly calls @ref clean(); called implicitly from @ref draw()
          * and all event processing functions. If @ref state() contains none of
          * @ref UserInterfaceState::NeedsDataUpdate,
@@ -828,9 +977,13 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Handle a pointer press event
          *
-         * Implicitly calls @ref update() and @ref clean(). Finds the
-         * front-most nodes under @p globalPosition and then backtracks to
-         * parent nodes. For each such node calls
+         * Implicitly calls @ref update() and @ref clean(). The
+         * @p globalPosition is assumed to be in respect to @ref windowSize(),
+         * and is internally scaled to match @ref size() before being set to
+         * @ref PointerEvent.
+         *
+         * Finds the front-most nodes under (scaled) @p globalPosition and then
+         * backtracks to parent nodes. For each such node calls
          * @ref AbstractLayer::pointerPressEvent() on all data belonging to
          * layers that support @ref LayerFeature::Event until one of them
          * accepts the event. For each call the event position is made relative
@@ -857,7 +1010,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Handle a pointer release event
          *
-         * Implicitly calls @ref update() and @ref clean().
+         * Implicitly calls @ref update() and @ref clean(). The
+         * @p globalPosition is assumed to be in respect to @ref windowSize(),
+         * and is internally scaled to match @ref size() before being set to
+         * @ref PointerEvent.
          *
          * If a node was captured by a previous @ref pointerPressEvent() or
          * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
@@ -871,15 +1027,15 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref PointerEvent::setCaptured() was set by the implementation.
          *
          * Otherwise, if a node wasn't captured, finds the front-most nodes
-         * under @p globalPosition and then backtracks to parent nodes. For
-         * each such node calls @ref AbstractLayer::pointerReleaseEvent() on
-         * all data belonging to layers that support @ref LayerFeature::Event
-         * until one of them accepts the event. For each call the event
-         * position is made relative to the node to which the data is
-         * attached. Returns @cpp true @ce if the event was accepted,
-         * @cpp false @ce if it wasn't or there wasn't any visible event
-         * handling node at given position and thus the event should be
-         * propagated further.
+         * under (scaled) @p globalPosition and then backtracks to parent
+         * nodes. For each such node calls
+         * @ref AbstractLayer::pointerReleaseEvent() on all data belonging to
+         * layers that support @ref LayerFeature::Event until one of them
+         * accepts the event. For each call the event position is made relative
+         * to the node to which the data is attached. Returns @cpp true @ce if
+         * the event was accepted, @cpp false @ce if it wasn't or there wasn't
+         * any visible event handling node at given position and thus the event
+         * should be propagated further.
          *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
@@ -891,7 +1047,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Handle a pointer move event
          *
-         * Implicitly calls @ref update() and @ref clean().
+         * Implicitly calls @ref update() and @ref clean(). The
+         * @p globalPosition is assumed to be in respect to @ref windowSize(),
+         * and is internally scaled to match @ref size() before being set to
+         * @ref PointerEvent.
          *
          * If a node was captured by a previous @ref pointerPressEvent() or
          * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
@@ -914,15 +1073,16 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * this function, otherwise it stays unchanged.
          *
          * Otherwise, if a node wasn't captured, finds the front-most nodes
-         * under @p globalPosition and then backtracks to parent nodes. For
-         * each such node calls @ref AbstractLayer::pointerMoveEvent() on all
-         * data belonging to layers that support @ref LayerFeature::Event until
-         * one of them accepts the event, in which case given node is then
-         * treated as hovered; if no nodes accept the event, there's no hovered
-         * node. For each call the event position is made relative to the node
-         * to which the data is attached. If the currently hovered node
-         * changed, an @ref AbstractLayer::pointerLeaveEvent() is called for a
-         * previously hovered node if it exists, and then a corresponding
+         * under (scaled) @p globalPosition and then backtracks to parent
+         * nodes. For each such node calls
+         * @ref AbstractLayer::pointerMoveEvent() on all data belonging to
+         * layers that support @ref LayerFeature::Event until one of them
+         * accepts the event, in which case given node is then treated as
+         * hovered; if no nodes accept the event, there's no hovered node. For
+         * each call the event position is made relative to the node to which
+         * the data is attached. If the currently hovered node changed, an
+         * @ref AbstractLayer::pointerLeaveEvent() is called for a previously
+         * hovered node if it exists, and then a corresponding
          * @ref AbstractLayer::pointerEnterEvent() is called on the current
          * node if it exists, in both cases with the same @p event except for
          * @ref PointerMoveEvent::relativePosition() which is reset to a zero
@@ -997,8 +1157,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         MAGNUM_WHEE_LOCAL void clearNodeOrderInternal(NodeHandle handle);
         /* Used by *Event() functions, returns a NodeHandle and a corresponding
            DataHandle on which an event was accepted */
-        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL Containers::Pair<NodeHandle, DataHandle> callEvent(const Vector2& globalPosition, UnsignedInt visibleNodeIndex, Event& event);
-        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL Containers::Pair<NodeHandle, DataHandle> callEvent(const Vector2& globalPosition, Event& event);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL Containers::Pair<NodeHandle, DataHandle> callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL Containers::Pair<NodeHandle, DataHandle> callEvent(const Vector2& globalPositionScaled, Event& event);
 
         struct State;
         Containers::Pointer<State> _state;
