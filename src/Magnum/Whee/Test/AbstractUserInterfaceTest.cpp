@@ -53,7 +53,9 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void debugStates();
     void debugStatesSupersets();
 
+    void constructNoCreate();
     void construct();
+    void constructSingleSize();
     void constructCopy();
     void constructMove();
 
@@ -83,6 +85,10 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void data();
     void dataAttach();
     void dataAttachInvalid();
+
+    void setSize();
+    void setSizeZero();
+    void setSizeNotCalledBeforeUpdate();
 
     void cleanEmpty();
     void cleanNoOp();
@@ -262,7 +268,9 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::debugStates,
               &AbstractUserInterfaceTest::debugStatesSupersets,
 
+              &AbstractUserInterfaceTest::constructNoCreate,
               &AbstractUserInterfaceTest::construct,
+              &AbstractUserInterfaceTest::constructSingleSize,
               &AbstractUserInterfaceTest::constructCopy,
               &AbstractUserInterfaceTest::constructMove,
 
@@ -292,6 +300,10 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::data,
               &AbstractUserInterfaceTest::dataAttach,
               &AbstractUserInterfaceTest::dataAttachInvalid,
+
+              &AbstractUserInterfaceTest::setSize,
+              &AbstractUserInterfaceTest::setSizeZero,
+              &AbstractUserInterfaceTest::setSizeNotCalledBeforeUpdate,
 
               &AbstractUserInterfaceTest::cleanEmpty,
               &AbstractUserInterfaceTest::cleanNoOp,
@@ -453,8 +465,14 @@ void AbstractUserInterfaceTest::debugStatesSupersets() {
     }
 }
 
-void AbstractUserInterfaceTest::construct() {
-    AbstractUserInterface ui;
+void AbstractUserInterfaceTest::constructNoCreate() {
+    /* Currently, the only difference to the regular constructor is that the
+       size vectors are zero */
+    AbstractUserInterface ui{NoCreate};
+
+    CORRADE_COMPARE(ui.size(), Vector2{});
+    CORRADE_COMPARE(ui.windowSize(), Vector2{});
+    CORRADE_COMPARE(ui.framebufferSize(), Vector2i{});
 
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
@@ -480,27 +498,54 @@ void AbstractUserInterfaceTest::construct() {
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 }
 
+void AbstractUserInterfaceTest::construct() {
+    AbstractUserInterface ui{{100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}};
+
+    CORRADE_COMPARE(ui.size(), (Vector2{100.0f, 150.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{50.0f, 75.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
+
+    /* The constructor delegates to NoCreate, which is tested above */
+}
+
+void AbstractUserInterfaceTest::constructSingleSize() {
+    AbstractUserInterface ui{{200, 300}};
+
+    CORRADE_COMPARE(ui.size(), (Vector2{200.0f, 300.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{200.0f, 300.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
+
+    /* The constructor delegates to NoCreate, which is tested above */
+}
+
 void AbstractUserInterfaceTest::constructCopy() {
     CORRADE_VERIFY(!std::is_copy_constructible<AbstractUserInterface>{});
     CORRADE_VERIFY(!std::is_copy_assignable<AbstractUserInterface>{});
 }
 
 void AbstractUserInterfaceTest::constructMove() {
-    AbstractUserInterface a;
+    AbstractUserInterface a{{100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}};
     a.createLayer();
 
     /* The class has an internal state struct containing everything, so it's
-       not needed to test each and every property */
+       not needed to test each and every property, yet this test is doing it
+       for some unexplainable reason */
     AbstractUserInterface b{Utility::move(a)};
+    CORRADE_COMPARE(b.size(), (Vector2{100.0f, 150.0f}));
+    CORRADE_COMPARE(b.windowSize(), (Vector2{50.0f, 75.0f}));
+    CORRADE_COMPARE(b.framebufferSize(), (Vector2i{200, 300}));
     CORRADE_COMPARE(b.layerCapacity(), 1);
     CORRADE_COMPARE(b.layerUsedCount(), 1);
     CORRADE_COMPARE(b.nodeCapacity(), 0);
     CORRADE_COMPARE(b.nodeUsedCount(), 0);
     CORRADE_COMPARE(b.dataAttachmentCount(), 0);
 
-    AbstractUserInterface c;
+    AbstractUserInterface c{{10, 10}};
     c.createNode(NodeHandle::Null, {}, {}, {});
     c = Utility::move(b);
+    CORRADE_COMPARE(c.size(), (Vector2{100.0f, 150.0f}));
+    CORRADE_COMPARE(c.windowSize(), (Vector2{50.0f, 75.0f}));
+    CORRADE_COMPARE(c.framebufferSize(), (Vector2i{200, 300}));
     CORRADE_COMPARE(c.layerCapacity(), 1);
     CORRADE_COMPARE(c.layerUsedCount(), 1);
     CORRADE_COMPARE(c.nodeCapacity(), 0);
@@ -512,7 +557,7 @@ void AbstractUserInterfaceTest::constructMove() {
 }
 
 void AbstractUserInterfaceTest::layer() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.layerCapacity(), 0);
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
     CORRADE_COMPARE(ui.layerFirst(), LayerHandle::Null);
@@ -620,7 +665,7 @@ void AbstractUserInterfaceTest::layer() {
 }
 
 void AbstractUserInterfaceTest::layerHandleRecycle() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle first = ui.createLayer();
     LayerHandle second = ui.createLayer();
     LayerHandle third = ui.createLayer();
@@ -686,7 +731,7 @@ void AbstractUserInterfaceTest::layerHandleRecycle() {
 }
 
 void AbstractUserInterfaceTest::layerHandleDisable() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     LayerHandle first = ui.createLayer();
     CORRADE_COMPARE(first, layerHandle(0, 1));
@@ -714,7 +759,7 @@ void AbstractUserInterfaceTest::layerHandleDisable() {
 }
 
 void AbstractUserInterfaceTest::layerHandleLastFree() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle first = ui.createLayer();
     LayerHandle second = ui.createLayer();
     for(std::size_t i = 0; i != (1 << Implementation::LayerHandleIdBits) - 3; ++i)
@@ -751,7 +796,8 @@ void AbstractUserInterfaceTest::layerSetInstance() {
     int secondDestructed = 0;
 
     {
-        AbstractUserInterface ui;
+        /* Size propagation to layers is tested thoroughly in setSize() */
+        AbstractUserInterface ui{{100, 100}};
         LayerHandle first = ui.createLayer();
         LayerHandle second = ui.createLayer();
         LayerHandle third = ui.createLayer();
@@ -811,7 +857,7 @@ void AbstractUserInterfaceTest::layerSetInstance() {
 void AbstractUserInterfaceTest::layerCreateInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -829,7 +875,7 @@ void AbstractUserInterfaceTest::layerSetInstanceInvalid() {
         LayerFeatures doFeatures() const override { return {}; }
     };
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     LayerHandle handle = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(handle));
@@ -855,7 +901,7 @@ void AbstractUserInterfaceTest::layerGetInvalid() {
         LayerFeatures doFeatures() const override { return {}; }
     };
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     /* Need at least one layer to be present so layer() asserts can return
        something */
     ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
@@ -889,7 +935,7 @@ void AbstractUserInterfaceTest::layerGetInvalid() {
 void AbstractUserInterfaceTest::layerRemoveInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -901,7 +947,7 @@ void AbstractUserInterfaceTest::layerRemoveInvalid() {
 void AbstractUserInterfaceTest::layerNoHandlesLeft() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     LayerHandle handle;
     for(std::size_t i = 0; i != 1 << Implementation::LayerHandleIdBits; ++i)
@@ -921,7 +967,7 @@ void AbstractUserInterfaceTest::layerNoHandlesLeft() {
 }
 
 void AbstractUserInterfaceTest::node() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.nodeCapacity(), 0);
     CORRADE_COMPARE(ui.nodeUsedCount(), 0);
 
@@ -968,7 +1014,7 @@ void AbstractUserInterfaceTest::node() {
 }
 
 void AbstractUserInterfaceTest::nodeHandleRecycle() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     NodeHandle first = ui.createNode({}, {});
     NodeHandle second = ui.createNode({}, {});
     NodeHandle third = ui.createNode({}, {});
@@ -1034,7 +1080,7 @@ void AbstractUserInterfaceTest::nodeHandleRecycle() {
 }
 
 void AbstractUserInterfaceTest::nodeHandleDisable() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     NodeHandle first = ui.createNode({}, {});
     CORRADE_COMPARE(first, nodeHandle(0, 1));
@@ -1062,7 +1108,7 @@ void AbstractUserInterfaceTest::nodeHandleDisable() {
 }
 
 void AbstractUserInterfaceTest::nodeFlags() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     /* Add more than one handle to verify the correct one gets updated and not
        always the first */
@@ -1087,7 +1133,7 @@ void AbstractUserInterfaceTest::nodeFlags() {
 void AbstractUserInterfaceTest::nodeCreateInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -1099,7 +1145,7 @@ void AbstractUserInterfaceTest::nodeCreateInvalid() {
 void AbstractUserInterfaceTest::nodeGetSetInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -1128,7 +1174,7 @@ void AbstractUserInterfaceTest::nodeGetSetInvalid() {
 void AbstractUserInterfaceTest::nodeRemoveInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -1142,7 +1188,7 @@ void AbstractUserInterfaceTest::nodeRemoveInvalid() {
 void AbstractUserInterfaceTest::nodeNoHandlesLeft() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
 
     NodeHandle handle;
     for(std::size_t i = 0; i != 1 << Implementation::NodeHandleIdBits; ++i)
@@ -1162,7 +1208,7 @@ void AbstractUserInterfaceTest::nodeNoHandlesLeft() {
 }
 
 void AbstractUserInterfaceTest::nodeOrder() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.nodeOrderFirst(), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderLast(), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 0);
@@ -1477,7 +1523,7 @@ void AbstractUserInterfaceTest::nodeOrder() {
 void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     NodeHandle inOrder = ui.createNode({}, {});
     CORRADE_VERIFY(ui.isNodeOrdered(inOrder));
 
@@ -1523,7 +1569,8 @@ void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
 }
 
 void AbstractUserInterfaceTest::data() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
 
     LayerHandle layerHandle = ui.createLayer();
@@ -1559,7 +1606,8 @@ void AbstractUserInterfaceTest::data() {
 }
 
 void AbstractUserInterfaceTest::dataAttach() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle = ui.createLayer();
     NodeHandle node = ui.createNode({}, {});
 
@@ -1585,7 +1633,7 @@ void AbstractUserInterfaceTest::dataAttach() {
 void AbstractUserInterfaceTest::dataAttachInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     NodeHandle node = ui.createNode({}, {});
 
     std::ostringstream out;
@@ -1601,8 +1649,153 @@ void AbstractUserInterfaceTest::dataAttachInvalid() {
         "Whee::AbstractUserInterface::attachData(): invalid handle Whee::DataHandle({0xab, 0x12}, {0x34567, 0xcde})\n");
 }
 
+void AbstractUserInterfaceTest::setSize() {
+    AbstractUserInterface ui{NoCreate};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features, Containers::Array<Containers::Triple<LayerHandle, Vector2, Vector2i>>& calls): AbstractLayer{handle}, features{features}, calls(calls) {}
+
+        LayerFeatures doFeatures() const override { return features; }
+
+        void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override {
+            arrayAppend(calls, InPlaceInit, handle(), size, framebufferSize);
+        }
+
+        LayerFeatures features;
+        Containers::Array<Containers::Triple<LayerHandle, Vector2, Vector2i>>& calls;
+    };
+
+    Containers::Array<Containers::Triple<LayerHandle, Vector2, Vector2i>> calls;
+
+    /* Layer instances set before the size is set shouldn't have doSetSize()
+       called */
+    /*LayerHandle layerWithNoInstance =*/ ui.createLayer();
+    LayerHandle layerWithNoDrawFeature = ui.createLayer();
+    LayerHandle layerSetBeforeFirstSize = ui.createLayer();
+    LayerHandle layerThatIsRemoved = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layerWithNoDrawFeature, LayerFeature::Event, calls));
+    ui.setLayerInstance(Containers::pointer<Layer>(layerSetBeforeFirstSize, LayerFeature::Draw|LayerFeature::Event, calls));
+    ui.removeLayer(layerThatIsRemoved);
+    CORRADE_COMPARE_AS(calls, (Containers::array<Containers::Triple<LayerHandle, Vector2, Vector2i>>({
+        /* Nothing yet */
+    })), TestSuite::Compare::Container);
+
+    /* Setting the size should set it for all layers that have instances and
+       support Draw */
+    ui.setSize({300.0f, 200.0f}, {3000.0f, 2000.0f}, {30, 20});
+    CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{3000.0f, 2000.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30, 20}));
+    CORRADE_COMPARE_AS(calls, (Containers::array<Containers::Triple<LayerHandle, Vector2, Vector2i>>({
+        {layerSetBeforeFirstSize, {300.0f, 200.0f}, {30, 20}},
+    })), TestSuite::Compare::Container);
+
+    /* Setting a layer instance after setSize() was called should call
+       doSetSize() directly, but again only if it supports Draw */
+    calls = {};
+    LayerHandle layerSetAfterFirstSizeWithNoDrawFeature = ui.createLayer();
+    LayerHandle layerSetAfterFirstSize = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layerSetAfterFirstSizeWithNoDrawFeature, LayerFeatures{}, calls));
+    ui.setLayerInstance(Containers::pointer<Layer>(layerSetAfterFirstSize, LayerFeature::Draw, calls));
+    CORRADE_COMPARE_AS(calls, (Containers::array<Containers::Triple<LayerHandle, Vector2, Vector2i>>({
+        {layerSetAfterFirstSize, {300.0f, 200.0f}, {30, 20}},
+    })), TestSuite::Compare::Container);
+
+    /* Calling setSize() again with the same size and framebufferSize should do
+       nothing even if window size is different, as window size never reaches
+       the layers */
+    calls = {};
+    ui.setSize({300.0f, 200.0f}, {3.0f, 2.0f}, {30, 20});
+    CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{3.0f, 2.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30, 20}));
+    CORRADE_COMPARE_AS(calls, (Containers::array<Containers::Triple<LayerHandle, Vector2, Vector2i>>({
+        /* Nothing */
+    })), TestSuite::Compare::Container);
+
+    /* Calling setSize() again with different size should call doSetSize() on
+       all layers that have an instance and support Draw even if
+       framebufferSize and windowSize stays the same */
+    calls = {};
+    ui.setSize({3000.0f, 2000.0f}, {3.0f, 2.0f}, {30, 20});
+    CORRADE_COMPARE(ui.size(), (Vector2{3000.0f, 2000.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{3.0f, 2.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30, 20}));
+    CORRADE_COMPARE_AS(calls, (Containers::array<Containers::Triple<LayerHandle, Vector2, Vector2i>>({
+        {layerSetBeforeFirstSize, {3000.0f, 2000.0f}, {30, 20}},
+        {layerSetAfterFirstSize, {3000.0f, 2000.0f}, {30, 20}},
+    })), TestSuite::Compare::Container);
+
+    /* Calling setSize() again with different framebufferSize should call
+       doSetSize() on all layers that have an instance and support Draw even if
+       size and windowSize stays the same */
+    calls = {};
+    ui.setSize({3000.0f, 2000.0f}, {3.0f, 2.0f}, {300, 200});
+    CORRADE_COMPARE(ui.size(), (Vector2{3000.0f, 2000.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{3.0f, 2.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{300, 200}));
+    CORRADE_COMPARE_AS(calls, (Containers::array<Containers::Triple<LayerHandle, Vector2, Vector2i>>({
+        {layerSetBeforeFirstSize, {3000.0f, 2000.0f}, {300, 200}},
+        {layerSetAfterFirstSize, {3000.0f, 2000.0f}, {300, 200}},
+    })), TestSuite::Compare::Container);
+
+    /* Finally, verify that the unscaled size overload works as well */
+    calls = {};
+    ui.setSize({300, 200});
+    CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{300.0f, 200.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{300, 200}));
+    CORRADE_COMPARE_AS(calls, (Containers::array<Containers::Triple<LayerHandle, Vector2, Vector2i>>({
+        {layerSetBeforeFirstSize, {300.0f, 200.0f}, {300, 200}},
+        {layerSetAfterFirstSize, {300.0f, 200.0f}, {300, 200}},
+    })), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceTest::setSizeZero() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{NoCreate};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.setSize({0.0f, 1.0f}, {2.0f, 3.0f}, {4, 5});
+    ui.setSize({1.0f, 0.0f}, {2.0f, 3.0f}, {4, 5});
+    ui.setSize({1.0f, 2.0f}, {0.0f, 3.0f}, {4, 5});
+    ui.setSize({1.0f, 2.0f}, {3.0f, 0.0f}, {4, 5});
+    ui.setSize({1.0f, 2.0f}, {3.0f, 4.0f}, {0, 5});
+    ui.setSize({1.0f, 2.0f}, {3.0f, 4.0f}, {5, 0});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(0, 1), Vector(2, 3) and Vector(4, 5)\n"
+        "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(1, 0), Vector(2, 3) and Vector(4, 5)\n"
+        "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(1, 2), Vector(0, 3) and Vector(4, 5)\n"
+        "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(1, 2), Vector(3, 0) and Vector(4, 5)\n"
+        "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(1, 2), Vector(3, 4) and Vector(0, 5)\n"
+        "Whee::AbstractUserInterface::setSize(): expected non-zero sizes, got Vector(1, 2), Vector(3, 4) and Vector(5, 0)\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractUserInterfaceTest::setSizeNotCalledBeforeUpdate() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    AbstractUserInterface ui{NoCreate};
+
+    /* With an empty UI this shouldn't assert as it doesn't have any
+       UserInterfaceState set */
+    ui.update();
+
+    /* Causes update() to not be a no-op */
+    ui.createNode({}, {});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.update();
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractUserInterface::update(): user interface size wasn't set\n");
+}
+
 void AbstractUserInterfaceTest::cleanEmpty() {
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.nodeUsedCount(), 0);
     CORRADE_COMPARE(ui.dataAttachmentCount(), 0);
 
@@ -1612,7 +1805,8 @@ void AbstractUserInterfaceTest::cleanEmpty() {
 }
 
 void AbstractUserInterfaceTest::cleanNoOp() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle = ui.createLayer();
 
     struct Layer: AbstractLayer {
@@ -1644,7 +1838,8 @@ void AbstractUserInterfaceTest::cleanNoOp() {
 }
 
 void AbstractUserInterfaceTest::cleanRemoveInvalidData() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle1 = ui.createLayer();
     LayerHandle layerHandle2 = ui.createLayer();
 
@@ -1687,7 +1882,8 @@ void AbstractUserInterfaceTest::cleanRemoveInvalidData() {
 }
 
 void AbstractUserInterfaceTest::cleanRemoveDataInvalidLayer() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle1 = ui.createLayer();
     LayerHandle layerHandle2 = ui.createLayer();
 
@@ -1731,7 +1927,8 @@ void AbstractUserInterfaceTest::cleanRemoveDataInvalidLayer() {
 }
 
 void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle1 = ui.createLayer();
     LayerHandle layerHandle2 = ui.createLayer();
 
@@ -1779,7 +1976,8 @@ void AbstractUserInterfaceTest::cleanRemoveAttachedData() {
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle = ui.createLayer();
 
     struct Layer: AbstractLayer {
@@ -1825,7 +2023,8 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodes() {
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemoved() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     NodeHandle node = ui.createNode({}, {});
     NodeHandle nested = ui.createNode(node, {}, {});
 
@@ -1845,7 +2044,8 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemoved() {
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemovedDangling() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     NodeHandle node = ui.createNode({}, {});
     NodeHandle nested = ui.createNode(node, {}, {});
 
@@ -1863,7 +2063,8 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesAlreadyRemovedDangling() {
 }
 
 void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle = ui.createLayer();
 
     struct Layer: AbstractLayer {
@@ -1904,7 +2105,8 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandle() {
 void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycle() {
     CORRADE_SKIP("Ugh, this asserts.");
 
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle = ui.createLayer();
 
     struct Layer: AbstractLayer {
@@ -1944,7 +2146,8 @@ void AbstractUserInterfaceTest::cleanRemoveNestedNodesRecycledHandleOrphanedCycl
 }
 
 void AbstractUserInterfaceTest::cleanRemoveAll() {
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     LayerHandle layerHandle = ui.createLayer();
 
     struct Layer: AbstractLayer {
@@ -1980,7 +2183,8 @@ void AbstractUserInterfaceTest::state() {
     auto&& data = StateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Creating nodes sets a state flag */
@@ -2564,7 +2768,8 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     /* Tests more complex behavior of state propagation that isn't checked in
        the state() case above */
 
-    AbstractUserInterface ui;
+    /* Event/framebuffer scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     /*LayerHandle layerWithoutInstance =*/ ui.createLayer();
     LayerHandle layerRemoved = ui.createLayer();
@@ -2621,7 +2826,7 @@ void AbstractUserInterfaceTest::drawEmpty() {
     auto&& data = CleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Just verify that this doesn't crash or assert, there's nothing visibly
@@ -2642,14 +2847,26 @@ void AbstractUserInterfaceTest::draw() {
     auto&& data = CleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* windowSize isn't used for anything here */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 30.0f}, {400, 500}};
 
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, features{features} {}
 
         LayerFeatures doFeatures() const override { return features; }
 
+        void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override {
+            CORRADE_ITERATION(handle());
+            ++setSizeCallCount;
+            CORRADE_COMPARE(size, (Vector2{200.0f, 300.0f}));
+            CORRADE_COMPARE(framebufferSize, (Vector2i{400, 500}));
+        }
+
         void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+            CORRADE_ITERATION(handle());
+            /* doSetSize() should have been called exactly once at this point
+               if this layer draws, and not at all if it doesn't */
+            CORRADE_COMPARE(setSizeCallCount, features & LayerFeature::Draw ? 1 : 0);
             CORRADE_COMPARE_AS(dataIds,
                 expectedData.slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
                 TestSuite::Compare::Container);
@@ -2673,6 +2890,9 @@ void AbstractUserInterfaceTest::draw() {
         }
 
         void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& dataNodeIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes) override {
+            CORRADE_ITERATION(handle());
+            /* doSetSize() should have been called exactly once at this point */
+            CORRADE_COMPARE(setSizeCallCount, 1);
             /* The passed views should be exactly the same */
             CORRADE_COMPARE(dataIds.data(), actualDataIds.data());
             CORRADE_COMPARE(dataIds.size(), actualDataIds.size());
@@ -2693,6 +2913,7 @@ void AbstractUserInterfaceTest::draw() {
         Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedData;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
         Int* updateCallCount;
+        Int setSizeCallCount = 0;
         Containers::Array<Containers::Triple<LayerHandle, std::size_t, std::size_t>>* drawCalls;
 
         Containers::StridedArrayView1D<const UnsignedInt> actualDataIds;
@@ -2700,6 +2921,9 @@ void AbstractUserInterfaceTest::draw() {
         Containers::StridedArrayView1D<const Vector2> actualNodeOffsets;
         Containers::StridedArrayView1D<const Vector2> actualNodeSizes;
     };
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
 
     NodeHandle topLevel = ui.createNode({10.0f, 20.0f}, {200.0f, 100.0f});
     NodeHandle left = ui.createNode(topLevel, {30.0f, 40.0f}, {20.0f, 10.0f});
@@ -2864,7 +3088,7 @@ void AbstractUserInterfaceTest::eventEmpty() {
     auto&& data = CleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -2895,7 +3119,7 @@ void AbstractUserInterfaceTest::eventEmpty() {
 void AbstractUserInterfaceTest::eventAlreadyAccepted() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    AbstractUserInterface ui;
+    AbstractUserInterface ui{{100, 100}};
     PointerEvent pointerEvent{Pointer::MouseRight};
     pointerEvent.setAccepted();
     PointerMoveEvent pointerMoveEvent{{}, {}};
@@ -2916,7 +3140,9 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     auto&& data = CleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, features{features} {}
@@ -3026,7 +3252,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer1Accept = layer2Accept = layer3Accept = true;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(!ui.pointerPressEvent({300.0f, 300.0f}, event));
+        CORRADE_VERIFY(!ui.pointerPressEvent({3000.0f, 30000.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
         })), TestSuite::Compare::Container);
 
@@ -3035,7 +3261,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer1Accept = layer2Accept = layer3Accept = true;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(!ui.pointerPressEvent({195.0f, 195.0f}, event));
+        CORRADE_VERIFY(!ui.pointerPressEvent({1950.0f, 19500.0f}, event));
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
         })), TestSuite::Compare::Container);
@@ -3045,7 +3271,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer1Accept = layer2Accept = layer3Accept = true;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({100.0f, 60.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({1000.0f, 6000.0f}, event));
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             {topData, {85.0f, 35.0f}, true},
@@ -3057,7 +3283,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer1Accept = layer2Accept = layer3Accept = true;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({115.0f, 60.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({1150.0f, 6000.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             /* The bottomData2 don't get selected as it's from layer2 that
                doesn't have LayerFeature::Event */
@@ -3072,7 +3298,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer3Accept = true;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(!ui.pointerPressEvent({115.0f, 60.0f}, event));
+        CORRADE_VERIFY(!ui.pointerPressEvent({1150.0f, 6000.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             {bottomData1, {105.0f, 40.0f}, false},
             /* The bottomData2 don't get selected as it's from layer2 that
@@ -3085,7 +3311,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer3Accept = false;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({100.0f, 60.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({1000.0f, 6000.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             {topData, {85.0f, 35.0f}, false},
             {bottomData1, {90.0f, 40.0f}, true}
@@ -3096,7 +3322,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer1Accept = layer2Accept = layer3Accept = true;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({40.0f, 60.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({400.0f, 6000.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             /* There's removedData covering this same position but weren't
                considered as they belong to a removed node */
@@ -3110,7 +3336,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer3Accept = false;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({40.0f, 60.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({400.0f, 6000.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             {topNestedData3, {5.0f, 5.0f}, false},
             {topNestedData1, {5.0f, 5.0f}, false},
@@ -3122,7 +3348,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer1Accept = layer2Accept = layer3Accept = false;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(!ui.pointerPressEvent({40.0f, 60.0f}, event));
+        CORRADE_VERIFY(!ui.pointerPressEvent({400.0f, 6000.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             {topNestedData3, {5.0f, 5.0f}, false},
             {topNestedData1, {5.0f, 5.0f}, false},
@@ -3137,7 +3363,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer1Accept = layer2Accept = layer3Accept = true;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({43.0f, 63.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({430.0f, 6300.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             {topNestedOutsideData, {0.5f, 0.5f}, true},
         })), TestSuite::Compare::Container);
@@ -3145,7 +3371,7 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layer1Accept = layer2Accept = layer3Accept = true;
         eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({46.0f, 66.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({460.0f, 6600.0f}, event));
         CORRADE_COMPARE_AS(eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
             /* It's at {3.5f, 3.5f} for topNestedOutside, but that's outside
                of topNested so it isn't considered */
@@ -3157,7 +3383,9 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
 }
 
 void AbstractUserInterfaceTest::eventEdges() {
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -3188,7 +3416,7 @@ void AbstractUserInterfaceTest::eventEdges() {
     {
         ui.layer<Layer>(layer).eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({10.0f, 20.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({100.0f, 2000.0f}, event));
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {topData, {0.0f, 0.0f}},
         })), TestSuite::Compare::Container);
@@ -3197,7 +3425,7 @@ void AbstractUserInterfaceTest::eventEdges() {
     } {
         ui.layer<Layer>(layer).eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({57.0f, 20.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({570.0f, 2000.0f}, event));
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {topData, {47.0f, 0.0f}},
         })), TestSuite::Compare::Container);
@@ -3206,7 +3434,7 @@ void AbstractUserInterfaceTest::eventEdges() {
     } {
         ui.layer<Layer>(layer).eventCalls = {};
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({10.0f, 34.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({100.0f, 3400.0f}, event));
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {topData, {0.0f, 14.0f}},
         })), TestSuite::Compare::Container);
@@ -3216,8 +3444,8 @@ void AbstractUserInterfaceTest::eventEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
         PointerEvent event1{Pointer::MouseLeft};
         PointerEvent event2{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({90.0f, 80.0f}, event1));
-        CORRADE_VERIFY(ui.pointerPressEvent({89.9f, 79.9f}, event2));
+        CORRADE_VERIFY(ui.pointerPressEvent({900.0f, 8000.0f}, event1));
+        CORRADE_VERIFY(ui.pointerPressEvent({899.0f, 7990.0f}, event2));
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {bottomData, {90.0f, 80.0f}},
             {topData, {79.9f, 59.9f}},
@@ -3228,8 +3456,8 @@ void AbstractUserInterfaceTest::eventEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
         PointerEvent event1{Pointer::MouseLeft};
         PointerEvent event2{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({90.0f, 34.0f}, event1));
-        CORRADE_VERIFY(ui.pointerPressEvent({89.9f, 34.0f}, event2));
+        CORRADE_VERIFY(ui.pointerPressEvent({900.0f, 3400.0f}, event1));
+        CORRADE_VERIFY(ui.pointerPressEvent({899.0f, 3400.0f}, event2));
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {bottomData, {90.0f, 34.0f}},
             {topData, {79.9f, 14.0f}},
@@ -3240,8 +3468,8 @@ void AbstractUserInterfaceTest::eventEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
         PointerEvent event1{Pointer::MouseLeft};
         PointerEvent event2{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({57.0f, 80.0f}, event1));
-        CORRADE_VERIFY(ui.pointerPressEvent({57.0f, 79.9f}, event2));
+        CORRADE_VERIFY(ui.pointerPressEvent({570.0f, 8000.0f}, event1));
+        CORRADE_VERIFY(ui.pointerPressEvent({570.0f, 7990.0f}, event2));
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {bottomData, {57.0f, 80.0f}},
             {topData, {47.0f, 59.9f}},
@@ -3253,7 +3481,9 @@ void AbstractUserInterfaceTest::eventPointerPress() {
     auto&& data = UpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -3299,7 +3529,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
     /* Outside, no hit */
     {
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(!ui.pointerPressEvent({100.0f, 100.0f}, event));
+        CORRADE_VERIFY(!ui.pointerPressEvent({1000.0f, 10000.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.layer<Layer>(layer).acceptedCount, 0);
@@ -3307,7 +3537,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
     /* Inside, hit */
     } {
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({20.0f, 25.0f}, event));
+        CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.layer<Layer>(layer).acceptedCount, 1);
@@ -3320,7 +3550,9 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
     auto&& data = UpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -3366,7 +3598,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
     /* Outside, no hit */
     {
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(!ui.pointerReleaseEvent({100.0f, 100.0f}, event));
+        CORRADE_VERIFY(!ui.pointerReleaseEvent({1000.0f, 10000.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.layer<Layer>(layer).acceptedCount, 0);
@@ -3374,7 +3606,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
     /* Inside, hit */
     } {
         PointerEvent event{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerReleaseEvent({20.0f, 25.0f}, event));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({200.0f, 2500.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.layer<Layer>(layer).acceptedCount, 1);
@@ -3387,7 +3619,9 @@ void AbstractUserInterfaceTest::eventPointerMove() {
     auto&& data = UpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     enum Event {
         Move = 2,
@@ -3446,7 +3680,7 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent event{{}, {}};
-        CORRADE_VERIFY(!ui.pointerMoveEvent({10.0f, 10.0f}, event));
+        CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 1000.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
@@ -3458,12 +3692,12 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent event1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 11.0f}, event1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1100.0f}, event1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
 
         PointerMoveEvent event2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({35.0f, 10.0f}, event2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({350.0f, 1000.0f}, event2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
 
@@ -3484,12 +3718,12 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent event1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 11.0f}, event1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1100.0f}, event1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
 
         PointerMoveEvent event2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 10.0f}, event2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({550.0f, 1000.0f}, event2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
 
@@ -3510,12 +3744,32 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent event{{}, {}};
-        CORRADE_VERIFY(!ui.pointerMoveEvent({10.0f, 11.0f}, event));
+        CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 1100.0f}, event));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
             {Leave, rightData, {-30.0f, 11.0f, 0.0f, 0.0f}},
             /* There's nothing to receive a Move event afterwards */
+        })), TestSuite::Compare::Container);
+
+    /* After changing the UI size, the relative position should be still in the
+       already scaled units */
+    } {
+        /* Events should get scaled to (0.01, 0.1), i.e. the scale is flipped
+           now */
+        ui.setSize({300.0f, 200.0f}, {30000.0f, 2000.0f}, {30, 20});
+        ui.layer<Layer>(layer).eventCalls = {};
+
+        /* Back hovering on the right node */
+        PointerMoveEvent event2{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({5500.0f, 100.0f}, event2));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector4>>({
+            /* Is relative to the {-30, 11} that was above, without considering
+               the 10x / 100x scale in any way */
+            {Move, rightData, {15.0f, 10.0f, 45.0f, -1.0f}},
+            {Enter, rightData, {15.0f, 10.0f, 0.0f, 0.0f}},
         })), TestSuite::Compare::Container);
     }
 
@@ -3532,7 +3786,9 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
        are enforced to have the relative position a zero vector so they
        aren't tested here. */
 
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     enum Event {
         Press = 0,
@@ -3580,16 +3836,16 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent pressEvent{Pointer::MouseRight};
-        CORRADE_COMPARE(ui.pointerPressEvent({30.0f, 10.0f}, pressEvent), data.accept);
+        CORRADE_COMPARE(ui.pointerPressEvent({300.0f, 1000.0f}, pressEvent), data.accept);
 
         PointerMoveEvent moveEvent1{{}, {}};
-        CORRADE_COMPARE(ui.pointerMoveEvent({35.0f, 15.0f}, moveEvent1), data.accept);
+        CORRADE_COMPARE(ui.pointerMoveEvent({350.0f, 1500.0f}, moveEvent1), data.accept);
 
         PointerEvent releaseEvent{Pointer::MouseMiddle};
-        CORRADE_COMPARE(ui.pointerReleaseEvent({25.0f, 5.0f}, releaseEvent), data.accept);
+        CORRADE_COMPARE(ui.pointerReleaseEvent({250.0f, 500.0f}, releaseEvent), data.accept);
 
         PointerMoveEvent moveEvent2{{}, {}};
-        CORRADE_COMPARE(ui.pointerMoveEvent({30.0f, 10.0f}, moveEvent2), data.accept);
+        CORRADE_COMPARE(ui.pointerMoveEvent({300.0f, 1000.0f}, moveEvent2), data.accept);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector4>>({
             {Press, {10.0f, 10.0f, 0.0f, 0.0f}},
@@ -3606,10 +3862,10 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent moveEvent{{}, {}};
-        CORRADE_COMPARE(ui.pointerMoveEvent({30.0f, 10.0f}, moveEvent), data.accept);
+        CORRADE_COMPARE(ui.pointerMoveEvent({300.0f, 1000.0f}, moveEvent), data.accept);
 
         PointerEvent pressEvent{Pointer::MouseMiddle};
-        CORRADE_VERIFY(!ui.pointerPressEvent({10.0f, 10.0f}, pressEvent));
+        CORRADE_VERIFY(!ui.pointerPressEvent({100.0f, 1000.0f}, pressEvent));
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector4>>({
             {Move, {10.0f, 10.0f, 0.0f, 0.0f}},
@@ -3621,7 +3877,8 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
 }
 
 void AbstractUserInterfaceTest::eventPointerMoveNotAccepted() {
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     enum Event {
         Accepted = true,
@@ -3762,7 +4019,9 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
     auto&& data = UpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     enum Event {
         Move = 0,
@@ -3810,7 +4069,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
     }
 
     PointerMoveEvent eventMove1{{}, {}};
-    CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
+    CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1000.0f}, eventMove1));
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), nested);
 
     ui.setNodeOffset(node, {30.0f, 20.0f});
@@ -3822,7 +4081,7 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
     }
 
     PointerMoveEvent eventMove2{{}, {}};
-    CORRADE_VERIFY(ui.pointerMoveEvent({35.0f, 25.0f}, eventMove2));
+    CORRADE_VERIFY(ui.pointerMoveEvent({350.0f, 2500.0f}, eventMove2));
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), nested);
 
     CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
@@ -3833,7 +4092,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
             potentially also Enter and Leave, to prevent those usual UI bugs
             when stuff changes while mouse doesn't move? */
         /* Should receive up-to-date position, not something relative to a
-           position cached at the last move */
+           position cached at the last move; also properly considering the
+           event scale */
         {Move, nestedData, {15.0f - 10.0f, 25.0f - 20.0f}},
     })), TestSuite::Compare::Container);
 
@@ -3844,7 +4104,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHidden() {
     auto&& data = EventPointerNodeBecomesHiddenData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     enum Event {
         Move = 0,
@@ -3933,7 +4194,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
     auto&& data = EventNodeRemovedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     enum Event {
         Move = 0,
@@ -4021,7 +4283,8 @@ void AbstractUserInterfaceTest::eventPointerMoveDataRemoved() {
     auto&& data = CleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     enum Event {
         Move = 0,
@@ -4102,7 +4365,9 @@ void AbstractUserInterfaceTest::eventPointerMoveDataRemoved() {
 }
 
 void AbstractUserInterfaceTest::eventCapture() {
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     enum Event {
         Captured = true,
@@ -4168,14 +4433,14 @@ void AbstractUserInterfaceTest::eventCapture() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so no
            hovered node either */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerReleaseEvent({32.0f, 10.0f}, eventRelease));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({320.0f, 1000.0f}, eventRelease));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so no
            hovered node either */
@@ -4193,14 +4458,14 @@ void AbstractUserInterfaceTest::eventCapture() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so no
            hovered node either */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({500.0f, 1000.0f}, eventRelease));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so no
            hovered node either */
@@ -4218,14 +4483,14 @@ void AbstractUserInterfaceTest::eventCapture() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({50.0f, 10.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         /* No Enter/Leave events synthesized from Press at the moment, so no
            hovered node either */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerReleaseEvent({30.0f, 10.0f}, eventRelease));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({300.0f, 1000.0f}, eventRelease));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so no
            hovered node either */
@@ -4244,31 +4509,31 @@ void AbstractUserInterfaceTest::eventCapture() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerMoveEvent eventMove1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1500.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         PointerMoveEvent eventMove2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({35.0f, 15.0f}, eventMove2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({350.0f, 1500.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
 
         PointerEvent eventRelease{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({500.0f, 1000.0f}, eventRelease));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so the
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), left);
 
         PointerMoveEvent eventMove3{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove3));
+        CORRADE_VERIFY(ui.pointerMoveEvent({550.0f, 1500.0f}, eventMove3));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
@@ -4305,35 +4570,35 @@ void AbstractUserInterfaceTest::eventCapture() {
         /* Just to reset everything */
         /** @todo have a pointerCancelEvent() for this */
         PointerEvent eventReleaseReset{Pointer::MouseLeft};
-        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
+        ui.pointerReleaseEvent({10000.0f, 10000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}};
-        ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        ui.pointerMoveEvent({10000.0f, 10000.0f}, eventMoveReset);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({50.0f, 10.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({550.0f, 1500.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
 
         PointerMoveEvent eventMove2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({35.0f, 10.0f}, eventMove2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({350.0f, 1000.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         /* We're on the `left` node, but since the pointer is captured on the
            `right` node, there's no hover */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove3{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({45.0f, 5.0f}, eventMove3));
+        CORRADE_VERIFY(ui.pointerMoveEvent({450.0f, 500.0f}, eventMove3));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         /* Moving back on the `right` node makes it hovered again */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), right);
@@ -4365,23 +4630,23 @@ void AbstractUserInterfaceTest::eventCapture() {
         /* Just to reset everything */
         /** @todo have a pointerCancelEvent() for this */
         PointerEvent eventReleaseReset{Pointer::MouseLeft};
-        ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
+        ui.pointerReleaseEvent({10000.0f, 10000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}};
-        ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        ui.pointerMoveEvent({10000.0f, 10000.0f}, eventMoveReset);
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress1{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({50.0f, 10.0f}, eventPress1));
+        CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress1));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), right);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventPress2{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress2));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress2));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -4397,7 +4662,9 @@ void AbstractUserInterfaceTest::eventCapture() {
 }
 
 void AbstractUserInterfaceTest::eventCaptureEdges() {
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     /* Like eventEdges(), but testing the special case with event capture where
        it's used to fire Enter and Leave events */
@@ -4453,7 +4720,7 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
     /* Set the node as initially hovered */
     PointerMoveEvent eventMove0{{}, {}};
-    CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 25.0f}, eventMove0));
+    CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 2500.0f}, eventMove0));
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
     /* Top left corner */
@@ -4461,16 +4728,16 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 25.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         PointerMoveEvent eventMove1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({19.9f, 9.9f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({199.0f, 990.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({20.0f, 10.0f}, eventMove2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 1000.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
@@ -4486,16 +4753,16 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 25.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         PointerMoveEvent eventMove1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 9.9f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 990.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1000.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
@@ -4511,16 +4778,16 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 25.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         PointerMoveEvent eventMove1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({19.9f, 25.0f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({199.0f, 2500.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({20.0f, 25.0f}, eventMove2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 2500.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
@@ -4536,16 +4803,16 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 25.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         PointerMoveEvent eventMove1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({40.0f, 30.0f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({400.0f, 3000.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({39.9f, 29.9f}, eventMove2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({399.0f, 2990.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
@@ -4561,16 +4828,16 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 25.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         PointerMoveEvent eventMove1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 30.0f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 3000.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 29.9f}, eventMove2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 2990.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
@@ -4586,16 +4853,16 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         ui.layer<Layer>(layer).eventCalls = {};
 
         PointerEvent eventPress{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 25.0f}, eventPress));
+        CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 2500.0f}, eventPress));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         PointerMoveEvent eventMove1{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({40.0f, 25.0f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({400.0f, 2500.0f}, eventMove1));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove2{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({39.9f, 25.0f}, eventMove2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({399.0f, 2500.0f}, eventMove2));
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
 
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<Int, Vector2>>({
@@ -4609,7 +4876,8 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 }
 
 void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     enum Event {
         Captured = true,
@@ -4922,7 +5190,8 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
 }
 
 void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     enum Event {
         Captured = true,
@@ -5321,7 +5590,8 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
 }
 
 void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     enum Event {
         Captured = true,
@@ -5445,7 +5715,9 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
     auto&& data = EventCaptureUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -5495,7 +5767,7 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
     }
 
     PointerEvent eventPress{Pointer::MouseLeft};
-    CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+    CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
     CORRADE_COMPARE(ui.pointerEventCapturedNode(), nested);
 
     ui.setNodeOffset(node, {30.0f, 20.0f});
@@ -5508,18 +5780,19 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
 
     if(data.release) {
         PointerEvent eventRelease{Pointer::MouseLeft};
-        CORRADE_VERIFY(ui.pointerReleaseEvent({32.0f, 10.0f}, eventRelease));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({320.0f, 1000.0f}, eventRelease));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
     } else if(data.move) {
         PointerMoveEvent eventMove{{}, {}};
-        CORRADE_VERIFY(ui.pointerMoveEvent({32.0f, 10.0f}, eventMove));
+        CORRADE_VERIFY(ui.pointerMoveEvent({320.0f, 1000.0f}, eventMove));
         CORRADE_COMPARE(ui.pointerEventCapturedNode(), nested);
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
     CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
         {nestedData, {10.0f, 10.0f}},
         /* Should receive up-to-date position, not something relative to a
-           position cached at the press */
+           position cached at the press; also properly considering the event
+           scale */
         {nestedData, {12.0f - 10.0f, 10.0f - 20.0f}},
     })), TestSuite::Compare::Container);
 
@@ -5530,7 +5803,8 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHidden() {
     auto&& data = EventCaptureNodeBecomesHiddenData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -5625,7 +5899,8 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
     auto&& data = EventCaptureNodeRemovedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -5721,7 +5996,8 @@ void AbstractUserInterfaceTest::eventCaptureDataRemoved() {
     auto&& data = EventCaptureCleanUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    AbstractUserInterface ui;
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
 
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
