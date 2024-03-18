@@ -60,6 +60,11 @@ struct AbstractLayerTest: TestSuite::Tester {
     void createNoHandlesLeft();
     void removeInvalid();
 
+    void setSize();
+    void setSizeZero();
+    void setSizeNotSupported();
+    void setSizeNotImplemented();
+
     void clean();
     void cleanEmpty();
     void cleanNotImplemented();
@@ -101,6 +106,11 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::createRemoveHandleDisable,
               &AbstractLayerTest::createNoHandlesLeft,
               &AbstractLayerTest::removeInvalid,
+
+              &AbstractLayerTest::setSize,
+              &AbstractLayerTest::setSizeZero,
+              &AbstractLayerTest::setSizeNotSupported,
+              &AbstractLayerTest::setSizeNotImplemented,
 
               &AbstractLayerTest::clean,
               &AbstractLayerTest::cleanEmpty,
@@ -404,6 +414,86 @@ void AbstractLayerTest::removeInvalid() {
         "Whee::AbstractLayer::remove(): invalid handle Whee::DataHandle(Null, {0x0, 0x1})\n"
         "Whee::AbstractLayer::remove(): invalid handle Whee::LayerDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::setSize() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Draw;
+        }
+
+        void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override {
+            ++called;
+            CORRADE_COMPARE(size, (Vector2{1.0f, 2.0f}));
+            CORRADE_COMPARE(framebufferSize, (Vector2i{3, 4}));
+        }
+
+        Int called = 0;
+    } layer{layerHandle(0, 1)};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    layer.setSize({1.0f, 2.0f}, {3, 4});
+    CORRADE_COMPARE(layer.called, 1);
+}
+
+void AbstractLayerTest::setSizeZero() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Draw;
+        }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setSize({0.0f, 1.0f}, {2, 3});
+    layer.setSize({1.0f, 0.0f}, {2, 3});
+    layer.setSize({1.0f, 2.0f}, {0, 3});
+    layer.setSize({1.0f, 2.0f}, {3, 0});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::setSize(): expected non-zero sizes, got Vector(0, 1) and Vector(2, 3)\n"
+        "Whee::AbstractLayer::setSize(): expected non-zero sizes, got Vector(1, 0) and Vector(2, 3)\n"
+        "Whee::AbstractLayer::setSize(): expected non-zero sizes, got Vector(1, 2) and Vector(0, 3)\n"
+        "Whee::AbstractLayer::setSize(): expected non-zero sizes, got Vector(1, 2) and Vector(3, 0)\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::setSizeNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setSize({}, {});
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::setSize(): Whee::LayerFeature::Draw not supported\n");
+}
+
+void AbstractLayerTest::setSizeNotImplemented() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Draw;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.setSize({1.0f, 2.0f}, {3, 4});
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
 }
 
 void AbstractLayerTest::clean() {

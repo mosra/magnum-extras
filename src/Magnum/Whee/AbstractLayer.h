@@ -285,6 +285,18 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         void remove(LayerDataHandle handle);
 
         /**
+         * @brief Set user interface size
+         *
+         * Used internally from @ref AbstractUserInterface::setSize() and
+         * @ref AbstractUserInterface::setLayerInstance(). Exposed just for
+         * testing purposes, there should be no need to call this function
+         * directly. Expects that the layer supports @ref LayerFeature::Draw
+         * and that both sizes are non-zero. Delegates to @ref doSetSize(), see
+         * its documentation for more information about the arguments.
+         */
+        void setSize(const Vector2& size, const Vector2i& framebufferSize);
+
+        /**
          * @brief Clean no longer valid layer data
          *
          * Used internally from @ref AbstractUserInterface::clean(). Exposed
@@ -430,6 +442,27 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
     private:
         /** @brief Implementation for @ref features() */
         virtual LayerFeatures doFeatures() const = 0;
+
+        /**
+         * @brief Set user interface size
+         * @param size              Size of the user interface to which
+         *      everything including events is positioned
+         * @param framebufferSize   Size of the window framebuffer
+         *
+         * Implementation for @ref setSize(), which is called from
+         * @ref AbstractUserInterface::setSize() whenever the UI size or the
+         * framebuffer size changes, and from
+         * @ref AbstractUserInterface::setLayerInstance() if the UI size is
+         * already set at the time the function is called. Called only if
+         * @ref LayerFeature::Draw is supported. The implementation is expected
+         * to update its internal rendering state such as projection matrices
+         * and other framebuffer-related state. If the size change led to a
+         * change in node positioning, the implementation can expect a followup
+         * @ref doUpdate() call with up-to-date node positions and sizes.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doSetSize(const Vector2& size, const Vector2i& framebufferSize);
 
         /**
          * @brief Clean no longer valid layer data

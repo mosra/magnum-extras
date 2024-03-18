@@ -44,4 +44,11 @@ if(MAGNUM_WITH_UI AND Magnum_Sdl2Application_FOUND)
     if(CORRADE_TESTSUITE_TEST_TARGET)
         add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Ui)
     endif()
+
+    add_library(snippets-Whee-sdl2 STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
+        Whee-sdl2.cpp)
+    target_link_libraries(snippets-Whee-sdl2 PRIVATE MagnumWhee Magnum::Sdl2Application)
+    if(CORRADE_TESTSUITE_TEST_TARGET)
+        add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Whee-sdl2)
+    endif()
 endif()
