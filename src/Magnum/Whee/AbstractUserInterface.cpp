@@ -321,6 +321,18 @@ struct AbstractUserInterface::State {
     /* Tracks whether update() and clean() needs to do something */
     UserInterfaceStates state;
 
+    /* Node + data on which a pointer press event was accepted & captured and
+       which will receive remaining pointer events until a pointer release. If
+       null, a pointer isn't pressed, a capture was disabled, or the captured
+       node or data got removed or hidden since. */
+    NodeHandle pointerEventCapturedNode = NodeHandle::Null;
+    /** @todo instead of capturing a single data, might want to bubble through
+        all attachments of given node again, so even the data that don't
+        actually accept the event still get it? but that would imply the UI
+        library supports such "lurking" event handling, which probably needs
+        further design considerations */
+    DataHandle pointerEventCapturedData = DataHandle::Null;
+
     /* Data for updates, event handling and drawing, repopulated by clean() and
        update() */
     Containers::ArrayTuple nodeStateStorage;
@@ -1167,6 +1179,17 @@ AbstractUserInterface& AbstractUserInterface::clean() {
         CORRADE_INTERNAL_ASSERT(dataOffset == dataCount);
     }
 
+    /* 5. Refresh the event handling state based on valid data. */
+    if(states >= UserInterfaceState::NeedsDataClean) {
+        /* If the data used for pointer capture is no longer valid, reset it.
+           Can't decide anything about the pointerEventCapturedNode, visibility
+           is handled only later in update(). */
+        if(!isHandleValid(state.pointerEventCapturedData)) {
+            state.pointerEventCapturedNode = NodeHandle::Null;
+            state.pointerEventCapturedData = DataHandle::Null;
+        }
+    }
+
     /* Unmark the UI as needing a clean() call, but keep the Update states
        including ones that bubbled up from layers */
     state.state = states & ~((UserInterfaceState::NeedsDataClean|UserInterfaceState::NeedsNodeClean) & ~UserInterfaceState::NeedsNodeUpdate);
@@ -1340,6 +1363,17 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
     /** @todo layer-specific cull/clip step? */
 
+    /* 8. Refresh the event handling state based on visible nodes. */
+    if(states >= UserInterfaceState::NeedsNodeUpdate) {
+        /* If the node capturing pointer events is no longer valid or is now
+           invisible, reset it */
+        if(!isHandleValid(state.pointerEventCapturedNode) ||
+           !visibleNodeMask[nodeHandleId(state.pointerEventCapturedNode)]) {
+            state.pointerEventCapturedNode = NodeHandle::Null;
+            state.pointerEventCapturedData = DataHandle::Null;
+        }
+    }
+
     /* Unmark the UI as needing an update() call. No other states should be
        left after that, i.e. the UI should be ready for drawing and event
        processing. */
@@ -1377,7 +1411,7 @@ AbstractUserInterface& AbstractUserInterface::draw() {
     return *this;
 }
 
-template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEvent(const Vector2& globalPosition, UnsignedInt visibleNodeIndex, Event& event) {
+template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Containers::Pair<NodeHandle, DataHandle> AbstractUserInterface::callEvent(const Vector2& globalPosition, UnsignedInt visibleNodeIndex, Event& event) {
     CORRADE_INTERNAL_ASSERT(!event._accepted);
     State& state = *_state;
     const UnsignedInt nodeId = state.visibleNodeIds[visibleNodeIndex];
@@ -1386,13 +1420,15 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
     const Vector2 nodeOffset = state.absoluteNodeOffsets[nodeId];
     if((globalPosition < nodeOffset).any() ||
        (globalPosition >= nodeOffset + state.nodes[nodeId].used.size).any())
-        return false;
+        return {};
 
     /* If the position is inside, recurse into *direct* children. If the event
        is handled there, we're done. */
-    for(UnsignedInt i = 1, iMax = state.visibleNodeChildrenCounts[visibleNodeIndex] + 1; i != iMax; i += state.visibleNodeChildrenCounts[visibleNodeIndex + i] + 1)
-        if(callEvent<Event, function>(globalPosition, visibleNodeIndex + i, event))
-            return true;
+    for(UnsignedInt i = 1, iMax = state.visibleNodeChildrenCounts[visibleNodeIndex] + 1; i != iMax; i += state.visibleNodeChildrenCounts[visibleNodeIndex + i] + 1) {
+        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<Event, function>(globalPosition, visibleNodeIndex + i, event);
+        if(called.first() != NodeHandle::Null)
+            return called;
+    }
 
     /* Only if children didn't handle the event, look into this node data */
     const Vector2 position = globalPosition - nodeOffset;
@@ -1401,36 +1437,87 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
         event._position = position;
         ((*state.layers[dataHandleLayerId(data)].used.instance).*function)(dataHandleId(data), event);
         if(event._accepted)
-            return true;
+            return {nodeHandle(nodeId, state.nodes[nodeId].used.generation), data};
     }
 
-    return false;
+    return {};
 }
 
-template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEvent(const Vector2& globalPosition, Event& event) {
+template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> Containers::Pair<NodeHandle, DataHandle> AbstractUserInterface::callEvent(const Vector2& globalPosition, Event& event) {
     /* Call update implicitly in order to make the internal state ready for
        event processing. Is a no-op if there's nothing to update or clean. */
     update();
 
-    for(const UnsignedInt visibleTopLevelNodeIndex: _state->visibleFrontToBackTopLevelNodeIndices)
-        if(callEvent<Event, function>(globalPosition, visibleTopLevelNodeIndex, event))
-            return true;
+    for(const UnsignedInt visibleTopLevelNodeIndex: _state->visibleFrontToBackTopLevelNodeIndices) {
+        const Containers::Pair<NodeHandle, DataHandle> called = callEvent<Event, function>(globalPosition, visibleTopLevelNodeIndex, event);
+        if(called.first() != NodeHandle::Null)
+            return called;
+    }
 
-    return false;
+    return {};
 }
 
 bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, PointerEvent& event) {
     CORRADE_ASSERT(!event._accepted,
         "Whee::AbstractUserInterface::pointerPressEvent(): event already accepted", {});
 
-    return callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPosition, event);
+    /* Press event has isCaptured() set always */
+    event._captured = true;
+
+    const Containers::Pair<NodeHandle, DataHandle> called = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPosition, event);
+
+    /* If the event was accepted and capture is desired, remember the concrete
+       node and data it got called on */
+    if(event._accepted && event._captured) {
+        CORRADE_INTERNAL_ASSERT(called.first() != NodeHandle::Null &&
+                                called.second() != DataHandle::Null);
+        State& state = *_state;
+        state.pointerEventCapturedNode = called.first();
+        state.pointerEventCapturedData = called.second();
+    }
+
+    return event._accepted;
 }
 
 bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event) {
     CORRADE_ASSERT(!event._accepted,
         "Whee::AbstractUserInterface::pointerReleaseEvent(): event already accepted", {});
 
-    return callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPosition, event);
+    /* Update so we don't have stale pointerEventCapture{Node,Data}. Otherwise
+       the update() gets called only later in callEvent(). */
+    update();
+
+    /* If there's a node capturing pointer events, call the event on it
+       directly. Given that update() was called, these should be both either
+       null or both valid. */
+    State& state = *_state;
+    if(state.pointerEventCapturedNode != NodeHandle::Null) {
+        CORRADE_INTERNAL_ASSERT(isHandleValid(state.pointerEventCapturedNode) &&
+                                isHandleValid(state.pointerEventCapturedData));
+
+        /* Called on a captured node, so isCaptured() should be true */
+        event._captured = true;
+
+        const Vector2 position = globalPosition - state.absoluteNodeOffsets[nodeHandleId(state.pointerEventCapturedNode)];
+        event._position = position;
+        state.layers[dataHandleLayerId(state.pointerEventCapturedData)].used.instance->pointerReleaseEvent(dataHandleId(state.pointerEventCapturedData), event);
+
+    /* Otherwise the usual hit testing etc. */
+    } else {
+        /* Not called on a captured node, isCaptured() should be false */
+        event._captured = false;
+
+        callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPosition, event);
+    }
+
+    /* After a release, there should be no captured node anymore */
+    state.pointerEventCapturedNode = NodeHandle::Null;
+    state.pointerEventCapturedData = DataHandle::Null;
+    return event._accepted;
+}
+
+NodeHandle AbstractUserInterface::pointerEventCapturedNode() const {
+    return _state->pointerEventCapturedNode;
 }
 
 }}
