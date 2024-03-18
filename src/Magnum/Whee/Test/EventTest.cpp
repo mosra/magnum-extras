@@ -55,7 +55,11 @@ void EventTest::pointer() {
     PointerEvent event{Pointer::MouseMiddle};
     CORRADE_COMPARE(event.type(), Pointer::MouseMiddle);
     CORRADE_COMPARE(event.position(), Vector2{});
+    CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isAccepted());
+
+    event.setCaptured(true);
+    CORRADE_VERIFY(event.isCaptured());
 
     event.setAccepted();
     CORRADE_VERIFY(event.isAccepted());
