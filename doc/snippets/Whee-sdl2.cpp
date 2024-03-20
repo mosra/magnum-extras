@@ -26,7 +26,11 @@
 #include <Magnum/Platform/Sdl2Application.h>
 
 #include "Magnum/Math/Functions.h"
+#include "Magnum/Whee/Application.h"
 #include "Magnum/Whee/AbstractUserInterface.h"
+
+#define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
+#define DOXYGEN_IGNORE(...) __VA_ARGS__
 
 using namespace Magnum;
 
@@ -58,3 +62,41 @@ Whee::AbstractUserInterface ui(
 }
 }
 };
+
+struct MyApplication: Platform::Application {
+    void mousePressEvent(MouseEvent& event) override;
+    void mouseReleaseEvent(MouseEvent& event) override;
+    void mouseMoveEvent(MouseMoveEvent& event) override;
+    Whee::AbstractUserInterface _ui;
+};
+
+/* The include is already above, so doing it again here should be harmless */
+/* [AbstractUserInterface-application-events] */
+#include <Magnum/Whee/Application.h>
+
+DOXYGEN_ELLIPSIS()
+
+void MyApplication::mousePressEvent(MouseEvent& event) {
+    if(!_ui.pointerPressEvent(event)) {
+        /* Handle an event that wasn't accepted by the UI */
+    }
+
+    DOXYGEN_ELLIPSIS()
+}
+
+void MyApplication::mouseReleaseEvent(MouseEvent& event) {
+    if(!_ui.pointerReleaseEvent(event)) {
+        /* Handle an event that wasn't accepted by the UI */
+    }
+
+    DOXYGEN_ELLIPSIS()
+}
+
+void MyApplication::mouseMoveEvent(MouseMoveEvent& event) {
+    if(!_ui.pointerMoveEvent(event)) {
+        /* Handle an event that wasn't accepted by the UI */
+    }
+
+    DOXYGEN_ELLIPSIS()
+}
+/* [AbstractUserInterface-application-events] */

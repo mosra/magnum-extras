@@ -78,6 +78,7 @@ environment:
     CONFIGURATION: Debug
   - TARGET: desktop
     COMPILER: mingw
+    PLATFORM: x64 # Needed for GLFW download
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     APPVEYOR_JOB_NAME: windows-mingw
   #- TARGET: desktop-gles
@@ -86,16 +87,19 @@ environment:
     #APPVEYOR_JOB_NAME: windows-gles2-msvc2019
     #COMPILER: msvc
   - TARGET: desktop-gles
+    PLATFORM: x64 # Needed for GLFW download
     TARGET_GLES2: OFF
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     APPVEYOR_JOB_NAME: windows-gles3-msvc2019
     COMPILER: msvc
   #- TARGET: desktop-gles
+    #PLATFORM: x64 # Needed for GLFW download
     #TARGET_GLES2: ON
     #APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     #APPVEYOR_JOB_NAME: windows-gles2-msvc2022
     #COMPILER: msvc
   - TARGET: desktop-gles
+    PLATFORM: x64 # Needed for GLFW download
     TARGET_GLES2: OFF
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
     APPVEYOR_JOB_NAME: windows-gles3-msvc2022
@@ -126,6 +130,14 @@ install:
 - IF NOT "%TARGET%" == "rt" IF "%COMPILER:~0,4%" == "msvc" 7z x SDL2-devel-2.0.9-VC.zip && ren SDL2-2.0.9 SDL
 - IF NOT "%TARGET%" == "rt" IF "%COMPILER%" == "mingw" IF NOT EXIST %APPVEYOR_BUILD_FOLDER%\SDL2-devel-2.0.9-mingw.tar.gz appveyor DownloadFile http://libsdl.org/release/SDL2-devel-2.0.9-mingw.tar.gz
 - IF NOT "%TARGET%" == "rt" IF "%COMPILER%" == "mingw" 7z x SDL2-devel-2.0.9-mingw.tar.gz & 7z x SDL2-devel-2.0.9-mingw.tar & ren SDL2-2.0.9 SDL
+
+# GLFW
+- IF NOT "%TARGET%" == "rt" IF "%PLATFORM%" == "" IF NOT EXIST %APPVEYOR_BUILD_FOLDER%\glfw-3.2.1.bin.WIN32.zip appveyor DownloadFile https://github.com/glfw/glfw/releases/download/3.2.1/glfw-3.2.1.bin.WIN32.zip
+- IF NOT "%TARGET%" == "rt" IF "%PLATFORM%" == "x64" IF NOT EXIST %APPVEYOR_BUILD_FOLDER%\glfw-3.2.1.bin.WIN64.zip appveyor DownloadFile https://github.com/glfw/glfw/releases/download/3.2.1/glfw-3.2.1.bin.WIN64.zip
+- IF NOT "%TARGET%" == "rt" IF "%PLATFORM%" == "" 7z x glfw-3.2.1.bin.WIN32.zip && ren glfw-3.2.1.bin.WIN32 glfw && mkdir deps && mkdir deps\lib && mkdir deps\bin && mkdir deps\include && xcopy /e glfw\include\* deps\include\
+- IF NOT "%TARGET%" == "rt" IF "%PLATFORM%" == "x64" 7z x glfw-3.2.1.bin.WIN64.zip && ren glfw-3.2.1.bin.WIN64 glfw && mkdir deps && mkdir deps\lib && mkdir deps\bin && mkdir deps\include && xcopy /e glfw\include\* deps\include\
+- IF NOT "%TARGET%" == "rt" IF "%COMPILER:~0,4%" == "msvc" copy glfw\lib-vc2015\glfw3.dll deps\bin\ && copy glfw\lib-vc2015\glfw3dll.lib deps\lib\glfw3.lib
+- IF NOT "%TARGET%" == "rt" IF "%COMPILER%" == "mingw" copy glfw\lib-mingw-w64\glfw3.dll deps\bin\ && copy glfw\lib-mingw-w64\libglfw3dll.a deps\lib\libglfw3.a
 
 build_script:
 - IF "%TARGET%" == "desktop" IF "%COMPILER:~0,4%" == "msvc" call package\ci\appveyor-desktop.bat
