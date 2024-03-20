@@ -265,7 +265,7 @@ jobs:
       PLATFORM_GL_API: GLX
     steps:
     - install-base-linux:
-        extra: libgl1-mesa-dev libsdl2-dev
+        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -284,7 +284,7 @@ jobs:
     # Not installing the old GCC 4.8 and CMake 3.4 to speed up. These are
     # tested more than enough on other jobs.
     - install-base-linux-arm64:
-        extra: libgl1-mesa-dev libsdl2-dev
+        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
     - build:
         script: unix-desktop.sh
     - lcov
@@ -300,7 +300,7 @@ jobs:
       TARGET_GLES2: "ON"
     steps:
     - install-base-linux:
-        extra: libsdl2-dev wget unzip
+        extra: libsdl2-dev libglfw3-dev wget unzip
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -322,7 +322,7 @@ jobs:
       TARGET_GLES2: "OFF"
     steps:
     - install-base-linux:
-        extra: libsdl2-dev wget unzip
+        extra: libsdl2-dev libglfw3-dev wget unzip
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -345,7 +345,7 @@ jobs:
       PLATFORM_GL_API: GLX
     steps:
     - install-base-linux:
-        extra: libgl1-mesa-dev libsdl2-dev
+        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -364,7 +364,7 @@ jobs:
       PLATFORM_GL_API: GLX
     steps:
     - install-base-linux:
-        extra: libgl1-mesa-dev libsdl2-dev
+        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
     - cap-ninja-jobs
     - install-gcc-4_8
     - install-cmake:
@@ -384,7 +384,7 @@ jobs:
       PLATFORM_GL_API: GLX
     steps:
     - install-base-linux:
-        extra: libgl1-mesa-dev libsdl2-dev
+        extra: libgl1-mesa-dev libsdl2-dev libglfw3-dev
     - install-clang
     - install-cmake:
         version: "3.5.2"
@@ -399,7 +399,7 @@ jobs:
       PLATFORM_GL_API: CGL
     steps:
     - install-base-macos:
-        extra: sdl2
+        extra: sdl2 glfw
     - build:
         script: unix-desktop.sh
     - lcov
@@ -414,7 +414,7 @@ jobs:
       TARGET_GLES2: "OFF"
     steps:
     - install-base-macos:
-        extra: sdl2 wget
+        extra: sdl2 glfw wget
     - install-swiftshader-gles:
         build: macos12-arm64
     - build:
@@ -431,7 +431,7 @@ jobs:
       PLATFORM_GL_API: CGL
     steps:
     - install-base-macos:
-        extra: sdl2
+        extra: sdl2 glfw
     - build:
         script: unix-desktop.sh
     - lcov
