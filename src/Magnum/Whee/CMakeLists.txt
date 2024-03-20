@@ -65,6 +65,7 @@ set(MagnumWhee_GracefulAssert_SRCS
     UserInterface.cpp)
 
 set(MagnumWhee_HEADERS
+    Application.h
     AbstractAnimator.h
     AbstractLayer.h
     AbstractLayouter.h
