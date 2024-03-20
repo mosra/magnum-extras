@@ -67,6 +67,7 @@ set(MagnumWhee_HEADERS
     AbstractStyle.h
     AbstractUserInterface.h
     AbstractVisualLayer.h
+    Application.h
     BaseLayer.h
     Event.h
     EventLayer.h
