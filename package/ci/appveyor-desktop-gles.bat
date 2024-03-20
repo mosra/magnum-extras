@@ -42,6 +42,7 @@ cmake .. ^
     -DMAGNUM_WITH_OPENGLTESTER=%TARGET_GLES3% ^
     -DMAGNUM_WITH_WINDOWLESSWGLAPPLICATION=ON ^
     -DMAGNUM_WITH_SDL2APPLICATION=%TARGET_GLES3% ^
+    -DMAGNUM_WITH_GLFWAPPLICATION=%TARGET_GLES3% ^
     -G Ninja || exit /b
 cmake --build . || exit /b
 cmake --build . --target install || exit /b

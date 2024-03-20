@@ -34,6 +34,7 @@ corrade_add_test(WheeAbstractRendererTest AbstractRendererTest.cpp LIBRARIES Mag
 corrade_add_test(WheeAbstractStyleTest AbstractStyleTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractUserInterfaceTest AbstractUserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractVisualLayerTest AbstractVisualLayerTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeApplicationTest ApplicationTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeBlurShaderTest BlurShaderTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
@@ -81,6 +82,47 @@ set_property(TARGET
     WheeHandleTest
     WheeTextLayerTest
     APPEND PROPERTY COMPILE_DEFINITIONS "CORRADE_GRACEFUL_ASSERT")
+
+find_package(Magnum OPTIONAL_COMPONENTS
+    Sdl2Application
+    GlfwApplication
+    EmscriptenApplication)
+if(Magnum_Sdl2Application_FOUND)
+    add_executable(WheeSdl2ApplicationTest Sdl2ApplicationTest.cpp)
+    target_link_libraries(WheeSdl2ApplicationTest PRIVATE
+        MagnumWhee
+        Magnum::Sdl2Application)
+    if(CORRADE_TARGET_EMSCRIPTEN)
+        add_custom_command(TARGET WheeSdl2ApplicationTest POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${MAGNUM_WEBAPPLICATION_CSS}
+                ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+                $<TARGET_FILE_DIR:WheeSdl2ApplicationTest>
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_CURRENT_SOURCE_DIR}/Sdl2ApplicationTest.html"
+                "$<TARGET_FILE_DIR:WheeSdl2ApplicationTest>/WheeSdl2ApplicationTest.html")
+    endif()
+endif()
+if(Magnum_GlfwApplication_FOUND)
+    add_executable(WheeGlfwApplicationTest GlfwApplicationTest.cpp)
+    target_link_libraries(WheeGlfwApplicationTest PRIVATE
+        MagnumWhee
+        Magnum::GlfwApplication)
+endif()
+if(Magnum_EmscriptenApplication_FOUND)
+    add_executable(WheeEmscriptenApplicationTest EmscriptenApplicationTest.cpp)
+    target_link_libraries(WheeEmscriptenApplicationTest PRIVATE
+        MagnumWhee
+        Magnum::EmscriptenApplication)
+    add_custom_command(TARGET WheeEmscriptenApplicationTest POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${MAGNUM_WEBAPPLICATION_CSS}
+            ${MAGNUM_EMSCRIPTENAPPLICATION_JS}
+            $<TARGET_FILE_DIR:WheeEmscriptenApplicationTest>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/EmscriptenApplicationTest.html"
+            "$<TARGET_FILE_DIR:WheeEmscriptenApplicationTest>/WheeEmscriptenApplicationTest.html")
+endif()
 
 if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED DebugTools)

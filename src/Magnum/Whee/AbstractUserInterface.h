@@ -241,12 +241,29 @@ MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, UserInterfaceStates value);
 
 CORRADE_ENUMSET_OPERATORS(UserInterfaceStates)
 
+namespace Implementation {
+    template<class, class = void> struct PointerEventConverter;
+    template<class, class = void> struct PointerMoveEventConverter;
+}
+
 /**
 @brief Base for the main user interface
 @m_since_latest
 
 Doesn't contain any implicit layers, layouters or animators. You'll most likely
 want to instantiate the @ref UserInterface subclass instead.
+
+@section Whee-AbstractUserInterface-application Integration with application libraries
+
+By including @ref Magnum/Whee/Application.h it's possible to pass event
+instances from @ref Platform::Sdl2Application "Platform::*Application" classes directly to event handlers. They get internally converted to a corresponding
+@ref PointerEvent or @ref PointerMoveEvent instance with a subset of
+information given application provides. Then, if the event is accepted by the
+user interface, the original application event is marked as accepted as well,
+to prevent it from propagating further in certain circumstances (such as to the
+browser window when compiling for the web). Example usage:
+
+@snippet Whee-sdl2.cpp AbstractUserInterface-application-events
 
 @section Whee-AbstractUserInterface-dpi DPI awareness
 
@@ -1652,6 +1669,17 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         bool pointerPressEvent(const Vector2& globalPosition, PointerEvent& event);
 
         /**
+         * @brief Handle an external pointer press event
+         *
+         * Converts the @p event to a @ref PointerEvent and delegates to
+         * @ref pointerPressEvent(), see its documentation and
+         * @ref Whee-AbstractUserInterface-application for more information.
+         */
+        template<class Event, class = decltype(Implementation::PointerEventConverter<Event>::press(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool pointerPressEvent(Event& event) {
+            return Implementation::PointerEventConverter<Event>::press(*this, event);
+        }
+
+        /**
          * @brief Handle a pointer release event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
@@ -1696,6 +1724,17 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      @ref pointerEventPressedNode(), @ref pointerEventCapturedNode()
          */
         bool pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event);
+
+        /**
+         * @brief Handle an external pointer release event
+         *
+         * Converts the @p event to a @ref PointerEvent and delegates to
+         * @ref pointerReleaseEvent(), see its documentation and
+         * @ref Whee-AbstractUserInterface-application for more information.
+         */
+        template<class Event, class = decltype(Implementation::PointerEventConverter<Event>::release(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool pointerReleaseEvent(Event& event) {
+            return Implementation::PointerEventConverter<Event>::release(*this, event);
+        }
 
         /**
          * @brief Handle a pointer move event
@@ -1768,6 +1807,17 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      @ref pointerEventHoveredNode()
          */
         bool pointerMoveEvent(const Vector2& globalPosition, PointerMoveEvent& event);
+
+        /**
+         * @brief Handle an external pointer move event
+         *
+         * Converts the @p event to a @ref PointerMoveEvent and delegates to
+         * @ref pointerMoveEvent(), see its documentation and
+         * @ref Whee-AbstractUserInterface-application for more information.
+         */
+        template<class Event, class = decltype(Implementation::PointerMoveEventConverter<Event>::move(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool pointerMoveEvent(Event& event) {
+            return Implementation::PointerMoveEventConverter<Event>::move(*this, event);
+        }
 
         /**
          * @brief Node pressed by last pointer event

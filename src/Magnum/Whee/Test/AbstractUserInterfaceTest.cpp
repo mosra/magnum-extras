@@ -198,6 +198,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventTapOrClickNodeBecomesHiddenDisabledNoEvents();
     void eventTapOrClickNodeRemoved();
     void eventTapOrClickAllDataRemoved();
+
+    void eventConvertExternal();
 };
 
 using namespace Math::Literals;
@@ -966,6 +968,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved},
         Containers::arraySize(CleanUpdateData));
+
+    addTests({&AbstractUserInterfaceTest::eventConvertExternal});
 }
 
 void AbstractUserInterfaceTest::debugState() {
@@ -14166,6 +14170,81 @@ void AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved() {
     })), TestSuite::Compare::Container);
 
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+}
+
+}}}}
+
+struct CustomEvent {};
+
+namespace Magnum { namespace Whee { namespace Implementation {
+
+template<> struct PointerEventConverter<CustomEvent> {
+    static bool press(AbstractUserInterface& ui, CustomEvent&) {
+        PointerEvent e{Pointer::MouseLeft};
+        return ui.pointerPressEvent(Vector2{}, e);
+    }
+    static bool release(AbstractUserInterface& ui, CustomEvent&) {
+        PointerEvent e{Pointer::MouseLeft};
+        return ui.pointerReleaseEvent(Vector2{}, e);
+    }
+};
+template<> struct PointerMoveEventConverter<CustomEvent> {
+    static bool move(AbstractUserInterface& ui, CustomEvent&) {
+        PointerMoveEvent e{{}, {}};
+        return ui.pointerMoveEvent(Vector2{}, e);
+    }
+};
+
+}
+
+namespace Test { namespace {
+
+void AbstractUserInterfaceTest::eventConvertExternal() {
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Event {
+        PointerPress = 0,
+        PointerRelease = 1,
+        PointerMove = 2
+    };
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Event; }
+
+        void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
+            arrayAppend(eventCalls, PointerPress);
+            event.setAccepted();
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent& event) override {
+            arrayAppend(eventCalls, PointerRelease);
+            event.setAccepted();
+        }
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+            arrayAppend(eventCalls, PointerMove);
+            event.setAccepted();
+        }
+
+        Containers::Array<Int> eventCalls;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    /* Node with single data */
+    NodeHandle node = ui.createNode({0.0f, 0.0f}, {20.0f, 20.0f});
+    layer.create(node);
+
+    CustomEvent e;
+    CORRADE_VERIFY(ui.pointerPressEvent(e));
+    CORRADE_VERIFY(ui.pointerReleaseEvent(e));
+    CORRADE_VERIFY(ui.pointerMoveEvent(e));
+    CORRADE_COMPARE_AS(layer.eventCalls, Containers::arrayView<Int>({
+        PointerPress,
+        PointerRelease,
+        PointerMove,
+    }), TestSuite::Compare::Container);
 }
 
 }}}}
