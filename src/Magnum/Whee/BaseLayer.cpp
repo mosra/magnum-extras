@@ -127,6 +127,10 @@ BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform
     CORRADE_ASSERT(styleToUniform.size() == state.styleCount,
         "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleCount << "style uniform indices, got" << styleToUniform.size(), *this);
     setStyleInternal(commonUniform, uniforms, stylePadding);
+    /** @todo if this changes compared to before, all layers using this shared
+        state should have NeedsUpdate set, how? "ideally" it would be done via
+        some virtual (ugh) doState() that can peek into the shared state for
+        changes and compare similarly to styleUniformUpdateStamp */
     Utility::copy(styleToUniform, stridedArrayView(state.styles).slice(&Implementation::BaseLayerStyle::uniform));
     return *this;
 }
