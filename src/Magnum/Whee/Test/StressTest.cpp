@@ -25,6 +25,7 @@
 
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Utility/Arguments.h>
 #include <Magnum/Mesh.h>
@@ -59,7 +60,7 @@ class StressTest: public Platform::Application {
         void drawEvent() override;
 
         AbstractUserInterface _ui;
-        LayerHandle _layer1, _layer2;
+        LayerHandle _firstLayer;
         bool _triggerDataUpdate,
             _triggerNodeClipUpdate,
             _triggerNodeLayoutUpdate,
@@ -208,6 +209,7 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
         .addOption("clip", "1.0").setHelp("clip", "clip to only a part of the view", "RATIO")
         /** @todo other triggers */
         .addOption("size", "1000 1000").setHelp("size", "node grid size")
+        .addOption("count", "1").setHelp("count", "count of data per node")
         .parse(arguments.argc, arguments.argv);
 
     _triggerDataUpdate = args.isSet("data-update");
@@ -222,6 +224,10 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
     if(size.product() > 1000000)
         Fatal{} << "At most a million nodes is allowed, got" << size;
 
+    const UnsignedInt count = args.value<UnsignedInt>("count");
+    if(count > 128)
+        Fatal{} << "At most 128 layers is allowed, got" << count;
+
     create(Configuration{}
         .setTitle("Magnum::Whee Stress Test"_s));
 
@@ -234,10 +240,10 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
         .setSize(Vector2{size}*args.value<Float>("clip"), Vector2{windowSize()}, framebufferSize())
         .setRendererInstance(Containers::pointer<Whee::RendererGL>());
 
-    _layer1 = _ui.createLayer();
-    _layer2 = _ui.createLayer();
-    Layer& layer1 = _ui.setLayerInstance(Containers::pointer<Layer>(_layer1, skipVertexDataUpdate, skipIndexDataUpdate, advertiseEvents));
-    Layer& layer2 = _ui.setLayerInstance(Containers::pointer<Layer>(_layer2, skipVertexDataUpdate, skipIndexDataUpdate, advertiseEvents));
+    Containers::Array<Containers::Reference<Layer>> layers;
+    for(UnsignedInt i = 0; i != count*2; ++i)
+        arrayAppend(layers,  _ui.setLayerInstance(Containers::pointer<Layer>(_ui.createLayer(), skipVertexDataUpdate, skipIndexDataUpdate, advertiseEvents)));
+    _firstLayer = layers[0]->handle();
 
     const Containers::StaticArrayView<256, const Vector3ub> colors = DebugTools::ColorMap::turbo();
 
@@ -251,13 +257,19 @@ StressTest::StressTest(const Arguments& arguments): Platform::Application{argume
             NodeHandle nodeSub = _ui.createNode(node, {0.0f, 0.0f}, {1.0f, 1.0f});
             Color4ub color = colors[(i*117) % colors.size()];
             ColorHsv hsv = color.toHsv();
-            layer1.create(color, node);
-            layer2.create(Color4ub::fromHsv({hsv.hue, hsv.saturation*0.25f, hsv.value}), nodeSub);
+            for(UnsignedInt j = 0; j != count; ++j)
+                layers[j]->create(color, node);
+            for(UnsignedInt j = 0; j != count; ++j)
+                layers[count + j]->create(Color4ub::fromHsv({hsv.hue, hsv.saturation*0.25f, hsv.value}), nodeSub);
             ++i;
         }
     }
 
-    Debug{} << _ui.nodeCapacity() << "nodes total," << layer1.capacity() + layer2.capacity() << "data attachments";
+    UnsignedInt capacity = 0;
+    for(UnsignedInt j = 0; j != count*2; ++j)
+        capacity += layers[j]->capacity();
+
+    Debug{} << _ui.nodeCapacity() << "nodes total," << capacity << "data attachments";
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     setSwapInterval(0);
@@ -277,7 +289,7 @@ void StressTest::drawEvent() {
     else if(_triggerNodeLayoutUpdate)
         _ui.setNodeOffset(nodeHandle(0, 1), _ui.nodeOffset(nodeHandle(0, 1)));
     else if(_triggerDataUpdate)
-        _ui.layer<Layer>(_layer1).setNeedsUpdate();
+        _ui.layer<Layer>(_firstLayer).setNeedsUpdate();
 
     _ui.draw();
 
