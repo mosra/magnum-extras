@@ -40,6 +40,7 @@
 #endif
 #include <Magnum/Text/Alignment.h>
 
+#include "Magnum/Whee/Application.h"
 #include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/BaseLayerAnimator.h"
 #include "Magnum/Whee/BaseLayerGL.h"
@@ -351,32 +352,19 @@ void WheeGallery::drawEvent() {
 }
 
 void WheeGallery::mousePressEvent(MouseEvent& event) {
-    if(event.button() == MouseEvent::Button::Left) {
-        Whee::PointerEvent e{Whee::Pointer::MouseLeft};
-        // TODO integer overload? or just have a template wrapper that does this automagically
-        _ui.pointerPressEvent(Vector2{event.position()}, e);
-    }
+    _ui.pointerPressEvent(event);
 
     if(_ui.state()) redraw();
 }
 
 void WheeGallery::mouseReleaseEvent(MouseEvent& event) {
-    if(event.button() == MouseEvent::Button::Left) {
-        Whee::PointerEvent e{Whee::Pointer::MouseLeft};
-        // TODO integer overload? or just have a template wrapper that does this automagically
-        _ui.pointerReleaseEvent(Vector2{event.position()}, e);
-    }
+    _ui.pointerReleaseEvent(event);
 
     if(_ui.state()) redraw();
 }
 
 void WheeGallery::mouseMoveEvent(MouseMoveEvent& event) {
-    Whee::Pointers pointers;
-    if(event.buttons() & MouseMoveEvent::Button::Left)
-        pointers |= Whee::Pointer::MouseLeft;
-    Whee::PointerMoveEvent e{{}, pointers};
-    // TODO integer overload? or just have a template wrapper that does this automagically
-    _ui.pointerMoveEvent(Vector2{event.position()}, e);
+    _ui.pointerMoveEvent(event);
 
     if(_ui.state()) redraw();
 }
