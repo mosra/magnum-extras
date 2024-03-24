@@ -672,6 +672,7 @@ void BaseLayerTest::sharedConstruct() {
     };
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
+    CORRADE_COMPARE(shared.dynamicStyleCount(), 0);
     CORRADE_COMPARE(shared.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
 }
 

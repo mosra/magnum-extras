@@ -542,6 +542,7 @@ void TextLayerTest::sharedConstruct() {
     } shared{TextLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
+    CORRADE_COMPARE(shared.dynamicStyleCount(), 0);
 
     CORRADE_VERIFY(!shared.hasGlyphCache());
 

@@ -30,6 +30,7 @@
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
+#include <Corrade/Utility/FormatStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/AbstractVisualLayer.h"
@@ -59,12 +60,17 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void invalidHandle();
     void styleOutOfRange();
 
+    void dynamicStyleAllocateRecycle();
+    void dynamicStyleAllocateNoDynamicStyles();
+    void dynamicStyleRecycleInvalid();
+
     void eventStyleTransitionNoOp();
     void eventStyleTransition();
     void eventStyleTransitionNoHover();
     void eventStyleTransitionDisabled();
     void eventStyleTransitionNoCapture();
     void eventStyleTransitionOutOfRange();
+    void eventStyleTransitionDynamicStyle();
 };
 
 enum class Enum: UnsignedShort {};
@@ -118,6 +124,24 @@ Debug& operator<<(Debug& debug, StyleIndex value) {
 
 const struct {
     const char* name;
+    UnsignedInt styleCount, dynamicStyleCount;
+} SetStyleData[]{
+    {"", 67, 0},
+    /* 37 is used as one style ID and 66 as the other, make sure the actual
+       style count is less than that in both cases */
+    {"dynamic styles", 29, 38},
+};
+
+const struct {
+    const char* name;
+    UnsignedInt styleCount, dynamicStyleCount;
+} StyleOutOfRangeData[]{
+    {"", 3, 0},
+    {"dynamic styles", 2, 1},
+};
+
+const struct {
+    const char* name;
     bool update;
     bool templated;
 } EventStyleTransitionData[]{
@@ -144,6 +168,14 @@ const struct {
     {"capture disabled", true, StyleIndex::Green, StyleIndex::GreenHover},
 };
 
+const struct {
+    const char* name;
+    UnsignedInt dynamicStyleCount;
+} EventStyleTransitionOutOfRangeData[]{
+    {"", 0},
+    {"dynamic styles", 5},
+};
+
 AbstractVisualLayerTest::AbstractVisualLayerTest() {
     addTests({&AbstractVisualLayerTest::sharedConstruct,
               &AbstractVisualLayerTest::sharedConstructNoCreate,
@@ -153,13 +185,22 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
 
               &AbstractVisualLayerTest::construct,
               &AbstractVisualLayerTest::constructCopy,
-              &AbstractVisualLayerTest::constructMove,
+              &AbstractVisualLayerTest::constructMove});
 
-              &AbstractVisualLayerTest::setStyle<UnsignedInt>,
-              &AbstractVisualLayerTest::setStyle<Enum>,
-              &AbstractVisualLayerTest::setTransitionedStyle,
-              &AbstractVisualLayerTest::invalidHandle,
-              &AbstractVisualLayerTest::styleOutOfRange,
+    addInstancedTests<AbstractVisualLayerTest>({
+        &AbstractVisualLayerTest::setStyle<UnsignedInt>,
+        &AbstractVisualLayerTest::setStyle<Enum>},
+        Containers::arraySize(SetStyleData));
+
+    addTests({&AbstractVisualLayerTest::setTransitionedStyle,
+              &AbstractVisualLayerTest::invalidHandle});
+
+    addInstancedTests({&AbstractVisualLayerTest::styleOutOfRange},
+        Containers::arraySize(StyleOutOfRangeData));
+
+    addTests({&AbstractVisualLayerTest::dynamicStyleAllocateRecycle,
+              &AbstractVisualLayerTest::dynamicStyleAllocateNoDynamicStyles,
+              &AbstractVisualLayerTest::dynamicStyleRecycleInvalid,
 
               &AbstractVisualLayerTest::eventStyleTransitionNoOp});
 
@@ -173,17 +214,22 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNoCapture},
         Containers::arraySize(EventStyleTransitionNoCaptureData));
 
-    addTests({&AbstractVisualLayerTest::eventStyleTransitionOutOfRange});
+    addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionOutOfRange},
+        Containers::arraySize(EventStyleTransitionOutOfRangeData));
+
+    addTests({&AbstractVisualLayerTest::eventStyleTransitionDynamicStyle});
 }
 
 void AbstractVisualLayerTest::sharedConstruct() {
     AbstractVisualLayer::Shared* self;
     struct Shared: AbstractVisualLayer::Shared {
-        explicit Shared(UnsignedInt styleCount, AbstractVisualLayer::Shared*& selfPointer): AbstractVisualLayer::Shared{styleCount} {
+        explicit Shared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount, AbstractVisualLayer::Shared*& selfPointer): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {
             selfPointer = &*_state->self;
         }
-    } shared{3, self};
+    } shared{3, 5, self};
     CORRADE_COMPARE(shared.styleCount(), 3);
+    CORRADE_COMPARE(shared.dynamicStyleCount(), 5);
+    CORRADE_COMPARE(shared.totalStyleCount(), 8);
     CORRADE_COMPARE(self, &shared);
 }
 
@@ -206,25 +252,27 @@ void AbstractVisualLayerTest::sharedConstructCopy() {
 
 void AbstractVisualLayerTest::sharedConstructMove() {
     struct Shared: AbstractVisualLayer::Shared {
-        explicit Shared(UnsignedInt styleCount, Containers::Reference<AbstractVisualLayer::Shared>*& selfPointer): AbstractVisualLayer::Shared{styleCount} {
+        explicit Shared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount, Containers::Reference<AbstractVisualLayer::Shared>*& selfPointer): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {
             selfPointer = &_state->self;
         }
     };
 
     Containers::Reference<AbstractVisualLayer::Shared>* aSelf;
-    Shared a{3, aSelf};
+    Shared a{3, 5, aSelf};
     CORRADE_COMPARE(&**aSelf, &a);
 
     Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleCount(), 3);
+    CORRADE_COMPARE(b.dynamicStyleCount(), 5);
     CORRADE_COMPARE(&**aSelf, &b);
 
     Containers::Reference<AbstractVisualLayer::Shared>* cSelf;
-    Shared c{5, cSelf};
+    Shared c{7, 9, cSelf};
     CORRADE_COMPARE(&**cSelf, &c);
 
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleCount(), 3);
+    CORRADE_COMPARE(c.dynamicStyleCount(), 5);
     CORRADE_COMPARE(&**aSelf, &c);
     CORRADE_COMPARE(&**cSelf, &b);
 
@@ -234,13 +282,13 @@ void AbstractVisualLayerTest::sharedConstructMove() {
 
 void AbstractVisualLayerTest::sharedConstructMoveMovedOutInstance() {
     struct Shared: AbstractVisualLayer::Shared {
-        explicit Shared(UnsignedInt styleCount, Containers::Reference<AbstractVisualLayer::Shared>*& selfPointer): AbstractVisualLayer::Shared{styleCount} {
+        explicit Shared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount, Containers::Reference<AbstractVisualLayer::Shared>*& selfPointer): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {
             selfPointer = &_state->self;
         }
     };
 
     Containers::Reference<AbstractVisualLayer::Shared>* aSelf;
-    Shared a{3, aSelf};
+    Shared a{3, 5, aSelf};
     Shared out{Utility::move(a)};
     CORRADE_COMPARE(&**aSelf, &out);
 
@@ -249,7 +297,7 @@ void AbstractVisualLayerTest::sharedConstructMoveMovedOutInstance() {
     CORRADE_COMPARE(&**aSelf, &out);
 
     Containers::Reference<AbstractVisualLayer::Shared>* cSelf;
-    Shared c{5, cSelf};
+    Shared c{7, 9, cSelf};
     CORRADE_COMPARE(&**cSelf, &c);
 
     /* Moving a moved-out instance (a) to an alive instance (c) should redirect
@@ -273,8 +321,8 @@ void AbstractVisualLayerTest::sharedConstructMoveMovedOutInstance() {
 
 void AbstractVisualLayerTest::construct() {
     struct LayerShared: AbstractVisualLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
-    } shared{3};
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{3, 5};
 
     struct Layer: AbstractVisualLayer {
         explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
@@ -294,15 +342,15 @@ void AbstractVisualLayerTest::constructCopy() {
 
 void AbstractVisualLayerTest::constructMove() {
     struct LayerShared: AbstractVisualLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
     };
 
     struct Layer: AbstractVisualLayer {
         explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
     };
 
-    LayerShared shared{3};
-    LayerShared shared2{5};
+    LayerShared shared{3, 2};
+    LayerShared shared2{5, 7};
 
     Layer a{layerHandle(137, 0xfe), shared};
 
@@ -321,7 +369,7 @@ void AbstractVisualLayerTest::constructMove() {
 
 /* These are shared by all cases that need to call create() below */
 struct StyleLayerShared: AbstractVisualLayer::Shared {
-    explicit StyleLayerShared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
+    explicit StyleLayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
 
     /* To verify that the macro correctly passes everything through. The Shared
        typedef is because the macro overrides return Shared&, which if not
@@ -351,27 +399,29 @@ struct StyleLayer: AbstractVisualLayer {
 };
 
 template<class T> void AbstractVisualLayerTest::setStyle() {
+    auto&& data = SetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
 
-    StyleLayerShared shared{67};
+    StyleLayerShared shared{data.styleCount, data.dynamicStyleCount};
     StyleLayer layer{layerHandle(0, 1), shared};
 
     /* Just to be sure the setters aren't picking up the first ever data
        always */
     layer.create(2);
 
-    DataHandle data = layer.create(17);
-    CORRADE_COMPARE(layer.style(data), 17);
+    DataHandle layerData = layer.create(17);
+    CORRADE_COMPARE(layer.style(layerData), 17);
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a style marks the layer as dirty */
-    layer.setStyle(data, T(37));
-    CORRADE_COMPARE(layer.style(data), 37);
+    layer.setStyle(layerData, T(37));
+    CORRADE_COMPARE(layer.style(layerData), 37);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 
     /* Testing also the other overload */
-    layer.setStyle(dataHandleData(data), T(66));
-    CORRADE_COMPARE(layer.style(data), 66);
+    layer.setStyle(dataHandleData(layerData), T(66));
+    CORRADE_COMPARE(layer.style(layerData), 66);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 }
 
@@ -390,7 +440,9 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         PressedHover1,
     };
 
-    StyleLayerShared shared{8};
+    /* Style transition isn't allowed to use dynamic styles so the dynamic
+       count shouldn't affect it */
+    StyleLayerShared shared{8, 0};
     shared.setStyleTransition(
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
@@ -550,8 +602,8 @@ void AbstractVisualLayerTest::invalidHandle() {
     AbstractUserInterface ui{{100, 100}};
 
     struct LayerShared: AbstractVisualLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
-    } shared{1};
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{1, 0};
 
     struct Layer: AbstractVisualLayer {
         explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
@@ -575,13 +627,16 @@ void AbstractVisualLayerTest::invalidHandle() {
 }
 
 void AbstractVisualLayerTest::styleOutOfRange() {
+    auto&& data = StyleOutOfRangeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     AbstractUserInterface ui{{100, 100}};
 
     struct LayerShared: AbstractVisualLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): AbstractVisualLayer::Shared{styleCount} {}
-    } shared{3};
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{data.styleCount, data.dynamicStyleCount};
 
     struct Layer: AbstractVisualLayer {
         explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
@@ -589,19 +644,121 @@ void AbstractVisualLayerTest::styleOutOfRange() {
         using AbstractVisualLayer::create;
     } layer{layerHandle(0, 1), shared};
 
-    DataHandle data = layer.create();
+    DataHandle layerData = layer.create();
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.setStyle(data, 3);
-    layer.setStyle(dataHandleData(data), 3);
-    layer.setTransitionedStyle(ui, data, 3);
-    layer.setTransitionedStyle(ui, dataHandleData(data), 3);
+    layer.setStyle(layerData, 3);
+    layer.setStyle(dataHandleData(layerData), 3);
+    layer.setTransitionedStyle(ui, layerData, data.styleCount);
+    layer.setTransitionedStyle(ui, dataHandleData(layerData), data.styleCount);
+    CORRADE_COMPARE(out.str(), Utility::formatString(
+        "Whee::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
+        "Whee::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): style {0} out of range for {0} styles\n"
+        "Whee::AbstractVisualLayer::setTransitionedStyle(): style {0} out of range for {0} styles\n", data.styleCount));
+}
+
+void AbstractVisualLayerTest::dynamicStyleAllocateRecycle() {
+    struct LayerShared: AbstractVisualLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{3, 5};
+
+    struct Layer: AbstractVisualLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
+
+        using AbstractVisualLayer::create;
+    } layer{layerHandle(0, 1), shared};
+
+    CORRADE_COMPARE(shared.dynamicStyleCount(), 5);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+
+    Containers::Optional<UnsignedInt> first = layer.allocateDynamicStyle();
+    CORRADE_COMPARE(first, 0);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+
+    Containers::Optional<UnsignedInt> second = layer.allocateDynamicStyle();
+    CORRADE_COMPARE(second, 1);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+
+    Containers::Optional<UnsignedInt> third = layer.allocateDynamicStyle();
+    CORRADE_COMPARE(third, 2);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
+
+    Containers::Optional<UnsignedInt> fourth = layer.allocateDynamicStyle();
+    CORRADE_COMPARE(fourth, 3);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 4);
+
+    /* Recycle a subset in random order */
+    layer.recycleDynamicStyle(*third);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
+
+    layer.recycleDynamicStyle(*second);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+
+    layer.recycleDynamicStyle(*fourth);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+
+    /* Allocating new ones simply picks up the first free */
+    Containers::Optional<UnsignedInt> second2 = layer.allocateDynamicStyle();
+    Containers::Optional<UnsignedInt> third2 = layer.allocateDynamicStyle();
+    Containers::Optional<UnsignedInt> fourth2 = layer.allocateDynamicStyle();
+    CORRADE_COMPARE(second2, 1);
+    CORRADE_COMPARE(third2, 2);
+    CORRADE_COMPARE(fourth2, 3);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 4);
+
+    /* Try recycling the first also */
+    layer.recycleDynamicStyle(*first);
+    Containers::Optional<UnsignedInt> first2 = layer.allocateDynamicStyle();
+    CORRADE_COMPARE(first2, 0);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 4);
+
+    /* Allocating the last free */
+    Containers::Optional<UnsignedInt> fifth = layer.allocateDynamicStyle();
+    CORRADE_COMPARE(fifth, 4);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 5);
+
+    /* It's not possible to allocate any more at this point */
+    CORRADE_COMPARE(layer.allocateDynamicStyle(), Containers::NullOpt);
+}
+
+void AbstractVisualLayerTest::dynamicStyleAllocateNoDynamicStyles() {
+    struct LayerShared: AbstractVisualLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{3, 0};
+
+    struct Layer: AbstractVisualLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
+
+        using AbstractVisualLayer::create;
+    } layer{layerHandle(0, 1), shared};
+
+    CORRADE_COMPARE(shared.dynamicStyleCount(), 0);
+    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+    CORRADE_COMPARE(layer.allocateDynamicStyle(), Containers::NullOpt);
+}
+
+void AbstractVisualLayerTest::dynamicStyleRecycleInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: AbstractVisualLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{3, 4};
+
+    struct Layer: AbstractVisualLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
+
+        using AbstractVisualLayer::create;
+    } layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.recycleDynamicStyle(2);
+    layer.recycleDynamicStyle(4);
     CORRADE_COMPARE(out.str(),
-        "Whee::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
-        "Whee::AbstractVisualLayer::setStyle(): style 3 out of range for 3 styles\n"
-        "Whee::AbstractVisualLayer::setTransitionedStyle(): style 3 out of range for 3 styles\n"
-        "Whee::AbstractVisualLayer::setTransitionedStyle(): style 3 out of range for 3 styles\n");
+        "Whee::AbstractVisualLayer::recycleDynamicStyle(): style 2 not allocated\n"
+        "Whee::AbstractVisualLayer::recycleDynamicStyle(): index 4 out of range for 4 dynamic styles\n");
 }
 
 StyleIndex styleIndexTransitionToInactiveBlur(StyleIndex index) {
@@ -745,7 +902,9 @@ StyleIndex styleIndexTransitionToDisabled(StyleIndex index) {
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
-    StyleLayerShared shared{14};
+    /* Transition for dynamic styles tested in
+       eventStyleTransitionDynamicStyle() instead */
+    StyleLayerShared shared{14, 0};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -904,7 +1063,9 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     auto&& data = EventStyleTransitionData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    StyleLayerShared shared{14};
+    /* Transition for dynamic styles tested in
+       eventStyleTransitionDynamicStyle() instead */
+    StyleLayerShared shared{14, 0};
 
     /* StyleLayerShared uses the *_SHARED_SUBCLASS_IMPLEMENTATION() macro, this
        verifies that all the overrides do what's expected */
@@ -1188,7 +1349,9 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
     auto&& data = EventStyleTransitionData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    StyleLayerShared shared{4};
+    /* Transition for dynamic styles tested in
+       eventStyleTransitionDynamicStyle() instead */
+    StyleLayerShared shared{4, 0};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -1288,7 +1451,9 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
     NodeHandle nodeBlue = ui.createNode({}, {100, 100});
     NodeHandle nodeWhite = ui.createNode({}, {100, 100}, NodeFlag::Disabled);
 
-    StyleLayerShared shared{14};
+    /* Transition for dynamic styles tested in
+       eventStyleTransitionDynamicStyle() instead */
+    StyleLayerShared shared{14, 0};
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     /* One extra data to verify it's mapping from nodes to data correctly */
     layer.create(StyleIndex::Green);
@@ -1427,7 +1592,9 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
     auto&& data = EventStyleTransitionNoCaptureData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    StyleLayerShared shared{4};
+    /* Transition for dynamic styles tested in
+       eventStyleTransitionDynamicStyle() instead */
+    StyleLayerShared shared{4, 0};
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionToPressedBlur,
         styleIndexTransitionToPressedHover,
@@ -1506,9 +1673,14 @@ StyleIndex styleIndexTransitionOutOfRange(StyleIndex) {
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
+    auto&& data = EventStyleTransitionOutOfRangeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    StyleLayerShared shared{14};
+    /* Style transition isn't performed on dynamic styles so this shouldn't
+       affect it */
+    StyleLayerShared shared{14, data.dynamicStyleCount};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -1522,7 +1694,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     /* Tests an OOB condition happening in any of the four functions, and
        checked in any of the four event handlers. Does not exhaustively test
-       all possible combinations, as that should not be needed. */
+       all possible combinations, as that should not be needed.
+
+       The same logic is used in eventStyleTransitionDynamicStyle() to exhaust
+       all possibilities, keep in sync. */
 
     /* OOB toPressedBlur transition */
     shared.setStyleTransition<StyleIndex,
@@ -1622,6 +1797,94 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         Error redirectError{&out};
         ui.update();
         CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::update(): style transition from 5 to 14 out of range for 14 styles\n");
+    }
+}
+
+void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
+    /* There's 14 styles, style ID 14 is a dynamic style */
+    StyleLayerShared shared{14, 1};
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    DataHandle data = layer.create(StyleIndex::Green, node);
+    DataHandle dataDynamic = layer.create(14, node);
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* All these should get called only for the non-dynamic style. Logic the
+       same as in eventStyleTransitionOutOfRange(), just not asserting in this
+       case. Keep the two in sync. */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToDisabled>();
+
+    /* toPressedBlur transition */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        ui.pointerPressEvent({2.0f, 2.0f}, event);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+
+    /* toPressedHover transition in the press event. Doing a move before so the
+       hovered node is properly registered. */
+    } {
+        PointerMoveEvent moveEvent{{}, {}};
+        ui.pointerMoveEvent({1.5f, 2.0f}, moveEvent);
+
+        PointerEvent event{Pointer::MouseLeft};
+        ui.pointerPressEvent({2.0f, 2.0f}, event);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+
+    /* toInactiveHover transition */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        ui.pointerReleaseEvent({1.5f, 2.5f}, event);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+
+    /* toInactiveBlur transition in the leave event */
+    } {
+        PointerMoveEvent event{{}, {}};
+        ui.pointerMoveEvent({8.5f, 2.0f}, event);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
+        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+
+    /* toInactiveHover transition in the enter event */
+    } {
+        PointerMoveEvent event{{}, {}};
+        ui.pointerMoveEvent({1.5f, 2.0f}, event);
+        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+
+    /* toDisabled transition in doUpdate() */
+    } {
+        ui.addNodeFlags(node, NodeFlag::Disabled);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+        /* Only the calculated style changes, not the public one */
+        ui.update();
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(data)]), StyleIndex::GreenDisabled);
+        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], 14);
     }
 }
 
