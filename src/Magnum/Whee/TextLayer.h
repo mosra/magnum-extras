@@ -44,7 +44,7 @@ namespace Magnum { namespace Whee {
 @m_since_latest
 
 Currently this is just a placeholder with no properties.
-@see @ref TextLayerStyleItem, @ref TextLayerGL::Shared::setStyle()
+@see @ref TextLayerStyleItem, @ref TextLayer::Shared::setStyle()
 */
 struct alignas(4) TextLayerStyleCommon {
     /** @brief Construct with default values */
@@ -79,7 +79,7 @@ struct alignas(4) TextLayerStyleCommon {
 @brief Varying style properties for @ref TextLayer data
 @m_since_latest
 
-@see @ref TextLayerStyleCommon, @ref TextLayerGL::Shared::setStyle()
+@see @ref TextLayerStyleCommon, @ref TextLayer::Shared::setStyle()
 */
 struct TextLayerStyleItem {
     /** @brief Construct with default values */
@@ -412,7 +412,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
 Contains a set of fonts and a glyph cache used by all of them. In order to use
 the layer it's expected that @ref setGlyphCache() was called, at least one font
 was added with @ref addFont() and fonts were assigned to corresponding styles
-with @ref setStyleFonts().
+with @ref setStyle().
 
 Pre-filling the glyph cache with appropriate glyphs for a particular font is
 the user responsibility, the implementation currently won't perform that on its
@@ -457,7 +457,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * Expects that @ref glyphCache() is set and contains @p font. Doesn't
          * perform any operation with the glyph cache, pre-filling is left to
          * the caller. The returned handle can be subsequently assigned to a
-         * particular style via @ref setStyleFonts(), or passed to
+         * particular style via @ref setStyle(), or passed to
          * @ref TextProperties::setFont() to create a text with a font that's
          * different from the one assigned to a particular style.
          *
@@ -492,17 +492,20 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         const Text::AbstractFont& font(FontHandle handle) const; /**< @overload */
 
         /**
-         * @brief Assign fonts to styles
+         * @brief Set style data
+         * @param common        Data common to all styles
+         * @param items         Individual style data
+         * @param itemFonts     Font handles corresponding to individual styles
          * @return Reference to self (for method chaining)
          *
-         * Meant to be called in tandem with @ref TextLayerGL::Shared::setStyle()
-         * to match styles with corresponding font properties. The @p handles
-         * view is expected to consist of @ref styleCount() valid handles.
+         * The @p items and @p itemFonts view is expected to have the same size
+         * as @ref styleCount(). The @p itemFonts handles are all expected to
+         * be valid.
          * @see @ref isHandleValid()
          */
-        Shared& setStyleFonts(const Containers::StridedArrayView1D<const FontHandle>& handles);
+        Shared& setStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts);
         /** @overload */
-        Shared& setStyleFonts(std::initializer_list<FontHandle> handles);
+        Shared& setStyle(const TextLayerStyleCommon& common, std::initializer_list<TextLayerStyleItem> items, std::initializer_list<FontHandle> itemFonts);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -534,6 +537,10 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         explicit Shared(UnsignedInt styleCount);
         /* Can't be MAGNUM_WHEE_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
+
+    private:
+        /* The items are guaranteed to have the same size as styleCount() */
+        virtual void doSetStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items) = 0;
 };
 
 }}

@@ -43,6 +43,18 @@ BaseLayer::Shared::Shared(const UnsignedInt styleCount): Shared{Containers::poin
 
 BaseLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCreate} {}
 
+BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(items.size() == state.styleCount,
+        "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleCount << "style items, got" << items.size(), *this);
+    doSetStyle(common, items);
+    return *this;
+}
+
+BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& common, const std::initializer_list<BaseLayerStyleItem> items) {
+    return setStyle(common, Containers::arrayView(items));
+}
+
 BaseLayer::BaseLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
 
 BaseLayer::BaseLayer(const LayerHandle handle, Shared& shared): BaseLayer{handle, Containers::pointer<State>(*shared._state)} {}

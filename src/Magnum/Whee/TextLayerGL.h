@@ -80,8 +80,10 @@ class MAGNUM_WHEE_EXPORT TextLayerGL: public TextLayer {
 /**
 @brief Shared state for the OpenGL implementation of the text layer
 
-Contains fonts, shader instances and style data. In order to draw the layer
-it's expected that @ref setStyle() was called.
+Contains fonts, shader instances and style data. In order to use
+the layer it's expected that @ref setGlyphCache() was called, at least one font
+was added with @ref addFont() and fonts were assigned to corresponding styles
+with @ref setStyle().
 */
 class MAGNUM_WHEE_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
     public:
@@ -124,42 +126,18 @@ class MAGNUM_WHEE_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
          */
         Shared& setGlyphCache(Text::GlyphCache&& cache);
 
-        /**
-         * @brief Set style data
-         * @return Reference to self (for method chaining)
-         *
-         * The style is expected to be a tightly packed struct consisting of
-         * one @ref TextLayerStyleCommon instance followed by
-         * @ref styleCount() const instances of @ref TextLayerStyleItem. For
-         * example, for three different styles the setup could look like this.
-         * Or the @ref TextLayerStyleItem instances could be in a three-item
-         * array.
-         *
-         * @snippet Whee-gl.cpp TextLayerGL-setStyle
-         */
-        template<class T> Shared& setStyle(const T& style) {
-            #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-            static_assert(std::is_trivially_copyable<T>::value, "style data not trivially copyable");
-            #endif
-            return setStyleInternal(&style, sizeof(style));
-        }
-
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
         MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION()
-        Shared& setStyleFonts(const Containers::StridedArrayView1D<const FontHandle>& handles) {
-            return static_cast<Shared&>(TextLayer::Shared::setStyleFonts(handles));
-        }
-        Shared& setStyleFonts(std::initializer_list<FontHandle> handles) {
-            return static_cast<Shared&>(TextLayer::Shared::setStyleFonts(handles));
-        }
+        Shared& setStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts);
+        Shared& setStyle(const TextLayerStyleCommon& common, std::initializer_list<TextLayerStyleItem> items, std::initializer_list<FontHandle> itemFonts);
         #endif
 
     private:
         struct State;
         friend TextLayerGL;
 
-        Shared& setStyleInternal(const void* style, std::size_t size);
+        void doSetStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items) override;
 };
 
 }}

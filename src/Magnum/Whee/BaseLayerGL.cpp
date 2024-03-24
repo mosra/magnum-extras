@@ -160,20 +160,23 @@ BaseLayerGL::Shared::Shared(const UnsignedInt styleCount): BaseLayer::Shared{Con
 
 BaseLayerGL::Shared::Shared(NoCreateT) noexcept: BaseLayer::Shared{NoCreate} {}
 
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyleInternal(const void* const style, std::size_t size) {
-    #ifndef CORRADE_NO_ASSERT
-    const std::size_t expectedSize = sizeof(BaseLayerStyleCommon) + sizeof(BaseLayerStyleItem)*_state->styleCount;
-    #endif
-    CORRADE_ASSERT(size == expectedSize,
-        "Whee::BaseLayerGL::Shared::setStyle(): expected style data of" << expectedSize << "bytes, got" << size, *this);
+BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items) {
+    return static_cast<Shared&>(BaseLayer::Shared::setStyle(common, items));
+}
 
+BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerStyleCommon& common, const std::initializer_list<BaseLayerStyleItem> items) {
+    return static_cast<Shared&>(BaseLayer::Shared::setStyle(common, items));
+}
+
+void BaseLayerGL::Shared::doSetStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items) {
     auto& state = static_cast<State&>(*_state);
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     if(!state.styleBuffer.id())
-        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform};
-    state.styleBuffer.setData({style, size});
-    return *this;
+        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(BaseLayerStyleCommon) + sizeof(BaseLayerStyleItem)*_state->styleCount}};
+
+    state.styleBuffer.setSubData(0, {&common, 1});
+    state.styleBuffer.setSubData(sizeof(BaseLayerStyleCommon), items);
 }
 
 struct BaseLayerGL::State: BaseLayer::State {

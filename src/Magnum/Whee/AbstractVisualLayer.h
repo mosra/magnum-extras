@@ -216,8 +216,8 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          *
          * @see @ref BaseLayerGL::Shared::Shared(UnsignedInt),
          *      @ref TextLayerGL::Shared::Shared(UnsignedInt),
-         *      @ref BaseLayerGL::Shared::setStyle(),
-         *      @ref TextLayerGL::Shared::setStyle()
+         *      @ref BaseLayer::Shared::setStyle(),
+         *      @ref TextLayer::Shared::setStyle()
          */
         UnsignedInt styleCount() const;
 

@@ -40,7 +40,7 @@ namespace Magnum { namespace Whee {
 @brief Common style properties for all @ref BaseLayer data
 @m_since_latest
 
-@see @ref BaseLayerStyleItem, @ref BaseLayerGL::Shared::setStyle()
+@see @ref BaseLayerStyleItem, @ref BaseLayer::Shared::setStyle()
 */
 struct BaseLayerStyleCommon {
     /** @brief Construct with default values */
@@ -116,7 +116,7 @@ struct BaseLayerStyleCommon {
 @brief Varying style properties for @ref BaseLayer data
 @m_since_latest
 
-@see @ref BaseLayerStyleCommon, @ref BaseLayerGL::Shared::setStyle()
+@see @ref BaseLayerStyleCommon, @ref BaseLayer::Shared::setStyle()
 */
 struct BaseLayerStyleItem {
     /** @brief Construct with default values */
@@ -669,10 +669,30 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
 /**
 @brief Shared state for the base layer
 
-You'll most likely instantiate the class through @ref BaseLayerGL::Shared,
-which contains a concrete OpenGL implementation.
+Contains style data. You'll most likely instantiate the class through
+@ref BaseLayerGL::Shared. In order to draw the layer it's expected that
+@ref setStyle() was called.
 */
 class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
+    public:
+        /**
+         * @brief Set style data
+         * @param common        Data common to all styles
+         * @param items         Individual style data
+         * @return Reference to self (for method chaining)
+         *
+         * The @p items view is expected to have the same size as
+         * @ref styleCount().
+         */
+        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items);
+        /** @overload */
+        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items);
+
+        /* Overloads to remove a WTF factor from method chaining order */
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION()
+        #endif
+
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
@@ -685,6 +705,10 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         explicit Shared(UnsignedInt styleCount);
         /* Can't be MAGNUM_WHEE_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
+
+    private:
+        /* The items are guaranteed to have the same size as styleCount() */
+        virtual void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) = 0;
 };
 
 }}

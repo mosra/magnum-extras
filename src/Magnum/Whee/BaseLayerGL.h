@@ -80,8 +80,8 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
 /**
 @brief Shared state for the OpenGL implementation of the base layer
 
-Contains shader instances and style data. In order to draw the layer it's
-expected that @ref setStyle() was called.
+Contains shader instances. In order to draw the layer it's expected that
+@ref setStyle() was called.
 */
 class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
     public:
@@ -103,36 +103,18 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
          */
         explicit Shared(NoCreateT) noexcept;
 
-        /**
-         * @brief Set style data
-         * @return Reference to self (for method chaining)
-         *
-         * The style is expected to be a tightly packed struct consisting of
-         * one @ref BaseLayerStyleCommon instance followed by
-         * @ref styleCount() const instances of @ref BaseLayerStyleItem. For
-         * example, for three different styles the setup could look like this.
-         * Or the @ref BaseLayerStyleItem instances could be in a three-item
-         * array.
-         *
-         * @snippet Whee-gl.cpp BaseLayerGL-setStyle
-         */
-        template<class T> Shared& setStyle(const T& style) {
-            #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
-            static_assert(std::is_trivially_copyable<T>::value, "style data not trivially copyable");
-            #endif
-            return setStyleInternal(&style, sizeof(style));
-        }
-
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
         MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION()
+        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items);
+        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items);
         #endif
 
     private:
         struct State;
         friend BaseLayerGL;
 
-        Shared& setStyleInternal(const void* style, std::size_t size);
+        void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) override;
 };
 
 }}
