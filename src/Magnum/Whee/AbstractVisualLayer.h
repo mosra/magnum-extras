@@ -77,7 +77,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @brief Type-erased data style index
          *
          * Expects that @p handle is valid. The index is guaranteed to be less
-         * than @ref Shared::styleCount().
+         * than @ref Shared::totalStyleCount().
          * @see @ref isHandleValid(DataHandle) const
          */
         UnsignedInt style(DataHandle handle) const;
@@ -86,7 +86,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @brief Data style index in a concrete enum type
          *
          * Expects that @p handle is valid. The index is guaranteed to be less
-         * than @ref Shared::styleCount().
+         * than @ref Shared::totalStyleCount().
          * @see @ref isHandleValid(DataHandle) const
          */
         template<class StyleIndex> StyleIndex style(DataHandle handle) const {
@@ -121,7 +121,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @brief Set data style index
          *
          * Expects that @p handle is valid and @p style is less than
-         * @ref Shared::styleCount().
+         * @ref Shared::totalStyleCount().
          *
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const,
@@ -175,7 +175,9 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * applies style transition functions set in
          * @ref Shared::setStyleTransition() to it first. Expects that
          * @p handle is valid and @p style is less than
-         * @ref Shared::styleCount().
+         * @ref Shared::styleCount(). Not @ref Shared::totalStyleCount() ---
+         * the style transition functions are not allowed to use the dynamic
+         * style indices.
          *
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const
@@ -218,6 +220,39 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
         > void setTransitionedStyle(const AbstractUserInterface& ui, LayerDataHandle handle, StyleIndex style) {
             setTransitionedStyle(ui, handle, UnsignedInt(style));
         }
+
+        /**
+         * @brief Count of used dynamic styles
+         *
+         * Always at most @ref Shared::dynamicStyleCount(). If equal to
+         * @ref Shared::dynamicStyleCount(), a call to
+         * @ref allocateDynamicStyle() will return @ref Containers::NullOpt.
+         */
+        UnsignedInt dynamicStyleUsedCount() const;
+
+        /**
+         * @brief Allocate a dynamic style index
+         *
+         * The returned index, when added to @ref Shared::styleCount(), can be
+         * passed as a style index to @ref setStyle().
+         *
+         * When not used anymore, the index should be passed to
+         * @ref recycleDynamicStyle() to make it available for allocation
+         * again. If there are no free dynamic styles left, returns
+         * @ref Containers::NullOpt.
+         * @see @ref dynamicStyleUsedCount(), @ref Shared::dynamicStyleCount()
+         */
+        Containers::Optional<UnsignedInt> allocateDynamicStyle();
+
+        /**
+         * @brief Recycle a dynamic style index
+         *
+         * Expects that @p id is less than @ref Shared::dynamicStyleCount(),
+         * that it was returned from @ref allocateDynamicStyle() earlier and
+         * that @ref recycleDynamicStyle() hasn't been called on the allocated
+         * @p id yet.
+         */
+        void recycleDynamicStyle(UnsignedInt id);
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
@@ -282,12 +317,38 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
         /**
          * @brief Style count
          *
-         * @see @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt),
+         * Count of styles used by all layer instances referencing this
+         * @ref Shared instance. IDs greater than @ref styleCount() are then
+         * dynamic styles, with their count specified by
+         * @ref dynamicStyleCount().
+         * @see @ref totalStyleCount(),
+         *      @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt),
          *      @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt),
          *      @ref BaseLayer::Shared::setStyle(),
          *      @ref TextLayer::Shared::setStyle()
          */
         UnsignedInt styleCount() const;
+
+        /**
+         * @brief Dynamic style count
+         *
+         * Count of dynamic styles appearing after the initial @ref styleCount()
+         * styles, i.e. having IDs greater or equal to @ref styleCount() and
+         * less than @ref totalStyleCount(). The dynamic styles are local to
+         * every layer instance and are meant to be used mainly for style
+         * transition animations.
+         */
+        UnsignedInt dynamicStyleCount() const;
+
+        /**
+         * @brief Total style count
+         *
+         * A sum of @ref styleCount() and @ref dynamicStyleCount(). Styles with
+         * IDs less than @ref styleCount() are the shared ones, styles with
+         * IDs greater or equal to @ref styleCount() and less than
+         * @ref totalStyleCount() are the dynamic ones.
+         */
+        UnsignedInt totalStyleCount() const;
 
         /**
          * @brief Set type-erased style transition functions
@@ -327,6 +388,13 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
          * instead, which doesn't make any distinction between the hover and
          * blur states and uses the same transition function for both.
+         *
+         * All functions are passed an index that's less than @ref styleCount()
+         * and are expected to return an index that's less than
+         * @ref styleCount() as well. Not @ref totalStyleCount() --- the style
+         * transition functions are not allowed to use the dynamic style
+         * indices. Data with a dynamic style index are not transitioned in any
+         * way.
          */
         Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt));
 
@@ -382,7 +450,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
-        explicit Shared(UnsignedInt styleCount);
+        explicit Shared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount);
         /* Can't be MAGNUM_WHEE_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
 
