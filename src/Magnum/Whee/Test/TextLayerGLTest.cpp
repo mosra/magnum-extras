@@ -67,7 +67,6 @@ struct TextLayerGLTest: GL::OpenGLTester {
 
     void sharedSetGlyphCache();
     void sharedSetGlyphCacheTakeOwnership();
-    void sharedSetStyleInvalidSize();
 
     void construct();
     void constructCopy();
@@ -172,7 +171,6 @@ TextLayerGLTest::TextLayerGLTest() {
 
               &TextLayerGLTest::sharedSetGlyphCache,
               &TextLayerGLTest::sharedSetGlyphCacheTakeOwnership,
-              &TextLayerGLTest::sharedSetStyleInvalidSize,
 
               &TextLayerGLTest::construct,
               &TextLayerGLTest::constructCopy,
@@ -273,22 +271,6 @@ void TextLayerGLTest::sharedSetGlyphCacheTakeOwnership() {
     /** @todo any way to check that a deletion happened? */
 }
 
-void TextLayerGLTest::sharedSetStyleInvalidSize() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    TextLayerGL::Shared shared{3};
-
-    struct {
-        TextLayerStyleCommon common;
-        TextLayerStyleItem styles[2];
-    } style;
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    shared.setStyle(style);
-    CORRADE_COMPARE(out.str(), "Whee::TextLayerGL::Shared::setStyle(): expected style data of 64 bytes, got 48\n");
-}
-
 void TextLayerGLTest::construct() {
     TextLayerGL::Shared shared{3};
 
@@ -363,14 +345,6 @@ void TextLayerGLTest::render() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        TextLayerStyleCommon common;
-        /* To verify it's not always picking the first style */
-        TextLayerStyleItem itemAnother;
-        TextLayerStyleItem item;
-    } style;
-    style.item = data.styleItem;
-
     Containers::Pointer<Text::AbstractFont> font =_fontManager.loadAndInstantiate("StbTrueTypeFont");
     CORRADE_VERIFY(font);
     CORRADE_VERIFY(font->openFile(Utility::Path::join(UI_DIR, "SourceSansPro-Regular.ttf"), 32.0f));
@@ -378,13 +352,20 @@ void TextLayerGLTest::render() {
     Text::GlyphCache cache{{64, 64}};
     font->fillGlyphCache(cache, "Magi");
 
-    TextLayerGL::Shared layerShared{2};
-    layerShared
-        .setStyle(style)
-        .setGlyphCache(cache);
-
-    FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
-    layerShared.setStyleFonts({fontHandle, fontHandle});
+    /* Testing the ArrayView overload, others cases use the initializer list */
+    TextLayerStyleItem styleItems[]{
+        /* To verify it's not always picking the first style */
+        TextLayerStyleItem{},
+        data.styleItem
+    };
+    TextLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleItems))};
+    layerShared.setGlyphCache(cache);
+    FontHandle fontHandle[]{
+        layerShared.addFont(*font, 32.0f)
+    };
+    layerShared.setStyle(TextLayerStyleCommon{},
+        styleItems,
+        Containers::stridedArrayView(fontHandle).broadcasted<0>(2));
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -422,11 +403,6 @@ void TextLayerGLTest::renderAlignment() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        TextLayerStyleCommon common;
-        TextLayerStyleItem item;
-    } style;
-
     Containers::Pointer<Text::AbstractFont> font =_fontManager.loadAndInstantiate("StbTrueTypeFont");
     CORRADE_VERIFY(font);
     CORRADE_VERIFY(font->openFile(Utility::Path::join(UI_DIR, "SourceSansPro-Regular.ttf"), 32.0f));
@@ -438,9 +414,9 @@ void TextLayerGLTest::renderAlignment() {
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
-    layerShared
-        .setStyle(style)
-        .setStyleFonts({fontHandle});
+    layerShared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {fontHandle});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -481,12 +457,6 @@ void TextLayerGLTest::renderCustomColor() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        TextLayerStyleCommon common;
-        TextLayerStyleItem item;
-    } style;
-    style.item.setColor(0x3bd267_rgbf/0x336699_rgbf);
-
     Containers::Pointer<Text::AbstractFont> font =_fontManager.loadAndInstantiate("StbTrueTypeFont");
     CORRADE_VERIFY(font);
     CORRADE_VERIFY(font->openFile(Utility::Path::join(UI_DIR, "SourceSansPro-Regular.ttf"), 32.0f));
@@ -495,12 +465,13 @@ void TextLayerGLTest::renderCustomColor() {
     font->fillGlyphCache(cache, "Magi");
 
     TextLayerGL::Shared layerShared{1};
-    layerShared
-        .setStyle(style)
-        .setGlyphCache(cache);
+    layerShared.setGlyphCache(cache);
 
     FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
-    layerShared.setStyleFonts({fontHandle});
+    layerShared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}
+            .setColor(0x3bd267_rgbf/0x336699_rgbf)},
+        {fontHandle});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -553,13 +524,6 @@ void TextLayerGLTest::renderChangeStyle() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        TextLayerStyleCommon common;
-        TextLayerStyleItem anotherItem;
-        TextLayerStyleItem item;
-    } style;
-    style.item.setColor(0x3bd267_rgbf);
-
     Containers::Pointer<Text::AbstractFont> font =_fontManager.loadAndInstantiate("StbTrueTypeFont");
     CORRADE_VERIFY(font);
     CORRADE_VERIFY(font->openFile(Utility::Path::join(UI_DIR, "SourceSansPro-Regular.ttf"), 32.0f));
@@ -569,11 +533,14 @@ void TextLayerGLTest::renderChangeStyle() {
 
     TextLayerGL::Shared layerShared{2};
     layerShared
-        .setStyle(style)
         .setGlyphCache(cache);
 
     FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
-    layerShared.setStyleFonts({fontHandle, fontHandle});
+    layerShared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{},
+         TextLayerStyleItem{}
+            .setColor(0x3bd267_rgbf)},
+        {fontHandle, fontHandle});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -622,11 +589,6 @@ void TextLayerGLTest::renderChangeText() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        TextLayerStyleCommon common;
-        TextLayerStyleItem item;
-    } style;
-
     Containers::Pointer<Text::AbstractFont> font =_fontManager.loadAndInstantiate("StbTrueTypeFont");
     CORRADE_VERIFY(font);
     CORRADE_VERIFY(font->openFile(Utility::Path::join(UI_DIR, "SourceSansPro-Regular.ttf"), 32.0f));
@@ -635,12 +597,12 @@ void TextLayerGLTest::renderChangeText() {
     font->fillGlyphCache(cache, "Magi");
 
     TextLayerGL::Shared layerShared{1};
-    layerShared
-        .setStyle(style)
-        .setGlyphCache(cache);
+    layerShared.setGlyphCache(cache);
 
     FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
-    layerShared.setStyleFonts({fontHandle});
+    layerShared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {fontHandle});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -757,26 +719,21 @@ void TextLayerGLTest::drawOrder() {
     cache.flushImage({{}, {8, 16}});
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 16}});
 
-    struct {
-        TextLayerStyleCommon common;
-        TextLayerStyleItem redLarge;    /* 0 */
-        TextLayerStyleItem redSmall;    /* 1 */
-        TextLayerStyleItem greenLarge;  /* 2 */
-        TextLayerStyleItem blueSmall;   /* 3 */
-    } style;
-    style.redLarge.setColor(0xff0000_rgbf);
-    style.redSmall.setColor(0xff0000_rgbf);
-    style.greenLarge.setColor(0x00ff00_rgbf);
-    style.blueSmall.setColor(0x0000ff_rgbf);
-
     TextLayerGL::Shared layerShared{4};
-    layerShared
-        .setStyle(style)
-        .setGlyphCache(cache);
+    layerShared.setGlyphCache(cache);
 
     FontHandle fontHandleLarge = layerShared.addFont(font, 16.0f);
     FontHandle fontHandleSmall = layerShared.addFont(font, 8.0f);
-    layerShared.setStyleFonts({
+    layerShared.setStyle(TextLayerStyleCommon{}, {
+        TextLayerStyleItem{}        /* 0, red large */
+            .setColor(0xff0000_rgbf),
+        TextLayerStyleItem{}        /* 1, red small */
+            .setColor(0xff0000_rgbf),
+        TextLayerStyleItem{}        /* 2, green large */
+            .setColor(0x00ff00_rgbf),
+        TextLayerStyleItem{}        /* 3, blue small */
+            .setColor(0x0000ff_rgbf)
+    }, {
         fontHandleLarge,
         fontHandleSmall,
         fontHandleLarge,
@@ -839,13 +796,6 @@ void TextLayerGLTest::eventStyleTransition() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        TextLayerStyleCommon common;
-        TextLayerStyleItem defaults;
-        TextLayerStyleItem colored;
-    } style;
-    style.colored.setColor(0x3bd267_rgbf);
-
     Containers::Pointer<Text::AbstractFont> font =_fontManager.loadAndInstantiate("StbTrueTypeFont");
     CORRADE_VERIFY(font);
     CORRADE_VERIFY(font->openFile(Utility::Path::join(UI_DIR, "SourceSansPro-Regular.ttf"), 32.0f));
@@ -854,9 +804,15 @@ void TextLayerGLTest::eventStyleTransition() {
     font->fillGlyphCache(cache, "Magi");
 
     TextLayerGL::Shared layerShared{2};
+    layerShared.setGlyphCache(cache);
+
+    FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
     layerShared
-        .setStyle(style)
-        .setGlyphCache(cache)
+        .setStyle(TextLayerStyleCommon{}, {
+            TextLayerStyleItem{},           /* default */
+            TextLayerStyleItem{}            /* colored */
+                .setColor(0x3bd267_rgbf)
+        }, {fontHandle, fontHandle})
         .setStyleTransition(
             [](UnsignedInt style) -> UnsignedInt {
                 if(style == 0) return 1;
@@ -865,9 +821,6 @@ void TextLayerGLTest::eventStyleTransition() {
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             });
-
-    FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
-    layerShared.setStyleFonts({fontHandle, fontHandle});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));

@@ -126,21 +126,24 @@ Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
     return const_cast<Text::AbstractFont&>(const_cast<const TextLayer::Shared&>(*this).font(handle));
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyleFonts(const Containers::StridedArrayView1D<const FontHandle>& handles) {
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts) {
     State& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(handles.size() == state.styleCount,
-        "Whee::TextLayer::Shared::setStyleFonts(): expected" << state.styleCount << "fonts, got" << handles.size(), *this);
+    CORRADE_ASSERT(items.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "style items, got" << items.size(), *this);
+    CORRADE_ASSERT(itemFonts.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "font handles, got" << itemFonts.size(), *this);
     #ifndef CORRADE_NO_ASSERT
-    for(std::size_t i = 0; i != handles.size(); ++i)
-        CORRADE_ASSERT(isHandleValid(handles[i]),
-            "Whee::TextLayer::Shared::setStyleFonts(): invalid handle" << handles[i] << "at index" << i, *this);
+    for(std::size_t i = 0; i != itemFonts.size(); ++i)
+        CORRADE_ASSERT(isHandleValid(itemFonts[i]),
+            "Whee::TextLayer::Shared::setStyle(): invalid handle" << itemFonts[i] << "at index" << i, *this);
     #endif
-    Utility::copy(handles, state.styleFonts);
+    Utility::copy(itemFonts, state.styleFonts);
+    doSetStyle(common, items);
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyleFonts(const std::initializer_list<FontHandle> handles) {
-    return setStyleFonts(Containers::stridedArrayView(handles));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& common, const std::initializer_list<TextLayerStyleItem> items, const std::initializer_list<FontHandle> itemFonts) {
+    return setStyle(common, Containers::arrayView(items), Containers::stridedArrayView(itemFonts));
 }
 
 TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
@@ -160,12 +163,12 @@ void TextLayer::shapeInternal(
     FontHandle font = properties.font();
     if(font == FontHandle::Null) {
         /* This assumes that fonts can never be deleted, otherwise it'd have to
-           call isHandleValid() on the Shared class somehow. setStyleFonts()
-           checks that all handles are non-null (and valid), so if a handle is
-           null it means setStyleFonts() wasn't called yet. */
+           call isHandleValid() on the Shared class somehow. setStyle() checks
+           that all handles are non-null (and valid), so if a handle is null it
+           means setStyle() wasn't called yet. */
         font = sharedState.styleFonts[style];
         CORRADE_ASSERT(font != FontHandle::Null,
-            messagePrefix << "no fonts were assigned to styles and no custom font was supplied", );
+            messagePrefix << "no style data was set and no custom font was supplied", );
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
         messagePrefix << "invalid handle" << font, );
 

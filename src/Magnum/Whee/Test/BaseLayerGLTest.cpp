@@ -61,8 +61,6 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void sharedConstructCopy();
     void sharedConstructMove();
 
-    void sharedSetStyleInvalidSize();
-
     void construct();
     void constructCopy();
     void constructMove();
@@ -203,8 +201,6 @@ BaseLayerGLTest::BaseLayerGLTest() {
               &BaseLayerGLTest::sharedConstructCopy,
               &BaseLayerGLTest::sharedConstructMove,
 
-              &BaseLayerGLTest::sharedSetStyleInvalidSize,
-
               &BaseLayerGLTest::construct,
               &BaseLayerGLTest::constructCopy,
               &BaseLayerGLTest::constructMove,
@@ -266,22 +262,6 @@ void BaseLayerGLTest::sharedConstructMove() {
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<BaseLayerGL::Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<BaseLayerGL::Shared>::value);
-}
-
-void BaseLayerGLTest::sharedSetStyleInvalidSize() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    BaseLayerGL::Shared shared{3};
-
-    struct {
-        BaseLayerStyleCommon common;
-        BaseLayerStyleItem styles[2];
-    } style;
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    shared.setStyle(style);
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayerGL::Shared::setStyle(): expected style data of 304 bytes, got 208\n");
 }
 
 void BaseLayerGLTest::construct() {
@@ -357,17 +337,14 @@ void BaseLayerGLTest::render() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        BaseLayerStyleCommon common;
+    /* Testing the ArrayView overload, others cases use the initializer list */
+    BaseLayerStyleItem styleItems[]{
         /* To verify it's not always picking the first style */
-        BaseLayerStyleItem itemAnother;
-        BaseLayerStyleItem item;
-    } style;
-    style.common = data.styleCommon;
-    style.item = data.styleItem;
-
-    BaseLayerGL::Shared layerShared{2};
-    layerShared.setStyle(style);
+        BaseLayerStyleItem{},
+        data.styleItem
+    };
+    BaseLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleItems))};
+    layerShared.setStyle(data.styleCommon, styleItems);
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -403,14 +380,11 @@ void BaseLayerGLTest::renderCustomColor() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        BaseLayerStyleCommon common;
-        BaseLayerStyleItem item;
-    } style;
-    style.item.setColor(0xeeddaa_rgbf/0x336699_rgbf, 0x774422_rgbf/0x336699_rgbf);
-
     BaseLayerGL::Shared layerShared{1};
-    layerShared.setStyle(style);
+    layerShared.setStyle(BaseLayerStyleCommon{}, {
+        BaseLayerStyleItem{}
+            .setColor(0xeeddaa_rgbf/0x336699_rgbf, 0x774422_rgbf/0x336699_rgbf)
+    });
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -461,16 +435,12 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        BaseLayerStyleCommon common;
-        BaseLayerStyleItem item;
-    } style;
-    style.item
-        .setOutlineColor(0x7f7f7f_rgbf)
-        .setOutlineWidth({16.0f, 2.0f, 4.0f, 0.0f});
-
     BaseLayerGL::Shared layerShared{1};
-    layerShared.setStyle(style);
+    layerShared.setStyle(BaseLayerStyleCommon{}, {
+        BaseLayerStyleItem{}
+            .setOutlineColor(0x7f7f7f_rgbf)
+            .setOutlineWidth({16.0f, 2.0f, 4.0f, 0.0f})
+    });
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -522,15 +492,12 @@ void BaseLayerGLTest::renderChangeStyle() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        BaseLayerStyleCommon common;
-        BaseLayerStyleItem anotherItem;
-        BaseLayerStyleItem item;
-    } style;
-    style.item.setColor(0xeeddaa_rgbf, 0x774422_rgbf);
-
     BaseLayerGL::Shared layerShared{2};
-    layerShared.setStyle(style);
+    layerShared.setStyle(BaseLayerStyleCommon{}, {
+        BaseLayerStyleItem{},
+        BaseLayerStyleItem{}
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
+    });
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -597,18 +564,15 @@ void BaseLayerGLTest::drawOrder() {
 
     AbstractUserInterface ui{DrawSize};
 
-    struct {
-        BaseLayerStyleCommon common;
-        BaseLayerStyleItem red;     /* 0 */
-        BaseLayerStyleItem green;   /* 1 */
-        BaseLayerStyleItem blue;    /* 2 */
-    } style;
-    style.red.setColor(0xff0000_rgbf);
-    style.green.setColor(0x00ff00_rgbf);
-    style.blue.setColor(0x0000ff_rgbf);
-
     BaseLayerGL::Shared layerShared{3};
-    layerShared.setStyle(style);
+    layerShared.setStyle(BaseLayerStyleCommon{}, {
+        BaseLayerStyleItem{}            /* 0, red */
+            .setColor(0xff0000_rgbf),
+        BaseLayerStyleItem{}            /* 1, green */
+            .setColor(0x00ff00_rgbf),
+        BaseLayerStyleItem{}            /* 2, blue */
+            .setColor(0x0000ff_rgbf)
+    });
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -663,16 +627,13 @@ void BaseLayerGLTest::eventStyleTransition() {
 
     AbstractUserInterface ui{RenderSize};
 
-    struct {
-        BaseLayerStyleCommon common;
-        BaseLayerStyleItem defaults;
-        BaseLayerStyleItem gradient;
-    } style;
-    style.gradient.setColor(0xeeddaa_rgbf, 0x774422_rgbf);
-
     BaseLayerGL::Shared layerShared{2};
     layerShared
-        .setStyle(style)
+        .setStyle(BaseLayerStyleCommon{}, {
+            BaseLayerStyleItem{},           /* default */
+            BaseLayerStyleItem{}            /* gradient */
+                .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
+        })
         .setStyleTransition(
             [](UnsignedInt style) -> UnsignedInt {
                 if(style == 0) return 1;
