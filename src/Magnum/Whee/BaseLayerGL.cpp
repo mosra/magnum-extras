@@ -146,21 +146,15 @@ BaseShaderGL::BaseShaderGL(UnsignedInt styleCount) {
 }
 
 struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
-    explicit State(Shared& self, UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared::State{self, styleUniformCount, styleCount} {}
+    explicit State(Shared& self, const Configuration& configuration): BaseLayer::Shared::State{self, configuration}, shader{configuration.styleUniformCount()} {}
 
-    BaseShaderGL shader{NoCreate};
+    BaseShaderGL shader;
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     GL::Buffer styleBuffer{NoCreate};
 };
 
-BaseLayerGL::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<State>(*this, styleUniformCount, styleCount)} {
-    CORRADE_ASSERT(styleUniformCount, "Whee::BaseLayerGL::Shared: expected non-zero style uniform count", );
-    CORRADE_ASSERT(styleCount, "Whee::BaseLayerGL::Shared: expected non-zero style count", );
-    /* Construct the shader only after the assertion as it otherwise may fail
-       to compile */
-    static_cast<State&>(*_state).shader = BaseShaderGL{styleUniformCount};
-}
+BaseLayerGL::Shared::Shared(const Configuration& configuration): BaseLayer::Shared{Containers::pointer<State>(*this, configuration)} {}
 
 BaseLayerGL::Shared::Shared(NoCreateT) noexcept: BaseLayer::Shared{NoCreate} {}
 

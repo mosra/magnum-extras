@@ -753,12 +753,14 @@ that @ref setStyle() was called.
 */
 class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     public:
+        class Configuration;
+
         /**
          * @brief Style uniform count
          *
          * Size of the style uniform buffer. May or may not be the same as
          * @ref styleCount().
-         * @see @ref BaseLayerGL::Shared::Shared(UnsignedInt, UnsignedInt),
+         * @see @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt),
          *      @ref setStyle()
          */
         UnsignedInt styleUniformCount() const;
@@ -832,7 +834,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount);
+        explicit Shared(const Configuration& configuration);
         /* Can't be MAGNUM_WHEE_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
 
@@ -842,6 +844,43 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         /* The items are guaranteed to have the same size as
            styleUniformCount() */
         virtual void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) = 0;
+};
+
+/**
+@brief Configuration of a base layer shared state
+
+@see @ref BaseLayerGL::Shared::Shared(const Configuration&)
+*/
+class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
+    public:
+        /**
+         * @brief Constructor
+         *
+         * The @p styleUniformCount parameter specifies the size of the uniform
+         * array, @p styleCount then the number of distinct styles to use for
+         * drawing. The sizes are independent in order to allow styles with
+         * different paddings share the same uniform data. Both
+         * @p styleUniformCount and @p styleCount is expected to be non-zero.
+         * Style data are then set with @ref setStyle().
+         */
+        explicit Configuration(UnsignedInt styleUniformCount, UnsignedInt styleCount);
+
+        /**
+         * @brief Construct with style uniform count being the same as style count
+         *
+         * Equivalent to calling @ref Configuration(UnsignedInt, UnsignedInt)
+         * with both parameters set to @p styleCount.
+         */
+        explicit Configuration(UnsignedInt styleCount): Configuration{styleCount, styleCount} {}
+
+        /** @brief Style uniform count */
+        UnsignedInt styleUniformCount() const { return _styleUniformCount; }
+
+        /** @brief Style count */
+        UnsignedInt styleCount() const { return _styleCount; }
+
+    private:
+        UnsignedInt _styleUniformCount, _styleCount;
 };
 
 inline BaseLayer::Shared& BaseLayer::shared() {

@@ -395,7 +395,7 @@ void UserInterfaceGLTest::setStyleFeaturesNotSupported() {
 }
 
 void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
-    BaseLayerGL::Shared shared{1};
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}};
     UserInterfaceGL ui{NoCreate, {200, 300}};
     ui.setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), shared));
 
@@ -417,7 +417,7 @@ void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
 }
 
 void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
-    TextLayerGL::Shared shared{1};
+    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{1}};
     UserInterfaceGL ui{NoCreate, {200, 300}};
     ui.setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), shared));
 

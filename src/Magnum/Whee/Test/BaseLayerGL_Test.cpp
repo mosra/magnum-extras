@@ -23,9 +23,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/TestSuite/Tester.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Whee/BaseLayerGL.h"
 
@@ -35,14 +33,12 @@ struct BaseLayerGL_Test: TestSuite::Tester {
     explicit BaseLayerGL_Test();
 
     void sharedConstructNoCreate();
-    void sharedConstructZeroStyleCount();
 };
 
 using namespace Math::Literals;
 
 BaseLayerGL_Test::BaseLayerGL_Test() {
-    addTests({&BaseLayerGL_Test::sharedConstructNoCreate,
-              &BaseLayerGL_Test::sharedConstructZeroStyleCount});
+    addTests({&BaseLayerGL_Test::sharedConstructNoCreate});
 }
 
 void BaseLayerGL_Test::sharedConstructNoCreate() {
@@ -53,18 +49,6 @@ void BaseLayerGL_Test::sharedConstructNoCreate() {
 
     /* Implicit construction is not allowed */
     CORRADE_VERIFY(!std::is_convertible<NoCreateT, BaseLayerGL::Shared>::value);
-}
-
-void BaseLayerGL_Test::sharedConstructZeroStyleCount() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    BaseLayerGL::Shared{0, 4};
-    BaseLayerGL::Shared{4, 0};
-    CORRADE_COMPARE(out.str(),
-        "Whee::BaseLayerGL::Shared: expected non-zero style uniform count\n"
-        "Whee::BaseLayerGL::Shared: expected non-zero style count\n");
 }
 
 }}}}

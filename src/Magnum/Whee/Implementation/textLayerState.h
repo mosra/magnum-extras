@@ -66,7 +66,7 @@ struct TextLayerStyle {
 }
 
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, UnsignedInt styleUniformCount, UnsignedInt styleCount): AbstractVisualLayer::Shared::State{self, styleCount}, styleUniformCount{styleUniformCount} {}
+    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount()}, styleUniformCount{configuration.styleUniformCount()} {}
 
     UnsignedInt styleUniformCount;
 

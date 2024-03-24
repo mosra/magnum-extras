@@ -62,7 +62,6 @@ struct TextLayerGLTest: GL::OpenGLTester {
     explicit TextLayerGLTest();
 
     void sharedConstruct();
-    void sharedConstructSameStyleUniformCount();
     /* NoCreate tested in TextLayerGL_Test to verify it works without a GL
        context */
     void sharedConstructCopy();
@@ -228,7 +227,6 @@ const struct {
 
 TextLayerGLTest::TextLayerGLTest() {
     addTests({&TextLayerGLTest::sharedConstruct,
-              &TextLayerGLTest::sharedConstructSameStyleUniformCount,
               &TextLayerGLTest::sharedConstructCopy,
               &TextLayerGLTest::sharedConstructMove,
 
@@ -285,15 +283,9 @@ TextLayerGLTest::TextLayerGLTest() {
 }
 
 void TextLayerGLTest::sharedConstruct() {
-    TextLayerGL::Shared shared{3, 5};
+    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
-}
-
-void TextLayerGLTest::sharedConstructSameStyleUniformCount() {
-    TextLayerGL::Shared shared{3};
-    CORRADE_COMPARE(shared.styleUniformCount(), 3);
-    CORRADE_COMPARE(shared.styleCount(), 3);
 }
 
 void TextLayerGLTest::sharedConstructCopy() {
@@ -302,12 +294,12 @@ void TextLayerGLTest::sharedConstructCopy() {
 }
 
 void TextLayerGLTest::sharedConstructMove() {
-    TextLayerGL::Shared a{3};
+    TextLayerGL::Shared a{TextLayer::Shared::Configuration{3}};
 
     TextLayerGL::Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleCount(), 3);
 
-    TextLayerGL::Shared c{5};
+    TextLayerGL::Shared c{TextLayer::Shared::Configuration{5}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleCount(), 3);
 
@@ -320,7 +312,7 @@ void TextLayerGLTest::sharedSetGlyphCache() {
     CORRADE_VERIFY(cache.texture().id());
 
     {
-        TextLayerGL::Shared shared{3};
+        TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
         shared.setGlyphCache(cache);
         CORRADE_COMPARE(&shared.glyphCache(), &cache);
     }
@@ -334,7 +326,7 @@ void TextLayerGLTest::sharedSetGlyphCacheTakeOwnership() {
     CORRADE_VERIFY(cache.texture().id());
 
     {
-        TextLayerGL::Shared shared{3};
+        TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
         shared.setGlyphCache(Utility::move(cache));
 
         /* It should get moved in */
@@ -347,7 +339,7 @@ void TextLayerGLTest::sharedSetGlyphCacheTakeOwnership() {
 }
 
 void TextLayerGLTest::construct() {
-    TextLayerGL::Shared shared{3};
+    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
 
     TextLayerGL layer{layerHandle(137, 0xfe), shared};
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
@@ -362,8 +354,8 @@ void TextLayerGLTest::constructCopy() {
 }
 
 void TextLayerGLTest::constructMove() {
-    TextLayerGL::Shared shared{3};
-    TextLayerGL::Shared shared2{5};
+    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
+    TextLayerGL::Shared shared2{TextLayer::Shared::Configuration{5}};
 
     TextLayerGL a{layerHandle(137, 0xfe), shared};
 
@@ -383,7 +375,7 @@ void TextLayerGLTest::constructMove() {
 void TextLayerGLTest::drawNoStyleSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    TextLayerGL::Shared shared{3};
+    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
     TextLayerGL layer{layerHandle(0, 1), shared};
 
     std::ostringstream out;
@@ -445,7 +437,9 @@ void TextLayerGLTest::render() {
         /* To verify it's not using the style ID as uniform ID */
         1, 2, 0, 1, 0
     };
-    TextLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleUniforms)), UnsignedInt(Containers::arraySize(styleToUniform))};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{
+        UnsignedInt(Containers::arraySize(styleUniforms)),
+        UnsignedInt(Containers::arraySize(styleToUniform))}};
     layerShared.setGlyphCache(cache);
     FontHandle fontHandle[]{
         layerShared.addFont(*font, 32.0f)
@@ -505,7 +499,7 @@ void TextLayerGLTest::renderAlignmentPadding() {
     Text::GlyphCache cache{{64, 64}};
     font->fillGlyphCache(cache, "Magi");
 
-    TextLayerGL::Shared layerShared{1};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}};
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
@@ -573,7 +567,7 @@ void TextLayerGLTest::renderCustomColor() {
     Text::GlyphCache cache{{64, 64}};
     font->fillGlyphCache(cache, "Magi");
 
-    TextLayerGL::Shared layerShared{1};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}};
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
@@ -642,7 +636,7 @@ void TextLayerGLTest::renderChangeStyle() {
     Text::GlyphCache cache{{64, 64}};
     font->fillGlyphCache(cache, "Magi");
 
-    TextLayerGL::Shared layerShared{2};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{2}};
     layerShared
         .setGlyphCache(cache);
 
@@ -709,7 +703,7 @@ void TextLayerGLTest::renderChangeText() {
     Text::GlyphCache cache{{64, 64}};
     font->fillGlyphCache(cache, "Magi");
 
-    TextLayerGL::Shared layerShared{1};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}};
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandle = layerShared.addFont(*font, 32.0f);
@@ -837,7 +831,7 @@ void TextLayerGLTest::drawOrder() {
     cache.flushImage({{}, {8, 16}});
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 16}});
 
-    TextLayerGL::Shared layerShared{3, 4};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{3, 4}};
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandleLarge = layerShared.addFont(font, 16.0f);
@@ -968,7 +962,7 @@ void TextLayerGLTest::drawClipping() {
     cache.flushImage({{}, {8, 160}});
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 160}});
 
-    TextLayerGL::Shared layerShared{3, 5};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{3, 5}};
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandleLarge = layerShared.addFont(font, 160.0f);
@@ -1077,7 +1071,7 @@ void TextLayerGLTest::eventStyleTransition() {
     Text::GlyphCache cache{{64, 64}};
     font->fillGlyphCache(cache, "Magi");
 
-    TextLayerGL::Shared layerShared{2};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{2}};
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandle = layerShared.addFont(*font, 32.0f);

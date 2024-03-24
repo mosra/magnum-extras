@@ -63,6 +63,11 @@ struct BaseLayerTest: TestSuite::Tester {
     void styleItemConstructNoInit();
     void styleItemSetters();
 
+    void sharedConfigurationConstruct();
+    void sharedConfigurationConstructSameStyleUniformCount();
+    void sharedConfigurationConstructZeroStyleCount();
+    void sharedConfigurationConstructCopy();
+
     void sharedConstruct();
     void sharedConstructNoCreate();
     void sharedConstructCopy();
@@ -154,6 +159,11 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::styleItemConstructNoGradientNoOutlineSingleRadius,
               &BaseLayerTest::styleItemConstructNoInit,
               &BaseLayerTest::styleItemSetters,
+
+              &BaseLayerTest::sharedConfigurationConstruct,
+              &BaseLayerTest::sharedConfigurationConstructSameStyleUniformCount,
+              &BaseLayerTest::sharedConfigurationConstructZeroStyleCount,
+              &BaseLayerTest::sharedConfigurationConstructCopy,
 
               &BaseLayerTest::sharedConstruct,
               &BaseLayerTest::sharedConstructNoCreate,
@@ -513,12 +523,54 @@ void BaseLayerTest::styleItemSetters() {
     CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{5.5f});
 }
 
+void BaseLayerTest::sharedConfigurationConstruct() {
+    BaseLayer::Shared::Configuration configuration{3, 5};
+    CORRADE_COMPARE(configuration.styleUniformCount(), 3);
+    CORRADE_COMPARE(configuration.styleCount(), 5);
+}
+
+void BaseLayerTest::sharedConfigurationConstructSameStyleUniformCount() {
+    BaseLayer::Shared::Configuration configuration{3};
+    CORRADE_COMPARE(configuration.styleUniformCount(), 3);
+    CORRADE_COMPARE(configuration.styleCount(), 3);
+}
+
+void BaseLayerTest::sharedConfigurationConstructZeroStyleCount() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    BaseLayer::Shared::Configuration{0, 4};
+    BaseLayer::Shared::Configuration{4, 0};
+    CORRADE_COMPARE(out.str(),
+        "Whee::BaseLayer::Shared::Configuration: expected non-zero style uniform count\n"
+        "Whee::BaseLayer::Shared::Configuration: expected non-zero style count\n");
+}
+
+void BaseLayerTest::sharedConfigurationConstructCopy() {
+    BaseLayer::Shared::Configuration a{3, 5};
+
+    BaseLayer::Shared::Configuration b = a;
+    CORRADE_COMPARE(b.styleUniformCount(), 3);
+    CORRADE_COMPARE(b.styleCount(), 5);
+
+    BaseLayer::Shared::Configuration c{7, 9};
+    c = b;
+    CORRADE_COMPARE(c.styleUniformCount(), 3);
+    CORRADE_COMPARE(c.styleCount(), 5);
+
+    #ifndef CORRADE_NO_STD_IS_TRIVIALLY_TRAITS
+    CORRADE_VERIFY(std::is_trivially_copy_constructible<BaseLayer::Shared::Configuration>::value);
+    CORRADE_VERIFY(std::is_trivially_copy_assignable<BaseLayer::Shared::Configuration>::value);
+    #endif
+}
+
 void BaseLayerTest::sharedConstruct() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
 }
@@ -543,7 +595,7 @@ void BaseLayerTest::sharedConstructCopy() {
            without the constructor the type would be impossible to construct
            (and thus also to copy), leading to false positives in the trait
            check below */
-        explicit CORRADE_UNUSED Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<BaseLayer::Shared::State>(*this, styleUniformCount, styleCount)} {}
+        explicit CORRADE_UNUSED Shared(const Configuration& configuration): BaseLayer::Shared{Containers::pointer<BaseLayer::Shared::State>(*this, configuration)} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, const Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     };
@@ -554,18 +606,18 @@ void BaseLayerTest::sharedConstructCopy() {
 
 void BaseLayerTest::sharedConstructMove() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, const Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     };
 
-    Shared a{3, 5};
+    Shared a{BaseLayer::Shared::Configuration{3, 5}};
 
     Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleUniformCount(), 3);
     CORRADE_COMPARE(b.styleCount(), 5);
 
-    Shared c{5, 7};
+    Shared c{BaseLayer::Shared::Configuration{5, 7}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleUniformCount(), 3);
     CORRADE_COMPARE(c.styleCount(), 5);
@@ -576,7 +628,7 @@ void BaseLayerTest::sharedConstructMove() {
 
 void BaseLayerTest::sharedSetStyle() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
         State& state() { return static_cast<State&>(*_state); }
 
         void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) override {
@@ -587,7 +639,7 @@ void BaseLayerTest::sharedSetStyle() {
         }
 
         Int setStyleCalled = 0;
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     /* By default the shared.state().styles array is empty, it gets only filled
        during the setStyle() call. The empty state is used to detect whether
@@ -622,7 +674,7 @@ void BaseLayerTest::sharedSetStyle() {
 
 void BaseLayerTest::sharedSetStyleImplicitPadding() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
         State& state() { return static_cast<State&>(*_state); }
 
         void doSetStyle(const BaseLayerCommonStyleUniform& common, Containers::ArrayView<const BaseLayerStyleUniform> items) override {
@@ -633,7 +685,7 @@ void BaseLayerTest::sharedSetStyleImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -696,10 +748,10 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -723,7 +775,7 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
 
 void BaseLayerTest::sharedSetStyleImplicitMapping() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
         State& state() { return static_cast<State&>(*_state); }
 
         void doSetStyle(const BaseLayerCommonStyleUniform& common, Containers::ArrayView<const BaseLayerStyleUniform> items) override {
@@ -734,7 +786,7 @@ void BaseLayerTest::sharedSetStyleImplicitMapping() {
         }
 
         Int setStyleCalled = 0;
-    } shared{3, 3};
+    } shared{BaseLayer::Shared::Configuration{3}};
 
     shared.setStyle(
         BaseLayerCommonStyleUniform{}
@@ -759,7 +811,7 @@ void BaseLayerTest::sharedSetStyleImplicitMapping() {
 
 void BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
         State& state() { return static_cast<State&>(*_state); }
 
         void doSetStyle(const BaseLayerCommonStyleUniform& common, Containers::ArrayView<const BaseLayerStyleUniform> items) override {
@@ -770,7 +822,7 @@ void BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{3, 3};
+    } shared{BaseLayer::Shared::Configuration{3}};
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
@@ -824,10 +876,10 @@ void BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: BaseLayer::Shared {
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -840,10 +892,10 @@ void BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
 
 void BaseLayerTest::construct() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -862,7 +914,7 @@ void BaseLayerTest::constructCopy() {
 
 void BaseLayerTest::constructMove() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     };
@@ -871,8 +923,8 @@ void BaseLayerTest::constructMove() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     };
 
-    LayerShared shared{1, 3};
-    LayerShared shared2{5, 7};
+    LayerShared shared{BaseLayer::Shared::Configuration{1, 3}};
+    LayerShared shared2{BaseLayer::Shared::Configuration{5, 7}};
 
     Layer a{layerHandle(137, 0xfe), shared};
 
@@ -895,10 +947,10 @@ template<class T> void BaseLayerTest::createRemove() {
     setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{12, 38};
+    } shared{BaseLayer::Shared::Configuration{12, 38}};
 
     /* Not setting any padding via style -- tested in setPadding() instead */
 
@@ -965,10 +1017,10 @@ template<class T> void BaseLayerTest::createRemove() {
 
 void BaseLayerTest::setColor() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{1, 3};
+    } shared{BaseLayer::Shared::Configuration{1, 3}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -995,10 +1047,10 @@ void BaseLayerTest::setColor() {
 
 void BaseLayerTest::setOutlineWidth() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{2, 3};
+    } shared{BaseLayer::Shared::Configuration{2, 3}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1035,10 +1087,10 @@ void BaseLayerTest::setOutlineWidth() {
 
 void BaseLayerTest::setPadding() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{2, 3};
+    } shared{BaseLayer::Shared::Configuration{2, 3}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1077,10 +1129,10 @@ void BaseLayerTest::invalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{1, 1};
+    } shared{BaseLayer::Shared::Configuration{1}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1122,10 +1174,10 @@ void BaseLayerTest::styleOutOfRange() {
        unlikely to happen in practice. It's to verify the check happens against
        the style count, not uniform count. */
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{6, 3};
+    } shared{BaseLayer::Shared::Configuration{6, 3}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1147,10 +1199,10 @@ void BaseLayerTest::updateDataOrder() {
        output is checked in BaseLayerGLTest. */
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     shared.setStyle(
         BaseLayerCommonStyleUniform{},
@@ -1283,10 +1335,10 @@ void BaseLayerTest::updateNoStyleSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{1, 1};
+    } shared{BaseLayer::Shared::Configuration{1}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
