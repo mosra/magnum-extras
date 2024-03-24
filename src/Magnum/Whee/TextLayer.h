@@ -540,6 +540,44 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         void remove(LayerDataHandle handle);
 
         /**
+         * @brief Text glyph count
+         *
+         * Expects that @p handle is valid.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        UnsignedInt glyphCount(DataHandle handle) const;
+
+        /**
+         * @brief Text glyph count assuming it belongs to this layer
+         *
+         * Expects that @p handle is valid.
+         * @see @ref isHandleValid(LayerDataHandle) const
+         */
+        UnsignedInt glyphCount(LayerDataHandle handle) const;
+
+        /**
+         * @brief Size of the laid out text
+         *
+         * Expects that @p handle is valid. For text laid out with
+         * @ref create() or @ref setText() the size is derived from ascent,
+         * descent and advances of individual glyphs, not from actual area of
+         * the glyphs being drawn, as that may not be known at that time. For
+         * @ref createGlyph() or @ref setGlyph() the size is based on the
+         * actual glyph size coming out of the glyph cache.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        Vector2 size(DataHandle handle) const;
+
+        /**
+         * @brief Size of the laid out text assuming it belongs to this layer
+         *
+         * Like @ref size(DataHandle) const but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         */
+        Vector2 size(LayerDataHandle handle) const;
+
+        /**
          * @brief Set text
          *
          * Expects that @p handle is valid and @ref TextProperties::font() is

@@ -117,6 +117,9 @@ struct TextLayerData {
     /* Ratio of the style size and font size, for appropriately scaling the
        rectangles coming out of the glyph cache */
     Float scale;
+    /* Size of the text. For use by client code to do various sizing and
+       alignment, not used by the layer itself for anything. */
+    Vector2 size;
     /* Alignment is both to align the glyphs while shaping and to position the
        bounding box relative to the node. Again impossible to change without
        relayouting the text. */

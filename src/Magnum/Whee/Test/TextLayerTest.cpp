@@ -1788,6 +1788,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         data.node);
     CORRADE_COMPARE(layer.node(first), data.node);
     CORRADE_COMPARE(layer.style(first), 1);
+    CORRADE_COMPARE(layer.glyphCount(first), 5);
+    CORRADE_COMPARE(layer.size(first), (Vector2{10.0f, 6.0f}));
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
@@ -1801,6 +1803,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         data.node);
     CORRADE_COMPARE(layer.node(firstGlyph), data.node);
     CORRADE_COMPARE(layer.style(firstGlyph), 1);
+    CORRADE_COMPARE(layer.glyphCount(firstGlyph), 1);
+    CORRADE_COMPARE(layer.size(firstGlyph), (Vector2{8.0f, 12.0f}));
     CORRADE_COMPARE(layer.color(firstGlyph), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(firstGlyph), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
@@ -1819,6 +1823,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         /* Can't use StyleIndex, as the function restricts to enum types which
            would fail for StyleIndex == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(second)), Enum(2));
+        CORRADE_COMPARE(layer.glyphCount(dataHandleData(second)), 1);
+        CORRADE_COMPARE(layer.size(dataHandleData(second)), (Vector2{5.0f, 3.0f}));
         CORRADE_COMPARE(layer.color(dataHandleData(second)), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.padding(dataHandleData(second)), Vector4{0.0f});
     } else {
@@ -1826,6 +1832,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         /* Can't use StyleIndex, as the function restricts to enum types which
            would fail for StyleIndex == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(second), Enum(2));
+        CORRADE_COMPARE(layer.glyphCount(second), 1);
+        CORRADE_COMPARE(layer.size(second), (Vector2{5.0f, 3.0f}));
         CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     }
@@ -1841,6 +1849,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         data.node);
     CORRADE_COMPARE(layer.node(secondGlyph), data.node);
     CORRADE_COMPARE(layer.style(secondGlyph), 2);
+    CORRADE_COMPARE(layer.glyphCount(secondGlyph), 1);
+    CORRADE_COMPARE(layer.size(secondGlyph), (Vector2{16.0f, 24.0f}));
     CORRADE_COMPARE(layer.color(secondGlyph), 0xff3366_rgbf);
     CORRADE_COMPARE(layer.padding(secondGlyph), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
@@ -1854,6 +1864,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         data.node);
     CORRADE_COMPARE(layer.node(third), data.node);
     CORRADE_COMPARE(layer.style(third), 1);
+    CORRADE_COMPARE(layer.glyphCount(third), 0);
+    CORRADE_COMPARE(layer.size(third), (Vector2{0.0f, 6.0f}));
     CORRADE_COMPARE(layer.color(third), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
@@ -1866,6 +1878,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         data.node);
     CORRADE_COMPARE(layer.node(fourth), data.node);
     CORRADE_COMPARE(layer.style(fourth), 0);
+    CORRADE_COMPARE(layer.glyphCount(fourth), 2);
+    CORRADE_COMPARE(layer.size(fourth), (Vector2{2.5f, 6.0f}));
     CORRADE_COMPARE(layer.color(fourth), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
@@ -1976,6 +1990,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         0u, 1u, 2u, 3u, 4u, 5u, 3u, 2u
     }), TestSuite::Compare::Container);
     if(data.customFont) {
+        CORRADE_COMPARE(layer.glyphCount(secondGlyph), 3);
+        CORRADE_COMPARE(layer.glyphCount(second), 1);
+        CORRADE_COMPARE(layer.size(secondGlyph), (Vector2{4.5f, 6.0f}));
+        CORRADE_COMPARE(layer.size(second), (Vector2{12.0f, 8.0f}));
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
             0u, 5u, 0xffffffffu, 0xffffffffu, 8u, 0xffffffffu, 10u, 13u
         }), TestSuite::Compare::Container);
@@ -2022,6 +2040,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             {-7.0f, -2.0f}
         }), TestSuite::Compare::Container);
     } else {
+        CORRADE_COMPARE(layer.glyphCount(secondGlyph), 1);
+        CORRADE_COMPARE(layer.glyphCount(second), 1);
+        CORRADE_COMPARE(layer.size(secondGlyph), (Vector2{5.0f, 3.0f}));
+        CORRADE_COMPARE(layer.size(second), (Vector2{16.0f, 24.0f}));
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
             0u, 5u, 0xffffffffu, 0xffffffffu, 8u, 0xffffffffu, 10u, 11u
         }), TestSuite::Compare::Container);
@@ -2426,6 +2448,10 @@ void TextLayerTest::invalidHandle() {
 
     std::ostringstream out;
     Error redirectError{&out};
+    layer.glyphCount(DataHandle::Null);
+    layer.glyphCount(LayerDataHandle::Null);
+    layer.size(DataHandle::Null);
+    layer.size(LayerDataHandle::Null);
     layer.setText(DataHandle::Null, "", {});
     layer.setText(LayerDataHandle::Null, "", {});
     layer.setGlyph(DataHandle::Null, 0, {});
@@ -2439,6 +2465,10 @@ void TextLayerTest::invalidHandle() {
     layer.setPadding(DataHandle::Null, {});
     layer.setPadding(LayerDataHandle::Null, {});
     CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::glyphCount(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::glyphCount(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::size(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::size(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::setText(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::setText(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::setGlyph(): invalid handle Whee::DataHandle::Null\n"
@@ -2881,7 +2911,8 @@ void TextLayerTest::updateCleanDataOrder() {
     DataHandle data7 = layer.create(1, "ahoy", {}, 0x112233_rgbf, node15);
                                                         /* 7, quad 11 */
     layer.create(0, "", {});                            /* 8, quad 12 */
-    layer.create(3, "hi", {}, 0x663399_rgbf, node15);   /* 9, quad 13 to 14 */
+    DataHandle data9 = layer.create(3, "hi", {}, 0x663399_rgbf, node15);
+                                                        /* 9, quad 13 to 14 */
 
     if(!data.paddingFromData.isZero()) {
         layer.setPadding(data3, data.paddingFromData);
@@ -3140,6 +3171,10 @@ void TextLayerTest::updateCleanDataOrder() {
         0u, 1u, 2u, 4u, 6u, 7u, 8u, 9u
     }), TestSuite::Compare::Container);
 
+    /* The glyph count queries should still match */
+    CORRADE_COMPARE(layer.glyphCount(data7), 1u);
+    CORRADE_COMPARE(layer.glyphCount(data9), 2u);
+
     /* Indices for remaining 3 visible glyphs */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
         /* Text 9, "hi", quads 7 to 8 */
@@ -3239,6 +3274,9 @@ void TextLayerTest::updateCleanDataOrder() {
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
         0u, 1u, 2u, 4u, 6u, 8u, 9u
     }), TestSuite::Compare::Container);
+
+    /* The glyph count queries should still match */
+    CORRADE_COMPARE(layer.glyphCount(data9), 2u);
 
     /* Indices for remaining 2 visible glyphs */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
