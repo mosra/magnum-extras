@@ -284,6 +284,7 @@ UnsignedInt TextLayer::shapeInternal(
     const Containers::StridedArrayView1D<Vector2> glyphOffsetsPositions = glyphData.slice(&Implementation::TextLayerGlyphData::position);
     const Containers::StridedArrayView1D<Vector2> glyphAdvances = Containers::arrayCast<Vector2>(glyphData.slice(&Implementation::TextLayerGlyphData::glyphId));
     shaper.glyphOffsetsAdvancesInto(glyphOffsetsPositions, glyphAdvances);
+    Vector2 size{NoInit};
     {
         Vector2 cursor;
         const Range2D lineRectangle = Text::renderLineGlyphPositionsInto(
@@ -299,12 +300,11 @@ UnsignedInt TextLayer::shapeInternal(
             properties.layoutDirection(),
             properties.alignment(),
             glyphOffsetsPositions);
-        /** @todo use the final rectangle for min size for UI layouter */
-        Text::alignRenderedBlock(
+        size = Text::alignRenderedBlock(
             blockRectangle,
             properties.layoutDirection(),
             properties.alignment(),
-            glyphOffsetsPositions);
+            glyphOffsetsPositions).size();
     }
 
     /* Glyph cache. The create() (or createGlyph()) should have ensured that a
@@ -319,9 +319,10 @@ UnsignedInt TextLayer::shapeInternal(
             glyph.glyphId = glyphCache->glyphId(fontState.glyphCacheFontId, glyph.glyphId);
     }
 
-    /* Save scale and alignment */
+    /* Save scale, size and alignment */
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
+    data.size = size;
     data.alignment = properties.alignment();
 
     return glyphRun;
@@ -367,6 +368,7 @@ UnsignedInt TextLayer::shapeGlyphInternal(
        then convert those in-place to absolute glyph positions and align
        them */
     Vector2 glyphPosition[1]{};
+    Vector2 size{NoInit};
     {
         const Range2D blockRectangle = Text::alignRenderedLine(
             glyphRectangle,
@@ -374,12 +376,12 @@ UnsignedInt TextLayer::shapeGlyphInternal(
             Text::LayoutDirection::HorizontalTopToBottom,
             properties.alignment(),
             glyphPosition);
-        Text::alignRenderedBlock(
+        size = Text::alignRenderedBlock(
             blockRectangle,
             /** @todo could the direction be abused for anything cool? */
             Text::LayoutDirection::HorizontalTopToBottom,
             properties.alignment(),
-            glyphPosition);
+            glyphPosition).size();
     }
 
     /* Add a new run containing just that one glyph */
@@ -388,9 +390,10 @@ UnsignedInt TextLayer::shapeGlyphInternal(
     arrayAppend(state.glyphData, InPlaceInit, *glyphPosition, cacheGlobalGlyphId);
     arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, 1u, id);
 
-    /* Save scale and alignment */
+    /* Save scale, size and alignment */
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
+    data.size = size;
     data.alignment = properties.alignment();
 
     return glyphRun;
@@ -503,6 +506,34 @@ void TextLayer::removeInternal(const UnsignedInt id) {
        wouldn't really fully solve that peak memory problem anyway, and on the
        other hand choosing to trigger update() manually after a lot of removals
        can achieve lower peak use than any automagic. */
+}
+
+UnsignedInt TextLayer::glyphCount(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::glyphCount(): invalid handle" << handle, {});
+    const State& state = static_cast<const State&>(*_state);
+    return state.glyphRuns[state.data[dataHandleId(handle)].glyphRun].glyphCount;
+}
+
+UnsignedInt TextLayer::glyphCount(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::glyphCount(): invalid handle" << handle, {});
+    const State& state = static_cast<const State&>(*_state);
+    return state.glyphRuns[state.data[layerDataHandleId(handle)].glyphRun].glyphCount;
+}
+
+Vector2 TextLayer::size(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::size(): invalid handle" << handle, {});
+    const State& state = static_cast<const State&>(*_state);
+    return state.data[dataHandleId(handle)].size;
+}
+
+Vector2 TextLayer::size(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::size(): invalid handle" << handle, {});
+    const State& state = static_cast<const State&>(*_state);
+    return state.data[layerDataHandleId(handle)].size;
 }
 
 void TextLayer::setText(const DataHandle handle, const Containers::StringView text, const TextProperties& properties) {
