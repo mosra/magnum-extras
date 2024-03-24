@@ -85,9 +85,9 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedAddFontNoHandlesLeft();
     void sharedFontInvalidHandle();
 
-    void sharedSetStyleFonts();
-    void sharedSetStyleFontsInvalidSize();
-    void sharedSetStyleFontsInvalidHandle();
+    void sharedSetStyle();
+    void sharedSetStyleInvalidSize();
+    void sharedSetStyleInvalidFontHandle();
 
     void construct();
     void constructCopy();
@@ -119,7 +119,7 @@ const struct {
     const char* name;
     NodeHandle node;
     LayerStates state;
-    bool layerDataHandleOverloads, customFont, noStyleFonts;
+    bool layerDataHandleOverloads, customFont, noStyle;
 } CreateRemoveSetTextData[]{
     {"create",
         NodeHandle::Null, LayerStates{},
@@ -133,7 +133,7 @@ const struct {
     {"custom fonts",
         NodeHandle::Null, LayerStates{},
         false, true, false},
-    {"custom fonts, no style fonts set",
+    {"custom fonts, no style set",
         NodeHandle::Null, LayerStates{},
         false, true, true},
     {"custom fonts, LayerDataHandle overloads",
@@ -219,9 +219,9 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::sharedAddFontNoHandlesLeft,
               &TextLayerTest::sharedFontInvalidHandle,
 
-              &TextLayerTest::sharedSetStyleFonts,
-              &TextLayerTest::sharedSetStyleFontsInvalidSize,
-              &TextLayerTest::sharedSetStyleFontsInvalidHandle,
+              &TextLayerTest::sharedSetStyle,
+              &TextLayerTest::sharedSetStyleInvalidSize,
+              &TextLayerTest::sharedSetStyleInvalidFontHandle,
 
               &TextLayerTest::construct,
               &TextLayerTest::constructCopy,
@@ -406,6 +406,8 @@ void TextLayerTest::debugFontHandle() {
 void TextLayerTest::sharedConstruct() {
     struct Shared: TextLayer::Shared {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     CORRADE_COMPARE(shared.styleCount(), 3);
 
@@ -416,6 +418,8 @@ void TextLayerTest::sharedConstruct() {
 void TextLayerTest::sharedConstructNoCreate() {
     struct Shared: TextLayer::Shared {
         explicit Shared(NoCreateT): TextLayer::Shared{NoCreate} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{NoCreate};
 
     /* Shouldn't crash */
@@ -426,13 +430,25 @@ void TextLayerTest::sharedConstructNoCreate() {
 }
 
 void TextLayerTest::sharedConstructCopy() {
-    CORRADE_VERIFY(!std::is_copy_constructible<TextLayer::Shared>{});
-    CORRADE_VERIFY(!std::is_copy_assignable<TextLayer::Shared>{});
+    struct Shared: TextLayer::Shared {
+        /* Clang says the constructor is unused otherwise. However I fear that
+           without the constructor the type would be impossible to construct
+           (and thus also to copy), leading to false positives in the trait
+           check below */
+        explicit CORRADE_UNUSED Shared(UnsignedInt styleCount): TextLayer::Shared{Containers::pointer<TextLayer::Shared::State>(styleCount)} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+    };
+
+    CORRADE_VERIFY(!std::is_copy_constructible<Shared>{});
+    CORRADE_VERIFY(!std::is_copy_assignable<Shared>{});
 }
 
 void TextLayerTest::sharedConstructMove() {
     struct Shared: TextLayer::Shared {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     };
 
     Shared a{3};
@@ -444,8 +460,8 @@ void TextLayerTest::sharedConstructMove() {
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleCount(), 3);
 
-    CORRADE_VERIFY(std::is_nothrow_move_constructible<TextLayer::Shared>::value);
-    CORRADE_VERIFY(std::is_nothrow_move_assignable<TextLayer::Shared>::value);
+    CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
+    CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
 }
 
 void TextLayerTest::sharedSetGlyphCache() {
@@ -460,6 +476,8 @@ void TextLayerTest::sharedSetGlyphCache() {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     shared.setGlyphCache(cache);
     CORRADE_COMPARE(&shared.glyphCache(), &cache);
@@ -481,6 +499,8 @@ void TextLayerTest::sharedSetGlyphCacheAlreadySet() {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     shared.setGlyphCache(cache);
 
@@ -495,6 +515,8 @@ void TextLayerTest::sharedNoGlyphCache() {
 
     struct Shared: TextLayer::Shared {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
 
     std::ostringstream out;
@@ -519,6 +541,8 @@ void TextLayerTest::sharedAddFont() {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     shared.setGlyphCache(cache);
     CORRADE_COMPARE(shared.fontCount(), 0);
@@ -600,6 +624,8 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
             explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
             using TextLayer::Shared::setGlyphCache;
+
+            void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
         } shared{3};
         shared.setGlyphCache(cache);
         CORRADE_COMPARE(shared.fontCount(), 0);
@@ -641,6 +667,8 @@ void TextLayerTest::sharedAddFontTakeOwnershipNull() {
 
     struct Shared: TextLayer::Shared {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     CORRADE_COMPARE(shared.fontCount(), 0);
 
@@ -655,6 +683,8 @@ void TextLayerTest::sharedAddFontNoCache() {
 
     struct Shared: TextLayer::Shared {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
 
     struct: Text::AbstractFont {
@@ -693,6 +723,8 @@ void TextLayerTest::sharedAddFontNotFoundInCache() {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     shared.setGlyphCache(cache);
 
@@ -739,6 +771,8 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     shared.setGlyphCache(cache);
 
@@ -784,6 +818,8 @@ void TextLayerTest::sharedFontInvalidHandle() {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     shared.setGlyphCache(cache);
 
@@ -805,7 +841,7 @@ void TextLayerTest::sharedFontInvalidHandle() {
         "Whee::TextLayer::Shared::font(): invalid handle Whee::FontHandle::Null\n");
 }
 
-void TextLayerTest::sharedSetStyleFonts() {
+void TextLayerTest::sharedSetStyle() {
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
 
@@ -828,12 +864,20 @@ void TextLayerTest::sharedSetStyleFonts() {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         State& state() { return static_cast<State&>(*_state); }
-
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem> items) override {
+            /** @todo test the common style once it contains something */
+            CORRADE_COMPARE(items.size(), 3);
+            CORRADE_COMPARE(items[1].color, 0xc0ffee_rgbf);
+            ++setStyleCalled;
+        }
+
+        Int setStyleCalled = 0;
     } shared{3};
     shared.setGlyphCache(cache);
 
-    /* By default they're all null handles */
+    /* By default there are all null font handles */
     CORRADE_COMPARE_AS(shared.state().styleFonts, Containers::arrayView({
         FontHandle::Null,
         FontHandle::Null,
@@ -845,7 +889,14 @@ void TextLayerTest::sharedSetStyleFonts() {
     cache.addFont(23, &font2);
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
-    shared.setStyleFonts({first, second, first});
+    shared.setStyle(
+        TextLayerStyleCommon{},
+        {TextLayerStyleItem{},
+         TextLayerStyleItem{}
+            .setColor(0xc0ffee_rgbf),
+         TextLayerStyleItem{}},
+        {first, second, first});
+    CORRADE_COMPARE(shared.setStyleCalled, 1);
     CORRADE_COMPARE_AS(shared.state().styleFonts, Containers::arrayView({
         first,
         second,
@@ -853,20 +904,29 @@ void TextLayerTest::sharedSetStyleFonts() {
     }), TestSuite::Compare::Container);
 }
 
-void TextLayerTest::sharedSetStyleFontsInvalidSize() {
+void TextLayerTest::sharedSetStyleInvalidSize() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: TextLayer::Shared {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
 
     std::ostringstream out;
     Error redirectError{&out};
-    shared.setStyleFonts({FontHandle::Null, FontHandle::Null});
-    CORRADE_COMPARE(out.str(), "Whee::TextLayer::Shared::setStyleFonts(): expected 3 fonts, got 2\n");
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}, TextLayerStyleItem{}},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null});
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+        {FontHandle::Null, FontHandle::Null});
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::Shared::setStyle(): expected 3 style items, got 2\n"
+        "Whee::TextLayer::Shared::setStyle(): expected 3 font handles, got 2\n");
 }
 
-void TextLayerTest::sharedSetStyleFontsInvalidHandle() {
+void TextLayerTest::sharedSetStyleInvalidFontHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: Text::AbstractFont {
@@ -892,6 +952,8 @@ void TextLayerTest::sharedSetStyleFontsInvalidHandle() {
         explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{4};
     shared.setGlyphCache(cache);
 
@@ -899,16 +961,22 @@ void TextLayerTest::sharedSetStyleFontsInvalidHandle() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    shared.setStyleFonts({handle, FontHandle(0x12ab), handle, handle});
-    shared.setStyleFonts({handle, handle, FontHandle::Null, handle});
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+        {handle, FontHandle(0x12ab), handle, handle});
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+        {handle, handle, FontHandle::Null, handle});
     CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::Shared::setStyleFonts(): invalid handle Whee::FontHandle(0x12ab, 0x0) at index 1\n"
-        "Whee::TextLayer::Shared::setStyleFonts(): invalid handle Whee::FontHandle::Null at index 2\n");
+        "Whee::TextLayer::Shared::setStyle(): invalid handle Whee::FontHandle(0x12ab, 0x0) at index 1\n"
+        "Whee::TextLayer::Shared::setStyle(): invalid handle Whee::FontHandle::Null at index 2\n");
 }
 
 void TextLayerTest::construct() {
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
 
     struct Layer: TextLayer {
@@ -927,6 +995,8 @@ void TextLayerTest::constructCopy() {
 void TextLayerTest::constructMove() {
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     };
 
     struct Layer: TextLayer {
@@ -1068,6 +1138,8 @@ template<class T> void TextLayerTest::createRemoveSetText() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     shared.setGlyphCache(cache);
 
@@ -1079,9 +1151,13 @@ template<class T> void TextLayerTest::createRemoveSetText() {
        different or not set them at all -- they shouldn't get used for
        anything */
     if(!data.customFont)
-        shared.setStyleFonts({threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle});
-    else if(!data.noStyleFonts)
-        shared.setStyleFonts({oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle});
+        shared.setStyle(TextLayerStyleCommon{},
+            {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+            {threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle});
+    else if(!data.noStyle)
+        shared.setStyle(TextLayerStyleCommon{},
+            {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+            {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1378,11 +1454,13 @@ void TextLayerTest::createSetTextTextProperties() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{1};
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 16.0f);
-    shared.setStyleFonts({fontHandle});
+    shared.setStyle(TextLayerStyleCommon{}, {TextLayerStyleItem{}}, {fontHandle});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1424,6 +1502,8 @@ void TextLayerTest::createNoSharedGlyphCache() {
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
 
     struct Layer: TextLayer {
@@ -1460,12 +1540,16 @@ void TextLayerTest::setColor() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{1};
     shared.setGlyphCache(cache);
     /* Interestingly enough, these two can't be chained together as on some
        compilers it'd call addFont() before setGlyphCache(), causing an
        assert */
-    shared.setStyleFonts({shared.addFont(font, 1.0f)});
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {shared.addFont(font, 1.0f)});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1497,6 +1581,8 @@ void TextLayerTest::invalidHandle() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{1};
 
     struct Layer: TextLayer {
@@ -1547,12 +1633,16 @@ void TextLayerTest::invalidFontHandle() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{1};
     shared.setGlyphCache(cache);
     /* Interestingly enough, these two can't be chained together as on some
        compilers it'd call addFont() before setGlyphCache(), causing an
        assert */
-    shared.setStyleFonts({shared.addFont(font, 1.0f)});
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {shared.addFont(font, 1.0f)});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1595,6 +1685,8 @@ void TextLayerTest::noSharedStyleFonts() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{1};
     shared.setGlyphCache(cache);
 
@@ -1611,8 +1703,8 @@ void TextLayerTest::noSharedStyleFonts() {
     layer.create(0, "", {});
     layer.setText(data, "", {});
     CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::create(): no fonts were assigned to styles and no custom font was supplied\n"
-        "Whee::TextLayer::setText(): no fonts were assigned to styles and no custom font was supplied\n");
+        "Whee::TextLayer::create(): no style data was set and no custom font was supplied\n"
+        "Whee::TextLayer::setText(): no style data was set and no custom font was supplied\n");
 }
 
 void TextLayerTest::styleOutOfRange() {
@@ -1641,6 +1733,8 @@ void TextLayerTest::styleOutOfRange() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{3};
     shared.setGlyphCache(cache);
 
@@ -1728,13 +1822,17 @@ void TextLayerTest::updateCleanDataOrder() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{4};
     shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
     FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f);
     FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
-    shared.setStyleFonts({oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle});
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+        {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2202,13 +2300,17 @@ void TextLayerTest::updateAlignment() {
         explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
     } shared{1};
     shared.setGlyphCache(cache);
 
     /* Font scaled 2x, so all metrics coming from the font or the cache should
        be scaled 2x */
     FontHandle fontHandle = shared.addFont(font, 200.0f);
-    shared.setStyleFonts({fontHandle});
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {fontHandle});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
