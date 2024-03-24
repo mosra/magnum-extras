@@ -655,7 +655,8 @@ void BaseLayerGLTest::drawOrder() {
 
 void BaseLayerGLTest::eventStyleTransition() {
     /* Switches between the "default" and "gradient" cases from render() after
-       a press event. Everything else is tested in BaseLayerTest already. */
+       a press event. Everything else is tested in AbstractLayerTest
+       already. */
 
     AbstractUserInterface ui{RenderSize};
 
