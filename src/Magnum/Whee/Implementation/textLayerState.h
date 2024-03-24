@@ -54,6 +54,9 @@ struct TextLayerFont {
 };
 
 struct TextLayerStyle {
+    /* Uniform index corresponding to given style */
+    UnsignedInt uniform;
+
     FontHandle font;
     Vector4 padding;
 };
@@ -61,7 +64,9 @@ struct TextLayerStyle {
 }
 
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount} {}
+    explicit State(UnsignedInt styleUniformCount, UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount}, styleUniformCount{styleUniformCount} {}
+
+    UnsignedInt styleUniformCount;
 
     /* Glyph cache used by all fonts. It's expected to know about each font
        that's added. */
@@ -72,8 +77,8 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
        FontHandle generation counters doesn't need to exist here. */
     Containers::Array<Implementation::TextLayerFont> fonts;
 
-    /* Fonts and padding values assigned to each style. Initially empty to be
-       able to detect whether setStyle() was called. */
+    /* Uniform mapping, fonts and padding values assigned to each style.
+       Initially empty to be able to detect whether setStyle() was called. */
     Containers::Array<Implementation::TextLayerStyle> styles;
 };
 
@@ -122,7 +127,7 @@ struct TextLayerVertex {
     Vector2 position;
     Vector3 textureCoordinates;
     Color3 color;
-    UnsignedInt style;
+    UnsignedInt styleUniform;
 };
 
 }

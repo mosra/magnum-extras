@@ -92,11 +92,22 @@ class MAGNUM_WHEE_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
         /**
          * @brief Constructor
          *
-         * The @p styleCount parameter specifies the number of distinct styles
-         * to use for drawing and is expected to be non-zero. Style data are
-         * then set with @ref setStyle().
+         * The @p styleUniformCount parameter specifies the size of the uniform
+         * array, @p styleCount then the number of distinct styles to use for
+         * drawing. The sizes are independent in order to allow styles with
+         * different fonts or paddings share the same uniform data. Both
+         * @p styleUniformCount and @p styleCount is expected to be non-zero.
+         * Style data are then set with @ref setStyle().
          */
-        explicit Shared(UnsignedInt styleCount);
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount);
+
+        /**
+         * @brief Construct with style uniform count being the same as style count
+         *
+         * Equivalent to calling @ref Shared(UnsignedInt, UnsignedInt) with
+         * both parameters set to @p styleCount.
+         */
+        explicit Shared(UnsignedInt styleCount): Shared{styleCount, styleCount} {}
 
         /**
          * @brief Construct without creating the contents
@@ -142,15 +153,17 @@ class MAGNUM_WHEE_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
         template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex)> Shared& setStyleTransition() {
             return static_cast<Shared&>(TextLayer::Shared::setStyleTransition<StyleIndex, toPressed, toInactive>());
         }
-        Shared& setStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts, const Containers::StridedArrayView1D<const Vector4>& itemPadding);
-        Shared& setStyle(const TextLayerStyleCommon& common, std::initializer_list<TextLayerStyleItem> items, std::initializer_list<FontHandle> itemFonts, std::initializer_list<Vector4> itemPadding);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Vector4>& padding);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<FontHandle> fonts, std::initializer_list<Vector4> padding);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePadding);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<FontHandle> styleFonts, std::initializer_list<Vector4> stylePadding);
         #endif
 
     private:
         struct State;
         friend TextLayerGL;
 
-        void doSetStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items) override;
+        void doSetStyle(const TextLayerCommonStyleUniform& common, Containers::ArrayView<const TextLayerStyleUniform> items) override;
 };
 
 }}
