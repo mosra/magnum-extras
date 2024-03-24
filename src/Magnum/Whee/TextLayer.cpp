@@ -53,7 +53,13 @@ Debug& operator<<(Debug& debug, const FontHandle value) {
     return debug << "Whee::FontHandle(" << Debug::nospace << Debug::hex << fontHandleId(value) << Debug::nospace << "," << Debug::hex << fontHandleGeneration(value) << Debug::nospace << ")";
 }
 
-TextLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {}
+TextLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {
+    #ifndef CORRADE_NO_ASSERT
+    const State& s = static_cast<const State&>(*_state);
+    #endif
+    CORRADE_ASSERT(s.styleCount + s.dynamicStyleCount,
+        "Whee::TextLayer::Shared: expected non-zero total style count", );
+}
 
 TextLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
 
@@ -175,8 +181,11 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
     /* Allocation done before the asserts so if they fail in a graceful assert
        build, we don't hit another assert in Utility::copy(styleToUniform) in
        the setStyle() below */
-    if(state.styles.isEmpty())
+    if(state.styles.isEmpty()) {
         state.styles = Containers::Array<Implementation::TextLayerStyle>{NoInit, state.styleCount};
+        if(state.dynamicStyleCount)
+            state.styleUniforms = Containers::Array<TextLayerStyleUniform>{NoInit, state.styleUniformCount};
+    }
     CORRADE_ASSERT(uniforms.size() == state.styleUniformCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleUniformCount << "uniforms, got" << uniforms.size(), );
     CORRADE_ASSERT(styleFonts.size() == state.styleCount,
@@ -196,7 +205,15 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
     } else {
         Utility::copy(stylePadding, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::padding));
     }
-    doSetStyle(commonUniform, uniforms);
+
+    /* If there are dynamic styles, the layers will combine them with the
+       static styles and upload to a single buffer, so just copy them to an
+       array for the layers to reuse */
+    if(state.dynamicStyleCount) {
+        state.commonStyleUniform = commonUniform;
+        Utility::copy(uniforms, state.styleUniforms);
+        ++state.styleUniformUpdateStamp;
+    } else doSetStyle(commonUniform, uniforms);
 }
 
 TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePadding) {
@@ -227,13 +244,44 @@ TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform
 }
 
 TextLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {
-    CORRADE_ASSERT(styleUniformCount, "Whee::TextLayer::Shared::Configuration: expected non-zero style uniform count", );
-    CORRADE_ASSERT(styleCount, "Whee::TextLayer::Shared::Configuration: expected non-zero style count", );
+    CORRADE_ASSERT(!styleUniformCount == !styleCount, "Whee::TextLayer::Shared::Configuration: expected style uniform and style count to be either both zero or both non-zero, got" << styleUniformCount << "and" << styleCount, );
 }
 
 TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
 
 TextLayer::TextLayer(const LayerHandle handle, Shared& shared): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*shared._state))} {}
+
+Containers::ArrayView<const TextLayerStyleUniform> TextLayer::dynamicStyleUniforms() const {
+    return static_cast<const State&>(*_state).dynamicStyleUniforms;
+}
+
+Containers::StridedArrayView1D<const FontHandle> TextLayer::dynamicStyleFonts() const {
+    return stridedArrayView(static_cast<const State&>(*_state).dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::font);
+}
+
+Containers::StridedArrayView1D<const Vector4> TextLayer::dynamicStylePaddings() const {
+    return stridedArrayView(static_cast<const State&>(*_state).dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding);
+}
+
+void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Vector4& padding) {
+    auto& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyleUniforms.size(),
+        "Whee::TextLayer::setDynamicStyle(): index" << id << "out of range for" << state.dynamicStyleUniforms.size() << "dynamic styles", );
+    CORRADE_ASSERT(font == FontHandle::Null || Whee::isHandleValid(static_cast<const Shared::State&>(state.shared).fonts, font),
+        "Whee::TextLayer::setDynamicStyle(): invalid handle" << font, );
+    state.dynamicStyleUniforms[id] = uniform;
+    state.dynamicStyleChanged = true;
+
+    /* Mark the layer as changed only if the padding actually changes,
+       otherwise it's not needed to trigger an update(). OTOH changing the font
+       doesn't / cannot trigger an update because we don't keep the source
+       text string. */
+    state.dynamicStyles[id].font = font;
+    if(state.dynamicStyles[id].padding != padding) {
+        state.dynamicStyles[id].padding = padding;
+        setNeedsUpdate();
+    }
+}
 
 UnsignedInt TextLayer::shapeInternal(
     #ifndef CORRADE_NO_ASSERT
@@ -247,9 +295,16 @@ UnsignedInt TextLayer::shapeInternal(
     /* Decide on a font */
     FontHandle font = properties.font();
     if(font == FontHandle::Null) {
-        CORRADE_ASSERT(!sharedState.styles.isEmpty() && sharedState.styles[style].font != FontHandle::Null,
-            messagePrefix << "style" << style << "has no font set and no custom font was supplied", {});
-        font = sharedState.styles[style].font;
+        if(style < sharedState.styleCount) {
+            CORRADE_ASSERT(!sharedState.styles.isEmpty() && sharedState.styles[style].font != FontHandle::Null,
+                messagePrefix << "style" << style << "has no font set and no custom font was supplied", {});
+            font = sharedState.styles[style].font;
+        } else {
+            CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
+            font = state.dynamicStyles[style - sharedState.styleCount].font;
+            CORRADE_ASSERT(font != FontHandle::Null,
+                messagePrefix << "dynamic style" << style - sharedState.styleCount << "has no font set and no custom font was supplied", {});
+        }
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
         messagePrefix << "invalid handle" << font, {});
 
@@ -340,9 +395,16 @@ UnsignedInt TextLayer::shapeGlyphInternal(
     /* Decide on a font */
     FontHandle font = properties.font();
     if(font == FontHandle::Null) {
-        CORRADE_ASSERT(!sharedState.styles.isEmpty() && sharedState.styles[style].font != FontHandle::Null,
-            messagePrefix << "style" << style << "has no font set and no custom font was supplied", {});
-        font = sharedState.styles[style].font;
+        if(style < sharedState.styleCount) {
+            CORRADE_ASSERT(!sharedState.styles.isEmpty() && sharedState.styles[style].font != FontHandle::Null,
+                messagePrefix << "style" << style << "has no font set and no custom font was supplied", {});
+            font = sharedState.styles[style].font;
+        } else {
+            CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
+            font = state.dynamicStyles[style - sharedState.styleCount].font;
+            CORRADE_ASSERT(font != FontHandle::Null,
+                messagePrefix << "dynamic style" << style - sharedState.styleCount << "has no font set and no custom font was supplied", {});
+        }
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
         messagePrefix << "invalid handle" << font, {});
 
@@ -419,8 +481,8 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
     #endif
     CORRADE_ASSERT(sharedState.glyphCache,
         "Whee::TextLayer::create(): no glyph cache was set", {});
-    CORRADE_ASSERT(style < sharedState.styleCount,
-        "Whee::TextLayer::create(): style" << style << "out of range for" << sharedState.styleCount << "styles", {});
+    CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
+        "Whee::TextLayer::create(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
 
     /* Create a data */
     const DataHandle handle = createInternal(node);
@@ -452,8 +514,8 @@ DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt gly
     #endif
     CORRADE_ASSERT(sharedState.glyphCache,
         "Whee::TextLayer::createGlyph(): no glyph cache was set", {});
-    CORRADE_ASSERT(style < sharedState.styleCount,
-        "Whee::TextLayer::createGlyph(): style" << style << "out of range for" << sharedState.styleCount << "styles", {});
+    CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
+        "Whee::TextLayer::createGlyph(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
 
     /* Create a data */
     const DataHandle handle = createInternal(node);
@@ -756,7 +818,13 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             vertexData.slice(&Implementation::TextLayerVertex::textureCoordinates));
 
         /* Align the glyph run relative to the node area */
-        const Vector4 padding = sharedState.styles[data.calculatedStyle].padding + data.padding;
+        Vector4 padding = data.padding;
+        if(data.calculatedStyle < sharedState.styleCount)
+            padding += sharedState.styles[data.calculatedStyle].padding;
+        else {
+            CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
+            padding += state.dynamicStyles[data.calculatedStyle - sharedState.styleCount].padding;
+        }
         Vector2 offset = nodeOffsets[nodeId] + padding.xy();
         const Vector2 size = nodeSizes[nodeId] - padding.xy() - Math::gather<'z', 'w'>(padding);
         const UnsignedByte alignmentHorizontal = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentHorizontal);
@@ -790,7 +858,11 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
         for(Implementation::TextLayerVertex& i: vertexData) {
             i.position = i.position*Vector2::yScale(-1.0f) + offset;
             i.color = data.color;
-            i.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
+            /* For dynamic styles the uniform mapping is implicit and they're
+               placed right after all non-dynamic styles */
+            i.styleUniform = data.calculatedStyle < sharedState.styleCount ?
+                sharedState.styles[data.calculatedStyle].uniform :
+                sharedState.styleUniformCount + data.calculatedStyle - sharedState.styleCount;
         }
 
         /* Generate indices in draw order. Remeber the offset for each data to

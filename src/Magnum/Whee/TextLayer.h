@@ -218,6 +218,62 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         inline const Shared& shared() const; /**< @overload */
 
         /**
+         * @brief Dynamic style uniforms
+         *
+         * Size of the returned view is @ref Shared::dynamicStyleCount(). These
+         * uniforms are used by style indices greater than or equal to
+         * @ref Shared::styleCount().
+         * @see @ref dynamicStyleFonts(), @ref dynamicStylePaddings(),
+         *      @ref setDynamicStyle()
+         */
+        Containers::ArrayView<const TextLayerStyleUniform> dynamicStyleUniforms() const;
+
+        /**
+         * @brief Dynamic style fonts
+         *
+         * Size of the returned view is @ref Shared::dynamicStyleCount(). These
+         * fonts are used by style indices greater than or equal to
+         * @ref Shared::styleCount().
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStylePaddings(),
+         *      @ref setDynamicStyle()
+         */
+        Containers::StridedArrayView1D<const FontHandle> dynamicStyleFonts() const;
+
+        /**
+         * @brief Dynamic style paddings
+         *
+         * Size of the returned view is @ref Shared::dynamicStyleCount(). These
+         * paddings are used by style indices greater than or equal to
+         * @ref Shared::styleCount().
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref setDynamicStyle()
+         */
+        Containers::StridedArrayView1D<const Vector4> dynamicStylePaddings() const;
+
+        /**
+         * @brief Set a dynamic style
+         *
+         * Expects that the @p id is less than @ref Shared::dynamicStyleCount()
+         * and @p font is either @ref FontHandle::Null or valid.
+         * @ref Shared::styleCount() plus @p id is then a style index that can
+         * be passed to @ref create(), @ref createGlyph() or @ref setStyle() in
+         * order to use this style. Compared to @ref Shared::setStyle() the
+         * mapping between dynamic styles and uniforms is implicit. All dynamic
+         * styles are initially default-constructed @ref TextLayerStyleUniform
+         * instances, @ref FontHandle::Null and zero padding vectors.
+         *
+         * Calling this function causes the changed dynamic style uniform data
+         * to be uploaded at next @ref draw(). If @p padding changed as well,
+         * @ref LayerState::NeedsUpdate gets set. On the other, changing the
+         * @p font doesn't cause any state flag to be set --- the @p font gets
+         * only used in the following call to @ref create(),
+         * @ref createGlyph(), @ref setText() or @ref setGlyph().
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStylePaddings(),
+         *      @ref allocateDynamicStyle(), @ref recycleDynamicStyle()
+         */
+        void setDynamicStyle(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, const Vector4& padding);
+
+        /**
          * @brief Create a text
          * @param style         Style index
          * @param text          Text to render
@@ -226,7 +282,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @ref Shared::setGlyphCache() has been called, @p style
-         * is less than @ref Shared::styleCount() and
+         * is less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
          * index @p style. If @ref TextProperties::font() is not null it's
@@ -280,7 +336,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @ref Shared::setGlyphCache() has been called, @p style
-         * is less than @ref Shared::styleCount() and
+         * is less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
          * index @p style. If @ref TextProperties::font() is not null it's
@@ -331,7 +387,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @ref Shared::setGlyphCache() has been called, @p style
-         * is less than @ref Shared::styleCount() and
+         * is less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
          * index @p style. If @ref TextProperties::font() is not null it's
@@ -433,7 +489,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @return New data handle
          *
          * Expects that @ref Shared::setGlyphCache() has been called, @p style
-         * is less than @ref Shared::styleCount() and
+         * is less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
          * index @p style. If @ref TextProperties::font() is not null it's
@@ -826,8 +882,9 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         /**
          * @brief Style uniform count
          *
-         * Size of the style uniform buffer. May or may not be the same as
-         * @ref styleCount().
+         * Size of the style uniform buffer excluding dynamic styles. May or
+         * may not be the same as @ref styleCount(). For dynamic styles, the
+         * style uniform count is the same as @ref dynamicStyleCount().
          * @see @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt),
          *      @ref setStyle()
          */
@@ -1062,7 +1119,9 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         MAGNUM_WHEE_LOCAL void setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePadding);
 
         /* The items are guaranteed to have the same size as
-           styleUniformCount() */
+           styleUniformCount(). Called only if there are no dynamic styles,
+           otherwise the data are copied to internal arrays to be subsequently
+           combined with dynamic uniforms and uploaded together in doDraw(). */
         virtual void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) = 0;
 };
 
@@ -1082,6 +1141,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared::Configuration {
          * different fonts or paddings share the same uniform data. Both
          * @p styleUniformCount and @p styleCount is expected to be non-zero.
          * Style data are then set with @ref setStyle().
+         * @see @ref setDynamicStyleCount()
          */
         explicit Configuration(UnsignedInt styleUniformCount, UnsignedInt styleCount);
 
@@ -1099,8 +1159,26 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared::Configuration {
         /** @brief Style count */
         UnsignedInt styleCount() const { return _styleCount; }
 
+        /** @brief Dynamic style count */
+        UnsignedInt dynamicStyleCount() const { return _dynamicStyleCount; }
+
+        /**
+         * @brief Set dynamic style count
+         * @return Reference to self (for method chaining)
+         *
+         * Initial count is @cpp 0 @ce.
+         * @see @ref Configuration(UnsignedInt, UnsignedInt),
+         *      @ref AbstractVisualLayer::allocateDynamicStyle(),
+         *      @ref AbstractVisualLayer::dynamicStyleUsedCount()
+         */
+        Configuration& setDynamicStyleCount(UnsignedInt count) {
+            _dynamicStyleCount = count;
+            return *this;
+        }
+
     private:
         UnsignedInt _styleUniformCount, _styleCount;
+        UnsignedInt _dynamicStyleCount = 0;
 };
 
 inline TextLayer::Shared& TextLayer::shared() {

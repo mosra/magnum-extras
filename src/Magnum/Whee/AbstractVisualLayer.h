@@ -234,9 +234,11 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @brief Allocate a dynamic style index
          *
          * The returned index can be used to set properties of a dynamic style
-         * using @ref BaseLayer::setDynamicStyle(). When added to
+         * using @ref BaseLayer::setDynamicStyle() /
+         * @ref TextLayer::setDynamicStyle(). When added to
          * @ref Shared::styleCount(), it can be passed as a style index to
-         * @ref setStyle() or @ref BaseLayer::create().
+         * @ref setStyle() or @ref BaseLayer::create() /
+         * @ref TextLayer::create() / @ref TextLayer::createGlyph().
          *
          * When not used anymore, the index should be passed to
          * @ref recycleDynamicStyle() to make it available for allocation

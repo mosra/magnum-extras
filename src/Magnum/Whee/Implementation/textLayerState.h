@@ -66,9 +66,17 @@ struct TextLayerStyle {
 }
 
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), 0}, styleUniformCount{configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, styleUniformCount{configuration.styleUniformCount()} {}
 
     UnsignedInt styleUniformCount;
+
+    /* 2 bytes free */
+
+    /* Incremented every time the styleUniforms array is changed. There's a
+       corresponding TextLayer::State::styleUniformUpdateStamp variable that
+       doDraw() compares to this one, triggering style uniform buffer update if
+       it differs. */
+    UnsignedShort styleUniformUpdateStamp = 0;
 
     /* Glyph cache used by all fonts. It's expected to know about each font
        that's added. */
@@ -82,6 +90,12 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
     /* Uniform mapping, fonts and padding values assigned to each style.
        Initially empty to be able to detect whether setStyle() was called. */
     Containers::Array<Implementation::TextLayerStyle> styles;
+    /* Uniform values to be copied to layer-specific uniform buffers. Initially
+       empty to be able to detect whether setStyle() was called, stays empty
+       and unused if dynamicStyleCount is 0. */
+    /** @todo the allocation could be shared with above */
+    Containers::Array<TextLayerStyleUniform> styleUniforms;
+    TextLayerCommonStyleUniform commonStyleUniform{NoInit};
 };
 
 namespace Implementation {
@@ -135,10 +149,16 @@ struct TextLayerVertex {
     UnsignedInt styleUniform;
 };
 
+struct TextLayerDynamicStyle {
+    FontHandle font = FontHandle::Null;
+    /* 2 bytes free */
+    Vector4 padding;
+};
+
 }
 
 struct TextLayer::State: AbstractVisualLayer::State {
-    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared} {}
+    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared}, dynamicStyleUniforms{ValueInit, shared.dynamicStyleCount}, dynamicStyles{ValueInit, shared.dynamicStyleCount} {}
 
     /* Glyph data. Only the items referenced from `glyphRunData` are valid, the
        rest is unused space that gets recompacted during each doUpdate(). */
@@ -168,6 +188,31 @@ struct TextLayer::State: AbstractVisualLayer::State {
         change and not by draw order */
     Containers::Array<UnsignedInt> indices;
     Containers::Array<UnsignedInt> indexDrawOffsets;
+
+    /* Used only if shared.dynamicStyleCount is non-zero, is compared to
+       Shared::styleUniformUpdateStamp in order to detect that the uniform
+       buffer needs to be updated and then set to its value. When the two are
+       the same, it's assumed the buffer is up-to-date. As setStyle() is forced
+       to be called at least once, Shared::styleUniformUpdateStamp is initially
+       1 so the first update gets triggered always.
+
+       The only case where a style update may get skipped by accident is if the
+       shared state gets 65536 style updates, wrapping back to 0, and a
+       completely new layer gets created and drawn right at that point. Which I
+       think is rather unlikely, but if it wouldn't the stamps could be
+       expanded to 32 bits. */
+    UnsignedShort styleUniformUpdateStamp = 0;
+    /* True initially to trigger upload of the default-constructed dynamic
+       style even if it haven't been set to anything */
+    bool dynamicStyleChanged = true;
+
+    /* 1 / 5 bytes free */
+
+    /* Used only if shared.dynamicStyleCount is non-zero */
+    /** @todo the allocations could be shared, w/ dynamicStyles deinterleaved
+        to save 2 bytes per entry */
+    Containers::Array<TextLayerStyleUniform> dynamicStyleUniforms;
+    Containers::Array<Implementation::TextLayerDynamicStyle> dynamicStyles;
 };
 
 }}
