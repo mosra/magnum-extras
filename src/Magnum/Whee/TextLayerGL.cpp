@@ -150,7 +150,7 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
 }
 
 struct TextLayerGL::Shared::State: TextLayer::Shared::State {
-    explicit State(UnsignedInt styleCount): TextLayer::Shared::State{styleCount} {}
+    explicit State(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared::State{styleUniformCount, styleCount} {}
 
     /* Never used directly, only owns the instance passed to
        setGlyphCache(GlyphCache&&) if it got called instead of
@@ -163,11 +163,12 @@ struct TextLayerGL::Shared::State: TextLayer::Shared::State {
     GL::Buffer styleBuffer{NoCreate};
 };
 
-TextLayerGL::Shared::Shared(const UnsignedInt styleCount): TextLayer::Shared{Containers::pointer<State>(styleCount)} {
+TextLayerGL::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): TextLayer::Shared{Containers::pointer<State>(styleUniformCount, styleCount)} {
+    CORRADE_ASSERT(styleUniformCount, "Whee::TextLayerGL::Shared: expected non-zero style uniform count", );
     CORRADE_ASSERT(styleCount, "Whee::TextLayerGL::Shared: expected non-zero style count", );
     /* Construct the shader only after the assertion as it otherwise may fail
        to compile */
-    static_cast<State&>(*_state).shader = TextShaderGL{styleCount};
+    static_cast<State&>(*_state).shader = TextShaderGL{styleUniformCount};
 }
 
 TextLayerGL::Shared::Shared(NoCreateT) noexcept: TextLayer::Shared{NoCreate} {}
@@ -183,25 +184,33 @@ TextLayerGL::Shared& TextLayerGL::Shared::setGlyphCache(Text::GlyphCache&& cache
     return setGlyphCache(*state.glyphCacheStorage);
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts, const Containers::StridedArrayView1D<const Vector4>& itemPadding) {
-    return static_cast<Shared&>(TextLayer::Shared::setStyle(common, items, itemFonts, itemPadding));
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, fonts, paddings));
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerStyleCommon& common, const std::initializer_list<TextLayerStyleItem> items, const std::initializer_list<FontHandle> itemFonts, const std::initializer_list<Vector4> itemPadding) {
-    return static_cast<Shared&>(TextLayer::Shared::setStyle(common, items, itemFonts, itemPadding));
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Vector4> paddings) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, fonts, paddings));
 }
 
-void TextLayerGL::Shared::doSetStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items) {
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, styleFonts, stylePaddings));
+}
+
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Vector4> stylePaddings) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, styleFonts, stylePaddings));
+}
+
+void TextLayerGL::Shared::doSetStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms) {
     auto& state = static_cast<State&>(*_state);
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     if(!state.styleBuffer.id())
-        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(TextLayerStyleCommon) + sizeof(TextLayerStyleItem)*_state->styleCount}};
+        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(TextLayerCommonStyleUniform) + sizeof(TextLayerStyleUniform)*state.styleUniformCount}};
 
     /** @todo the common stuff wouldn't even need to be uploaded, skipping it
         causes no breakage in the shader */
-    state.styleBuffer.setSubData(0, {&common, 1});
-    state.styleBuffer.setSubData(sizeof(TextLayerStyleCommon), items);
+    state.styleBuffer.setSubData(0, {&commonUniform, 1});
+    state.styleBuffer.setSubData(sizeof(TextLayerCommonStyleUniform), uniforms);
 }
 
 struct TextLayerGL::State: TextLayer::State {

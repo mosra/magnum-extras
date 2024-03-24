@@ -60,8 +60,11 @@ void TextLayerGL_Test::sharedConstructZeroStyleCount() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    TextLayerGL::Shared{0};
-    CORRADE_COMPARE(out.str(), "Whee::TextLayerGL::Shared: expected non-zero style count\n");
+    TextLayerGL::Shared{0, 4};
+    TextLayerGL::Shared{4, 0};
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayerGL::Shared: expected non-zero style uniform count\n"
+        "Whee::TextLayerGL::Shared: expected non-zero style count\n");
 }
 
 }}}}

@@ -58,8 +58,8 @@ class EventLayer;
 
 enum class FontHandle: UnsignedShort;
 class TextLayer;
-struct TextLayerStyleCommon;
-struct TextLayerStyleItem;
+struct TextLayerCommonStyleUniform;
+struct TextLayerStyleUniform;
 #ifdef MAGNUM_TARGET_GL
 class TextLayerGL;
 #endif

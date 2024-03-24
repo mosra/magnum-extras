@@ -60,6 +60,7 @@ struct TextLayerGLTest: GL::OpenGLTester {
     explicit TextLayerGLTest();
 
     void sharedConstruct();
+    void sharedConstructSameStyleUniformCount();
     /* NoCreate tested in TextLayerGL_Test to verify it works without a GL
        context */
     void sharedConstructCopy();
@@ -106,12 +107,12 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     const char* filename;
-    TextLayerStyleItem styleItem;
+    TextLayerStyleUniform styleUniform;
 } RenderData[]{
     {"default", "default.png",
-        TextLayerStyleItem{}},
+        TextLayerStyleUniform{}},
     {"colored", "colored.png",
-        TextLayerStyleItem{}
+        TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)},
     /** @todo test at least toggling kerning once StbTrueTypeFont supports
         that */
@@ -204,6 +205,7 @@ const struct {
 
 TextLayerGLTest::TextLayerGLTest() {
     addTests({&TextLayerGLTest::sharedConstruct,
+              &TextLayerGLTest::sharedConstructSameStyleUniformCount,
               &TextLayerGLTest::sharedConstructCopy,
               &TextLayerGLTest::sharedConstructMove,
 
@@ -262,7 +264,14 @@ TextLayerGLTest::TextLayerGLTest() {
 }
 
 void TextLayerGLTest::sharedConstruct() {
+    TextLayerGL::Shared shared{3, 5};
+    CORRADE_COMPARE(shared.styleUniformCount(), 3);
+    CORRADE_COMPARE(shared.styleCount(), 5);
+}
+
+void TextLayerGLTest::sharedConstructSameStyleUniformCount() {
     TextLayerGL::Shared shared{3};
+    CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 3);
 }
 
@@ -395,21 +404,27 @@ void TextLayerGLTest::render() {
     CORRADE_VERIFY(_font && _font->isOpened());
 
     /* Testing the ArrayView overload, others cases use the initializer list */
-    TextLayerStyleItem styleItems[]{
-        /* To verify it's not always picking the first style */
-        TextLayerStyleItem{},
-        data.styleItem
+    TextLayerStyleUniform styleUniforms[]{
+        /* To verify it's not always picking the first uniform */
+        TextLayerStyleUniform{},
+        TextLayerStyleUniform{},
+        data.styleUniform
     };
-    TextLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleItems))};
+    UnsignedInt styleToUniform[]{
+        /* To verify it's not using the style ID as uniform ID */
+        1, 2, 0, 1, 0
+    };
+    TextLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleUniforms)), UnsignedInt(Containers::arraySize(styleToUniform))};
     layerShared.setGlyphCache(_fontGlyphCache);
     FontHandle fontHandle[]{
         layerShared.addFont(*_font, 32.0f)
     };
     /* The (lack of any) effect of padding on rendered output is tested
        thoroughly in renderAlignmentPadding() */
-    layerShared.setStyle(TextLayerStyleCommon{},
-        styleItems,
-        Containers::stridedArrayView(fontHandle).broadcasted<0>(2),
+    layerShared.setStyle(TextLayerCommonStyleUniform{},
+        styleUniforms,
+        styleToUniform,
+        Containers::stridedArrayView(fontHandle).broadcasted<0>(5),
         {});
 
     LayerHandle layer = ui.createLayer();
@@ -456,8 +471,8 @@ void TextLayerGLTest::renderAlignmentPadding() {
     layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
-    layerShared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+    layerShared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {fontHandle},
         {data.paddingFromStyle});
 
@@ -520,8 +535,8 @@ void TextLayerGLTest::renderCustomColor() {
     layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
-    layerShared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}
+    layerShared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf/0x336699_rgbf)},
         {fontHandle},
         {});
@@ -586,9 +601,9 @@ void TextLayerGLTest::renderChangeStyle() {
         .setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
-    layerShared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{},
-         TextLayerStyleItem{}
+    layerShared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)},
         {fontHandle, fontHandle},
         {});
@@ -648,8 +663,8 @@ void TextLayerGLTest::renderChangeText() {
     layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
-    layerShared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+    layerShared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {fontHandle},
         {});
 
@@ -773,20 +788,25 @@ void TextLayerGLTest::drawOrder() {
     cache.flushImage({{}, {8, 16}});
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 16}});
 
-    TextLayerGL::Shared layerShared{4};
+    TextLayerGL::Shared layerShared{3, 4};
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandleLarge = layerShared.addFont(font, 16.0f);
     FontHandle fontHandleSmall = layerShared.addFont(font, 8.0f);
-    layerShared.setStyle(TextLayerStyleCommon{}, {
-        TextLayerStyleItem{}        /* 0, red large */
+    /* Testing the styleToUniform initializer list overload, others cases use
+       implicit mapping initializer list overloads */
+    layerShared.setStyle(TextLayerCommonStyleUniform{}, {
+        TextLayerStyleUniform{}
             .setColor(0xff0000_rgbf),
-        TextLayerStyleItem{}        /* 1, red small */
-            .setColor(0xff0000_rgbf),
-        TextLayerStyleItem{}        /* 2, green large */
+        TextLayerStyleUniform{}
             .setColor(0x00ff00_rgbf),
-        TextLayerStyleItem{}        /* 3, blue small */
+        TextLayerStyleUniform{}
             .setColor(0x0000ff_rgbf)
+    }, {
+        0, /* 0, red large */
+        0, /* 1, red small */
+        1, /* 2, green large */
+        2, /* 3, blue small */
     }, {
         fontHandleLarge,
         fontHandleSmall,
@@ -859,9 +879,9 @@ void TextLayerGLTest::eventStyleTransition() {
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared
-        .setStyle(TextLayerStyleCommon{}, {
-            TextLayerStyleItem{},           /* default */
-            TextLayerStyleItem{}            /* colored */
+        .setStyle(TextLayerCommonStyleUniform{}, {
+            TextLayerStyleUniform{},        /* default */
+            TextLayerStyleUniform{}         /* colored */
                 .setColor(0x3bd267_rgbf)
         }, {fontHandle, fontHandle}, {})
         .setStyleTransition(
