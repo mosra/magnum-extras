@@ -48,7 +48,7 @@ struct BaseLayerStyle {
 }
 
 struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount()}, styleUniformCount{configuration.styleUniformCount()}, flags{configuration.flags()} {}
+    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), 0}, styleUniformCount{configuration.styleUniformCount()}, flags{configuration.flags()} {}
 
     UnsignedInt styleUniformCount;
     Flags flags;
