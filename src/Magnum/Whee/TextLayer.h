@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::TextLayer, struct @ref Magnum::Whee::TextLayerStyleCommon, @ref Magnum::Whee::TextLayerStyleItem, enum @ref Magnum::Whee::FontHandle, function @ref Magnum::Whee::fontHandle(), @ref Magnum::Whee::fontHandleId(), @ref Magnum::Whee::fontHandleGeneration()
+ * @brief Class @ref Magnum::Whee::TextLayer, struct @ref Magnum::Whee::TextLayerCommonStyleUniform, @ref Magnum::Whee::TextLayerStyleUniform, enum @ref Magnum::Whee::FontHandle, function @ref Magnum::Whee::fontHandle(), @ref Magnum::Whee::fontHandleId(), @ref Magnum::Whee::fontHandleGeneration()
  * @m_since_latest
  */
 
@@ -40,18 +40,23 @@
 namespace Magnum { namespace Whee {
 
 /**
-@brief Common style properties for all @ref TextLayer data
+@brief Properties common to all @ref TextLayer style uniforms
 @m_since_latest
 
+Together with one or more @ref TextLayerStyleUniform instances contains style
+properties that are used by the @ref TextLayer shaders to draw the layer data,
+packed in a form that allows direct usage in uniform buffers. Is uploaded
+using @ref TextLayer::Shared::setStyle(), style data that aren't used by the
+shader are passed to the function separately.
+
 Currently this is just a placeholder with no properties.
-@see @ref TextLayerStyleItem, @ref TextLayer::Shared::setStyle()
 */
-struct alignas(4) TextLayerStyleCommon {
+struct alignas(4) TextLayerCommonStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit TextLayerStyleCommon(DefaultInitT = DefaultInit) noexcept {}
+    constexpr explicit TextLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept {}
 
     /** @brief Construct without initializing the contents */
-    explicit TextLayerStyleCommon(NoInitT) noexcept {}
+    explicit TextLayerCommonStyleUniform(NoInitT) noexcept {}
 
     /** @{
      * @name Convenience setters
@@ -76,20 +81,25 @@ struct alignas(4) TextLayerStyleCommon {
 };
 
 /**
-@brief Varying style properties for @ref TextLayer data
+@brief @ref TextLayer style uniform
 @m_since_latest
 
-@see @ref TextLayerStyleCommon, @ref TextLayer::Shared::setStyle()
+Instances of this class together with @ref TextLayerCommonStyleUniform contain
+style properties that are used by the @ref TextLayer shaders to draw the layer
+data, packed in a form that allows direct usage in uniform buffers. Total count
+of styles is specified with the @ref TextLayerGL::Shared::Shared() constructor,
+uniforms are then uploaded using @ref TextLayer::Shared::setStyle(), style data
+that aren't used by the shader are passed to the function separately.
 */
-struct TextLayerStyleItem {
+struct TextLayerStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit TextLayerStyleItem(DefaultInitT = DefaultInit) noexcept: color{1.0f} {}
+    constexpr explicit TextLayerStyleUniform(DefaultInitT = DefaultInit) noexcept: color{1.0f} {}
 
     /** @brief Constructor */
-    constexpr /*implicit*/ TextLayerStyleItem(const Color4& color): color{color} {}
+    constexpr /*implicit*/ TextLayerStyleUniform(const Color4& color): color{color} {}
 
     /** @brief Construct without initializing the contents */
-    explicit TextLayerStyleItem(NoInitT) noexcept: color{NoInit} {}
+    explicit TextLayerStyleUniform(NoInitT) noexcept: color{NoInit} {}
 
     /** @{
      * @name Convenience setters
@@ -104,7 +114,7 @@ struct TextLayerStyleItem {
      * @brief Set the @ref color field
      * @return Reference to self (for method chaining)
      */
-    TextLayerStyleItem& setColor(const Color4& color) {
+    TextLayerStyleUniform& setColor(const Color4& color) {
         this->color = color;
         return *this;
     }
@@ -206,10 +216,10 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Expects that @p style is less than @ref Shared::styleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
-         * valid. Styling is driven from the @ref TextLayerStyleItem at index
-         * @p style but if @ref TextProperties::font() is not null it's used
-         * instead of the default @ref FontHandle assigned to given style. Use
-         * @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, NodeHandle)
+         * valid. Styling is driven from the @ref TextLayerStyleUniform at
+         * index @p style but if @ref TextProperties::font() is not null it's
+         * used instead of the default @ref FontHandle assigned to given style.
+         * Use @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, NodeHandle)
          * for creating a text with a custom color. This function is equivalent
          * to calling it with @cpp 0xffffff_srgbf @ce.
          * @see @ref setText()
@@ -256,10 +266,11 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * Expects that @ref Shared::setGlyphCache() has been called, @p style
          * is less than @ref Shared::styleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
-         * valid. Styling is driven from the @ref TextLayerStyleItem at index
-         * @p style but if @ref TextProperties::font() is not null it's used
-         * instead of the default @ref FontHandle assigned to given style. In
-         * addition @ref TextLayerStyleItem::color is multiplied with @p color.
+         * valid. Styling is driven from the @ref TextLayerStyleUniform at
+         * index @p style but if @ref TextProperties::font() is not null it's
+         * used instead of the default @ref FontHandle assigned to given style.
+         * In addition @ref TextLayerStyleUniform::color is multiplied with
+         * @p color.
          * @see @ref create(UnsignedInt, Containers::StringView, const TextProperties&, NodeHandle),
          *      @ref setText()
          */
@@ -352,8 +363,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Set text custom base color
          *
-         * Expects that @p handle is valid. @ref TextLayerStyleItem::color is
-         * multiplied with @p color. By default, unless specified in
+         * Expects that @p handle is valid. @ref TextLayerStyleUniform::color
+         * is multiplied with @p color. By default, unless specified in
          * @ref create() already, the custom color is @cpp 0xffffff_srgbf @ce,
          * i.e. not affecting the style in any way.
          *
@@ -483,6 +494,16 @@ own, neither it does any on-demand cache filling.
 class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
     public:
         /**
+         * @brief Style uniform count
+         *
+         * Size of the style uniform buffer. May or may not be the same as
+         * @ref styleCount().
+         * @see @ref TextLayerGL::Shared::Shared(UnsignedInt, UnsignedInt),
+         *      @ref setStyle()
+         */
+        UnsignedInt styleUniformCount() const;
+
+        /**
          * @brief Glyph cache instance
          *
          * Expects that a glyph cache was set with @ref setGlyphCache().
@@ -554,24 +575,60 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         const Text::AbstractFont& font(FontHandle handle) const; /**< @overload */
 
         /**
-         * @brief Set style data
-         * @param common        Data common to all styles
-         * @param items         Individual style data
-         * @param itemFonts     Font handles corresponding to individual styles
-         * @param itemPadding   Padding inside the node in order left, top,
-         *      right, bottom for each style
+         * @brief Set style data with implicit mapping between styles and uniforms
+         * @param commonUniform Common style uniform data
+         * @param uniforms      Style uniforms
+         * @param fonts         Font handles corresponding to style uniforms
+         * @param paddings      Padding inside the node in order left, top,
+         *      right, bottom corresponding to style uniforms
          * @return Reference to self (for method chaining)
          *
-         * The @p items and @p itemFonts view is expected to have the same size
-         * as @ref styleCount(). The @p itemFonts handles are all expected to
-         * be valid. The @p padding view is expected to either have the same
-         * size as @ref styleCount() or be empty, in which case all paddings
-         * are implicitly zero.
-         * @see @ref isHandleValid()
+         * The @p uniforms view is expected to have the same size as
+         * @ref styleUniformCount(), the @p fonts view the same size as
+         * @ref styleCount(). All font handles are expected to be valid. The
+         * @p paddings view is expected to either have the same size as
+         * @ref styleCount() or be empty, in which case all paddings are
+         * implicitly zero.
+         *
+         * Can only be called if @ref styleUniformCount() and @ref styleCount()
+         * were set to the same value in the constructor, otherwise you have
+         * to additionally provide a mapping from styles to uniforms using
+         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * instead.
+         * @see @ref isHandleValid(FontHandle) const
          */
-        Shared& setStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts, const Containers::StridedArrayView1D<const Vector4>& itemPadding);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
-        Shared& setStyle(const TextLayerStyleCommon& common, std::initializer_list<TextLayerStyleItem> items, std::initializer_list<FontHandle> itemFonts, std::initializer_list<Vector4> itemPadding);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<FontHandle> fonts, std::initializer_list<Vector4> paddings);
+
+        /**
+         * @brief Set style data
+         * @param commonUniform     Common style uniform data
+         * @param uniforms          Style uniforms
+         * @param styleToUniform    Style to style uniform mapping
+         * @param styleFonts        Per-style font handles
+         * @param stylePaddings     Per-style padding inside the node in order
+         *      left, top, right, bottom
+         * @return Reference to self (for method chaining)
+         *
+         * The @p uniforms view is expected to have the same size as
+         * @ref styleUniformCount(), the @p styleToUniform and @p styleFonts
+         * views the same size as @ref styleCount(). All font handles are
+         * expected to be valid. The @p stylePaddings view is expected to
+         * either have the same size as @ref styleCount() or be empty, in which
+         * case all paddings are implicitly zero.
+         *
+         * Value of @cpp styleToUniform[i] @ce should give back an index into
+         * the @p uniforms array for style @cpp i @ce. If
+         * @ref styleUniformCount() and @ref styleCount() is the same and the
+         * mapping is implicit, you can use the
+         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * convenience overload instead.
+         * @see @ref isHandleValid(FontHandle) const
+         */
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        /** @overload */
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<FontHandle> styleFonts, std::initializer_list<Vector4> stylePaddings);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -600,13 +657,16 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
-        explicit Shared(UnsignedInt styleCount);
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount);
         /* Can't be MAGNUM_WHEE_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
 
     private:
-        /* The items are guaranteed to have the same size as styleCount() */
-        virtual void doSetStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items) = 0;
+        MAGNUM_WHEE_LOCAL void setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+
+        /* The items are guaranteed to have the same size as
+           styleUniformCount() */
+        virtual void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) = 0;
 };
 
 }}
