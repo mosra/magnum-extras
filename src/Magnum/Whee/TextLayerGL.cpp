@@ -183,20 +183,25 @@ TextLayerGL::Shared& TextLayerGL::Shared::setGlyphCache(Text::GlyphCache&& cache
     return setGlyphCache(*state.glyphCacheStorage);
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyleInternal(const void* const style, std::size_t size) {
-    #ifndef CORRADE_NO_ASSERT
-    const std::size_t expectedSize = sizeof(TextLayerStyleCommon) + sizeof(TextLayerStyleItem)*_state->styleCount;
-    #endif
-    CORRADE_ASSERT(size == expectedSize,
-        "Whee::TextLayerGL::Shared::setStyle(): expected style data of" << expectedSize << "bytes, got" << size, *this);
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(common, items, itemFonts));
+}
 
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerStyleCommon& common, const std::initializer_list<TextLayerStyleItem> items, const std::initializer_list<FontHandle> itemFonts) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(common, items, itemFonts));
+}
+
+void TextLayerGL::Shared::doSetStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items) {
     auto& state = static_cast<State&>(*_state);
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     if(!state.styleBuffer.id())
-        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform};
-    state.styleBuffer.setData({style, size});
-    return *this;
+        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(TextLayerStyleCommon) + sizeof(TextLayerStyleItem)*_state->styleCount}};
+
+    /** @todo the common stuff wouldn't even need to be uploaded, skipping it
+        causes no breakage in the shader */
+    state.styleBuffer.setSubData(0, {&common, 1});
+    state.styleBuffer.setSubData(sizeof(TextLayerStyleCommon), items);
 }
 
 struct TextLayerGL::State: TextLayer::State {
