@@ -54,9 +54,13 @@ Debug& operator<<(Debug& debug, const FontHandle value) {
 
 TextLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {}
 
-TextLayer::Shared::Shared(const UnsignedInt styleCount): Shared{Containers::pointer<State>(styleCount)} {}
+TextLayer::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): Shared{Containers::pointer<State>(styleUniformCount, styleCount)} {}
 
 TextLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCreate} {}
+
+UnsignedInt TextLayer::Shared::styleUniformCount() const {
+    return static_cast<const State&>(*_state).styleUniformCount;
+}
 
 TextLayer::Shared& TextLayer::Shared::setGlyphCache(Text::AbstractGlyphCache& cache) {
     State& state = static_cast<State&>(*_state);
@@ -127,35 +131,60 @@ Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
     return const_cast<Text::AbstractFont&>(const_cast<const TextLayer::Shared&>(*this).font(handle));
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts, const Containers::StridedArrayView1D<const Vector4>& itemPadding) {
+void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(items.size() == state.styleCount,
-        "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "style items, got" << items.size(), *this);
-    CORRADE_ASSERT(itemFonts.size() == state.styleCount,
-        "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "font handles, got" << itemFonts.size(), *this);
-    CORRADE_ASSERT(itemPadding.isEmpty() || itemPadding.size() == state.styleCount,
-        "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << itemPadding.size(), *this);
-    #ifndef CORRADE_NO_ASSERT
-    for(std::size_t i = 0; i != itemFonts.size(); ++i)
-        CORRADE_ASSERT(isHandleValid(itemFonts[i]),
-            "Whee::TextLayer::Shared::setStyle(): invalid handle" << itemFonts[i] << "at index" << i, *this);
-    #endif
+    /* Allocation done before the asserts so if they fail in a graceful assert
+       build, we don't hit another assert in Utility::copy(styleToUniform) in
+       the setStyle() below */
     if(state.styles.isEmpty())
         state.styles = Containers::Array<Implementation::TextLayerStyle>{NoInit, state.styleCount};
-    Utility::copy(itemFonts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::font));
-    if(itemPadding.isEmpty()) {
+    CORRADE_ASSERT(uniforms.size() == state.styleUniformCount,
+        "Whee::TextLayer::Shared::setStyle(): expected" << state.styleUniformCount << "uniforms, got" << uniforms.size(), );
+    CORRADE_ASSERT(styleFonts.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "font handles, got" << styleFonts.size(), );
+    CORRADE_ASSERT(stylePaddings.isEmpty() || stylePaddings.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << stylePaddings.size(), );
+    #ifndef CORRADE_NO_ASSERT
+    for(std::size_t i = 0; i != styleFonts.size(); ++i)
+        CORRADE_ASSERT(isHandleValid(styleFonts[i]),
+            "Whee::TextLayer::Shared::setStyle(): invalid handle" << styleFonts[i] << "at index" << i, );
+    #endif
+    Utility::copy(styleFonts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::font));
+    if(stylePaddings.isEmpty()) {
         /** @todo some Utility::fill() for this */
         for(Implementation::TextLayerStyle& style: state.styles)
             style.padding = {};
     } else {
-        Utility::copy(itemPadding, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::padding));
+        Utility::copy(stylePaddings, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::padding));
     }
-    doSetStyle(common, items);
+    doSetStyle(commonUniform, uniforms);
+}
+
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(styleToUniform.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "style uniform indices, got" << styleToUniform.size(), *this);
+    setStyleInternal(commonUniform, uniforms, styleFonts, stylePaddings);
+    Utility::copy(styleToUniform, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::uniform));
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& common, const std::initializer_list<TextLayerStyleItem> items, const std::initializer_list<FontHandle> itemFonts, const std::initializer_list<Vector4> itemPadding) {
-    return setStyle(common, Containers::arrayView(items), Containers::stridedArrayView(itemFonts), Containers::stridedArrayView(itemPadding));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Vector4> stylePaddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(styleFonts), Containers::stridedArrayView(stylePaddings));
+}
+
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(state.styleUniformCount == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): there's" << state.styleUniformCount << "uniforms for" << state.styleCount << "styles, provide an explicit mapping", *this);
+    setStyleInternal(commonUniform, uniforms, fonts, paddings);
+    for(UnsignedInt i = 0; i != state.styleCount; ++i)
+        state.styles[i].uniform = i;
+    return *this;
+}
+
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Vector4> paddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(fonts), Containers::stridedArrayView(paddings));
 }
 
 TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
@@ -542,7 +571,7 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
         for(Implementation::TextLayerVertex& vertex: vertexData) {
             vertex.position = vertex.position*Vector2::yScale(-1.0f) + offset;
             vertex.color = data.color;
-            vertex.style = data.style;
+            vertex.styleUniform = sharedState.styles[data.style].uniform;
         }
 
         /* Generate indices in draw order. Remeber the offset for each data to

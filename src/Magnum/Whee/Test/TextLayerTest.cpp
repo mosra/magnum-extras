@@ -54,16 +54,16 @@ namespace Magnum { namespace Whee { namespace Test { namespace {
 struct TextLayerTest: TestSuite::Tester {
     explicit TextLayerTest();
 
-    template<class T> void styleSizeAlignment();
+    template<class T> void styleUniformSizeAlignment();
 
-    void styleCommonConstructDefault();
-    void styleCommonConstructNoInit();
-    void styleCommonSetters();
+    void styleUniformCommonConstructDefault();
+    void styleUniformCommonConstructNoInit();
+    void styleUniformCommonSetters();
 
-    void styleItemConstructDefault();
-    void styleItemConstruct();
-    void styleItemConstructNoInit();
-    void styleItemSetters();
+    void styleUniformConstructDefault();
+    void styleUniformConstruct();
+    void styleUniformConstructNoInit();
+    void styleUniformSetters();
 
     void fontHandle();
     void fontHandleInvalid();
@@ -89,6 +89,9 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedSetStyle();
     void sharedSetStyleImplicitPadding();
     void sharedSetStyleInvalidSize();
+    void sharedSetStyleImplicitMapping();
+    void sharedSetStyleImplicitMappingImplicitPadding();
+    void sharedSetStyleImplicitMappingInvalidSize();
     void sharedSetStyleInvalidFontHandle();
 
     void construct();
@@ -207,17 +210,17 @@ const struct {
 };
 
 TextLayerTest::TextLayerTest() {
-    addTests({&TextLayerTest::styleSizeAlignment<TextLayerStyleCommon>,
-              &TextLayerTest::styleSizeAlignment<TextLayerStyleItem>,
+    addTests({&TextLayerTest::styleUniformSizeAlignment<TextLayerCommonStyleUniform>,
+              &TextLayerTest::styleUniformSizeAlignment<TextLayerStyleUniform>,
 
-              &TextLayerTest::styleCommonConstructDefault,
-              &TextLayerTest::styleCommonConstructNoInit,
-              &TextLayerTest::styleCommonSetters,
+              &TextLayerTest::styleUniformCommonConstructDefault,
+              &TextLayerTest::styleUniformCommonConstructNoInit,
+              &TextLayerTest::styleUniformCommonSetters,
 
-              &TextLayerTest::styleItemConstructDefault,
-              &TextLayerTest::styleItemConstruct,
-              &TextLayerTest::styleItemConstructNoInit,
-              &TextLayerTest::styleItemSetters,
+              &TextLayerTest::styleUniformConstructDefault,
+              &TextLayerTest::styleUniformConstruct,
+              &TextLayerTest::styleUniformConstructNoInit,
+              &TextLayerTest::styleUniformSetters,
 
               &TextLayerTest::fontHandle,
               &TextLayerTest::fontHandleInvalid,
@@ -243,6 +246,9 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::sharedSetStyle,
               &TextLayerTest::sharedSetStyleImplicitPadding,
               &TextLayerTest::sharedSetStyleInvalidSize,
+              &TextLayerTest::sharedSetStyleImplicitMapping,
+              &TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding,
+              &TextLayerTest::sharedSetStyleImplicitMappingInvalidSize,
               &TextLayerTest::sharedSetStyleInvalidFontHandle,
 
               &TextLayerTest::construct,
@@ -281,14 +287,14 @@ using namespace Containers::Literals;
 using namespace Math::Literals;
 
 template<class> struct StyleTraits;
-template<> struct StyleTraits<TextLayerStyleCommon> {
-    static const char* name() { return "TextLayerStyleCommon"; }
+template<> struct StyleTraits<TextLayerCommonStyleUniform> {
+    static const char* name() { return "TextLayerCommonStyleUniform"; }
 };
-template<> struct StyleTraits<TextLayerStyleItem> {
-    static const char* name() { return "TextLayerStyleItem"; }
+template<> struct StyleTraits<TextLayerStyleUniform> {
+    static const char* name() { return "TextLayerStyleUniform"; }
 };
 
-template<class T> void TextLayerTest::styleSizeAlignment() {
+template<class T> void TextLayerTest::styleUniformSizeAlignment() {
     setTestCaseTemplateName(StyleTraits<T>::name());
 
     CORRADE_FAIL_IF(sizeof(T) % sizeof(Vector4) != 0, sizeof(T) << "is not a multiple of vec4 for UBO alignment.");
@@ -302,33 +308,33 @@ template<class T> void TextLayerTest::styleSizeAlignment() {
     CORRADE_COMPARE(alignof(T), 4);
 }
 
-void TextLayerTest::styleCommonConstructDefault() {
-    TextLayerStyleCommon a;
-    TextLayerStyleCommon b{DefaultInit};
+void TextLayerTest::styleUniformCommonConstructDefault() {
+    TextLayerCommonStyleUniform a;
+    TextLayerCommonStyleUniform b{DefaultInit};
     /* No actual fields yet */
     static_cast<void>(a);
     static_cast<void>(b);
 
-    constexpr TextLayerStyleCommon ca;
-    constexpr TextLayerStyleCommon cb{DefaultInit};
+    constexpr TextLayerCommonStyleUniform ca;
+    constexpr TextLayerCommonStyleUniform cb{DefaultInit};
     /* No actual fields yet */
     static_cast<void>(ca);
     static_cast<void>(cb);
 
-    CORRADE_VERIFY(std::is_nothrow_default_constructible<TextLayerStyleCommon>::value);
-    CORRADE_VERIFY(std::is_nothrow_constructible<TextLayerStyleCommon, DefaultInitT>::value);
+    CORRADE_VERIFY(std::is_nothrow_default_constructible<TextLayerCommonStyleUniform>::value);
+    CORRADE_VERIFY(std::is_nothrow_constructible<TextLayerCommonStyleUniform, DefaultInitT>::value);
 
     /* Implicit construction is not allowed */
-    CORRADE_VERIFY(!std::is_convertible<DefaultInitT, TextLayerStyleCommon>::value);
+    CORRADE_VERIFY(!std::is_convertible<DefaultInitT, TextLayerCommonStyleUniform>::value);
 }
 
-void TextLayerTest::styleCommonConstructNoInit() {
+void TextLayerTest::styleUniformCommonConstructNoInit() {
     /* Testing only some fields, should be enough */
-    TextLayerStyleCommon a;
+    TextLayerCommonStyleUniform a;
     /* No actual fields yet */
     static_cast<void>(a);
 
-    new(&a) TextLayerStyleCommon{NoInit};
+    new(&a) TextLayerCommonStyleUniform{NoInit};
     {
         /* Explicitly check we're not on Clang because certain Clang-based IDEs
            inherit __GNUC__ if GCC is used instead of leaving it at 4 like
@@ -341,44 +347,44 @@ void TextLayerTest::styleCommonConstructNoInit() {
     }
 }
 
-void TextLayerTest::styleCommonSetters() {
-    TextLayerStyleCommon a;
+void TextLayerTest::styleUniformCommonSetters() {
+    TextLayerCommonStyleUniform a;
     static_cast<void>(a);
     CORRADE_SKIP("No actual fields yet");
 }
 
-void TextLayerTest::styleItemConstructDefault() {
-    TextLayerStyleItem a;
-    TextLayerStyleItem b{DefaultInit};
+void TextLayerTest::styleUniformConstructDefault() {
+    TextLayerStyleUniform a;
+    TextLayerStyleUniform b{DefaultInit};
     CORRADE_COMPARE(a.color, 0xffffffff_srgbaf);
     CORRADE_COMPARE(b.color, 0xffffffff_srgbaf);
 
-    constexpr TextLayerStyleItem ca;
-    constexpr TextLayerStyleItem cb{DefaultInit};
+    constexpr TextLayerStyleUniform ca;
+    constexpr TextLayerStyleUniform cb{DefaultInit};
     CORRADE_COMPARE(ca.color, 0xffffffff_srgbaf);
     CORRADE_COMPARE(cb.color, 0xffffffff_srgbaf);
 
-    CORRADE_VERIFY(std::is_nothrow_default_constructible<TextLayerStyleItem>::value);
-    CORRADE_VERIFY(std::is_nothrow_constructible<TextLayerStyleItem, DefaultInitT>::value);
+    CORRADE_VERIFY(std::is_nothrow_default_constructible<TextLayerStyleUniform>::value);
+    CORRADE_VERIFY(std::is_nothrow_constructible<TextLayerStyleUniform, DefaultInitT>::value);
 
     /* Implicit construction is not allowed */
-    CORRADE_VERIFY(!std::is_convertible<DefaultInitT, TextLayerStyleItem>::value);
+    CORRADE_VERIFY(!std::is_convertible<DefaultInitT, TextLayerStyleUniform>::value);
 }
 
-void TextLayerTest::styleItemConstruct() {
-    TextLayerStyleItem a{0xff336699_rgbaf};
+void TextLayerTest::styleUniformConstruct() {
+    TextLayerStyleUniform a{0xff336699_rgbaf};
     CORRADE_COMPARE(a.color, 0xff336699_rgbaf);
 
-    constexpr TextLayerStyleItem ca{0xff336699_rgbaf};
+    constexpr TextLayerStyleUniform ca{0xff336699_rgbaf};
     CORRADE_COMPARE(ca.color, 0xff336699_rgbaf);
 }
 
-void TextLayerTest::styleItemConstructNoInit() {
+void TextLayerTest::styleUniformConstructNoInit() {
     /* Testing only some fields, should be enough */
-    TextLayerStyleItem a;
+    TextLayerStyleUniform a;
     a.color = 0xff3366_rgbf;
 
-    new(&a) TextLayerStyleItem{NoInit};
+    new(&a) TextLayerStyleUniform{NoInit};
     {
         /* Explicitly check we're not on Clang because certain Clang-based IDEs
            inherit __GNUC__ if GCC is used instead of leaving it at 4 like
@@ -390,8 +396,8 @@ void TextLayerTest::styleItemConstructNoInit() {
     }
 }
 
-void TextLayerTest::styleItemSetters() {
-    TextLayerStyleItem a;
+void TextLayerTest::styleUniformSetters() {
+    TextLayerStyleUniform a;
     a.setColor(0xff336699_rgbaf);
     CORRADE_COMPARE(a.color, 0xff336699_rgbaf);
 }
@@ -434,11 +440,12 @@ void TextLayerTest::debugFontHandle() {
 
 void TextLayerTest::sharedConstruct() {
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
-    CORRADE_COMPARE(shared.styleCount(), 3);
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
+    CORRADE_COMPARE(shared.styleUniformCount(), 3);
+    CORRADE_COMPARE(shared.styleCount(), 5);
 
     CORRADE_COMPARE(shared.fontCount(), 0);
     CORRADE_VERIFY(!shared.isHandleValid(FontHandle::Null));
@@ -448,7 +455,7 @@ void TextLayerTest::sharedConstructNoCreate() {
     struct Shared: TextLayer::Shared {
         explicit Shared(NoCreateT): TextLayer::Shared{NoCreate} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
     } shared{NoCreate};
 
     /* Shouldn't crash */
@@ -464,9 +471,9 @@ void TextLayerTest::sharedConstructCopy() {
            without the constructor the type would be impossible to construct
            (and thus also to copy), leading to false positives in the trait
            check below */
-        explicit CORRADE_UNUSED Shared(UnsignedInt styleCount): TextLayer::Shared{Containers::pointer<TextLayer::Shared::State>(styleCount)} {}
+        explicit CORRADE_UNUSED Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{Containers::pointer<TextLayer::Shared::State>(styleUniformCount, styleCount)} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
     };
 
     CORRADE_VERIFY(!std::is_copy_constructible<Shared>{});
@@ -475,19 +482,21 @@ void TextLayerTest::sharedConstructCopy() {
 
 void TextLayerTest::sharedConstructMove() {
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
     };
 
-    Shared a{3};
+    Shared a{3, 5};
 
     Shared b{Utility::move(a)};
-    CORRADE_COMPARE(b.styleCount(), 3);
+    CORRADE_COMPARE(b.styleUniformCount(), 3);
+    CORRADE_COMPARE(b.styleCount(), 5);
 
-    Shared c{5};
+    Shared c{5, 7};
     c = Utility::move(b);
-    CORRADE_COMPARE(c.styleCount(), 3);
+    CORRADE_COMPARE(c.styleUniformCount(), 3);
+    CORRADE_COMPARE(c.styleCount(), 5);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
@@ -502,12 +511,12 @@ void TextLayerTest::sharedSetGlyphCache() {
     } cache{PixelFormat::R8Unorm, {32, 32, 2}};
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
     shared.setGlyphCache(cache);
     CORRADE_COMPARE(&shared.glyphCache(), &cache);
     /* Const overload */
@@ -525,12 +534,12 @@ void TextLayerTest::sharedSetGlyphCacheAlreadySet() {
     } cache{PixelFormat::R8Unorm, {32, 32, 2}};
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
     shared.setGlyphCache(cache);
 
     std::ostringstream out;
@@ -543,10 +552,10 @@ void TextLayerTest::sharedNoGlyphCache() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -567,12 +576,12 @@ void TextLayerTest::sharedAddFont() {
     } cache{PixelFormat::R8Unorm, {32, 32, 2}};
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
     shared.setGlyphCache(cache);
     CORRADE_COMPARE(shared.fontCount(), 0);
 
@@ -650,12 +659,12 @@ void TextLayerTest::sharedAddFontTakeOwnership() {
 
     {
         struct Shared: TextLayer::Shared {
-            explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+            explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
             using TextLayer::Shared::setGlyphCache;
 
-            void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-        } shared{3};
+            void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        } shared{3, 5};
         shared.setGlyphCache(cache);
         CORRADE_COMPARE(shared.fontCount(), 0);
 
@@ -695,10 +704,10 @@ void TextLayerTest::sharedAddFontTakeOwnershipNull() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
     CORRADE_COMPARE(shared.fontCount(), 0);
 
     std::ostringstream out;
@@ -711,10 +720,10 @@ void TextLayerTest::sharedAddFontNoCache() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
@@ -749,12 +758,12 @@ void TextLayerTest::sharedAddFontNotFoundInCache() {
     cache.addFont(36);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
     shared.setGlyphCache(cache);
 
     struct: Text::AbstractFont {
@@ -797,12 +806,12 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
     cache.addFont(67, &font);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
     shared.setGlyphCache(cache);
 
     FontHandle handle;
@@ -844,12 +853,12 @@ void TextLayerTest::sharedFontInvalidHandle() {
     cache.addFont(67, &font);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
     shared.setGlyphCache(cache);
 
     /* Need to add at least one font because the assertion returns the first
@@ -890,20 +899,20 @@ void TextLayerTest::sharedSetStyle() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         State& state() { return static_cast<State&>(*_state); }
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem> items) override {
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
-            CORRADE_COMPARE(items.size(), 3);
-            CORRADE_COMPARE(items[1].color, 0xc0ffee_rgbf);
+            CORRADE_COMPARE(uniforms.size(), 3);
+            CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
         }
 
         Int setStyleCalled = 0;
-    } shared{3};
+    } shared{3, 5};
     shared.setGlyphCache(cache);
 
     /* By default the shared.state().styles array is empty, it gets only filled
@@ -917,25 +926,35 @@ void TextLayerTest::sharedSetStyle() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerStyleCommon{},
-        {TextLayerStyleItem{},
-         TextLayerStyleItem{}
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
-         TextLayerStyleItem{}},
-        {first, second, first},
+         TextLayerStyleUniform{}},
+        {2, 1, 0, 0, 1},
+        {first, second, first, second, second},
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
-         {2.0f, 1.0f, 4.0f, 3.0f}});
+         {2.0f, 1.0f, 4.0f, 3.0f},
+         {1.0f, 3.0f, 2.0f, 4.0f},
+         {4.0f, 1.0f, 3.0f, 2.0f}});
     CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::uniform), Containers::stridedArrayView({
+        2u, 1u, 0u, 0u, 1u
+    }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
         first,
         second,
-        first
+        first,
+        second,
+        second
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
         Vector4{1.0f, 2.0f, 3.0f, 4.0f},
         Vector4{4.0f, 3.0f, 2.0f, 1.0f},
-        Vector4{2.0f, 1.0f, 4.0f, 3.0f}
+        Vector4{2.0f, 1.0f, 4.0f, 3.0f},
+        Vector4{1.0f, 3.0f, 2.0f, 4.0f},
+        Vector4{4.0f, 1.0f, 3.0f, 2.0f}
     }), TestSuite::Compare::Container);
 }
 
@@ -959,20 +978,20 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
     };
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         State& state() { return static_cast<State&>(*_state); }
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem> items) override {
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
             /** @todo test the common style once it contains something */
-            CORRADE_COMPARE(items.size(), 3);
-            CORRADE_COMPARE(items[1].color, 0xc0ffee_rgbf);
+            CORRADE_COMPARE(uniforms.size(), 3);
+            CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
             ++setStyleCalled;
         }
 
         Int setStyleCalled = 0;
-    } shared{3};
+    } shared{3, 5};
     shared.setGlyphCache(cache);
 
     /* Capture correct function name */
@@ -984,14 +1003,230 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
     FontHandle first = shared.addFont(font1, 13.0f);
     FontHandle second = shared.addFont(font2, 6.0f);
     shared.setStyle(
-        TextLayerStyleCommon{},
-        {TextLayerStyleItem{},
-         TextLayerStyleItem{}
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
-         TextLayerStyleItem{}},
+         TextLayerStyleUniform{}},
+        {2, 1, 0, 0, 1},
+        {first, second, first, second, second},
+        {});
+    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::uniform), Containers::stridedArrayView({
+        2u, 1u, 0u, 0u, 1u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
+        first,
+        second,
+        first,
+        second,
+        second
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{},
+        Vector4{},
+        Vector4{}
+    }), TestSuite::Compare::Container);
+
+    /* Setting a style with implicit padding after a non-implicit padding was
+       set should reset it back to zeros */
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
+            .setColor(0xc0ffee_rgbf),
+         TextLayerStyleUniform{}},
+        {2, 1, 0, 0, 1},
+        {first, second, first, second, second},
+        {{1.0f, 2.0f, 3.0f, 4.0f},
+         {4.0f, 3.0f, 2.0f, 1.0f},
+         {2.0f, 1.0f, 4.0f, 3.0f},
+         {1.0f, 3.0f, 2.0f, 4.0f},
+         {4.0f, 1.0f, 3.0f, 2.0f}});
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
+            .setColor(0xc0ffee_rgbf),
+         TextLayerStyleUniform{}},
+        {2, 1, 0, 0, 1},
+        {first, second, first, second, second},
+        {});
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{},
+        Vector4{},
+        Vector4{}
+    }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::sharedSetStyleInvalidSize() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {0, 1, 2, 3, 4},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {{}, {}, {}, {}, {}});
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {0, 1, 2},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {{}, {}, {}, {}, {}});
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {0, 1, 2, 3, 4},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {{}, {}, {}, {}, {}});
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {0, 1, 2, 3, 4},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {{}, {}, {}});
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::Shared::setStyle(): expected 3 uniforms, got 2\n"
+        "Whee::TextLayer::Shared::setStyle(): expected 5 style uniform indices, got 3\n"
+        "Whee::TextLayer::Shared::setStyle(): expected 5 font handles, got 3\n"
+        "Whee::TextLayer::Shared::setStyle(): expected either no or 5 paddings, got 3\n");
+}
+
+void TextLayerTest::sharedSetStyleImplicitMapping() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+
+    struct Font: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return false; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    };
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        State& state() { return static_cast<State&>(*_state); }
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            /** @todo test the common style once it contains something */
+            CORRADE_COMPARE(uniforms.size(), 3);
+            CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
+            ++setStyleCalled;
+        }
+
+        Int setStyleCalled = 0;
+    } shared{3, 3};
+    shared.setGlyphCache(cache);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Font font1, font2;
+    cache.addFont(67, &font1);
+    cache.addFont(23, &font2);
+    FontHandle first = shared.addFont(font1, 13.0f);
+    FontHandle second = shared.addFont(font2, 6.0f);
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
+            .setColor(0xc0ffee_rgbf),
+         TextLayerStyleUniform{}},
+        {first, second, first},
+        {{1.0f, 2.0f, 3.0f, 4.0f},
+         {4.0f, 3.0f, 2.0f, 1.0f},
+         {2.0f, 1.0f, 4.0f, 3.0f}});
+    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::uniform), Containers::stridedArrayView({
+        0u, 1u, 2u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
+        first,
+        second,
+        first
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{1.0f, 2.0f, 3.0f, 4.0f},
+        Vector4{4.0f, 3.0f, 2.0f, 1.0f},
+        Vector4{2.0f, 1.0f, 4.0f, 3.0f}
+    }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+
+    struct Font: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return false; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    };
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        State& state() { return static_cast<State&>(*_state); }
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform> uniforms) override {
+            /** @todo test the common style once it contains something */
+            CORRADE_COMPARE(uniforms.size(), 3);
+            CORRADE_COMPARE(uniforms[1].color, 0xc0ffee_rgbf);
+            ++setStyleCalled;
+        }
+
+        Int setStyleCalled = 0;
+    } shared{3, 3};
+    shared.setGlyphCache(cache);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Font font1, font2;
+    cache.addFont(67, &font1);
+    cache.addFont(23, &font2);
+    FontHandle first = shared.addFont(font1, 13.0f);
+    FontHandle second = shared.addFont(font2, 6.0f);
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
+            .setColor(0xc0ffee_rgbf),
+         TextLayerStyleUniform{}},
         {first, second, first},
         {});
     CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::uniform), Containers::stridedArrayView({
+        0u, 1u, 2u
+    }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
         first,
         second,
@@ -1006,21 +1241,21 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
     /* Setting a style with implicit padding after a non-implicit padding was
        set should reset it back to zeros */
     shared.setStyle(
-        TextLayerStyleCommon{},
-        {TextLayerStyleItem{},
-         TextLayerStyleItem{}
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
-         TextLayerStyleItem{}},
+         TextLayerStyleUniform{}},
         {first, second, first},
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f}});
     shared.setStyle(
-        TextLayerStyleCommon{},
-        {TextLayerStyleItem{},
-         TextLayerStyleItem{}
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}
             .setColor(0xc0ffee_rgbf),
-         TextLayerStyleItem{}},
+         TextLayerStyleUniform{}},
         {first, second, first},
         {});
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
@@ -1030,33 +1265,23 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
     }), TestSuite::Compare::Container);
 }
 
-void TextLayerTest::sharedSetStyleInvalidSize() {
+void TextLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
 
     std::ostringstream out;
     Error redirectError{&out};
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}, TextLayerStyleItem{}},
-        {FontHandle::Null, FontHandle::Null, FontHandle::Null},
-        {{}, {}, {}});
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
-        {FontHandle::Null, FontHandle::Null},
-        {{}, {}, {}});
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
-        {FontHandle::Null, FontHandle::Null, FontHandle::Null},
-        {{}, {}});
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {{}, {}, {}, {}, {}});
     CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::Shared::setStyle(): expected 3 style items, got 2\n"
-        "Whee::TextLayer::Shared::setStyle(): expected 3 font handles, got 2\n"
-        "Whee::TextLayer::Shared::setStyle(): expected either no or 3 paddings, got 2\n");
+        "Whee::TextLayer::Shared::setStyle(): there's 3 uniforms for 5 styles, provide an explicit mapping\n");
 }
 
 void TextLayerTest::sharedSetStyleInvalidFontHandle() {
@@ -1082,24 +1307,26 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
     cache.addFont(67, &font);
 
     struct Shared: TextLayer::Shared {
-        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{4};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{4, 4};
     shared.setGlyphCache(cache);
 
     FontHandle handle = shared.addFont(font, 13.0f);
 
     std::ostringstream out;
     Error redirectError{&out};
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+    /* Testing just the implicit mapping variant, as both variants delegate to
+       the same internal helper */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {handle, FontHandle(0x12ab), handle, handle},
         {});
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {handle, handle, FontHandle::Null, handle},
         {});
     CORRADE_COMPARE(out.str(),
@@ -1109,10 +1336,10 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
 
 void TextLayerTest::construct() {
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1129,17 +1356,17 @@ void TextLayerTest::constructCopy() {
 
 void TextLayerTest::constructMove() {
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
     };
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, LayerShared& shared): TextLayer{handle, shared} {}
     };
 
-    LayerShared shared{3};
-    LayerShared shared2{5};
+    LayerShared shared{1, 3};
+    LayerShared shared2{5, 7};
 
     Layer a{layerHandle(137, 0xfe), shared};
 
@@ -1270,12 +1497,12 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     }
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 3};
     shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
@@ -1284,15 +1511,17 @@ template<class T> void TextLayerTest::createRemoveSetText() {
 
     /* If using custom fonts, set the style to either something completely
        different or not set them at all -- they shouldn't get used for
-       anything. Padding from the style is tested in setPadding() instead. */
+       anything. Padding from the style is tested in setPadding() instead,
+       effect of the style->uniform mapping in updateCleanDataOrder()
+       instead, here they're both implicit. */
     if(!data.customFont)
-        shared.setStyle(TextLayerStyleCommon{},
-            {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+        shared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
             {threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle},
             {});
     else if(!data.noStyle)
-        shared.setStyle(TextLayerStyleCommon{},
-            {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+        shared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
             {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle},
             {});
 
@@ -1538,18 +1767,18 @@ void TextLayerTest::createRemoveHandleRecycle() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
     /* Interestingly enough, these two can't be chained together as on some
        compilers it'd call addFont() before setGlyphCache(), causing an
        assert */
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
         {});
 
@@ -1646,16 +1875,16 @@ void TextLayerTest::createSetTextTextProperties() {
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 16.0f);
-    shared.setStyle(TextLayerStyleCommon{}, {TextLayerStyleItem{}}, {fontHandle}, {});
+    shared.setStyle(TextLayerCommonStyleUniform{}, {TextLayerStyleUniform{}}, {fontHandle}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1696,10 +1925,10 @@ void TextLayerTest::createNoSharedGlyphCache() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{2, 3};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1732,18 +1961,18 @@ void TextLayerTest::setColor() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
     /* Interestingly enough, these two can't be chained together as on some
        compilers it'd call addFont() before setGlyphCache(), causing an
        assert */
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
         {});
 
@@ -1791,18 +2020,18 @@ void TextLayerTest::setPadding() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
     /* Interestingly enough, these two can't be chained together as on some
        compilers it'd call addFont() before setGlyphCache(), causing an
        assert */
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
         {});
 
@@ -1843,12 +2072,12 @@ void TextLayerTest::invalidHandle() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1903,18 +2132,18 @@ void TextLayerTest::invalidFontHandle() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
     /* Interestingly enough, these two can't be chained together as on some
        compilers it'd call addFont() before setGlyphCache(), causing an
        assert */
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
         {});
 
@@ -1956,12 +2185,12 @@ void TextLayerTest::noSharedStyleFonts() {
     cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
@@ -2003,13 +2232,16 @@ void TextLayerTest::styleOutOfRange() {
     } cache{PixelFormat::R8Unorm, {32, 32, 2}};
     cache.addFont(56, &font);
 
+    /* In this case the uniform count is higher than the style count, which is
+       unlikely to happen in practice. It's to verify the check happens against
+       the style count, not uniform count. */
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{3};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{6, 3};
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
@@ -2046,18 +2278,18 @@ void TextLayerTest::updateEmpty() {
     cache.addFont(56, &font);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
     shared.setStyle(
-        TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {fontHandle},
         {});
 
@@ -2140,19 +2372,20 @@ void TextLayerTest::updateCleanDataOrder() {
     }
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{4};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 4};
     shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
     FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f);
     FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {1, 2, 0, 1},
         {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
         {{}, {}, data.paddingFromStyle, {}});
 
@@ -2243,17 +2476,20 @@ void TextLayerTest::updateCleanDataOrder() {
     for(std::size_t i = 0; i != 5*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].style, 2);
+        /* Created with style 2, which is mapped to uniform 0 */
+        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 0);
     }
     for(std::size_t i = 0; i != 1*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x112233_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].style, 1);
+        /* Created with style 1, which is mapped to uniform 2 */
+        CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].styleUniform, 2);
     }
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].color, 0x663399_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].style, 3);
+        /* Created with style 3, which is mapped to uniform 1 */
+        CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].styleUniform, 1);
     }
 
     Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
@@ -2428,12 +2664,14 @@ void TextLayerTest::updateCleanDataOrder() {
     for(std::size_t i = 0; i != 1*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].color, 0x112233_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].style, 1);
+        /* Created with style 1, which is mapped to uniform 2 */
+        CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].styleUniform, 2);
     }
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[8*4 + i].color, 0x663399_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[8*4 + i].style, 3);
+        /* Created with style 3, which is mapped to uniform 1 */
+        CORRADE_COMPARE(layer.stateData().vertices[8*4 + i].styleUniform, 1);
     }
 
     /* Text 7 and 9, now quads 6 and 8 to 9 */
@@ -2524,7 +2762,8 @@ void TextLayerTest::updateCleanDataOrder() {
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].color, 0x663399_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].style, 3);
+        /* Created with style 3, which is mapped to uniform 1 */
+        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].styleUniform, 1);
     }
 
     /* Text 9, now quad 7 to 8 */
@@ -2623,19 +2862,19 @@ void TextLayerTest::updateAlignment() {
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {1, 2}});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
 
     /* Font scaled 2x, so all metrics coming from the font or the cache should
        be scaled 2x */
     FontHandle fontHandle = shared.addFont(font, 200.0f);
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {fontHandle},
         {});
 
@@ -2744,19 +2983,19 @@ void TextLayerTest::updatePadding() {
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {1, 2}});
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
         using TextLayer::Shared::setGlyphCache;
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
     shared.setGlyphCache(cache);
 
     /* Font scaled 2x, so all metrics coming from the font or the cache should
        be scaled 2x */
     FontHandle fontHandle = shared.addFont(font, 200.0f);
-    shared.setStyle(TextLayerStyleCommon{},
-        {TextLayerStyleItem{}},
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
         {fontHandle},
         {{10.0f, 5.0f, 20.0f, 10.0f}});
 
@@ -2806,10 +3045,10 @@ void TextLayerTest::updateNoStyleSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
-        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
-    } shared{1};
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
