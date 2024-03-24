@@ -67,6 +67,9 @@ struct BaseLayerTest: TestSuite::Tester {
     void sharedConstructCopy();
     void sharedConstructMove();
 
+    void sharedSetStyle();
+    void sharedSetStyleInvalidSize();
+
     void construct();
     void constructCopy();
     void constructMove();
@@ -135,6 +138,9 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::sharedConstructNoCreate,
               &BaseLayerTest::sharedConstructCopy,
               &BaseLayerTest::sharedConstructMove,
+
+              &BaseLayerTest::sharedSetStyle,
+              &BaseLayerTest::sharedSetStyleInvalidSize,
 
               &BaseLayerTest::construct,
               &BaseLayerTest::constructCopy,
@@ -482,6 +488,8 @@ void BaseLayerTest::styleItemSetters() {
 void BaseLayerTest::sharedConstruct() {
     struct Shared: BaseLayer::Shared {
         explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{3};
     CORRADE_COMPARE(shared.styleCount(), 3);
 }
@@ -489,6 +497,8 @@ void BaseLayerTest::sharedConstruct() {
 void BaseLayerTest::sharedConstructNoCreate() {
     struct Shared: BaseLayer::Shared {
         explicit Shared(NoCreateT): BaseLayer::Shared{NoCreate} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{NoCreate};
 
     /* Shouldn't crash */
@@ -499,13 +509,25 @@ void BaseLayerTest::sharedConstructNoCreate() {
 }
 
 void BaseLayerTest::sharedConstructCopy() {
-    CORRADE_VERIFY(!std::is_copy_constructible<BaseLayer::Shared>{});
-    CORRADE_VERIFY(!std::is_copy_assignable<BaseLayer::Shared>{});
+    struct Shared: BaseLayer::Shared {
+        /* Clang says the constructor is unused otherwise. However I fear that
+           without the constructor the type would be impossible to construct
+           (and thus also to copy), leading to false positives in the trait
+           check below */
+        explicit CORRADE_UNUSED Shared(UnsignedInt styleCount): BaseLayer::Shared{Containers::pointer<BaseLayer::Shared::State>(styleCount)} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, const Containers::ArrayView<const BaseLayerStyleItem>) override {}
+    };
+
+    CORRADE_VERIFY(!std::is_copy_constructible<Shared>{});
+    CORRADE_VERIFY(!std::is_copy_assignable<Shared>{});
 }
 
 void BaseLayerTest::sharedConstructMove() {
     struct Shared: BaseLayer::Shared {
         explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, const Containers::ArrayView<const BaseLayerStyleItem>) override {}
     };
 
     Shared a{3};
@@ -517,13 +539,58 @@ void BaseLayerTest::sharedConstructMove() {
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleCount(), 3);
 
-    CORRADE_VERIFY(std::is_nothrow_move_constructible<BaseLayer::Shared>::value);
-    CORRADE_VERIFY(std::is_nothrow_move_assignable<BaseLayer::Shared>::value);
+    CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
+    CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
+}
+
+void BaseLayerTest::sharedSetStyle() {
+    struct Shared: BaseLayer::Shared {
+        explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items) override {
+            CORRADE_COMPARE(common.smoothness, 3.14f);
+            CORRADE_COMPARE(items.size(), 3);
+            CORRADE_COMPARE(items[1].outlineColor, 0xc0ffee_rgbf);
+            ++setStyleCalled;
+        }
+
+        Int setStyleCalled = 0;
+    } shared{3};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    shared.setStyle(
+        BaseLayerStyleCommon{}
+            .setSmoothness(3.14f),
+        {BaseLayerStyleItem{},
+         BaseLayerStyleItem{}
+            .setOutlineColor(0xc0ffee_rgbf),
+         BaseLayerStyleItem{}});
+    CORRADE_COMPARE(shared.setStyleCalled, 1);
+}
+
+void BaseLayerTest::sharedSetStyleInvalidSize() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: BaseLayer::Shared {
+        explicit Shared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
+    } shared{3};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    shared.setStyle(BaseLayerStyleCommon{},
+        {BaseLayerStyleItem{}, BaseLayerStyleItem{}});
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::setStyle(): expected 3 style items, got 2\n");
 }
 
 void BaseLayerTest::construct() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{3};
 
     struct Layer: BaseLayer {
@@ -542,6 +609,8 @@ void BaseLayerTest::constructCopy() {
 void BaseLayerTest::constructMove() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     };
 
     struct Layer: BaseLayer {
@@ -572,6 +641,8 @@ template<class T> void BaseLayerTest::createRemove() {
 
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{38};
 
     struct Layer: BaseLayer {
@@ -633,6 +704,8 @@ template<class T> void BaseLayerTest::createRemove() {
 void BaseLayerTest::setColor() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{3};
 
     struct Layer: BaseLayer {
@@ -661,6 +734,8 @@ void BaseLayerTest::setColor() {
 void BaseLayerTest::setOutlineWidth() {
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{3};
 
     struct Layer: BaseLayer {
@@ -701,6 +776,8 @@ void BaseLayerTest::invalidHandle() {
 
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{1};
 
     struct Layer: BaseLayer {
@@ -733,6 +810,8 @@ void BaseLayerTest::styleOutOfRange() {
 
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{3};
 
     struct Layer: BaseLayer {
@@ -756,6 +835,8 @@ void BaseLayerTest::updateDataOrder() {
 
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+
+        void doSetStyle(const BaseLayerStyleCommon&, Containers::ArrayView<const BaseLayerStyleItem>) override {}
     } shared{4};
 
     struct Layer: BaseLayer {
