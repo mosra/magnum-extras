@@ -437,6 +437,7 @@ jobs:
       TARGET_GLES2: "ON"
     steps:
     - install-base-linux
+    - cap-ninja-jobs
     - build:
         script: emscripten.sh
 
@@ -447,6 +448,7 @@ jobs:
       TARGET_GLES2: "OFF"
     steps:
     - install-base-linux
+    - cap-ninja-jobs
     - build:
         script: emscripten.sh
 
