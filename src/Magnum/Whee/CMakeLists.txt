@@ -160,22 +160,25 @@ add_library(MagnumExtras::Whee ALIAS MagnumWhee)
 
 if(MAGNUM_WITH_UI_GALLERY)
     if(CORRADE_TARGET_EMSCRIPTEN)
-        find_package(Magnum REQUIRED EmscriptenApplication)
-        find_package(MagnumPlugins REQUIRED StbTrueTypeFont)
+        find_package(Magnum REQUIRED
+            AnyImageImporter
+            EmscriptenApplication)
+        find_package(MagnumPlugins REQUIRED
+            StbImageImporter
+            StbTrueTypeFont)
     else()
         find_package(Magnum REQUIRED Sdl2Application)
     endif()
 
-    corrade_add_resource(MagnumWheeGallery_RESOURCES resources-gallery.conf)
-
     add_executable(magnum-whee-gallery
-        whee-gallery.cpp
-        ${MagnumWheeGallery_RESOURCES})
+        whee-gallery.cpp)
     target_link_libraries(magnum-whee-gallery PRIVATE
         MagnumWhee
         Magnum::Application)
     if(CORRADE_TARGET_EMSCRIPTEN)
         target_link_libraries(magnum-whee-gallery PRIVATE
+            Magnum::AnyImageImporter
+            MagnumPlugins::StbImageImporter
             MagnumPlugins::StbTrueTypeFont)
         if(CMAKE_VERSION VERSION_LESS 3.13)
             message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")

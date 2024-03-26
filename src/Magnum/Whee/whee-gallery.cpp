@@ -23,11 +23,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <Corrade/Containers/StridedArrayView.h>
-#include <Corrade/PluginManager/Manager.h>
-#include <Corrade/Utility/Format.h>
-#include <Corrade/Utility/Resource.h>
-#include <Magnum/Mesh.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
@@ -37,294 +32,19 @@
 #include <Magnum/Platform/Sdl2Application.h>
 #endif
 #include <Magnum/Text/Alignment.h>
-#include <Magnum/Text/AbstractFont.h>
-#include <Magnum/Text/GlyphCache.h>
-#include <Magnum/TextureTools/Atlas.h>
 
-#include "Magnum/Whee/AbstractUserInterface.h"
-#include "Magnum/Whee/BaseLayerGL.h"
+#include "Magnum/Whee/Button.h"
 #include "Magnum/Whee/EventLayer.h"
 #include "Magnum/Whee/Event.h"
-#include "Magnum/Whee/Handle.h"
-#include "Magnum/Whee/TextLayerGL.h"
+#include "Magnum/Whee/Label.h"
+#include "Magnum/Whee/Style.h"
 #include "Magnum/Whee/TextProperties.h"
+#include "Magnum/Whee/UserInterfaceGL.h"
 
 namespace Magnum { namespace {
 
 using namespace Containers::Literals;
 using namespace Math::Literals;
-
-enum class BaseStyleIndex: UnsignedInt {
-    DialogBackground,
-    DialogTitleButton,
-    DialogTitleButtonHovered,
-    DialogTitleButtonPressedHovered,
-    Button,
-    ButtonHovered,
-    ButtonPressedHovered,
-    ButtonDisabled,
-    ProgressBar,
-
-    Count
-};
-
-enum class TextStyleIndex: UnsignedInt {
-    DefaultDark,
-    DefaultLight,
-    Title,
-
-    Count
-};
-
-BaseStyleIndex styleIndexTransitionToPressedBlur(BaseStyleIndex index) {
-    switch(index) {
-        case BaseStyleIndex::Button:
-        case BaseStyleIndex::ButtonHovered:
-        case BaseStyleIndex::ButtonPressedHovered:
-            return BaseStyleIndex::ButtonPressedHovered;
-        case BaseStyleIndex::DialogTitleButton:
-        case BaseStyleIndex::DialogTitleButtonHovered:
-        case BaseStyleIndex::DialogTitleButtonPressedHovered:
-            return BaseStyleIndex::DialogTitleButtonPressedHovered;
-        case BaseStyleIndex::DialogBackground:
-        case BaseStyleIndex::ButtonDisabled:
-        case BaseStyleIndex::ProgressBar:
-            return index;
-        case BaseStyleIndex::Count:
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }
-
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-}
-
-BaseStyleIndex styleIndexTransitionToPressedHover(BaseStyleIndex index) {
-    switch(index) {
-        case BaseStyleIndex::Button:
-        case BaseStyleIndex::ButtonHovered:
-        case BaseStyleIndex::ButtonPressedHovered:
-            return BaseStyleIndex::ButtonPressedHovered;
-        case BaseStyleIndex::DialogTitleButton:
-        case BaseStyleIndex::DialogTitleButtonHovered:
-        case BaseStyleIndex::DialogTitleButtonPressedHovered:
-            return BaseStyleIndex::DialogTitleButtonPressedHovered;
-        case BaseStyleIndex::DialogBackground:
-        case BaseStyleIndex::ButtonDisabled:
-        case BaseStyleIndex::ProgressBar:
-            return index;
-        case BaseStyleIndex::Count:
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }
-
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-}
-
-BaseStyleIndex styleIndexTransitionToInactiveBlur(BaseStyleIndex index) {
-    switch(index) {
-        case BaseStyleIndex::Button:
-        case BaseStyleIndex::ButtonHovered:
-        case BaseStyleIndex::ButtonPressedHovered:
-            return BaseStyleIndex::Button;
-        case BaseStyleIndex::DialogTitleButton:
-        case BaseStyleIndex::DialogTitleButtonHovered:
-        case BaseStyleIndex::DialogTitleButtonPressedHovered:
-            return BaseStyleIndex::DialogTitleButton;
-        case BaseStyleIndex::DialogBackground:
-        case BaseStyleIndex::ButtonDisabled:
-        case BaseStyleIndex::ProgressBar:
-            return index;
-        case BaseStyleIndex::Count:
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }
-
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-}
-
-BaseStyleIndex styleIndexTransitionToInactiveHover(BaseStyleIndex index) {
-    switch(index) {
-        case BaseStyleIndex::Button:
-        case BaseStyleIndex::ButtonHovered:
-        case BaseStyleIndex::ButtonPressedHovered:
-            return BaseStyleIndex::ButtonHovered;
-        case BaseStyleIndex::DialogTitleButton:
-        case BaseStyleIndex::DialogTitleButtonHovered:
-        case BaseStyleIndex::DialogTitleButtonPressedHovered:
-            return BaseStyleIndex::DialogTitleButtonHovered;
-        case BaseStyleIndex::DialogBackground:
-        case BaseStyleIndex::ButtonDisabled:
-        case BaseStyleIndex::ProgressBar:
-            return index;
-        case BaseStyleIndex::Count:
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-    }
-
-    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-}
-
-class UserInterface: public Whee::AbstractUserInterface {
-    public:
-        explicit UserInterface(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize): Whee::AbstractUserInterface{size, windowSize, framebufferSize} {
-            Whee::BaseLayerCommonStyleUniform baseLayerCommonStyleUniform;
-            baseLayerCommonStyleUniform.setSmoothness(0.5f);
-            Whee::BaseLayerStyleUniform baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::Count)];
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::DialogBackground)]
-                .setCornerRadius({16.0f, 4.0f, 16.0f, 4.0f})
-                .setInnerOutlineCornerRadius({2.0f, 2.0f, 2.0f, 2.0f})
-                .setOutlineWidth({0.0f, 32.0f, 0.0f, 2.0f})
-                .setColor(0x2f363fee_rgbaf)
-                .setOutlineColor(0x282e36cc_rgbaf);
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::DialogTitleButton)]
-                .setCornerRadius(8.0f)
-                .setColor(0xffffff_rgbf, 0xdcdcdc_rgbf);
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::DialogTitleButtonHovered)]
-                .setCornerRadius(8.0f)
-                .setColor(0xffffff_rgbf, 0xffffff_rgbf);
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::DialogTitleButtonPressedHovered)]
-                .setCornerRadius(8.0f)
-                .setColor(0xdcdcdc_rgbf, 0xffffff_rgbf);
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::Button)]
-                .setCornerRadius(16.0f)
-                .setColor(0x3bd267_rgbf, 0x3bd267_rgbf*0xdcdcdc_rgbf);
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::ButtonHovered)]
-                .setCornerRadius(16.0f)
-                .setColor(0x3bd267_rgbf, 0x3bd267_rgbf);
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::ButtonPressedHovered)]
-                .setCornerRadius(16.0f)
-                .setColor(0x3bd267_rgbf*0xdcdcdc_rgbf, 0x3bd267_rgbf);
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::ButtonDisabled)]
-                .setCornerRadius(16.0f)
-                .setColor(0x3bd267ff_rgbaf*0.3f, 0x3bd267ff_rgbaf*0.3f);
-            baseLayerStyleUniforms[UnsignedInt(BaseStyleIndex::ProgressBar)]
-                .setCornerRadius(12.0f)
-                .setOutlineWidth(2.0f)
-                .setInnerOutlineCornerRadius(10.0f)
-                .setColor(0xa5c9ea_rgbf, 0xa5c9ea_rgbf*0xdcdcdc_rgbf)
-                .setOutlineColor(0x34424d_rgbf/(0xa5c9ea_rgbf*0xdcdcdc_rgbf));
-            _baseLayerShared = Whee::BaseLayerGL::Shared{UnsignedInt(Containers::arraySize(baseLayerStyleUniforms))};
-            _baseLayerShared
-                .setStyle(baseLayerCommonStyleUniform, baseLayerStyleUniforms, {})
-                .setStyleTransition<BaseStyleIndex,
-                    styleIndexTransitionToPressedBlur,
-                    styleIndexTransitionToPressedHover,
-                    styleIndexTransitionToInactiveBlur,
-                    styleIndexTransitionToInactiveHover,
-                    nullptr>();
-
-            const Utility::Resource rs{"MagnumWheeGallery"};
-
-            // TODO artifacts!
-            Text::GlyphCache glyphCache{Vector2i{256}};
-            Containers::Pointer<Text::AbstractFont> font = _fontManager.loadAndInstantiate("TrueTypeFont");
-            // TODO account for DPI scaling
-            CORRADE_INTERNAL_ASSERT_OUTPUT(font && font->openData(rs.getRaw("SourceSansPro-Regular.ttf"), 16.0f*2));
-            font->fillGlyphCache(glyphCache,
-                "abcdefghijklmnopqrstuvwxyz"
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
-
-            Containers::Pointer<Text::AbstractFont> fontSmall = _fontManager.loadAndInstantiate("TrueTypeFont");
-            CORRADE_INTERNAL_ASSERT_OUTPUT(fontSmall && fontSmall->openData(rs.getRaw("SourceSansPro-Regular.ttf"), 13.0f*2));
-            fontSmall->fillGlyphCache(glyphCache,
-                "abcdefghijklmnopqrstuvwxyz"
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                "0123456789 _.,-+=*:;?!@$&#/\\|`\"'<>()[]{}%…");
-
-            Debug{} << "Glyph cache filled to" << glyphCache.atlas().filledSize().y()*100.0f/glyphCache.atlas().size().y() << Debug::nospace << "%";
-
-            Whee::TextLayerStyleUniform textLayerStyleUniforms[UnsignedInt(TextStyleIndex::Count)];
-            textLayerStyleUniforms[UnsignedInt(TextStyleIndex::DefaultDark)]
-                .setColor(0x22272e_rgbf);
-            textLayerStyleUniforms[UnsignedInt(TextStyleIndex::DefaultLight)]
-                .setColor(0xdcdcdc_rgbf);
-            textLayerStyleUniforms[UnsignedInt(TextStyleIndex::Title)]
-                .setColor(0xdcdcdc_rgbf);
-
-            _textLayerShared = Whee::TextLayerGL::Shared{UnsignedInt(Containers::arraySize(textLayerStyleUniforms))};
-            _textLayerShared.setGlyphCache(Utility::move(glyphCache));
-            Whee::FontHandle fontHandle = _textLayerShared.addFont(Utility::move(font), 16.0f);
-            Whee::FontHandle fontSmallHandle = _textLayerShared.addFont(Utility::move(fontSmall), 13.0f);
-            _textLayerShared.setStyle(Whee::TextLayerCommonStyleUniform{},
-                textLayerStyleUniforms,
-                Containers::arrayView({fontHandle, fontHandle, fontSmallHandle}),
-                {});
-
-            _baseLayer = &setLayerInstance(Containers::pointer<Whee::BaseLayerGL>(createLayer(), _baseLayerShared));
-
-            _textLayer = &setLayerInstance(Containers::pointer<Whee::TextLayerGL>(createLayer(), _textLayerShared));
-
-            _eventLayer = &setLayerInstance(Containers::pointer<Whee::EventLayer>(createLayer()));
-        }
-
-        Whee::BaseLayer& baseLayer() { return *_baseLayer; }
-        Whee::TextLayer& textLayer() { return *_textLayer; }
-        Whee::EventLayer& eventLayer() { return *_eventLayer; }
-
-    private:
-        PluginManager::Manager<Text::AbstractFont> _fontManager;
-
-        Whee::BaseLayerGL::Shared _baseLayerShared{NoCreate};
-        Whee::TextLayerGL::Shared _textLayerShared{NoCreate};
-        Whee::BaseLayer* _baseLayer;
-        Whee::TextLayer* _textLayer;
-        Whee::EventLayer* _eventLayer;
-};
-
-class Popup {
-    public:
-        explicit Popup(UserInterface& ui, Float progress, bool closeable) {
-            Whee::NodeHandle popup = _popup = ui.createNode({180, 180}, {440, 240});
-            ui.baseLayer().create(BaseStyleIndex::DialogBackground, _popup);
-            ui.eventLayer().onDrag(_popup, [&ui, popup](const Vector2& offset){
-                ui.setNodeOffset(popup, ui.nodeOffset(popup) + offset);
-            });
-            ui.eventLayer().onPress(_popup, [&ui, popup]{
-                ui.setNodeOrder(popup, Whee::NodeHandle::Null);
-            });
-            Whee::NodeHandle title = ui.createNode(popup, {24, 0}, {380, 32});
-            // TODO NodeFlag::NoEvent (Inactive? ReadOnly? ugh) to make this
-            //  text not react to press
-            ui.textLayer().create(TextStyleIndex::Title,
-                Utility::format("Progress bar with {:.1f}%", progress*100.0f),
-                Whee::TextProperties{}
-                    .setAlignment(Text::Alignment::MiddleLeft),
-                title);
-
-            if(closeable) {
-                Whee::NodeHandle closeButton = ui.createNode(_popup, {415, 8}, {16, 16});
-                ui.baseLayer().create(BaseStyleIndex::DialogTitleButton, 0xcd3431_rgbf, closeButton);
-                ui.eventLayer().onTapOrClick(closeButton, [&ui, popup]{
-                    ui.removeNode(popup);
-                });
-            } else {
-                Whee::NodeHandle minimizeButton = ui.createNode(_popup, {390, 8}, {16, 16});
-                ui.baseLayer().create(BaseStyleIndex::DialogTitleButton, 0xc7cf2f_rgbf, minimizeButton);
-                ui.eventLayer().onTapOrClick(minimizeButton, [&ui, popup]{
-                    ui.clearNodeOrder(popup);
-                });
-            }
-
-            Float progressOutlineWidth = Math::min(296.0f, 316.0f*(1.0f - progress));
-
-            Whee::NodeHandle progressBar = ui.createNode(_popup, {60, 100}, {320, 24});
-            ui.baseLayer().create(BaseStyleIndex::ProgressBar, 0xffffff_rgbf, {0.0f, 0.0f, progressOutlineWidth, 0.0f}, progressBar);
-
-            Whee::NodeHandle button = ui.createNode(_popup, {156, 170}, {128, 32});
-            ui.textLayer().create(TextStyleIndex::DefaultDark, Utility::format("Go to {:.1f}%", progress*80.0f), {}, button);
-            if(progressOutlineWidth < 296.0f) {
-                ui.baseLayer().create(BaseStyleIndex::Button, button);
-                ui.eventLayer().onTapOrClick(button, [&ui, progress]{
-                    Popup{ui, progress*0.8f, true};
-                });
-            } else {
-                ui.baseLayer().create(BaseStyleIndex::ButtonDisabled, button);
-            }
-        }
-
-        // TODO not needed for anything, actually the whole class could be just a function, heh
-        operator Whee::NodeHandle() const { return _popup; }
-
-    private:
-        Whee::NodeHandle _popup;
-};
 
 class WheeGallery: public Platform::Application {
     public:
@@ -336,13 +56,123 @@ class WheeGallery: public Platform::Application {
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
 
-        UserInterface _ui;
-        Containers::Optional<Popup> _popup;
+        Whee::UserInterfaceGL _ui;
 };
 
-WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Whee Gallery"_s)}, _ui{{800, 600}, Vector2{windowSize()}, framebufferSize()} {
-    _popup.emplace(_ui, 0.7f, false);
+WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Whee Gallery"_s).setSize({960, 600})}, _ui{{960, 600}, Vector2{windowSize()}, framebufferSize(), Whee::McssDarkStyle{}} {
+    Whee::NodeHandle root = _ui.createNode({}, _ui.size());
 
+    {
+        Whee::NodeHandle label = Whee::label(_ui, root, Whee::LabelStyle::Dim, {96, 16},  "Buttons", Whee::TextProperties{}.setAlignment(Text::Alignment::MiddleLeft));
+        _ui.setNodeOffset(label, {16, 16});
+
+        Whee::NodeHandle buttons = _ui.createNode(root, {0, 48}, _ui.size());
+
+        Whee::NodeHandle buttonDefault = Whee::button(_ui, buttons, Whee::ButtonStyle::Default, {96, 36}, Whee::Icon::Yes, "Default");
+        _ui.setNodeOffset(buttonDefault, {16, 0});
+
+        Whee::NodeHandle buttonPrimary = Whee::button(_ui, buttons, Whee::ButtonStyle::Primary, {96, 36}, Whee::Icon::Yes, "Primary");
+        _ui.setNodeOffset(buttonPrimary, {120, 0});
+
+        Whee::NodeHandle buttonDanger = Whee::button(_ui, buttons, Whee::ButtonStyle::Danger, {96, 36}, Whee::Icon::No, "Danger");
+        _ui.setNodeOffset(buttonDanger, {224, 0});
+
+        Whee::NodeHandle buttonSuccess = Whee::button(_ui, buttons, Whee::ButtonStyle::Success, {96, 36}, Whee::Icon::Yes, "Success");
+        _ui.setNodeOffset(buttonSuccess, {328, 0});
+
+        Whee::NodeHandle buttonWarning = Whee::button(_ui, buttons, Whee::ButtonStyle::Warning, {96, 36}, Whee::Icon::No, "Warning");
+        _ui.setNodeOffset(buttonWarning, {432, 0});
+
+        Whee::NodeHandle buttonInfo = Whee::button(_ui, buttons, Whee::ButtonStyle::Info, {96, 36}, Whee::Icon::Yes, "Info");
+        _ui.setNodeOffset(buttonInfo, {536, 0});
+
+        Whee::NodeHandle buttonDim = Whee::button(_ui, buttons, Whee::ButtonStyle::Dim, {96, 36}, Whee::Icon::No, "Dim");
+        _ui.setNodeOffset(buttonDim, {640, 0});
+
+        Whee::NodeHandle buttonFlat = Whee::button(_ui, buttons, Whee::ButtonStyle::Flat, {96, 36}, Whee::Icon::Yes, "Flat");
+        _ui.setNodeOffset(buttonFlat, {744, 0});
+    } {
+        Whee::NodeHandle buttonsDisabled = _ui.createNode(root, {0, 94}, _ui.size());
+        _ui.addNodeFlags(buttonsDisabled, Whee::NodeFlag::Disabled);
+
+        Whee::NodeHandle buttonDefault = Whee::button(_ui, buttonsDisabled, Whee::ButtonStyle::Default, {96, 36}, Whee::Icon::Yes, "Default");
+        _ui.setNodeOffset(buttonDefault, {16, 0});
+
+        Whee::NodeHandle buttonPrimary = Whee::button(_ui, buttonsDisabled, Whee::ButtonStyle::Primary, {96, 36}, Whee::Icon::Yes, "Primary");
+        _ui.setNodeOffset(buttonPrimary, {120, 0});
+
+        Whee::NodeHandle buttonDanger = Whee::button(_ui, buttonsDisabled, Whee::ButtonStyle::Danger, {96, 36}, Whee::Icon::No, "Danger");
+        _ui.setNodeOffset(buttonDanger, {224, 0});
+
+        Whee::NodeHandle buttonSuccess = Whee::button(_ui, buttonsDisabled, Whee::ButtonStyle::Success, {96, 36}, Whee::Icon::Yes, "Success");
+        _ui.setNodeOffset(buttonSuccess, {328, 0});
+
+        Whee::NodeHandle buttonWarning = Whee::button(_ui, buttonsDisabled, Whee::ButtonStyle::Warning, {96, 36}, Whee::Icon::No, "Warning");
+        _ui.setNodeOffset(buttonWarning, {432, 0});
+
+        Whee::NodeHandle buttonInfo = Whee::button(_ui, buttonsDisabled, Whee::ButtonStyle::Info, {96, 36}, Whee::Icon::Yes, "Info");
+        _ui.setNodeOffset(buttonInfo, {536, 0});
+
+        Whee::NodeHandle buttonDim = Whee::button(_ui, buttonsDisabled, Whee::ButtonStyle::Dim, {96, 36}, Whee::Icon::No, "Dim");
+        _ui.setNodeOffset(buttonDim, {640, 0});
+
+        Whee::NodeHandle buttonFlat = Whee::button(_ui, buttonsDisabled, Whee::ButtonStyle::Flat, {96, 36}, Whee::Icon::Yes, "Flat");
+        _ui.setNodeOffset(buttonFlat, {744, 0});
+    }
+
+    {
+        Whee::NodeHandle label = Whee::label(_ui, root, Whee::LabelStyle::Dim, {96, 16},  "Labels", Whee::TextProperties{}.setAlignment(Text::Alignment::MiddleLeft));
+        _ui.setNodeOffset(label, {16, 146});
+
+        Whee::NodeHandle labels = _ui.createNode(root, {0, 170}, _ui.size());
+
+        Whee::NodeHandle labelDefault = Whee::label(_ui, labels, Whee::LabelStyle::Default, {96, 36}, Whee::Icon::Yes, "Default");
+        _ui.setNodeOffset(labelDefault, {16, 0});
+
+        Whee::NodeHandle labelPrimary = Whee::label(_ui, labels, Whee::LabelStyle::Primary, {96, 36}, Whee::Icon::Yes, "Primary");
+        _ui.setNodeOffset(labelPrimary, {120, 0});
+
+        Whee::NodeHandle labelDanger = Whee::label(_ui, labels, Whee::LabelStyle::Danger, {96, 36}, Whee::Icon::No, "Danger");
+        _ui.setNodeOffset(labelDanger, {224, 0});
+
+        Whee::NodeHandle labelSuccess = Whee::label(_ui, labels, Whee::LabelStyle::Success, {96, 36}, Whee::Icon::Yes, "Success");
+        _ui.setNodeOffset(labelSuccess, {328, 0});
+
+        Whee::NodeHandle labelWarning = Whee::label(_ui, labels, Whee::LabelStyle::Warning, {96, 36}, Whee::Icon::No, "Warning");
+        _ui.setNodeOffset(labelWarning, {432, 0});
+
+        Whee::NodeHandle labelInfo = Whee::label(_ui, labels, Whee::LabelStyle::Info, {96, 36}, Whee::Icon::Yes, "Info");
+        _ui.setNodeOffset(labelInfo, {536, 0});
+
+        Whee::NodeHandle labelDim = Whee::label(_ui, labels, Whee::LabelStyle::Dim, {96, 36}, Whee::Icon::No, "Dim");
+        _ui.setNodeOffset(labelDim, {640, 0});
+    } {
+        Whee::NodeHandle labelsDisabled = _ui.createNode(root, {0, 208}, _ui.size());
+        _ui.addNodeFlags(labelsDisabled, Whee::NodeFlag::Disabled);
+
+        Whee::NodeHandle labelDefault = Whee::label(_ui, labelsDisabled, Whee::LabelStyle::Default, {96, 36}, Whee::Icon::Yes, "Default");
+        _ui.setNodeOffset(labelDefault, {16, 0});
+
+        Whee::NodeHandle labelPrimary = Whee::label(_ui, labelsDisabled, Whee::LabelStyle::Primary, {96, 36}, Whee::Icon::Yes, "Primary");
+        _ui.setNodeOffset(labelPrimary, {120, 0});
+
+        Whee::NodeHandle labelDanger = Whee::label(_ui, labelsDisabled, Whee::LabelStyle::Danger, {96, 36}, Whee::Icon::No, "Danger");
+        _ui.setNodeOffset(labelDanger, {224, 0});
+
+        Whee::NodeHandle labelSuccess = Whee::label(_ui, labelsDisabled, Whee::LabelStyle::Success, {96, 36}, Whee::Icon::Yes, "Success");
+        _ui.setNodeOffset(labelSuccess, {328, 0});
+
+        Whee::NodeHandle labelWarning = Whee::label(_ui, labelsDisabled, Whee::LabelStyle::Warning, {96, 36}, Whee::Icon::No, "Warning");
+        _ui.setNodeOffset(labelWarning, {432, 0});
+
+        Whee::NodeHandle labelInfo = Whee::label(_ui, labelsDisabled, Whee::LabelStyle::Info, {96, 36}, Whee::Icon::Yes, "Info");
+        _ui.setNodeOffset(labelInfo, {536, 0});
+
+        Whee::NodeHandle labelDim = Whee::label(_ui, labelsDisabled, Whee::LabelStyle::Dim, {96, 36}, Whee::Icon::No, "Dim");
+        _ui.setNodeOffset(labelDim, {640, 0});
+    }
+
+    GL::Renderer::setClearColor(0x22272e_rgbf);
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 }
@@ -353,16 +183,14 @@ void WheeGallery::drawEvent() {
     _ui.draw();
 
     swapBuffers();
+    if(_ui.state()) redraw();
 }
 
 void WheeGallery::mousePressEvent(MouseEvent& event) {
     if(event.button() == MouseEvent::Button::Left) {
         Whee::PointerEvent e{Whee::Pointer::MouseLeft};
         // TODO integer overload? or just have a template wrapper that does this automagically
-        if(_ui.pointerPressEvent(Vector2{event.position()}, e))
-            ;
-        else if(!_ui.isNodeOrdered(*_popup))
-            _ui.setNodeOrder(*_popup, Whee::NodeHandle::Null);
+        _ui.pointerPressEvent(Vector2{event.position()}, e);
     }
 
     if(_ui.state()) redraw();
