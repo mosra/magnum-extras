@@ -30,6 +30,7 @@
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
+#include <Corrade/Utility/Algorithms.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/Utility/Path.h>
@@ -43,6 +44,7 @@
 #include <Magnum/GL/OpenGLTester.h>
 #include <Magnum/Math/Vector2.h>
 #include <Magnum/Trade/AbstractImporter.h>
+#include <Magnum/Trade/ImageData.h>
 
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/BaseLayerGL.h"
@@ -58,6 +60,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     explicit BaseLayerGLTest();
 
     void sharedConstruct();
+    void sharedConstructComposite();
     /* NoCreate tested in BaseLayerGL_Test to verify it works without a GL
        context */
     void sharedConstructCopy();
@@ -78,9 +81,15 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void renderPadding();
     void renderChangeStyle();
 
+    void renderOrDrawCompositeSetup();
+    void renderOrDrawCompositeTeardown();
+
+    void renderComposite();
+
     void drawSetup();
     void drawTeardown();
     void drawOrder();
+    void drawOrderComposite();
     void drawClipping();
 
     void eventStyleTransition();
@@ -218,10 +227,172 @@ const struct {
 
 const struct {
     const char* name;
+    const char* filename;
+    BaseLayerGL::Shared::Flags flags;
+    Containers::Optional<UnsignedInt> backgroundBlurRadius;
+    Containers::Optional<Float> backgroundBlurCutoff;
+    Containers::Optional<UnsignedInt> backgroundBlurPassCount;
+    BaseLayerCommonStyleUniform styleCommon;
+    BaseLayerStyleUniform styleUniform;
+    Float maxThreshold, meanThreshold;
+} RenderCompositeData[]{
+    {"default, 50% opacity", "composite-default-50.png",
+        {}, {}, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.0f, 0.0f},
+    {"background blur, 0% opacity", "composite-background-blur-0.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, {}, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setColor(0xffffffff_rgbaf),
+        0.0f, 0.0f},
+    {"background blur, 50% opacity", "composite-background-blur-50.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, {}, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.0f, 0.0f},
+    {"background blur, 75% opacity, colored", "composite-background-blur-75-colored.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, {}, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setInnerOutlineCornerRadius(4.0f)
+            .setOutlineWidth(8.0f)
+            /* Premultiplied alpha */
+            .setColor(0x747474ff_rgbaf*0.75f, 0xdcdcdcff_rgbaf*0.75f)
+            .setOutlineColor(0xa5c9eaff_rgbaf*0.75f),
+        0.0f, 0.0f},
+    /* This should look the same as if no compositing is done, including the
+       same blend operation and everything. In reality there's a slight
+       difference possibly due to the blend operation being done a bit
+       differently? */
+    {"background blur, 50% opacity, radius 0", "composite-default-50.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 0, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.75f, 0.236f},
+    /* Should be the same as the default */
+    {"background blur, 50% opacity, radius 4", "composite-background-blur-50.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 4, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.0f, 0.0f},
+    /* sqrt(4*(2^2)) == 4, so should be ~same as above (plus rounding
+       errors) */
+    {"background blur, 50% opacity, radius 2, 4 passes", "composite-background-blur-50.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 2, {}, 4,
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        5.75f, 0.723f},
+    /* sqrt(16*(1^2)) == 4, so should ~same as above (plus even more rounding
+       errors) */
+    {"background blur, 50% opacity, radius 1, 16 passes", "composite-background-blur-50.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 1, {}, 16,
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        12.25f, 1.542f},
+    {"background blur, 50% opacity, radius 31", "composite-background-blur-50-r31.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.0f, 0.0f},
+    /* This shouldn't make any visible difference to the above but is using
+       considerably less samples */
+    {"background blur, 50% opacity, radius 31, cutoff 0.5/255", "composite-background-blur-50-r31.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, 0.5f/255.0f, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.0f, 0.0f},
+    /* This should again look the same as if no compositing is done as all the
+       extra samples get discarded due to being less than the cutoff In reality
+       there's a slight difference possibly due to the blend operation being
+       done a bit differently? */
+    {"background blur, 50% opacity, radius 31, cutoff 1", "composite-default-50.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, 1.0f, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.75f, 0.236f},
+    {"background blur, 50% opacity, radius 31, 80% blur opacity", "composite-background-blur-50-r31-80.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f)
+            .setBackgroundBlurAlpha(0.8f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.0f, 0.0f},
+    /* This should again look the same as if no compositing is done, as the
+       blurred background contributes in no way to the output */
+    {"background blur, 50% opacity, radius 31, 0% blur opacity", "composite-default-50.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f)
+            .setBackgroundBlurAlpha(0.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.0f, 0.0f},
+};
+
+const struct {
+    const char* name;
     bool dataInNodeOrder;
 } DrawOrderData[]{
     {"data created in node order", true},
     {"data created randomly", false}
+};
+
+const struct {
+    const char* name;
+    const char* filename;
+    BaseLayerGL::Shared::Flags flags;
+} DrawOrderCompositeData[]{
+    {"default", "draw-order-composite-default.png",
+        {}},
+    {"background blur", "draw-order-composite-background-blur.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur}
 };
 
 const struct {
@@ -243,6 +414,7 @@ const struct {
 
 BaseLayerGLTest::BaseLayerGLTest() {
     addTests({&BaseLayerGLTest::sharedConstruct,
+              &BaseLayerGLTest::sharedConstructComposite,
               &BaseLayerGLTest::sharedConstructCopy,
               &BaseLayerGLTest::sharedConstructMove,
 
@@ -274,10 +446,20 @@ BaseLayerGLTest::BaseLayerGLTest() {
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
+    addInstancedTests({&BaseLayerGLTest::renderComposite},
+        Containers::arraySize(RenderCompositeData),
+        &BaseLayerGLTest::renderOrDrawCompositeSetup,
+        &BaseLayerGLTest::renderOrDrawCompositeTeardown);
+
     addInstancedTests({&BaseLayerGLTest::drawOrder},
         Containers::arraySize(DrawOrderData),
         &BaseLayerGLTest::drawSetup,
         &BaseLayerGLTest::drawTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::drawOrderComposite},
+        Containers::arraySize(DrawOrderData),
+        &BaseLayerGLTest::renderOrDrawCompositeSetup,
+        &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
     addInstancedTests({&BaseLayerGLTest::drawClipping},
         Containers::arraySize(DrawClippingData),
@@ -300,6 +482,16 @@ void BaseLayerGLTest::sharedConstruct() {
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
+    CORRADE_COMPARE(shared.flags(), BaseLayerGL::Shared::Flags{});
+}
+
+void BaseLayerGLTest::sharedConstructComposite() {
+    BaseLayerGL::Shared shared{
+        BaseLayerGL::Shared::Configuration{3, 5}
+            .addFlags(BaseLayerGL::Shared::Flag::BackgroundBlur)};
+    CORRADE_COMPARE(shared.styleUniformCount(), 3);
+    CORRADE_COMPARE(shared.styleCount(), 5);
+    CORRADE_COMPARE(shared.flags(), BaseLayerGL::Shared::Flag::BackgroundBlur);
 }
 
 void BaseLayerGLTest::sharedConstructCopy() {
@@ -689,6 +881,92 @@ void BaseLayerGLTest::renderChangeStyle() {
         DebugTools::CompareImageToFile{_manager});
 }
 
+void BaseLayerGLTest::renderOrDrawCompositeSetup() {
+    /* Using the framebuffer inside the RendererGL instead, thus this can be
+       also shared for all render*() and draw*() cases */
+
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    /* The RendererGL should enable these on its own if needed */
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
+    GL::Renderer::disable(GL::Renderer::Feature::Blending);
+}
+
+void BaseLayerGLTest::renderOrDrawCompositeTeardown() {
+    /* Using the framebuffer inside the RendererGL instead, thus this can be
+       also shared for all render*() and draw*() cases */
+
+    GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
+    GL::Renderer::disable(GL::Renderer::Feature::Blending);
+}
+
+void BaseLayerGLTest::renderComposite() {
+    auto&& data = RenderCompositeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    AbstractUserInterface ui{RenderSize};
+    RendererGL& renderer = ui.setRendererInstance(Containers::pointer<RendererGL>(RendererGL::Flag::CompositingFramebuffer));
+
+    /* Upload (a crop of) the blur source image as a framebuffer background */
+    Containers::Pointer<Trade::AbstractImporter> importer = _manager.loadAndInstantiate("AnyImageImporter");
+    CORRADE_VERIFY(importer->openFile(Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/blur-input.png")));
+
+    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+    CORRADE_VERIFY(image);
+    CORRADE_COMPARE(image->format(), PixelFormat::RGBA8Unorm);
+    CORRADE_COMPARE_AS(image->size(), RenderSize,
+        TestSuite::Compare::GreaterOrEqual);
+
+    Image2D imageCropped{PixelFormat::RGBA8Unorm, RenderSize, Containers::Array<char>{NoInit, std::size_t(RenderSize.product()*4)}};
+    Utility::copy(image->pixels<Color4ub>().prefix({
+        std::size_t(RenderSize.y()),
+        std::size_t(RenderSize.x()),
+    }), imageCropped.pixels<Color4ub>());
+
+    renderer.compositingTexture().setSubImage(0, {}, imageCropped);
+
+    BaseLayerGL::Shared::Configuration configuration{2};
+    configuration.addFlags(data.flags);
+    if(data.backgroundBlurRadius) {
+        if(data.backgroundBlurCutoff)
+            configuration.setBackgroundBlurRadius(*data.backgroundBlurRadius, *data.backgroundBlurCutoff);
+        else
+            configuration.setBackgroundBlurRadius(*data.backgroundBlurRadius);
+    }
+
+    BaseLayerGL::Shared layerShared{configuration};
+    layerShared.setStyle(data.styleCommon,
+        /* To verify it's not always picking the first uniform */
+        {BaseLayerStyleUniform{}, data.styleUniform},
+        {});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+    if(data.backgroundBlurPassCount)
+        layer.setBackgroundBlurPassCount(*data.backgroundBlurPassCount);
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    layer.create(1, node);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+        (DebugTools::CompareImageToFile{_manager, data.maxThreshold, data.meanThreshold}));
+}
+
 constexpr Vector2i DrawSize{64, 64};
 
 void BaseLayerGLTest::drawSetup() {
@@ -778,6 +1056,72 @@ void BaseLayerGLTest::drawOrder() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/draw-order.png"),
+        DebugTools::CompareImageToFile{_manager});
+}
+
+void BaseLayerGLTest::drawOrderComposite() {
+    auto&& data = DrawOrderCompositeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* A reduced variant of drawOrder() that only tests the effect of (stacked)
+       compositing, that it's applied on top-level nodes and its children as a
+       whole and not on each node separately. As it's meant to be used only on
+       non-overlapping nodes within a top-level node, the blending behaves
+       differently between the non-composited and composited case, in
+       particular the blue doesn't shine through the red. */
+
+    AbstractUserInterface ui{DrawSize};
+    RendererGL& renderer = ui.setRendererInstance(Containers::pointer<RendererGL>(RendererGL::Flag::CompositingFramebuffer));
+
+    /* Clear the framebuffer so we can draw to it */
+    renderer.compositingFramebuffer().clear(GL::FramebufferClear::Color);
+
+    BaseLayerGL::Shared layerShared{
+        BaseLayerGL::Shared::Configuration{4}
+            .addFlags(data.flags)
+            .setBackgroundBlurRadius(16)
+    };
+    layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
+        BaseLayerStyleUniform{}         /* 0, red */
+            .setColor(0xff0000ff_rgbaf*0.5f),
+        BaseLayerStyleUniform{}         /* 1, green */
+            .setColor(0x00ff00ff_rgbaf*0.5f),
+        BaseLayerStyleUniform{}         /* 2, blue */
+            .setColor(0x0000ffff_rgbaf*0.5f),
+        BaseLayerStyleUniform{}         /* 3, white */
+            .setColor(0xffffffff_rgbaf)
+    }, {});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+
+    NodeHandle topLevelBelowWhite = ui.createNode({28.0f, 28.0f}, {48.0f, 48.0f});
+
+    NodeHandle topLevelOnTopGreen = ui.createNode({8.0f, 8.0f}, {48.0f, 48.0f});
+
+    NodeHandle childBelowBlue = ui.createNode(topLevelOnTopGreen, {12.0f, 4.0f}, {32.0f, 32.0f});
+    NodeHandle childAboveRed = ui.createNode(childBelowBlue, {-8.0f, 8.0f}, {32.0f, 32.0f});
+
+    layer.create(3, topLevelBelowWhite);
+    layer.create(1, topLevelOnTopGreen);
+    layer.create(2, childBelowBlue);
+    layer.create(0, childAboveRed);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
         DebugTools::CompareImageToFile{_manager});
 }
 

@@ -48,9 +48,10 @@ struct BaseLayerStyle {
 }
 
 struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount()}, styleUniformCount{configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount()}, styleUniformCount{configuration.styleUniformCount()}, flags{configuration.flags()} {}
 
     UnsignedInt styleUniformCount;
+    Flags flags;
 
     /* Uniform mapping and padding values assigned to each style. Initially
        empty to be able to detect whether setStyle() was called. */
@@ -83,6 +84,9 @@ struct BaseLayer::State: AbstractVisualLayer::State {
     Containers::Array<Implementation::BaseLayerData> data;
     Containers::Array<Implementation::BaseLayerVertex> vertices;
     Containers::Array<UnsignedInt> indices;
+
+    /* Used only if Flag::BackgroundBlur is enabled */
+    UnsignedInt backgroundBlurPassCount = 1;
 };
 
 }}
