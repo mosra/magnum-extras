@@ -27,6 +27,7 @@
 
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Utility/Algorithms.h>
@@ -40,6 +41,26 @@
 
 namespace Magnum { namespace Whee {
 
+Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
+    debug << "Whee::BaseLayer::Shared::Flag" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case BaseLayer::Shared::Flag::value: return debug << "::" #value;
+        _c(BackgroundBlur)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flags value) {
+    return Containers::enumSetDebugOutput(debug, value, "Whee::BaseLayer::Shared::Flags{}", {
+        BaseLayer::Shared::Flag::BackgroundBlur
+    });
+}
+
 BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {}
 
 BaseLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
@@ -48,6 +69,10 @@ BaseLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCre
 
 UnsignedInt BaseLayer::Shared::styleUniformCount() const {
     return static_cast<const State&>(*_state).styleUniformCount;
+}
+
+BaseLayer::Shared::Flags BaseLayer::Shared::flags() const {
+    return static_cast<const State&>(*_state).flags;
 }
 
 void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& stylePadding) {
@@ -103,9 +128,39 @@ BaseLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCo
     CORRADE_ASSERT(styleCount, "Whee::BaseLayer::Shared::Configuration: expected non-zero style count", );
 }
 
+BaseLayer::Shared::Configuration& BaseLayer::Shared::Configuration::setBackgroundBlurRadius(const UnsignedInt radius, const Float cutoff) {
+    CORRADE_ASSERT(radius < 32,
+        "Whee::BaseLayer::Shared::Configuration::setBackgroundBlurRadius(): radius" << radius << "too large", *this);
+    _backgroundBlurRadius = radius;
+    _backgroundBlurCutoff = cutoff;
+    return *this;
+}
+
 BaseLayer::BaseLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
 
 BaseLayer::BaseLayer(const LayerHandle handle, Shared& shared): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*shared._state))} {}
+
+UnsignedInt BaseLayer::backgroundBlurPassCount() const {
+    auto& state = static_cast<const State&>(*_state);
+    #ifndef CORRADE_NO_ASSERT
+    auto& sharedState = static_cast<const Shared::State&>(state.shared);
+    #endif
+    CORRADE_ASSERT(sharedState.flags & Shared::Flag::BackgroundBlur,
+        "Whee::BaseLayer::backgroundBlurPassCount(): background blur not enabled", {});
+    return state.backgroundBlurPassCount;
+}
+
+void BaseLayer::setBackgroundBlurPassCount(UnsignedInt count) {
+    auto& state = static_cast<State&>(*_state);
+    #ifndef CORRADE_NO_ASSERT
+    auto& sharedState = static_cast<const Shared::State&>(state.shared);
+    #endif
+    CORRADE_ASSERT(sharedState.flags & Shared::Flag::BackgroundBlur,
+        "Whee::BaseLayer::setBackgroundBlurPassCount(): background blur not enabled", );
+    CORRADE_ASSERT(count,
+        "Whee::BaseLayer::setBackgroundBlurPassCount(): expected at least one pass", );
+    state.backgroundBlurPassCount = count;
+}
 
 DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const Vector4& outlineWidth, const NodeHandle node) {
     State& state = static_cast<State&>(*_state);
