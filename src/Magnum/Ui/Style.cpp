@@ -758,18 +758,18 @@ StyleConfiguration mcssDarkStyleConfiguration() {
            Everything has 80% opacity except the text, the disabled state is
            default but with 30% opacity. Disabled text color is --background-color
            with 80% opacity. */
-        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0xdcdcdc_rgbf)
-        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0xdcdcdc_rgbf)
-        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0x22272e_rgbf)
-        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0x22272e_rgbf)
-        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0xa5c9ea_rgbf)
-        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0xa5c9ea_rgbf)
-        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0xa5c9ea_rgbf)
-        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0xa5c9ea_rgbf)
-        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0x22272e_rgbf)
-        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
-        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0x4a4a4a4d_rgbaf))
-        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, premult(0xafafaf4d_rgbaf))
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0xdcdcdcff_rgbaf*0.8f)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0xdcdcdcff_rgbaf*0.8f)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Default,  0x22272eff_rgbaf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0xa5c9eaff_rgbaf*0.8f)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0xa5c9eaff_rgbaf*0.8f)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Hover,    0x22272eff_rgbaf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0xa5c9eaff_rgbaf*0.8f)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0xa5c9eaff_rgbaf*0.8f)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Pressed,  0x22272eff_rgbaf)
+        .setTopFillColor(   Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, 0xdcdcdcff_rgbaf*0.3f)
+        .setBottomFillColor(Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, 0xdcdcdcff_rgbaf*0.3f)
+        .setTextColor(      Ui::Type::Button, Ui::Style::Default, Ui::State::Disabled, 0x2f363fff_rgbaf*0.8f)
 
         .setTopFillColor(   Ui::Type::Button, Ui::Style::Primary, Ui::State::Default,  0xa5c9eaff_rgbaf*0.8f)
         .setBottomFillColor(Ui::Type::Button, Ui::Style::Primary, Ui::State::Default,  0xa5c9eaff_rgbaf*0.8f)
@@ -826,8 +826,8 @@ StyleConfiguration mcssDarkStyleConfiguration() {
         /* Flat button is styled the same as links (--link-color,
            --link-active-color). Disabled state is --dim-link-color with 80%
            opacity. */
-        .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Hover,    0xa5c9eaff_rgbaf)
         .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Default,  0x5b9dd9ff_rgbaf)
+        .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Hover,    0xa5c9eaff_rgbaf)
         .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Pressed,  0xa5c9eaff_rgbaf)
         .setTextColor(Ui::Type::Button, Ui::Style::Flat, Ui::State::Disabled, 0xacacacff_rgbaf*0.8f)
 
