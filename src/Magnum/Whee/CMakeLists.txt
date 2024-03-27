@@ -43,6 +43,7 @@ set(MagnumWhee_SRCS
     Button.cpp
     Event.cpp
     Handle.cpp
+    Label.cpp
     NodeFlags.cpp
     Style.cpp
     Widget.cpp)
@@ -75,6 +76,7 @@ set(MagnumWhee_HEADERS
     Event.h
     EventLayer.h
     Handle.h
+    Label.h
     NodeFlags.h
     Style.h
     Style.hpp

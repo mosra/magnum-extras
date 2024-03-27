@@ -62,8 +62,8 @@ namespace Implementation {
        potentially huge Style.hpp */
     enum: UnsignedInt {
         BaseStyleCount = 40,
-        TextStyleCount = 32,
-        TextStyleUniformCount = 7,
+        TextStyleCount = 60,
+        TextStyleUniformCount = 21,
         IconCount = 2
     };
 }
