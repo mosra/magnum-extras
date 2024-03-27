@@ -28,8 +28,10 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
+#include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Whee/AbstractUserInterface.h"
@@ -47,7 +49,8 @@ struct BaseLayerTest: TestSuite::Tester {
 
     void styleUniformCommonConstructDefault();
     void styleUniformCommonConstruct();
-    void styleUniformCommonConstructSingleSmoothness();
+    void styleUniformCommonConstructNoBlurParameters();
+    void styleUniformCommonConstructNoBlurParametersSingleSmoothness();
     void styleUniformCommonConstructNoInit();
     void styleUniformCommonSetters();
 
@@ -63,10 +66,16 @@ struct BaseLayerTest: TestSuite::Tester {
     void styleUniformConstructNoInit();
     void styleUniformSetters();
 
+    void sharedDebugFlag();
+    void sharedDebugFlags();
+
     void sharedConfigurationConstruct();
     void sharedConfigurationConstructSameStyleUniformCount();
     void sharedConfigurationConstructZeroStyleCount();
     void sharedConfigurationConstructCopy();
+
+    void sharedConfigurationSetters();
+    void sharedConfigurationSettersInvalid();
 
     void sharedConstruct();
     void sharedConstructNoCreate();
@@ -83,6 +92,9 @@ struct BaseLayerTest: TestSuite::Tester {
     void construct();
     void constructCopy();
     void constructMove();
+
+    void backgroundBlurPassCount();
+    void backgroundBlurPassCountInvalid();
 
     template<class T> void createRemove();
     void createRemoveHandleRecycle();
@@ -147,7 +159,8 @@ BaseLayerTest::BaseLayerTest() {
 
               &BaseLayerTest::styleUniformCommonConstructDefault,
               &BaseLayerTest::styleUniformCommonConstruct,
-              &BaseLayerTest::styleUniformCommonConstructSingleSmoothness,
+              &BaseLayerTest::styleUniformCommonConstructNoBlurParameters,
+              &BaseLayerTest::styleUniformCommonConstructNoBlurParametersSingleSmoothness,
               &BaseLayerTest::styleUniformCommonConstructNoInit,
               &BaseLayerTest::styleUniformCommonSetters,
 
@@ -163,10 +176,16 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::styleUniformConstructNoInit,
               &BaseLayerTest::styleUniformSetters,
 
+              &BaseLayerTest::sharedDebugFlag,
+              &BaseLayerTest::sharedDebugFlags,
+
               &BaseLayerTest::sharedConfigurationConstruct,
               &BaseLayerTest::sharedConfigurationConstructSameStyleUniformCount,
               &BaseLayerTest::sharedConfigurationConstructZeroStyleCount,
               &BaseLayerTest::sharedConfigurationConstructCopy,
+
+              &BaseLayerTest::sharedConfigurationSetters,
+              &BaseLayerTest::sharedConfigurationSettersInvalid,
 
               &BaseLayerTest::sharedConstruct,
               &BaseLayerTest::sharedConstructNoCreate,
@@ -182,7 +201,10 @@ BaseLayerTest::BaseLayerTest() {
 
               &BaseLayerTest::construct,
               &BaseLayerTest::constructCopy,
-              &BaseLayerTest::constructMove});
+              &BaseLayerTest::constructMove,
+
+              &BaseLayerTest::backgroundBlurPassCount,
+              &BaseLayerTest::backgroundBlurPassCountInvalid});
 
     addInstancedTests<BaseLayerTest>({&BaseLayerTest::createRemove<UnsignedInt>,
                                       &BaseLayerTest::createRemove<Enum>},
@@ -252,23 +274,39 @@ void BaseLayerTest::styleUniformCommonConstructDefault() {
 }
 
 void BaseLayerTest::styleUniformCommonConstruct() {
+    BaseLayerCommonStyleUniform a{3.0f, 5.0f, 0.95f};
+    CORRADE_COMPARE(a.smoothness, 3.0f);
+    CORRADE_COMPARE(a.innerOutlineSmoothness, 5.0f);
+    CORRADE_COMPARE(a.backgroundBlurAlpha, 0.95f);
+
+    constexpr BaseLayerCommonStyleUniform ca{3.0f, 5.0f, 0.95f};
+    CORRADE_COMPARE(ca.smoothness, 3.0f);
+    CORRADE_COMPARE(ca.innerOutlineSmoothness, 5.0f);
+    CORRADE_COMPARE(ca.backgroundBlurAlpha, 0.95f);
+}
+
+void BaseLayerTest::styleUniformCommonConstructNoBlurParameters() {
     BaseLayerCommonStyleUniform a{3.0f, 5.0f};
     CORRADE_COMPARE(a.smoothness, 3.0f);
     CORRADE_COMPARE(a.innerOutlineSmoothness, 5.0f);
+    CORRADE_COMPARE(a.backgroundBlurAlpha, 1.0f);
 
     constexpr BaseLayerCommonStyleUniform ca{3.0f, 5.0f};
     CORRADE_COMPARE(ca.smoothness, 3.0f);
     CORRADE_COMPARE(ca.innerOutlineSmoothness, 5.0f);
+    CORRADE_COMPARE(ca.backgroundBlurAlpha, 1.0f);
 }
 
-void BaseLayerTest::styleUniformCommonConstructSingleSmoothness() {
+void BaseLayerTest::styleUniformCommonConstructNoBlurParametersSingleSmoothness() {
     BaseLayerCommonStyleUniform a{4.0f};
     CORRADE_COMPARE(a.smoothness, 4.0f);
     CORRADE_COMPARE(a.innerOutlineSmoothness, 4.0f);
+    CORRADE_COMPARE(a.backgroundBlurAlpha, 1.0f);
 
     constexpr BaseLayerCommonStyleUniform ca{4.0f};
     CORRADE_COMPARE(ca.smoothness, 4.0f);
     CORRADE_COMPARE(ca.innerOutlineSmoothness, 4.0f);
+    CORRADE_COMPARE(ca.backgroundBlurAlpha, 1.0f);
 }
 
 void BaseLayerTest::styleUniformCommonConstructNoInit() {
@@ -530,6 +568,18 @@ void BaseLayerTest::styleUniformSetters() {
     CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{5.5f});
 }
 
+void BaseLayerTest::sharedDebugFlag() {
+    std::ostringstream out;
+    Debug{&out} << BaseLayer::Shared::Flag::BackgroundBlur << BaseLayer::Shared::Flag(0xbe);
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::Flag::BackgroundBlur Whee::BaseLayer::Shared::Flag(0xbe)\n");
+}
+
+void BaseLayerTest::sharedDebugFlags() {
+    std::ostringstream out;
+    Debug{&out} << (BaseLayer::Shared::Flag::BackgroundBlur|BaseLayer::Shared::Flag(0xb0)) << BaseLayer::Shared::Flags{};
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::Flag::BackgroundBlur|Whee::BaseLayer::Shared::Flag(0xb0) Whee::BaseLayer::Shared::Flags{}\n");
+}
+
 void BaseLayerTest::sharedConfigurationConstruct() {
     BaseLayer::Shared::Configuration configuration{3, 5};
     CORRADE_COMPARE(configuration.styleUniformCount(), 3);
@@ -572,14 +622,49 @@ void BaseLayerTest::sharedConfigurationConstructCopy() {
     #endif
 }
 
+void BaseLayerTest::sharedConfigurationSetters() {
+    BaseLayer::Shared::Configuration configuration{3, 5};
+    CORRADE_COMPARE(configuration.flags(), BaseLayer::Shared::Flags{});
+    CORRADE_COMPARE(configuration.backgroundBlurRadius(), 4);
+    CORRADE_COMPARE(configuration.backgroundBlurCutoff(), 0.5f/255.0f);
+
+    configuration
+        .setFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+        .addFlags(BaseLayer::Shared::Flag(0xe0))
+        .clearFlags(BaseLayer::Shared::Flag(0x70))
+        .setBackgroundBlurRadius(16, 0.1f);
+    CORRADE_COMPARE(configuration.flags(), BaseLayer::Shared::Flag::BackgroundBlur|BaseLayer::Shared::Flag(0x80));
+    CORRADE_COMPARE(configuration.backgroundBlurRadius(), 16);
+    CORRADE_COMPARE(configuration.backgroundBlurCutoff(), 0.1f);
+}
+
+void BaseLayerTest::sharedConfigurationSettersInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    BaseLayer::Shared::Configuration configuration{3};
+
+    /* This should be okay */
+    configuration.setBackgroundBlurRadius(31);
+    /* This also */
+    configuration.setBackgroundBlurRadius(2, 150.0f);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    configuration.setBackgroundBlurRadius(32);
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::Configuration::setBackgroundBlurRadius(): radius 32 too large\n");
+}
+
 void BaseLayerTest::sharedConstruct() {
     struct Shared: BaseLayer::Shared {
         explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{3, 5}};
+    } shared{BaseLayer::Shared::Configuration{3, 5}
+        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+    };
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
+    CORRADE_COMPARE(shared.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
 }
 
 void BaseLayerTest::sharedConstructNoCreate() {
@@ -618,16 +703,19 @@ void BaseLayerTest::sharedConstructMove() {
         void doSetStyle(const BaseLayerCommonStyleUniform&, const Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     };
 
-    Shared a{BaseLayer::Shared::Configuration{3, 5}};
+    Shared a{BaseLayer::Shared::Configuration{3, 5}
+        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)};
 
     Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleUniformCount(), 3);
     CORRADE_COMPARE(b.styleCount(), 5);
+    CORRADE_COMPARE(b.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
 
     Shared c{BaseLayer::Shared::Configuration{5, 7}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleUniformCount(), 3);
     CORRADE_COMPARE(c.styleCount(), 5);
+    CORRADE_COMPARE(c.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
@@ -949,6 +1037,54 @@ void BaseLayerTest::constructMove() {
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<BaseLayer>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<BaseLayer>::value);
+}
+
+void BaseLayerTest::backgroundBlurPassCount() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 3}
+        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+    CORRADE_COMPARE(layer.backgroundBlurPassCount(), 1);
+
+    layer.setBackgroundBlurPassCount(11);
+    CORRADE_COMPARE(layer.backgroundBlurPassCount(), 11);
+}
+
+void BaseLayerTest::backgroundBlurPassCountInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    };
+    LayerShared sharedNoBlur{BaseLayer::Shared::Configuration{3}};
+    LayerShared sharedBlur{BaseLayer::Shared::Configuration{3}
+        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+    Layer noBlur{layerHandle(0, 1), sharedNoBlur};
+    Layer blur{layerHandle(0, 1), sharedBlur};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    noBlur.backgroundBlurPassCount();
+    noBlur.setBackgroundBlurPassCount(2);
+    blur.setBackgroundBlurPassCount(0);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::BaseLayer::backgroundBlurPassCount(): background blur not enabled\n"
+        "Whee::BaseLayer::setBackgroundBlurPassCount(): background blur not enabled\n"
+        "Whee::BaseLayer::setBackgroundBlurPassCount(): expected at least one pass\n",
+        TestSuite::Compare::String);
 }
 
 template<class T> void BaseLayerTest::createRemove() {

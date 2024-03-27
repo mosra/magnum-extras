@@ -37,18 +37,29 @@ layout(std140
     , binding = 0
     #endif
 ) uniform Style {
-    lowp vec4 smoothnessInnerOutlineSmoothnessReservedReserved;
+    lowp vec4 smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved;
     StyleEntry styles[STYLE_COUNT];
 };
 
-#define style_smoothness smoothnessInnerOutlineSmoothnessReservedReserved.x
-#define style_innerOutlineSmoothness smoothnessInnerOutlineSmoothnessReservedReserved.y
+#define style_smoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.x
+#define style_innerOutlineSmoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.y
+#define style_backgroundBlurAlpha smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.z
+
+#ifdef BACKGROUND_BLUR
+#ifdef EXPLICIT_BINDING
+layout(binding = 1)
+#endif
+uniform lowp sampler2D backgroundBlurTextureData;
+#endif
 
 flat in mediump uint interpolatedStyle;
 flat in mediump vec2 halfQuadSize;
 flat in mediump vec4 interpolatedOutlineWidth;
 in mediump vec4 interpolatedColor;
 in mediump vec2 normalizedQuadPosition; /* -1 to +1 in both coordinates */
+#ifdef BACKGROUND_BLUR
+in highp vec2 backgroundBlurTextureCoordinates;
+#endif
 
 out lowp vec4 fragmentColor;
 
@@ -122,6 +133,22 @@ void main() {
     lowp float innerOutlineSmoothness = style_innerOutlineSmoothness;
     lowp vec4 outlineColor = styles[interpolatedStyle].outlineColor;
     lowp vec4 color = mix(outlineColor, gradientColor, smoothstep(-innerOutlineSmoothness, +innerOutlineSmoothness, outlineDist));
+
+    #ifdef BACKGROUND_BLUR
+    /* The blurred background color is first multiplied with the background
+       blur alpha coming from the style. If less than 1, it achieves an effect
+       where the unblurred background shines through. */
+    lowp vec4 blurred = texture(backgroundBlurTextureData, backgroundBlurTextureCoordinates)*style_backgroundBlurAlpha;
+    /* Blend the color with the blurred background based on the alpha channel.
+       The input colors are assumed to be premultiplied so it's not a mix() but
+       a simpler operation. I.e., color.rgb*color.a is already done on
+       input.
+
+       If background blur alpha coming from the style is 1, this makes the
+       final alpha 1 (effectively adding the difference between color.a and 1
+       to color.a), i.e. no unblurred background shining through. */
+    color += blurred*(1.0 - color.a);
+    #endif
 
     /* Final color */
     lowp float smoothness = style_smoothness;
