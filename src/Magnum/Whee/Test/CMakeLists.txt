@@ -34,6 +34,7 @@ corrade_add_test(WheeAbstractStyleTest AbstractStyleTest.cpp LIBRARIES MagnumWhe
 corrade_add_test(WheeAbstractUserInterfaceTest AbstractUserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractVisualLayerTest AbstractVisualLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumWheeTestLib)
+corrade_add_test(WheeBlurShaderTest BlurShaderTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventLayerTest EventLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
@@ -140,10 +141,21 @@ if(MAGNUM_BUILD_GL_TESTS)
             Magnum::DebugTools
             Magnum::OpenGLTester
         FILES
+            # Scaled-down mage from https://en.wikipedia.org/wiki/Gaussian_blur
+            # by IkamusumeFan - Own work, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=41790217
+            BaseLayerTestFiles/blur-input.png
             BaseLayerTestFiles/clipping-disabled.png
             BaseLayerTestFiles/clipping-enabled.png
+            BaseLayerTestFiles/composite-background-blur-0.png
+            BaseLayerTestFiles/composite-background-blur-50.png
+            BaseLayerTestFiles/composite-background-blur-50-r31.png
+            BaseLayerTestFiles/composite-background-blur-50-r31-80.png
+            BaseLayerTestFiles/composite-background-blur-75-colored.png
+            BaseLayerTestFiles/composite-default-50.png
             BaseLayerTestFiles/default.png
             BaseLayerTestFiles/draw-order.png
+            BaseLayerTestFiles/draw-order-composite-background-blur.png
+            BaseLayerTestFiles/draw-order-composite-default.png
             BaseLayerTestFiles/gradient.png
             BaseLayerTestFiles/outline-different.png
             BaseLayerTestFiles/outline-gradient.png
@@ -161,6 +173,30 @@ if(MAGNUM_BUILD_GL_TESTS)
         endif()
         if(MagnumPlugins_StbImageImporter_FOUND)
             target_link_libraries(WheeBaseLayerGLTest PRIVATE MagnumPlugins::StbImageImporter)
+        endif()
+    endif()
+
+    corrade_add_test(WheeBlurShaderGLTest BlurShaderGLTest.cpp
+        LIBRARIES
+            # There are no asserts used but we need to use a symbol that's only
+            # exported in the test lib
+            MagnumWheeTestLib
+            Magnum::DebugTools
+            Magnum::OpenGLTester
+        FILES
+            # Scaled-down mage from https://en.wikipedia.org/wiki/Gaussian_blur
+            # by IkamusumeFan - Own work, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=41790217
+            BaseLayerTestFiles/blur-input.png
+            BaseLayerTestFiles/blur-3.png
+            BaseLayerTestFiles/blur-16.png
+            BaseLayerTestFiles/blur-31.png)
+    target_include_directories(WheeBlurShaderGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    if(MAGNUM_BUILD_STATIC)
+        if(Magnum_AnyImageImporter_FOUND)
+            target_link_libraries(WheeBlurShaderGLTest PRIVATE Magnum::AnyImageImporter)
+        endif()
+        if(MagnumPlugins_StbImageImporter_FOUND)
+            target_link_libraries(WheeBlurShaderGLTest PRIVATE MagnumPlugins::StbImageImporter)
         endif()
     endif()
 
@@ -200,4 +236,12 @@ if(MAGNUM_BUILD_GL_TESTS)
         LIBRARIES
             MagnumWheeTestLib
             Magnum::OpenGLTester)
+
+    if(CORRADE_TARGET_EMSCRIPTEN)
+        if(CMAKE_VERSION VERSION_LESS 3.13)
+            message(FATAL_ERROR "CMake 3.13+ is required in order to specify Emscripten linker options")
+        endif()
+        # It allocates a large image to benchmark the blur ops
+        target_link_options(WheeBlurShaderGLTest PRIVATE "SHELL:-s ALLOW_MEMORY_GROWTH=1")
+    endif()
 endif()

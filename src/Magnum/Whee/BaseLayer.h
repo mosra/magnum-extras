@@ -48,13 +48,19 @@ shader are passed to the function separately.
 */
 struct BaseLayerCommonStyleUniform {
     /** @brief Construct with default values */
-    constexpr explicit BaseLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f}, innerOutlineSmoothness{0.0f} {}
+    constexpr explicit BaseLayerCommonStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f}, innerOutlineSmoothness{0.0f}, backgroundBlurAlpha{1.0f} {}
 
     /** @brief Constructor */
-    constexpr /*implicit*/ BaseLayerCommonStyleUniform(Float smoothness, Float innerOutlineSmoothness): smoothness{smoothness}, innerOutlineSmoothness{innerOutlineSmoothness} {}
+    constexpr /*implicit*/ BaseLayerCommonStyleUniform(Float smoothness, Float innerOutlineSmoothness, Float blurredBackgroundAlpha): smoothness{smoothness}, innerOutlineSmoothness{innerOutlineSmoothness}, backgroundBlurAlpha{blurredBackgroundAlpha} {}
 
-    /** @brief Construct with the @ref smoothness and @ref innerOutlineSmoothness fields set to the same value */
+    /** @brief Construct without blur parameters */
+    constexpr /*implicit*/ BaseLayerCommonStyleUniform(Float smoothness, Float innerOutlineSmoothness): smoothness{smoothness}, innerOutlineSmoothness{innerOutlineSmoothness}, backgroundBlurAlpha{1.0f} {}
+
+    /** @brief Construct without blur parameters with the @ref smoothness and @ref innerOutlineSmoothness fields set to the same value */
     constexpr /*implicit*/ BaseLayerCommonStyleUniform(Float smoothness): BaseLayerCommonStyleUniform{smoothness, smoothness} {}
+
+    /** @todo once there's more than one parameters, there could be also a
+        variant taking a single smoothness value and all blur parameters? */
 
     /** @brief Construct without initializing the contents */
     explicit BaseLayerCommonStyleUniform(NoInitT) noexcept {}
@@ -89,6 +95,15 @@ struct BaseLayerCommonStyleUniform {
     }
 
     /**
+     * @brief Set the @ref backgroundBlurAlpha field
+     * @return Reference to self (for method chaining)
+     */
+    BaseLayerCommonStyleUniform& setBackgroundBlurAlpha(Float alpha) {
+        this->backgroundBlurAlpha = alpha;
+        return *this;
+    }
+
+    /**
      * @}
      */
 
@@ -110,8 +125,21 @@ struct BaseLayerCommonStyleUniform {
      */
     Float innerOutlineSmoothness;
 
+    /**
+     * @brief Blurred background alpha
+     *
+     * If @ref BaseLayer::Shared::Flag::BackgroundBlur is enabled, the alpha
+     * value of @ref BaseLayerStyleUniform::topColor,
+     * @relativeref{BaseLayerStyleUniform,bottomColor} and
+     * @relativeref{BaseLayerStyleUniform,outlineColor} is used to interpolate
+     * between the color value and the blurred background. Making this value
+     * less than @cpp 1.0f @ce makes the original unblurred framebuffer
+     * contents show through as well, which can be used to achieve a glow-like
+     * effect. Default value is @cpp 1.0f @ce.
+     */
+    Float backgroundBlurAlpha;
+
     #ifndef DOXYGEN_GENERATING_OUTPUT
-    Int:32;
     Int:32;
     #endif
 };
@@ -363,6 +391,42 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          */
         inline Shared& shared();
         inline const Shared& shared() const; /**< @overload */
+
+        /**
+         * @brief Background blur pass count
+         *
+         * Expects that @ref Shared::Flag::BackgroundBlur was enabled for the
+         * shared state the layer was created with.
+         */
+        UnsignedInt backgroundBlurPassCount() const;
+
+        /**
+         * @brief Set background blur pass count
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref Shared::Flag::BackgroundBlur was enabled for the
+         * shared state the layer was created with and that @p count is at
+         * least @cpp 1 @ce. Higher values will perform the blurring process
+         * several times, which has the same effect as applying a single,
+         * larger, Gaussian blur. With @f$ r @f$ being the radius configured by
+         * @ref Shared::Configuration::setBackgroundBlurRadius() and @f$ n @f$
+         * being the @p count, the relation to the larger radius @f$ l @f$ is
+         * as follows: @f[
+         *      l = \sqrt{nr^2}
+         * @f]
+         *
+         * Thus by combining the radius and pass count it's possible to achieve
+         * blurring in radii larger than the limit of @cpp 31 @ce in
+         * @ref Shared::Configuration::setBackgroundBlurRadius(), or
+         * alternatively tune the operation based on whether the GPU is faster
+         * with few passes and many texture samples each or many passes with
+         * few (localized) texture samples each. For example, a radius of 36
+         * can be achieved with 16 passes of radius 9, or with 4 passes of
+         * radius 18, or other combinations.
+         *
+         * Default pass count is @cpp 1 @ce.
+         */
+        BaseLayer& setBackgroundBlurPassCount(UnsignedInt count);
 
         /**
          * @brief Create a quad
@@ -738,8 +802,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         /* These can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class
            in tests causes linker errors */
 
-        /* Advertises LayerFeature::Draw but *does not* implement doDraw(),
-           that's on the subclass */
+        /* Advertises LayerFeature::Draw (and Composite if BackgroundBlur is
+           enabled) but *does not* implement doDraw() or doComposite(), that's
+           on the subclass */
         LayerFeatures doFeatures() const override;
 
         void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
@@ -762,6 +827,36 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         class Configuration;
 
         /**
+         * @brief Flag
+         *
+         * @see @ref Flags, @ref Configuration::setFlags(), @ref flags()
+         */
+        enum class Flag: UnsignedByte {
+            /**
+             * Blur the background of semi-transparent quads. If enabled, the
+             * alpha value of @ref BaseLayerStyleUniform::topColor,
+             * @relativeref{BaseLayerStyleUniform,bottomColor} and
+             * @relativeref{BaseLayerStyleUniform,outlineColor} is used to
+             * interpolate between the color and the blurred background,
+             * instead of performing a classical blending of the color and the
+             * framebuffer contents underneath.
+             *
+             * Use @ref Configuration::setBackgroundBlurRadius() and
+             * @ref setBackgroundBlurPassCount() to control the blur radius and
+             * @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha to achieve
+             * additional effects.
+             */
+            BackgroundBlur = 1 << 0
+        };
+
+        /**
+         * @brief Flags
+         *
+         * @see @ref Configuration::setFlags(), @ref flags()
+         */
+        typedef Containers::EnumSet<Flag> Flags;
+
+        /**
          * @brief Style uniform count
          *
          * Size of the style uniform buffer. May or may not be the same as
@@ -770,6 +865,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          *      @ref setStyle()
          */
         UnsignedInt styleUniformCount() const;
+
+        /** @brief Flags */
+        Flags flags() const;
 
         /**
          * @brief Set style data with implicit mapping between styles and uniforms
@@ -848,6 +946,20 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         virtual void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) = 0;
 };
 
+CORRADE_ENUMSET_OPERATORS(BaseLayer::Shared::Flags)
+
+/**
+@debugoperatorclassenum{BaseLayer::Shared,Flag}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, BaseLayer::Shared::Flag value);
+
+/**
+@debugoperatorclassenum{BaseLayer::Shared,Flags}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, BaseLayer::Shared::Flags value);
+
 /**
 @brief Configuration of a base layer shared state
 
@@ -881,8 +993,85 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
         /** @brief Style count */
         UnsignedInt styleCount() const { return _styleCount; }
 
+        /** @brief Flags */
+        Flags flags() const { return _flags; }
+
+        /**
+         * @brief Set flags
+         * @return Reference to self (for method chaining)
+         *
+         * By default no flags are set.
+         * @see @ref addFlags(), @ref clearFlags()
+         */
+        Configuration& setFlags(Flags flags) {
+            _flags = flags;
+            return *this;
+        }
+
+        /**
+         * @brief Add flags
+         * @return Reference to self (for method chaining)
+         *
+         * Calls @ref setFlags() with the existing flags ORed with @p flags.
+         * Useful for preserving previously set flags.
+         * @see @ref clearFlags()
+         */
+        Configuration& addFlags(Flags flags) {
+            return setFlags(_flags|flags);
+        }
+
+        /**
+         * @brief Clear flags
+         * @return Reference to self (for method chaining)
+         *
+         * Calls @ref setFlags() with the existing flags ANDed with the inverse
+         * of @p flags. Useful for removing a subset of previously set flags.
+         * @see @ref addFlags()
+         */
+        Configuration& clearFlags(Flags flags) {
+            return setFlags(_flags & ~flags);
+        }
+
+        /** @brief Background blur radius */
+        UnsignedInt backgroundBlurRadius() const {
+            return _backgroundBlurRadius;
+        }
+
+        /** @brief Background blur sampling cutoff */
+        Float backgroundBlurCutoff() const { return _backgroundBlurCutoff; }
+
+        /**
+         * @brief Set background blur radius and sampling cutoff
+         * @param radius    Gaussian blur radius
+         * @param cutoff    Cutoff for weight values after which no sampling is
+         *      done
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the @p radius is less than @cpp 31 @ce, value of
+         * @cpp 0 @ce makes the blur sample only the center pixel, effectively
+         * not blurring anything. The @p cutoff value controls a balance
+         * between speed and precision, @cpp 0.0f @ce samples all pixels in
+         * given radius even though they may have a weight that doesn't result
+         * in any contribution to the quantized output, higher values gradually
+         * reduce the number of sampled pixels down to just one.
+         *
+         * While the radius is a static setting that has to be set upfront,
+         * there's also pass count that can be changed dynamically at runtime.
+         * See @ref BaseLayer::setBackgroundBlurPassCount() for more
+         * information and details about how it interacts with blur radius.
+         *
+         * Initial @p radius is @cpp 4 @ce and @p cutoff is
+         * @cpp 0.5f/255.0f @ce, i.e. weights that don't contribute any value
+         * even when combined from both sides of the blur circle for a 8bpp
+         * render target are ignored.
+         */
+        Configuration& setBackgroundBlurRadius(UnsignedInt radius, Float cutoff = 0.5f/255.0f);
+
     private:
         UnsignedInt _styleUniformCount, _styleCount;
+        Flags _flags;
+        UnsignedInt _backgroundBlurRadius = 4;
+        Float _backgroundBlurCutoff = 0.5f/255.0f;
 };
 
 inline BaseLayer::Shared& BaseLayer::shared() {

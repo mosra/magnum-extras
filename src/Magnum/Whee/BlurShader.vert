@@ -23,36 +23,14 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#ifdef EXPLICIT_UNIFORM_LOCATION
-layout(location = 0)
-#endif
-uniform highp mat3 transformationProjectionMatrix;
-
 layout(location = 0) in highp vec2 position;
-layout(location = 1) in mediump vec2 centerDistance;
-layout(location = 2) in mediump vec4 outlineWidth;
-layout(location = 3) in lowp vec4 color;
-layout(location = 4) in mediump uint style;
 
-flat out mediump uint interpolatedStyle;
-flat out mediump vec2 halfQuadSize;
-flat out mediump vec4 interpolatedOutlineWidth;
-out lowp vec4 interpolatedColor;
-out mediump vec2 normalizedQuadPosition;
-#ifdef BACKGROUND_BLUR
-out highp vec2 backgroundBlurTextureCoordinates;
-#endif
+out mediump vec2 textureCoordinates;
 
 void main() {
-    interpolatedStyle = style;
-    halfQuadSize = abs(centerDistance);
-    interpolatedOutlineWidth = outlineWidth;
-    interpolatedColor = color;
-    normalizedQuadPosition = sign(centerDistance);
+    gl_Position = vec4(position, 0.0, 1.0);
 
-    gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
-
-    #ifdef BACKGROUND_BLUR
-    backgroundBlurTextureCoordinates = gl_Position.xy*0.5 + vec2(0.5);
-    #endif
+    /* The position should be already in a normalized [-1, +1] range, so
+       texture coordinates are just that range shifted to [0, 1] */
+    textureCoordinates = position*0.5 + vec2(0.5);
 }

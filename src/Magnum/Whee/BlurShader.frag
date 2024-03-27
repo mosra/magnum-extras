@@ -23,36 +23,40 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#if !defined(FIRST_TAP_AT_CENTER) || COUNT > 1
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
-uniform highp mat3 transformationProjectionMatrix;
-
-layout(location = 0) in highp vec2 position;
-layout(location = 1) in mediump vec2 centerDistance;
-layout(location = 2) in mediump vec4 outlineWidth;
-layout(location = 3) in lowp vec4 color;
-layout(location = 4) in mediump uint style;
-
-flat out mediump uint interpolatedStyle;
-flat out mediump vec2 halfQuadSize;
-flat out mediump vec4 interpolatedOutlineWidth;
-out lowp vec4 interpolatedColor;
-out mediump vec2 normalizedQuadPosition;
-#ifdef BACKGROUND_BLUR
-out highp vec2 backgroundBlurTextureCoordinates;
+uniform highp vec2 direction;
 #endif
 
+#ifdef EXPLICIT_BINDING
+layout(binding = 6)
+#endif
+uniform lowp sampler2D textureData;
+
+in mediump vec2 textureCoordinates;
+
+out lowp vec4 fragmentColor;
+
 void main() {
-    interpolatedStyle = style;
-    halfQuadSize = abs(centerDistance);
-    interpolatedOutlineWidth = outlineWidth;
-    interpolatedColor = color;
-    normalizedQuadPosition = sign(centerDistance);
+    #ifdef FIRST_TAP_AT_CENTER
+    fragmentColor = texture(textureData, textureCoordinates)*weights[0];
+    #else
+    fragmentColor = vec4(0.0);
+    #endif
 
-    gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
-
-    #ifdef BACKGROUND_BLUR
-    backgroundBlurTextureCoordinates = gl_Position.xy*0.5 + vec2(0.5);
+    #if !defined(FIRST_TAP_AT_CENTER) || COUNT > 1
+    for(int i =
+        #ifdef FIRST_TAP_AT_CENTER
+        1
+        #else
+        0
+        #endif
+        ; i < COUNT; ++i)
+    {
+        fragmentColor += texture(textureData, textureCoordinates + offsets[i]*direction)*weights[i];
+        fragmentColor += texture(textureData, textureCoordinates - offsets[i]*direction)*weights[i];
+    }
     #endif
 }
