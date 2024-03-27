@@ -96,6 +96,9 @@ if(MAGNUM_TARGET_GL)
         RendererGL.h
         TextLayerGL.h
         UserInterfaceGL.h)
+    list(APPEND MagnumWhee_PRIVATE_HEADERS
+        Implementation/blurCoefficients.h
+        Implementation/BlurShaderGL.h)
 endif()
 
 # Objects shared between main and test library
