@@ -43,4 +43,21 @@ _c(ButtonFlatInactiveOver,      0xa5c9ea_rgbf)
 _c(ButtonFlatPressedOut,        0x5b9dd9_rgbf)
 _c(ButtonFlatPressedOver,       0xa5c9ea_rgbf)
 _c(ButtonFlatDisabled,          0x5b9dd9ff_rgbaf*0.3f)
+
+/* Labels the same as --*-color. Disabled state is 30% opacity, same as with
+   button background color. */
+_c(LabelDefault,                0xdcdcdc_rgbf)
+_c(LabelDefaultDisabled,        0xdcdcdcff_rgbaf*0.3f)
+_c(LabelPrimary,                0xa5c9ea_rgbf)
+_c(LabelPrimaryDisabled,        0xa5c9eaff_rgbaf*0.3f)
+_c(LabelSuccess,                0x3bd267_rgbf)
+_c(LabelSuccessDisabled,        0x3bd267ff_rgbaf*0.3f)
+_c(LabelWarning,                0xc7cf2f_rgbf)
+_c(LabelWarningDisabled,        0xc7cf2fff_rgbaf*0.3f)
+_c(LabelDanger,                 0xcd3431_rgbf)
+_c(LabelDangerDisabled,         0xcd3431ff_rgbaf*0.3f)
+_c(LabelInfo,                   0x2f83cc_rgbf)
+_c(LabelInfoDisabled,           0x2f83ccff_rgbaf*0.3f)
+_c(LabelDim,                    0x747474_rgbf)
+_c(LabelDimDisabled,            0x747474ff_rgbaf*0.3f)
 #endif

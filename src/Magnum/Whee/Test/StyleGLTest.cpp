@@ -46,6 +46,7 @@
 #include "Magnum/Whee/Button.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/Label.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/Style.h"
@@ -219,6 +220,85 @@ const struct {
             button.setStyle(ButtonStyle(style));
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
+        }},
+    {"label text, stateless", "label-text.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            return label({ui, {52, 36}}, LabelStyle(style), counter % 3 ? "Bye" : "Hello!").node();
+        }},
+    {"label text", "label-text.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            return Label{{ui, {52, 36}}, LabelStyle(style), counter % 3 ? "Bye" : "Hello!"}.release();
+        }},
+    {"label text, setters", "label-text.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{{ui, {52, 36}}, LabelStyle(style), "Hey"};
+            label.setText(counter % 3 ? "Bye" : "Hello!");
+            return label.release();
+        }},
+    {"label text, setters from empty", "label-text.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{{ui, {52, 36}}, LabelStyle(style), ""};
+            label.setText(counter % 3 ? "Bye" : "Hello!");
+            return label.release();
+        }},
+    {"label text, setStyle()", "label-text.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{{ui, {52, 36}}, LabelStyle(style == 0 ? 1 : 0), counter % 3 ? "Bye" : "Hello!"};
+            label.setStyle(LabelStyle(style));
+            return label.release();
+        }},
+    {"label text, setStyle() on empty, setters", "label-text.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{{ui, {52, 36}}, LabelStyle(style == 0 ? 1 : 0), ""};
+            label.setStyle(LabelStyle(style));
+            label.setText(counter % 3 ? "Bye" : "Hello!");
+            return label.release();
+        }},
+    {"label icon, stateless", "label-icon.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            /** @todo differently wide icons to test alignment */
+            return label({ui, {48, 36}}, LabelStyle(style), counter % 3 ? Icon::Yes : Icon::No).node();
+        }},
+    {"label icon", "label-icon.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            return Label{{ui, {48, 36}}, LabelStyle(style), counter % 3 ? Icon::Yes : Icon::No}.release();
+        }},
+    {"label icon, setters", "label-icon.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{{ui, {48, 36}}, LabelStyle(style), Icon::Yes};
+            label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
+            return label.release();
+        }},
+    {"label icon, setters on empty", "label-icon.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{{ui, {48, 36}}, LabelStyle(style), Icon::None};
+            label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
+            return label.release();
+        }},
+    {"label icon, setStyle()", "label-icon.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{{ui, {48, 36}}, LabelStyle(style == 0 ? 1 : 0), counter % 3 ? Icon::Yes : Icon::No};
+            label.setStyle(LabelStyle(style));
+            return label.release();
+        }},
+    {"label icon, setStyle() on empty, setters", "label-icon.png",
+        7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{{ui, {48, 36}}, LabelStyle(style == 0 ? 1 : 0), Icon::None};
+            label.setStyle(LabelStyle(style));
+            label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
+            return label.release();
         }},
 };
 

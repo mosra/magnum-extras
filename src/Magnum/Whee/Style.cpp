@@ -290,6 +290,48 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
                     TextStyle::ButtonFlatPressedOutText,
                     TextStyle::ButtonFlatPressedOverText,
                     TextStyle::ButtonFlatDisabledText};
+        case TextStyle::LabelDefaultIcon:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelDefaultDisabledIcon};
+        case TextStyle::LabelDefaultText:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelDefaultDisabledText};
+        case TextStyle::LabelPrimaryIcon:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelPrimaryDisabledIcon};
+        case TextStyle::LabelPrimaryText:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelPrimaryDisabledText};
+        case TextStyle::LabelSuccessIcon:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelSuccessDisabledIcon};
+        case TextStyle::LabelSuccessText:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelSuccessDisabledText};
+        case TextStyle::LabelWarningIcon:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelWarningDisabledIcon};
+        case TextStyle::LabelWarningText:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelWarningDisabledText};
+        case TextStyle::LabelDangerIcon:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelDangerDisabledIcon};
+        case TextStyle::LabelDangerText:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelDangerDisabledText};
+        case TextStyle::LabelInfoIcon:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelInfoDisabledIcon};
+        case TextStyle::LabelInfoText:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelInfoDisabledText};
+        case TextStyle::LabelDimIcon:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelDimDisabledIcon};
+        case TextStyle::LabelDimText:
+            return {index, index, index, index, index, index,
+                    TextStyle::LabelDimDisabledText};
         case TextStyle::ButtonDisabledIconOnly:
         case TextStyle::ButtonDisabledTextOnly:
         case TextStyle::ButtonDisabledIcon:
@@ -298,6 +340,20 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::ButtonFlatDisabledTextOnly:
         case TextStyle::ButtonFlatDisabledIcon:
         case TextStyle::ButtonFlatDisabledText:
+        case TextStyle::LabelDefaultDisabledIcon:
+        case TextStyle::LabelDefaultDisabledText:
+        case TextStyle::LabelPrimaryDisabledIcon:
+        case TextStyle::LabelPrimaryDisabledText:
+        case TextStyle::LabelSuccessDisabledIcon:
+        case TextStyle::LabelSuccessDisabledText:
+        case TextStyle::LabelWarningDisabledIcon:
+        case TextStyle::LabelWarningDisabledText:
+        case TextStyle::LabelDangerDisabledIcon:
+        case TextStyle::LabelDangerDisabledText:
+        case TextStyle::LabelInfoDisabledIcon:
+        case TextStyle::LabelInfoDisabledText:
+        case TextStyle::LabelDimDisabledIcon:
+        case TextStyle::LabelDimDisabledText:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
     }
     /* LCOV_EXCL_STOP */
