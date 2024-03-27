@@ -63,8 +63,8 @@ namespace Implementation {
     enum: UnsignedInt {
         BaseStyleCount = 40,
         BaseStyleUniformCount = BaseStyleCount,
-        TextStyleCount = 32,
-        TextStyleUniformCount = 7,
+        TextStyleCount = 60,
+        TextStyleUniformCount = 21,
         IconCount = 2
     };
 }
