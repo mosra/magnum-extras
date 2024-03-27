@@ -401,6 +401,35 @@ TextStyle styleTransitionToInactiveBlur(const TextStyle index) {
         case TextStyle::ButtonFlatPressedBlurText:
         case TextStyle::ButtonFlatPressedHoverText:
             return TextStyle::ButtonFlatInactiveBlurText;
+        case TextStyle::LabelDefaultIconOnly:
+        case TextStyle::LabelDefaultTextOnly:
+        case TextStyle::LabelDefaultIcon:
+        case TextStyle::LabelDefaultText:
+        case TextStyle::LabelPrimaryIconOnly:
+        case TextStyle::LabelPrimaryTextOnly:
+        case TextStyle::LabelPrimaryIcon:
+        case TextStyle::LabelPrimaryText:
+        case TextStyle::LabelSuccessIconOnly:
+        case TextStyle::LabelSuccessTextOnly:
+        case TextStyle::LabelSuccessIcon:
+        case TextStyle::LabelSuccessText:
+        case TextStyle::LabelWarningIconOnly:
+        case TextStyle::LabelWarningTextOnly:
+        case TextStyle::LabelWarningIcon:
+        case TextStyle::LabelWarningText:
+        case TextStyle::LabelDangerIconOnly:
+        case TextStyle::LabelDangerTextOnly:
+        case TextStyle::LabelDangerIcon:
+        case TextStyle::LabelDangerText:
+        case TextStyle::LabelInfoIconOnly:
+        case TextStyle::LabelInfoTextOnly:
+        case TextStyle::LabelInfoIcon:
+        case TextStyle::LabelInfoText:
+        case TextStyle::LabelDimIconOnly:
+        case TextStyle::LabelDimTextOnly:
+        case TextStyle::LabelDimIcon:
+        case TextStyle::LabelDimText:
+            return index;
         /* LCOV_EXCL_START */
         case TextStyle::ButtonDisabledIconOnly:
         case TextStyle::ButtonDisabledTextOnly:
@@ -410,6 +439,34 @@ TextStyle styleTransitionToInactiveBlur(const TextStyle index) {
         case TextStyle::ButtonFlatDisabledTextOnly:
         case TextStyle::ButtonFlatDisabledIcon:
         case TextStyle::ButtonFlatDisabledText:
+        case TextStyle::LabelDefaultDisabledIconOnly:
+        case TextStyle::LabelDefaultDisabledTextOnly:
+        case TextStyle::LabelDefaultDisabledIcon:
+        case TextStyle::LabelDefaultDisabledText:
+        case TextStyle::LabelPrimaryDisabledIconOnly:
+        case TextStyle::LabelPrimaryDisabledTextOnly:
+        case TextStyle::LabelPrimaryDisabledIcon:
+        case TextStyle::LabelPrimaryDisabledText:
+        case TextStyle::LabelSuccessDisabledIconOnly:
+        case TextStyle::LabelSuccessDisabledTextOnly:
+        case TextStyle::LabelSuccessDisabledIcon:
+        case TextStyle::LabelSuccessDisabledText:
+        case TextStyle::LabelWarningDisabledIconOnly:
+        case TextStyle::LabelWarningDisabledTextOnly:
+        case TextStyle::LabelWarningDisabledIcon:
+        case TextStyle::LabelWarningDisabledText:
+        case TextStyle::LabelDangerDisabledIconOnly:
+        case TextStyle::LabelDangerDisabledTextOnly:
+        case TextStyle::LabelDangerDisabledIcon:
+        case TextStyle::LabelDangerDisabledText:
+        case TextStyle::LabelInfoDisabledIconOnly:
+        case TextStyle::LabelInfoDisabledTextOnly:
+        case TextStyle::LabelInfoDisabledIcon:
+        case TextStyle::LabelInfoDisabledText:
+        case TextStyle::LabelDimDisabledIconOnly:
+        case TextStyle::LabelDimDisabledTextOnly:
+        case TextStyle::LabelDimDisabledIcon:
+        case TextStyle::LabelDimDisabledText:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         /* LCOV_EXCL_STOP */
     }
@@ -451,6 +508,35 @@ TextStyle styleTransitionToInactiveHover(const TextStyle index) {
         case TextStyle::ButtonFlatPressedBlurText:
         case TextStyle::ButtonFlatPressedHoverText:
             return TextStyle::ButtonFlatInactiveHoverText;
+        case TextStyle::LabelDefaultIconOnly:
+        case TextStyle::LabelDefaultTextOnly:
+        case TextStyle::LabelDefaultIcon:
+        case TextStyle::LabelDefaultText:
+        case TextStyle::LabelPrimaryIconOnly:
+        case TextStyle::LabelPrimaryTextOnly:
+        case TextStyle::LabelPrimaryIcon:
+        case TextStyle::LabelPrimaryText:
+        case TextStyle::LabelSuccessIconOnly:
+        case TextStyle::LabelSuccessTextOnly:
+        case TextStyle::LabelSuccessIcon:
+        case TextStyle::LabelSuccessText:
+        case TextStyle::LabelWarningIconOnly:
+        case TextStyle::LabelWarningTextOnly:
+        case TextStyle::LabelWarningIcon:
+        case TextStyle::LabelWarningText:
+        case TextStyle::LabelDangerIconOnly:
+        case TextStyle::LabelDangerTextOnly:
+        case TextStyle::LabelDangerIcon:
+        case TextStyle::LabelDangerText:
+        case TextStyle::LabelInfoIconOnly:
+        case TextStyle::LabelInfoTextOnly:
+        case TextStyle::LabelInfoIcon:
+        case TextStyle::LabelInfoText:
+        case TextStyle::LabelDimIconOnly:
+        case TextStyle::LabelDimTextOnly:
+        case TextStyle::LabelDimIcon:
+        case TextStyle::LabelDimText:
+            return index;
         /* LCOV_EXCL_START */
         case TextStyle::ButtonDisabledIconOnly:
         case TextStyle::ButtonDisabledTextOnly:
@@ -460,6 +546,34 @@ TextStyle styleTransitionToInactiveHover(const TextStyle index) {
         case TextStyle::ButtonFlatDisabledTextOnly:
         case TextStyle::ButtonFlatDisabledIcon:
         case TextStyle::ButtonFlatDisabledText:
+        case TextStyle::LabelDefaultDisabledIconOnly:
+        case TextStyle::LabelDefaultDisabledTextOnly:
+        case TextStyle::LabelDefaultDisabledIcon:
+        case TextStyle::LabelDefaultDisabledText:
+        case TextStyle::LabelPrimaryDisabledIconOnly:
+        case TextStyle::LabelPrimaryDisabledTextOnly:
+        case TextStyle::LabelPrimaryDisabledIcon:
+        case TextStyle::LabelPrimaryDisabledText:
+        case TextStyle::LabelSuccessDisabledIconOnly:
+        case TextStyle::LabelSuccessDisabledTextOnly:
+        case TextStyle::LabelSuccessDisabledIcon:
+        case TextStyle::LabelSuccessDisabledText:
+        case TextStyle::LabelWarningDisabledIconOnly:
+        case TextStyle::LabelWarningDisabledTextOnly:
+        case TextStyle::LabelWarningDisabledIcon:
+        case TextStyle::LabelWarningDisabledText:
+        case TextStyle::LabelDangerDisabledIconOnly:
+        case TextStyle::LabelDangerDisabledTextOnly:
+        case TextStyle::LabelDangerDisabledIcon:
+        case TextStyle::LabelDangerDisabledText:
+        case TextStyle::LabelInfoDisabledIconOnly:
+        case TextStyle::LabelInfoDisabledTextOnly:
+        case TextStyle::LabelInfoDisabledIcon:
+        case TextStyle::LabelInfoDisabledText:
+        case TextStyle::LabelDimDisabledIconOnly:
+        case TextStyle::LabelDimDisabledTextOnly:
+        case TextStyle::LabelDimDisabledIcon:
+        case TextStyle::LabelDimDisabledText:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         /* LCOV_EXCL_STOP */
     }
@@ -501,6 +615,35 @@ TextStyle styleTransitionToPressedBlur(const TextStyle index) {
         case TextStyle::ButtonFlatPressedBlurText:
         case TextStyle::ButtonFlatPressedHoverText:
             return TextStyle::ButtonFlatPressedBlurText;
+        case TextStyle::LabelDefaultIconOnly:
+        case TextStyle::LabelDefaultTextOnly:
+        case TextStyle::LabelDefaultIcon:
+        case TextStyle::LabelDefaultText:
+        case TextStyle::LabelPrimaryIconOnly:
+        case TextStyle::LabelPrimaryTextOnly:
+        case TextStyle::LabelPrimaryIcon:
+        case TextStyle::LabelPrimaryText:
+        case TextStyle::LabelSuccessIconOnly:
+        case TextStyle::LabelSuccessTextOnly:
+        case TextStyle::LabelSuccessIcon:
+        case TextStyle::LabelSuccessText:
+        case TextStyle::LabelWarningIconOnly:
+        case TextStyle::LabelWarningTextOnly:
+        case TextStyle::LabelWarningIcon:
+        case TextStyle::LabelWarningText:
+        case TextStyle::LabelDangerIconOnly:
+        case TextStyle::LabelDangerTextOnly:
+        case TextStyle::LabelDangerIcon:
+        case TextStyle::LabelDangerText:
+        case TextStyle::LabelInfoIconOnly:
+        case TextStyle::LabelInfoTextOnly:
+        case TextStyle::LabelInfoIcon:
+        case TextStyle::LabelInfoText:
+        case TextStyle::LabelDimIconOnly:
+        case TextStyle::LabelDimTextOnly:
+        case TextStyle::LabelDimIcon:
+        case TextStyle::LabelDimText:
+            return index;
         /* LCOV_EXCL_START */
         case TextStyle::ButtonDisabledIconOnly:
         case TextStyle::ButtonDisabledTextOnly:
@@ -510,6 +653,34 @@ TextStyle styleTransitionToPressedBlur(const TextStyle index) {
         case TextStyle::ButtonFlatDisabledTextOnly:
         case TextStyle::ButtonFlatDisabledIcon:
         case TextStyle::ButtonFlatDisabledText:
+        case TextStyle::LabelDefaultDisabledIconOnly:
+        case TextStyle::LabelDefaultDisabledTextOnly:
+        case TextStyle::LabelDefaultDisabledIcon:
+        case TextStyle::LabelDefaultDisabledText:
+        case TextStyle::LabelPrimaryDisabledIconOnly:
+        case TextStyle::LabelPrimaryDisabledTextOnly:
+        case TextStyle::LabelPrimaryDisabledIcon:
+        case TextStyle::LabelPrimaryDisabledText:
+        case TextStyle::LabelSuccessDisabledIconOnly:
+        case TextStyle::LabelSuccessDisabledTextOnly:
+        case TextStyle::LabelSuccessDisabledIcon:
+        case TextStyle::LabelSuccessDisabledText:
+        case TextStyle::LabelWarningDisabledIconOnly:
+        case TextStyle::LabelWarningDisabledTextOnly:
+        case TextStyle::LabelWarningDisabledIcon:
+        case TextStyle::LabelWarningDisabledText:
+        case TextStyle::LabelDangerDisabledIconOnly:
+        case TextStyle::LabelDangerDisabledTextOnly:
+        case TextStyle::LabelDangerDisabledIcon:
+        case TextStyle::LabelDangerDisabledText:
+        case TextStyle::LabelInfoDisabledIconOnly:
+        case TextStyle::LabelInfoDisabledTextOnly:
+        case TextStyle::LabelInfoDisabledIcon:
+        case TextStyle::LabelInfoDisabledText:
+        case TextStyle::LabelDimDisabledIconOnly:
+        case TextStyle::LabelDimDisabledTextOnly:
+        case TextStyle::LabelDimDisabledIcon:
+        case TextStyle::LabelDimDisabledText:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         /* LCOV_EXCL_STOP */
     }
@@ -551,6 +722,35 @@ TextStyle styleTransitionToPressedHover(const TextStyle index) {
         case TextStyle::ButtonFlatPressedBlurText:
         case TextStyle::ButtonFlatPressedHoverText:
             return TextStyle::ButtonFlatPressedHoverText;
+        case TextStyle::LabelDefaultIconOnly:
+        case TextStyle::LabelDefaultTextOnly:
+        case TextStyle::LabelDefaultIcon:
+        case TextStyle::LabelDefaultText:
+        case TextStyle::LabelPrimaryIconOnly:
+        case TextStyle::LabelPrimaryTextOnly:
+        case TextStyle::LabelPrimaryIcon:
+        case TextStyle::LabelPrimaryText:
+        case TextStyle::LabelSuccessIconOnly:
+        case TextStyle::LabelSuccessTextOnly:
+        case TextStyle::LabelSuccessIcon:
+        case TextStyle::LabelSuccessText:
+        case TextStyle::LabelWarningIconOnly:
+        case TextStyle::LabelWarningTextOnly:
+        case TextStyle::LabelWarningIcon:
+        case TextStyle::LabelWarningText:
+        case TextStyle::LabelDangerIconOnly:
+        case TextStyle::LabelDangerTextOnly:
+        case TextStyle::LabelDangerIcon:
+        case TextStyle::LabelDangerText:
+        case TextStyle::LabelInfoIconOnly:
+        case TextStyle::LabelInfoTextOnly:
+        case TextStyle::LabelInfoIcon:
+        case TextStyle::LabelInfoText:
+        case TextStyle::LabelDimIconOnly:
+        case TextStyle::LabelDimTextOnly:
+        case TextStyle::LabelDimIcon:
+        case TextStyle::LabelDimText:
+            return index;
         /* LCOV_EXCL_START */
         case TextStyle::ButtonDisabledIconOnly:
         case TextStyle::ButtonDisabledTextOnly:
@@ -560,6 +760,34 @@ TextStyle styleTransitionToPressedHover(const TextStyle index) {
         case TextStyle::ButtonFlatDisabledTextOnly:
         case TextStyle::ButtonFlatDisabledIcon:
         case TextStyle::ButtonFlatDisabledText:
+        case TextStyle::LabelDefaultDisabledIconOnly:
+        case TextStyle::LabelDefaultDisabledTextOnly:
+        case TextStyle::LabelDefaultDisabledIcon:
+        case TextStyle::LabelDefaultDisabledText:
+        case TextStyle::LabelPrimaryDisabledIconOnly:
+        case TextStyle::LabelPrimaryDisabledTextOnly:
+        case TextStyle::LabelPrimaryDisabledIcon:
+        case TextStyle::LabelPrimaryDisabledText:
+        case TextStyle::LabelSuccessDisabledIconOnly:
+        case TextStyle::LabelSuccessDisabledTextOnly:
+        case TextStyle::LabelSuccessDisabledIcon:
+        case TextStyle::LabelSuccessDisabledText:
+        case TextStyle::LabelWarningDisabledIconOnly:
+        case TextStyle::LabelWarningDisabledTextOnly:
+        case TextStyle::LabelWarningDisabledIcon:
+        case TextStyle::LabelWarningDisabledText:
+        case TextStyle::LabelDangerDisabledIconOnly:
+        case TextStyle::LabelDangerDisabledTextOnly:
+        case TextStyle::LabelDangerDisabledIcon:
+        case TextStyle::LabelDangerDisabledText:
+        case TextStyle::LabelInfoDisabledIconOnly:
+        case TextStyle::LabelInfoDisabledTextOnly:
+        case TextStyle::LabelInfoDisabledIcon:
+        case TextStyle::LabelInfoDisabledText:
+        case TextStyle::LabelDimDisabledIconOnly:
+        case TextStyle::LabelDimDisabledTextOnly:
+        case TextStyle::LabelDimDisabledIcon:
+        case TextStyle::LabelDimDisabledText:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         /* LCOV_EXCL_STOP */
     }
@@ -601,6 +829,62 @@ TextStyle styleTransitionToDisabled(const TextStyle index) {
         case TextStyle::ButtonFlatPressedBlurText:
         case TextStyle::ButtonFlatPressedHoverText:
             return TextStyle::ButtonFlatDisabledText;
+        case TextStyle::LabelDefaultIconOnly:
+            return TextStyle::LabelDefaultDisabledIconOnly;
+        case TextStyle::LabelDefaultTextOnly:
+            return TextStyle::LabelDefaultDisabledTextOnly;
+        case TextStyle::LabelDefaultIcon:
+            return TextStyle::LabelDefaultDisabledIcon;
+        case TextStyle::LabelDefaultText:
+            return TextStyle::LabelDefaultDisabledText;
+        case TextStyle::LabelPrimaryIconOnly:
+            return TextStyle::LabelPrimaryDisabledIconOnly;
+        case TextStyle::LabelPrimaryTextOnly:
+            return TextStyle::LabelPrimaryDisabledTextOnly;
+        case TextStyle::LabelPrimaryIcon:
+            return TextStyle::LabelPrimaryDisabledIcon;
+        case TextStyle::LabelPrimaryText:
+            return TextStyle::LabelPrimaryDisabledText;
+        case TextStyle::LabelSuccessIconOnly:
+            return TextStyle::LabelSuccessDisabledIconOnly;
+        case TextStyle::LabelSuccessTextOnly:
+            return TextStyle::LabelSuccessDisabledTextOnly;
+        case TextStyle::LabelSuccessIcon:
+            return TextStyle::LabelSuccessDisabledIcon;
+        case TextStyle::LabelSuccessText:
+            return TextStyle::LabelSuccessDisabledText;
+        case TextStyle::LabelWarningIconOnly:
+            return TextStyle::LabelWarningDisabledIconOnly;
+        case TextStyle::LabelWarningTextOnly:
+            return TextStyle::LabelWarningDisabledTextOnly;
+        case TextStyle::LabelWarningIcon:
+            return TextStyle::LabelWarningDisabledIcon;
+        case TextStyle::LabelWarningText:
+            return TextStyle::LabelWarningDisabledText;
+        case TextStyle::LabelDangerIconOnly:
+            return TextStyle::LabelDangerDisabledIconOnly;
+        case TextStyle::LabelDangerTextOnly:
+            return TextStyle::LabelDangerDisabledTextOnly;
+        case TextStyle::LabelDangerIcon:
+            return TextStyle::LabelDangerDisabledIcon;
+        case TextStyle::LabelDangerText:
+            return TextStyle::LabelDangerDisabledText;
+        case TextStyle::LabelInfoIconOnly:
+            return TextStyle::LabelInfoDisabledIconOnly;
+        case TextStyle::LabelInfoTextOnly:
+            return TextStyle::LabelInfoDisabledTextOnly;
+        case TextStyle::LabelInfoIcon:
+            return TextStyle::LabelInfoDisabledIcon;
+        case TextStyle::LabelInfoText:
+            return TextStyle::LabelInfoDisabledText;
+        case TextStyle::LabelDimIconOnly:
+            return TextStyle::LabelDimDisabledIconOnly;
+        case TextStyle::LabelDimTextOnly:
+            return TextStyle::LabelDimDisabledTextOnly;
+        case TextStyle::LabelDimIcon:
+            return TextStyle::LabelDimDisabledIcon;
+        case TextStyle::LabelDimText:
+            return TextStyle::LabelDimDisabledText;
         /* LCOV_EXCL_START */
         case TextStyle::ButtonDisabledIconOnly:
         case TextStyle::ButtonDisabledTextOnly:
@@ -610,6 +894,34 @@ TextStyle styleTransitionToDisabled(const TextStyle index) {
         case TextStyle::ButtonFlatDisabledTextOnly:
         case TextStyle::ButtonFlatDisabledIcon:
         case TextStyle::ButtonFlatDisabledText:
+        case TextStyle::LabelDefaultDisabledIconOnly:
+        case TextStyle::LabelDefaultDisabledTextOnly:
+        case TextStyle::LabelDefaultDisabledIcon:
+        case TextStyle::LabelDefaultDisabledText:
+        case TextStyle::LabelPrimaryDisabledIconOnly:
+        case TextStyle::LabelPrimaryDisabledTextOnly:
+        case TextStyle::LabelPrimaryDisabledIcon:
+        case TextStyle::LabelPrimaryDisabledText:
+        case TextStyle::LabelSuccessDisabledIconOnly:
+        case TextStyle::LabelSuccessDisabledTextOnly:
+        case TextStyle::LabelSuccessDisabledIcon:
+        case TextStyle::LabelSuccessDisabledText:
+        case TextStyle::LabelWarningDisabledIconOnly:
+        case TextStyle::LabelWarningDisabledTextOnly:
+        case TextStyle::LabelWarningDisabledIcon:
+        case TextStyle::LabelWarningDisabledText:
+        case TextStyle::LabelDangerDisabledIconOnly:
+        case TextStyle::LabelDangerDisabledTextOnly:
+        case TextStyle::LabelDangerDisabledIcon:
+        case TextStyle::LabelDangerDisabledText:
+        case TextStyle::LabelInfoDisabledIconOnly:
+        case TextStyle::LabelInfoDisabledTextOnly:
+        case TextStyle::LabelInfoDisabledIcon:
+        case TextStyle::LabelInfoDisabledText:
+        case TextStyle::LabelDimDisabledIconOnly:
+        case TextStyle::LabelDimDisabledTextOnly:
+        case TextStyle::LabelDimDisabledIcon:
+        case TextStyle::LabelDimDisabledText:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         /* LCOV_EXCL_STOP */
     }

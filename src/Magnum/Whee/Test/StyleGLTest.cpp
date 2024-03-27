@@ -42,6 +42,7 @@
 #include "Magnum/Whee/Button.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/Label.h"
 #include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/Style.h"
 #include "Magnum/Whee/UserInterfaceGL.h"
@@ -151,6 +152,91 @@ const struct {
             Button button{ui, {}, ButtonStyle(style), {48, 36}, Icon::None};
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
+        }},
+
+    {"m.css dark, label text + icon, stateless", "mcss-dark-label-text-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            /** @todo differently wide icons to test alignment */
+            return label(ui, {}, LabelStyle(style), {84, 36}, counter % 3 ? Icon::No : Icon::Yes, counter % 3 ? "Bye" : "Hello!");
+        }},
+    {"m.css dark, label text + icon, stateful", "mcss-dark-label-text-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            return Label{ui, {}, LabelStyle(style), {84, 36}, counter % 3 ? Icon::No : Icon::Yes, counter % 3 ? "Bye" : "Hello!"}.release();
+        }},
+    {"m.css dark, label text + icon, stateful setters", "mcss-dark-label-text-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{ui, {}, LabelStyle(style), {84, 36}, Icon::No, "Hey"};
+            label.setIcon(counter % 3 ? Icon::No : Icon::Yes);
+            label.setText(counter % 3 ? "Bye" : "Hello!");
+            return label.release();
+        }},
+    {"m.css dark, label text + icon, stateful setters from empty", "mcss-dark-label-text-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{ui, {}, LabelStyle(style), {84, 36}, Icon::None, ""};
+            label.setIcon(counter % 3 ? Icon::No : Icon::Yes);
+            label.setText(counter % 3 ? "Bye" : "Hello!");
+            return label.release();
+        }},
+    {"m.css dark, label text + icon, stateful setters from empty, different order", "mcss-dark-label-text-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{ui, {}, LabelStyle(style), {84, 36}, Icon::None, ""};
+            label.setText(counter % 3 ? "Bye" : "Hello!");
+            label.setIcon(counter % 3 ? Icon::No : Icon::Yes);
+            return label.release();
+        }},
+    {"m.css dark, label text, stateless", "mcss-dark-label-text.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            return label(ui, {}, LabelStyle(style), {52, 36}, counter % 3 ? "Bye" : "Hello!");
+        }},
+    {"m.css dark, label text, stateful", "mcss-dark-label-text.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            return Label{ui, {}, LabelStyle(style), {52, 36}, counter % 3 ? "Bye" : "Hello!"}.release();
+        }},
+    {"m.css dark, label text, stateful setters", "mcss-dark-label-text.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{ui, {}, LabelStyle(style), {52, 36}, "Hey"};
+            label.setText(counter % 3 ? "Bye" : "Hello!");
+            return label.release();
+        }},
+    {"m.css dark, label text, stateful setters from empty", "mcss-dark-label-text.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{ui, {}, LabelStyle(style), {52, 36}, ""};
+            label.setText(counter % 3 ? "Bye" : "Hello!");
+            return label.release();
+        }},
+    {"m.css dark, label icon, stateless", "mcss-dark-label-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            /** @todo differently wide icons to test alignment */
+            return label(ui, {}, LabelStyle(style), {48, 36}, counter % 3 ? Icon::Yes : Icon::No);
+        }},
+    {"m.css dark, label icon, stateful", "mcss-dark-label-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            return Label{ui, {}, LabelStyle(style), {48, 36}, counter % 3 ? Icon::Yes : Icon::No}.release();
+        }},
+    {"m.css dark, label icon, stateful setters", "mcss-dark-label-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{ui, {}, LabelStyle(style), {48, 36}, Icon::Yes};
+            label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
+            return label.release();
+        }},
+    {"m.css dark, label icon, stateful setters from empty", "mcss-dark-label-icon.png",
+        Containers::pointer<McssDarkStyle>(), 7, false, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Label label{ui, {}, LabelStyle(style), {48, 36}, Icon::None};
+            label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
+            return label.release();
         }},
 };
 
