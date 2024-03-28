@@ -151,7 +151,7 @@ const struct {
 const struct {
     const char* name;
     bool disableCapture;
-    StyleIndex blurStyle, hoverStyle;
+    StyleIndex outStyle, overStyle;
 } EventStyleTransitionNoCaptureData[]{
     {"", false, StyleIndex::GreenPressed, StyleIndex::GreenPressedHover},
     {"capture disabled", true, StyleIndex::Green, StyleIndex::GreenHover},
@@ -412,14 +412,14 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
 
     enum Style {
         /* 2 is first, to avoid accidentally matching the order */
-        InactiveBlur2,
-        InactiveBlur1,
-        InactiveHover2,
-        InactiveHover1,
-        PressedBlur2,
-        PressedBlur1,
-        PressedHover2,
-        PressedHover1,
+        InactiveOut2,
+        InactiveOut1,
+        InactiveOver2,
+        InactiveOver1,
+        PressedOut2,
+        PressedOut1,
+        PressedOver2,
+        PressedOver1,
     };
 
     /* Style transition isn't allowed to use dynamic styles so the dynamic
@@ -428,61 +428,61 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     shared.setStyleTransition(
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveBlur1:
-                case InactiveHover1:
-                case PressedBlur1:
-                case PressedHover1:
-                    return PressedBlur1;
-                case InactiveBlur2:
-                case InactiveHover2:
-                case PressedBlur2:
-                case PressedHover2:
-                    return PressedBlur2;
+                case InactiveOut1:
+                case InactiveOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return PressedOut1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return PressedOut2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveBlur1:
-                case InactiveHover1:
-                case PressedBlur1:
-                case PressedHover1:
-                    return PressedHover1;
-                case InactiveBlur2:
-                case InactiveHover2:
-                case PressedBlur2:
-                case PressedHover2:
-                    return PressedHover2;
+                case InactiveOut1:
+                case InactiveOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return PressedOver1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return PressedOver2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveBlur1:
-                case InactiveHover1:
-                case PressedBlur1:
-                case PressedHover1:
-                    return InactiveBlur1;
-                case InactiveBlur2:
-                case InactiveHover2:
-                case PressedBlur2:
-                case PressedHover2:
-                    return InactiveBlur2;
+                case InactiveOut1:
+                case InactiveOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return InactiveOut1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return InactiveOut2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
-                case InactiveBlur1:
-                case InactiveHover1:
-                case PressedBlur1:
-                case PressedHover1:
-                    return InactiveHover1;
-                case InactiveBlur2:
-                case InactiveHover2:
-                case PressedBlur2:
-                case PressedHover2:
-                    return InactiveHover2;
+                case InactiveOut1:
+                case InactiveOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return InactiveOver1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return InactiveOver2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
@@ -495,87 +495,87 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     /* Node 2 is first, to avoid accidentally matching the order */
     NodeHandle node2 = ui.createNode({}, {100, 50});
     NodeHandle node1 = ui.createNode({0, 50}, {100, 50});
-    DataHandle data1 = layer.create(InactiveBlur1, node1);
-    DataHandle data2 = layer.create(InactiveBlur2, node2);
+    DataHandle data1 = layer.create(InactiveOut1, node1);
+    DataHandle data2 = layer.create(InactiveOut2, node2);
 
     /* Nothing is hovered or pressed initially. */
     CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
 
-    /* Setting a transitioned style picks InactiveBlur. Switching the IDs to be
+    /* Setting a transitioned style picks InactiveOut. Switching the IDs to be
        sure it actually changed. */
-    layer.setTransitionedStyle(ui, data1, PressedBlur2);
-    layer.setTransitionedStyle(ui, data2, InactiveHover1);
-    CORRADE_COMPARE(layer.style(data1), InactiveBlur2);
-    CORRADE_COMPARE(layer.style(data2), InactiveBlur1);
+    layer.setTransitionedStyle(ui, data1, PressedOut2);
+    layer.setTransitionedStyle(ui, data2, InactiveOver1);
+    CORRADE_COMPARE(layer.style(data1), InactiveOut2);
+    CORRADE_COMPARE(layer.style(data2), InactiveOut1);
 
-    /* Hovering node 2 causes the style to be changed to InactiveHover */
+    /* Hovering node 2 causes the style to be changed to InactiveOver */
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
         CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node2);
-        CORRADE_COMPARE(layer.style(data2), InactiveHover1);
+        CORRADE_COMPARE(layer.style(data2), InactiveOver1);
     }
 
-    /* Setting a transitioned style (switching IDs again) picks InactiveHover
-       for the hovered node, the other stays InactiveBlur. Using the integer
+    /* Setting a transitioned style (switching IDs again) picks InactiveOver
+       for the hovered node, the other stays InactiveOut. Using the integer
        overload. */
-    layer.setTransitionedStyle(ui, data1, UnsignedInt(InactiveHover1));
-    layer.setTransitionedStyle(ui, data2, UnsignedInt(PressedBlur2));
-    CORRADE_COMPARE(layer.style(data1), InactiveBlur1);
-    CORRADE_COMPARE(layer.style(data2), InactiveHover2);
+    layer.setTransitionedStyle(ui, data1, UnsignedInt(InactiveOver1));
+    layer.setTransitionedStyle(ui, data2, UnsignedInt(PressedOut2));
+    CORRADE_COMPARE(layer.style(data1), InactiveOut1);
+    CORRADE_COMPARE(layer.style(data2), InactiveOver2);
 
-    /* Pressing on node 2 causes the style to be changed to PressedHover */
+    /* Pressing on node 2 causes the style to be changed to PressedOver */
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, event));
         CORRADE_COMPARE(ui.pointerEventPressedNode(), node2);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node2);
-        CORRADE_COMPARE(layer.style(data2), PressedHover2);
+        CORRADE_COMPARE(layer.style(data2), PressedOver2);
     }
 
-    /* Setting a transitioned style (switching IDs again) picks PressedHover
-       for the pressed & hovered node, the other again stays InactiveBlur.
+    /* Setting a transitioned style (switching IDs again) picks PressedOver
+       for the pressed & hovered node, the other again stays InactiveOut.
        Using the LayerDataHandle overload. */
-    layer.setTransitionedStyle(ui, dataHandleData(data1), PressedBlur2);
-    layer.setTransitionedStyle(ui, dataHandleData(data2), InactiveBlur1);
-    CORRADE_COMPARE(layer.style(data1), InactiveBlur2);
-    CORRADE_COMPARE(layer.style(data2), PressedHover1);
+    layer.setTransitionedStyle(ui, dataHandleData(data1), PressedOut2);
+    layer.setTransitionedStyle(ui, dataHandleData(data2), InactiveOut1);
+    CORRADE_COMPARE(layer.style(data1), InactiveOut2);
+    CORRADE_COMPARE(layer.style(data2), PressedOver1);
 
-    /* Moving onto node 1 causes the style to be changed to PressedBlur. No
+    /* Moving onto node 1 causes the style to be changed to PressedOut. No
        node is hovered due to event capture on node 2. */
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 75}, event));
         CORRADE_COMPARE(ui.pointerEventPressedNode(), node2);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style(data2), PressedBlur1);
+        CORRADE_COMPARE(layer.style(data2), PressedOut1);
     }
 
-    /* Setting a transitioned style (switching IDs again) picks PressedBlur
-       for the pressed node, the other again stays InactiveBlur. Using the
+    /* Setting a transitioned style (switching IDs again) picks PressedOut
+       for the pressed node, the other again stays InactiveOut. Using the
        integer + LayerDataHandle overload. */
-    layer.setTransitionedStyle(ui, dataHandleData(data1), UnsignedInt(InactiveBlur1));
-    layer.setTransitionedStyle(ui, dataHandleData(data2), UnsignedInt(PressedHover2));
-    CORRADE_COMPARE(layer.style(data1), InactiveBlur1);
-    CORRADE_COMPARE(layer.style(data2), PressedBlur2);
+    layer.setTransitionedStyle(ui, dataHandleData(data1), UnsignedInt(InactiveOut1));
+    layer.setTransitionedStyle(ui, dataHandleData(data2), UnsignedInt(PressedOver2));
+    CORRADE_COMPARE(layer.style(data1), InactiveOut1);
+    CORRADE_COMPARE(layer.style(data2), PressedOut2);
 
-    /* Releasing causes the style to be changed to InactiveBlur */
+    /* Releasing causes the style to be changed to InactiveOut */
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 75}, event));
         CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style(data2), InactiveBlur2);
+        CORRADE_COMPARE(layer.style(data2), InactiveOut2);
     }
 
-    /* Setting a transitioned style (switching IDs again) picks InactiveBlur
+    /* Setting a transitioned style (switching IDs again) picks InactiveOut
        for both */
-    layer.setTransitionedStyle(ui, data1, PressedBlur2);
-    layer.setTransitionedStyle(ui, data2, InactiveHover1);
-    CORRADE_COMPARE(layer.style(data1), InactiveBlur2);
-    CORRADE_COMPARE(layer.style(data2), InactiveBlur1);
+    layer.setTransitionedStyle(ui, data1, PressedOut2);
+    layer.setTransitionedStyle(ui, data2, InactiveOver1);
+    CORRADE_COMPARE(layer.style(data1), InactiveOut2);
+    CORRADE_COMPARE(layer.style(data2), InactiveOut1);
 }
 
 void AbstractVisualLayerTest::invalidHandle() {
@@ -743,7 +743,7 @@ void AbstractVisualLayerTest::dynamicStyleRecycleInvalid() {
         "Whee::AbstractVisualLayer::recycleDynamicStyle(): index 4 out of range for 4 dynamic styles\n");
 }
 
-StyleIndex styleIndexTransitionToInactiveBlur(StyleIndex index) {
+StyleIndex styleIndexTransitionToInactiveOut(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
@@ -769,7 +769,7 @@ StyleIndex styleIndexTransitionToInactiveBlur(StyleIndex index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 }
 
-StyleIndex styleIndexTransitionToInactiveHover(StyleIndex index) {
+StyleIndex styleIndexTransitionToInactiveOver(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
@@ -795,7 +795,7 @@ StyleIndex styleIndexTransitionToInactiveHover(StyleIndex index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 }
 
-StyleIndex styleIndexTransitionToPressedBlur(StyleIndex index) {
+StyleIndex styleIndexTransitionToPressedOut(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
@@ -821,7 +821,7 @@ StyleIndex styleIndexTransitionToPressedBlur(StyleIndex index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 }
 
-StyleIndex styleIndexTransitionToPressedHover(StyleIndex index) {
+StyleIndex styleIndexTransitionToPressedOver(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
@@ -899,8 +899,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Press, release, hover, hovered press, hovered release, blur should all
-       do nothing by default */
+    /* Press, release, over, hovered press, hovered release, out should all do
+       nothing by default */
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
@@ -945,12 +945,12 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
-    /* Setting a null toPressedBlur transition will do nothing for a press */
+    /* Setting a null toPressedOut transition will do nothing for a press */
     shared.setStyleTransition<StyleIndex,
         nullptr,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
@@ -961,12 +961,12 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
-    /* Setting a null toInactiveBlur transition will do nothing for a release */
+    /* Setting a null toInactiveOut transition will do nothing for a release */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         nullptr,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
@@ -977,11 +977,11 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
-    /* Setting a null toInactiveHover will do nothing for a hover */
+    /* Setting a null toInactiveOver will do nothing for a hover */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
         nullptr,
         styleIndexTransitionToDisabledDoNotCall>();
     {
@@ -993,12 +993,12 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
-    /* Setting a null toPressedHover will do nothing for a hovered press */
+    /* Setting a null toPressedOver will do nothing for a hovered press */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedOut,
         nullptr,
-        styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
@@ -1012,7 +1012,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     /* Setting a null combined toPressed will do nothing for a press */
     shared.setStyleTransition<StyleIndex,
         nullptr,
-        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveOut,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
@@ -1025,7 +1025,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
 
     /* Setting a null combined toInactive will do nothing for a release */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedOut,
         nullptr,
         styleIndexTransitionToDisabledDoNotCall>();
     {
@@ -1049,10 +1049,10 @@ void AbstractVisualLayerTest::eventStyleTransition() {
        eventStyleTransitionDynamicStyle() instead */
     StyleLayerShared shared{14, 0};
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
         /* toDisabled transition is tested in eventStyleTransitionDisabled()
            instead */
         styleIndexTransitionToDisabledDoNotCall>();
@@ -1320,8 +1320,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToInactiveOut,
         /* "no hover" toDisabled transition is tested in
            eventStyleTransitionDisabled() instead */
         styleIndexTransitionToDisabledDoNotCall>();
@@ -1508,10 +1508,10 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
        eventStyleTransitionDynamicStyle() instead */
     StyleLayerShared shared{4, 0};
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionToDisabled>();
 
     struct EventLayer: AbstractLayer {
@@ -1568,7 +1568,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
         CORRADE_COMPARE(ui.pointerMoveEvent({7.0f, 2.0f}, event), !data.disableCapture);
         CORRADE_COMPARE(ui.pointerEventPressedNode(), data.disableCapture ? NodeHandle::Null : node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.blurStyle);
+        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.outStyle);
 
     /* Move back will only preserve the press if capture is set */
     } {
@@ -1576,7 +1576,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.pointerEventPressedNode(), data.disableCapture ? NodeHandle::Null : node);
         CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
-        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.hoverStyle);
+        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.overStyle);
     }
 }
 
@@ -1611,12 +1611,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
        The same logic is used in eventStyleTransitionDynamicStyle() to exhaust
        all possibilities, keep in sync. */
 
-    /* OOB toPressedBlur transition */
+    /* OOB toPressedOut transition */
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionOutOfRange,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
@@ -1627,14 +1627,14 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from 4 to 14 out of range for 14 styles\n");
     }
 
-    /* OOB toPressedHover transition in the press event. Doing a
+    /* OOB toPressedOver transition in the press event. Doing a
        (non-asserting) move before so the hovered node is properly
        registered. */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedOut,
         styleIndexTransitionOutOfRange,
-        styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent moveEvent{{}, {}};
@@ -1647,11 +1647,11 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from 5 to 14 out of range for 14 styles\n");
     }
 
-    /* OOB toInactiveHover transition */
+    /* OOB toInactiveOver transition */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToDisabledDoNotCall>();
     {
@@ -1663,12 +1663,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from 5 to 14 out of range for 14 styles\n");
     }
 
-    /* OOB toInactiveBlur transition in the leave event */
+    /* OOB toInactiveOut transition in the leave event */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionOutOfRange,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent event{{}, {}};
@@ -1679,11 +1679,11 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from 5 to 14 out of range for 14 styles\n");
     }
 
-    /* OOB toInactiveHover transition in the enter event */
+    /* OOB toInactiveOver transition in the enter event */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToDisabledDoNotCall>();
     {
@@ -1697,10 +1697,10 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     /* OOB toDisabled transition in doUpdate() */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionOutOfRange>();
     ui.addNodeFlags(node, NodeFlag::Disabled);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
@@ -1731,13 +1731,13 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
        same as in eventStyleTransitionOutOfRange(), just not asserting in this
        case. Keep the two in sync. */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedBlur,
-        styleIndexTransitionToPressedHover,
-        styleIndexTransitionToInactiveBlur,
-        styleIndexTransitionToInactiveHover,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
         styleIndexTransitionToDisabled>();
 
-    /* toPressedBlur transition */
+    /* toPressedOut transition */
     {
         PointerEvent event{Pointer::MouseLeft};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
@@ -1746,7 +1746,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressed);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
-    /* toPressedHover transition in the press event. Doing a
+    /* toPressedOver transition in the press event. Doing a
        (non-asserting) move before so the hovered node is properly
        registered. */
     } {
@@ -1760,7 +1760,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
-    /* toInactiveHover transition */
+    /* toInactiveOver transition */
     } {
         PointerEvent event{Pointer::MouseLeft};
         ui.pointerReleaseEvent({1.5f, 2.5f}, event);
@@ -1769,7 +1769,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
-    /* toInactiveBlur transition in the leave event */
+    /* toInactiveOut transition in the leave event */
     } {
         PointerMoveEvent event{{}, {}};
         ui.pointerMoveEvent({8.5f, 2.0f}, event);
@@ -1778,7 +1778,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
-    /* toInactiveHover transition in the enter event */
+    /* toInactiveOver transition in the enter event */
     } {
         PointerMoveEvent event{{}, {}};
         ui.pointerMoveEvent({1.5f, 2.0f}, event);
