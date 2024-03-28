@@ -61,10 +61,10 @@ struct AbstractVisualLayer::Shared::State {
     Containers::Reference<Shared> self;
 
     UnsignedInt styleCount, dynamicStyleCount;
-    UnsignedInt(*styleTransitionToPressedBlur)(UnsignedInt) = Implementation::styleTransitionPassthrough;
-    UnsignedInt(*styleTransitionToPressedHover)(UnsignedInt) = Implementation::styleTransitionPassthrough;
-    UnsignedInt(*styleTransitionToInactiveBlur)(UnsignedInt) = Implementation::styleTransitionPassthrough;
-    UnsignedInt(*styleTransitionToInactiveHover)(UnsignedInt) = Implementation::styleTransitionPassthrough;
+    UnsignedInt(*styleTransitionToPressedOut)(UnsignedInt) = Implementation::styleTransitionPassthrough;
+    UnsignedInt(*styleTransitionToPressedOver)(UnsignedInt) = Implementation::styleTransitionPassthrough;
+    UnsignedInt(*styleTransitionToInactiveOut)(UnsignedInt) = Implementation::styleTransitionPassthrough;
+    UnsignedInt(*styleTransitionToInactiveOver)(UnsignedInt) = Implementation::styleTransitionPassthrough;
     /* Unlike the others, this one can be nullptr, in which case the whole
        logic in doUpdate() gets skipped */
     UnsignedInt(*styleTransitionToDisabled)(UnsignedInt) = nullptr;

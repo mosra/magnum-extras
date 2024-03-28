@@ -78,14 +78,14 @@ UnsignedInt AbstractVisualLayer::Shared::totalStyleCount() const {
     return state.styleCount + state.dynamicStyleCount;
 }
 
-AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(UnsignedInt(*const toPressedBlur)(UnsignedInt), UnsignedInt(*const toPressedHover)(UnsignedInt), UnsignedInt(*const toInactiveBlur)(UnsignedInt), UnsignedInt(*const toInactiveHover)(UnsignedInt), UnsignedInt(*const toDisabled)(UnsignedInt)) {
-    _state->styleTransitionToPressedBlur = toPressedBlur ? toPressedBlur :
+AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(UnsignedInt(*const toPressedOut)(UnsignedInt), UnsignedInt(*const toPressedOver)(UnsignedInt), UnsignedInt(*const toInactiveOut)(UnsignedInt), UnsignedInt(*const toInactiveOver)(UnsignedInt), UnsignedInt(*const toDisabled)(UnsignedInt)) {
+    _state->styleTransitionToPressedOut = toPressedOut ? toPressedOut :
         Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToPressedHover = toPressedHover ? toPressedHover :
+    _state->styleTransitionToPressedOver = toPressedOver ? toPressedOver :
         Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToInactiveBlur = toInactiveBlur ? toInactiveBlur :
+    _state->styleTransitionToInactiveOut = toInactiveOut ? toInactiveOut :
         Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToInactiveHover = toInactiveHover ? toInactiveHover :
+    _state->styleTransitionToInactiveOver = toInactiveOver ? toInactiveOver :
         Implementation::styleTransitionPassthrough;
     /* Unlike the others, this one can be nullptr, in which case the whole
        transitioning logic in doUpdate() gets replaced with a simple copy */
@@ -173,11 +173,11 @@ void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterfa
     const bool hovered = ui.pointerEventHoveredNode() == node;
     UnsignedInt(*transition)(UnsignedInt);
     if(ui.pointerEventPressedNode() == node) transition = hovered ?
-        sharedState.styleTransitionToPressedHover :
-        sharedState.styleTransitionToPressedBlur;
+        sharedState.styleTransitionToPressedOver :
+        sharedState.styleTransitionToPressedOut;
     else transition = hovered ?
-        sharedState.styleTransitionToInactiveHover :
-        sharedState.styleTransitionToInactiveBlur;
+        sharedState.styleTransitionToInactiveOver :
+        sharedState.styleTransitionToInactiveOut;
     state.styles[layerDataHandleId(handle)] = transition(style);
     setNeedsUpdate();
 }
@@ -281,8 +281,8 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
            touches, or if move events aren't propagated from the
            application) */
         UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
-            sharedState.styleTransitionToPressedHover :
-            sharedState.styleTransitionToPressedBlur;
+            sharedState.styleTransitionToPressedOver :
+            sharedState.styleTransitionToPressedOut;
         const UnsignedInt nextStyle = transition(style);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
@@ -316,8 +316,8 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
            touches, or if move events aren't propagated from the
            application) */
         UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
-            sharedState.styleTransitionToInactiveHover :
-            sharedState.styleTransitionToInactiveBlur;
+            sharedState.styleTransitionToInactiveOver :
+            sharedState.styleTransitionToInactiveOut;
         const UnsignedInt nextStyle = transition(style);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
@@ -341,13 +341,13 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
     UnsignedInt& style = state.styles[dataId];
 
-    /* Transition the style to hover if it's not dynamic */
+    /* Transition the style to over if it's not dynamic */
     if(style >= sharedState.styleCount) {
         CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
     } else {
         UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
-            sharedState.styleTransitionToPressedHover :
-            sharedState.styleTransitionToInactiveHover;
+            sharedState.styleTransitionToPressedOver :
+            sharedState.styleTransitionToInactiveOver;
         const UnsignedInt nextStyle = transition(style);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
@@ -364,13 +364,13 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
     UnsignedInt& style = state.styles[dataId];
 
-    /* Transition the style from hover if it's not dynamic */
+    /* Transition the style to out if it's not dynamic */
     if(style >= sharedState.styleCount) {
         CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
     } else {
         UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
-            sharedState.styleTransitionToPressedBlur :
-            sharedState.styleTransitionToInactiveBlur;
+            sharedState.styleTransitionToPressedOut :
+            sharedState.styleTransitionToInactiveOut;
         const UnsignedInt nextStyle = transition(style);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
