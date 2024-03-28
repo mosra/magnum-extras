@@ -77,48 +77,48 @@ using Implementation::TextStyleUniform;
 
 namespace {
 
-BaseStyle styleTransitionToInactiveBlur(const BaseStyle index) {
+BaseStyle styleTransitionToInactiveOut(const BaseStyle index) {
     switch(index) {
-        case BaseStyle::ButtonDefaultInactiveBlur:
-        case BaseStyle::ButtonDefaultInactiveHover:
-        case BaseStyle::ButtonDefaultPressedBlur:
-        case BaseStyle::ButtonDefaultPressedHover:
-            return BaseStyle::ButtonDefaultInactiveBlur;
-        case BaseStyle::ButtonPrimaryInactiveBlur:
-        case BaseStyle::ButtonPrimaryInactiveHover:
-        case BaseStyle::ButtonPrimaryPressedBlur:
-        case BaseStyle::ButtonPrimaryPressedHover:
-            return BaseStyle::ButtonPrimaryInactiveBlur;
-        case BaseStyle::ButtonSuccessInactiveBlur:
-        case BaseStyle::ButtonSuccessInactiveHover:
-        case BaseStyle::ButtonSuccessPressedBlur:
-        case BaseStyle::ButtonSuccessPressedHover:
-            return BaseStyle::ButtonSuccessInactiveBlur;
-        case BaseStyle::ButtonWarningInactiveBlur:
-        case BaseStyle::ButtonWarningInactiveHover:
-        case BaseStyle::ButtonWarningPressedBlur:
-        case BaseStyle::ButtonWarningPressedHover:
-            return BaseStyle::ButtonWarningInactiveBlur;
-        case BaseStyle::ButtonDangerInactiveBlur:
-        case BaseStyle::ButtonDangerInactiveHover:
-        case BaseStyle::ButtonDangerPressedBlur:
-        case BaseStyle::ButtonDangerPressedHover:
-            return BaseStyle::ButtonDangerInactiveBlur;
-        case BaseStyle::ButtonInfoInactiveBlur:
-        case BaseStyle::ButtonInfoInactiveHover:
-        case BaseStyle::ButtonInfoPressedBlur:
-        case BaseStyle::ButtonInfoPressedHover:
-            return BaseStyle::ButtonInfoInactiveBlur;
-        case BaseStyle::ButtonDimInactiveBlur:
-        case BaseStyle::ButtonDimInactiveHover:
-        case BaseStyle::ButtonDimPressedBlur:
-        case BaseStyle::ButtonDimPressedHover:
-            return BaseStyle::ButtonDimInactiveBlur;
-        case BaseStyle::ButtonFlatInactiveBlur:
-        case BaseStyle::ButtonFlatInactiveHover:
-        case BaseStyle::ButtonFlatPressedBlur:
-        case BaseStyle::ButtonFlatPressedHover:
-            return BaseStyle::ButtonFlatInactiveBlur;
+        case BaseStyle::ButtonDefaultInactiveOut:
+        case BaseStyle::ButtonDefaultInactiveOver:
+        case BaseStyle::ButtonDefaultPressedOut:
+        case BaseStyle::ButtonDefaultPressedOver:
+            return BaseStyle::ButtonDefaultInactiveOut;
+        case BaseStyle::ButtonPrimaryInactiveOut:
+        case BaseStyle::ButtonPrimaryInactiveOver:
+        case BaseStyle::ButtonPrimaryPressedOut:
+        case BaseStyle::ButtonPrimaryPressedOver:
+            return BaseStyle::ButtonPrimaryInactiveOut;
+        case BaseStyle::ButtonSuccessInactiveOut:
+        case BaseStyle::ButtonSuccessInactiveOver:
+        case BaseStyle::ButtonSuccessPressedOut:
+        case BaseStyle::ButtonSuccessPressedOver:
+            return BaseStyle::ButtonSuccessInactiveOut;
+        case BaseStyle::ButtonWarningInactiveOut:
+        case BaseStyle::ButtonWarningInactiveOver:
+        case BaseStyle::ButtonWarningPressedOut:
+        case BaseStyle::ButtonWarningPressedOver:
+            return BaseStyle::ButtonWarningInactiveOut;
+        case BaseStyle::ButtonDangerInactiveOut:
+        case BaseStyle::ButtonDangerInactiveOver:
+        case BaseStyle::ButtonDangerPressedOut:
+        case BaseStyle::ButtonDangerPressedOver:
+            return BaseStyle::ButtonDangerInactiveOut;
+        case BaseStyle::ButtonInfoInactiveOut:
+        case BaseStyle::ButtonInfoInactiveOver:
+        case BaseStyle::ButtonInfoPressedOut:
+        case BaseStyle::ButtonInfoPressedOver:
+            return BaseStyle::ButtonInfoInactiveOut;
+        case BaseStyle::ButtonDimInactiveOut:
+        case BaseStyle::ButtonDimInactiveOver:
+        case BaseStyle::ButtonDimPressedOut:
+        case BaseStyle::ButtonDimPressedOver:
+            return BaseStyle::ButtonDimInactiveOut;
+        case BaseStyle::ButtonFlatInactiveOut:
+        case BaseStyle::ButtonFlatInactiveOver:
+        case BaseStyle::ButtonFlatPressedOut:
+        case BaseStyle::ButtonFlatPressedOver:
+            return BaseStyle::ButtonFlatInactiveOut;
         /* LCOV_EXCL_START */
         case BaseStyle::ButtonDefaultDisabled:
         case BaseStyle::ButtonPrimaryDisabled:
@@ -135,48 +135,48 @@ BaseStyle styleTransitionToInactiveBlur(const BaseStyle index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-BaseStyle styleTransitionToInactiveHover(const BaseStyle index) {
+BaseStyle styleTransitionToInactiveOver(const BaseStyle index) {
     switch(index) {
-        case BaseStyle::ButtonDefaultInactiveBlur:
-        case BaseStyle::ButtonDefaultInactiveHover:
-        case BaseStyle::ButtonDefaultPressedBlur:
-        case BaseStyle::ButtonDefaultPressedHover:
-            return BaseStyle::ButtonDefaultInactiveHover;
-        case BaseStyle::ButtonPrimaryInactiveBlur:
-        case BaseStyle::ButtonPrimaryInactiveHover:
-        case BaseStyle::ButtonPrimaryPressedBlur:
-        case BaseStyle::ButtonPrimaryPressedHover:
-            return BaseStyle::ButtonPrimaryInactiveHover;
-        case BaseStyle::ButtonSuccessInactiveBlur:
-        case BaseStyle::ButtonSuccessInactiveHover:
-        case BaseStyle::ButtonSuccessPressedBlur:
-        case BaseStyle::ButtonSuccessPressedHover:
-            return BaseStyle::ButtonSuccessInactiveHover;
-        case BaseStyle::ButtonWarningInactiveBlur:
-        case BaseStyle::ButtonWarningInactiveHover:
-        case BaseStyle::ButtonWarningPressedBlur:
-        case BaseStyle::ButtonWarningPressedHover:
-            return BaseStyle::ButtonWarningInactiveHover;
-        case BaseStyle::ButtonDangerInactiveBlur:
-        case BaseStyle::ButtonDangerInactiveHover:
-        case BaseStyle::ButtonDangerPressedBlur:
-        case BaseStyle::ButtonDangerPressedHover:
-            return BaseStyle::ButtonDangerInactiveHover;
-        case BaseStyle::ButtonInfoInactiveBlur:
-        case BaseStyle::ButtonInfoInactiveHover:
-        case BaseStyle::ButtonInfoPressedBlur:
-        case BaseStyle::ButtonInfoPressedHover:
-            return BaseStyle::ButtonInfoInactiveHover;
-        case BaseStyle::ButtonDimInactiveBlur:
-        case BaseStyle::ButtonDimInactiveHover:
-        case BaseStyle::ButtonDimPressedBlur:
-        case BaseStyle::ButtonDimPressedHover:
-            return BaseStyle::ButtonDimInactiveHover;
-        case BaseStyle::ButtonFlatInactiveBlur:
-        case BaseStyle::ButtonFlatInactiveHover:
-        case BaseStyle::ButtonFlatPressedBlur:
-        case BaseStyle::ButtonFlatPressedHover:
-            return BaseStyle::ButtonFlatInactiveHover;
+        case BaseStyle::ButtonDefaultInactiveOut:
+        case BaseStyle::ButtonDefaultInactiveOver:
+        case BaseStyle::ButtonDefaultPressedOut:
+        case BaseStyle::ButtonDefaultPressedOver:
+            return BaseStyle::ButtonDefaultInactiveOver;
+        case BaseStyle::ButtonPrimaryInactiveOut:
+        case BaseStyle::ButtonPrimaryInactiveOver:
+        case BaseStyle::ButtonPrimaryPressedOut:
+        case BaseStyle::ButtonPrimaryPressedOver:
+            return BaseStyle::ButtonPrimaryInactiveOver;
+        case BaseStyle::ButtonSuccessInactiveOut:
+        case BaseStyle::ButtonSuccessInactiveOver:
+        case BaseStyle::ButtonSuccessPressedOut:
+        case BaseStyle::ButtonSuccessPressedOver:
+            return BaseStyle::ButtonSuccessInactiveOver;
+        case BaseStyle::ButtonWarningInactiveOut:
+        case BaseStyle::ButtonWarningInactiveOver:
+        case BaseStyle::ButtonWarningPressedOut:
+        case BaseStyle::ButtonWarningPressedOver:
+            return BaseStyle::ButtonWarningInactiveOver;
+        case BaseStyle::ButtonDangerInactiveOut:
+        case BaseStyle::ButtonDangerInactiveOver:
+        case BaseStyle::ButtonDangerPressedOut:
+        case BaseStyle::ButtonDangerPressedOver:
+            return BaseStyle::ButtonDangerInactiveOver;
+        case BaseStyle::ButtonInfoInactiveOut:
+        case BaseStyle::ButtonInfoInactiveOver:
+        case BaseStyle::ButtonInfoPressedOut:
+        case BaseStyle::ButtonInfoPressedOver:
+            return BaseStyle::ButtonInfoInactiveOver;
+        case BaseStyle::ButtonDimInactiveOut:
+        case BaseStyle::ButtonDimInactiveOver:
+        case BaseStyle::ButtonDimPressedOut:
+        case BaseStyle::ButtonDimPressedOver:
+            return BaseStyle::ButtonDimInactiveOver;
+        case BaseStyle::ButtonFlatInactiveOut:
+        case BaseStyle::ButtonFlatInactiveOver:
+        case BaseStyle::ButtonFlatPressedOut:
+        case BaseStyle::ButtonFlatPressedOver:
+            return BaseStyle::ButtonFlatInactiveOver;
         /* LCOV_EXCL_START */
         case BaseStyle::ButtonDefaultDisabled:
         case BaseStyle::ButtonPrimaryDisabled:
@@ -193,48 +193,48 @@ BaseStyle styleTransitionToInactiveHover(const BaseStyle index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-BaseStyle styleTransitionToPressedBlur(const BaseStyle index) {
+BaseStyle styleTransitionToPressedOut(const BaseStyle index) {
     switch(index) {
-        case BaseStyle::ButtonDefaultInactiveBlur:
-        case BaseStyle::ButtonDefaultInactiveHover:
-        case BaseStyle::ButtonDefaultPressedBlur:
-        case BaseStyle::ButtonDefaultPressedHover:
-            return BaseStyle::ButtonDefaultPressedBlur;
-        case BaseStyle::ButtonPrimaryInactiveBlur:
-        case BaseStyle::ButtonPrimaryInactiveHover:
-        case BaseStyle::ButtonPrimaryPressedBlur:
-        case BaseStyle::ButtonPrimaryPressedHover:
-            return BaseStyle::ButtonPrimaryPressedBlur;
-        case BaseStyle::ButtonSuccessInactiveBlur:
-        case BaseStyle::ButtonSuccessInactiveHover:
-        case BaseStyle::ButtonSuccessPressedBlur:
-        case BaseStyle::ButtonSuccessPressedHover:
-            return BaseStyle::ButtonSuccessPressedBlur;
-        case BaseStyle::ButtonWarningInactiveBlur:
-        case BaseStyle::ButtonWarningInactiveHover:
-        case BaseStyle::ButtonWarningPressedBlur:
-        case BaseStyle::ButtonWarningPressedHover:
-            return BaseStyle::ButtonWarningPressedBlur;
-        case BaseStyle::ButtonDangerInactiveBlur:
-        case BaseStyle::ButtonDangerInactiveHover:
-        case BaseStyle::ButtonDangerPressedBlur:
-        case BaseStyle::ButtonDangerPressedHover:
-            return BaseStyle::ButtonDangerPressedBlur;
-        case BaseStyle::ButtonInfoInactiveBlur:
-        case BaseStyle::ButtonInfoInactiveHover:
-        case BaseStyle::ButtonInfoPressedBlur:
-        case BaseStyle::ButtonInfoPressedHover:
-            return BaseStyle::ButtonInfoPressedBlur;
-        case BaseStyle::ButtonDimInactiveBlur:
-        case BaseStyle::ButtonDimInactiveHover:
-        case BaseStyle::ButtonDimPressedBlur:
-        case BaseStyle::ButtonDimPressedHover:
-            return BaseStyle::ButtonDimPressedBlur;
-        case BaseStyle::ButtonFlatInactiveBlur:
-        case BaseStyle::ButtonFlatInactiveHover:
-        case BaseStyle::ButtonFlatPressedBlur:
-        case BaseStyle::ButtonFlatPressedHover:
-            return BaseStyle::ButtonFlatPressedBlur;
+        case BaseStyle::ButtonDefaultInactiveOut:
+        case BaseStyle::ButtonDefaultInactiveOver:
+        case BaseStyle::ButtonDefaultPressedOut:
+        case BaseStyle::ButtonDefaultPressedOver:
+            return BaseStyle::ButtonDefaultPressedOut;
+        case BaseStyle::ButtonPrimaryInactiveOut:
+        case BaseStyle::ButtonPrimaryInactiveOver:
+        case BaseStyle::ButtonPrimaryPressedOut:
+        case BaseStyle::ButtonPrimaryPressedOver:
+            return BaseStyle::ButtonPrimaryPressedOut;
+        case BaseStyle::ButtonSuccessInactiveOut:
+        case BaseStyle::ButtonSuccessInactiveOver:
+        case BaseStyle::ButtonSuccessPressedOut:
+        case BaseStyle::ButtonSuccessPressedOver:
+            return BaseStyle::ButtonSuccessPressedOut;
+        case BaseStyle::ButtonWarningInactiveOut:
+        case BaseStyle::ButtonWarningInactiveOver:
+        case BaseStyle::ButtonWarningPressedOut:
+        case BaseStyle::ButtonWarningPressedOver:
+            return BaseStyle::ButtonWarningPressedOut;
+        case BaseStyle::ButtonDangerInactiveOut:
+        case BaseStyle::ButtonDangerInactiveOver:
+        case BaseStyle::ButtonDangerPressedOut:
+        case BaseStyle::ButtonDangerPressedOver:
+            return BaseStyle::ButtonDangerPressedOut;
+        case BaseStyle::ButtonInfoInactiveOut:
+        case BaseStyle::ButtonInfoInactiveOver:
+        case BaseStyle::ButtonInfoPressedOut:
+        case BaseStyle::ButtonInfoPressedOver:
+            return BaseStyle::ButtonInfoPressedOut;
+        case BaseStyle::ButtonDimInactiveOut:
+        case BaseStyle::ButtonDimInactiveOver:
+        case BaseStyle::ButtonDimPressedOut:
+        case BaseStyle::ButtonDimPressedOver:
+            return BaseStyle::ButtonDimPressedOut;
+        case BaseStyle::ButtonFlatInactiveOut:
+        case BaseStyle::ButtonFlatInactiveOver:
+        case BaseStyle::ButtonFlatPressedOut:
+        case BaseStyle::ButtonFlatPressedOver:
+            return BaseStyle::ButtonFlatPressedOut;
         /* LCOV_EXCL_START */
         case BaseStyle::ButtonDefaultDisabled:
         case BaseStyle::ButtonPrimaryDisabled:
@@ -251,48 +251,48 @@ BaseStyle styleTransitionToPressedBlur(const BaseStyle index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-BaseStyle styleTransitionToPressedHover(const BaseStyle index) {
+BaseStyle styleTransitionToPressedOver(const BaseStyle index) {
     switch(index) {
-        case BaseStyle::ButtonDefaultInactiveBlur:
-        case BaseStyle::ButtonDefaultInactiveHover:
-        case BaseStyle::ButtonDefaultPressedBlur:
-        case BaseStyle::ButtonDefaultPressedHover:
-            return BaseStyle::ButtonDefaultPressedHover;
-        case BaseStyle::ButtonPrimaryInactiveBlur:
-        case BaseStyle::ButtonPrimaryInactiveHover:
-        case BaseStyle::ButtonPrimaryPressedBlur:
-        case BaseStyle::ButtonPrimaryPressedHover:
-            return BaseStyle::ButtonPrimaryPressedHover;
-        case BaseStyle::ButtonSuccessInactiveBlur:
-        case BaseStyle::ButtonSuccessInactiveHover:
-        case BaseStyle::ButtonSuccessPressedBlur:
-        case BaseStyle::ButtonSuccessPressedHover:
-            return BaseStyle::ButtonSuccessPressedHover;
-        case BaseStyle::ButtonWarningInactiveBlur:
-        case BaseStyle::ButtonWarningInactiveHover:
-        case BaseStyle::ButtonWarningPressedBlur:
-        case BaseStyle::ButtonWarningPressedHover:
-            return BaseStyle::ButtonWarningPressedHover;
-        case BaseStyle::ButtonDangerInactiveBlur:
-        case BaseStyle::ButtonDangerInactiveHover:
-        case BaseStyle::ButtonDangerPressedBlur:
-        case BaseStyle::ButtonDangerPressedHover:
-            return BaseStyle::ButtonDangerPressedHover;
-        case BaseStyle::ButtonInfoInactiveBlur:
-        case BaseStyle::ButtonInfoInactiveHover:
-        case BaseStyle::ButtonInfoPressedBlur:
-        case BaseStyle::ButtonInfoPressedHover:
-            return BaseStyle::ButtonInfoPressedHover;
-        case BaseStyle::ButtonDimInactiveBlur:
-        case BaseStyle::ButtonDimInactiveHover:
-        case BaseStyle::ButtonDimPressedBlur:
-        case BaseStyle::ButtonDimPressedHover:
-            return BaseStyle::ButtonDimPressedHover;
-        case BaseStyle::ButtonFlatInactiveBlur:
-        case BaseStyle::ButtonFlatInactiveHover:
-        case BaseStyle::ButtonFlatPressedBlur:
-        case BaseStyle::ButtonFlatPressedHover:
-            return BaseStyle::ButtonFlatPressedHover;
+        case BaseStyle::ButtonDefaultInactiveOut:
+        case BaseStyle::ButtonDefaultInactiveOver:
+        case BaseStyle::ButtonDefaultPressedOut:
+        case BaseStyle::ButtonDefaultPressedOver:
+            return BaseStyle::ButtonDefaultPressedOver;
+        case BaseStyle::ButtonPrimaryInactiveOut:
+        case BaseStyle::ButtonPrimaryInactiveOver:
+        case BaseStyle::ButtonPrimaryPressedOut:
+        case BaseStyle::ButtonPrimaryPressedOver:
+            return BaseStyle::ButtonPrimaryPressedOver;
+        case BaseStyle::ButtonSuccessInactiveOut:
+        case BaseStyle::ButtonSuccessInactiveOver:
+        case BaseStyle::ButtonSuccessPressedOut:
+        case BaseStyle::ButtonSuccessPressedOver:
+            return BaseStyle::ButtonSuccessPressedOver;
+        case BaseStyle::ButtonWarningInactiveOut:
+        case BaseStyle::ButtonWarningInactiveOver:
+        case BaseStyle::ButtonWarningPressedOut:
+        case BaseStyle::ButtonWarningPressedOver:
+            return BaseStyle::ButtonWarningPressedOver;
+        case BaseStyle::ButtonDangerInactiveOut:
+        case BaseStyle::ButtonDangerInactiveOver:
+        case BaseStyle::ButtonDangerPressedOut:
+        case BaseStyle::ButtonDangerPressedOver:
+            return BaseStyle::ButtonDangerPressedOver;
+        case BaseStyle::ButtonInfoInactiveOut:
+        case BaseStyle::ButtonInfoInactiveOver:
+        case BaseStyle::ButtonInfoPressedOut:
+        case BaseStyle::ButtonInfoPressedOver:
+            return BaseStyle::ButtonInfoPressedOver;
+        case BaseStyle::ButtonDimInactiveOut:
+        case BaseStyle::ButtonDimInactiveOver:
+        case BaseStyle::ButtonDimPressedOut:
+        case BaseStyle::ButtonDimPressedOver:
+            return BaseStyle::ButtonDimPressedOver;
+        case BaseStyle::ButtonFlatInactiveOut:
+        case BaseStyle::ButtonFlatInactiveOver:
+        case BaseStyle::ButtonFlatPressedOut:
+        case BaseStyle::ButtonFlatPressedOver:
+            return BaseStyle::ButtonFlatPressedOver;
         /* LCOV_EXCL_START */
         case BaseStyle::ButtonDefaultDisabled:
         case BaseStyle::ButtonPrimaryDisabled:
@@ -311,45 +311,45 @@ BaseStyle styleTransitionToPressedHover(const BaseStyle index) {
 
 BaseStyle styleTransitionToDisabled(const BaseStyle index) {
     switch(index) {
-        case BaseStyle::ButtonDefaultInactiveBlur:
-        case BaseStyle::ButtonDefaultInactiveHover:
-        case BaseStyle::ButtonDefaultPressedBlur:
-        case BaseStyle::ButtonDefaultPressedHover:
+        case BaseStyle::ButtonDefaultInactiveOut:
+        case BaseStyle::ButtonDefaultInactiveOver:
+        case BaseStyle::ButtonDefaultPressedOut:
+        case BaseStyle::ButtonDefaultPressedOver:
             return BaseStyle::ButtonDefaultDisabled;
-        case BaseStyle::ButtonPrimaryInactiveBlur:
-        case BaseStyle::ButtonPrimaryInactiveHover:
-        case BaseStyle::ButtonPrimaryPressedBlur:
-        case BaseStyle::ButtonPrimaryPressedHover:
+        case BaseStyle::ButtonPrimaryInactiveOut:
+        case BaseStyle::ButtonPrimaryInactiveOver:
+        case BaseStyle::ButtonPrimaryPressedOut:
+        case BaseStyle::ButtonPrimaryPressedOver:
             return BaseStyle::ButtonPrimaryDisabled;
-        case BaseStyle::ButtonSuccessInactiveBlur:
-        case BaseStyle::ButtonSuccessInactiveHover:
-        case BaseStyle::ButtonSuccessPressedBlur:
-        case BaseStyle::ButtonSuccessPressedHover:
+        case BaseStyle::ButtonSuccessInactiveOut:
+        case BaseStyle::ButtonSuccessInactiveOver:
+        case BaseStyle::ButtonSuccessPressedOut:
+        case BaseStyle::ButtonSuccessPressedOver:
             return BaseStyle::ButtonSuccessDisabled;
-        case BaseStyle::ButtonWarningInactiveBlur:
-        case BaseStyle::ButtonWarningInactiveHover:
-        case BaseStyle::ButtonWarningPressedBlur:
-        case BaseStyle::ButtonWarningPressedHover:
+        case BaseStyle::ButtonWarningInactiveOut:
+        case BaseStyle::ButtonWarningInactiveOver:
+        case BaseStyle::ButtonWarningPressedOut:
+        case BaseStyle::ButtonWarningPressedOver:
             return BaseStyle::ButtonWarningDisabled;
-        case BaseStyle::ButtonDangerInactiveBlur:
-        case BaseStyle::ButtonDangerInactiveHover:
-        case BaseStyle::ButtonDangerPressedBlur:
-        case BaseStyle::ButtonDangerPressedHover:
+        case BaseStyle::ButtonDangerInactiveOut:
+        case BaseStyle::ButtonDangerInactiveOver:
+        case BaseStyle::ButtonDangerPressedOut:
+        case BaseStyle::ButtonDangerPressedOver:
             return BaseStyle::ButtonDangerDisabled;
-        case BaseStyle::ButtonInfoInactiveBlur:
-        case BaseStyle::ButtonInfoInactiveHover:
-        case BaseStyle::ButtonInfoPressedBlur:
-        case BaseStyle::ButtonInfoPressedHover:
+        case BaseStyle::ButtonInfoInactiveOut:
+        case BaseStyle::ButtonInfoInactiveOver:
+        case BaseStyle::ButtonInfoPressedOut:
+        case BaseStyle::ButtonInfoPressedOver:
             return BaseStyle::ButtonInfoDisabled;
-        case BaseStyle::ButtonDimInactiveBlur:
-        case BaseStyle::ButtonDimInactiveHover:
-        case BaseStyle::ButtonDimPressedBlur:
-        case BaseStyle::ButtonDimPressedHover:
+        case BaseStyle::ButtonDimInactiveOut:
+        case BaseStyle::ButtonDimInactiveOver:
+        case BaseStyle::ButtonDimPressedOut:
+        case BaseStyle::ButtonDimPressedOver:
             return BaseStyle::ButtonDimDisabled;
-        case BaseStyle::ButtonFlatInactiveBlur:
-        case BaseStyle::ButtonFlatInactiveHover:
-        case BaseStyle::ButtonFlatPressedBlur:
-        case BaseStyle::ButtonFlatPressedHover:
+        case BaseStyle::ButtonFlatInactiveOut:
+        case BaseStyle::ButtonFlatInactiveOver:
+        case BaseStyle::ButtonFlatPressedOut:
+        case BaseStyle::ButtonFlatPressedOver:
             return BaseStyle::ButtonFlatDisabled;
         /* LCOV_EXCL_START */
         case BaseStyle::ButtonDefaultDisabled:
@@ -367,7 +367,7 @@ BaseStyle styleTransitionToDisabled(const BaseStyle index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle styleTransitionToInactiveBlur(const TextStyle index) {
+TextStyle styleTransitionToInactiveOut(const TextStyle index) {
     switch(index) {
         case TextStyle::ButtonIconOnly:
         case TextStyle::ButtonPressedIconOnly:
@@ -381,26 +381,26 @@ TextStyle styleTransitionToInactiveBlur(const TextStyle index) {
         case TextStyle::ButtonText:
         case TextStyle::ButtonPressedText:
             return TextStyle::ButtonText;
-        case TextStyle::ButtonFlatInactiveBlurIconOnly:
-        case TextStyle::ButtonFlatInactiveHoverIconOnly:
-        case TextStyle::ButtonFlatPressedBlurIconOnly:
-        case TextStyle::ButtonFlatPressedHoverIconOnly:
-            return TextStyle::ButtonFlatInactiveBlurIconOnly;
-        case TextStyle::ButtonFlatInactiveBlurTextOnly:
-        case TextStyle::ButtonFlatInactiveHoverTextOnly:
-        case TextStyle::ButtonFlatPressedBlurTextOnly:
-        case TextStyle::ButtonFlatPressedHoverTextOnly:
-            return TextStyle::ButtonFlatInactiveBlurTextOnly;
-        case TextStyle::ButtonFlatInactiveBlurIcon:
-        case TextStyle::ButtonFlatInactiveHoverIcon:
-        case TextStyle::ButtonFlatPressedBlurIcon:
-        case TextStyle::ButtonFlatPressedHoverIcon:
-            return TextStyle::ButtonFlatInactiveBlurIcon;
-        case TextStyle::ButtonFlatInactiveBlurText:
-        case TextStyle::ButtonFlatInactiveHoverText:
-        case TextStyle::ButtonFlatPressedBlurText:
-        case TextStyle::ButtonFlatPressedHoverText:
-            return TextStyle::ButtonFlatInactiveBlurText;
+        case TextStyle::ButtonFlatInactiveOutIconOnly:
+        case TextStyle::ButtonFlatInactiveOverIconOnly:
+        case TextStyle::ButtonFlatPressedOutIconOnly:
+        case TextStyle::ButtonFlatPressedOverIconOnly:
+            return TextStyle::ButtonFlatInactiveOutIconOnly;
+        case TextStyle::ButtonFlatInactiveOutTextOnly:
+        case TextStyle::ButtonFlatInactiveOverTextOnly:
+        case TextStyle::ButtonFlatPressedOutTextOnly:
+        case TextStyle::ButtonFlatPressedOverTextOnly:
+            return TextStyle::ButtonFlatInactiveOutTextOnly;
+        case TextStyle::ButtonFlatInactiveOutIcon:
+        case TextStyle::ButtonFlatInactiveOverIcon:
+        case TextStyle::ButtonFlatPressedOutIcon:
+        case TextStyle::ButtonFlatPressedOverIcon:
+            return TextStyle::ButtonFlatInactiveOutIcon;
+        case TextStyle::ButtonFlatInactiveOutText:
+        case TextStyle::ButtonFlatInactiveOverText:
+        case TextStyle::ButtonFlatPressedOutText:
+        case TextStyle::ButtonFlatPressedOverText:
+            return TextStyle::ButtonFlatInactiveOutText;
         case TextStyle::LabelDefaultIconOnly:
         case TextStyle::LabelDefaultTextOnly:
         case TextStyle::LabelDefaultIcon:
@@ -474,7 +474,7 @@ TextStyle styleTransitionToInactiveBlur(const TextStyle index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle styleTransitionToInactiveHover(const TextStyle index) {
+TextStyle styleTransitionToInactiveOver(const TextStyle index) {
     switch(index) {
         case TextStyle::ButtonIconOnly:
         case TextStyle::ButtonPressedIconOnly:
@@ -488,26 +488,26 @@ TextStyle styleTransitionToInactiveHover(const TextStyle index) {
         case TextStyle::ButtonText:
         case TextStyle::ButtonPressedText:
             return TextStyle::ButtonText;
-        case TextStyle::ButtonFlatInactiveBlurIconOnly:
-        case TextStyle::ButtonFlatInactiveHoverIconOnly:
-        case TextStyle::ButtonFlatPressedBlurIconOnly:
-        case TextStyle::ButtonFlatPressedHoverIconOnly:
-            return TextStyle::ButtonFlatInactiveHoverIconOnly;
-        case TextStyle::ButtonFlatInactiveBlurTextOnly:
-        case TextStyle::ButtonFlatInactiveHoverTextOnly:
-        case TextStyle::ButtonFlatPressedBlurTextOnly:
-        case TextStyle::ButtonFlatPressedHoverTextOnly:
-            return TextStyle::ButtonFlatInactiveHoverTextOnly;
-        case TextStyle::ButtonFlatInactiveBlurIcon:
-        case TextStyle::ButtonFlatInactiveHoverIcon:
-        case TextStyle::ButtonFlatPressedBlurIcon:
-        case TextStyle::ButtonFlatPressedHoverIcon:
-            return TextStyle::ButtonFlatInactiveHoverIcon;
-        case TextStyle::ButtonFlatInactiveBlurText:
-        case TextStyle::ButtonFlatInactiveHoverText:
-        case TextStyle::ButtonFlatPressedBlurText:
-        case TextStyle::ButtonFlatPressedHoverText:
-            return TextStyle::ButtonFlatInactiveHoverText;
+        case TextStyle::ButtonFlatInactiveOutIconOnly:
+        case TextStyle::ButtonFlatInactiveOverIconOnly:
+        case TextStyle::ButtonFlatPressedOutIconOnly:
+        case TextStyle::ButtonFlatPressedOverIconOnly:
+            return TextStyle::ButtonFlatInactiveOverIconOnly;
+        case TextStyle::ButtonFlatInactiveOutTextOnly:
+        case TextStyle::ButtonFlatInactiveOverTextOnly:
+        case TextStyle::ButtonFlatPressedOutTextOnly:
+        case TextStyle::ButtonFlatPressedOverTextOnly:
+            return TextStyle::ButtonFlatInactiveOverTextOnly;
+        case TextStyle::ButtonFlatInactiveOutIcon:
+        case TextStyle::ButtonFlatInactiveOverIcon:
+        case TextStyle::ButtonFlatPressedOutIcon:
+        case TextStyle::ButtonFlatPressedOverIcon:
+            return TextStyle::ButtonFlatInactiveOverIcon;
+        case TextStyle::ButtonFlatInactiveOutText:
+        case TextStyle::ButtonFlatInactiveOverText:
+        case TextStyle::ButtonFlatPressedOutText:
+        case TextStyle::ButtonFlatPressedOverText:
+            return TextStyle::ButtonFlatInactiveOverText;
         case TextStyle::LabelDefaultIconOnly:
         case TextStyle::LabelDefaultTextOnly:
         case TextStyle::LabelDefaultIcon:
@@ -581,7 +581,7 @@ TextStyle styleTransitionToInactiveHover(const TextStyle index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle styleTransitionToPressedBlur(const TextStyle index) {
+TextStyle styleTransitionToPressedOut(const TextStyle index) {
     switch(index) {
         case TextStyle::ButtonIconOnly:
         case TextStyle::ButtonPressedIconOnly:
@@ -595,26 +595,26 @@ TextStyle styleTransitionToPressedBlur(const TextStyle index) {
         case TextStyle::ButtonText:
         case TextStyle::ButtonPressedText:
             return TextStyle::ButtonPressedText;
-        case TextStyle::ButtonFlatInactiveBlurIconOnly:
-        case TextStyle::ButtonFlatInactiveHoverIconOnly:
-        case TextStyle::ButtonFlatPressedBlurIconOnly:
-        case TextStyle::ButtonFlatPressedHoverIconOnly:
-            return TextStyle::ButtonFlatPressedBlurIconOnly;
-        case TextStyle::ButtonFlatInactiveBlurTextOnly:
-        case TextStyle::ButtonFlatInactiveHoverTextOnly:
-        case TextStyle::ButtonFlatPressedBlurTextOnly:
-        case TextStyle::ButtonFlatPressedHoverTextOnly:
-            return TextStyle::ButtonFlatPressedBlurTextOnly;
-        case TextStyle::ButtonFlatInactiveBlurIcon:
-        case TextStyle::ButtonFlatInactiveHoverIcon:
-        case TextStyle::ButtonFlatPressedBlurIcon:
-        case TextStyle::ButtonFlatPressedHoverIcon:
-            return TextStyle::ButtonFlatPressedBlurIcon;
-        case TextStyle::ButtonFlatInactiveBlurText:
-        case TextStyle::ButtonFlatInactiveHoverText:
-        case TextStyle::ButtonFlatPressedBlurText:
-        case TextStyle::ButtonFlatPressedHoverText:
-            return TextStyle::ButtonFlatPressedBlurText;
+        case TextStyle::ButtonFlatInactiveOutIconOnly:
+        case TextStyle::ButtonFlatInactiveOverIconOnly:
+        case TextStyle::ButtonFlatPressedOutIconOnly:
+        case TextStyle::ButtonFlatPressedOverIconOnly:
+            return TextStyle::ButtonFlatPressedOutIconOnly;
+        case TextStyle::ButtonFlatInactiveOutTextOnly:
+        case TextStyle::ButtonFlatInactiveOverTextOnly:
+        case TextStyle::ButtonFlatPressedOutTextOnly:
+        case TextStyle::ButtonFlatPressedOverTextOnly:
+            return TextStyle::ButtonFlatPressedOutTextOnly;
+        case TextStyle::ButtonFlatInactiveOutIcon:
+        case TextStyle::ButtonFlatInactiveOverIcon:
+        case TextStyle::ButtonFlatPressedOutIcon:
+        case TextStyle::ButtonFlatPressedOverIcon:
+            return TextStyle::ButtonFlatPressedOutIcon;
+        case TextStyle::ButtonFlatInactiveOutText:
+        case TextStyle::ButtonFlatInactiveOverText:
+        case TextStyle::ButtonFlatPressedOutText:
+        case TextStyle::ButtonFlatPressedOverText:
+            return TextStyle::ButtonFlatPressedOutText;
         case TextStyle::LabelDefaultIconOnly:
         case TextStyle::LabelDefaultTextOnly:
         case TextStyle::LabelDefaultIcon:
@@ -688,7 +688,7 @@ TextStyle styleTransitionToPressedBlur(const TextStyle index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
-TextStyle styleTransitionToPressedHover(const TextStyle index) {
+TextStyle styleTransitionToPressedOver(const TextStyle index) {
     switch(index) {
         case TextStyle::ButtonIconOnly:
         case TextStyle::ButtonPressedIconOnly:
@@ -702,26 +702,26 @@ TextStyle styleTransitionToPressedHover(const TextStyle index) {
         case TextStyle::ButtonText:
         case TextStyle::ButtonPressedText:
             return TextStyle::ButtonPressedText;
-        case TextStyle::ButtonFlatInactiveBlurIconOnly:
-        case TextStyle::ButtonFlatInactiveHoverIconOnly:
-        case TextStyle::ButtonFlatPressedBlurIconOnly:
-        case TextStyle::ButtonFlatPressedHoverIconOnly:
-            return TextStyle::ButtonFlatPressedHoverIconOnly;
-        case TextStyle::ButtonFlatInactiveBlurTextOnly:
-        case TextStyle::ButtonFlatInactiveHoverTextOnly:
-        case TextStyle::ButtonFlatPressedBlurTextOnly:
-        case TextStyle::ButtonFlatPressedHoverTextOnly:
-            return TextStyle::ButtonFlatPressedHoverTextOnly;
-        case TextStyle::ButtonFlatInactiveBlurIcon:
-        case TextStyle::ButtonFlatInactiveHoverIcon:
-        case TextStyle::ButtonFlatPressedBlurIcon:
-        case TextStyle::ButtonFlatPressedHoverIcon:
-            return TextStyle::ButtonFlatPressedHoverIcon;
-        case TextStyle::ButtonFlatInactiveBlurText:
-        case TextStyle::ButtonFlatInactiveHoverText:
-        case TextStyle::ButtonFlatPressedBlurText:
-        case TextStyle::ButtonFlatPressedHoverText:
-            return TextStyle::ButtonFlatPressedHoverText;
+        case TextStyle::ButtonFlatInactiveOutIconOnly:
+        case TextStyle::ButtonFlatInactiveOverIconOnly:
+        case TextStyle::ButtonFlatPressedOutIconOnly:
+        case TextStyle::ButtonFlatPressedOverIconOnly:
+            return TextStyle::ButtonFlatPressedOverIconOnly;
+        case TextStyle::ButtonFlatInactiveOutTextOnly:
+        case TextStyle::ButtonFlatInactiveOverTextOnly:
+        case TextStyle::ButtonFlatPressedOutTextOnly:
+        case TextStyle::ButtonFlatPressedOverTextOnly:
+            return TextStyle::ButtonFlatPressedOverTextOnly;
+        case TextStyle::ButtonFlatInactiveOutIcon:
+        case TextStyle::ButtonFlatInactiveOverIcon:
+        case TextStyle::ButtonFlatPressedOutIcon:
+        case TextStyle::ButtonFlatPressedOverIcon:
+            return TextStyle::ButtonFlatPressedOverIcon;
+        case TextStyle::ButtonFlatInactiveOutText:
+        case TextStyle::ButtonFlatInactiveOverText:
+        case TextStyle::ButtonFlatPressedOutText:
+        case TextStyle::ButtonFlatPressedOverText:
+            return TextStyle::ButtonFlatPressedOverText;
         case TextStyle::LabelDefaultIconOnly:
         case TextStyle::LabelDefaultTextOnly:
         case TextStyle::LabelDefaultIcon:
@@ -809,25 +809,25 @@ TextStyle styleTransitionToDisabled(const TextStyle index) {
         case TextStyle::ButtonText:
         case TextStyle::ButtonPressedText:
             return TextStyle::ButtonDisabledText;
-        case TextStyle::ButtonFlatInactiveBlurIconOnly:
-        case TextStyle::ButtonFlatInactiveHoverIconOnly:
-        case TextStyle::ButtonFlatPressedBlurIconOnly:
-        case TextStyle::ButtonFlatPressedHoverIconOnly:
+        case TextStyle::ButtonFlatInactiveOutIconOnly:
+        case TextStyle::ButtonFlatInactiveOverIconOnly:
+        case TextStyle::ButtonFlatPressedOutIconOnly:
+        case TextStyle::ButtonFlatPressedOverIconOnly:
             return TextStyle::ButtonFlatDisabledIconOnly;
-        case TextStyle::ButtonFlatInactiveBlurTextOnly:
-        case TextStyle::ButtonFlatInactiveHoverTextOnly:
-        case TextStyle::ButtonFlatPressedBlurTextOnly:
-        case TextStyle::ButtonFlatPressedHoverTextOnly:
+        case TextStyle::ButtonFlatInactiveOutTextOnly:
+        case TextStyle::ButtonFlatInactiveOverTextOnly:
+        case TextStyle::ButtonFlatPressedOutTextOnly:
+        case TextStyle::ButtonFlatPressedOverTextOnly:
             return TextStyle::ButtonFlatDisabledTextOnly;
-        case TextStyle::ButtonFlatInactiveBlurIcon:
-        case TextStyle::ButtonFlatInactiveHoverIcon:
-        case TextStyle::ButtonFlatPressedBlurIcon:
-        case TextStyle::ButtonFlatPressedHoverIcon:
+        case TextStyle::ButtonFlatInactiveOutIcon:
+        case TextStyle::ButtonFlatInactiveOverIcon:
+        case TextStyle::ButtonFlatPressedOutIcon:
+        case TextStyle::ButtonFlatPressedOverIcon:
             return TextStyle::ButtonFlatDisabledIcon;
-        case TextStyle::ButtonFlatInactiveBlurText:
-        case TextStyle::ButtonFlatInactiveHoverText:
-        case TextStyle::ButtonFlatPressedBlurText:
-        case TextStyle::ButtonFlatPressedHoverText:
+        case TextStyle::ButtonFlatInactiveOutText:
+        case TextStyle::ButtonFlatInactiveOverText:
+        case TextStyle::ButtonFlatPressedOutText:
+        case TextStyle::ButtonFlatPressedOverText:
             return TextStyle::ButtonFlatDisabledText;
         case TextStyle::LabelDefaultIconOnly:
             return TextStyle::LabelDefaultDisabledIconOnly;
@@ -999,10 +999,10 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
                 BaseLayerStyleUniformsMcssDark,
                 {})
             .setStyleTransition<BaseStyle,
-                styleTransitionToPressedBlur,
-                styleTransitionToPressedHover,
-                styleTransitionToInactiveBlur,
-                styleTransitionToInactiveHover,
+                styleTransitionToPressedOut,
+                styleTransitionToPressedOver,
+                styleTransitionToInactiveOut,
+                styleTransitionToInactiveOver,
                 styleTransitionToDisabled>();
     }
 
@@ -1064,10 +1064,10 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
                 fontHandles,
                 Containers::stridedArrayView(TextStyleData).slice(&std::remove_all_extents<decltype(TextStyleData)>::type::padding))
             .setStyleTransition<TextStyle,
-                styleTransitionToPressedBlur,
-                styleTransitionToPressedHover,
-                styleTransitionToInactiveBlur,
-                styleTransitionToInactiveHover,
+                styleTransitionToPressedOut,
+                styleTransitionToPressedOver,
+                styleTransitionToInactiveOut,
+                styleTransitionToInactiveOver,
                 styleTransitionToDisabled>();
     }
 

@@ -35,10 +35,10 @@ _c(ButtonDisabled,              0x2f363fff_rgbaf*0.8f)
 
 /* Flat button is styled the same as links (--link-color, --link-active-color).
    Disabled state is --dim-link-color with 80% opacity. */
-_c(ButtonFlatInactiveBlur,      0x8fa5ec_rgbf)
-_c(ButtonFlatInactiveHover,     0xd0d9f7_rgbf)
-_c(ButtonFlatPressedBlur,       0xd0d9f7_rgbf)
-_c(ButtonFlatPressedHover,      0xd0d9f7_rgbf)
+_c(ButtonFlatInactiveOut,       0x8fa5ec_rgbf)
+_c(ButtonFlatInactiveOver,      0xd0d9f7_rgbf)
+_c(ButtonFlatPressedOut,        0xd0d9f7_rgbf)
+_c(ButtonFlatPressedOver,       0xd0d9f7_rgbf)
 _c(ButtonFlatDisabled,          0xacacacff_rgbaf*0.3f)
 
 _c(LabelDefault,                0xdcdcdc_rgbf)

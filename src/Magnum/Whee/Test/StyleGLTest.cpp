@@ -356,7 +356,7 @@ void StyleGLTest::render() {
         Utility::Path::join({WHEE_TEST_DIR, "StyleTestFiles", data.filename}),
         DebugTools::CompareImageToFile{_importerManager});
 
-    /* Verify that a change back to inactive blur state results in the same
+    /* Verify that a change back to inactive out state results in the same
        visuals as originally */
     if(data.hoverActive) {
         for(Int style = 0; style != data.styleCount; ++style) {
