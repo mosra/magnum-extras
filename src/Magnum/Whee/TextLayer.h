@@ -1088,11 +1088,11 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
-        Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) {
-            return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover, toDisabled));
+        Shared& setStyleTransition(UnsignedInt(*toPressedOut)(UnsignedInt), UnsignedInt(*toPressedOver)(UnsignedInt), UnsignedInt(*toInactiveOut)(UnsignedInt), UnsignedInt(*toInactiveOver)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) {
+            return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressedOut, toPressedOver, toInactiveOut, toInactiveOver, toDisabled));
         }
-        template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() {
-            return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover, toDisabled>());
+        template<class StyleIndex, StyleIndex(*toPressedOut)(StyleIndex), StyleIndex(*toPressedOver)(StyleIndex), StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*toInactiveOver)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() {
+            return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toPressedOut, toPressedOver, toInactiveOut, toInactiveOver, toDisabled>());
         }
         Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) {
             return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressed, toInactive, toDisabled));
