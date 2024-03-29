@@ -42,6 +42,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
 set(MagnumWhee_SRCS
     Event.cpp
     Handle.cpp
+    NodeFlags.cpp
     Widget.cpp)
 
 set(MagnumWhee_GracefulAssert_SRCS
@@ -70,6 +71,7 @@ set(MagnumWhee_HEADERS
     Event.h
     EventLayer.h
     Handle.h
+    NodeFlags.h
     TextLayer.h
     TextProperties.h
     UserInterface.h

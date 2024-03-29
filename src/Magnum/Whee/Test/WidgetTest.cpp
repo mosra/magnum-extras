@@ -28,6 +28,7 @@
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/UserInterface.h"
 #include "Magnum/Whee/Widget.h"
 

@@ -35,6 +35,7 @@
 #include "Magnum/Whee/AbstractVisualLayer.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 /* for setStyle(), eventStyleTransition*() */
 #include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
 
