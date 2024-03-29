@@ -42,6 +42,7 @@
 #include "Magnum/Whee/AbstractRenderer.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/Implementation/abstractUserInterface.h"
 
 namespace Magnum { namespace Whee {
@@ -91,33 +92,6 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         UserInterfaceState::NeedsDataUpdate,
         UserInterfaceState::NeedsRendererSizeSetup,
         UserInterfaceState::NeedsAnimationAdvance
-    });
-}
-
-Debug& operator<<(Debug& debug, const NodeFlag value) {
-    debug << "Whee::NodeFlag" << Debug::nospace;
-
-    switch(value) {
-        /* LCOV_EXCL_START */
-        #define _c(value) case NodeFlag::value: return debug << "::" #value;
-        _c(Hidden)
-        _c(Clip)
-        _c(NoEvents)
-        _c(Disabled)
-        #undef _c
-        /* LCOV_EXCL_STOP */
-    }
-
-    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
-}
-
-Debug& operator<<(Debug& debug, const NodeFlags value) {
-    return Containers::enumSetDebugOutput(debug, value, "Whee::NodeFlags{}", {
-        NodeFlag::Hidden,
-        NodeFlag::Clip,
-        NodeFlag::Disabled,
-        /* Implied by Disabled, has to be after */
-        NodeFlag::NoEvents
     });
 }
 

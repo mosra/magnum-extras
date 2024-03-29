@@ -51,6 +51,7 @@
 #include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
 
 #include "configure.h"

@@ -50,6 +50,7 @@
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/TextLayerGL.h"
 #include "Magnum/Whee/TextProperties.h"

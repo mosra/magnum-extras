@@ -45,6 +45,9 @@ enum class AnimationHandle: UnsignedLong;
 enum class AnimatorHandle: UnsignedShort;
 enum class AnimatorDataHandle: UnsignedInt;
 
+enum class NodeFlag: UnsignedByte;
+typedef Containers::EnumSet<NodeFlag> NodeFlags;
+
 class AbstractAnimator;
 class AbstractGenericAnimator;
 class AbstractLayer;

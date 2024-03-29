@@ -39,6 +39,8 @@ corrade_add_test(WheeBlurShaderTest BlurShaderTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventLayerTest EventLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
+corrade_add_test(WheeNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumWhee)
+
 corrade_add_test(WheeTextLayerTest TextLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeTextPropertiesTest TextPropertiesTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeUserInterfaceTest UserInterfaceTest.cpp LIBRARIES MagnumWheeTestLib)

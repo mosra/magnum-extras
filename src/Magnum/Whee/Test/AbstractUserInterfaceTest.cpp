@@ -47,15 +47,13 @@
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
 
 struct AbstractUserInterfaceTest: TestSuite::Tester {
     explicit AbstractUserInterfaceTest();
 
-    void debugNodeFlag();
-    void debugNodeFlags();
-    void debugNodeFlagsSupersets();
     void debugState();
     void debugStates();
     void debugStatesSupersets();
@@ -578,10 +576,7 @@ const struct {
 };
 
 AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
-    addTests({&AbstractUserInterfaceTest::debugNodeFlag,
-              &AbstractUserInterfaceTest::debugNodeFlags,
-              &AbstractUserInterfaceTest::debugNodeFlagsSupersets,
-              &AbstractUserInterfaceTest::debugState,
+    addTests({&AbstractUserInterfaceTest::debugState,
               &AbstractUserInterfaceTest::debugStates,
               &AbstractUserInterfaceTest::debugStatesSupersets,
 
@@ -770,27 +765,6 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved},
         Containers::arraySize(CleanUpdateData));
-}
-
-void AbstractUserInterfaceTest::debugNodeFlag() {
-    std::ostringstream out;
-    Debug{&out} << NodeFlag::Hidden << NodeFlag(0xbe);
-    CORRADE_COMPARE(out.str(), "Whee::NodeFlag::Hidden Whee::NodeFlag(0xbe)\n");
-}
-
-void AbstractUserInterfaceTest::debugNodeFlags() {
-    std::ostringstream out;
-    Debug{&out} << (NodeFlag::Hidden|NodeFlag(0xe0)) << NodeFlags{};
-    CORRADE_COMPARE(out.str(), "Whee::NodeFlag::Hidden|Whee::NodeFlag(0xe0) Whee::NodeFlags{}\n");
-}
-
-void AbstractUserInterfaceTest::debugNodeFlagsSupersets() {
-    /* Disabled is a superset of NoEvents, so only one should be printed */
-    {
-        std::ostringstream out;
-        Debug{&out} << (NodeFlag::Disabled|NodeFlag::NoEvents);
-        CORRADE_COMPARE(out.str(), "Whee::NodeFlag::Disabled\n");
-    }
 }
 
 void AbstractUserInterfaceTest::debugState() {

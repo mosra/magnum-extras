@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::AbstractUserInterface, enum @ref Magnum::Whee::UserInterfaceState, @ref Magnum::Whee::NodeFlag, enum set @ref Magnum::Whee::UserInterfaceStates, @ref Magnum::Whee::NodeFlags
+ * @brief Class @ref Magnum::Whee::AbstractUserInterface, enum @ref Magnum::Whee::UserInterfaceState, enum set @ref Magnum::Whee::UserInterfaceStates
  * @m_since_latest
  */
 
@@ -237,92 +237,6 @@ typedef Containers::EnumSet<UserInterfaceState> UserInterfaceStates;
 MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, UserInterfaceStates value);
 
 CORRADE_ENUMSET_OPERATORS(UserInterfaceStates)
-
-/**
-@brief Node behavior flag
-@m_since_latest
-
-@see @ref NodeFlags, @ref AbstractUserInterface::createNode(),
-    @ref AbstractUserInterface::nodeFlags(),
-    @ref AbstractUserInterface::setNodeFlags(),
-    @ref AbstractUserInterface::addNodeFlags(),
-    @ref AbstractUserInterface::clearNodeFlags()
-*/
-enum class NodeFlag: UnsignedByte {
-    /**
-     * The node, all nested nodes and all attached data are hidden, i.e. not
-     * drawn and excluded from event processing.
-     *
-     * For top-level nodes (i.e., nodes for which
-     * @ref AbstractUserInterface::nodeParent() is @ref NodeHandle::Null) a
-     * draw order is managed in addition to the hidden state, using
-     * @ref AbstractUserInterface::setNodeOrder() and
-     * @relativeref{AbstractUserInterface,clearNodeOrder()}. A top-level node
-     * that isn't in the draw order list behaves the same as if
-     * @ref NodeFlag::Hidden was set for it. For performance reasons it's
-     * however recommended to keep the draw list small rather than having it
-     * full of mostly hidden nodes.
-     *
-     * Changing this flag causes @ref UserInterfaceState::NeedsNodeUpdate to be
-     * set.
-     * @see @ref NodeFlag::NoEvents, @ref NodeFlag::Disabled
-     */
-    Hidden = 1 << 0,
-
-    /**
-     * The node clips its contents. When enabled, child nodes that are
-     * completely outside of the node rectangle are culled and not even drawn,
-     * nodes that are partially outside are clipped.
-     *
-     * Changing this flag causes @ref UserInterfaceState::NeedsNodeClipUpdate
-     * to be set.
-     */
-    Clip = 1 << 1,
-
-    /**
-     * The node, all nested nodes and all attached data don't get any events
-     * even if a particular layer implements event handlers. Doesn't have any
-     * visual effect, see @ref NodeFlag::Disabled or @ref NodeFlag::Hidden for
-     * alternatives.
-     *
-     * Changing this flag causes
-     * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
-     */
-    NoEvents = 1 << 2,
-
-    /**
-     * The node, all nested nodes and all attached data are disabled. Implies
-     * @ref NodeFlag::NoEvents and additionally has a visual effect on layers
-     * that implement a disabled state.
-     *
-     * Changing this flag causes
-     * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
-     * @see @ref NodeFlag::Hidden
-     */
-    Disabled = NoEvents|(1 << 3),
-};
-
-/**
-@debugoperatorenum{NodeFlag}
-@m_since_latest
-*/
-MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, NodeFlag value);
-
-/**
-@brief Node behavior flags
-@m_since_latest
-
-@see @ref AbstractUserInterface::createNode()
-*/
-typedef Containers::EnumSet<NodeFlag> NodeFlags;
-
-/**
-@debugoperatorenum{NodeFlags}
-@m_since_latest
-*/
-MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, NodeFlags value);
-
-CORRADE_ENUMSET_OPERATORS(NodeFlags)
 
 /**
 @brief Base for the main user interface

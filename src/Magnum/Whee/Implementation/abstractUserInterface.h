@@ -36,8 +36,8 @@
 #include <Magnum/Math/Functions.h>
 
 #include "Magnum/Whee/AbstractAnimator.h" /* AnimatorFeatures */
-#include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 
 /* Contains algorithms used internally in AbstractUserInterface.cpp. Extracted
    here for easier testing and ability to iterate on them in isolation without
