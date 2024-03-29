@@ -439,7 +439,7 @@ void BaseLayerTest::styleUniformConstructNoGradientNoOutline() {
     BaseLayerStyleUniform a{0xff336699_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
-    CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.outlineWidth, Vector4{0.0f});
     CORRADE_COMPARE(a.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
     CORRADE_COMPARE(a.innerOutlineCornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
@@ -447,7 +447,7 @@ void BaseLayerTest::styleUniformConstructNoGradientNoOutline() {
     constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, {5.0f, 6.0f, 7.0f, 8.0f}};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
-    CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.outlineWidth, Vector4{0.0f});
     CORRADE_COMPARE(ca.cornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
     CORRADE_COMPARE(ca.innerOutlineCornerRadius, (Vector4{5.0f, 6.0f, 7.0f, 8.0f}));
@@ -457,7 +457,7 @@ void BaseLayerTest::styleUniformConstructNoGradientNoOutlineSingleRadius() {
     BaseLayerStyleUniform a{0xff336699_rgbaf, 2.5f};
     CORRADE_COMPARE(a.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.bottomColor, 0xff336699_rgbaf);
-    CORRADE_COMPARE(a.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(a.outlineColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(a.outlineWidth, Vector4{0.0f});
     CORRADE_COMPARE(a.cornerRadius, Vector4{2.5f});
     CORRADE_COMPARE(a.innerOutlineCornerRadius, Vector4{2.5f});
@@ -465,7 +465,7 @@ void BaseLayerTest::styleUniformConstructNoGradientNoOutlineSingleRadius() {
     constexpr BaseLayerStyleUniform ca{0xff336699_rgbaf, 2.5f};
     CORRADE_COMPARE(ca.topColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.bottomColor, 0xff336699_rgbaf);
-    CORRADE_COMPARE(ca.outlineColor, 0xffffffff_rgbaf);
+    CORRADE_COMPARE(ca.outlineColor, 0xff336699_rgbaf);
     CORRADE_COMPARE(ca.outlineWidth, Vector4{0.0f});
     CORRADE_COMPARE(ca.cornerRadius, Vector4{2.5f});
     CORRADE_COMPARE(ca.innerOutlineCornerRadius, Vector4{2.5f});

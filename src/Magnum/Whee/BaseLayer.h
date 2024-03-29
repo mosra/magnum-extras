@@ -180,18 +180,19 @@ struct BaseLayerStyleUniform {
     /**
      * @brief Construct with no gradient and no outline
      *
-     * Delegates to @ref BaseLayerStyleUniform(const Color4&, const Color4&, const Vector4&)
-     * with @p color used for both @p topColor and @p bottomColor.
+     * The @ref topColor, @ref bottomColor and @ref outlineColor are all set to
+     * @p color, @ref outlineWidth to a zero vector and both @ref cornerRadius
+     * and @ref innerOutlineCornerRadius get a value of @p cornerRadius.
      */
-    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& color, const Vector4& cornerRadius): BaseLayerStyleUniform{color, color, cornerRadius} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& color, const Vector4& cornerRadius): BaseLayerStyleUniform{color, color, color, Vector4{0.0f}, cornerRadius, cornerRadius} {}
 
     /**
      * @brief Construct with no gradient, no outline and all corners having the same radius
      *
-     * Delegates to @ref BaseLayerStyleUniform(const Color4&, const Color4&, Float)
-     * with @p color used for both @p topColor and @p bottomColor.
+     * Delegates to @ref BaseLayerStyleUniform(const Color4&, const Vector4&)
+     * with @p cornerRadius having all components set to the same value.
      */
-    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& color, Float cornerRadius): BaseLayerStyleUniform{color, color, cornerRadius} {}
+    constexpr /*implicit*/ BaseLayerStyleUniform(const Color4& color, Float cornerRadius): BaseLayerStyleUniform{color, Vector4{cornerRadius}} {}
 
     /** @brief Construct without initializing the contents */
     explicit BaseLayerStyleUniform(NoInitT) noexcept: topColor{NoInit}, bottomColor{NoInit}, outlineColor{NoInit}, outlineWidth{NoInit}, cornerRadius{NoInit}, innerOutlineCornerRadius{NoInit} {}
