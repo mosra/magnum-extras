@@ -39,7 +39,7 @@ should be no need to use anything from this header from application code.
 #ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Whee { namespace Implementation {
 
-enum class BaseStyle: UnsignedInt {
+enum class BaseStyle: UnsignedShort {
     ButtonDefaultInactiveOut,
     ButtonDefaultInactiveOver,
     ButtonDefaultPressedOut,
@@ -100,7 +100,7 @@ enum class TextStyleUniform: UnsignedInt {
     ButtonFlatDisabled,
 };
 
-enum class TextStyle: UnsignedInt {
+enum class TextStyle: UnsignedShort {
     ButtonIconOnly,
     ButtonTextOnly,
     ButtonIcon,
