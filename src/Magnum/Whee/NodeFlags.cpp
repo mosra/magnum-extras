@@ -23,45 +23,37 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Widget.h"
+#include "NodeFlags.h"
 
-#include "Magnum/Whee/Handle.h"
-#include "Magnum/Whee/NodeFlags.h"
-#include "Magnum/Whee/UserInterface.h"
+#include <Corrade/Containers/EnumSet.hpp>
 
 namespace Magnum { namespace Whee {
 
-Widget::Widget(Widget&& other) noexcept: _ui{other._ui}, _node{other._node} {
-    /* not using NodeHandle::Null to not need to include Handle.h */
-    other._node = NodeHandle{};
+Debug& operator<<(Debug& debug, const NodeFlag value) {
+    debug << "Whee::NodeFlag" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case NodeFlag::value: return debug << "::" #value;
+        _c(Hidden)
+        _c(Clip)
+        _c(NoEvents)
+        _c(Disabled)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-Widget::~Widget() {
-    /* Explicitly checking for null handles even though isHandleValid() does
-       that to avoid a needless indirection */
-    if(_node != NodeHandle::Null && _ui->isHandleValid(_node))
-        _ui->removeNode(_node);
-}
-
-Widget& Widget::operator=(Widget&& other) noexcept {
-    Utility::swap(_ui, other._ui);
-    Utility::swap(_node, other._node);
-    return *this;
-}
-
-bool Widget::isHidden() const {
-    return _ui->nodeFlags(_node) >= NodeFlag::Hidden;
-}
-
-void Widget::setHidden(const bool hidden) {
-    hidden ? _ui->addNodeFlags(_node, NodeFlag::Hidden) :
-             _ui->clearNodeFlags(_node, NodeFlag::Hidden);
-}
-
-NodeHandle Widget::release() {
-    const NodeHandle out = _node;
-    _node = NodeHandle::Null;
-    return out;
+Debug& operator<<(Debug& debug, const NodeFlags value) {
+    return Containers::enumSetDebugOutput(debug, value, "Whee::NodeFlags{}", {
+        NodeFlag::Hidden,
+        NodeFlag::Clip,
+        NodeFlag::Disabled,
+        /* Implied by Disabled, has to be after */
+        NodeFlag::NoEvents
+    });
 }
 
 }}
