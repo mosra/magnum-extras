@@ -42,8 +42,11 @@ namespace Magnum { namespace Whee { namespace Test { namespace {
 struct BaseLayerGLBenchmark: GL::OpenGLTester {
     explicit BaseLayerGLBenchmark();
 
-    void setup();
+    void setupVertex();
+    void setupFragment();
     void teardown();
+
+    void vertex();
     void fragment();
 
     private:
@@ -53,7 +56,22 @@ struct BaseLayerGLBenchmark: GL::OpenGLTester {
 
 using namespace Math::Literals;
 
-constexpr Vector2i BenchmarkSize{2048, 2048};
+constexpr Vector2i VertexBenchmarkSize{128, 128};
+constexpr Vector2i FragmentBenchmarkSize{2048, 2048};
+
+const struct {
+    const char* name;
+    BaseLayerGL::Shared::Flags flags;
+} VertexData[]{
+    {"default", {}},
+    {"no rounded corners",
+        BaseLayerGL::Shared::Flag::NoRoundedCorners},
+    {"no outline",
+        BaseLayerGL::Shared::Flag::NoOutline},
+    {"no rounded corners or outline",
+        BaseLayerGL::Shared::Flag::NoRoundedCorners|
+        BaseLayerGL::Shared::Flag::NoOutline},
+};
 
 const struct {
     const char* name;
@@ -73,25 +91,47 @@ const struct {
         BaseLayerGL::Shared::Flag::NoRoundedCorners|
         BaseLayerGL::Shared::Flag::NoOutline},
     {"just rounded corners",
-        BenchmarkSize.x()*0.5f, 0.0f, {}},
+        FragmentBenchmarkSize.x()*0.5f, 0.0f, {}},
     {"just outline",
-        0.0f, BenchmarkSize.x()*0.5f, {}},
+        0.0f, FragmentBenchmarkSize.x()*0.5f, {}},
     {"just rounded corners and outline",
-        BenchmarkSize.x()*0.5f, BenchmarkSize.x()*0.5f, {}},
+        FragmentBenchmarkSize.x()*0.5f, FragmentBenchmarkSize.x()*0.5f, {}},
 };
 
 BaseLayerGLBenchmark::BaseLayerGLBenchmark() {
+    addInstancedBenchmarks({&BaseLayerGLBenchmark::vertex}, 10,
+        Containers::arraySize(VertexData),
+        &BaseLayerGLBenchmark::setupVertex,
+        &BaseLayerGLBenchmark::teardown,
+        BenchmarkType::GpuTime);
+
     addInstancedBenchmarks({&BaseLayerGLBenchmark::fragment}, 10,
         Containers::arraySize(FragmentData),
-        &BaseLayerGLBenchmark::setup,
+        &BaseLayerGLBenchmark::setupFragment,
         &BaseLayerGLBenchmark::teardown,
         BenchmarkType::GpuTime);
 }
 
-void BaseLayerGLBenchmark::setup() {
+void BaseLayerGLBenchmark::setupVertex() {
     _color = GL::Texture2D{};
-    _color.setStorage(1, GL::TextureFormat::RGBA8, BenchmarkSize);
-    _framebuffer = GL::Framebuffer{{{}, BenchmarkSize}};
+    _color.setStorage(1, GL::TextureFormat::RGBA8, VertexBenchmarkSize);
+    _framebuffer = GL::Framebuffer{{{}, VertexBenchmarkSize}};
+    _framebuffer
+        .attachTexture(GL::Framebuffer::ColorAttachment{0}, _color, 0)
+        .clear(GL::FramebufferClear::Color)
+        .bind();
+
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    /* The RendererGL should enable these on its own if needed */
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
+    GL::Renderer::disable(GL::Renderer::Feature::Blending);
+}
+
+void BaseLayerGLBenchmark::setupFragment() {
+    _color = GL::Texture2D{};
+    _color.setStorage(1, GL::TextureFormat::RGBA8, FragmentBenchmarkSize);
+    _framebuffer = GL::Framebuffer{{{}, FragmentBenchmarkSize}};
     _framebuffer
         .attachTexture(GL::Framebuffer::ColorAttachment{0}, _color, 0)
         .clear(GL::FramebufferClear::Color)
@@ -113,6 +153,52 @@ void BaseLayerGLBenchmark::teardown() {
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
+void BaseLayerGLBenchmark::vertex() {
+    auto&& data = VertexData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Renders one data for every pixels to benchmark mainly the vertex shader
+       invocation */
+
+    AbstractUserInterface ui{VertexBenchmarkSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}
+        .setFlags(data.flags)
+    };
+    shared.setStyle(BaseLayerCommonStyleUniform{}, {
+        BaseLayerStyleUniform{}
+            .setColor(0xff3366_rgbf)
+    }, {});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), shared));
+
+    NodeHandle root = ui.createNode({}, ui.size());
+    for(Int x = 0; x != VertexBenchmarkSize.x(); ++x)
+        for(Int y = 0; y != VertexBenchmarkSize.y(); ++y) {
+            NodeHandle node = ui.createNode(root, {Float(x), Float(y)}, Vector2{1.0f});
+            layer.create(0, node);
+        }
+
+    ui.update();
+
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    CORRADE_BENCHMARK(20)
+        ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    /* Verify just one pixel, the BaseLayerGLTest does the rest */
+    Image2D out = _framebuffer.read({{}, VertexBenchmarkSize}, {PixelFormat::RGBA8Unorm});
+    CORRADE_COMPARE_WITH(
+        Math::unpack<Color4>(
+            out.pixels<Color4ub>()[std::size_t(VertexBenchmarkSize.y()/2)]
+                                  [std::size_t(VertexBenchmarkSize.x()/2)]),
+        0xff3366_rgbf,
+        TestSuite::Compare::around(Color4{1.0f/255.0f, 1.0f/255.0f}));
+}
+
 void BaseLayerGLBenchmark::fragment() {
     auto&& data = FragmentData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -120,7 +206,7 @@ void BaseLayerGLBenchmark::fragment() {
     /* Renders a single data over the whole size to benchmark mainly the
        fragment shader invocation */
 
-    AbstractUserInterface ui{BenchmarkSize};
+    AbstractUserInterface ui{FragmentBenchmarkSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}
@@ -138,7 +224,7 @@ void BaseLayerGLBenchmark::fragment() {
 
     BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), shared));
 
-    NodeHandle node = ui.createNode({}, Vector2{BenchmarkSize});
+    NodeHandle node = ui.createNode({}, Vector2{FragmentBenchmarkSize});
     layer.create(0, node);
 
     ui.update();
@@ -150,11 +236,11 @@ void BaseLayerGLBenchmark::fragment() {
     MAGNUM_VERIFY_NO_GL_ERROR();
 
     /* Verify just one pixel, the BaseLayerGLTest does the rest */
-    Image2D out = _framebuffer.read({{}, BenchmarkSize}, {PixelFormat::RGBA8Unorm});
+    Image2D out = _framebuffer.read({{}, FragmentBenchmarkSize}, {PixelFormat::RGBA8Unorm});
     CORRADE_COMPARE_WITH(
         Math::unpack<Color4>(
-            out.pixels<Color4ub>()[std::size_t(BenchmarkSize.y()/2)]
-                                  [std::size_t(BenchmarkSize.x()/2)]),
+            out.pixels<Color4ub>()[std::size_t(FragmentBenchmarkSize.y()/2)]
+                                  [std::size_t(FragmentBenchmarkSize.x()/2)]),
         0xff3366_rgbf,
         TestSuite::Compare::around(Color4{1.0f/255.0f, 1.0f/255.0f}));
 }
