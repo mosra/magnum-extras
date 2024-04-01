@@ -1561,23 +1561,16 @@ void BaseLayerTest::updateDataOrder() {
         3*4 + 0, 3*4 + 2, 3*4 + 1, 3*4 + 2, 3*4 + 3, 3*4 + 1, /* quad 3 */
     }), TestSuite::Compare::Container);
 
-    /* Depending on whether texturing is enabled, either the vertices or the
-       texturedVertices array should be filled, not both */
-    Containers::StridedArrayView1D<const Implementation::BaseLayerVertex> vertices;
-    /** @todo arrayCast() doesn't work because the derived type is not
-        standard layout, so some slice<T>() to base or whatever? */
-    if(data.textured) {
-        CORRADE_COMPARE(layer.stateData().vertices.size(), 0);
-        vertices = {
-            layer.stateData().texturedVertices,
-            layer.stateData().texturedVertices.begin(),
-            layer.stateData().texturedVertices.size(),
-            sizeof(Implementation::BaseLayerTexturedVertex)
-        };
-    } else {
-        CORRADE_COMPARE(layer.stateData().texturedVertices.size(), 0);
-        vertices = layer.stateData().vertices;
-    }
+    /* Depending on whether texturing is enabled the vertex data contain a
+       different type. Make a view on the common type prefix. */
+    std::size_t typeSize = data.textured ?
+        sizeof(Implementation::BaseLayerTexturedVertex) :
+        sizeof(Implementation::BaseLayerVertex);
+    Containers::StridedArrayView1D<const Implementation::BaseLayerVertex> vertices{
+        layer.stateData().vertices,
+        reinterpret_cast<const Implementation::BaseLayerVertex*>(layer.stateData().vertices.data()),
+        layer.stateData().vertices.size()/typeSize,
+        std::ptrdiff_t(typeSize)};
     CORRADE_COMPARE(vertices.size(), 10*4);
 
     /* The vertices are there for all data, but only the actually used are
@@ -1640,7 +1633,7 @@ void BaseLayerTest::updateDataOrder() {
     /** @todo which may get annoying with non-GL renderers that don't Y-flip
         the projection, reconsider? */
     if(data.textured) {
-        Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().texturedVertices).slice(&Implementation::BaseLayerTexturedVertex::textureCoordinates);
+        Containers::StridedArrayView1D<const Vector3> textureCoordinates = Containers::arrayCast<const Implementation::BaseLayerTexturedVertex>(vertices).slice(&Implementation::BaseLayerTexturedVertex::textureCoordinates);
 
         CORRADE_COMPARE_AS(textureCoordinates.sliceSize(7*4, 4), Containers::arrayView<Vector3>({
             {0.25f, 0.625f, 37.0f},

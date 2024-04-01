@@ -485,12 +485,8 @@ void BaseLayerGL::doUpdate(const Containers::StridedArrayView1D<const UnsignedIn
     BaseLayer::doUpdate(dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
 
     State& state = static_cast<State&>(*_state);
-    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     state.indexBuffer.setData(state.indices);
-    if(sharedState.flags & Shared::Flag::Textured)
-        state.vertexBuffer.setData(state.texturedVertices);
-    else
-        state.vertexBuffer.setData(state.vertices);
+    state.vertexBuffer.setData(state.vertices);
     state.mesh.setCount(state.indices.size());
 }
 
