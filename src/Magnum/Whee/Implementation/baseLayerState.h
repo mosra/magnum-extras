@@ -78,7 +78,10 @@ struct BaseLayerVertex {
     UnsignedInt styleUniform;
 };
 
-struct BaseLayerTexturedVertex: BaseLayerVertex {
+struct BaseLayerTexturedVertex {
+    /* Has to be a member and not a base class because then is_standard_layout
+       complains, making arrayCast() impossible. Sigh. */
+    BaseLayerVertex vertex;
     Vector3 textureCoordinates;
 };
 
@@ -88,9 +91,9 @@ struct BaseLayer::State: AbstractVisualLayer::State {
     explicit State(Shared::State& shared): AbstractVisualLayer::State{shared} {}
 
     Containers::Array<Implementation::BaseLayerData> data;
-    /* Only one of these is used at a time */
-    Containers::Array<Implementation::BaseLayerVertex> vertices;
-    Containers::Array<Implementation::BaseLayerTexturedVertex> texturedVertices;
+    /* Is either Implementation::BaseLayerVertex or BaseLayerTexturedVertex
+       based on whether texturing is enabled */
+    Containers::Array<char> vertices;
     Containers::Array<UnsignedInt> indices;
 
     /* Used only if Flag::BackgroundBlur is enabled */
