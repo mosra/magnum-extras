@@ -389,20 +389,17 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
 
     const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
 
-    Containers::StridedArrayView1D<Implementation::BaseLayerVertex> vertices;
-    if(sharedState.flags & Shared::Flag::Textured) {
-        arrayResize(state.texturedVertices, NoInit, capacity()*4);
-        /** @todo arrayCast() doesn't work because the derived type is not
-            standard layout, so some slice<T>() to base or whatever? */
-        vertices = {
-            state.texturedVertices,
-            state.texturedVertices.begin(),
-            state.texturedVertices.size(), sizeof(Implementation::BaseLayerTexturedVertex)
-        };
-    } else {
-        arrayResize(state.vertices, NoInit, capacity()*4);
-        vertices = state.vertices;
-    }
+    /* Resize the vertex array to fit all data, make a view on the common type
+       prefix */
+    const std::size_t typeSize = sharedState.flags & Shared::Flag::Textured ?
+        sizeof(Implementation::BaseLayerTexturedVertex) :
+        sizeof(Implementation::BaseLayerVertex);
+    arrayResize(state.vertices, NoInit, capacity()*4*typeSize);
+    const Containers::StridedArrayView1D<Implementation::BaseLayerVertex> vertices{
+        state.vertices,
+        reinterpret_cast<Implementation::BaseLayerVertex*>(state.vertices.data()),
+        state.vertices.size()/typeSize,
+        std::ptrdiff_t(typeSize)};
 
     /* Fill in quad corner positions and colors */
     for(std::size_t i = 0; i != dataIds.size(); ++i) {
@@ -435,6 +432,8 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
 
     /* Fill in also quad texture coordinates if enabled */
     if(sharedState.flags & Shared::Flag::Textured) {
+        const Containers::ArrayView<Implementation::BaseLayerTexturedVertex> texturedVertices = Containers::arrayCast<Implementation::BaseLayerTexturedVertex>(vertices).asContiguous();
+
         for(std::size_t i = 0; i != dataIds.size(); ++i) {
             const UnsignedInt dataId = dataIds[i];
             const Implementation::BaseLayerData& data = state.data[dataId];
@@ -446,7 +445,7 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             const Vector2 min = data.textureCoordinateOffset.xy() + Vector2::yAxis(data.textureCoordinateSize.y());
             const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x());
             for(UnsignedByte j = 0; j != 4; ++j)
-                state.texturedVertices[dataId*4 + j].textureCoordinates = {Math::lerp(min, max, BitVector2{j}), data.textureCoordinateOffset.z()};
+                texturedVertices[dataId*4 + j].textureCoordinates = {Math::lerp(min, max, BitVector2{j}), data.textureCoordinateOffset.z()};
         }
     }
 }
