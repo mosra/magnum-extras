@@ -95,6 +95,7 @@ Debug& operator<<(Debug& debug, const NodeFlag value) {
         /* LCOV_EXCL_START */
         #define _c(value) case NodeFlag::value: return debug << "::" #value;
         _c(Hidden)
+        _c(Clip)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -104,7 +105,8 @@ Debug& operator<<(Debug& debug, const NodeFlag value) {
 
 Debug& operator<<(Debug& debug, const NodeFlags value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::NodeFlags{}", {
-        NodeFlag::Hidden
+        NodeFlag::Hidden,
+        NodeFlag::Clip
     });
 }
 
@@ -847,6 +849,8 @@ void AbstractUserInterface::setNodeFlagsInternal(const UnsignedInt id, const Nod
     State& state = *_state;
     if((state.nodes[id].used.flags & NodeFlag::Hidden) != (flags & NodeFlag::Hidden))
         state.state |= UserInterfaceState::NeedsNodeUpdate;
+    if((state.nodes[id].used.flags & NodeFlag::Clip) != (flags & NodeFlag::Clip))
+        state.state |= UserInterfaceState::NeedsNodeClipUpdate;
     state.nodes[id].used.flags = flags;
 }
 
@@ -1374,6 +1378,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         Implementation::cullVisibleNodesInto(
             state.absoluteNodeOffsets,
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size),
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
             clipStack.prefix(state.visibleNodeIds.size()),
             state.visibleNodeIds,
             state.visibleNodeChildrenCounts,

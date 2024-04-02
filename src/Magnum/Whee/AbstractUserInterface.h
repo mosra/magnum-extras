@@ -88,8 +88,12 @@ enum class UserInterfaceState: UnsignedByte {
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
      * visible node set after node sizes changed. Set implicitly after every
-     * @ref AbstractUserInterface::setNodeSize() call, is
-     * reset next time @ref AbstractUserInterface::update() is called. Implies
+     * @ref AbstractUserInterface::setNodeSize() call and after every
+     * @relativeref{AbstractUserInterface,setNodeFlags()},
+     * @relativeref{AbstractUserInterface,addNodeFlags()} and
+     * @relativeref{AbstractUserInterface,clearNodeFlags()} that changes the
+     * presence of the @ref NodeFlag::Clip flag; is reset next time
+     * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate},
@@ -115,14 +119,16 @@ enum class UserInterfaceState: UnsignedByte {
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
      * visible node hierarchy and data attached to it after nodes were added or
-     * removed or the top-level node order changed. Set implicitly after every
+     * removed, made hidden or visible again or the top-level node order
+     * changed. Set implicitly after every
      * @ref AbstractUserInterface::createNode(),
-     * @relativeref{AbstractUserInterface,setNodeFlags()},
-     * @relativeref{AbstractUserInterface,addNodeFlags()},
-     * @relativeref{AbstractUserInterface,clearNodeFlags()},
      * @relativeref{AbstractUserInterface,setNodeOrder()} and
-     * @relativeref{AbstractUserInterface,clearNodeOrder()} call, is reset next
-     * time @ref AbstractUserInterface::update() is called. Implies
+     * @relativeref{AbstractUserInterface,clearNodeOrder()} call and after
+     * every @relativeref{AbstractUserInterface,setNodeFlags()},
+     * @relativeref{AbstractUserInterface,addNodeFlags()} and
+     * @relativeref{AbstractUserInterface,clearNodeFlags()} call that changes
+     * the presence of the @ref NodeFlag::Hidden flag; is reset next time
+     * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsNodeLayoutUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
@@ -200,8 +206,21 @@ enum class NodeFlag: UnsignedByte {
      * @ref NodeFlag::Hidden was set for it. For performance reasons it's
      * however recommended to keep the draw list small rather than having it
      * full of mostly hidden nodes.
+     *
+     * Changing this flag causes @ref UserInterfaceState::NeedsNodeUpdate to be
+     * set.
      */
-    Hidden = 1 << 0
+    Hidden = 1 << 0,
+
+    /**
+     * The node clips its contents. When enabled, child nodes that are
+     * completely outside of the node rectangle are culled and not even drawn,
+     * nodes that are partially outside are clipped.
+     *
+     * Changing this flag causes @ref UserInterfaceState::NeedsNodeClipUpdate
+     * to be set.
+     */
+    Clip = 1 << 1,
 };
 
 /**
@@ -764,7 +783,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * If @ref NodeFlag::Hidden was added or cleared by calling this
          * function, it causes @ref UserInterfaceState::NeedsNodeUpdate to be
-         * set.
+         * set. If @ref NodeFlag::Clip was added or cleared by calling this
+         * function, it causes @ref UserInterfaceState::NeedsNodeClipUpdate to
+         * be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref addNodeFlags(),
          *      @ref clearNodeFlags()
          */
