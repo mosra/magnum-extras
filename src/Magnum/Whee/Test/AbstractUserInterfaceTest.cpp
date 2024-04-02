@@ -2206,7 +2206,7 @@ void AbstractUserInterfaceTest::state() {
        4 |        +---------| nested2 |
        5 |        | nested1 +---------+
        6 +--------+---------+---------+           */
-    NodeHandle node = ui.createNode({2.0f, 1.0f}, {3.0f, 5.0f});
+    NodeHandle node = ui.createNode({2.0f, 1.0f}, {3.0f, 5.0f}, NodeFlag::Clip);
     NodeHandle another = ui.createNode({5.0f, 0.0f}, {1.0f, 2.0f});
     NodeHandle nested1 = ui.createNode(node, {1.0f, 3.0f}, {1.0f, 2.0f});
     NodeHandle nested2 = ui.createNode(node, {2.0f, 2.0f}, {1.0f, 2.0f});
@@ -2560,7 +2560,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
     }
 
-    /* Calling update() reuploads the previous data again and resets the
+    /* Calling update() reuploads the previous data again and resets the state
        flag */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
@@ -2588,6 +2588,93 @@ void AbstractUserInterfaceTest::state() {
     ui.clearNodeFlags(node, NodeFlag(0x70)|NodeFlag::Hidden);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
+    /* Setting a Clip flag that's already there should be a no-op,
+       independently of what other flags get added */
+    ui.addNodeFlags(node, NodeFlag(0x10)|NodeFlag::Clip);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Resetting a Clip flag sets a state flag */
+    ui.clearNodeFlags(node, NodeFlag::Clip);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+    }
+
+    /* Calling update() uploads the full data including the no-longer-clipped
+       nodes */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
+            {dataHandleId(data2), nodeHandleId(node)},
+            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data1), nodeHandleId(nested2)},
+            {dataHandleId(data3), nodeHandleId(another)}
+        };
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {{5.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
+        };
+        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+
+    /* Resetting a Clip flag that's not there should be a no-op, independently
+       of what other flags get cleared */
+    ui.clearNodeFlags(node, NodeFlag(0x30)|NodeFlag::Clip);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Setting a Clip flag sets a state flag again */
+    ui.addNodeFlags(node, NodeFlag::Clip);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+    }
+
+    /* Calling update() reuploads the previous data again and resets the state
+       flag */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedData[]{
+            {dataHandleId(data2), nodeHandleId(node)},
+            {dataHandleId(data4), nodeHandleId(nested1)},
+            {dataHandleId(data3), nodeHandleId(another)}
+        };
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
+        };
+        ui.layer<Layer>(layer).expectedData = expectedData;
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+
     /* Calling clearNodeOrder() sets a state flag */
     ui.clearNodeOrder(another);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
@@ -2600,7 +2687,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
     }
 
     /* Calling update() uploads data in new order and resets the flag */
@@ -2622,7 +2709,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
 
     /* Calling clearNodeOrder() on a node that isn't in the order is a no-op */
     ui.clearNodeOrder(another);
@@ -2641,7 +2728,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
     }
 
     /* Calling update() uploads data in new order and resets the flag */
@@ -2664,7 +2751,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
 
     /* Removing data marks the layer with NeedsClean, which is then propagated
        to the UI-wide state */
@@ -2685,7 +2772,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
         CORRADE_COMPARE(ui.dataAttachmentCount(), 3);
     }
 
@@ -2716,7 +2803,7 @@ void AbstractUserInterfaceTest::state() {
     /* doClean() should only be called either in the branch above or from
        update(), never both */
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
 
     /* Removing a node sets a state flag */
     ui.removeNode(node);
@@ -2739,7 +2826,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 2);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
         CORRADE_COMPARE(ui.nodeUsedCount(), 1);
         CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
     }
@@ -2771,7 +2858,7 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.nodeUsedCount(), 1);
     CORRADE_COMPARE(ui.dataAttachmentCount(), 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 2);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
 
     /* Add one more layer to check layer removal behavior, should set no state
        flags again */
@@ -2995,7 +3082,7 @@ void AbstractUserInterfaceTest::draw() {
            |  culled  |
       11   +----------+                             */
     NodeHandle topLevel = ui.createNode({1.0f, 3.0f}, {7.0f, 6.0f});
-    NodeHandle left = ui.createNode(topLevel, {1.0f, 2.0f}, {1.0f, 2.0f});
+    NodeHandle left = ui.createNode(topLevel, {1.0f, 2.0f}, {1.0f, 2.0f}, NodeFlag::Clip);
     NodeHandle right = ui.createNode(topLevel, {3.0f, 1.0f}, {3.0f, 4.0f});
     NodeHandle anotherTopLevel = ui.createNode({6.0f, 5.0f}, {4.0f, 5.0f});
     NodeHandle topLevelNotInOrder = ui.createNode({9.0f, 4.0f}, {2.0f, 3.0f});

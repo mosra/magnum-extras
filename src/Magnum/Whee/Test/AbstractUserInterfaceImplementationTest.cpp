@@ -73,6 +73,69 @@ const struct {
     {"touching everything", {-0.01f, -0.01f}, {9.02f, 9.02f}, true}
 };
 
+const struct {
+    const char* name;
+    NodeFlags flags[15];
+    bool visible[15];
+} CullVisibleNodesData[]{
+    {"all clipping", {
+        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 0-3 */
+        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 4-7 */
+        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip, /* 8-11 */
+        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip                  /* 12-14 */
+    }, {
+        false, /* 0 */
+        false, /* 1, hidden because it's clipped by 2 */
+        true,  /* 2 */
+        true,  /* 3 */
+        false, /* 4, hidden because it's clipped by 2 */
+        true,  /* 5 */
+        false, /* 6, hidden because it's clipped by 0 */
+        true,  /* 7 */
+        false, /* 8 */
+        false, /* 9 */
+        true,  /* 10 */
+        false, /* 11, hidden because it has zero size */
+        false, /* 12, hidden because it has zero height */
+        false, /* 13, hidden because it has zero width */
+        false, /* 14, hidden because it's a child of a zero-size rect */
+    }},
+    {"no clipping", {
+        {},             {},             {},             {},             /* 0-3 */
+        {},             {},             {},             {},             /* 4-7 */
+        {},             {},             {},             {},             /* 8-11 */
+        {},             {},             {},                             /* 12-14 */
+    }, {
+        true, true, true, true, true, true, true, true, true, true, true, true,
+        true, true, true,
+    }},
+    {"special cases", {
+        {},             {},             {},             {},             /* 0-3 */
+        {},             {},             {},             NodeFlag::Clip, /* 4-7 */
+        NodeFlag::Clip, {},             {},             {},             /* 8-11 */
+        NodeFlag::Clip, NodeFlag::Clip, NodeFlag::Clip,                 /* 12-14 */
+    }, {
+        false, /* 0, clipped by 7 */
+        true,  /* 1, outside of 2 but that one is not clipping */
+        true,  /* 2, partially visible in 7 */
+        true,  /* 3 */
+        true,  /* 4, inside 1 which is visible */
+        true,  /* 5 */
+        true,  /* 6, partially visible in 7 even though it's a child of 0
+                     that's fully clipped */
+        true,  /* 7 */
+        true,  /* 8, clips but only its children, not itself against the
+                     parent */
+        true,  /* 9, outside of 5 but 5 doesn't clip */
+        true,  /* 10, fully visible in 7 */
+        true,  /* 11, shown even though it has zero size as it doesn't clip */
+        false, /* 12, hidden because it clips and has zero height */
+        false, /* 13, hidden because it clips and has zero width */
+        true,  /* 14, shown even though it's a child of a zero-size rect, it
+                      clips its children but not itself against the parent */
+    }},
+};
+
 AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest() {
     addTests({&AbstractUserInterfaceImplementationTest::orderNodesBreadthFirst,
 
@@ -85,9 +148,10 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
     addInstancedTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges},
         Containers::arraySize(CullVisibleNodesEdgesData));
 
-    addTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodes,
+    addInstancedTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodes},
+        Containers::arraySize(CullVisibleNodesData));
 
-              &AbstractUserInterfaceImplementationTest::orderVisibleNodeData,
+    addTests({&AbstractUserInterfaceImplementationTest::orderVisibleNodeData,
               &AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoLayers,
               &AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoValidLayers,
 
@@ -372,44 +436,45 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
     const struct Node {
         Vector2 offset;
         Vector2 size;
-    } nodeOffsetsSizes[]{
-        {{ 0.0f,  0.0f}, {4.0f, 4.0f}}, /*  0, top left */
-        {{ 3.0f, -1.0f}, {3.0f, 3.0f}}, /*  1, top */
-        {{ 5.0f,  0.0f}, {4.0f, 4.0f}}, /*  2, top right */
-        {{ 0.0f,  0.0f}, {9.0f, 4.0f}}, /*  3, top left + right */
-        {{-1.0f,  3.0f}, {3.0f, 3.0f}}, /*  4, left */
-        {{ 7.0f,  3.0f}, {3.0f, 3.0f}}, /*  5, right */
-        {{ 0.0f,  0.0f}, {4.0f, 9.0f}}, /*  6, left top + bottom */
-        {{ 5.0f,  0.0f}, {4.0f, 9.0f}}, /*  7, right top + bottom */
-        {{ 0.0f,  5.0f}, {9.0f, 4.0f}}, /*  8, bottom left + right */
-        {{ 3.0f,  7.0f}, {3.0f, 3.0f}}, /*  9, bottom */
-        {{ 0.0f,  5.0f}, {4.0f, 4.0f}}, /* 10, bottom left */
-        {{ 5.0f,  5.0f}, {4.0f, 4.0f}}, /* 11, bottom right */
+        NodeFlags flags;
+    } nodeOffsetsSizesFlags[]{
+        {{ 0.0f,  0.0f}, {4.0f, 4.0f}, {}}, /*  0, top left */
+        {{ 3.0f, -1.0f}, {3.0f, 3.0f}, {}}, /*  1, top */
+        {{ 5.0f,  0.0f}, {4.0f, 4.0f}, {}}, /*  2, top right */
+        {{ 0.0f,  0.0f}, {9.0f, 4.0f}, {}}, /*  3, top left + right */
+        {{-1.0f,  3.0f}, {3.0f, 3.0f}, {}}, /*  4, left */
+        {{ 7.0f,  3.0f}, {3.0f, 3.0f}, {}}, /*  5, right */
+        {{ 0.0f,  0.0f}, {4.0f, 9.0f}, {}}, /*  6, left top + bottom */
+        {{ 5.0f,  0.0f}, {4.0f, 9.0f}, {}}, /*  7, right top + bottom */
+        {{ 0.0f,  5.0f}, {9.0f, 4.0f}, {}}, /*  8, bottom left + right */
+        {{ 3.0f,  7.0f}, {3.0f, 3.0f}, {}}, /*  9, bottom */
+        {{ 0.0f,  5.0f}, {4.0f, 4.0f}, {}}, /* 10, bottom left */
+        {{ 5.0f,  5.0f}, {4.0f, 4.0f}, {}}, /* 11, bottom right */
 
-        {{ 4.0f,  4.0f}, {2.0f, 2.0f}}, /* 12, in the center */
-        {{ 0.0f,  0.0f}, {9.0f, 9.0f}}, /* 13, covering whole area */
+        {{ 4.0f,  4.0f}, {2.0f, 2.0f}, {}}, /* 12, in the center */
+        {{ 0.0f,  0.0f}, {9.0f, 9.0f}, {}}, /* 13, covering whole area */
 
-        {{-2.0f, -2.0f}, {5.0f, 2.0f}}, /* 14, outside top extended left */
-        {{ 6.0f, -2.0f}, {5.0f, 2.0f}}, /* 15, outside top extended right */
-        {{-2.0f, -2.0f}, {2.0f, 2.0f}}, /* 16, outside top left */
-        {{ 9.0f, -2.0f}, {2.0f, 2.0f}}, /* 17, outside top right */
-        {{ 3.0f, -2.0f}, {3.0f, 2.0f}}, /* 18, outside top */
-        {{-2.0f,  0.0f}, {2.0f, 3.0f}}, /* 19, outside left extended top */
-        {{ 9.0f,  0.0f}, {2.0f, 3.0f}}, /* 20, outside right extended top */
-        {{-2.0f,  6.0f}, {2.0f, 3.0f}}, /* 21, outside left extended bottom */
-        {{ 9.0f,  0.0f}, {2.0f, 3.0f}}, /* 22, outside right extended bottom */
-        {{-2.0f,  3.0f}, {2.0f, 3.0f}}, /* 23, outside left */
-        {{ 9.0f,  3.0f}, {2.0f, 3.0f}}, /* 24, outside right */
-        {{-2.0f,  9.0f}, {5.0f, 2.0f}}, /* 25, outside bottom extended left */
-        {{ 6.0f,  9.0f}, {5.0f, 2.0f}}, /* 26, outside bottom extended right */
-        {{-2.0f,  9.0f}, {2.0f, 2.0f}}, /* 27, outside bottom left */
-        {{ 9.0f,  9.0f}, {2.0f, 2.0f}}, /* 28, outside bottom right */
-        {{ 3.0f,  9.0f}, {3.0f, 2.0f}}, /* 29, outside bottom */
-        {{ 0.0f, -3.0f}, {9.0f, 3.0f}}, /* 30, outside top left + right */
-        {{-3.0f,  0.0f}, {3.0f, 9.0f}}, /* 31, outside left top + bottom */
-        {{ 9.0f,  0.0f}, {3.0f, 9.0f}}, /* 32, outside right top + bottom */
-        {{ 0.0f,  9.0f}, {9.0f, 3.0f}}, /* 33, outside bottom left + right */
-        {data.offset, data.size},       /* 34, clip node */
+        {{-2.0f, -2.0f}, {5.0f, 2.0f}, {}}, /* 14, outside top extended left */
+        {{ 6.0f, -2.0f}, {5.0f, 2.0f}, {}}, /* 15, outside top extended right */
+        {{-2.0f, -2.0f}, {2.0f, 2.0f}, {}}, /* 16, outside top left */
+        {{ 9.0f, -2.0f}, {2.0f, 2.0f}, {}}, /* 17, outside top right */
+        {{ 3.0f, -2.0f}, {3.0f, 2.0f}, {}}, /* 18, outside top */
+        {{-2.0f,  0.0f}, {2.0f, 3.0f}, {}}, /* 19, outside left extended top */
+        {{ 9.0f,  0.0f}, {2.0f, 3.0f}, {}}, /* 20, outside right extended top */
+        {{-2.0f,  6.0f}, {2.0f, 3.0f}, {}}, /* 21, outside left extended bottom */
+        {{ 9.0f,  0.0f}, {2.0f, 3.0f}, {}}, /* 22, outside right extended bottom */
+        {{-2.0f,  3.0f}, {2.0f, 3.0f}, {}}, /* 23, outside left */
+        {{ 9.0f,  3.0f}, {2.0f, 3.0f}, {}}, /* 24, outside right */
+        {{-2.0f,  9.0f}, {5.0f, 2.0f}, {}}, /* 25, outside bottom extended left */
+        {{ 6.0f,  9.0f}, {5.0f, 2.0f}, {}}, /* 26, outside bottom extended right */
+        {{-2.0f,  9.0f}, {2.0f, 2.0f}, {}}, /* 27, outside bottom left */
+        {{ 9.0f,  9.0f}, {2.0f, 2.0f}, {}}, /* 28, outside bottom right */
+        {{ 3.0f,  9.0f}, {3.0f, 2.0f}, {}}, /* 29, outside bottom */
+        {{ 0.0f, -3.0f}, {9.0f, 3.0f}, {}}, /* 30, outside top left + right */
+        {{-3.0f,  0.0f}, {3.0f, 9.0f}, {}}, /* 31, outside left top + bottom */
+        {{ 9.0f,  0.0f}, {3.0f, 9.0f}, {}}, /* 32, outside right top + bottom */
+        {{ 0.0f,  9.0f}, {9.0f, 3.0f}, {}}, /* 33, outside bottom left + right */
+        {data.offset, data.size, NodeFlag::Clip}, /* 34, clip node */
     };
 
     /* Children after the parent */
@@ -426,12 +491,13 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
     };
 
     UnsignedInt visibleNodeMaskStorage[2];
-    Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, Containers::arraySize(nodeOffsetsSizes)};
+    Containers::MutableBitArrayView visibleNodeMask{visibleNodeMaskStorage, 0, Containers::arraySize(nodeOffsetsSizesFlags)};
 
-    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[Containers::arraySize(nodeOffsetsSizes)];
+    Containers::Triple<Vector2, Vector2, UnsignedInt> clipStack[Containers::arraySize(nodeOffsetsSizesFlags)];
     Implementation::cullVisibleNodesInto(
-        Containers::stridedArrayView(nodeOffsetsSizes).slice(&Node::offset),
-        Containers::stridedArrayView(nodeOffsetsSizes).slice(&Node::size),
+        Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::offset),
+        Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::size),
+        Containers::stridedArrayView(nodeOffsetsSizesFlags).slice(&Node::flags),
         clipStack,
         Containers::stridedArrayView(nodeIdsChildrenCount).slice(&Children::id),
         Containers::stridedArrayView(nodeIdsChildrenCount).slice(&Children::count),
@@ -461,6 +527,9 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodesEdges() {
 }
 
 void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
+    auto&& data = CullVisibleNodesData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     const struct Children {
         UnsignedInt id;
         UnsignedInt count;
@@ -531,28 +600,14 @@ void AbstractUserInterfaceImplementationTest::cullVisibleNodes() {
     Implementation::cullVisibleNodesInto(
         Containers::stridedArrayView(nodeOffsetsSizes).slice(&Node::offset),
         Containers::stridedArrayView(nodeOffsetsSizes).slice(&Node::size),
+        Containers::arrayView(data.flags),
         clipStack,
         Containers::stridedArrayView(nodeIdsChildrenCount).slice(&Children::id),
         Containers::stridedArrayView(nodeIdsChildrenCount).slice(&Children::count),
         visibleNodeMask);
     CORRADE_COMPARE_AS(visibleNodeMask,
-        Containers::stridedArrayView({
-            false, /* 0 */
-            false, /* 1, hidden because it's clipped by 2 */
-            true,  /* 2 */
-            true,  /* 3 */
-            false, /* 4, hidden because it's clipped by 2 */
-            true,  /* 5 */
-            false, /* 6, hidden because it's clipped by 0 */
-            true,  /* 7 */
-            false, /* 8 */
-            false, /* 9 */
-            true,  /* 10 */
-            false, /* 11, hidden because it has zero size */
-            false, /* 12, hidden because it has zero height */
-            false, /* 13, hidden because it has zero width */
-            false, /* 14, hidden because it's a child of a zero-size rect */
-        }).sliceBit(0), TestSuite::Compare::Container);
+        Containers::stridedArrayView(data.visible).sliceBit(0),
+        TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
