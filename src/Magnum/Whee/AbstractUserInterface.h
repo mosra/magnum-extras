@@ -1619,7 +1619,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
-         *      @ref currentCapturedNode()
+         *      @ref currentCapturedNode(), @ref currentGlobalPointerPosition()
          */
         bool pointerPressEvent(const Vector2& globalPosition, PointerEvent& event);
 
@@ -1676,7 +1676,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
-         *      @ref currentCapturedNode()
+         *      @ref currentCapturedNode(), @ref currentGlobalPointerPosition()
          */
         bool pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event);
 
@@ -1758,7 +1758,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentCapturedNode(),
-         *      @ref currentHoveredNode()
+         *      @ref currentHoveredNode(), @ref currentGlobalPointerPosition()
          */
         bool pointerMoveEvent(const Vector2& globalPosition, PointerMoveEvent& event);
 
@@ -1838,6 +1838,16 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * were removed and @ref clean() wasn't called since.
          */
         NodeHandle currentHoveredNode() const;
+
+        /**
+         * @brief Position of last pointer event
+         *
+         * Returns a position passed to the last @ref pointerPressEvent(),
+         * @ref pointerReleaseEvent() or @ref pointerMoveEvent(), scaled to
+         * match @ref size() instead of @ref windowSize(). If no pointer event
+         * happened yet, returns @ref Containers::NullOpt.
+         */
+        Containers::Optional<Vector2> currentGlobalPointerPosition() const;
 
     private:
         /* Used by set*AnimatorInstance() */
