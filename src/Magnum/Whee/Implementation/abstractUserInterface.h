@@ -244,6 +244,226 @@ std::size_t visibleTopLevelNodeIndicesInto(const Containers::StridedArrayView1D<
     return offset;
 }
 
+/* The `visibleNodeIds` is the output of orderVisibleNodesDepthFirstInto()
+   above. The `nodeLayouts` is meant to be a 2D array, where the first
+   dimension is all node IDs and the second dimension is all layouters ordered
+   by the layouter order, with items filled if given layouter has a layout for
+   given node and null otherwise.
+
+   The `topLevelLayoutIds` array gets filled with a subset of handle IDs
+   from `nodeLayouts` which are considered top-level, i.e. nodes that act as
+   roots from which layout is calculated. They're ordered by dependency, i.e.
+   if a top-level layout node has its size calculated by another layout, it
+   ensures that it's ordered after the layout it depends on. Prefix of the
+   `topLevelLayoutOffsets` array, with prefix size being the function return
+   value, is filled with a running offset into the `topLevelLayoutIds` array,
+   with `[topLevelLayoutOffsets[i], topLevelLayoutOffsets[i + 1])` being the
+   range of IDs to submit to AbstractLayouter::layout() of a layouter
+   `topLevelLayoutLayouterIds[i]`.
+
+   The `nodeLayoutLevels`, `layoutLevelOffsets`, `topLevelLayouts`,
+   `topLevelLayoutLevels` and `levelPartitionedTopLevelLayouts` arrays are
+   temporary storage, the `layoutLevelOffsets` array is expected to be
+   zero-initialized. */
+std::size_t discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParentOrOrder, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const UnsignedInt layouterCount, const Containers::StridedArrayView2D<const LayoutHandle>& nodeLayouts, const Containers::StridedArrayView2D<UnsignedInt>& nodeLayoutLevels, const Containers::ArrayView<UnsignedInt> layoutLevelOffsets, const Containers::StridedArrayView1D<LayoutHandle>& topLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutLevels, const Containers::StridedArrayView1D<LayoutHandle>& levelPartitionedTopLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutOffsets, const Containers::StridedArrayView1D<UnsignedByte>& topLevelLayoutLayouterIds, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutIds) {
+    CORRADE_INTERNAL_ASSERT(
+        nodeLayouts.size()[0] == nodeParentOrOrder.size() &&
+        nodeLayouts.isContiguous<1>() &&
+        nodeLayoutLevels.size() == nodeLayouts.size() &&
+        nodeLayoutLevels.isContiguous<1>() &&
+        /* Size of the topLevelLayouts array should be basically all data from
+           all layouters, which unfortunately cannot be easily verified
+           here. Then, worst case scenario is that each layout gets its own
+           level, for example when they're all chained together, so the
+           temporaries need to be the same size as the count of all top-level
+           layout nodes. The running offset then needs one more element. */
+        layoutLevelOffsets.size() == topLevelLayouts.size() + 1 &&
+        topLevelLayoutLevels.size() == topLevelLayouts.size() &&
+        levelPartitionedTopLevelLayouts.size() == topLevelLayouts.size() &&
+        /* Worst case scenario is that each top-level layout is from a
+           different layouter or from a different level, so the offsets have to
+           have the same size as the count of all top-level layouts. The
+           running offset then needs one more element. */
+        topLevelLayoutOffsets.size() == topLevelLayouts.size() + 1 &&
+        topLevelLayoutLayouterIds.size() == topLevelLayouts.size() &&
+        topLevelLayoutIds.size() == topLevelLayouts.size());
+
+    std::size_t topLevelLayoutIndex = 0;
+    UnsignedInt maxLevel = 0;
+
+    /* 1. Go through all layouts assigned to all nodes and collect top-level
+       layouts, i.e. layouts which act as roots for a layout calculation.
+
+       A layout is a top-level layout if it's assigned to a root node or its
+       parent node doesn't have a layout from the same layouter. To ensure
+       they're correctly ordered, a level index is calculated for each, where
+       layouts with a higher index get always calculated after layouts with a
+       lower index. */
+    for(const UnsignedInt nodeId: visibleNodeIds) {
+        CORRADE_INTERNAL_DEBUG_ASSERT(nodeId < nodeParentOrOrder.size());
+
+        const Containers::ArrayView<const LayoutHandle> layouts = nodeLayouts[nodeId].asContiguous();
+        const Containers::ArrayView<UnsignedInt> layoutLevels = nodeLayoutLevels[nodeId].asContiguous();
+        UnsignedInt nextFreeLevel = 0;
+
+        /* Layout assigned to a root node is always a top-level layout. The
+           first layout (first in the layout order, as supplied in the 2D
+           nodeLayouts array passed to this function) assigned to a root node
+           gets level 0, each subsequent layout assigned to the same node gets
+           a higher level. */
+        if(nodeHandleGeneration(nodeParentOrOrder[nodeId]) == 0) {
+            for(std::size_t i = 0; i != layouts.size(); ++i) {
+                if(layouts[i] != LayoutHandle::Null) {
+                    layoutLevels[i] = nextFreeLevel;
+                    topLevelLayouts[topLevelLayoutIndex] = layouts[i];
+                    topLevelLayoutLevels[topLevelLayoutIndex] = nextFreeLevel;
+                    ++nextFreeLevel;
+                    ++topLevelLayoutIndex;
+                }
+            }
+
+        /* Otherwise it might or might not be a top-level layout, and it gets a
+           level depending on whether the parent node is assigned a layout from
+           the same layouter or not */
+        } else {
+            const UnsignedInt parentNodeId = nodeHandleId(nodeParentOrOrder[nodeId]);
+            const Containers::ArrayView<const LayoutHandle> parentLayouts = nodeLayouts[parentNodeId].asContiguous();
+            const Containers::ArrayView<const UnsignedInt> parentLayoutLevels = nodeLayoutLevels[parentNodeId].asContiguous();
+
+            /* Go through all layouts for this node and inherit levels for
+               layouts that have the same layouter in the parent node.
+               The nextFreeLevel is used for potential other layouts that don't
+               have the same layouter in the parent, and is higher than all
+               inherited levels. */
+            for(std::size_t i = 0; i != layouts.size(); ++i) {
+                if(layouts[i] != LayoutHandle::Null &&
+                   parentLayouts[i] != LayoutHandle::Null)
+                {
+                    nextFreeLevel = Math::max(nextFreeLevel, parentLayoutLevels[i] + 1);
+                    layoutLevels[i] = parentLayoutLevels[i];
+                }
+            }
+
+            /* Go through the layouts again and assign next free levels to
+               those that don't have the same layouter in the parent node.
+               Those are then also treated as top-level layout nodes. */
+            for(std::size_t i = 0; i != layouts.size(); ++i) {
+                if(layouts[i] != LayoutHandle::Null &&
+                   parentLayouts[i] == LayoutHandle::Null)
+                {
+                    layoutLevels[i] = nextFreeLevel;
+                    topLevelLayouts[topLevelLayoutIndex] = layouts[i];
+                    topLevelLayoutLevels[topLevelLayoutIndex] = nextFreeLevel;
+                    ++nextFreeLevel;
+                    ++topLevelLayoutIndex;
+                }
+            }
+        }
+
+        maxLevel = Math::max(maxLevel, nextFreeLevel);
+    }
+
+    CORRADE_INTERNAL_ASSERT(topLevelLayoutIndex <= topLevelLayouts.size());
+
+    /* 2. Partition the top-level layout list by level. */
+    CORRADE_INTERNAL_ASSERT(maxLevel + 1 <= layoutLevelOffsets.size());
+
+    /* First calculate the count of layouts for each level, skipping the first
+       element ... */
+    for(const UnsignedInt level: topLevelLayoutLevels.prefix(topLevelLayoutIndex))
+        ++layoutLevelOffsets[level + 1];
+
+    /* ... then convert the counts to a running offset. Now
+      `[layoutLevelOffsets[i + 1], layoutLevelOffsets[i + 2])` is a range in
+      which the `levelPartitionedTopLevelLayouts` array will contain a list of
+      layouts for level `i`. The last element (containing the end offset) is
+      omitted at this step. */
+    {
+        UnsignedInt offset = 0;
+        for(UnsignedInt& i: layoutLevelOffsets) {
+            const UnsignedInt nextOffset = offset + i;
+            i = offset;
+            offset = nextOffset;
+        }
+        CORRADE_INTERNAL_ASSERT(offset == topLevelLayoutIndex);
+    }
+
+    /* Go through the (layout, level) list again, partition that to level
+       ranges in a temporary storage. The `layoutLevelOffsets` array gets
+       shifted by one element by the process, thus now
+       `[layoutLevelOffsets[i], layoutLevelOffsets[i + 1])` is a range in which
+       the `levelPartitionedTopLevelLayouts` array contains a list of layouts
+       for level `i`. The last element is now containing the end offset.
+
+       The temporary `topLevelLayoutLevels` array isn't needed for anything
+       after this step, as the levels in `levelPartitionedTopLevelLayouts` are
+       implicit from the `layoutLevelOffsets`. */
+    for(std::size_t i = 0; i != topLevelLayoutIndex; ++i) {
+        levelPartitionedTopLevelLayouts[layoutLevelOffsets[topLevelLayoutLevels[i] + 1]++] = topLevelLayouts[i];
+    }
+
+    /* 3. Partition each level by layouter and save the running offsets. */
+    UnsignedInt offset = 0;
+    topLevelLayoutOffsets[0] = 0;
+    UnsignedInt outputTopLevelLayoutIndex = 1;
+    for(UnsignedInt level = 0; level != maxLevel; ++level) {
+        /* First calculate the count of layouts for each layouter, skipping the
+           first element. The array is sized for the max layouter count but
+           only `layouterCount + 1` elements get filled. Also only those get
+           zero-initialized -- compared to a {} it makes a significant
+           difference when there's just a few layouters but a ton of levels.
+
+           Here it also doesn't need to take the layouter order into account,
+           as top-level layout nodes within a single level don't depend on each
+           other in any way, and thus the layouts for them can be calculated in
+           an arbitrary order. */
+        UnsignedInt layouterOffsets[(1 << Implementation::LayouterHandleIdBits) + 1];
+        std::memset(layouterOffsets, 0, (layouterCount + 1)*sizeof(UnsignedInt));
+
+        const std::size_t levelBegin = layoutLevelOffsets[level];
+        const std::size_t levelEnd = layoutLevelOffsets[level + 1];
+        for(std::size_t i = levelBegin; i != levelEnd; ++i) {
+            const UnsignedInt layouterId = layoutHandleLayouterId(levelPartitionedTopLevelLayouts[i]);
+            ++layouterOffsets[layouterId + 1];
+        }
+
+        /* ... then convert the first `layouterCount + 1` counts to a running
+           offset. Now `[layouterOffsets[i + 1], layouterOffsets[i + 2])` is a
+           range in which the `topLevelLayoutNodes` array contains a list of
+           layouts for level `level` and layouter `i`. The last element
+           (containing the end offset) is omitted at this step. */
+        for(UnsignedInt& i: Containers::arrayView(layouterOffsets).prefix(layouterCount + 1)) {
+            const UnsignedInt nextOffset = offset + i;
+            i = offset;
+            offset = nextOffset;
+        }
+
+        /* Go through the layout list again, convert that to per-layouter
+           ranges. The `layouterOffsets` array gets shifted by one element by
+           this, so now `[layouterOffsets[i], layouterOffsets[i + 1])` is a
+           range in which the `topLevelLayoutNodes` array contains a list of
+           layouts for level `level` and layouter `i`. The last element is now
+           containing the end offset. */
+        for(std::size_t i = levelBegin; i != levelEnd; ++i) {
+            const LayoutHandle layout = levelPartitionedTopLevelLayouts[i];
+            topLevelLayoutIds[layouterOffsets[layoutHandleLayouterId(layout) + 1]++] = layoutHandleId(layout);
+        }
+
+        /* Finally, take the non-empty layouter offsets and put them into the
+           output array */
+        for(UnsignedInt i = 0; i != layouterCount; ++i) {
+            if(layouterOffsets[i] == layouterOffsets[i + 1])
+                continue;
+
+            topLevelLayoutOffsets[outputTopLevelLayoutIndex] = layouterOffsets[i + 1];
+            topLevelLayoutLayouterIds[outputTopLevelLayoutIndex - 1] = i;
+            ++outputTopLevelLayoutIndex;
+        }
+    }
+
+    return outputTopLevelLayoutIndex;
+}
+
 /* The `visibleNodeMask` has bits set for nodes in `visibleNodeIds` that are
    at least partially visible in the parent clip rects, the `clipRects` is then
    a list of clip rects and count of nodes affected by them.

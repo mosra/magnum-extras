@@ -49,6 +49,13 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
 
     void visibleTopLevelNodeIndices();
 
+    void discoverTopLevelLayoutNodesSingleLayouterPerNode();
+    void discoverTopLevelLayoutNodesMultipleLayoutersPerNode();
+    void discoverTopLevelLayoutNodesNoLayouters();
+    void discoverTopLevelLayoutNodesNoVisibleNodes();
+    void discoverTopLevelLayoutNodesSingleNode();
+    void discoverTopLevelLayoutNodesSingleNodeLayoutChain();
+
     void cullVisibleNodesClipRects();
     void cullVisibleNodesEdges();
     void cullVisibleNodes();
@@ -60,6 +67,70 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
     void orderNodeDataForEventHandling();
 
     void compactDraws();
+};
+
+const struct {
+    const char* name;
+    /* The 2D node layout list is defined in the function because it's less
+       annoying that way */
+    Containers::Array<UnsignedInt> topLevelLayoutOffsets;
+    Containers::Array<UnsignedByte> topLevelLayoutLayouterIds;
+    Containers::Array<UnsignedInt> topLevelLayoutIds;
+} DiscoverTopLevelLayoutNodesMultipleLayoutersPerNodeData[]{
+    /* node, layouter, calculated level
+       1    AB      01
+       2    ab DE   01 23
+       3     bC      12
+       4      c       2
+       5    A       0
+       6    a       0     */
+    {"same layouter, independent run", {InPlaceInit, {
+            0,    2,    3,    4,    5,    6
+        }}, {InPlaceInit, {
+            0xaa, 0xbb, 0xcc, 0xdd, 0xee,
+        }}, {InPlaceInit, {
+            0xaaa1, 0xaaa5, 0xbbb1, 0xccc3, 0xddd2, 0xeee2
+        }}},
+    /* 1    AB      01
+       2    ab DE   01 23
+       3     bC      12
+       4      c       2
+       5    A c     3 2
+       6    a       3     */
+    {"same layouter, dependent run", {InPlaceInit, {
+            0,    1,    2,    3,    4,    5,    6
+        }}, {InPlaceInit, {
+            0xaa, 0xbb, 0xcc, 0xdd, 0xaa, 0xee,
+        }}, {InPlaceInit, {
+            0xaaa1, 0xbbb1, 0xccc3, 0xddd2, 0xaaa5, 0xeee2
+        }}},
+    /* 1    AB      01
+       2    ab DE   01 23
+       3     bCd     132
+       4      c       3
+       5    A       0
+       6    a       0     */
+    {"parent dependency", {InPlaceInit, {
+            0,    2,    3,    4,    5,    6
+        }}, {InPlaceInit, {
+            0xaa, 0xbb, 0xdd, 0xcc, 0xee,
+        }}, {InPlaceInit, {
+            0xaaa1, 0xaaa5, 0xbbb1, 0xddd2, 0xccc3, 0xeee2
+        }}},
+    /** @todo this looks strangely suboptimal, fix to be the same as above */
+    /* 1    AB      01
+       2    ab DE   01 23
+       3     bCd     132
+       4      c       3
+       5    A       4
+       6    a       4     */
+    {"same layouter, transitive parent dependency", {InPlaceInit, {
+            0,    1,    2,    3,    4,    5,    6
+        }}, {InPlaceInit, {
+            0xaa, 0xbb, 0xdd, 0xcc, 0xee, 0xaa
+        }}, {InPlaceInit, {
+            0xaaa1, 0xbbb1, 0xddd2, 0xccc3, 0xeee2, 0xaaa5
+        }}},
 };
 
 const struct {
@@ -314,7 +385,17 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
               &AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstSingleBranch,
               &AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstNoTopLevelNodes,
 
-              &AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices});
+              &AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices,
+
+              &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleLayouterPerNode});
+
+    addInstancedTests({&AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesMultipleLayoutersPerNode},
+        Containers::arraySize(DiscoverTopLevelLayoutNodesMultipleLayoutersPerNodeData));
+
+    addTests({&AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoLayouters,
+              &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoVisibleNodes,
+              &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleNode,
+              &AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleNodeLayoutChain});
 
     addInstancedTests({&AbstractUserInterfaceImplementationTest::cullVisibleNodesClipRects},
         Containers::arraySize(CullVisibleNodesClipRectsData));
@@ -578,6 +659,470 @@ void AbstractUserInterfaceImplementationTest::visibleTopLevelNodeIndices() {
     CORRADE_COMPARE_AS(Containers::arrayView(visibleTopLevelNodeIndices).prefix(count), Containers::arrayView<UnsignedInt>({
         0, 1, 3, 10
     }), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleLayouterPerNode() {
+    /*  10-       9  12    15
+        |\ \      |  | .
+        7 6 5     8  13 14
+        .   .        .
+        4   0        11
+        .   |\
+        3   1 2
+
+       (10, 7, 6, 5), (disconnected) 3 and 11 is one layouter, (disconnected)
+       (0, 1, 2), (9, 8) and (11, 12) another. Node 4, 14, 15 has no layout,
+       (9, 8) and 11 is not visible. Should result in 4 runs with top-level
+       layout nodes 10, 3, 0 and 12. Shuffled to test for accidental ordering
+       assumptions. */
+
+    NodeHandle node0 = nodeHandle(0x0, 1);
+    NodeHandle node1 = nodeHandle(0x1, 1);
+    NodeHandle node2 = nodeHandle(0x2, 1);
+    NodeHandle node3 = nodeHandle(0x3, 1);
+    NodeHandle node4 = nodeHandle(0x4, 1);
+    NodeHandle node5 = nodeHandle(0x5, 1);
+    NodeHandle node6 = nodeHandle(0x6, 1);
+    NodeHandle node7 = nodeHandle(0x7, 1);
+    NodeHandle node8 = nodeHandle(0x8, 1);
+    NodeHandle node9 = nodeHandle(0x9, 1);
+    NodeHandle node10 = nodeHandle(0xa, 1);
+    NodeHandle node11 = nodeHandle(0xb, 1);
+    NodeHandle node12 = nodeHandle(0xc, 1);
+    NodeHandle node13 = nodeHandle(0xd, 1);
+    NodeHandle node14 = nodeHandle(0xe, 1);
+    NodeHandle node15 = nodeHandle(0xf, 1);
+    LayouterHandle layouterA = layouterHandle(0xaa, 1);
+    LayouterHandle layouterB = layouterHandle(0xbb, 1);
+    LayoutHandle b0 = layoutHandle(layouterB, 0xbbb0, 1);
+    LayoutHandle b1 = layoutHandle(layouterB, 0xbbb1, 1);
+    LayoutHandle b2 = layoutHandle(layouterB, 0xbbb2, 1);
+    LayoutHandle a3 = layoutHandle(layouterA, 0xaaa3, 1);
+    /* No layout for node 4 */
+    LayoutHandle a5 = layoutHandle(layouterA, 0xaaa5, 1);
+    LayoutHandle a6 = layoutHandle(layouterA, 0xaaa6, 1);
+    LayoutHandle a7 = layoutHandle(layouterA, 0xaaa7, 1);
+    LayoutHandle b8 = layoutHandle(layouterB, 0xbbb8, 1);
+    LayoutHandle b9 = layoutHandle(layouterB, 0xbbb9, 1);
+    LayoutHandle a10 = layoutHandle(layouterA, 0xaaa10, 1);
+    LayoutHandle a11 = layoutHandle(layouterA, 0xbbb11, 1);
+    LayoutHandle b12 = layoutHandle(layouterB, 0xbbb12, 1);
+    LayoutHandle b13 = layoutHandle(layouterB, 0xbbb13, 1);
+    /* No layout for node 14, 15 */
+
+    NodeHandle nodeParentOrOrder[16]{};
+    nodeParentOrOrder[nodeHandleId(node0)] = node5;
+    nodeParentOrOrder[nodeHandleId(node1)] = node0;
+    nodeParentOrOrder[nodeHandleId(node2)] = node0;
+    nodeParentOrOrder[nodeHandleId(node3)] = node4;
+    nodeParentOrOrder[nodeHandleId(node4)] = node7;
+    nodeParentOrOrder[nodeHandleId(node5)] = node10;
+    nodeParentOrOrder[nodeHandleId(node6)] = node10;
+    nodeParentOrOrder[nodeHandleId(node7)] = node10;
+    nodeParentOrOrder[nodeHandleId(node8)] = node9;
+    nodeParentOrOrder[nodeHandleId(node11)] = node13;
+    nodeParentOrOrder[nodeHandleId(node13)] = node12;
+    nodeParentOrOrder[nodeHandleId(node14)] = node12;
+
+    /* Again shuffled to test for accidental ordering assumptions, though
+       children *have to* be after parents in this case. */
+    UnsignedInt visibleNodeIds[]{
+        nodeHandleId(node12),
+        nodeHandleId(node13),
+        nodeHandleId(node14),
+        nodeHandleId(node10),
+        /* In the middle of the 10-765 tree, shouldn't cause it being split in
+           two runs */
+        nodeHandleId(node15),
+        nodeHandleId(node5),
+        nodeHandleId(node7),
+        nodeHandleId(node6),
+        /* Same here, is in the middle of the 5-012 tree but shouldn't cause it
+           being split */
+        nodeHandleId(node4),
+        nodeHandleId(node3),
+        nodeHandleId(node0),
+        nodeHandleId(node2),
+        nodeHandleId(node1),
+    };
+
+    LayoutHandle nodeLayouts[2*16]{
+        LayoutHandle{}, b0,
+        LayoutHandle{}, b1,
+        LayoutHandle{}, b2,
+        a3,             LayoutHandle{},
+        LayoutHandle{}, LayoutHandle{},
+        a5,             LayoutHandle{},
+        a6,             LayoutHandle{},
+        a7,             LayoutHandle{},
+        LayoutHandle{}, b8,
+        LayoutHandle{}, b9,
+        a10,            LayoutHandle{},
+        a11,            LayoutHandle{},
+        LayoutHandle{}, b12,
+        LayoutHandle{}, b13,
+        LayoutHandle{}, LayoutHandle{},
+        LayoutHandle{}, LayoutHandle{}
+    };
+
+    UnsignedInt nodeLayoutLevels[2*16]{};
+    UnsignedInt layoutLevelOffsets[16 + 1]{};
+    LayoutHandle topLevelLayouts[16];
+    UnsignedInt topLevelLayoutLevels[16];
+    LayoutHandle levelPartitionedTopLevelLayouts[16];
+    UnsignedInt topLevelLayoutOffsets[16 + 1];
+    UnsignedByte topLevelLayoutLayouterIds[16];
+    UnsignedInt topLevelLayoutIds[16];
+    std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
+        nodeParentOrOrder,
+        visibleNodeIds,
+        0xef,
+        Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts, {16, 2}},
+        Containers::StridedArrayView2D<UnsignedInt>{nodeLayoutLevels, {16, 2}},
+        layoutLevelOffsets,
+        topLevelLayouts,
+        topLevelLayoutLevels,
+        levelPartitionedTopLevelLayouts,
+        topLevelLayoutOffsets,
+        topLevelLayoutLayouterIds,
+        topLevelLayoutIds);
+    CORRADE_COMPARE_AS(count,
+        0,
+        TestSuite::Compare::Greater);
+    CORRADE_COMPARE_AS(count,
+        Containers::arraySize(topLevelLayoutOffsets),
+        TestSuite::Compare::LessOrEqual);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutOffsets).prefix(count),
+        Containers::arrayView({0u, 2u, 4u}),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutLayouterIds).prefix(count - 1),
+        Containers::arrayView<UnsignedByte>({0xaa, 0xbb}),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutIds).prefix(topLevelLayoutOffsets[count - 1]),
+        Containers::arrayView({layoutHandleId(a10), layoutHandleId(a3), layoutHandleId(b12), layoutHandleId(b0)}),
+        TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesMultipleLayoutersPerNode() {
+    auto&& data = DiscoverTopLevelLayoutNodesMultipleLayoutersPerNodeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    NodeHandle node1 = nodeHandle(0x1, 1);
+    NodeHandle node2 = nodeHandle(0x2, 1);
+    NodeHandle node3 = nodeHandle(0x3, 1);
+    NodeHandle node4 = nodeHandle(0x4, 1);
+    NodeHandle node5 = nodeHandle(0x5, 1);
+    NodeHandle node6 = nodeHandle(0x6, 1);
+    LayouterHandle layouterA = layouterHandle(0xaa, 1);
+    LayouterHandle layouterB = layouterHandle(0xbb, 1);
+    LayouterHandle layouterC = layouterHandle(0xcc, 1);
+    LayouterHandle layouterD = layouterHandle(0xdd, 1);
+    LayouterHandle layouterE = layouterHandle(0xee, 1);
+    LayoutHandle a1 = layoutHandle(layouterA, 0xaaa1, 1);
+    LayoutHandle a2 = layoutHandle(layouterA, 0xaaa2, 1);
+    LayoutHandle a5 = layoutHandle(layouterA, 0xaaa5, 1);
+    LayoutHandle a6 = layoutHandle(layouterA, 0xaaa6, 1);
+    LayoutHandle b1 = layoutHandle(layouterB, 0xbbb1, 1);
+    LayoutHandle b2 = layoutHandle(layouterB, 0xbbb2, 1);
+    LayoutHandle b3 = layoutHandle(layouterB, 0xbbb3, 1);
+    LayoutHandle c3 = layoutHandle(layouterC, 0xccc3, 1);
+    LayoutHandle c4 = layoutHandle(layouterC, 0xccc4, 1);
+    LayoutHandle c5 = layoutHandle(layouterC, 0xccc5, 1);
+    LayoutHandle d2 = layoutHandle(layouterD, 0xddd2, 1);
+    LayoutHandle d3 = layoutHandle(layouterD, 0xddd3, 1);
+    LayoutHandle e2 = layoutHandle(layouterE, 0xeee2, 1);
+
+    NodeHandle nodeParentOrOrder[0x7]{};
+    nodeParentOrOrder[nodeHandleId(node2)] = node1;
+    nodeParentOrOrder[nodeHandleId(node3)] = node2;
+    nodeParentOrOrder[nodeHandleId(node4)] = node3;
+    nodeParentOrOrder[nodeHandleId(node5)] = node4;
+    nodeParentOrOrder[nodeHandleId(node6)] = node5;
+
+    UnsignedInt visibleNodeIds[]{
+        nodeHandleId(node1),
+        nodeHandleId(node2),
+        nodeHandleId(node3),
+        nodeHandleId(node4),
+        nodeHandleId(node5),
+        nodeHandleId(node6),
+    };
+
+    /* This list is here instead of in
+       DiscoverTopLevelLayoutNodesMultipleLayoutersPerNodeData as it's
+       significantly less annoying that way.
+
+       In case there would be more than one layout assigned to the same node,
+       the code in UserInterface::update() would arbitrarily use just one of
+       them. Such condition can't be tested here but is checked in UserInterfaceTest::state().
+
+        0 (node 0 unused to test that it's not indexing with wrong IDs)
+        1  AB    01          AB    01        AB    01        AB    01
+        2  ab DE 01 23       ab DE 01 23     ab DE 01 23     ab DE 01 23
+        3   bC    12          bC    12        bCd   132       bCd   132
+        4    c     2           c     2         c     3         c     3
+        5  A     0           A c   3 2       A     0         A c   4 3
+        6  a     0           a     3         a     0         a     4     */
+    LayoutHandle nodeLayouts[Containers::arraySize(DiscoverTopLevelLayoutNodesMultipleLayoutersPerNodeData)][7*5]{
+        /** @todo cleanup once GCC 4.8, which fails with "error: braces around
+            scalar initializer" when encountering {}, is no longer supported */
+        #define __ LayoutHandle{}
+        {
+            __, __, __, __, __,
+            a1, b1, __, __, __,
+            a2, b2, __, d2, e2,
+            __, b3, c3, __, __,
+            __, __, c4, __, __,
+            a5, __, __, __, __,
+            a6, __, __, __, __
+        }, {
+            __, __, __, __, __,
+            a1, b1, __, __, __,
+            a2, b2, __, d2, e2,
+            __, b3, c3, __, __,
+            __, __, c4, __, __,
+            a5, __, c5, __, __,
+            a6, __, __, __, __
+        }, {
+            __, __, __, __, __,
+            a1, b1, __, __, __,
+            a2, b2, __, d2, e2,
+            __, b3, c3, d3, __,
+            __, __, c4, __, __,
+            a5, __, __, __, __,
+            a6, __, __, __, __
+        }, {
+            __, __, __, __, __,
+            a1, b1, __, __, __,
+            a2, b2, __, d2, e2,
+            __, b3, c3, d3, __,
+            __, __, c4, __, __,
+            a5, __, c5, __, __,
+            a6, __, __, __, __
+        }
+        #undef __
+    };
+
+    UnsignedInt nodeLayoutLevels[7*5];
+    UnsignedInt layoutLevelOffsets[11 + 1]{};
+    LayoutHandle topLevelLayouts[11];
+    UnsignedInt topLevelLayoutLevels[11];
+    LayoutHandle levelPartitionedTopLevelLayouts[11];
+    UnsignedInt topLevelLayoutOffsets[11 + 1];
+    UnsignedByte topLevelLayoutLayouterIds[11];
+    UnsignedInt topLevelLayoutIds[11];
+    std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
+        nodeParentOrOrder,
+        visibleNodeIds,
+        0xef,
+        Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts[testCaseInstanceId()], {7, 5}},
+        Containers::StridedArrayView2D<UnsignedInt>{nodeLayoutLevels, {7, 5}},
+        layoutLevelOffsets,
+        topLevelLayouts,
+        topLevelLayoutLevels,
+        levelPartitionedTopLevelLayouts,
+        topLevelLayoutOffsets,
+        topLevelLayoutLayouterIds,
+        topLevelLayoutIds);
+    CORRADE_COMPARE_AS(count,
+        0,
+        TestSuite::Compare::Greater);
+    CORRADE_COMPARE_AS(count,
+        Containers::arraySize(topLevelLayoutOffsets),
+        TestSuite::Compare::LessOrEqual);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutOffsets).prefix(count),
+        arrayView(data.topLevelLayoutOffsets),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutLayouterIds).prefix(count - 1),
+        arrayView(data.topLevelLayoutLayouterIds),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutIds).prefix(topLevelLayoutOffsets[count - 1]),
+        arrayView(data.topLevelLayoutIds),
+        TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoLayouters() {
+    NodeHandle node1 = nodeHandle(0x1, 1);
+    NodeHandle node2 = nodeHandle(0x2, 1);
+
+    NodeHandle nodeParentOrOrder[3]{};
+    nodeParentOrOrder[nodeHandleId(node2)] = node1;
+
+    UnsignedInt visibleNodeIds[]{
+        nodeHandleId(node1),
+        nodeHandleId(node2),
+    };
+
+    /* Shouldn't blow up in any way */
+    UnsignedInt layoutLevelOffsets[1]{};
+    UnsignedInt topLevelLayoutOffsets[1];
+    std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
+        nodeParentOrOrder,
+        visibleNodeIds,
+        0xef,
+        Containers::StridedArrayView2D<const LayoutHandle>{nullptr, {3, 0}},
+        Containers::StridedArrayView2D<UnsignedInt>{nullptr, {3, 0}},
+        layoutLevelOffsets,
+        {},
+        {},
+        {},
+        topLevelLayoutOffsets,
+        {},
+        {});
+    CORRADE_COMPARE(count, 1);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutOffsets),
+        Containers::arrayView({0u}),
+        TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoVisibleNodes() {
+    NodeHandle node1 = nodeHandle(0x1, 1);
+    NodeHandle node2 = nodeHandle(0x2, 1);
+    LayouterHandle layouterA = layouterHandle(0xaa, 1);
+    LayouterHandle layouterB = layouterHandle(0xbb, 1);
+    LayoutHandle a1 = layoutHandle(layouterA, 0xaaa1, 1);
+    LayoutHandle b2 = layoutHandle(layouterB, 0xbbb2, 1);
+
+    NodeHandle nodeParentOrOrder[3]{};
+    nodeParentOrOrder[nodeHandleId(node2)] = node1;
+
+    LayoutHandle nodeLayouts[3*2]{
+        LayoutHandle{}, LayoutHandle{},
+        a1,             LayoutHandle{},
+        LayoutHandle{}, b2
+    };
+    UnsignedInt nodeLayoutLevels[3*2];
+
+    /* Shouldn't blow up in any way */
+    UnsignedInt layoutLevelOffsets[1]{};
+    UnsignedInt topLevelLayoutOffsets[1];
+    std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
+        nodeParentOrOrder,
+        {},
+        0xef,
+        Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts, {3, 2}},
+        Containers::StridedArrayView2D<UnsignedInt>{nodeLayoutLevels, {3, 2}},
+        layoutLevelOffsets,
+        {},
+        {},
+        {},
+        topLevelLayoutOffsets,
+        {},
+        {});
+    CORRADE_COMPARE(count, 1);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutOffsets),
+        Containers::arrayView({0u}),
+        TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleNode() {
+    NodeHandle node = nodeHandle(0x0, 1);
+    LayouterHandle layouter = layouterHandle(0xaa, 1);
+    LayoutHandle a = layoutHandle(layouter, 0xaaa1, 1);
+
+    NodeHandle nodeParentOrOrder[1]{};
+
+    UnsignedInt visibleNodeIds[]{
+        nodeHandleId(node),
+    };
+
+    LayoutHandle nodeLayouts[]{
+        a
+    };
+
+    UnsignedInt nodeLayoutLevels[1];
+    UnsignedInt layoutLevelOffsets[1 + 1]{};
+    LayoutHandle topLevelLayouts[1];
+    UnsignedInt topLevelLayoutLevels[1];
+    LayoutHandle levelPartitionedTopLevelLayouts[1];
+    UnsignedInt topLevelLayoutOffsets[1 + 1];
+    UnsignedByte topLevelLayoutLayouterIds[1];
+    UnsignedInt topLevelLayoutIds[1];
+    std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
+        nodeParentOrOrder,
+        visibleNodeIds,
+        0xef,
+        Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts, {1, 1}},
+        Containers::StridedArrayView2D<UnsignedInt>{nodeLayoutLevels, {1, 1}},
+        layoutLevelOffsets,
+        topLevelLayouts,
+        topLevelLayoutLevels,
+        levelPartitionedTopLevelLayouts,
+        topLevelLayoutOffsets,
+        topLevelLayoutLayouterIds,
+        topLevelLayoutIds);
+    CORRADE_COMPARE_AS(count,
+        0,
+        TestSuite::Compare::Greater);
+    CORRADE_COMPARE_AS(count,
+        Containers::arraySize(topLevelLayoutOffsets),
+        TestSuite::Compare::LessOrEqual);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutOffsets).prefix(count),
+        Containers::arrayView({0u, 1u}),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutLayouterIds).prefix(count - 1),
+        Containers::arrayView<UnsignedByte>({0xaa}),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutIds).prefix(topLevelLayoutOffsets[count - 1]),
+        Containers::arrayView({layoutHandleId(a)}),
+        TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleNodeLayoutChain() {
+    NodeHandle node = nodeHandle(0x0, 1);
+    LayouterHandle layouterA = layouterHandle(0xaa, 1);
+    LayouterHandle layouterB = layouterHandle(0xbb, 1);
+    LayouterHandle layouterC = layouterHandle(0xcc, 1);
+    LayoutHandle a = layoutHandle(layouterA, 0xaaa1, 1);
+    LayoutHandle b = layoutHandle(layouterB, 0xbbb1, 1);
+    LayoutHandle c = layoutHandle(layouterC, 0xccc1, 1);
+
+    NodeHandle nodeParentOrOrder[1]{};
+
+    UnsignedInt visibleNodeIds[]{
+        nodeHandleId(node),
+    };
+
+    LayoutHandle nodeLayouts[]{
+        a, b, c
+    };
+
+    UnsignedInt nodeLayoutLevels[3];
+    UnsignedInt layoutLevelOffsets[3 + 1]{};
+    LayoutHandle topLevelLayouts[3];
+    UnsignedInt topLevelLayoutLevels[3];
+    LayoutHandle levelPartitionedTopLevelLayouts[3];
+    UnsignedInt topLevelLayoutOffsets[3 + 1];
+    UnsignedByte topLevelLayoutLayouterIds[3];
+    UnsignedInt topLevelLayoutIds[3];
+    std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
+        nodeParentOrOrder,
+        visibleNodeIds,
+        0xef,
+        Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts, {1, 3}},
+        Containers::StridedArrayView2D<UnsignedInt>{nodeLayoutLevels, {1, 3}},
+        layoutLevelOffsets,
+        topLevelLayouts,
+        topLevelLayoutLevels,
+        levelPartitionedTopLevelLayouts,
+        topLevelLayoutOffsets,
+        topLevelLayoutLayouterIds,
+        topLevelLayoutIds);
+    CORRADE_COMPARE_AS(count,
+        0,
+        TestSuite::Compare::Greater);
+    CORRADE_COMPARE_AS(count,
+        Containers::arraySize(topLevelLayoutOffsets),
+        TestSuite::Compare::LessOrEqual);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutOffsets).prefix(count),
+        Containers::arrayView({0u, 1u, 2u, 3u}),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutLayouterIds).prefix(count - 1),
+        Containers::arrayView<UnsignedByte>({0xaa, 0xbb, 0xcc}),
+        TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(topLevelLayoutIds).prefix(topLevelLayoutOffsets[count - 1]),
+        Containers::arrayView({layoutHandleId(a), layoutHandleId(b), layoutHandleId(c)}),
+        TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceImplementationTest::cullVisibleNodesClipRects() {

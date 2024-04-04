@@ -65,4 +65,34 @@ Debug& operator<<(Debug& debug, const NodeHandle value) {
     return debug << "Whee::NodeHandle(" << Debug::nospace << Debug::hex << nodeHandleId(value) << Debug::nospace << "," << Debug::hex << nodeHandleGeneration(value) << Debug::nospace << ")";
 }
 
+Debug& operator<<(Debug& debug, const LayouterHandle value) {
+    if(value == LayouterHandle::Null)
+        return debug << "Whee::LayouterHandle::Null";
+    return debug << "Whee::LayouterHandle(" << Debug::nospace << Debug::hex << layouterHandleId(value) << Debug::nospace << "," << Debug::hex << layouterHandleGeneration(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const LayouterDataHandle value) {
+    if(value == LayouterDataHandle::Null)
+        return debug << "Whee::LayouterDataHandle::Null";
+    return debug << "Whee::LayouterDataHandle(" << Debug::nospace << Debug::hex << layouterDataHandleId(value) << Debug::nospace << "," << Debug::hex << layouterDataHandleGeneration(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const LayoutHandle value) {
+    if(value == LayoutHandle::Null)
+        return debug << "Whee::LayoutHandle::Null";
+
+    debug << "Whee::LayoutHandle(" << Debug::nospace;
+    if(layoutHandleLayouter(value) == LayouterHandle::Null)
+        debug << "Null,";
+    else
+        debug << "{" << Debug::nospace << Debug::hex << layoutHandleLayouterId(value) << Debug::nospace << "," << Debug::hex << layoutHandleLayouterGeneration(value) << Debug::nospace << "},";
+
+    if(layoutHandleData(value) == LayouterDataHandle::Null)
+        debug << "Null)";
+    else
+        debug << "{" << Debug::nospace << Debug::hex << layoutHandleId(value) << Debug::nospace << "," << Debug::hex << layoutHandleGeneration(value) << Debug::nospace << "})";
+
+    return debug;
+}
+
 }}

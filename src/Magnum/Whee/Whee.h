@@ -38,8 +38,12 @@ enum class DataHandle: UnsignedLong;
 enum class LayerHandle: UnsignedShort;
 enum class LayerDataHandle: UnsignedInt;
 enum class NodeHandle: UnsignedInt;
+enum class LayoutHandle: UnsignedLong;
+enum class LayouterHandle: UnsignedShort;
+enum class LayouterDataHandle: UnsignedInt;
 
 class AbstractLayer;
+class AbstractLayouter;
 class AbstractUserInterface;
 
 class BaseLayer;

@@ -46,7 +46,8 @@ namespace Magnum { namespace Whee {
 Used to decide whether @ref AbstractUserInterface::clean() or
 @ref AbstractUserInterface::update() need to be called to refresh the internal
 state before the interface is drawn or an event is handled. See also
-@ref LayerState for layer-specific state.
+@ref LayerState for layer-specific state and @ref LayouterState for
+layouter-specific state.
 @see @ref UserInterfaceStates, @ref AbstractUserInterface::state()
 */
 enum class UserInterfaceState: UnsignedByte {
@@ -58,7 +59,8 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref AbstractUserInterface::update() is called. Implied by
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
-     * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
@@ -76,7 +78,8 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
-     * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
@@ -85,15 +88,15 @@ enum class UserInterfaceState: UnsignedByte {
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
-     * visible node set after node sizes changed. Set implicitly after every
-     * @ref AbstractUserInterface::setNodeSize() call and after every
-     * @relativeref{AbstractUserInterface,setNodeFlags()},
+     * visible node set after node clip state changed. Set implicitly after
+     * every @relativeref{AbstractUserInterface,setNodeFlags()},
      * @relativeref{AbstractUserInterface,addNodeFlags()} and
      * @relativeref{AbstractUserInterface,clearNodeFlags()} that changes the
      * presence of the @ref NodeFlag::Clip flag; is reset next time
      * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
-     * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
+     * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
@@ -103,14 +106,33 @@ enum class UserInterfaceState: UnsignedByte {
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
      * visible node hierarchy layout after node sizes or offsets changed. Set
-     * implicitly after every @ref AbstractUserInterface::setNodeOffset() call,
-     * is reset next time @ref AbstractUserInterface::update() is called.
-     * Implies @ref UserInterfaceState::NeedsNodeClipUpdate. Implied by
+     * implicitly if any of the layouters have
+     * @ref LayouterState::NeedsUpdate set and after every
+     * @ref AbstractUserInterface::setNodeOffset() and
+     * @ref AbstractUserInterface::setNodeSize(), is reset next time
+     * @ref AbstractUserInterface::update() is called. Implies
+     * @ref UserInterfaceState::NeedsNodeClipUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
-    NeedsNodeLayoutUpdate = NeedsNodeClipUpdate|(1 << 3),
+    NeedsLayoutUpdate = NeedsNodeClipUpdate|(1 << 3),
+
+    /**
+     * @ref AbstractUserInterface::update() needs to be called to refresh the
+     * layouts assigned to visible node hierarchy after new layouts were added
+     * or after existing layouts were removed and
+     * @ref AbstractUserInterface::clean() was called. Set implicitly if any of
+     * the layouters have @ref LayouterState::NeedsAssignmentUpdate set and
+     * after every @ref AbstractUserInterface::removeLayouter() call, is reset
+     * next time @ref AbstractUserInterface::update() is called. Implies
+     * @ref UserInterfaceState::NeedsLayoutUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
+     * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
+     * everything that sets those flags.
+     */
+    NeedsLayoutAssignmentUpdate = NeedsLayoutUpdate|(1 << 4),
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
@@ -125,21 +147,22 @@ enum class UserInterfaceState: UnsignedByte {
      * @relativeref{AbstractUserInterface,clearNodeFlags()} call that changes
      * the presence of the @ref NodeFlag::Hidden flag; is reset next time
      * @ref AbstractUserInterface::update() is called. Implies
-     * @ref UserInterfaceState::NeedsNodeLayoutUpdate. Implied by
+     * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsNodeUpdate = NeedsNodeLayoutUpdate|(1 << 4),
+    NeedsNodeUpdate = NeedsLayoutAssignmentUpdate|(1 << 5),
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
-     * hierarchies of removed nodes and data attached to those. Set implicitly
-     * after every @ref AbstractUserInterface::removeNode() call, is reset to
+     * hierarchies of removed nodes, layouts assigned to those and data
+     * attached to those. Set implicitly after every
+     * @ref AbstractUserInterface::removeNode() call, is reset to
      * @ref UserInterfaceState::NeedsNodeUpdate next time
      * @ref AbstractUserInterface::clean() is called. Implies
      * @ref UserInterfaceState::NeedsNodeUpdate.
      */
-    NeedsNodeClean = NeedsNodeUpdate|(1 << 5),
+    NeedsNodeClean = NeedsNodeUpdate|(1 << 6),
 };
 
 /**
@@ -608,6 +631,185 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          */
 
         /** @{
+         * @name Node layouter management
+         */
+
+        /**
+         * @brief Capacity of the layouter storage
+         *
+         * Can be at most 256. If @ref createLayouter() is called and there's
+         * no free slots left, the internal storage gets grown.
+         * @see @ref layouterUsedCount()
+         */
+        std::size_t layouterCapacity() const;
+
+        /**
+         * @brief Count of used items in the layouter storage
+         *
+         * Always at most @ref layouterCapacity(). Expired handles are counted
+         * among used as well. The operation is done with a
+         * @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
+         * @ref layouterCapacity().
+         */
+        std::size_t layouterUsedCount() const;
+
+        /**
+         * @brief Whether a layouter handle is valid
+         *
+         * A handle is valid if it has been returned from @ref createLayouter()
+         * before and @ref removeLayouter() wasn't called on it yet. Note that
+         * a handle is valid even if the layouter instance wasn't set with
+         * @ref setLayouterInstance() yet. For @ref LayouterHandle::Null always
+         * returns @cpp false @ce.
+         */
+        bool isHandleValid(LayouterHandle handle) const;
+
+        /**
+         * @brief Whether a layout handle is valid
+         *
+         * A shorthand for extracting a @ref LayouterHandle from @p handle
+         * using @ref layoutHandleLayouter(), calling
+         * @ref isHandleValid(LayouterHandle) const on it, if it's valid and
+         * set then retrieving the particular layouter instance using
+         * @ref layouter() and then calling
+         * @ref AbstractLayouter::isHandleValid(LayouterDataHandle) const with
+         * a @ref LayouterDataHandle extracted from @p handle using
+         * @ref layoutHandleData(). See these functions for more information.
+         * For @ref LayoutHandle::Null, @ref LayouterHandle::Null or
+         * @ref LayouterDataHandle::Null always returns @cpp false @ce.
+         */
+        bool isHandleValid(LayoutHandle handle) const;
+
+        /**
+         * @brief First layouter in the layout calculation order
+         *
+         * This layouter gets executed before all others. Returns
+         * @ref LayouterHandle::Null if there's no layouters. The returned
+         * handle is always either valid or null.
+         * @see @ref layouterNext(), @ref layouterLast(),
+         *      @ref layouterPrevious()
+         */
+        LayouterHandle layouterFirst() const;
+
+        /**
+         * @brief Last layouter in the layout calculation order
+         *
+         * This layouter gets executed after all others. Returns
+         * @ref LayouterHandle::Null if there's no layouters. The returned
+         * handle is always either valid or null.
+         * @see @ref layouterPrevious(), @ref layouterFirst(),
+         *      @ref layouterNext()
+         */
+        LayouterHandle layouterLast() const;
+
+        /**
+         * @brief Previous layouter in the layout calculation order
+         *
+         * The previous layouter gets executed earlier. Expects that @p handle
+         * is valid. Returns @ref LayouterHandle::Null if the layouter is
+         * first. The returned handle is always either valid or null.
+         * @see @ref isHandleValid(LayouterHandle) const,
+         *      @ref layouterNext(), @ref layouterFirst(), @ref layouterLast()
+         */
+        LayouterHandle layouterPrevious(LayouterHandle handle) const;
+
+        /**
+         * @brief Next layouter in the layout calculation order
+         *
+         * The next layouter gets executed later. Expects that @p handle is
+         * valid. Returns @ref LayouterHandle::Null if the layouter is last.
+         * The returned handle is always either valid or null.
+         * @see @ref isHandleValid(LayouterHandle) const,
+         *      @ref layouterPrevious(), @ref layouterLast(),
+         *      @ref layouterFirst()
+         */
+        LayouterHandle layouterNext(LayouterHandle handle) const;
+
+        /**
+         * @brief Create a layouter
+         * @param before    A layouter to order before for layout calculation
+         *      or @ref LayouterHandle::Null if ordered as last. Expected to be
+         *      valid if not null.
+         * @return New layouter handle
+         *
+         * Allocates a new handle in a free slot in the internal storage or
+         * grows the storage if there's no free slots left. Expects that
+         * there's at most 256 layouters. The returned handle is meant to be
+         * used to construct an @ref AbstractLayouter subclass and the instance
+         * then passed to @ref setLayouterInstance(). A layouter can be removed
+         * again with @ref removeLayer().
+         * @see @ref isHandleValid(LayouterHandle) const,
+         *      @ref layouterCapacity(), @ref layouterUsedCount()
+         */
+        LayouterHandle createLayouter(LayouterHandle before =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            LayouterHandle::Null
+            #else
+            LayouterHandle{} /* To not have to include Handle.h */
+            #endif
+        );
+
+        /**
+         * @brief Set a layouter instance
+         * @return Reference to @p instance
+         *
+         * Expects that @p instance was created with a @ref LayouterHandle
+         * returned from @ref createLayouter() earlier, the handle is valid and
+         * @ref setLayouterInstance() wasn't called for the same handle yet.
+         * @see @ref AbstractLayouter::handle(),
+         *      @ref isHandleValid(LayouterHandle) const
+         */
+        AbstractLayouter& setLayouterInstance(Containers::Pointer<AbstractLayouter>&& instance);
+        /** @overload */
+        template<class T> T& setLayouterInstance(Containers::Pointer<T>&& instance) {
+            return static_cast<T&>(setLayouterInstance(Containers::Pointer<AbstractLayouter>{Utility::move(instance)}));
+        }
+
+        /**
+         * @brief Layouter instance
+         *
+         * Expects that @p handle is valid and that @ref setLayouterInstance()
+         * was called for it.
+         * @see @ref isHandleValid(LayouterHandle) const
+         */
+        AbstractLayouter& layouter(LayouterHandle handle);
+        const AbstractLayouter& layouter(LayouterHandle handle) const; /**< @overload */
+
+        /**
+         * @brief Layouter instance in a concrete type
+         *
+         * Expects that @p handle is valid and that @ref setLayouterInstance()
+         * was called for it. It's the user responsibility to ensure that @p T
+         * matches the actual instance type.
+         * @see @ref isHandleValid(LayouterHandle) const
+         */
+        template<class T> T& layouter(LayouterHandle handle) {
+            return static_cast<T&>(layouter(handle));
+        }
+        /** @overload */
+        template<class T> const T& layouter(LayouterHandle handle) const {
+            return static_cast<const T&>(layouter(handle));
+        }
+
+        /**
+         * @brief Remove a layouter
+         *
+         * Expects that @p handle is valid. After this call,
+         * @ref isHandleValid(LayouterHandle) const returns @cpp false @ce for
+         * @p handle and @ref isHandleValid(LayoutHandle) const returns
+         * @cpp false @ce for all layouts associated with @p handle.
+         *
+         * Calling this function causes
+         * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate to be set.
+         * @see @ref clean()
+         */
+        void removeLayouter(LayouterHandle handle);
+
+        /**
+         * @}
+         */
+
+        /** @{
          * @name Node management
          */
 
@@ -699,7 +901,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Node offset relative to its parent
          *
-         * Expects that @p handle is valid.
+         * The returned value is before any layout calculation is done. Expects
+         * that @p handle is valid.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent()
          */
         Vector2 nodeOffset(NodeHandle handle) const;
@@ -707,10 +910,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Set node offset relative to its parent
          *
-         * Expects that @p handle is valid.
+         * The value is subsequently used for layout calculation. Expects that
+         * @p handle is valid.
          *
          * Calling this function causes
-         * @ref UserInterfaceState::NeedsNodeLayoutUpdate to be set.
+         * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent()
          */
         void setNodeOffset(NodeHandle handle, const Vector2& offset);
@@ -718,7 +922,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Node size
          *
-         * Expects that @p handle is valid.
+         * The returned value is before any layout calculation is done. Expects
+         * that @p handle is valid.
          * @see @ref isHandleValid(NodeHandle) const
          */
         Vector2 nodeSize(NodeHandle handle) const;
@@ -726,10 +931,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Set node size
          *
-         * Expects that @p handle is valid.
+         * The value is subsequently used for layout calculation. Expects that
+         * @p handle is valid.
          *
          * Calling this function causes
-         * @ref UserInterfaceState::NeedsNodeClipUpdate to be set.
+         * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
          * @see @ref isHandleValid(NodeHandle) const
          */
         void setNodeSize(NodeHandle handle, const Vector2& size);
@@ -929,6 +1135,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Removes nodes with an invalid (removed) parent node
          * -    Calls @ref AbstractLayer::cleanNodes() with updated node
          *      generations, causing removal of data attached to invalid nodes
+         * -    Calls @ref AbstractLayouter::cleanNodes() with updated node
+         *      generations, causing removal of layouts assigned to invalid
+         *      nodes
          *
          * After calling this function, @ref state() doesn't contain
          * @ref UserInterfaceState::NeedsNodeClean anymore;
@@ -950,13 +1159,16 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref UserInterfaceState::NeedsDataUpdate,
          * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
          * @ref UserInterfaceState::NeedsNodeClipUpdate,
-         * @ref UserInterfaceState::NeedsNodeLayoutUpdate or
+         * @ref UserInterfaceState::NeedsLayoutUpdate,
+         * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate or
          * @ref UserInterfaceState::NeedsNodeUpdate, this function is a no-op,
          * otherwise it performs a subset of the following depending on the
          * state:
          *
          * -    Orders visible nodes back-to-front for drawing and
          *      front-to-back for event processing
+         * -    Orders layouts assigned to nodes by their dependency
+         * -    Performs layout calculation
          * -    Calculates absolute offsets for visible nodes
          * -    Culls invisible nodes, calculates clip rectangles
          * -    Orders data attachments in each layer by draw order

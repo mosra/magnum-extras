@@ -45,6 +45,7 @@ set(MagnumWhee_SRCS
 
 set(MagnumWhee_GracefulAssert_SRCS
     AbstractLayer.cpp
+    AbstractLayouter.cpp
     AbstractUserInterface.cpp
     AbstractVisualLayer.cpp
     BaseLayer.cpp
@@ -54,6 +55,7 @@ set(MagnumWhee_GracefulAssert_SRCS
 
 set(MagnumWhee_HEADERS
     AbstractLayer.h
+    AbstractLayouter.h
     AbstractUserInterface.h
     AbstractVisualLayer.h
     BaseLayer.h
