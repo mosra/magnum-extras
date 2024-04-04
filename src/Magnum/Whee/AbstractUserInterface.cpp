@@ -513,7 +513,7 @@ struct AbstractUserInterface::State {
        if there was no pointer event yet. */
     /** @todo maintain previous position per pointer type? i.e., mouse, pen and
         finger independently? */
-    Containers::Optional<Vector2> pointerEventPreviousGlobalPositionScaled;
+    Containers::Optional<Vector2> currentGlobalPointerPosition;
 
     /* Data for updates, event handling and drawing, repopulated by clean() and
        update() */
@@ -3032,7 +3032,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     }
 
     /* Update the last relative position with this one */
-    state.pointerEventPreviousGlobalPositionScaled = globalPositionScaled;
+    state.currentGlobalPointerPosition = globalPositionScaled;
 
     return called != NodeHandle::Null;
 }
@@ -3111,7 +3111,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
     state.currentCapturedNode = NodeHandle::Null;
 
     /* Update the last relative position with this one */
-    state.pointerEventPreviousGlobalPositionScaled = globalPositionScaled;
+    state.currentGlobalPointerPosition = globalPositionScaled;
 
     return releaseAcceptedByAnyData;
 }
@@ -3130,8 +3130,8 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
     /* Fill in position relative to the previous event, if there was any. Since
        the value is event-relative and not node-relative, it doesn't need any
        further updates in the callEvent() code. */
-    event._relativePosition = state.pointerEventPreviousGlobalPositionScaled ?
-        globalPositionScaled - *state.pointerEventPreviousGlobalPositionScaled : Vector2{};
+    event._relativePosition = state.currentGlobalPointerPosition ?
+        globalPositionScaled - *state.currentGlobalPointerPosition : Vector2{};
 
     /* If there's a node capturing pointer events, call the event on it
        directly. Given that update() was called, it should be either null or
@@ -3291,7 +3291,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         state.currentPressedNode = NodeHandle::Null;
 
     /* Update the last relative position with this one */
-    state.pointerEventPreviousGlobalPositionScaled = globalPositionScaled;
+    state.currentGlobalPointerPosition = globalPositionScaled;
 
     return moveAcceptedByAnyData;
 }
@@ -3306,6 +3306,10 @@ NodeHandle AbstractUserInterface::currentCapturedNode() const {
 
 NodeHandle AbstractUserInterface::currentHoveredNode() const {
     return _state->currentHoveredNode;
+}
+
+Containers::Optional<Vector2> AbstractUserInterface::currentGlobalPointerPosition() const {
+    return _state->currentGlobalPointerPosition;
 }
 
 }}
