@@ -104,6 +104,11 @@ class AbstractWidget;
 template<class> class BasicWidget;
 typedef BasicWidget<UserInterface> Widget;
 
+class SnapLayouter;
+class AbstractSnapLayout;
+template<class> class BasicSnapLayout;
+typedef BasicSnapLayout<UserInterface> SnapLayout;
+
 enum class Pointer: UnsignedByte;
 typedef Containers::EnumSet<Pointer> Pointers;
 class PointerEvent;

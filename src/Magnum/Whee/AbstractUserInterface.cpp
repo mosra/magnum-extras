@@ -44,6 +44,7 @@
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/Implementation/abstractUserInterface.h"
+#include "Magnum/Whee/Implementation/orderNodesBreadthFirstInto.h"
 
 namespace Magnum { namespace Whee {
 
