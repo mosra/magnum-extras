@@ -46,6 +46,7 @@ set(MagnumWhee_SRCS
     Input.cpp
     Label.cpp
     NodeFlags.cpp
+    SnapLayouter.cpp
     Style.cpp
     Widget.cpp)
 
@@ -85,6 +86,7 @@ set(MagnumWhee_HEADERS
     Input.h
     Label.h
     NodeFlags.h
+    SnapLayouter.h
     Style.h
     Style.hpp
     TextLayer.h

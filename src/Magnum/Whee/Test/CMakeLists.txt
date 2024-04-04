@@ -50,6 +50,7 @@ corrade_add_test(WheeEventLayerTest EventLayerTest.cpp LIBRARIES MagnumWheeTestL
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeLabelTest LabelTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumWhee)
+corrade_add_test(WheeSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumWhee)
 
 corrade_add_test(WheeStyleTest StyleTest.cpp LIBRARIES MagnumWhee)
 if(MAGNUM_BUILD_STATIC)
