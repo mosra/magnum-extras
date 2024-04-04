@@ -33,6 +33,7 @@
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Whee/AbstractLayer.h"
+#include "Magnum/Whee/AbstractLayouter.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/abstractUserInterface.h"
@@ -48,7 +49,8 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         _c(NeedsDataUpdate)
         _c(NeedsDataAttachmentUpdate)
         _c(NeedsNodeClipUpdate)
-        _c(NeedsNodeLayoutUpdate)
+        _c(NeedsLayoutUpdate)
+        _c(NeedsLayoutAssignmentUpdate)
         _c(NeedsNodeUpdate)
         _c(NeedsNodeClean)
         #undef _c
@@ -64,8 +66,10 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsNodeUpdate,
         /* Implied by NeedsNodeUpdate, has to be after */
-        UserInterfaceState::NeedsNodeLayoutUpdate,
-        /* Implied by NeedsNodeLayoutUpdate, has to be after */
+        UserInterfaceState::NeedsLayoutAssignmentUpdate,
+        /* Implied by NeedsLayoutAssignmentUpdate, has to be after */
+        UserInterfaceState::NeedsLayoutUpdate,
+        /* Implied by NeedsLayoutUpdate, has to be after */
         UserInterfaceState::NeedsNodeClipUpdate,
         /* Implied by NeedsNodeClipUpdate, has to be after */
         UserInterfaceState::NeedsDataAttachmentUpdate,
@@ -168,6 +172,75 @@ static_assert(
     offsetof(Layer::Used, generation) == offsetof(Layer::Free, generation),
     "Layer::Used and Free layout not compatible");
 
+union Layouter {
+    explicit Layouter() noexcept: used{} {}
+    Layouter(const Layouter&&) = delete;
+    Layouter(Layouter&& other) noexcept: used{Utility::move(other.used)} {}
+    ~Layouter() {
+        used.instance.~Pointer();
+    }
+    Layouter& operator=(const Layouter&&) = delete;
+    Layouter& operator=(Layouter&& other) noexcept {
+        Utility::swap(other.used, used);
+        return *this;
+    }
+
+    struct Used {
+        /* Except for the generation (and instance, which is reset during
+           removal), these have to be re-filled every time a handle is
+           recycled, so it doesn't make sense to initialize them to
+           anything. */
+
+        /* Layouter instance. Null for newly created layouters until
+           setLayouterInstance() is called, set back to null in
+           removeLayouter(). */
+        Containers::Pointer<AbstractLayouter> instance;
+
+        /* Together with index of this item in `layouters` used for creating a
+           LayouterHandle. Increased every time a handle reaches
+           removeLayouter(). Has to be initially non-zero to differentiate the
+           first ever handle (with index 0) from LayouterHandle::Null. Once
+           wraps back to zero once the handle gets disabled. */
+        UnsignedByte generation = 1;
+
+        /* 1 byte free */
+
+        /* Always meant to be non-null and valid. To make insert/remove
+           operations easier the list is cyclic, so the last layouters's `next`
+           is the same as `_state->firstLayouter`. */
+        LayouterHandle previous;
+        LayouterHandle next;
+
+        /* 2 bytes free */
+    } used;
+
+    /* Used only if the Layouter is among the free ones */
+    struct Free {
+        /* The instance pointer value has to be preserved in order to be able
+           to distinguish between used layouters with set instances and others
+           (free or not set yet), which is used for iterating them in clean()
+           and update(). If free, the member is always null, to not cause
+           issues when moving & destructing. There's no other way to
+           distinguish free and used layouters apart from walking the free
+           list. */
+        void* instance;
+
+        /* The generation value has to be preserved in order to increment it
+           next time it gets used */
+        UnsignedByte generation;
+
+        /* See State::firstFreeLayouter for more information. Has to be larger
+           than 8 bits in order to distinguish between index 255 and "no next
+           free layouter" (which is now 65535). */
+        UnsignedShort next;
+    } free;
+};
+
+static_assert(
+    offsetof(Layouter::Used, instance) == offsetof(Layouter::Free, instance) &&
+    offsetof(Layouter::Used, generation) == offsetof(Layouter::Free, generation),
+    "Layouter::Used and Free layout not compatible");
+
 union Node {
     explicit Node() noexcept: used{} {}
 
@@ -269,6 +342,21 @@ struct AbstractUserInterface::State {
     UnsignedShort firstFreeLayer = 0xffffu;
     UnsignedShort lastFreeLayer = 0xffffu;
 
+    /* Layouters, indexed by LayouterHandle */
+    Containers::Array<Layouter> layouters;
+    /* The `Layouter` then has a `next` member containing the next layouter in
+       the draw order. To make insert/remove operations easier the list is
+       cyclic, so the last layouter's `next` is the same as `firstLayouter`. */
+    LayouterHandle firstLayouter = LayouterHandle::Null;
+    /* Indices into the `layouters` array. The `Layouter` then has a `nextFree`
+       member containing the next free index. To avoid repeatedly reusing the
+       same handles and exhausting their generation counter too soon, new
+       layouters get taken from the front and removed are put at the end. A
+       value with all bits set means there's no (first/next/last) free
+       layouter. */
+    UnsignedShort firstFreeLayouter = 0xffffu;
+    UnsignedShort lastFreeLayouter = 0xffffu;
+
     /* Nodes, indexed by NodeHandle */
     Containers::Array<Node> nodes;
     /* Indices into the `nodes` array. The `Node` then has a `nextFree`
@@ -327,11 +415,17 @@ struct AbstractUserInterface::State {
     Containers::ArrayView<UnsignedInt> visibleNodeIds;
     Containers::ArrayView<UnsignedInt> visibleNodeChildrenCounts;
     Containers::StridedArrayView1D<UnsignedInt> visibleFrontToBackTopLevelNodeIndices;
+    Containers::ArrayView<Vector2> nodeOffsets;
+    Containers::ArrayView<Vector2> nodeSizes;
     Containers::ArrayView<Vector2> absoluteNodeOffsets;
     Containers::MutableBitArrayView visibleNodeMask;
     Containers::ArrayView<Vector2> clipRectOffsets;
     Containers::ArrayView<Vector2> clipRectSizes;
     Containers::ArrayView<UnsignedInt> clipRectNodeCounts;
+    Containers::ArrayTuple layoutStateStorage;
+    Containers::ArrayView<UnsignedInt> topLevelLayoutOffsets;
+    Containers::ArrayView<UnsignedByte> topLevelLayoutLayouterIds;
+    Containers::ArrayView<UnsignedInt> topLevelLayoutIds;
     Containers::ArrayTuple dataStateStorage;
     Containers::ArrayView<Containers::Pair<UnsignedInt, UnsignedInt>> dataToUpdateLayerOffsets;
     Containers::ArrayView<UnsignedInt> dataToUpdateIds;
@@ -404,12 +498,31 @@ AbstractUserInterface& AbstractUserInterface::setSize(const Vector2i& size) {
 
 UserInterfaceStates AbstractUserInterface::state() const {
     const State& state = *_state;
+    UserInterfaceStates states;
+
+    /* Unless UserInterfaceState::NeedsLayoutAssignmentUpdate is set already,
+       go through all layouters and inherit the Needs* flags from them. Invalid
+       (removed) layouters have instances set to nullptr, so this will skip
+       them. */
+    if(!(state.state >= UserInterfaceState::NeedsLayoutAssignmentUpdate)) for(const Layouter& layouter: state.layouters) {
+        if(const AbstractLayouter* const instance = layouter.used.instance.get()) {
+            const LayouterStates layouterState = instance->state();
+            if(layouterState >= LayouterState::NeedsUpdate)
+                states |= UserInterfaceState::NeedsLayoutUpdate;
+            if(layouterState >= LayouterState::NeedsAssignmentUpdate)
+                states |= UserInterfaceState::NeedsLayoutAssignmentUpdate;
+
+            /* There's no broader state than this so if it's set, we can stop
+               iterating further */
+            if(states == UserInterfaceState::NeedsLayoutAssignmentUpdate)
+                break;
+        }
+    }
 
     /* Unless UserInterfaceState::NeedsDataAttachmentUpdate is set already, go
        through all layers and inherit the Needs* flags from them. Invalid
        (removed) layers have instances set to nullptr as well, so this will
        skip them. */
-    UserInterfaceStates states;
     if(!(state.state >= UserInterfaceState::NeedsDataAttachmentUpdate)) for(const Layer& layer: state.layers) {
         if(const AbstractLayer* const instance = layer.used.instance.get()) {
             const LayerStates layerState = instance->state();
@@ -685,6 +798,244 @@ void AbstractUserInterface::attachData(const NodeHandle node, const DataHandle d
        nothing to set here */
 }
 
+std::size_t AbstractUserInterface::layouterCapacity() const {
+    return _state->layouters.size();
+}
+
+std::size_t AbstractUserInterface::layouterUsedCount() const {
+    /* The "pointer" chasing in here is a bit nasty, but there's no other way
+       to know which layouters are actually used and which not. The instance is
+       a nullptr for unused layouters, yes, but it's also null for layouters
+       that don't have it set yet. */
+    std::size_t free = 0;
+    const State& state = *_state;
+    UnsignedShort index = state.firstFreeLayouter;
+    /* C, FUCK your STUPID conversion rules. Why isn't ~UnsignedShort{} 65535?
+       Why it evaluates to -1?! Why UnsignedShort(~UnsignedShort{}) is the only
+       way to put it back to 16 bits? Why is everything so fucking awful?! Why
+       do you force me to use error-prone constants, FFS?! */
+    while(index != 0xffffu) {
+        index = state.layouters[index].free.next;
+        ++free;
+    }
+    return state.layouters.size() - free;
+}
+
+bool AbstractUserInterface::isHandleValid(const LayouterHandle handle) const {
+    if(handle == LayouterHandle::Null)
+        return false;
+    const UnsignedInt index = layouterHandleId(handle);
+    const State& state = *_state;
+    if(index >= state.layouters.size())
+        return false;
+    /* Zero generation (i.e., where it wrapped around from 255) is also
+       invalid.
+
+       Note that this can still return true for manually crafted handles that
+       point to free nodes with correct generation counters. The only way to
+       detect that would be by either iterating the free list (slow) or by
+       keeping an additional bitfield marking free items. I don't think that's
+       necessary. */
+    const UnsignedInt generation = layouterHandleGeneration(handle);
+    return generation && generation == state.layouters[index].used.generation;
+}
+
+bool AbstractUserInterface::isHandleValid(const LayoutHandle handle) const {
+    if(layoutHandleData(handle) == LayouterDataHandle::Null ||
+       layoutHandleLayouter(handle) == LayouterHandle::Null)
+        return false;
+    const UnsignedInt layouterIndex = layoutHandleLayouterId(handle);
+    const State& state = *_state;
+    if(layouterIndex >= state.layouters.size())
+        return false;
+    const Layouter& layouter = state.layouters[layouterIndex];
+    if(!layouter.used.instance)
+        return false;
+    return layoutHandleLayouterGeneration(handle) == layouter.used.generation && layouter.used.instance->isHandleValid(layoutHandleData(handle));
+}
+
+LayouterHandle AbstractUserInterface::layouterFirst() const {
+    return _state->firstLayouter;
+}
+
+LayouterHandle AbstractUserInterface::layouterLast() const {
+    const State& state = *_state;
+    if(state.firstLayouter == LayouterHandle::Null)
+        return LayouterHandle::Null;
+    return state.layouters[layouterHandleId(state.firstLayouter)].used.previous;
+}
+
+LayouterHandle AbstractUserInterface::layouterPrevious(LayouterHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::layouterPrevious(): invalid handle" << handle, {});
+    const State& state = *_state;
+    if(state.firstLayouter == handle)
+        return LayouterHandle::Null;
+    return state.layouters[layouterHandleId(handle)].used.previous;
+}
+
+LayouterHandle AbstractUserInterface::layouterNext(LayouterHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::layouterNext(): invalid handle" << handle, {});
+    const State& state = *_state;
+    const LayouterHandle next = state.layouters[layouterHandleId(handle)].used.next;
+    if(state.firstLayouter == next)
+        return LayouterHandle::Null;
+    return next;
+}
+
+LayouterHandle AbstractUserInterface::createLayouter(const LayouterHandle before) {
+    CORRADE_ASSERT(before == LayouterHandle::Null || isHandleValid(before),
+        "Whee::AbstractUserInterface::createLayouter(): invalid before handle" << before, {});
+
+    State& state = *_state;
+
+    /* Find the first free layouter if there is, update the free index to point
+       to the next one (or none) */
+    Layouter* layouter;
+    /* C, FUCK your STUPID conversion rules. Why isn't ~UnsignedShort{} 65535?
+       Why it evaluates to -1?! Why UnsignedShort(~UnsignedShort{}) is the only
+       way to put it back to 16 bits? Why is everything so fucking awful?! Why
+       do you force me to use error-prone constants, FFS?! */
+    if(state.firstFreeLayouter != 0xffffu) {
+        layouter = &state.layouters[state.firstFreeLayouter];
+        /* If there's just one item in the list, make the list empty */
+        if(state.firstFreeLayouter == state.lastFreeLayouter) {
+            CORRADE_INTERNAL_ASSERT(layouter->free.next == 0xffffu);
+            state.firstFreeLayouter = state.lastFreeLayouter = 0xffffu;
+        } else {
+            state.firstFreeLayouter = layouter->free.next;
+        }
+
+    /* If there isn't, allocate a new one */
+    } else {
+        CORRADE_ASSERT(state.layouters.size() < 1 << Implementation::LayouterHandleIdBits,
+            "Whee::AbstractUserInterface::createLayouter(): can only have at most" << (1 << Implementation::LayouterHandleIdBits) << "layouters", {});
+        layouter = &arrayAppend(state.layouters, InPlaceInit);
+    }
+
+    /* In both above cases the generation is already set appropriately, either
+       initialized to 1, or incremented when it got remove()d (to mark existing
+       handles as invalid) */
+    const LayouterHandle handle = layouterHandle((layouter - state.layouters), layouter->used.generation);
+
+    /* This is the first ever layouter, no need to connect with anything else */
+    if(state.firstLayouter == LayouterHandle::Null) {
+        CORRADE_INTERNAL_ASSERT(before == LayouterHandle::Null);
+        layouter->used.previous = handle;
+        layouter->used.next = handle;
+        state.firstLayouter = handle;
+        return handle;
+    }
+
+    const LayouterHandle next = before == LayouterHandle::Null ?
+        state.firstLayouter : before;
+    const LayouterHandle previous = state.layouters[layouterHandleId(next)].used.previous;
+    layouter->used.previous = previous;
+    layouter->used.next = next;
+    state.layouters[layouterHandleId(next)].used.previous = handle;
+    state.layouters[layouterHandleId(previous)].used.next = handle;
+
+    /* If the `before` layouter was first, the new layouter is now first */
+    if(state.firstLayouter == before)
+        state.firstLayouter = handle;
+
+    return handle;
+}
+
+AbstractLayouter& AbstractUserInterface::setLayouterInstance(Containers::Pointer<AbstractLayouter>&& instance) {
+    State& state = *_state;
+    CORRADE_ASSERT(instance,
+        "Whee::AbstractUserInterface::setLayouterInstance(): instance is null", *state.layouters[0].used.instance);
+    const LayouterHandle handle = instance->handle();
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::setLayouterInstance(): invalid handle" << handle, *state.layouters[0].used.instance);
+    const UnsignedInt id = layouterHandleId(handle);
+    CORRADE_ASSERT(!state.layouters[id].used.instance,
+        "Whee::AbstractUserInterface::setLayouterInstance(): instance for" << handle << "already set", *state.layouters[0].used.instance);
+    Layouter& layouter = state.layouters[id];
+    layouter.used.instance = Utility::move(instance);
+
+    return *layouter.used.instance;
+}
+
+const AbstractLayouter& AbstractUserInterface::layouter(const LayouterHandle handle) const {
+    const State& state = *_state;
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::layouter(): invalid handle" << handle,
+        *state.layouters[0].used.instance);
+    const UnsignedInt id = layouterHandleId(handle);
+    CORRADE_ASSERT(state.layouters[id].used.instance,
+        "Whee::AbstractUserInterface::layouter():" << handle << "has no instance set", *state.layouters[0].used.instance);
+    return *state.layouters[id].used.instance;
+}
+
+AbstractLayouter& AbstractUserInterface::layouter(const LayouterHandle handle) {
+    return const_cast<AbstractLayouter&>(const_cast<const AbstractUserInterface&>(*this).layouter(handle));
+}
+
+void AbstractUserInterface::removeLayouter(const LayouterHandle handle) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::removeLayouter(): invalid handle" << handle, );
+    const UnsignedInt id = layouterHandleId(handle);
+    State& state = *_state;
+    Layouter& layouter = state.layouters[id];
+
+    const LayouterHandle originalPrevious = layouter.used.previous;
+    const LayouterHandle originalNext = layouter.used.next;
+    CORRADE_INTERNAL_ASSERT(isHandleValid(originalPrevious) && isHandleValid(originalNext));
+
+    /* This works correctly also in case of there being just a single item in
+       the list (i.e., originalPrevious == originalNext == handle), as the item
+       gets unused after */
+    state.layouters[layouterHandleId(originalPrevious)].used.next = originalNext;
+    state.layouters[layouterHandleId(originalNext)].used.previous = originalPrevious;
+    if(state.firstLayouter == handle) {
+        if(handle == originalNext)
+            state.firstLayouter = LayouterHandle::Null;
+        else
+            state.firstLayouter = originalNext;
+    }
+
+    /* Delete the instance. The instance being null then means that the
+       layouter is either free or is newly created until setLayouterInstance()
+       is called, which is used for iterating them in clean() and update(). */
+    layouter.used.instance = nullptr;
+
+    /* Increase the layouter generation so existing handles pointing to this
+       layouter are invalidated */
+    ++layouter.used.generation;
+
+    /* Put the layouter at the end of the free list (while they're allocated
+       from the front) to not exhaust the generation counter too fast. If the
+       free list is empty however, update also the index of the first free
+       layouter.
+
+       Don't do this if the generation wrapped around. That makes it disabled,
+       i.e. impossible to be recycled later, to avoid aliasing old handles. */
+    if(layouter.used.generation != 0) {
+        /* C, FUCK your STUPID conversion rules. Why isn't ~UnsignedShort{}
+           65535? Why it evaluates to -1?! Why UnsignedShort(~UnsignedShort{})
+           is the only way to put it back to 16 bits? Why is everything so
+           fucking awful?! Why do you force me to use error-prone constants,
+           FFS?! */
+        layouter.free.next = 0xffffu;
+        if(state.lastFreeLayouter == 0xffffu) {
+            CORRADE_INTERNAL_ASSERT(
+                state.firstFreeLayouter == 0xffffu &&
+                state.lastFreeLayouter == 0xffffu);
+            state.firstFreeLayouter = id;
+        } else {
+            state.layouters[state.lastFreeLayouter].free.next = id;
+        }
+        state.lastFreeLayouter = id;
+    }
+
+    /* Mark the UI as needing an update() call to refresh per-node layout
+       lists */
+    state.state |= UserInterfaceState::NeedsLayoutAssignmentUpdate;
+}
+
 std::size_t AbstractUserInterface::nodeCapacity() const {
     return _state->nodes.size();
 }
@@ -796,7 +1147,7 @@ void AbstractUserInterface::setNodeOffset(const NodeHandle handle, const Vector2
     state.nodes[nodeHandleId(handle)].used.offset = offset;
 
     /* Mark the UI as needing an update() call to refresh node layout state */
-    state.state |= UserInterfaceState::NeedsNodeLayoutUpdate;
+    state.state |= UserInterfaceState::NeedsLayoutUpdate;
 }
 
 Vector2 AbstractUserInterface::nodeSize(const NodeHandle handle) const {
@@ -811,8 +1162,8 @@ void AbstractUserInterface::setNodeSize(const NodeHandle handle, const Vector2& 
     State& state = *_state;
     state.nodes[nodeHandleId(handle)].used.size = size;
 
-    /* Mark the UI as needing an update() call to refresh node clip state */
-    state.state |= UserInterfaceState::NeedsNodeClipUpdate;
+    /* Mark the UI as needing an update() call to refresh node layout state */
+    state.state |= UserInterfaceState::NeedsLayoutUpdate;
 }
 
 NodeFlags AbstractUserInterface::nodeFlags(const NodeHandle handle) const {
@@ -1167,13 +1518,18 @@ AbstractUserInterface& AbstractUserInterface::clean() {
                 removeNodeInternal(id);
         }
 
-        /* 3. Next perform a clean for data node assignments, keeping only data
-           that are either not attached or attached to (remaining) valid node
-           handles. */
+        /* 3. Next perform a clean for layouter node assignments and data node
+           attachments, keeping only layouts assigned to (remaining) valid node
+           handles and data that are either not attached or attached to valid
+           node handles. */
         const Containers::StridedArrayView1D<const UnsignedShort> nodeGenerations = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::generation);
 
         /* In each layer remove data attached to invalid non-null nodes */
         for(Layer& layer: state.layers) if(AbstractLayer* const instance = layer.used.instance.get())
+            instance->cleanNodes(nodeGenerations);
+
+        /* In each layouter remove layouts assigned to invalid nodes */
+        for(Layouter& layouter: state.layouters) if(AbstractLayouter* const instance = layouter.used.instance.get())
             instance->cleanNodes(nodeGenerations);
     }
 
@@ -1205,11 +1561,26 @@ AbstractUserInterface& AbstractUserInterface::update() {
     CORRADE_ASSERT(!state.size.isZero(),
         "Whee::AbstractUserInterface::update(): user interface size wasn't set", *this);
 
+    /* If layout attachment update is desired, calculate the total conservative
+       count of layouts in all layouters to size the output arrays.
+       Conservative as it includes also freed layouts, however the assumption
+       is that in majority cases there will be very little freed layouts. */
+    std::size_t usedLayouterCount = 0;
+    std::size_t layoutCount = 0;
+    if(states >= UserInterfaceState::NeedsLayoutAssignmentUpdate) {
+        for(const Layouter& layouter: state.layouters) {
+            if(const AbstractLayouter* const instance = layouter.used.instance.get()) {
+                ++usedLayouterCount;
+                layoutCount += instance->capacity();
+            }
+        }
+    }
+
     /* If node data attachment update is desired, calculate the total
-       conservative count of data in all layers to size the output arrays.
-       Conservative as it includes also freed and non-attached data, however
-       the assumption is that in majority of cases there will be very little
-       freed data and all of them attached to some node. */
+       (again conservative) count of data in all layers to size the output
+       arrays. Conservative as it includes also freed and non-attached data,
+       however again the assumption is that in majority of cases there will be
+       very little freed data and all of them attached to some node. */
     std::size_t dataCount = 0;
     if(states >= UserInterfaceState::NeedsDataAttachmentUpdate)
         for(Layer& layer: state.layers)
@@ -1220,6 +1591,12 @@ AbstractUserInterface& AbstractUserInterface::update() {
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess;
+    Containers::StridedArrayView2D<LayoutHandle> nodeLayouts;
+    Containers::StridedArrayView2D<UnsignedInt> nodeLayoutLevels;
+    Containers::ArrayView<UnsignedInt> layoutLevelOffsets;
+    Containers::ArrayView<LayoutHandle> topLevelLayouts;
+    Containers::ArrayView<UnsignedInt> topLevelLayoutLevels;
+    Containers::ArrayView<LayoutHandle> levelPartitionedTopLevelLayouts;
     Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack;
     Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets;
     Containers::ArrayView<UnsignedInt> visibleNodeDataIds;
@@ -1228,6 +1605,15 @@ AbstractUserInterface& AbstractUserInterface::update() {
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
         {NoInit, state.nodes.size(), children},
         {NoInit, state.nodes.size(), parentsToProcess},
+        /* Not all nodes have layouts from all layouters, initialize to
+           LayoutHandle::Null */
+        {ValueInit, {state.nodes.size(), usedLayouterCount}, nodeLayouts},
+        {NoInit, {state.nodes.size(), usedLayouterCount}, nodeLayoutLevels},
+        /* Running layout offset (+1) for each level */
+        {ValueInit, layoutCount + 1, layoutLevelOffsets},
+        {NoInit, layoutCount, topLevelLayouts},
+        {NoInit, layoutCount, topLevelLayoutLevels},
+        {NoInit, layoutCount, levelPartitionedTopLevelLayouts},
         /* Running data offset (+1) for each item. This array gets overwritten
            from scratch for each layer so zero-initializing is done inside
            orderVisibleNodeDataInto() instead. */
@@ -1244,6 +1630,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.nodes.size(), state.visibleNodeIds},
             {NoInit, state.nodes.size(), state.visibleNodeChildrenCounts},
             {NoInit, state.nodeOrder.size(), state.visibleFrontToBackTopLevelNodeIndices},
+            {NoInit, state.nodes.size(), state.nodeOffsets},
+            {NoInit, state.nodes.size(), state.nodeSizes},
             {NoInit, state.nodes.size(), state.absoluteNodeOffsets},
             {NoInit, state.nodes.size(), state.visibleNodeMask},
             {NoInit, state.nodes.size(), state.clipRectOffsets},
@@ -1271,25 +1659,107 @@ AbstractUserInterface& AbstractUserInterface::update() {
         }
     }
 
-    /* If no layout update is needed, the `state.absoluteNodeOffsets` are all
+    /* If no layout assignment update is needed, the
+       `state.layouterStateStorage` and all views pointing to it are
        up-to-date */
-    if(states >= UserInterfaceState::NeedsNodeLayoutUpdate) {
-        /* 3. Calculate absolute offsets and clip rects for visible nodes. */
+    if(states >= UserInterfaceState::NeedsLayoutAssignmentUpdate) {
+        /* 3. Gather all layouts assigned to a particular node, ordered by the
+           layout order. */
+        if(state.firstLayouter != LayouterHandle::Null) {
+            LayouterHandle layouter = state.firstLayouter;
+            UnsignedInt layouterIndex = 0;
+            do {
+                const UnsignedInt layouterId = layouterHandleId(layouter);
+                const Layouter& layouterItem = state.layouters[layouterId];
+                if(const AbstractLayouter* const instance = layouterItem.used.instance.get()) {
+                    const Containers::StridedArrayView1D<const NodeHandle> nodes = instance->nodes();
+                    for(std::size_t i = 0; i != nodes.size(); ++i) {
+                        const NodeHandle node = nodes[i];
+                        if(node == NodeHandle::Null)
+                            continue;
+                        /* The LayoutHandle generation isn't used for anything,
+                           so can be arbitrary. This here also overwrites
+                           multiple layouts set for the same node. */
+                        nodeLayouts[{nodeHandleId(node), layouterIndex}] = layoutHandle(layouter, i, 0);
+                    }
+                }
+                layouter = layouterItem.used.next;
+                ++layouterIndex;
+            } while(layouter != state.firstLayouter);
+        }
+
+        /* Make a resident allocation for all layout-related state */
+        state.layoutStateStorage = Containers::ArrayTuple{
+            {NoInit, layoutCount + 1, state.topLevelLayoutOffsets},
+            {NoInit, layoutCount, state.topLevelLayoutLayouterIds},
+            {NoInit, layoutCount, state.topLevelLayoutIds},
+        };
+
+        /* 4. Discover top-level layouts to be subsequently fed to layouter
+           update() calls. */
+        const std::size_t topLevelLayoutOffsetCount = Implementation::discoverTopLevelLayoutNodesInto(
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parentOrOrder),
+            state.visibleNodeIds,
+            state.layouters.size(),
+            nodeLayouts,
+            nodeLayoutLevels,
+            layoutLevelOffsets,
+            topLevelLayouts,
+            topLevelLayoutLevels,
+            levelPartitionedTopLevelLayouts,
+            state.topLevelLayoutOffsets,
+            state.topLevelLayoutLayouterIds,
+            state.topLevelLayoutIds);
+        state.topLevelLayoutOffsets = state.topLevelLayoutOffsets.prefix(topLevelLayoutOffsetCount);
+    }
+
+    /* If no layout update is needed, the `state.nodeOffsets`,
+       `state.nodeSizes` and `state.absoluteNodeOffsets` are all
+       up-to-date */
+    if(states >= UserInterfaceState::NeedsLayoutUpdate) {
+        /* 5. Copy the explicitly set offset + sizes to the output. */
+        Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::offset), state.nodeOffsets);
+        Utility::copy(stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size), state.nodeSizes);
+
+        /* 6. Perform layout calculation for all top-level layouts. */
+        for(std::size_t i = 0; i != state.topLevelLayoutOffsets.size() - 1; ++i) {
+            AbstractLayouter* const instance = state.layouters[state.topLevelLayoutLayouterIds[i]].used.instance.get();
+            CORRADE_INTERNAL_ASSERT(instance);
+
+            instance->update(
+                state.topLevelLayoutIds.slice(
+                    state.topLevelLayoutOffsets[i],
+                    state.topLevelLayoutOffsets[i + 1]),
+                state.nodeOffsets,
+                state.nodeSizes);
+        }
+
+        /* Call a no-op update() on layouters that have Needs*Update flags but
+           have no visible layouts so update() wasn't called for them above */
+        /** @todo this is nasty, think of a better solution */
+        for(Layouter& layouter: state.layouters) {
+            AbstractLayouter* const instance = layouter.used.instance.get();
+            if(instance && instance->state() & LayouterState::NeedsAssignmentUpdate)
+                instance->update({}, state.nodeOffsets, state.nodeSizes);
+        }
+
+        /* 7. Calculate absolute offsets for visible nodes. */
         for(const UnsignedInt id: state.visibleNodeIds) {
             const Node& node = state.nodes[id];
+            const Vector2 nodeOffset = state.nodeOffsets[id];
             state.absoluteNodeOffsets[id] =
-                nodeHandleGeneration(node.used.parentOrOrder) == 0 ? node.used.offset :
-                    state.absoluteNodeOffsets[nodeHandleId(node.used.parentOrOrder)] + node.used.offset;
+                nodeHandleGeneration(node.used.parentOrOrder) == 0 ? nodeOffset :
+                    state.absoluteNodeOffsets[nodeHandleId(node.used.parentOrOrder)] + nodeOffset;
         }
     }
 
     /* If no clip update is needed, the `state.visibleNodeMask` is all
        up-to-date */
     if(states >= UserInterfaceState::NeedsNodeClipUpdate) {
-        /* 4. Cull / clip the visible nodes based on their clip rects */
+        /* 8. Cull / clip the visible nodes based on their clip rects */
         state.clipRectCount = Implementation::cullVisibleNodesInto(
             state.absoluteNodeOffsets,
-            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size),
+            state.nodeSizes,
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
             clipStack.prefix(state.visibleNodeIds.size()),
             state.visibleNodeIds,
@@ -1321,7 +1791,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 ++drawLayerCount;
         }
 
-        /* Make a resident allocation for all node-related state */
+        /* Make a resident allocation for all data-related state */
         state.dataStateStorage = Containers::ArrayTuple{
             /* Running data offset (+1) for each item. Populated sequentially
                so it doesn't need to be zero-initialized. */
@@ -1345,7 +1815,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
         state.dataToUpdateLayerOffsets[0] = {0, 0};
         if(state.firstLayer != LayerHandle::Null) {
-            /* 5. Go through the layer draw order and order data of each layer
+            /* 9. Go through the layer draw order and order data of each layer
                that are assigned to visible nodes into a contiguous range,
                populating also the draw list and count of event data per
                visible node as a side effect. */
@@ -1427,8 +1897,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 state.dataToUpdateLayerOffsets[i + 1] = {offset, clipRectOffset};
             }
 
-            /* 6. Take the count of event data per visible node, turn that into
-               an offset array and populate it. */
+            /* 10. Take the count of event data per visible node, turn that
+               into an offset array and populate it. */
 
             /* `[state.visibleNodeEventDataOffsets[i + 1], state.visibleNodeEventDataOffsets[i + 2])`
                is now a range in which the `state.visibleNodeEventData` array
@@ -1444,7 +1914,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 }
             }
 
-            /* 7. Go through all event handling layers and populate the
+            /* 11. Go through all event handling layers and populate the
                `state.visibleNodeEventData` array based on the
                `state.visibleNodeEventDataOffsets` populated above. Compared
                to drawing, event handling has the layers in a front-to-back
@@ -1472,7 +1942,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             } while(layer != lastLayer);
         }
 
-        /* 8. Compact the draw calls by throwing away the empty ones. This
+        /* 12. Compact the draw calls by throwing away the empty ones. This
            cannot be done in the above loop directly as it'd need to go first
            by top-level node and then by layer in each. That it used to do in a
            certain way before which was much slower. */
@@ -1484,7 +1954,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.dataToDrawClipRectSizes);
     }
 
-    /* 9. For each layer submit an update of visible data across all visible
+    /* 13. For each layer submit an update of visible data across all visible
        top-level nodes. If no data update is needed, the data in layers is
        already up-to-date. */
     if(states >= UserInterfaceState::NeedsDataUpdate) for(std::size_t i = 0; i != state.layers.size(); ++i) {
@@ -1513,14 +1983,14 @@ AbstractUserInterface& AbstractUserInterface::update() {
             /** @todo some layer implementations may eventually want relative
                 offsets, not absolute, provide both? */
             state.absoluteNodeOffsets,
-            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size),
+            state.nodeSizes,
             state.clipRectOffsets.prefix(state.clipRectCount),
             state.clipRectSizes.prefix(state.clipRectCount));
     }
 
     /** @todo layer-specific cull/clip step? */
 
-    /* 10. Refresh the event handling state based on visible nodes. */
+    /* 14. Refresh the event handling state based on visible nodes. */
     if(states >= UserInterfaceState::NeedsNodeUpdate) {
         /* If the pressed node is no longer valid or is now invisible, reset
            it */
@@ -1582,7 +2052,7 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             state.dataToDrawClipRectOffsets[i] - state.dataToUpdateLayerOffsets[layerId].second(),
             state.dataToDrawClipRectSizes[i],
             state.absoluteNodeOffsets,
-            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size),
+            state.nodeSizes,
             state.clipRectOffsets.prefix(state.clipRectCount),
             state.clipRectSizes.prefix(state.clipRectCount));
     }
@@ -1645,7 +2115,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
     /* If the position is outside the node, we got nothing */
     const Vector2 nodeOffset = state.absoluteNodeOffsets[nodeId];
     if((globalPositionScaled < nodeOffset).any() ||
-       (globalPositionScaled >= nodeOffset + state.nodes[nodeId].used.size).any())
+       (globalPositionScaled >= nodeOffset + state.nodeSizes[nodeId]).any())
         return {};
 
     /* If the position is inside, recurse into *direct* children. If the event
@@ -1734,7 +2204,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
 
         const UnsignedInt capturedNodeId = nodeHandleId(state.pointerEventCapturedNode);
         const Vector2 capturedNodeMin = state.absoluteNodeOffsets[capturedNodeId];
-        const Vector2 capturedNodeMax = capturedNodeMin + state.nodes[capturedNodeId].used.size;
+        const Vector2 capturedNodeMax = capturedNodeMin + state.nodeSizes[capturedNodeId];
         const bool insideCapturedNode = (globalPositionScaled >= capturedNodeMin).all() && (globalPositionScaled < capturedNodeMax).all();
 
         /* Called on a captured node, so isCaptured() should be true,
@@ -1820,7 +2290,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
 
         const UnsignedInt capturedNodeId = nodeHandleId(state.pointerEventCapturedNode);
         const Vector2 capturedNodeMin = state.absoluteNodeOffsets[capturedNodeId];
-        const Vector2 capturedNodeMax = capturedNodeMin + state.nodes[capturedNodeId].used.size;
+        const Vector2 capturedNodeMax = capturedNodeMin + state.nodeSizes[capturedNodeId];
         insideNodeArea = (globalPositionScaled >= capturedNodeMin).all() && (globalPositionScaled < capturedNodeMax).all();
 
         /* Called on a captured node, so isCaptured() should be true,
