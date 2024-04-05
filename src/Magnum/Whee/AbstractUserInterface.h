@@ -244,6 +244,7 @@ CORRADE_ENUMSET_OPERATORS(UserInterfaceStates)
 namespace Implementation {
     template<class, class = void> struct PointerEventConverter;
     template<class, class = void> struct PointerMoveEventConverter;
+    template<class, class = void> struct KeyEventConverter;
 }
 
 /**
@@ -1847,6 +1848,17 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         bool keyPressEvent(KeyEvent& event);
 
         /**
+         * @brief Handle an external key press event
+         *
+         * Converts the @p event to a @ref KeyEvent and delegates to
+         * @ref keyPressEvent(), see its documentation and
+         * @ref Whee-AbstractUserInterface-application for more information.
+         */
+        template<class Event, class = decltype(Implementation::KeyEventConverter<Event>::press(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool keyPressEvent(Event& event) {
+            return Implementation::KeyEventConverter<Event>::press(*this, event);
+        }
+
+        /**
          * @brief Handle a key release event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
@@ -1873,6 +1885,17 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
          */
         bool keyReleaseEvent(KeyEvent& event);
+
+        /**
+         * @brief Handle an external key release event
+         *
+         * Converts the @p event to a @ref KeyEvent and delegates to
+         * @ref keyReleaseEvent(), see its documentation and
+         * @ref Whee-AbstractUserInterface-application for more information.
+         */
+        template<class Event, class = decltype(Implementation::KeyEventConverter<Event>::release(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool keyReleaseEvent(Event& event) {
+            return Implementation::KeyEventConverter<Event>::release(*this, event);
+        }
 
         /**
          * @brief Node pressed by last pointer event

@@ -29,6 +29,7 @@
 #include "Magnum/Whee/Application.h"
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/AbstractUserInterface.h"
+#include "Magnum/Whee/Handle.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
 
@@ -42,6 +43,8 @@ struct ApplicationTest: TestSuite::Tester {
     void mousePressEvent();
     void mouseReleaseEvent();
     void mouseMoveEvent();
+    void keyPressEvent();
+    void keyReleaseEvent();
 };
 
 struct CustomMouseEvent {
@@ -127,6 +130,208 @@ const struct {
     {"no buttons", {}, {}, false},
 };
 
+struct CustomKeyEvent {
+    enum class Key {
+        /* Starting the values really high to uncover any accidental 1:1
+           mapping attempts */
+        Unknown = 10000000,
+
+        LeftShift,
+        RightShift,
+        LeftCtrl,
+        RightCtrl,
+        LeftAlt,
+        RightAlt,
+        LeftSuper,
+        RightSuper,
+
+        Enter,
+        Esc,
+
+        Up,
+        Down,
+        Left,
+        Right,
+        Home,
+        End,
+        PageUp,
+        PageDown,
+        Backspace,
+        Insert,
+        Delete,
+
+        F1,
+        F2,
+        F3,
+        F4,
+        F5,
+        F6,
+        F7,
+        F8,
+        F9,
+        F10,
+        F11,
+        F12,
+
+        Zero,
+        One,
+        Two,
+        Three,
+        Four,
+        Five,
+        Six,
+        Seven,
+        Eight,
+        Nine,
+
+        A,
+        B,
+        C,
+        D,
+        E,
+        F,
+        G,
+        H,
+        I,
+        J,
+        K,
+        L,
+        M,
+        N,
+        O,
+        P,
+        Q,
+        R,
+        S,
+        T,
+        U,
+        V,
+        W,
+        X,
+        Y,
+        Z,
+
+        Space,
+        Tab,
+        Quote,
+        Comma,
+        Period,
+        Minus,
+
+        Plus,
+        Slash,
+        Percent,
+        Semicolon,
+
+        Equal,
+        LeftBracket,
+        RightBracket,
+        Backslash,
+        Backquote,
+
+        CapsLock,
+        ScrollLock,
+        NumLock,
+        PrintScreen,
+        Pause,
+        Menu,
+
+        NumZero,
+        NumOne,
+        NumTwo,
+        NumThree,
+        NumFour,
+        NumFive,
+        NumSix,
+        NumSeven,
+        NumEight,
+        NumNine,
+        NumDecimal,
+        NumDivide,
+        NumMultiply,
+        NumSubtract,
+        NumAdd,
+        NumEnter,
+        NumEqual,
+
+        /* These are available only in some applications */
+        World1,
+        World2,
+        AltGr
+    };
+
+    enum class Modifier {
+        Shift = 1 << 12,
+        Ctrl = 1 << 10,
+        Alt = 1 << 20,
+        Super = 1 << 31
+    };
+
+    typedef Containers::EnumSet<Modifier> Modifiers;
+
+    explicit CustomKeyEvent(Key key, Modifiers modifiers): _key{key}, _modifiers{modifiers} {}
+
+    Key key() const { return _key; }
+    Modifiers modifiers() const { return _modifiers; }
+    void setAccepted() { accepted = true; }
+
+    bool accepted = false;
+
+    private:
+        Key _key;
+        Modifiers _modifiers;
+};
+
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+CORRADE_ENUMSET_OPERATORS(CustomKeyEvent::Modifiers)
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic pop
+#endif
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    CustomKeyEvent::Key key;
+    CustomKeyEvent::Modifiers modifiers;
+    Key expectedKey;
+    Modifiers expectedModifiers;
+    bool accept;
+} KeyPressReleaseEventData[]{
+    {"Enter, not accepted",
+        CustomKeyEvent::Key::Enter,
+        {},
+        Key::Enter,
+        {},
+        false},
+    {"Shift + Ctrl + C",
+        CustomKeyEvent::Key::C, CustomKeyEvent::Modifier::Shift|CustomKeyEvent::Modifier::Ctrl,
+        Key::C, Modifier::Shift|Modifier::Ctrl, true},
+    {"Super + Alt + Esc, not accepted",
+        CustomKeyEvent::Key::Esc, CustomKeyEvent::Modifier::Super|CustomKeyEvent::Modifier::Alt,
+        Key::Esc, Modifier::Super|Modifier::Alt, false},
+    {"left Ctrl, recognized as a key and not a modifier",
+        CustomKeyEvent::Key::LeftCtrl, {},
+        Key::LeftCtrl, {}, true},
+    {"Super + Unknown",
+        CustomKeyEvent::Key::Unknown, CustomKeyEvent::Modifier::Super,
+        Key{}, {}, false},
+    {"unhandled World1 key",
+        CustomKeyEvent::Key::World1, {},
+        Key{}, {}, false},
+    {"unhandled World2 key",
+        CustomKeyEvent::Key::World2, {},
+        Key{}, {}, false},
+    {"unhandled AltGr key",
+        CustomKeyEvent::Key::World2, {},
+        Key{}, {}, false},
+    {"unrecognized key",
+        /* Not using a named enum value to avoid -Wswitch warnings */
+        CustomKeyEvent::Key(0x7fffffff), {},
+        Key{}, {}, false},
+};
+
 ApplicationTest::ApplicationTest() {
     addInstancedTests({&ApplicationTest::mousePressEvent},
         Containers::arraySize(MousePressReleaseEventData));
@@ -136,6 +341,12 @@ ApplicationTest::ApplicationTest() {
 
     addInstancedTests({&ApplicationTest::mouseMoveEvent},
         Containers::arraySize(MouseMoveEventData));
+
+    addInstancedTests({&ApplicationTest::keyPressEvent},
+        Containers::arraySize(KeyPressReleaseEventData));
+
+    addInstancedTests({&ApplicationTest::keyReleaseEvent},
+        Containers::arraySize(KeyPressReleaseEventData));
 }
 
 void ApplicationTest::mousePressEvent() {
@@ -174,6 +385,12 @@ void ApplicationTest::mousePressEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
@@ -230,6 +447,12 @@ void ApplicationTest::mouseReleaseEvent() {
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
 
         Pointer expectedPointer;
         bool accept;
@@ -281,6 +504,12 @@ void ApplicationTest::mouseMoveEvent() {
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
 
         Pointers expectedPointers;
         bool accept;
@@ -294,6 +523,140 @@ void ApplicationTest::mouseMoveEvent() {
     CORRADE_COMPARE(ui.pointerMoveEvent(e), data.accept);
     /* Should be called always */
     CORRADE_COMPARE(layer.called, 1);
+    CORRADE_COMPARE(e.accepted, data.accept);
+}
+
+void ApplicationTest::keyPressEvent() {
+    auto&& data = KeyPressReleaseEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The events should internally still be reported relative to the UI size,
+       same as when passed directly. I.e., scaled by {0.1f, 10.0f}; framebuffer
+       size isn't used for anything here. */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, Key expectedKey, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedKey{expectedKey}, expectedModifiers{expectedModifiers}, accept{accept} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        /* Move and enter event gets called in order to remember the pointer
+           position, the move has to accept */
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+            event.setAccepted();
+        }
+        void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent& event) override {
+            CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
+            CORRADE_COMPARE(event.key(), expectedKey);
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
+            event.setAccepted(accept);
+            ++called;
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+
+        Key expectedKey;
+        Modifiers expectedModifiers;
+        bool accept;
+        Int called = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedKey, data.expectedModifiers, data.accept));
+    layer.create(ui.createNode({}, ui.size()));
+
+    /* Have to first submit an event that actually makes a node hovered, to
+       have something to call the event on */
+    PointerMoveEvent moveEvent{{}, {}};
+    CORRADE_VERIFY(ui.pointerMoveEvent({1560.0f, 23.0f}, moveEvent));
+    CORRADE_VERIFY(ui.currentHoveredNode() != NodeHandle::Null);
+
+    CustomKeyEvent e{data.key, data.modifiers};
+    /* Should return true only if it's accepted */
+    CORRADE_COMPARE(ui.keyPressEvent(e), data.accept);
+    /* Should be called only if there's a key to translate to */
+    CORRADE_COMPARE(layer.called, data.expectedKey == Key{} ? 0 : 1);
+    CORRADE_COMPARE(e.accepted, data.accept);
+}
+
+void ApplicationTest::keyReleaseEvent() {
+    auto&& data = KeyPressReleaseEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The events should internally still be reported relative to the UI size,
+       same as when passed directly. I.e., scaled by {10.0f, 0.1f}; framebuffer
+       size isn't used for anything here. */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 3000.0f}, {666, 777}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, Key expectedKey, Modifiers expectedModifiers, bool accept): AbstractLayer{handle}, expectedKey{expectedKey}, expectedModifiers{expectedModifiers}, accept{accept} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        /* Move and enter event gets called in order to remember the pointer
+           position, the move has to accept */
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+            event.setAccepted();
+        }
+        void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent& event) override {
+            CORRADE_COMPARE(event.position(), (Vector2{150.0f, 236.0f}));
+            CORRADE_COMPARE(event.key(), expectedKey);
+            CORRADE_COMPARE(event.modifiers(), expectedModifiers);
+            event.setAccepted(accept);
+            ++called;
+        }
+
+        Key expectedKey;
+        Modifiers expectedModifiers;
+        bool accept;
+        Int called = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedKey, data.expectedModifiers, data.accept));
+    layer.create(ui.createNode({}, ui.size()));
+
+    /* Have to first submit an event that actually makes a node hovered, to
+       have something to call the event on */
+    PointerMoveEvent moveEvent{{}, {}};
+    CORRADE_VERIFY(ui.pointerMoveEvent({15.0f, 2360.0f}, moveEvent));
+    CORRADE_VERIFY(ui.currentHoveredNode() != NodeHandle::Null);
+
+    CustomKeyEvent e{data.key, data.modifiers};
+    /* Should return true only if it's accepted */
+    CORRADE_COMPARE(ui.keyReleaseEvent(e), data.accept);
+    /* Should be called only if there's a key to translate to */
+    CORRADE_COMPARE(layer.called, data.expectedKey == Key{} ? 0 : 1);
     CORRADE_COMPARE(e.accepted, data.accept);
 }
 

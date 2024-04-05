@@ -93,6 +93,30 @@ struct ApplicationTest: Platform::Application {
         }
     }
 
+    void keyPressEvent(KeyEvent& event) override {
+        if(!_ui.keyPressEvent(event))
+            Debug{} << "key press event not accepted";
+        if(!event.isAccepted())
+            Debug{} << "key press event accept not propagated";
+
+        if(_ui.state()) {
+            Debug{} << "redraw triggered by" << _ui.state();
+            redraw();
+        }
+    }
+
+    void keyReleaseEvent(KeyEvent& event) override {
+        if(!_ui.keyReleaseEvent(event))
+            Debug{} << "key release event not accepted";
+        if(!event.isAccepted())
+            Debug{} << "key release event accept not propagated";
+
+        if(_ui.state()) {
+            Debug{} << "redraw triggered by" << _ui.state();
+            redraw();
+        }
+    }
+
     AbstractUserInterface _ui;
 };
 
@@ -137,6 +161,16 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
 
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent& event) override {
             Debug{} << event.type() << "tap or click at" << Debug::packed << event.position();
+            event.setAccepted();
+        }
+
+        void doKeyPressEvent(UnsignedInt, Whee::KeyEvent& event) override {
+            Debug{} << event.key() << "press with" << event.modifiers();
+            event.setAccepted();
+        }
+
+        void doKeyReleaseEvent(UnsignedInt, Whee::KeyEvent& event) override {
+            Debug{} << event.key() << "release with" << event.modifiers();
             event.setAccepted();
         }
     };

@@ -14507,6 +14507,16 @@ template<> struct PointerMoveEventConverter<CustomEvent> {
         return ui.pointerMoveEvent(Vector2{}, e);
     }
 };
+template<> struct KeyEventConverter<CustomEvent> {
+    static bool press(AbstractUserInterface& ui, CustomEvent&) {
+        KeyEvent e{Key::C, {}};
+        return ui.keyPressEvent(e);
+    }
+    static bool release(AbstractUserInterface& ui, CustomEvent&) {
+        KeyEvent e{Key::E, {}};
+        return ui.keyReleaseEvent(e);
+    }
+};
 
 }
 
@@ -14519,7 +14529,9 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
     enum Event {
         PointerPress = 0,
         PointerRelease = 1,
-        PointerMove = 2
+        PointerMove = 2,
+        KeyPress = 3,
+        KeyRelease = 4,
     };
 
     struct Layer: AbstractLayer {
@@ -14540,6 +14552,14 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
             arrayAppend(eventCalls, PointerMove);
             event.setAccepted();
         }
+        void doKeyPressEvent(UnsignedInt, KeyEvent& event) override {
+            arrayAppend(eventCalls, KeyPress);
+            event.setAccepted();
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent& event) override {
+            arrayAppend(eventCalls, KeyRelease);
+            event.setAccepted();
+        }
 
         Containers::Array<Int> eventCalls;
     };
@@ -14553,10 +14573,14 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
     CORRADE_VERIFY(ui.pointerPressEvent(e));
     CORRADE_VERIFY(ui.pointerReleaseEvent(e));
     CORRADE_VERIFY(ui.pointerMoveEvent(e));
+    CORRADE_VERIFY(ui.keyPressEvent(e));
+    CORRADE_VERIFY(ui.keyReleaseEvent(e));
     CORRADE_COMPARE_AS(layer.eventCalls, Containers::arrayView<Int>({
         PointerPress,
         PointerRelease,
         PointerMove,
+        KeyPress,
+        KeyRelease,
     }), TestSuite::Compare::Container);
 }
 
