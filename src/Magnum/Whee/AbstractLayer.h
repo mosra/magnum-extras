@@ -609,6 +609,35 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          */
         void pointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
+        /**
+         * @brief Handle a key press event
+         *
+         * Used internally from @ref AbstractUserInterface::keyPressEvent().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data. The event is
+         * expected to not be accepted yet. Delegates to
+         * @ref doKeyPressEvent(), see its documentation for more information.
+         * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
+         */
+        void keyPressEvent(UnsignedInt dataId, KeyEvent& event);
+
+        /**
+         * @brief Handle a key release event
+         *
+         * Used internally from @ref AbstractUserInterface::keyReleaseEvent().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data. The event is
+         * expected to not be accepted yet. Delegates to
+         * @ref doKeyReleaseEvent(), see its documentation for more
+         * information.
+         * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
+         */
+        void keyReleaseEvent(UnsignedInt dataId, KeyEvent& event);
+
     protected:
         /**
          * @brief Create a data
@@ -1129,6 +1158,47 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Default implementation does nothing.
          */
         virtual void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
+        /**
+         * @brief Handle a key press event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data
+         *
+         * Implementation for @ref keyPressEvent(), which is called from
+         * @ref AbstractUserInterface::keyPressEvent(). See its documentation
+         * for more information about key event behavior. It's guaranteed that
+         * @ref doUpdate() was called before this function with up-to-date data
+         * for @p dataId.
+         *
+         * If the implementation handles the event, it's expected to call
+         * @ref KeyEvent::setAccepted() on it to prevent it from being
+         * propagated further.
+         *
+         * Default implementation does nothing, i.e. the @p event gets
+         * implicitly propagated further.
+         */
+        virtual void doKeyPressEvent(UnsignedInt dataId, KeyEvent& event);
+
+        /**
+         * @brief Handle a pointer release event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data
+         *
+         * Implementation for @ref keyReleaseEvent(), which is called from
+         * @ref AbstractUserInterface::keyReleaseEvent(). See its documentation
+         * for more information. It's guaranteed that @ref doUpdate() was
+         * called before this function with up-to-date data for @p dataId.
+         *
+         * If the implementation handles the event, it's expected to call
+         * @ref KeyEvent::setAccepted() on it to prevent it from being
+         * propagated further.
+         *
+         * Default implementation does nothing, i.e. the @p event gets
+         * implicitly propagated further.
+         */
+        virtual void doKeyReleaseEvent(UnsignedInt dataId, KeyEvent& event);
 
         /* Common implementations for foo(DataHandle, ...) and
            foo(LayerDataHandle, ...) */

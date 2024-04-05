@@ -199,6 +199,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventTapOrClickNodeRemoved();
     void eventTapOrClickAllDataRemoved();
 
+    void eventKeyPressRelease();
+
     void eventConvertExternal();
 };
 
@@ -778,6 +780,17 @@ const struct {
     {"move", false, true, false, false},
 };
 
+const struct {
+    const char* name;
+    bool update;
+    bool layouter;
+} EventLayouterUpdateData[]{
+    {"update before", true, false},
+    {"", false, false},
+    {"layouter, update before", true, true},
+    {"layouter", false, true},
+};
+
 AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addTests({&AbstractUserInterfaceTest::debugState,
               &AbstractUserInterfaceTest::debugStates,
@@ -968,6 +981,9 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addInstancedTests({&AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved},
         Containers::arraySize(CleanUpdateData));
+
+    addInstancedTests({&AbstractUserInterfaceTest::eventKeyPressRelease},
+        Containers::arraySize(EventLayouterUpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventConvertExternal});
 }
@@ -9939,6 +9955,7 @@ void AbstractUserInterfaceTest::eventEmpty() {
     }
     PointerEvent pointerEvent{Pointer::MouseRight};
     PointerMoveEvent pointerMoveEvent{{}, {}};
+    KeyEvent keyEvent{Key::C, {}};
     CORRADE_VERIFY(!ui.pointerPressEvent({15, 36}, pointerEvent));
     CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{15.0f, 36.0f}));
     CORRADE_VERIFY(!pointerEvent.isAccepted());
@@ -9948,6 +9965,10 @@ void AbstractUserInterfaceTest::eventEmpty() {
     CORRADE_VERIFY(!ui.pointerMoveEvent({20, 22}, pointerMoveEvent));
     CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 22.0f}));
     CORRADE_VERIFY(!pointerMoveEvent.isAccepted());
+    CORRADE_VERIFY(!ui.keyPressEvent(keyEvent));
+    CORRADE_VERIFY(!keyEvent.isAccepted());
+    CORRADE_VERIFY(!ui.keyReleaseEvent(keyEvent));
+    CORRADE_VERIFY(!keyEvent.isAccepted());
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -9963,16 +9984,22 @@ void AbstractUserInterfaceTest::eventAlreadyAccepted() {
     pointerEvent.setAccepted();
     PointerMoveEvent pointerMoveEvent{{}, {}};
     pointerMoveEvent.setAccepted();
+    KeyEvent keyEvent{Key::F, {}};
+    keyEvent.setAccepted();
 
     std::ostringstream out;
     Error redirectError{&out};
     ui.pointerPressEvent({}, pointerEvent);
     ui.pointerReleaseEvent({}, pointerEvent);
     ui.pointerMoveEvent({}, pointerMoveEvent);
+    ui.keyPressEvent(keyEvent);
+    ui.keyReleaseEvent(keyEvent);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractUserInterface::pointerPressEvent(): event already accepted\n"
         "Whee::AbstractUserInterface::pointerReleaseEvent(): event already accepted\n"
-        "Whee::AbstractUserInterface::pointerMoveEvent(): event already accepted\n");
+        "Whee::AbstractUserInterface::pointerMoveEvent(): event already accepted\n"
+        "Whee::AbstractUserInterface::keyPressEvent(): event already accepted\n"
+        "Whee::AbstractUserInterface::keyReleaseEvent(): event already accepted\n");
 }
 
 void AbstractUserInterfaceTest::eventNodePropagation() {
@@ -14188,6 +14215,274 @@ void AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved() {
     })), TestSuite::Compare::Container);
 
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+}
+
+void AbstractUserInterfaceTest::eventKeyPressRelease() {
+    auto&& data = EventLayouterUpdateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* framebufferSize isn't used for anything here; events should get scaled
+       to (0.1, 0.01) */
+    AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
+
+    enum Event {
+        Captured = 1,
+        Hovering = 2,
+        /* All below have to be multiples of 4 to not clash with the above */
+        Press = 4,
+        Release = 8,
+        PointerMove = 12
+    };
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Event; }
+
+        void doKeyPressEvent(UnsignedInt dataId, KeyEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isHovering() ? Hovering : 0)|Press,
+                dataHandle(handle(), dataId, 1), event.position());
+            if(acceptPress)
+                event.setAccepted();
+        }
+        void doKeyReleaseEvent(UnsignedInt dataId, KeyEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isHovering() ? Hovering : 0)|Release,
+                dataHandle(handle(), dataId, 1), event.position());
+            if(acceptRelease)
+                event.setAccepted();
+        }
+        void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isCaptured() ? Captured : 0)|
+                (event.isHovering() ? Hovering : 0)|PointerMove,
+                dataHandle(handle(), dataId, 1), event.position());
+            if(capturePointerMove)
+                event.setCaptured(*capturePointerMove);
+            event.setAccepted();
+        }
+
+        bool acceptPress = true,
+            acceptRelease = true;
+        Containers::Optional<bool> capturePointerMove;
+        Containers::Array<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>> eventCalls;
+    };
+
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+            for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+                if(!layoutIdsToUpdate[i])
+                    continue;
+                nodeOffsets[nodeHandleId(nodes[i])].y() -= 1000.0f;
+                nodeSizes[nodeHandleId(nodes[i])] *= 100.0f;
+            }
+        }
+    };
+
+    /* Two nodes next to each other. If the layouter is enabled, the nodes are
+       shifted & scaled which makes them completely unreachable by events, and
+       the layouter then undoes that */
+    Vector2 baseNodeOffset{0.0f, data.layouter ? 1000.0f : 0.0f};
+    Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
+    NodeHandle left = ui.createNode(
+        baseNodeOffset + Vector2{20.0f, 0.0f},
+        baseNodeScale*Vector2{20.0f, 20.0f});
+    NodeHandle right = ui.createNode(
+        baseNodeOffset + Vector2{40.0f, 0.0f},
+        baseNodeScale*Vector2{20.0f, 20.0f});
+    if(data.layouter) {
+        Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+        layouter.add(left);
+        layouter.add(right);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle leftData1 = layer.create(left);
+    DataHandle leftData2 = layer.create(left);
+    DataHandle rightData = layer.create(right);
+
+    /* Press / release with no preceding pointer event isn't propagated
+       anywhere */
+    {
+        layer.eventCalls = {};
+
+        KeyEvent eventPress{Key::C, {}};
+        layer.acceptPress = true;
+        CORRADE_VERIFY(!ui.keyPressEvent(eventPress));
+
+        KeyEvent eventRelease{Key::C, {}};
+        layer.acceptRelease = true;
+        CORRADE_VERIFY(!ui.keyReleaseEvent(eventRelease));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+        })), TestSuite::Compare::Container);
+
+    /* A preceding pointer event that doesn't actually hover anything doesn't
+       make them propagated anywhere either */
+    } {
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({200.0f, 5000.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 50.0f}));
+
+        KeyEvent eventPress{Key::C, {}};
+        layer.acceptPress = true;
+        CORRADE_VERIFY(!ui.keyPressEvent(eventPress));
+
+        KeyEvent eventRelease{Key::C, {}};
+        layer.acceptRelease = true;
+        CORRADE_VERIFY(!ui.keyReleaseEvent(eventRelease));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+        })), TestSuite::Compare::Container);
+
+    /* A pointer event that hovers a node finally makes them propagated
+       there */
+    } {
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, {}};
+        layer.capturePointerMove = {};
+        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 10.0f}));
+
+        KeyEvent eventRelease{Key::C, {}};
+        layer.acceptRelease = true;
+        CORRADE_VERIFY(ui.keyReleaseEvent(eventRelease));
+
+        KeyEvent eventPress{Key::C, {}};
+        layer.acceptPress = true;
+        CORRADE_VERIFY(ui.keyPressEvent(eventPress));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {PointerMove, rightData, Vector2{10.0f, 10.0f}},
+            {Release|Hovering, rightData, Vector2{10.0f, 10.0f}},
+            {Press|Hovering, rightData, Vector2{10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Not accepting the events gets correctly propagated */
+    } {
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, {}};
+        layer.capturePointerMove = {};
+        CORRADE_VERIFY(ui.pointerMoveEvent({550.0f, 1000.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{55.0f, 10.0f}));
+
+        KeyEvent eventPress{Key::C, {}};
+        layer.acceptPress = false;
+        CORRADE_VERIFY(!ui.keyPressEvent(eventPress));
+
+        KeyEvent eventRelease{Key::C, {}};
+        layer.acceptRelease = false;
+        CORRADE_VERIFY(!ui.keyReleaseEvent(eventRelease));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {PointerMove|Hovering, rightData, Vector2{15.0f, 10.0f}},
+            {Press|Hovering, rightData, Vector2{15.0f, 10.0f}},
+            {Release|Hovering, rightData, Vector2{15.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* If a node is captured, it's picked instead of a node that's under
+       the current pointer position. The capture doesn't get reset on key
+       release. */
+    } {
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove1{{}, {}};
+        layer.capturePointerMove = true;
+        CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1000.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentHoveredNode(), left);
+        CORRADE_COMPARE(ui.currentCapturedNode(), left);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{30.0f, 10.0f}));
+
+        PointerMoveEvent eventMove2{{}, {}};
+        layer.capturePointerMove = {};
+        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), left);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 10.0f}));
+
+        KeyEvent eventPress{Key::C, {}};
+        layer.acceptPress = true;
+        CORRADE_VERIFY(ui.keyPressEvent(eventPress));
+
+        KeyEvent eventRelease{Key::C, {}};
+        layer.acceptRelease = true;
+        CORRADE_VERIFY(ui.keyReleaseEvent(eventRelease));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            /* Verifying also that it gets propagated to all data */
+            {PointerMove, leftData2, Vector2{10.0f, 10.0f}},
+            {PointerMove|Captured, leftData1, Vector2{10.0f, 10.0f}},
+            /* All below are actually the right node */
+            {PointerMove|Captured, leftData2, Vector2{30.0f, 10.0f}},
+            {PointerMove|Captured, leftData1, Vector2{30.0f, 10.0f}},
+            {Press|Captured, leftData2, Vector2{30.0f, 10.0f}},
+            {Press|Captured, leftData1, Vector2{30.0f, 10.0f}},
+            {Release|Captured, leftData2, Vector2{30.0f, 10.0f}},
+            {Release|Captured, leftData1, Vector2{30.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* The capture also doesn't get reset if the key events aren't accepted.
+       There's no way to reset the capture from the event either. */
+    } {
+        /* Just to reset everything */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerMoveEvent eventMoveReset{{}, {}};
+        layer.capturePointerMove = false;
+        CORRADE_VERIFY(ui.pointerMoveEvent({200.0f, 5000.0f}, eventMoveReset));
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, {}};
+        layer.capturePointerMove = true;
+        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentCapturedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 10.0f}));
+
+        KeyEvent eventPress{Key::C, {}};
+        layer.acceptPress = false;
+        CORRADE_VERIFY(!ui.keyPressEvent(eventPress));
+
+        KeyEvent eventRelease{Key::C, {}};
+        layer.acceptRelease = false;
+        CORRADE_VERIFY(!ui.keyReleaseEvent(eventRelease));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {PointerMove, rightData, Vector2{10.0f, 10.0f}},
+            {Press|Captured|Hovering, rightData, Vector2{10.0f, 10.0f}},
+            {Release|Captured|Hovering, rightData, Vector2{10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+    }
 }
 
 }}}}

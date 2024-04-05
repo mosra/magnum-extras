@@ -3296,6 +3296,65 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
     return moveAcceptedByAnyData;
 }
 
+template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUserInterface::keyPressOrReleaseEvent(KeyEvent& event) {
+    /* Common code for keyPressEvent() and keyReleaseEvent() */
+
+    update();
+
+    State& state = *_state;
+
+    /* If we have a pointer position from a previous pointer event, send the
+       key event based on that */
+    bool acceptedByAnyData = false;
+    if(state.currentGlobalPointerPosition) {
+        /* If there's a node capturing events, call the event on it directly.
+           Given that update() was called, it should be either null or
+           valid. */
+        if(state.currentCapturedNode != NodeHandle::Null) {
+            CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentCapturedNode));
+
+            /* Called on a captured node, so isCaptured() should be true,
+               isHovering() is true if it's also currently hovered */
+            event._captured = true;
+            event._hovering = state.currentHoveredNode == state.currentCapturedNode;
+
+            acceptedByAnyData = callEventOnNode<KeyEvent, function>(*state.currentGlobalPointerPosition, nodeHandleId(state.currentCapturedNode), event);
+
+        /* Otherwise call it on the currently hovered node, if there is. Again,
+           at this point it should be either null or valid. */
+        } else if(state.currentHoveredNode != NodeHandle::Null) {
+            CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentHoveredNode));
+
+            /* Not called on a captured node, but on a hovered node */
+            event._captured = false;
+            event._hovering = true;
+
+            acceptedByAnyData = callEventOnNode<KeyEvent, function>(*state.currentGlobalPointerPosition, nodeHandleId(state.currentHoveredNode), event);
+        }
+
+        /* Changing the capture state isn't possible from a key event, as that
+           would need to potentially emit a pointer release and pointer enter
+           event which isn't really possible now. */
+        CORRADE_INTERNAL_ASSERT(event._captured == (state.currentGlobalPointerPosition && state.currentCapturedNode != NodeHandle::Null));
+    }
+
+    return acceptedByAnyData;
+}
+
+bool AbstractUserInterface::keyPressEvent(KeyEvent& event) {
+    CORRADE_ASSERT(!event._accepted,
+        "Whee::AbstractUserInterface::keyPressEvent(): event already accepted", {});
+
+    return keyPressOrReleaseEvent<&AbstractLayer::keyPressEvent>(event);
+}
+
+bool AbstractUserInterface::keyReleaseEvent(KeyEvent& event) {
+    CORRADE_ASSERT(!event._accepted,
+        "Whee::AbstractUserInterface::keyReleaseEvent(): event already accepted", {});
+
+    return keyPressOrReleaseEvent<&AbstractLayer::keyReleaseEvent>(event);
+}
+
 NodeHandle AbstractUserInterface::currentPressedNode() const {
     return _state->currentPressedNode;
 }

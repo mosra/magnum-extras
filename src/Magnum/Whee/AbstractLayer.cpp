@@ -647,4 +647,34 @@ void AbstractLayer::pointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent
 
 void AbstractLayer::doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) {}
 
+void AbstractLayer::keyPressEvent(const UnsignedInt dataId, KeyEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::keyPressEvent(): feature not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
+    #endif
+    CORRADE_ASSERT(dataId < state.data.size(),
+        "Whee::AbstractLayer::keyPressEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::keyPressEvent(): event already accepted", );
+    return doKeyPressEvent(dataId, event);
+}
+
+void AbstractLayer::doKeyPressEvent(UnsignedInt, KeyEvent&) {}
+
+void AbstractLayer::keyReleaseEvent(const UnsignedInt dataId, KeyEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::keyReleaseEvent(): feature not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
+    #endif
+    CORRADE_ASSERT(dataId < state.data.size(),
+        "Whee::AbstractLayer::keyReleaseEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::keyReleaseEvent(): event already accepted", );
+    return doKeyReleaseEvent(dataId, event);
+}
+
+void AbstractLayer::doKeyReleaseEvent(UnsignedInt, KeyEvent&) {}
+
 }}

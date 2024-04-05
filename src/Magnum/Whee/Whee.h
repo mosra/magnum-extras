@@ -90,6 +90,11 @@ enum class Pointer: UnsignedByte;
 typedef Containers::EnumSet<Pointer> Pointers;
 class PointerEvent;
 class PointerMoveEvent;
+
+enum class Key: UnsignedShort;
+enum class Modifier: UnsignedByte;
+typedef Containers::EnumSet<Modifier> Modifiers;
+class KeyEvent;
 #endif
 
 }}
