@@ -130,6 +130,12 @@ struct AbstractLayerTest: TestSuite::Tester {
     void pointerEventNotImplemented();
     void pointerEventOutOfRange();
     void pointerEventAlreadyAccepted();
+
+    void keyEvent();
+    void keyEventNotSupported();
+    void keyEventNotImplemented();
+    void keyEventOutOfRange();
+    void keyEventAlreadyAccepted();
 };
 
 using namespace Math::Literals;
@@ -216,7 +222,13 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::pointerEventNotSupported,
               &AbstractLayerTest::pointerEventNotImplemented,
               &AbstractLayerTest::pointerEventOutOfRange,
-              &AbstractLayerTest::pointerEventAlreadyAccepted});
+              &AbstractLayerTest::pointerEventAlreadyAccepted,
+
+              &AbstractLayerTest::keyEvent,
+              &AbstractLayerTest::keyEventNotSupported,
+              &AbstractLayerTest::keyEventNotImplemented,
+              &AbstractLayerTest::keyEventOutOfRange,
+              &AbstractLayerTest::keyEventAlreadyAccepted});
 }
 
 void AbstractLayerTest::debugFeature() {
@@ -2587,6 +2599,135 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
         "Whee::AbstractLayer::pointerMoveEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerEnterEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerLeaveEvent(): event already accepted\n");
+}
+
+void AbstractLayerTest::keyEvent() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+
+        void doKeyPressEvent(UnsignedInt dataId, KeyEvent& event) override {
+            CORRADE_COMPARE(dataId, 1);
+            CORRADE_COMPARE(event.key(), Key::Comma);
+            called *= 2;
+        }
+        void doKeyReleaseEvent(UnsignedInt dataId, KeyEvent& event) override {
+            CORRADE_COMPARE(dataId, 2);
+            CORRADE_COMPARE(event.key(), Key::Delete);
+            CORRADE_COMPARE(event.modifiers(), Modifier::Ctrl|Modifier::Alt);
+            called *= 3;
+        }
+
+        int called = 1;
+    } layer{layerHandle(0, 1)};
+
+    /* Capture correct test case name */
+    CORRADE_VERIFY(true);
+
+    layer.create();
+    layer.create();
+    layer.create();
+    {
+        KeyEvent event{Key::Comma, {}};
+        layer.keyPressEvent(1, event);
+    } {
+        KeyEvent event{Key::Delete, Modifier::Ctrl|Modifier::Alt};
+        layer.keyReleaseEvent(2, event);
+    }
+    CORRADE_COMPARE(layer.called, 2*3);
+}
+
+void AbstractLayerTest::keyEventNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    KeyEvent event{Key::C, {}};
+    layer.keyPressEvent(0, event);
+    layer.keyReleaseEvent(0, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::keyPressEvent(): feature not supported\n"
+        "Whee::AbstractLayer::keyReleaseEvent(): feature not supported\n");
+}
+
+void AbstractLayerTest::keyEventNotImplemented() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    KeyEvent event{Key::NumDivide, {}};
+    layer.keyPressEvent(0, event);
+    layer.keyReleaseEvent(0, event);
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::keyEventOutOfRange() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+    layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    KeyEvent event{Key::Backquote, {}};
+    layer.keyPressEvent(2, event);
+    layer.keyReleaseEvent(2, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::keyPressEvent(): index 2 out of range for 2 data\n"
+        "Whee::AbstractLayer::keyReleaseEvent(): index 2 out of range for 2 data\n");
+}
+
+void AbstractLayerTest::keyEventAlreadyAccepted() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    KeyEvent event{Key::Space, {}};
+    event.setAccepted();
+    layer.keyPressEvent(0, event);
+    layer.keyReleaseEvent(0, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::keyPressEvent(): event already accepted\n"
+        "Whee::AbstractLayer::keyReleaseEvent(): event already accepted\n");
 }
 
 }}}}

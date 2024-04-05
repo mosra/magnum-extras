@@ -37,23 +37,33 @@ struct EventTest: TestSuite::Tester {
 
     void debugPointer();
     void debugPointers();
+    void debugKey();
+    void debugModifier();
+    void debugModifiers();
 
     void pointer();
     void pointerMove();
     void pointerMoveRelativePosition();
     void pointerMoveNoPointer();
     void pointerMoveNoPointerRelativePosition();
+
+    void key();
 };
 
 EventTest::EventTest() {
     addTests({&EventTest::debugPointer,
               &EventTest::debugPointers,
+              &EventTest::debugKey,
+              &EventTest::debugModifier,
+              &EventTest::debugModifiers,
 
               &EventTest::pointer,
               &EventTest::pointerMove,
               &EventTest::pointerMoveRelativePosition,
               &EventTest::pointerMoveNoPointer,
-              &EventTest::pointerMoveNoPointerRelativePosition});
+              &EventTest::pointerMoveNoPointerRelativePosition,
+
+              &EventTest::key});
 }
 
 void EventTest::debugPointer() {
@@ -66,6 +76,24 @@ void EventTest::debugPointers() {
     std::ostringstream out;
     Debug{&out} << (Pointer::MouseLeft|Pointer::Finger|Pointer(0x80)) << Pointers{};
     CORRADE_COMPARE(out.str(), "Whee::Pointer::MouseLeft|Whee::Pointer::Finger|Whee::Pointer(0x80) Whee::Pointers{}\n");
+}
+
+void EventTest::debugKey() {
+    std::ostringstream out;
+    Debug{&out} << Key::RightSuper << Key(0xcc00);
+    CORRADE_COMPARE(out.str(), "Whee::Key::RightSuper Whee::Key(0xcc00)\n");
+}
+
+void EventTest::debugModifier() {
+    std::ostringstream out;
+    Debug{&out} << Modifier::Super << Modifier(0xbb);
+    CORRADE_COMPARE(out.str(), "Whee::Modifier::Super Whee::Modifier(0xbb)\n");
+}
+
+void EventTest::debugModifiers() {
+    std::ostringstream out;
+    Debug{&out} << (Modifier::Shift|Modifier::Ctrl|Modifier(0x80)) << Modifiers{};
+    CORRADE_COMPARE(out.str(), "Whee::Modifier::Shift|Whee::Modifier::Ctrl|Whee::Modifier(0x80) Whee::Modifiers{}\n");
 }
 
 void EventTest::pointer() {
@@ -134,6 +162,22 @@ void EventTest::pointerMoveNoPointerRelativePosition() {
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isAccepted());
+}
+
+void EventTest::key() {
+    KeyEvent event{Key::Delete, Modifier::Ctrl|Modifier::Alt};
+    CORRADE_COMPARE(event.key(), Key::Delete);
+    CORRADE_COMPARE(event.modifiers(), Modifier::Ctrl|Modifier::Alt);
+    CORRADE_COMPARE(event.position(), Containers::NullOpt);
+    CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isAccepted());
+
+    event.setAccepted();
+    CORRADE_VERIFY(event.isAccepted());
+
+    event.setAccepted(false);
     CORRADE_VERIFY(!event.isAccepted());
 }
 

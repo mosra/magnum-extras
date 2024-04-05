@@ -257,11 +257,12 @@ want to instantiate the @ref UserInterface subclass instead.
 
 By including @ref Magnum/Whee/Application.h it's possible to pass event
 instances from @ref Platform::Sdl2Application "Platform::*Application" classes directly to event handlers. They get internally converted to a corresponding
-@ref PointerEvent or @ref PointerMoveEvent instance with a subset of
-information given application provides. Then, if the event is accepted by the
-user interface, the original application event is marked as accepted as well,
-to prevent it from propagating further in certain circumstances (such as to the
-browser window when compiling for the web). Example usage:
+@ref PointerEvent, @ref PointerMoveEvent or @ref KeyEvent instance with a
+subset of information given application provides. Then, if the event is
+accepted by the user interface, the original application event is marked as
+accepted as well, to prevent it from propagating further in certain
+circumstances (such as to the browser window when compiling for the web).
+Example usage:
 
 @snippet Whee-sdl2.cpp AbstractUserInterface-application-events
 
@@ -1818,6 +1819,62 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         }
 
         /**
+         * @brief Handle a key press event
+         *
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean() and @ref updateRenderer().
+         *
+         * If @ref currentGlobalPointerPosition() is not
+         * @ref Containers::NullOpt, finds the front-most node under it and
+         * calls @ref AbstractLayer::keyPressEvent() on all data attached to it
+         * belonging to layers that support @ref LayerFeature::Event. If no
+         * data accept the event, continues to other nodes under the position
+         * in a front-to-back order and then to parent nodes. For each such
+         * node, the event is always called on all attached data, regardless of
+         * the accept status. For each call the event contains the
+         * @ref currentGlobalPointerPosition() made relative to the node to
+         * which given data is attached.
+         *
+         * Returns @cpp true @ce if the event was accepted by at least one
+         * data, @cpp false @ce if it wasn't, if there wasn't any visible event
+         * handling node at given position or if
+         * @ref currentGlobalPointerPosition() is @ref Containers::NullOpt, and
+         * thus the event should be propagated further.
+         *
+         * Expects that the event is not accepted yet.
+         * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
+         */
+        bool keyPressEvent(KeyEvent& event);
+
+        /**
+         * @brief Handle a key release event
+         *
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean() and @ref updateRenderer().
+         *
+         * If @ref currentGlobalPointerPosition() is not
+         * @ref Containers::NullOpt, finds the front-most node under it and
+         * calls @ref AbstractLayer::keyReleaseEvent() on all data attached to
+         * it belonging to layers that support @ref LayerFeature::Event. If no
+         * data accept the event, continues to other nodes under the position
+         * in a front-to-back order and then to parent nodes. For each such
+         * node, the event is always called on all attached data, regardless of
+         * the accept status. For each call the event contains the
+         * @ref currentGlobalPointerPosition() made relative to the node to
+         * which given data is attached.
+         *
+         * Returns @cpp true @ce if the event was accepted by at least one
+         * data, @cpp false @ce if it wasn't, if there wasn't any visible event
+         * handling node at given position or if
+         * @ref currentGlobalPointerPosition() is @ref Containers::NullOpt, and
+         * thus the event should be propagated further.
+         *
+         * Expects that the event is not accepted yet.
+         * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
+         */
+        bool keyReleaseEvent(KeyEvent& event);
+
+        /**
          * @brief Node pressed by last pointer event
          *
          * Returns handle of a node that was under the pointer for the last
@@ -1912,6 +1969,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, UnsignedInt nodeId, Event& event, bool rememberCaptureOnUnaccepted = false);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);
+        template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_WHEE_LOCAL bool keyPressOrReleaseEvent(KeyEvent& event);
 
         struct State;
         Containers::Pointer<State> _state;

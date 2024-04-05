@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, enum @ref Magnum::Whee::Pointer, enum set @ref Magnum::Whee::Pointers
+ * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::KeyEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
  * @m_since_latest
  */
 
@@ -121,8 +121,8 @@ class PointerEvent {
          * @brief Set whether to capture the event on a node
          *
          * By default, after a pointer press event, a node captures all
-         * following pointer events until and including a pointer release, even
-         * if they happen outside of the node area.
+         * following pointer and key events until and including a pointer
+         * release, even if they happen outside of the node area.
          *
          * If capture is disabled, the events are always sent to the actual
          * node under the pointer. Which means that for example a node can
@@ -260,9 +260,10 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
          * @brief Set whether to capture the event on a node
          *
          * By default, after a pointer press event, a node captures all
-         * following pointer events until and including a pointer release, even
-         * if they happen outside of the node area. If capture is disabled, the
-         * events are always sent to the actual node under the pointer.
+         * following pointer and key events until and including a pointer
+         * release, even if they happen outside of the node area. If capture is
+         * disabled, the events are always sent to the actual node under the
+         * pointer.
          *
          * The capture can be both disabled and enabled again for all pointer
          * move, enter and leave events, each time it's enabled again it'll
@@ -318,6 +319,368 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
         Vector2 _position, _relativePosition;
         Pointer _type; /* NullOpt encoded as Pointer{} to avoid an include */
         Pointers _types;
+        bool _accepted = false;
+        bool _captured = false;
+        bool _hovering = false;
+};
+
+/**
+@brief Keyboard key
+@m_since_latest
+
+@see @ref KeyEvent
+*/
+enum class Key: UnsignedShort {
+    /* Where possible, the key maps directly to the ASCII code of the character
+       that would be printed. So '0' (48) for Zero, or for example 'a' (97) for
+       A. Lowercase, not 'A' (65), because that one would get printed only with
+       Shift pressed. As a special case, the Unknown key maps to '\0'.
+
+       Range 128 to 255 is not used, keys not representable in the ASCII range
+       have values 256 and up. Zero value is reserved for an unknown key. */
+
+    /* 1 to 7 are not keys */
+    Backspace = '\x08', /**< Backspace */
+    Tab = '\t',         /**< Tab */
+    Enter = '\n',       /**< Enter */
+    /* 11 to 26 are not keys */
+    Esc = '\x1b',       /**< Escape */
+    /* 28 to 31 are not keys */
+    Space = ' ',        /**< Space */
+    /* 33 to 36, '!', '"', '#', '$' are not keys */
+
+    /**
+     * Percent. On the US keyboard layout this may only be representable as
+     * @m_class{m-label m-warning} **Shift** @m_class{m-label m-default} **5**.
+     */
+    Percent = '%',
+
+    /* 38, '&' is not a key */
+    Quote = '\'',       /**< Quote (<tt>'</tt>) */
+    /** @todo Sdl2Application reports 41 / SDLK_RIGHTPAREN for ')', GLFW
+        reports 93 (RightBracket) instead */
+    /* 40 to 42, '(', ')', '*' are not keys */
+
+    /**
+     * Plus. On the US keyboard layout this may only be representable as
+     * @m_class{m-label m-warning} **Shift** @m_class{m-label m-default} **=**.
+     */
+    Plus = '+',
+
+    Comma = ',',        /**< Comma */
+    Minus = '-',        /**< Minus */
+    Period = '.',       /**< Period */
+    Slash = '/',        /**< Slash */
+    Zero = '0',         /**< Zero */
+    One = '1',          /**< One */
+    Two = '2',          /**< Two */
+    Three = '3',        /**< Three */
+    Four = '4',         /**< Four */
+    Five = '5',         /**< Five */
+    Six = '6',          /**< Six */
+    Seven = '7',        /**< Seven */
+    Eight = '8',        /**< Eight */
+    Nine = '9',         /**< Nine */
+    /* 58, ':' is not a key */
+    Semicolon = ';',    /**< Semicolon */
+    /* 60, '<' is not a key */
+    Equal = '=',        /**< Equal */
+    /* 62 to 64, '>', '?', '@' are not keys */
+    /* 65 to 90, (uppercase) 'A' to 'Z' are not keys */
+    LeftBracket = '[',  /**< Left bracket (`[`) */
+    Backslash = '\\',   /**< Backslash (`\`) */
+    RightBracket = ']', /**< Right bracket (`]`) */
+    /* 94 to 95, '^', '_' are not keys */
+    Backquote = '`',    /**< Backquote (<tt>`</tt>) */
+    A = 'a',            /**< Letter A */
+    B = 'b',            /**< Letter B */
+    C = 'c',            /**< Letter C */
+    D = 'd',            /**< Letter D */
+    E = 'e',            /**< Letter E */
+    F = 'f',            /**< Letter F */
+    G = 'g',            /**< Letter G */
+    H = 'h',            /**< Letter H */
+    I = 'i',            /**< Letter I */
+    J = 'j',            /**< Letter J */
+    K = 'k',            /**< Letter K */
+    L = 'l',            /**< Letter L */
+    M = 'm',            /**< Letter M */
+    N = 'n',            /**< Letter N */
+    O = 'o',            /**< Letter O */
+    P = 'p',            /**< Letter P */
+    Q = 'q',            /**< Letter Q */
+    R = 'r',            /**< Letter R */
+    S = 's',            /**< Letter S */
+    T = 't',            /**< Letter T */
+    U = 'u',            /**< Letter U */
+    V = 'v',            /**< Letter V */
+    W = 'w',            /**< Letter W */
+    X = 'x',            /**< Letter X */
+    Y = 'y',            /**< Letter Y */
+    Z = 'z',            /**< Letter Z */
+    /* 123 to 126, '{', '|', '}', '~' are not keys */
+    Delete = '\x7f',    /* Delete */
+
+    /* 128 to 255 unused */
+
+    /**
+     * Left Shift
+     *
+     * @see @ref Modifier::Shift
+     */
+    LeftShift = 256,
+
+    /**
+     * Right Shift
+     *
+     * @see @ref Modifier::Shift
+     */
+    RightShift,
+
+    /**
+     * Left Ctrl
+     *
+     * @see @ref Modifier::Ctrl
+     */
+    LeftCtrl,
+
+    /**
+     * Right Ctrl
+     *
+     * @see @ref Modifier::Ctrl
+     */
+    RightCtrl,
+
+    /**
+     * Left Alt
+     *
+     * @see @ref Modifier::Alt
+     */
+    LeftAlt,
+
+    /**
+     * Right Alt
+     *
+     * @see @ref Modifier::Alt
+     */
+    RightAlt,
+
+    /**
+     * Left Super key (Windows/⌘)
+     *
+     * @see @ref Modifier::Super
+     */
+    LeftSuper,
+
+    /**
+     * Right Super key (Windows/⌘)
+     *
+     * @see @ref Modifier::Super
+     */
+    RightSuper,
+
+    /** @todo Sdl2Application has AltGr, but the actual AltGr triggers RightAlt
+        instead, so can't really test */
+
+    Up,                 /**< Up arrow */
+    Down,               /**< Down arrow */
+    Left,               /**< Left arrow */
+    Right,              /**< Right arrow */
+    Home,               /**< Home */
+    End,                /**< End */
+    PageUp,             /**< Page up */
+    PageDown,           /**< Page down */
+    Insert,             /**< Insert */
+
+    F1,                 /**< F1 */
+    F2,                 /**< F2 */
+    F3,                 /**< F3 */
+    F4,                 /**< F4 */
+    F5,                 /**< F5 */
+    F6,                 /**< F6 */
+    F7,                 /**< F7 */
+    F8,                 /**< F8 */
+    F9,                 /**< F9 */
+    F10,                /**< F10 */
+    F11,                /**< F11 */
+    F12,                /**< F12 */
+
+    /** @todo GlfwApplication has World1 / World2 but there's no clear
+        consensus on what they should map to (World1 can be the backslash next
+        to left Shift, but also §: https://github.com/glfw/glfw/issues/2481),
+        so I don't know how to name them */
+
+    CapsLock,           /**< Caps lock */
+    ScrollLock,         /**< Scroll lock */
+    NumLock,            /**< Num lock */
+    PrintScreen,        /**< Print screen */
+    Pause,              /**< Pause */
+    Menu,               /**< Menu */
+
+    NumZero,            /**< Numpad zero */
+    NumOne,             /**< Numpad one */
+    NumTwo,             /**< Numpad two */
+    NumThree,           /**< Numpad three */
+    NumFour,            /**< Numpad four */
+    NumFive,            /**< Numpad five */
+    NumSix,             /**< Numpad six */
+    NumSeven,           /**< Numpad seven */
+    NumEight,           /**< Numpad eight */
+    NumNine,            /**< Numpad nine */
+    NumDecimal,         /**< Numpad decimal */
+    NumDivide,          /**< Numpad divide */
+    NumMultiply,        /**< Numpad multiply */
+    NumSubtract,        /**< Numpad subtract */
+    NumAdd,             /**< Numpad add */
+    NumEnter,           /**< Numpad enter */
+    NumEqual            /**< Numpad equal */
+};
+
+/**
+@debugoperatorenum{Key}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, Key value);
+
+/**
+@brief Keyboard modifier
+@m_since_latest
+
+@see @ref Modifiers, @ref KeyEvent, @ref Key
+*/
+enum class Modifier: UnsignedByte {
+    /**
+     * Shift
+     *
+     * @see @ref Key::LeftShift, @ref Key::RightShift
+     */
+    Shift = 1 << 0,
+
+    /**
+     * Ctrl
+     *
+     * @see @ref Key::LeftCtrl, @ref Key::RightCtrl
+     */
+    Ctrl = 1 << 1,
+
+    /**
+     * Alt
+     *
+     * @see @ref Key::LeftAlt, @ref Key::RightAlt
+     */
+    Alt = 1 << 2,
+
+    /**
+     * Super key (Windows/⌘)
+     *
+     * @see @ref Key::LeftSuper, @ref Key::RightSuper
+     */
+    Super = 1 << 3
+};
+
+/**
+@debugoperatorenum{Modifier}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, Modifier value);
+
+/**
+@brief Set of keyboard modifiers
+@m_since_latest
+
+@see @ref KeyEvent
+*/
+typedef Containers::EnumSet<Modifier> Modifiers;
+
+/**
+@debugoperatorenum{Modifiers}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, Modifiers value);
+
+CORRADE_ENUMSET_OPERATORS(Modifiers)
+
+/**
+@brief Key press or release event
+@m_since_latest
+
+@see @ref AbstractUserInterface::keyPressEvent(),
+    @ref AbstractUserInterface::keyReleaseEvent(),
+    @ref AbstractLayer::keyPressEvent(),
+    @ref AbstractLayer::keyReleaseEvent()
+*/
+class MAGNUM_WHEE_EXPORT KeyEvent {
+    public:
+        /**
+         * @brief Constructor
+         * @param key           Key that got pressed or released
+         * @param modifiers     Active keyboard modifiers
+         *
+         * The position, capture and hover properties are set from
+         * @ref AbstractUserInterface event handler internals.
+         */
+        explicit KeyEvent(Key key, Modifiers modifiers): _key{key}, _modifiers{modifiers} {}
+
+        /** @brief Key that got pressed or released */
+        Key key() const { return _key; }
+
+        /** @brief Active keyboard modifiers */
+        Modifiers modifiers() const { return _modifiers; }
+
+        /**
+         * @brief Event position
+         *
+         * If the event was preceded by a pointer press, release or move event
+         * and the node was picked based on pointer event position, returns a
+         * position relative to that node. Otherwise returns
+         * @ref Containers::NullOpt.
+         */
+        Containers::Optional<Vector2> position() const;
+
+        /**
+         * @brief Whether the event is captured on a node
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentCapturedNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise. Unlike @ref PointerEvent or @ref PointerMoveEvent, key
+         * events don't have a possibility to modify the captured status.
+         * @see @ref isHovering()
+         */
+        bool isCaptured() const { return _captured; }
+
+        /**
+         * @brief Whether the event is called on a node that's currently hovered
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise.
+         * @see @ref isCaptured()
+         */
+        bool isHovering() const { return _hovering; }
+
+        /**
+         * @brief Whether the event is accepted
+         *
+         * Implicitly @cpp false @ce.
+         */
+        bool isAccepted() const { return _accepted; }
+
+        /**
+         * @brief Set the event as accepted
+         *
+         * Once an event is accepted, it doesn't propagate further.
+         */
+        void setAccepted(bool accepted = true) {
+            _accepted = accepted;
+        }
+
+    private:
+        friend AbstractUserInterface;
+
+        /* NullOpt encoded as NaNs to avoid an include */
+        Vector2 _position{Constants::nan()};
+        Key _key;
+        Modifiers _modifiers;
         bool _accepted = false;
         bool _captured = false;
         bool _hovering = false;
