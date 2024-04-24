@@ -151,6 +151,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void advanceAnimations();
     void advanceAnimationsInvalidTime();
 
+    void updateOrder();
     void updateRecycledLayerWithoutInstance();
 
     /* Tests update() and clean() calls on AbstractLayer, AbstractLayouter and
@@ -225,6 +226,14 @@ const struct {
     /* Layers need to be enabled as well to have something to attach to */
     {"data attachment animators", true, false, false, true},
     {"all", true, true, true, true},
+};
+
+const struct {
+    const char* name;
+    bool shuffle;
+} UpdateOrderData[]{
+    {"created in layer order", false},
+    {"created in shuffled order", true}
 };
 
 const struct {
@@ -893,9 +902,12 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::advanceAnimationsEmpty,
               &AbstractUserInterfaceTest::advanceAnimationsNoOp,
               &AbstractUserInterfaceTest::advanceAnimations,
-              &AbstractUserInterfaceTest::advanceAnimationsInvalidTime,
+              &AbstractUserInterfaceTest::advanceAnimationsInvalidTime});
 
-              &AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance});
+    addInstancedTests({&AbstractUserInterfaceTest::updateOrder},
+        Containers::arraySize(UpdateOrderData));
+
+    addTests({&AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance});
 
     addInstancedTests({&AbstractUserInterfaceTest::state},
         Containers::arraySize(StateData));
@@ -5293,6 +5305,66 @@ void AbstractUserInterfaceTest::advanceAnimationsInvalidTime() {
     Error redirectError{&out};
     ui.advanceAnimations(55_nsec);
     CORRADE_COMPARE(out.str(), "Whee::AbstractUserInterface::advanceAnimations(): expected a time at least Nanoseconds(56) but got Nanoseconds(55)\n");
+}
+
+void AbstractUserInterfaceTest::updateOrder() {
+    auto&& data = UpdateOrderData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, Containers::Array<LayerHandle>& order): AbstractLayer{handle}, _order(order) {}
+
+        LayerFeatures doFeatures() const override { return {}; }
+        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(_order, handle());
+        }
+
+        private:
+            Containers::Array<LayerHandle>& _order;
+    };
+
+    LayerHandle layer1, layer2, layer3NoInstance, layer4, layer5Removed, layer6;
+    if(!data.shuffle) {
+        layer1 = ui.createLayer();
+        layer2 = ui.createLayer();
+        layer3NoInstance = ui.createLayer();
+        layer4 = ui.createLayer();
+        layer5Removed = ui.createLayer();
+        layer6 = ui.createLayer();
+    } else {
+        layer3NoInstance = ui.createLayer();
+        layer1 = ui.createLayer(layer3NoInstance);
+        layer2 = ui.createLayer(layer3NoInstance);
+        layer6 = ui.createLayer();
+        layer4 = ui.createLayer(layer6);
+        layer5Removed = ui.createLayer(layer6);
+    }
+
+    CORRADE_COMPARE(ui.layerFirst(), layer1);
+    CORRADE_COMPARE(ui.layerNext(layer1), layer2);
+    CORRADE_COMPARE(ui.layerNext(layer2), layer3NoInstance);
+    CORRADE_COMPARE(ui.layerNext(layer3NoInstance), layer4);
+    CORRADE_COMPARE(ui.layerNext(layer4), layer5Removed);
+    CORRADE_COMPARE(ui.layerNext(layer5Removed), layer6);
+    CORRADE_COMPARE(ui.layerNext(layer6), LayerHandle::Null);
+
+    Containers::Array<LayerHandle> order;
+    ui.setLayerInstance(Containers::pointer<Layer>(layer1, order));
+    ui.setLayerInstance(Containers::pointer<Layer>(layer2, order));
+    /* No instance for layer 3 */
+    ui.setLayerInstance(Containers::pointer<Layer>(layer4, order));
+    ui.removeLayer(layer5Removed);
+    ui.setLayerInstance(Containers::pointer<Layer>(layer6, order));
+
+    ui.update();
+    CORRADE_COMPARE_AS(order, Containers::arrayView({
+        layer1,
+        layer2,
+        layer4,
+        layer6,
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractUserInterfaceTest::updateRecycledLayerWithoutInstance() {
