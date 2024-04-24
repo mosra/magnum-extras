@@ -2759,46 +2759,53 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.dataToDrawClipRectSizes);
     }
 
-    /* 14. For each layer submit an update of visible data across all visible
-       top-level nodes. If no data update is needed, the data in layers is
-       already up-to-date. */
-    if(states >= UserInterfaceState::NeedsDataUpdate) for(std::size_t i = 0; i != state.layers.size(); ++i) {
-        /* Invalid (removed) layers have instances set to nullptr as well, so
-           this will skip them. */
-        AbstractLayer* const instance = state.layers[i].used.instance.get();
-        if(!instance)
-            continue;
+    /* 14. For each layer (if there are actually any) submit an update of
+       visible data across all visible top-level nodes. If no data update is
+       needed, the data in layers is already up-to-date. */
+    if(states >= UserInterfaceState::NeedsDataUpdate && state.firstLayer != LayerHandle::Null) {
+        /* Make the update calls follow layer order so the implementations can
+           rely on a consistent order of operations compared to going through
+           whatever was the order they were created in */
+        LayerHandle layer = state.firstLayer;
+        do {
+            const UnsignedInt layerId = layerHandleId(layer);
+            Layer& layerItem = state.layers[layerId];
 
-        /* Call update() on the layer even if the particular data range is
-           empty in order to allow the implementations to do various cleanups.
-           Plus the update() call resets the NeedsUpdate state on the layer,
-           if it's set. */
-        /** @todo include a bitmask of what node offsets / sizes / enabled bits
-            / data actually changed, or if it's just the set / order of drawn
-            IDs */
-        instance->update(
-            state.dataToUpdateIds.slice(
-                state.dataToUpdateLayerOffsets[i].first(),
-                state.dataToUpdateLayerOffsets[i + 1].first()),
-            state.dataToUpdateClipRectIds.slice(
-                state.dataToUpdateLayerOffsets[i].second(),
-                state.dataToUpdateLayerOffsets[i + 1].second()),
-            state.dataToUpdateClipRectDataCounts.slice(
-                state.dataToUpdateLayerOffsets[i].second(),
-                state.dataToUpdateLayerOffsets[i + 1].second()),
-            /** @todo some layer implementations may eventually want relative
-                offsets, not absolute, provide both? */
-            /** @todo once the changed mask is there, might be useful to have
-                (opt-in?) offsets relative to the clip rect -- it can be a
-                different draw anyway, so it might be easier to just add an
-                extra transform at draw time without triggering a full data
-                update for all offsets; what changes is the culling tho, which
-                still needs at least the index buffer update, not everything */
-            state.absoluteNodeOffsets,
-            state.nodeSizes,
-            state.visibleEnabledNodeMask,
-            state.clipRectOffsets.prefix(state.clipRectCount),
-            state.clipRectSizes.prefix(state.clipRectCount));
+            /* If the layer has an instance (as layers may have been created
+               but without instances set yet), call update() on it even if the
+               particular data range is empty in order to allow the
+               implementations to do various cleanups. Plus the update() call
+               resets the NeedsUpdate state on the layer, if it's set. */
+            /** @todo include a bitmask of what node offsets / sizes / enabled
+                bits / data actually changed, or if it's just the set / order
+                of drawn IDs */
+            if(AbstractLayer* const instance = layerItem.used.instance.get()) instance->update(
+                state.dataToUpdateIds.slice(
+                    state.dataToUpdateLayerOffsets[layerId].first(),
+                    state.dataToUpdateLayerOffsets[layerId + 1].first()),
+                state.dataToUpdateClipRectIds.slice(
+                    state.dataToUpdateLayerOffsets[layerId].second(),
+                    state.dataToUpdateLayerOffsets[layerId + 1].second()),
+                state.dataToUpdateClipRectDataCounts.slice(
+                    state.dataToUpdateLayerOffsets[layerId].second(),
+                    state.dataToUpdateLayerOffsets[layerId + 1].second()),
+                /** @todo some layer implementations may eventually want
+                    relative offsets, not absolute, provide both? */
+                /** @todo once the changed mask is there, might be useful to
+                    have (opt-in?) offsets relative to the clip rect -- it can
+                    be a different draw anyway, so it might be easier to just
+                    add an extra transform at draw time without triggering a
+                    full data update for all offsets; what changes is the
+                    culling tho, which still needs at least the index buffer
+                    update, not everything */
+                state.absoluteNodeOffsets,
+                state.nodeSizes,
+                state.visibleEnabledNodeMask,
+                state.clipRectOffsets.prefix(state.clipRectCount),
+                state.clipRectSizes.prefix(state.clipRectCount));
+
+            layer = layerItem.used.next;
+        } while(layer != state.firstLayer);
     }
 
     /** @todo layer-specific cull/clip step? */

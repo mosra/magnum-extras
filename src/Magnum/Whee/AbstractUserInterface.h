@@ -1589,7 +1589,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Propagates @ref NodeFlag::Disabled and @ref NodeFlag::NoEvents
          *      to child nodes
          * -    Orders data attachments in each layer by draw order
-         * -    Calls @ref AbstractLayer::update() with the ordered data
+         * -    Goes in a back to front order through layers that have
+         *      instances set and calls @ref AbstractLayer::update() with the
+         *      ordered data
          * -    Resets @ref currentPressedNode(), @ref currentCapturedNode() or
          *      @ref currentHoveredNode() if the nodes no longer exist, are not
          *      visible or have @ref NodeFlag::NoEvents or
