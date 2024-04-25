@@ -114,9 +114,11 @@ struct AbstractLayerTest: TestSuite::Tester {
     void advanceStyleAnimationsInvalidLayer();
 
     void update();
+    void updateComposite();
     void updateEmpty();
     void updateNotImplemented();
     void updateInvalidState();
+    void updateInvalidStateComposite();
     void updateInvalidSizes();
 
     void state();
@@ -148,6 +150,24 @@ struct AbstractLayerTest: TestSuite::Tester {
 
 using namespace Math::Literals;
 
+const struct {
+    const char* name;
+    LayerFeatures features;
+    LayerStates extraState;
+} StateQuerySetNeedsUpdateData[]{
+    {"", {}, {}},
+    {"composite layer", LayerFeature::Composite, LayerState::NeedsCompositeOffsetSizeUpdate},
+};
+
+const struct {
+    const char* name;
+    LayerFeatures features;
+    LayerStates extraAttachState;
+} StateData[]{
+    {"", {}, {}},
+    {"composite layer", LayerFeature::Composite, LayerState::NeedsCompositeOffsetSizeUpdate},
+};
+
 AbstractLayerTest::AbstractLayerTest() {
     addTests({&AbstractLayerTest::debugFeature,
               &AbstractLayerTest::debugFeatures,
@@ -159,14 +179,18 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::construct,
               &AbstractLayerTest::constructInvalidHandle,
               &AbstractLayerTest::constructCopy,
-              &AbstractLayerTest::constructMove,
+              &AbstractLayerTest::constructMove});
 
-              &AbstractLayerTest::stateQuery,
-              &AbstractLayerTest::stateQueryNotImplemented,
-              &AbstractLayerTest::stateQueryInvalid,
+    addInstancedTests({&AbstractLayerTest::stateQuery},
+        Containers::arraySize(StateQuerySetNeedsUpdateData));
 
-              &AbstractLayerTest::setNeedsUpdate,
-              &AbstractLayerTest::setNeedsUpdateInvalid,
+    addTests({&AbstractLayerTest::stateQueryNotImplemented,
+              &AbstractLayerTest::stateQueryInvalid});
+
+    addInstancedTests({&AbstractLayerTest::setNeedsUpdate},
+        Containers::arraySize(StateQuerySetNeedsUpdateData));
+
+    addTests({&AbstractLayerTest::setNeedsUpdateInvalid,
 
               &AbstractLayerTest::createRemove,
               &AbstractLayerTest::createRemoveHandleRecycle,
@@ -215,14 +239,17 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::advanceStyleAnimationsInvalidLayer,
 
               &AbstractLayerTest::update,
+              &AbstractLayerTest::updateComposite,
               &AbstractLayerTest::updateEmpty,
               &AbstractLayerTest::updateNotImplemented,
               &AbstractLayerTest::updateInvalidState,
-              &AbstractLayerTest::updateInvalidSizes,
+              &AbstractLayerTest::updateInvalidStateComposite,
+              &AbstractLayerTest::updateInvalidSizes});
 
-              &AbstractLayerTest::state,
+    addInstancedTests({&AbstractLayerTest::state},
+        Containers::arraySize(StateData));
 
-              &AbstractLayerTest::composite,
+    addTests({&AbstractLayerTest::composite,
               &AbstractLayerTest::compositeEmpty,
               &AbstractLayerTest::compositeNotSupported,
               &AbstractLayerTest::compositeNotImplemented,
@@ -382,19 +409,25 @@ void AbstractLayerTest::constructMove() {
 }
 
 void AbstractLayerTest::stateQuery() {
-    struct: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
+    auto&& data = StateQuerySetNeedsUpdateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
 
-        LayerFeatures doFeatures() const override { return {}; }
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features, LayerStates extraState): AbstractLayer{handle}, _features{features}, _extraState{extraState} {}
+
+        LayerFeatures doFeatures() const override { return _features; }
         LayerStates doState() const override {
-            return LayerState::NeedsSharedDataUpdate;
+            return LayerState::NeedsSharedDataUpdate|_extraState;
         }
-    } layer{layerHandle(0, 1)};
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate);
+        private:
+            LayerFeatures _features;
+            LayerStates _extraState;
+    } layer{layerHandle(0, 1), data.features, data.extraState};
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|data.extraState);
 
     /* The output of doState() should be combined with flags set directly */
     layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|LayerState::NeedsDataUpdate|data.extraState);
 }
 
 void AbstractLayerTest::stateQueryNotImplemented() {
@@ -417,32 +450,50 @@ void AbstractLayerTest::stateQueryInvalid() {
 
         LayerFeatures doFeatures() const override { return {}; }
         LayerStates doState() const override {
-            return LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsSharedDataUpdate;
+            return LayerState::NeedsSharedDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate;
         }
     } layer{layerHandle(0, 1)};
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+        LayerStates doState() const override {
+            return LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsSharedDataUpdate;
+        }
+    } layerCompositing{layerHandle(0, 1)};
 
     std::ostringstream out;
     Error redirectError{&out};
     layer.state();
+    layerCompositing.state();
     CORRADE_COMPARE_AS(out.str(),
-        "Whee::AbstractLayer::state(): implementation expected to return a subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsNodeEnabledUpdate|Whee::LayerState::NeedsSharedDataUpdate\n",
+        "Whee::AbstractLayer::state(): implementation expected to return a subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsSharedDataUpdate|Whee::LayerState::NeedsCompositeOffsetSizeUpdate\n"
+        "Whee::AbstractLayer::state(): implementation expected to return a subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate|Whee::LayerState::NeedsCompositeOffsetSizeUpdate but got Whee::LayerState::NeedsNodeEnabledUpdate|Whee::LayerState::NeedsSharedDataUpdate\n",
         TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::setNeedsUpdate() {
-    struct: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
+    auto&& data = StateQuerySetNeedsUpdateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
 
-        LayerFeatures doFeatures() const override { return {}; }
-    } layer{layerHandle(0, 1)};
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, _features{features} {}
+
+        LayerFeatures doFeatures() const override { return _features; }
+
+        private:
+            LayerFeatures _features;
+    } layer{layerHandle(0, 1), data.features};
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     layer.setNeedsUpdate(LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
 
     /* Subsequent set doesn't overwrite, but ORs with existing */
-    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
 }
 
 void AbstractLayerTest::setNeedsUpdateInvalid() {
@@ -453,15 +504,25 @@ void AbstractLayerTest::setNeedsUpdateInvalid() {
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+    } layerCompositing{layerHandle(0, 1)};
     CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layerCompositing.state(), LayerStates{});
 
     std::ostringstream out;
     Error redirectError{&out};
     layer.setNeedsUpdate({});
-    layer.setNeedsUpdate(LayerState::NeedsNodeOffsetSizeUpdate);
+    layer.setNeedsUpdate(LayerState::NeedsCompositeOffsetSizeUpdate);
+    layerCompositing.setNeedsUpdate(LayerState::NeedsNodeOffsetSizeUpdate);
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerStates{}\n"
-        "Whee::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsNodeOffsetSizeUpdate\n",
+        "Whee::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsCompositeOffsetSizeUpdate\n"
+        "Whee::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate|Whee::LayerState::NeedsCompositeOffsetSizeUpdate but got Whee::LayerState::NeedsNodeOffsetSizeUpdate\n",
         TestSuite::Compare::String);
 }
 
@@ -688,7 +749,7 @@ void AbstractLayerTest::createAttached() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Passing a non-null handle causes NeedsAttachmentUpdate and everything
@@ -735,6 +796,10 @@ void AbstractLayerTest::removeInvalid() {
 }
 
 void AbstractLayerTest::attach() {
+    /* This *does not* test the LayerState::NeedsCompositeOffsetSizeUpdate
+       flag, that's verified in state() more than enough. This case verifies
+       actual node attaching and attachment querying. */
+
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
         using AbstractLayer::create;
@@ -749,7 +814,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     NodeHandle nodeFirst = nodeHandle(2865, 0xcec);
@@ -768,7 +833,7 @@ void AbstractLayerTest::attach() {
     }), TestSuite::Compare::Container);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Calling with the layer-specific handles should work too */
@@ -777,7 +842,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.node(dataHandleData(second)), nodeFirst);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching to a new node should overwrite the previous */
@@ -786,7 +851,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.node(first), nodeThird);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching two data to the same node should work too */
@@ -796,7 +861,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.node(second), nodeThird);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching data to the same node is a no-op, not setting any flags */
@@ -813,7 +878,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.node(second), nodeThird);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Detaching an already-detached data is a no-op again */
@@ -1788,7 +1853,7 @@ void AbstractLayerTest::update() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             ++called;
             CORRADE_COMPARE(state, LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsCommonDataUpdate);
             CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
@@ -1831,6 +1896,120 @@ void AbstractLayerTest::update() {
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(clipRectSizes, Containers::arrayView<Vector2>({
                 {8.5f, 9.5f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectOffsets,
+                Containers::arrayView<Vector2>({}),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectSizes,
+                Containers::arrayView<Vector2>({}),
+                TestSuite::Compare::Container);
+        }
+
+        Int called = 0;
+    } layer{layerHandle(0, 1)};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    UnsignedByte nodesEnabled[1]{0x5};
+
+    layer.update(
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsCommonDataUpdate,
+        Containers::arrayView({
+            0xabcdeu,
+            0x45678u,
+        }),
+        Containers::arrayView({
+            3u,
+            16u,
+            27u,
+            2u
+        }),
+        Containers::arrayView({
+            265u,
+            1u,
+            13u,
+            7u
+        }),
+        Containers::arrayView<Vector2>({
+            {1.0f, 2.0f},
+            {3.0f, 4.0f},
+            {5.0f, 6.0f}
+        }),
+        Containers::arrayView<Vector2>({
+            {0.1f, 0.2f},
+            {0.3f, 0.4f},
+            {0.5f, 0.6f}
+        }),
+        Containers::BitArrayView{nodesEnabled, 0, 3},
+        Containers::arrayView<Vector2>({
+            {6.5f, 7.5f},
+        }),
+        Containers::arrayView<Vector2>({
+            {8.5f, 9.5f},
+        }),
+        {}, {}
+    );
+    CORRADE_COMPARE(layer.called, 1);
+}
+
+void AbstractLayerTest::updateComposite() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Composite; }
+
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
+            ++called;
+            CORRADE_COMPARE(state, LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsCommonDataUpdate);
+            CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
+                0xabcdeu,
+                0x45678u
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectIds, Containers::arrayView({
+                /* These should be small enough to index into clipRectOffsets
+                   and clipRectSizes but nobody cares here */
+                3u,
+                16u,
+                27u,
+                2u
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectDataCounts, Containers::arrayView({
+                /* The sum should be equal to dataIds.size(), yes, nobody cares
+                   here */
+                265u,
+                1u,
+                13u,
+                7u
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeOffsets, Containers::arrayView<Vector2>({
+                {1.0f, 2.0f},
+                {3.0f, 4.0f},
+                {5.0f, 6.0f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeSizes, Containers::arrayView<Vector2>({
+                {0.1f, 0.2f},
+                {0.3f, 0.4f},
+                {0.5f, 0.6f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodesEnabled, Containers::stridedArrayView({
+                true,
+                false,
+                true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectOffsets, Containers::arrayView<Vector2>({
+                {6.5f, 7.5f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(clipRectSizes, Containers::arrayView<Vector2>({
+                {8.5f, 9.5f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectOffsets, Containers::arrayView<Vector2>({
+                {3.0f, 4.0f},
+                {5.0f, 6.0f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectSizes, Containers::arrayView<Vector2>({
+                {0.3f, 0.4f},
+                {0.5f, 0.6f}
             }), TestSuite::Compare::Container);
         }
 
@@ -1876,8 +2055,15 @@ void AbstractLayerTest::update() {
         }),
         Containers::arrayView<Vector2>({
             {8.5f, 9.5f},
-        })
-    );
+        }),
+        Containers::arrayView<Vector2>({
+            {3.0f, 4.0f},
+            {5.0f, 6.0f}
+        }),
+        Containers::arrayView<Vector2>({
+            {0.3f, 0.4f},
+            {0.5f, 0.6f}
+        }));
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -1887,7 +2073,7 @@ void AbstractLayerTest::updateEmpty() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             ++called;
         }
 
@@ -1895,7 +2081,7 @@ void AbstractLayerTest::updateEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -1942,7 +2128,8 @@ void AbstractLayerTest::updateNotImplemented() {
         }),
         Containers::arrayView<Vector2>({
             {}
-        })
+        }),
+        {}, {}
     );
 
     /* Shouldn't crash or anything */
@@ -1960,11 +2147,34 @@ void AbstractLayerTest::updateInvalidState() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update({}, {}, {}, {}, {}, {}, {}, {}, {});
-    layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsCompositeOffsetSizeUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractLayer::update(): expected a non-empty subset of Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate|Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerStates{}\n"
-        "Whee::AbstractLayer::update(): expected a non-empty subset of Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate|Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsDataClean\n",
+        "Whee::AbstractLayer::update(): expected a non-empty subset of Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate|Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsDataClean\n"
+        "Whee::AbstractLayer::update(): expected a non-empty subset of Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate|Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsCompositeOffsetSizeUpdate\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::updateInvalidStateComposite() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Composite;
+        }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::update(): expected a non-empty subset of Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate|Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate|Whee::LayerState::NeedsCompositeOffsetSizeUpdate but got Whee::LayerStates{}\n"
+        "Whee::AbstractLayer::update(): expected a non-empty subset of Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate|Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate|Whee::LayerState::NeedsCompositeOffsetSizeUpdate but got Whee::LayerState::NeedsDataClean\n",
         TestSuite::Compare::String);
 }
 
@@ -1994,6 +2204,7 @@ void AbstractLayerTest::updateInvalidSizes() {
             0u
         }),
         {}, {}, {},
+        {}, {},
         {}, {}
     );
     layer.update(
@@ -2009,6 +2220,7 @@ void AbstractLayerTest::updateInvalidSizes() {
             {}
         }),
         Containers::BitArrayView{nodesEnabled, 0, 2},
+        {}, {},
         {}, {}
     );
     layer.update(
@@ -2023,6 +2235,7 @@ void AbstractLayerTest::updateInvalidSizes() {
             {}
         }),
         Containers::BitArrayView{nodesEnabled, 0, 3},
+        {}, {},
         {}, {}
     );
     layer.update(
@@ -2037,30 +2250,69 @@ void AbstractLayerTest::updateInvalidSizes() {
         Containers::arrayView<Vector2>({
             {},
             {}
+        }),
+        {}, {}
+    );
+    layer.update(
+        LayerState::NeedsDataUpdate,
+        {}, {}, {},
+        {}, {}, {},
+        {}, {},
+        Containers::arrayView<Vector2>({
+            {},
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        })
+    );
+    layer.update(
+        LayerState::NeedsDataUpdate,
+        {}, {}, {},
+        {}, {}, {},
+        {}, {},
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {},
+            {}
         })
     );
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractLayer::update(): expected clip rect ID and data count views to have the same size but got 3 and 2\n"
         "Whee::AbstractLayer::update(): expected node offset, size and enabled views to have the same size but got 2, 3 and 2\n"
         "Whee::AbstractLayer::update(): expected node offset, size and enabled views to have the same size but got 2, 2 and 3\n"
-        "Whee::AbstractLayer::update(): expected clip rect offset and size views to have the same size but got 3 and 2\n",
+        "Whee::AbstractLayer::update(): expected clip rect offset and size views to have the same size but got 3 and 2\n"
+        "Whee::AbstractLayer::update(): expected composite rect offset and size views to have the same size but got 3 and 2\n"
+        "Whee::AbstractLayer::update(): compositing not supported but got 2 composite rects\n",
         TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::state() {
-    struct: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
+    auto&& data = StateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, _features{features} {}
+
         using AbstractLayer::create;
         using AbstractLayer::remove;
 
-        LayerFeatures doFeatures() const override { return {}; }
+        LayerFeatures doFeatures() const override { return _features; }
 
-        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             /* The doUpdate() should never get the NeedsAttachmentUpdate, only
                the NeedsNodeOrderUpdate that's a subset of it */
             CORRADE_VERIFY(!(state >= LayerState::NeedsAttachmentUpdate));
         }
-    } layer{layerHandle(0xab, 0x12)};
+
+        private:
+            LayerFeatures _features;
+    } layer{layerHandle(0xab, 0x12), data.features};
 
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
@@ -2069,11 +2321,18 @@ void AbstractLayerTest::state() {
     DataHandle data2 = layer.create();
     DataHandle data3 = layer.create();
     DataHandle data4 = layer.create();
-    DataHandle data5 = layer.create();
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* update() then resets it, if passed the same flag */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsNodeOrderUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsNodeOrderUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Creating an attached data sets more state flags */
+    DataHandle data5 = layer.create(nodeHandle(0, 0x123));
+    CORRADE_COMPARE(layer.state(), Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate|data.extraAttachState);
+
+    /* update() then resets it, if passed the same flag */
+    layer.update(Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate|data.extraAttachState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* No other way to trigger any of these flags */
@@ -2081,22 +2340,21 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
 
     /* update() then resets the subset that was passed */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate);
 
     /* update() again for the remaining */
-    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching to a node sets state flags */
     layer.attach(data2, nodeHandle(0, 0x123));
     layer.attach(data3, nodeHandle(0, 0x123));
     layer.attach(data4, nodeHandle(0, 0x123));
-    layer.attach(data5, nodeHandle(0, 0x123));
-    CORRADE_COMPARE(layer.state(), Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|data.extraAttachState);
 
     /* update() then resets them */
-    layer.update(Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|data.extraAttachState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Detaching sets a state flag as well. Also testing the other overload
@@ -2105,7 +2363,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets it */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching/detaching an already-attached/detached data does nothing */
@@ -2132,7 +2390,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets one */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
 
     /* cleanData() the other */
@@ -2144,7 +2402,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() and cleanData() then resets it */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.cleanData({});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
@@ -2163,17 +2421,21 @@ void AbstractLayerTest::composite() {
             return LayerFeature::Composite;
         }
 
-        void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes) override {
+        void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes, std::size_t offset, std::size_t count) override {
             ++called;
             CORRADE_COMPARE(renderer.framebufferSize(), (Vector2i{12, 34}));
             CORRADE_COMPARE_AS(rectOffsets, Containers::arrayView<Vector2>({
                 {1.0f, 2.0f},
-                {3.0f, 4.0f}
+                {3.0f, 4.0f},
+                {5.0f, 6.0f},
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(rectSizes, Containers::arrayView<Vector2>({
                 {0.1f, 0.2f},
-                {0.3f, 0.4f}
+                {0.3f, 0.4f},
+                {0.5f, 0.6f}
             }), TestSuite::Compare::Container);
+            CORRADE_COMPARE(offset, 1);
+            CORRADE_COMPARE(count, 2);
         }
 
         Int called = 0;
@@ -2192,12 +2454,15 @@ void AbstractLayerTest::composite() {
     layer.composite(renderer,
         Containers::arrayView<Vector2>({
             {1.0f, 2.0f},
-            {3.0f, 4.0f}
+            {3.0f, 4.0f},
+            {5.0f, 6.0f},
         }),
         Containers::arrayView<Vector2>({
-                {0.1f, 0.2f},
-                {0.3f, 0.4f}
-        })
+            {0.1f, 0.2f},
+            {0.3f, 0.4f},
+            {0.5f, 0.6f}
+        }),
+        1, 2
     );
     CORRADE_COMPARE(layer.called, 1);
 }
@@ -2210,7 +2475,7 @@ void AbstractLayerTest::compositeEmpty() {
             return LayerFeature::Composite;
         }
 
-        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, std::size_t, std::size_t) override {
             ++called;
         }
 
@@ -2224,7 +2489,7 @@ void AbstractLayerTest::compositeEmpty() {
     } renderer;
 
     /* It should call the implementation even with empty contents */
-    layer.composite(renderer, {}, {});
+    layer.composite(renderer, {}, {}, 0, 0);
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -2245,7 +2510,7 @@ void AbstractLayerTest::compositeNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.composite(renderer, {}, {});
+    layer.composite(renderer, {}, {}, 0, 0);
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::composite(): feature not supported\n");
 }
 
@@ -2268,7 +2533,7 @@ void AbstractLayerTest::compositeNotImplemented() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.composite(renderer, {}, {});
+    layer.composite(renderer, {}, {}, 0, 0);
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::composite(): feature advertised but not implemented\n");
 }
 
@@ -2300,9 +2565,36 @@ void AbstractLayerTest::compositeInvalidSizes() {
             {},
             {},
             {}
-        })
+        }),
+        0, 0
     );
-    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::composite(): expected rect offset and size views to have the same size but got 2 and 3\n");
+    layer.composite(renderer,
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        3, 0
+    );
+    layer.composite(renderer,
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        2, 1
+    );
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::composite(): expected rect offset and size views to have the same size but got 2 and 3\n"
+        "Whee::AbstractLayer::composite(): offset 3 and count 0 out of range for 2 items\n"
+        "Whee::AbstractLayer::composite(): offset 2 and count 1 out of range for 2 items\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::draw() {

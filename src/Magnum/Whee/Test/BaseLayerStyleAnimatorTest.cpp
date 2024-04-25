@@ -1112,7 +1112,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
 
     /* Advancing the first animation to 1/2, which sets just the uniform and
        optionally padding */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
     layer.advanceAnimations(10_nsec, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
@@ -1125,7 +1125,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
     /* Advancing both the first animation to 3/4 and second animation directly
        to the final style. It should thus set both the update and the style
        change. */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
     layer.advanceAnimations(15_nsec, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
@@ -1138,7 +1138,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
 
     /* Advancing the first animation to the end & the final style. Only the
        style data is updated, no uniforms or paddings. */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
     layer.advanceAnimations(20_nsec, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);

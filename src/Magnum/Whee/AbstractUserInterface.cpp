@@ -484,6 +484,9 @@ struct AbstractUserInterface::State {
 
     /* Set by setSize(), checked in update(), used for event scaling and
        passing to layers */
+    /** @todo remove offset once composite() gets real rects, only used to have
+        the same view passed to update() and composite() */
+    Vector2 offset{Math::ZeroInit};
     Vector2 size;
     Vector2 windowSize;
     Vector2i framebufferSize;
@@ -2761,6 +2764,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
     /* 14. Decide what all to update on all layers */
     LayerStates allLayerStateToUpdate;
+    LayerStates allCompositeLayerStateToUpdate;
     /** @todo might be worth to have a dedicated state bit for just the
         order, not sure if it's feasible to have a bit for just node offsets
         and sizes and not the visible mask due to the visibility depending on
@@ -2770,6 +2774,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
            superset of NeedsNodeClipUpdate */
         CORRADE_INTERNAL_ASSERT(states >= UserInterfaceState::NeedsNodeClipUpdate);
         allLayerStateToUpdate |= LayerState::NeedsNodeOffsetSizeUpdate;
+        allCompositeLayerStateToUpdate |= LayerState::NeedsCompositeOffsetSizeUpdate;
     }
     if(states >= UserInterfaceState::NeedsNodeClipUpdate)
         allLayerStateToUpdate |= LayerState::NeedsNodeOrderUpdate;
@@ -2802,8 +2807,11 @@ AbstractUserInterface& AbstractUserInterface::update() {
                NeedsDataUpdate and it wouldn't even get here. */
             AbstractLayer* const instance = layerItem.used.instance.get();
             LayerStates layerStateToUpdate = allLayerStateToUpdate;
-            if(instance)
+            if(instance) {
                 layerStateToUpdate |= instance->state();
+                if(layerItem.used.features >= LayerFeature::Composite)
+                    layerStateToUpdate |= allCompositeLayerStateToUpdate;
+            }
 
             /* If the layer has an instance (as layers may have been created
                but without instances set yet) and there's something to update,
@@ -2833,7 +2841,11 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 state.nodeSizes,
                 state.visibleEnabledNodeMask,
                 state.clipRectOffsets.prefix(state.clipRectCount),
-                state.clipRectSizes.prefix(state.clipRectCount));
+                state.clipRectSizes.prefix(state.clipRectCount),
+                layerItem.used.features >= LayerFeature::Composite ?
+                    Containers::stridedArrayView(&state.offset, 1) : nullptr,
+                layerItem.used.features >= LayerFeature::Composite ?
+                    Containers::stridedArrayView(&state.size, 1) : nullptr);
 
             layer = layerItem.used.next;
         } while(layer != state.firstLayer);
@@ -2907,8 +2919,8 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             renderer.transition(RendererTargetState::Composite, {});
             /** @todo calculate proper per-top-level-node offsets and sizes */
             instance.composite(renderer,
-                Containers::stridedArrayView({Vector2{}}),
-                Containers::stridedArrayView({state.size}));
+                {&state.offset, 1},
+                {&state.size, 1}, 0, 1);
         }
 
         /* Transition between draw states. If they're the same, it's a no-op in
