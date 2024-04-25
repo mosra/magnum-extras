@@ -484,9 +484,6 @@ struct AbstractUserInterface::State {
 
     /* Set by setSize(), checked in update(), used for event scaling and
        passing to layers */
-    /** @todo remove offset once composite() gets real rects, only used to have
-        the same view passed to update() and composite() */
-    Vector2 offset{Math::ZeroInit};
     Vector2 size;
     Vector2 windowSize;
     Vector2i framebufferSize;
@@ -541,10 +538,13 @@ struct AbstractUserInterface::State {
         somehow */
     Containers::BitArray layoutMasks;
     Containers::ArrayTuple dataStateStorage;
-    Containers::ArrayView<Containers::Pair<UnsignedInt, UnsignedInt>> dataToUpdateLayerOffsets;
+    /* Data offset, clip rect offset, composite rect offset */
+    Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> dataToUpdateLayerOffsets;
     Containers::ArrayView<UnsignedInt> dataToUpdateIds;
     Containers::ArrayView<UnsignedInt> dataToUpdateClipRectIds;
     Containers::ArrayView<UnsignedInt> dataToUpdateClipRectDataCounts;
+    Containers::ArrayView<Vector2> dataToUpdateCompositeRectOffsets;
+    Containers::ArrayView<Vector2> dataToUpdateCompositeRectSizes;
     Containers::ArrayView<UnsignedByte> dataToDrawLayerIds;
     Containers::ArrayView<UnsignedInt> dataToDrawOffsets;
     Containers::ArrayView<UnsignedInt> dataToDrawSizes;
@@ -2572,6 +2572,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 ++visibleTopLevelNodeCount;
         }
         UnsignedInt drawLayerCount = 0;
+        std::size_t compositingDataCount = 0;
         for(const Layer& layer: state.layers) {
             /* This assumes that freed layers (or recycled layers without any
                instance set yet) have the features cleared to an empty set
@@ -2579,6 +2580,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                an instance as well. */
             if(layer.used.features & LayerFeature::Draw)
                 ++drawLayerCount;
+            if(layer.used.features & LayerFeature::Composite)
+                compositingDataCount += layer.used.instance->capacity();
         }
 
         /* Make a resident allocation for all data-related state */
@@ -2593,6 +2596,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                visible node count elements. */
             {NoInit, state.visibleNodeIds.size()*state.layers.size(), state.dataToUpdateClipRectIds},
             {NoInit, state.visibleNodeIds.size()*state.layers.size(), state.dataToUpdateClipRectDataCounts},
+            {NoInit, compositingDataCount, state.dataToUpdateCompositeRectOffsets},
+            {NoInit, compositingDataCount, state.dataToUpdateCompositeRectSizes},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawLayerIds},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawOffsets},
             {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawSizes},
@@ -2603,7 +2608,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, dataCount, state.visibleNodeEventData},
         };
 
-        state.dataToUpdateLayerOffsets[0] = {0, 0};
+        state.dataToUpdateLayerOffsets[0] = {0, 0, 0};
         if(state.firstLayer != LayerHandle::Null) {
             /* 10. Go through the layer draw order and order data of each layer
                that are assigned to visible nodes into a contiguous range,
@@ -2629,6 +2634,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                hierarchy order from above. */
             UnsignedInt offset = 0;
             UnsignedInt clipRectOffset = 0;
+            UnsignedInt compositeRectOffset = 0;
             for(UnsignedInt i = 0; i != state.layers.size(); ++i) {
                 const Layer& layerItem = state.layers[i];
 
@@ -2674,8 +2680,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         isDrawingAnything ? stridedArrayView(state.dataToDrawClipRectSizes)
                             .exceptPrefix(drawLayerOrder[i])
                             .every(drawLayerCount) : nullptr);
-                    offset = out.first();
-                    clipRectOffset = out.second();
+                    const UnsignedInt nextOffset = out.first();
+                    const UnsignedInt nextClipRectOffset = out.second();
 
                     /* If the layer has LayerFeature::Draw, increment to the
                        next interleaved position for the next. Also save the
@@ -2696,9 +2702,33 @@ AbstractUserInterface& AbstractUserInterface::update() {
                             instance->nodes(),
                             state.visibleNodeEventDataOffsets,
                             state.visibleEventNodeMask);
+
+                    /* If the layer has LayerFeature::Composite, calculate
+                       rects for compositing */
+                    if(layerItem.used.features >= LayerFeature::Composite) {
+                        Implementation::compositeRectsInto(
+                            /** @todo might be useful to make the offset
+                                configurable as well, likewise in the
+                                cullVisibleNodesInto() call above */
+                            {}, state.size,
+                            state.dataToUpdateIds.slice(offset, nextOffset),
+                            state.dataToUpdateClipRectIds.slice(clipRectOffset, nextClipRectOffset),
+                            state.dataToUpdateClipRectDataCounts.slice(clipRectOffset, nextClipRectOffset),
+                            instance->nodes(),
+                            state.absoluteNodeOffsets,
+                            state.nodeSizes,
+                            state.clipRectOffsets.prefix(state.clipRectCount),
+                            state.clipRectSizes.prefix(state.clipRectCount),
+                            state.dataToUpdateCompositeRectOffsets.sliceSize(compositeRectOffset, nextOffset - offset),
+                            state.dataToUpdateCompositeRectSizes.sliceSize(compositeRectOffset, nextOffset - offset));
+                        compositeRectOffset += nextOffset - offset;
+                    }
+
+                    offset = nextOffset;
+                    clipRectOffset = nextClipRectOffset;
                 }
 
-                state.dataToUpdateLayerOffsets[i + 1] = {offset, clipRectOffset};
+                state.dataToUpdateLayerOffsets[i + 1] = {offset, clipRectOffset, compositeRectOffset};
             }
 
             /* 11. Take the count of event data per visible node, turn that
@@ -2842,10 +2872,12 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 state.visibleEnabledNodeMask,
                 state.clipRectOffsets.prefix(state.clipRectCount),
                 state.clipRectSizes.prefix(state.clipRectCount),
-                layerItem.used.features >= LayerFeature::Composite ?
-                    Containers::stridedArrayView(&state.offset, 1) : nullptr,
-                layerItem.used.features >= LayerFeature::Composite ?
-                    Containers::stridedArrayView(&state.size, 1) : nullptr);
+                state.dataToUpdateCompositeRectOffsets.slice(
+                    state.dataToUpdateLayerOffsets[layerId].third(),
+                    state.dataToUpdateLayerOffsets[layerId + 1].third()),
+                state.dataToUpdateCompositeRectSizes.slice(
+                    state.dataToUpdateLayerOffsets[layerId].third(),
+                    state.dataToUpdateLayerOffsets[layerId + 1].third()));
 
             layer = layerItem.used.next;
         } while(layer != state.firstLayer);
@@ -2917,10 +2949,19 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             well or something */
         if(features >= LayerFeature::Composite) {
             renderer.transition(RendererTargetState::Composite, {});
-            /** @todo calculate proper per-top-level-node offsets and sizes */
+
             instance.composite(renderer,
-                {&state.offset, 1},
-                {&state.size, 1}, 0, 1);
+                /* The views should be exactly the same as passed to update()
+                   before ... */
+                state.dataToUpdateCompositeRectOffsets.slice(
+                    state.dataToUpdateLayerOffsets[layerId].third(),
+                    state.dataToUpdateLayerOffsets[layerId + 1].third()),
+                state.dataToUpdateCompositeRectSizes.slice(
+                    state.dataToUpdateLayerOffsets[layerId].third(),
+                    state.dataToUpdateLayerOffsets[layerId + 1].third()),
+                /* ... and the offset then being relative to those */
+                state.dataToDrawOffsets[i] - state.dataToUpdateLayerOffsets[layerId].first(),
+                state.dataToDrawSizes[i]);
         }
 
         /* Transition between draw states. If they're the same, it's a no-op in

@@ -1014,6 +1014,63 @@ UnsignedInt compactDrawsInPlace(const Containers::StridedArrayView1D<UnsignedByt
     return offset;
 }
 
+/* Calculates compositing rectangles for all nodes referenced by drawn data,
+   intersecting them with corresponding clip rectangles. The `dataIds` and
+   `compositeRectOffsets` + `compositeRectSizes` views are are meant to be the
+   same that's passed to `update()` but sliced to `offset` + `count` for a
+   particular draw; the `clipRectIds` + `clipRectDataCounts` then
+   similarly the views that are passed to `update()` but sliced to
+   `clipRectOffset` + `clipRectCount` for a particular draw. */
+void compositeRectsInto(const Vector2& uiOffset, const Vector2& uiSize, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<Vector2>& compositeRectSizes) {
+    CORRADE_INTERNAL_ASSERT(
+        clipRectDataCounts.size() == clipRectIds.size() &&
+        nodeSizes.size() == nodeOffsets.size() &&
+        clipRectOffsets.size() == clipRectSizes.size() &&
+        compositeRectOffsets.size() == dataIds.size() &&
+        compositeRectSizes.size() == dataIds.size());
+
+    /** @todo handle the case of multiple data per the same node, which means
+        filling less than `dataIds.size()` rects and returning the size, then
+        the internals have to keep some running offset for slicing into
+        doComposite(), can't reuse the doDraw() running offset anymore */
+
+    std::size_t dataOffset = 0;
+    for(std::size_t i = 0; i != clipRectIds.size(); ++i) {
+        const UnsignedInt clipRectId = clipRectIds[i];
+        const Vector2 clipRectSize = clipRectSizes[clipRectId];
+
+        Vector2 clipRectMin{NoInit}, clipRectMax{NoInit};
+        if(clipRectSize.isZero()) {
+            clipRectMin = uiOffset;
+            clipRectMax = uiOffset + uiSize;
+        } else {
+            clipRectMin = clipRectOffsets[clipRectId];
+            clipRectMax = clipRectMin + clipRectSize;
+            /* The clip rects should already include the UI size at this
+               point, as done by cullVisibleNodesInto() */
+            CORRADE_INTERNAL_DEBUG_ASSERT((clipRectMin >= uiOffset).all() &&
+                                          (clipRectMax <= uiOffset + uiSize).all());
+        }
+
+        const std::size_t clipRectDataCount = clipRectDataCounts[i];
+        for(std::size_t j = 0; j != clipRectDataCount; ++j) {
+            const NodeHandle node = dataNodes[dataIds[dataOffset + j]];
+            const UnsignedInt nodeId = nodeHandleId(node);
+            CORRADE_INTERNAL_DEBUG_ASSERT(node != NodeHandle::Null);
+
+            const Vector2 nodeMin = nodeOffsets[nodeId];
+            const Vector2 nodeMax = nodeMin + nodeSizes[nodeId];
+            const Vector2 compositingRectMin = Math::max(nodeMin, clipRectMin);
+            const Vector2 compositingRectMax = Math::min(nodeMax, clipRectMax);
+            compositeRectOffsets[dataOffset + j] = compositingRectMin;
+            compositeRectSizes[dataOffset + j] = compositingRectMax - compositingRectMin;
+        }
+
+        dataOffset += clipRectDataCount;
+    }
+    CORRADE_INTERNAL_ASSERT(dataOffset == dataIds.size());
+}
+
 /* Query a list of animators partitioned into the following groups:
    - Animators with no NodeAttachment
    - Animators with NodeAttachment

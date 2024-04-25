@@ -5890,7 +5890,7 @@ void AbstractUserInterfaceTest::state() {
 
     /* Calling update() rebuilds internal state, calls doUpdate() on the layer,
        and resets the flag. Since nothing is attached, there are no IDs to
-       draw. It doesn't call the layouters either. */
+       draw and no rects to composite. It doesn't call the layouters either. */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
@@ -5911,9 +5911,6 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
-        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {100.0f, 100.0f}}
-        };
         /* Nothing is attached to any nodes, so it's just the data alone being
            updated */
         ui.layer<Layer>(layer).expectedState = LayerState::NeedsDataUpdate;
@@ -5923,7 +5920,7 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = {};
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
         if(data.compositingLayer)
-            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = {};
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -6116,7 +6113,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {100.0f, 100.0f}}
+            {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* matching node */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* matching nested1 */
+            {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* matching nested2 */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Data were updated in the previous call, so it's now just the
            node-related state */
@@ -6245,7 +6245,8 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {4.0f, 5.0f}}
+            {{2.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node, clipped */
+            {{3.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
         };
         /* Updating the UI size caused some nodes to be invisible now, meaning
            an update of node order is triggered. It's however also node enabled
@@ -6347,7 +6348,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* matching node */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* matching nested1 */
+            {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* matching nested2 */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Updating the UI size again caused some previously-invisible nodes to
            be visible again, meaning an update of node order and enabled state
@@ -6439,7 +6443,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* matching node */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* matching nested1 */
+            {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* matching nested2 */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Just a common data update was requested, which is done now */
         ui.layer<Layer>(layer).expectedState = LayerState::NeedsCommonDataUpdate;
@@ -6605,7 +6612,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{2.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{3.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Updating node size means offsets/sizes have to be changed, and the
            order + enabled state as well, as the set of visible nodes may be
@@ -6775,7 +6784,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Updating node size agains means offsets/sizes + order + enabled
            has to be updated now */
@@ -6923,7 +6934,7 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Updating node hidden flags means order has to be changed due to
            potentially different set of nodes being visible (and also enabled),
@@ -7084,7 +7095,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Updating node hidden flags again means order has to be changed due
            to potentially different set of nodes being visible (and enabled),
@@ -7180,7 +7193,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Toggling a node Disabled flag means enabled state has to be updated,
            however due to the coarseness of UserInterfaceState bits it's
@@ -7283,7 +7298,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Toggling a node NoEvents flag causes the same as Disabled due to the
            coarseness of UserInterfaceState bits */
@@ -7375,7 +7392,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Toggling a node NoEvents flag back causes the same as Disabled due
            to the coarseness of UserInterfaceState bits */
@@ -7475,7 +7494,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* matching nested1 */
+            {{5.0f, 3.0f}, {1.0f, 2.0f}}, /* matching nested2 */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Toggling a node Clip flag causes the set of visible nodes to be
            changed, which also affects the set of enabled nodes */
@@ -7567,7 +7589,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
         };
         /* Toggling a node Clip flag again causes the set of visible nodes to
            be changed, which also affects the set of enabled nodes */
@@ -7683,7 +7707,8 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
         };
         /* Removing a node from the top-level order means just the set of drawn
            nodes (and thus also enabled state) being updated, but offset/size
@@ -7845,7 +7870,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
         };
         /* Putting a node back to the top-level order triggers offset/size
            update in addition to just the order + enabled */
@@ -7965,7 +7992,9 @@ void AbstractUserInterfaceTest::state() {
                 {{}, {}},
             };
             Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-                {{}, {165.0f, 156.0f}}
+                {{3.0f, 0.0f}, {0.5f, 2.0f}}, /* matching another1 */
+                {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+                {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
             };
             /* Layout change means offset/size update, which may affect the set
                of visible nodes and thus also the enabled state */
@@ -8157,7 +8186,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            data.layouters ?              /* matching another1 */
+                Containers::Pair<Vector2, Vector2>{{3.0f, 0.0f}, {0.5f, 2.0f}} :
+                Containers::Pair<Vector2, Vector2>{{5.0f, 0.0f}, {1.0f, 2.0f}},
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
         };
         bool expectedNodesEnabled[]{
             /* Again all enabled except invisible, notInOrder and nested2 */
@@ -8381,7 +8413,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-            {{}, {165.0f, 156.0f}}
+            data.layouters ?              /* matching another1 */
+                Containers::Pair<Vector2, Vector2>{{3.0f, 0.0f}, {0.5f, 2.0f}} :
+                Containers::Pair<Vector2, Vector2>{{5.0f, 0.0f}, {1.0f, 2.0f}},
         };
         /* Removing a node causes just node order and enabled state to get
            updated, however again with the coarseness of UserInterfaceState
@@ -8510,7 +8544,7 @@ void AbstractUserInterfaceTest::state() {
                 {{}, {}}
             };
             Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
-                {{}, {165.0f, 156.0f}}
+                {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* matching another1 */
             };
             /* Removing a layouter means node offsets/sizes can change but also
                the set of visible nodes and enabled state */
@@ -9847,32 +9881,14 @@ void AbstractUserInterfaceTest::drawComposite() {
         void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             CORRADE_ITERATION(handle());
             ++updateCallCount;
-            if(expectedCompositeOffsetsSizes.isEmpty()) {
-                CORRADE_COMPARE_AS(compositeRectOffsets,
-                    Containers::ArrayView<Vector2>{},
-                    TestSuite::Compare::Container);
-                CORRADE_COMPARE_AS(compositeRectSizes,
-                    Containers::ArrayView<Vector2>{},
-                    TestSuite::Compare::Container);
-            } else {
-                {
-                    CORRADE_EXPECT_FAIL("Currently the whole framebuffer is being composited");
-                    CORRADE_COMPARE_AS(compositeRectOffsets,
-                        expectedCompositeOffsetsSizes
-                            .slice(&Containers::Pair<Vector2, Vector2>::first),
-                        TestSuite::Compare::Container);
-                    CORRADE_COMPARE_AS(compositeRectSizes,
-                        expectedCompositeOffsetsSizes
-                            .slice(&Containers::Pair<Vector2, Vector2>::second),
-                        TestSuite::Compare::Container);
-                }
-                CORRADE_COMPARE_AS(compositeRectOffsets, Containers::arrayView({
-                    Vector2{}
-                }), TestSuite::Compare::Container);
-                CORRADE_COMPARE_AS(compositeRectSizes, Containers::arrayView({
-                    Vector2{200.0f, 300.0f}
-                }), TestSuite::Compare::Container);
-            }
+            CORRADE_COMPARE_AS(compositeRectOffsets,
+                expectedCompositeOffsetsSizes
+                    .slice(&Containers::Pair<Vector2, Vector2>::first),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectSizes,
+                expectedCompositeOffsetsSizes
+                    .slice(&Containers::Pair<Vector2, Vector2>::second),
+                TestSuite::Compare::Container);
             actualCompositeRectOffsets = compositeRectOffsets;
             actualCompositeRectSizes = compositeRectSizes;
         }
@@ -9886,9 +9902,6 @@ void AbstractUserInterfaceTest::drawComposite() {
 
             CORRADE_VERIFY(features & LayerFeature::Composite);
             CORRADE_COMPARE(renderer.framebufferSize(), (Vector2i{400, 500}));
-            /* Currently the whole framebuffer is being composited */
-            CORRADE_COMPARE(offset, 0);
-            CORRADE_COMPARE(count, 1);
 
             CORRADE_COMPARE(compositeRectOffsets.data(), actualCompositeRectOffsets.data());
             CORRADE_COMPARE(compositeRectOffsets.size(), actualCompositeRectOffsets.size());
@@ -9897,7 +9910,7 @@ void AbstractUserInterfaceTest::drawComposite() {
             CORRADE_COMPARE(compositeRectSizes.size(), actualCompositeRectSizes.size());
             CORRADE_COMPARE(compositeRectSizes.stride(), actualCompositeRectSizes.stride());
 
-            arrayAppend(*compositeDrawCalls, InPlaceInit, handle(), Composite, Containers::Pair<std::size_t, std::size_t>{});
+            arrayAppend(*compositeDrawCalls, InPlaceInit, handle(), Composite, Containers::pair(offset, count));
         }
 
         void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
@@ -9955,6 +9968,7 @@ void AbstractUserInterfaceTest::drawComposite() {
     DataHandle node2Data1Composited = layer1Compositing.create(node2CompositedClipped);
     DataHandle node2Data2Composited = layer3Compositing.create(node2CompositedClipped);
     DataHandle node2Data3Composited = layer1Compositing.create(node2CompositedClipped);
+    DataHandle node2Data4Composited = layer1Compositing.create(node2CompositedClipping);
 
     /* Third top-level node, this draw should not be preceded by any composite
        call */
@@ -9967,6 +9981,8 @@ void AbstractUserInterfaceTest::drawComposite() {
     DataHandle node4DataComposited = layer1Compositing.create(topLevelNode4);
 
     UnsignedInt expectedLayer1DataIds[]{
+        dataHandleId(node2Data4Composited), /* First because it's assigned to
+                                               parent node of the rest */
         dataHandleId(node2Data1Composited),
         dataHandleId(node2Data3Composited),
         dataHandleId(node4DataComposited),
@@ -9980,19 +9996,27 @@ void AbstractUserInterfaceTest::drawComposite() {
         dataHandleId(node2Data2Composited),
     };
     Containers::Pair<Vector2, Vector2> expectedLayer1CompositeOffsetsSizes[]{
-        /* Second top-level node, expanded to cover all sub-nodes but also
-           considering the clipping */
-        {{100, 150}, {25, 35}},
-        /* Fourth top-level node, nothing special */
+        /* Second top-level node, clipped. First child is the clip rect
+           itself. */
+        {{105, 155}, {20, 30}},
+        /* Second child twice because two data from this layer are assigned to
+           it. The clip rect is {105, 155} to {125, 185} (while the parent is
+           just to {120, 170}) and the node is {115, 175} to {515, 875}. */
+        /** @todo the duplicates should be prunned when calculating the
+            rects */
+        {{115, 175}, {10, 10}},
+        {{115, 175}, {10, 10}},
+        /* Fourth top-level node -- same offset + size as the node itself */
         {{20, 150}, {30, 20}}
     };
     /* Layer 2 is not compositing */
     Containers::Pair<Vector2, Vector2> expectedLayer3CompositeOffsetsSizes[]{
-        /* First top-level node, expanded to cover all (non-clipping)
-           sub-nodes */
-        {{20, 20}, {60, 70}},
-        /* Third top-level node, nothing special */
-        {{100, 30}, {40, 60}}
+        /* First top-level node. The clip rect is {50, 20} to {90, 50}, and the
+           data is assigned directly to the node containing it. */
+        {{50, 20}, {40, 30}},
+        /* Second top-level node, same as in the case above, just data from a
+           different layer */
+        {{115, 175}, {10, 10}},
     };
 
     layer1Compositing.expectedDataIds = expectedLayer1DataIds;
@@ -10017,23 +10041,26 @@ void AbstractUserInterfaceTest::drawComposite() {
             Containers::Pair<std::size_t, std::size_t>>>({
         /* First top-level node, non-composited data and then composited */
         {layer2.handle(), Draw, {0, 1}},
-        {layer3Compositing.handle(), Composite, {}},
+        /* The composite right now uses a range of rectangles that matches the
+           range of data passed to draw. No deduplication or overlap handling
+           anywhere so far. */
+        {layer3Compositing.handle(), Composite, {0, 1}},
         {layer3Compositing.handle(), Draw, {0, 1}},
         /* Second top-level node, a composition with two data and then a
            composition with one data */
         /** @todo this composition could be merged with the above when
             non-overlapping top-level node draw merging is implemented */
-        {layer1Compositing.handle(), Composite, {}},
-        {layer1Compositing.handle(), Draw, {0, 2}},
-        {layer3Compositing.handle(), Composite, {}},
+        {layer1Compositing.handle(), Composite, {0, 3}},
+        {layer1Compositing.handle(), Draw, {0, 3}},
+        {layer3Compositing.handle(), Composite, {1, 1}},
         {layer3Compositing.handle(), Draw, {1, 1}},
         /* Third top-level node, just a draw */
         {layer2.handle(), Draw, {1, 1}},
         /* Fourth top-level node, composite and draw that has to happen in
            isolation because of the other top-level node in between */
         /** @todo or does it? if non-overlapping it also doesn't have to */
-        {layer1Compositing.handle(), Composite, {}},
-        {layer1Compositing.handle(), Draw, {2, 1}},
+        {layer1Compositing.handle(), Composite, {3, 1}},
+        {layer1Compositing.handle(), Draw, {3, 1}},
     })), TestSuite::Compare::Container);
 }
 
