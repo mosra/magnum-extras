@@ -261,6 +261,24 @@ enum class LayerState: UnsignedShort {
     NeedsAttachmentUpdate = NeedsNodeOrderUpdate|(1 << 6),
 
     /**
+     * @ref AbstractLayer::update() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to recalculate
+     * and reupload compositing-related data after node sizes and offsets
+     * changed. Set on layers that advertise @ref LayerFeature::Composite
+     * implicitly after every @ref AbstractLayer::create() with a non-null
+     * @ref NodeHandle and after every @ref AbstractLayer::attach() call that
+     * attaches data to a different non-null @ref NodeHandle. Is reset next
+     * time @ref AbstractLayer::update() is called with this flag present.
+     *
+     * Besides being present in @ref AbstractLayer::state() gets passed to
+     * @ref AbstractLayer::update() when
+     * @ref UserInterfaceState::NeedsLayoutUpdate or anything that implies it
+     * is set on the user interface and the layer advertises
+     * @ref LayerFeature::Composite.
+     */
+    NeedsCompositeOffsetSizeUpdate = 1 << 7,
+
+    /**
      * @ref AbstractLayer::cleanData() (which is called from
      * @ref AbstractUserInterface::clean()) needs to be called to prune
      * animations attached to removed data. Set implicitly after every
@@ -270,7 +288,7 @@ enum class LayerState: UnsignedShort {
      * If set on a layer, causes @ref UserInterfaceState::NeedsDataClean
      * to be set on the user interface.
      */
-    NeedsDataClean = 1 << 7
+    NeedsDataClean = 1 << 8
 };
 
 /**
@@ -564,12 +582,17 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @relativeref{LayerState,NeedsDataUpdate},
          * @relativeref{LayerState,NeedsCommonDataUpdate},
          * @relativeref{LayerState,NeedsSharedDataUpdate} and
-         * @relativeref{LayerState,NeedsAttachmentUpdate}, that the
-         * @p clipRectIds and @p clipRectDataCounts views have the same size,
-         * @p nodeOffsets and @p nodeSizes have the same size and
-         * @p clipRectOffsets and @p clipRectOffset have the same size. The
-         * @p nodeOffsets, @p nodeSizes and @p nodesEnabled views should be
-         * large enough to contain any valid node ID. Delegates to
+         * @relativeref{LayerState,NeedsAttachmentUpdate}, and
+         * @relativeref{LayerState,NeedsCompositeOffsetSizeUpdate} if the layer
+         * advertises @ref LayerFeature::Composite, that the @p clipRectIds and
+         * @p clipRectDataCounts views have the same size, @p nodeOffsets and
+         * @p nodeSizes have the same size, @p clipRectOffsets and
+         * @p clipRectOffset have the same size and @p compositeRectOffsets and
+         * @p compositeRectSizes have the same size. If
+         * @ref LayerFeature::Composite isn't supported,
+         * @p compositeRectOffsets and @p compositeRectSizes are expected to
+         * be empty. The @p nodeOffsets, @p nodeSizes and @p nodesEnabled views
+         * should be large enough to contain any valid node ID. Delegates to
          * @ref doUpdate(), see its documentation for more information about
          * the arguments.
          *
@@ -578,7 +601,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref state() --- it performs the update only based on what's passed
          * in @p state.
          */
-        void update(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        void update(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes);
 
         /**
          * @brief Composite previously rendered contents
@@ -586,13 +609,13 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Used internally from @ref AbstractUserInterface::draw(). Exposed
          * just for testing purposes, there should be no need to call this
          * function directly. Expects that the layer supports
-         * @ref LayerFeature::Composite and that the @p rectOffsets and
-         * @p rectSizes views have the same size. Delegates to
-         * @ref doComposite(), see its documentation for more information about
-         * the arguments.
+         * @ref LayerFeature::Composite, that the @p rectOffsets and
+         * @p rectSizes views have the same size and that @p offset and
+         * @p count fits into their size. Delegates to @ref doComposite(), see
+         * its documentation for more information about the arguments.
          * @see @ref features()
          */
-        void composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes);
+        void composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes, std::size_t offset, std::size_t count);
 
         /**
          * @brief Draw a sub-range of visible layer data
@@ -986,6 +1009,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *      @p clipRectIds
          * @param clipRectSizes     Clip rect sizes referenced by
          *      @p clipRectIds
+         * @param compositeRectOffsets  Offsets of framebuffer rectangles to
+         *      composite
+         * @param compositeRectSizes  Sizes of framebuffer rectangles to
+         *      composite
          *
          * Implementation for @ref update(), which is called from
          * @ref AbstractUserInterface::update() whenever
@@ -1038,42 +1065,56 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * whether it clips the actual data directly or whether it performs
          * clipping at draw time.
          *
+         * The @p compositeRectOffsets and @p compositeRectOffsets have the
+         * same size and define rectangles to be used by compositing
+         * operations, i.e. intersections of node rectangles with corresponding
+         * clip rectangles. If the layer doesn't advertise
+         * @ref LayerFeature::Composite, the views are empty.
+         *
          * This function may get also called with @p dataIds being empty, for
          * example when @ref setNeedsUpdate() was called but the layer doesn't
          * have any data currently visible.
          *
          * Default implementation does nothing. Data passed to this function
-         * are subsequently passed to @ref doDraw() calls as well, the only
-         * difference is that @ref doUpdate() gets called just once with all
-         * data to update, while @ref doDraw() is called several times with
-         * different sub-ranges of the data based on desired draw order.
+         * are subsequently passed to @ref doComposite() / @ref doDraw() calls
+         * as well, the only difference is that @ref doUpdate() gets called
+         * just once with all data to update, while @ref doComposite() /
+         * @ref doDraw() is called several times with different sub-ranges of
+         * the data based on desired draw order.
          */
-        virtual void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        virtual void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes);
 
         /**
          * @brief Composite previously rendered contents
          * @param renderer          Renderer instance containing the previously
          *      rendered contents
-         * @param rectOffsets       Offsets of framebuffer rectangles to
-         *      composite
-         * @param rectSizes         Sizes of framebuffer rectangles to
-         *      composite
+         * @param compositeRectOffsets  Offsets of framebuffer rectangles to
+         *      composite. Same as the view passed to @ref doUpdate() earlier.
+         * @param compositeRectSizes  Sizes of framebuffer rectangles to
+         *      composite. Same as the view passed to @ref doUpdate() earlier.
+         * @param offset            Offset into @p compositeRectOffsets and
+         *      @p compositeRectSizes
+         * @param count             Count of @p compositeRectOffsets and
+         *      @p compositeRectSizes to composite
          *
          * Implementation for @ref composite(), which is called from
          * @ref AbstractUserInterface::draw(). Called only if
          * @ref LayerFeature::Composite is supported, it's guaranteed that
-         * @ref doUpdate() was called at some point before this function, and
-         * that this function is called after drawing contents of all layers
-         * earlier in the top-level node and layer draw order. It's guaranteed
-         * that @ref doDraw() will get called after this function.
+         * @ref doUpdate() was called at some point before this function with
+         * the exact same views passed to @p compositeRectOffsets and
+         * @p compositeRectSizes, see its documentation for their relations and
+         * constraints. This function is called after drawing contents of all
+         * layers earlier in the top-level node and layer draw order. It's
+         * guaranteed that @ref doDraw() will get called after this function.
          *
-         * The @p rectOffsets and @p rectSizes views contain rectangles that
-         * correspond to the layer data and can be used to restrict the
-         * compositing operation to only the area that's actually subsequently
-         * drawn. The views have the same size and are guaranteed to contain at
-         * least one rectangle and be mutually non-overlapping.
+         * This function usually gets called several times with the same views
+         * but different @p offset and @p count. The range of
+         * @p compositeRectOffsets and @p compositeRectSizes views defined by
+         * @p offset and @p count contains rectangles that correspond to the
+         * layer data and can be used to restrict the compositing operation to
+         * only the area that's actually subsequently drawn.)
          */
-        virtual void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes);
+        virtual void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes, std::size_t offset, std::size_t count);
 
         /**
          * @brief Draw a sub-range of visible layer data

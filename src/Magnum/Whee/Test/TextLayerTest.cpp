@@ -2737,7 +2737,7 @@ void TextLayerTest::setColor() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a color marks the layer as dirty */
@@ -2746,7 +2746,7 @@ void TextLayerTest::setColor() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
@@ -2805,7 +2805,7 @@ void TextLayerTest::setPadding() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a padding marks the layer as dirty */
@@ -2814,7 +2814,7 @@ void TextLayerTest::setPadding() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
@@ -2823,7 +2823,7 @@ void TextLayerTest::setPadding() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Single-value padding */
@@ -2832,7 +2832,7 @@ void TextLayerTest::setPadding() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
@@ -3346,7 +3346,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
-        layer.update(data.states, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+        layer.update(data.states, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
         CORRADE_VERIFY(data.expectIndexDataUpdated);
         CORRADE_COMPARE_AS(layer.stateData().indices,
             Containers::ArrayView<const UnsignedInt>{},
@@ -3360,7 +3360,7 @@ void TextLayerTest::updateCleanDataOrder() {
     /* Just the filled subset is getting updated, and just what was selected in
        states */
     UnsignedInt dataIds[]{9, 5, 7, 3};
-    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     if(data.expectIndexDataUpdated) {
         /* The indices should be filled just for the four items */
@@ -3577,7 +3577,7 @@ void TextLayerTest::updateCleanDataOrder() {
        glyph run recompaction, thus we also don't branch on
        data.expectIndexDataUpdated / data.expectVertexDataUpdated anymore */
     UnsignedInt dataIdsPostClean[]{9, 7};
-    layer.update(data.states|LayerState::NeedsDataUpdate, dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(data.states|LayerState::NeedsDataUpdate, dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     /* There should be just 9 glyph runs, assigned to the remaining 9 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -3690,7 +3690,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Again this explicitly adds NeedsDataUpdate to force recompaction */
     UnsignedInt dataIdsPostRemoval[]{9};
-    layer.update(data.states|LayerState::NeedsDataUpdate, dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(data.states|LayerState::NeedsDataUpdate, dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     /* There should be just 7 glyph runs, assigned to the remaining 7 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -3855,7 +3855,7 @@ void TextLayerTest::updateAlignment() {
     nodeOffsets[3] = {50.5f, 20.5f};
     nodeSizes[3] = {200.8f, 100.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     /* 2--3
        |  |
@@ -3936,7 +3936,7 @@ void TextLayerTest::updateAlignmentGlyph() {
     nodeOffsets[3] = {50.5f, 20.5f};
     nodeSizes[3] = {200.8f, 100.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     /* 2--3
        |  |
@@ -4046,7 +4046,7 @@ void TextLayerTest::updatePadding() {
     nodeOffsets[3] = {20.5f, 10.5f};
     nodeSizes[3] = {300.8f, 150.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     /* 2--3
        |  |
@@ -4128,7 +4128,7 @@ void TextLayerTest::updatePaddingGlyph() {
     nodeOffsets[3] = {20.5f, 10.5f};
     nodeSizes[3] = {300.8f, 150.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     /* 2--3
        |  |
@@ -4163,7 +4163,7 @@ void TextLayerTest::updateNoStyleSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::TextLayer::update(): no style data was set\n");
 }
 
@@ -4205,13 +4205,13 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
 
     /* Updating one doesn't cause the flag to be reset on others */
-    layer2.update(LayerState::NeedsDataUpdate|data.extraState, {}, {}, {}, {}, {}, {}, {}, {});
+    layer2.update(LayerState::NeedsDataUpdate|data.extraState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
     CORRADE_COMPARE(layer2.state(), LayerStates{});
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
 
     /* Updating another still doesn't */
-    layer1.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer1.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsCommonDataUpdate);
     CORRADE_COMPARE(layer2.state(), LayerStates{});
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
@@ -4247,7 +4247,7 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate|data.extraState);
 
     /* Updating again resets just one */
-    layer3.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    layer3.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
     CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsSharedDataUpdate);
