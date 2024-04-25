@@ -238,6 +238,7 @@ const struct {
 
 const struct {
     const char* name;
+    bool compositingLayer;
     bool layouters;
     bool nodeAttachmentAnimators;
     bool dataAttachmentAnimators;
@@ -246,41 +247,45 @@ const struct {
     bool noOp;
 } StateData[]{
     {"",
-        false, false, false, true, true, false},
+        false, false, false, false, true, true, false},
     {"with no-op calls",
-        false, false, false, true, true, true},
+        false, false, false, false, true, true, true},
     {"with implicit clean",
-        false, false, false, false, true, false},
+        false, false, false, false, false, true, false},
     {"with implicit clean and no-op calls",
-        false, false, false, false, true, true},
+        false, false, false, false, false, true, true},
     {"with implicit clean and renderer update",
-        false, false, false, false, false, false},
+        false, false, false, false, false, false, false},
     {"with layouters",
-        true, false, false, true, true, false},
+        false, true, false, false, true, true, false},
     {"with layouters, with no-op calls",
-        true, false, false, true, true, true},
+        false, true, false, false, true, true, true},
     {"with layouters, with implicit clean",
-        true, false, false, false, true, false},
+        false, true, false, false, false, true, false},
     {"with layouters, with implicit clean and no-op calls",
-        true, false, false, false, true, true},
+        false, true, false, false, false, true, true},
     {"with layouters, with implicit clean and renderer update",
-        true, false, false, false, false, false},
+        false, true, false, false, false, false, false},
     {"with node attachment animators",
-        false, true, false, true, true, false},
+        false, false, true, false, true, true, false},
     {"with node attachment animators, with no-op calls",
-        false, true, false, true, true, true},
+        false, false, true, false, true, true, true},
     {"with node attachment animators, with implicit clean",
-        false, true, false, false, true, false},
+        false, false, true, false, false, true, false},
     {"with node attachment animators, with implicit clean and no-op calls",
-        false, true, false, false, true, true},
+        false, false, true, false, false, true, true},
     {"with data attachment animators",
-        false, false, true, true, true, false},
+        false, false, false, true, true, true, false},
     {"with data attachment animators, with no-op calls",
-        false, false, true, true, true, true},
+        false, false, false, true, true, true, true},
     {"with data attachment animators, with implicit clean",
-        false, false, true, false, true, false},
+        false, false, false, true, false, true, false},
     {"with data attachment animators, with implicit clean and no-op calls",
-        false, false, true, false, true, true},
+        false, false, false, true, false, true, true},
+    {"compositing layer",
+        true, false, false, false, true, true, false},
+    {"compositing layer, with layouters",
+        true, true, false, false, true, true, false},
 };
 
 const struct {
@@ -5346,7 +5351,7 @@ void AbstractUserInterfaceTest::updateOrder() {
         explicit Layer(LayerHandle handle, Containers::Array<LayerHandle>& order): AbstractLayer{handle}, _order(order) {}
 
         LayerFeatures doFeatures() const override { return {}; }
-        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             arrayAppend(_order, handle());
         }
 
@@ -5746,11 +5751,12 @@ void AbstractUserInterfaceTest::state() {
     }
 
     struct Layer: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
+        explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, _features{features} {}
+
         using AbstractLayer::create;
         using AbstractLayer::remove;
 
-        LayerFeatures doFeatures() const override { return {}; }
+        LayerFeatures doFeatures() const override { return _features; }
 
         /* doSetSize() not implemented here as it isn't called from
            ui.update(), tested thoroughly in setSizeToLayers() instead */
@@ -5762,7 +5768,7 @@ void AbstractUserInterfaceTest::state() {
             ++cleanCallCount;
         }
 
-        void doUpdate(const LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(const LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             /* The doUpdate() should never get the NeedsAttachmentUpdate, only
                the NeedsNodeOrderUpdate that's a subset of it */
             CORRADE_VERIFY(!(state >= LayerState::NeedsAttachmentUpdate));
@@ -5794,6 +5800,12 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE_AS(clipRectSizes,
                 expectedClipRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::second),
                 TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectOffsets,
+                expectedCompositeRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::first),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectSizes,
+                expectedCompositeRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::second),
+                TestSuite::Compare::Container);
             ++updateCallCount;
         }
 
@@ -5804,13 +5816,17 @@ void AbstractUserInterfaceTest::state() {
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedNodeOffsetsSizes;
         Containers::StridedArrayView1D<const bool> expectedNodesEnabled;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedClipRectOffsetsSizes;
+        Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedCompositeRectOffsetsSizes;
         Int cleanCallCount = 0;
         Int updateCallCount = 0;
+
+        private:
+            LayerFeatures _features;
     };
 
     /* Creating a layer sets no state flags */
     LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+    ui.setLayerInstance(Containers::pointer<Layer>(layer, data.compositingLayer ? LayerFeature::Composite : LayerFeatures{}));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* Calling clean() should be a no-op, not calling anything in the layouters
@@ -5895,6 +5911,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {100.0f, 100.0f}}
+        };
         /* Nothing is attached to any nodes, so it's just the data alone being
            updated */
         ui.layer<Layer>(layer).expectedState = LayerState::NeedsDataUpdate;
@@ -5903,6 +5922,8 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = {};
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -6094,14 +6115,19 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {100.0f, 100.0f}}
+        };
         /* Data were updated in the previous call, so it's now just the
            node-related state */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -6122,7 +6148,9 @@ void AbstractUserInterfaceTest::state() {
     /* Setting a renderer instance propagates the size to it without setting
        any state flag */
     struct Renderer: AbstractRenderer {
-        RendererFeatures doFeatures() const override { return {}; }
+        explicit Renderer(RendererFeatures features): _features{features} {}
+
+        RendererFeatures doFeatures() const override { return _features; }
         void doSetupFramebuffers(const Vector2i& size) override {
             if(!setupFramebufferCallCount)
                 CORRADE_COMPARE(size, Vector2i{100});
@@ -6133,8 +6161,11 @@ void AbstractUserInterfaceTest::state() {
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
 
         Int setupFramebufferCallCount = 0;
+
+        private:
+            RendererFeatures _features;
     };
-    ui.setRendererInstance(Containers::pointer<Renderer>());
+    ui.setRendererInstance(Containers::pointer<Renderer>(data.compositingLayer ? RendererFeature::Composite : RendererFeatures{}));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
@@ -6213,16 +6244,21 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
-        /* Updating the clip state caused some nodes to be invisible now,
-           meaning an update of node order is triggered now. It's however also
-           node enabled update because some of the differently visible nodes
-           can now be differently enabled. */
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {4.0f, 5.0f}}
+        };
+        /* Updating the UI size caused some nodes to be invisible now, meaning
+           an update of node order is triggered. It's however also node enabled
+           update because some of the differently visible nodes can now be
+           differently enabled. */
         ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -6310,15 +6346,20 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
-        /* Updating the clip state caused some previously-invisible nodes to be
-           visible again, meaning an update of node order and enabled state is
-           triggered again */
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
+        /* Updating the UI size again caused some previously-invisible nodes to
+           be visible again, meaning an update of node order and enabled state
+           is triggered again */
         ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -6397,6 +6438,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Just a common data update was requested, which is done now */
         ui.layer<Layer>(layer).expectedState = LayerState::NeedsCommonDataUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
@@ -6404,6 +6448,8 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -6558,15 +6604,20 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Updating node size means offsets/sizes have to be changed, and the
            order + enabled state as well, as the set of visible nodes may be
            different now */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -6723,14 +6774,19 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Updating node size agains means offsets/sizes + order + enabled
            has to be updated now */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -6866,17 +6922,22 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Updating node hidden flags means order has to be changed due to
            potentially different set of nodes being visible (and also enabled),
            which is however smashed together with offset/size changes due to
            the coarseness of the UserInterfaceState bits. */
         /** @todo separate those */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -7022,17 +7083,22 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Updating node hidden flags again means order has to be changed due
            to potentially different set of nodes being visible (and enabled),
            which is again smashed together with offset/size changes due to
            the coarseness of the UserInterfaceState bits. */
         /** @todo separate those */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -7113,6 +7179,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Toggling a node Disabled flag means enabled state has to be updated,
            however due to the coarseness of UserInterfaceState bits it's
            together with draw order as well */
@@ -7123,6 +7192,8 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -7211,6 +7282,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Toggling a node NoEvents flag causes the same as Disabled due to the
            coarseness of UserInterfaceState bits */
         /** @todo separate those from disabled, separate from node order */
@@ -7220,6 +7294,8 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -7298,6 +7374,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Toggling a node NoEvents flag back causes the same as Disabled due
            to the coarseness of UserInterfaceState bits */
         /** @todo separate those from disabled, separate from node order */
@@ -7307,6 +7386,8 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -7393,6 +7474,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Toggling a node Clip flag causes the set of visible nodes to be
            changed, which also affects the set of enabled nodes */
         ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
@@ -7401,6 +7485,8 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -7480,6 +7566,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Toggling a node Clip flag again causes the set of visible nodes to
            be changed, which also affects the set of enabled nodes */
         ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
@@ -7488,6 +7577,8 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         ui.update();
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
@@ -7591,17 +7682,22 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{}, {}},
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Removing a node from the top-level order means just the set of drawn
            nodes (and thus also enabled state) being updated, but offset/size
            update is also triggered due to the coarseness of the
            UserInterfaceState bits */
         /** @todo separate those */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -7748,14 +7844,19 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{}, {}},
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         /* Putting a node back to the top-level order triggers offset/size
            update in addition to just the order + enabled */
-        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
         ui.update();
     }
@@ -7863,14 +7964,19 @@ void AbstractUserInterfaceTest::state() {
                 {{3.0f, 1.0f}, {2.0f, 4.0f}},
                 {{}, {}},
             };
+            Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+                {{}, {165.0f, 156.0f}}
+            };
             /* Layout change means offset/size update, which may affect the set
                of visible nodes and thus also the enabled state */
-            ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+            ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
             ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
             ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
             ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
             ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
             ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+            if(data.compositingLayer)
+                ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
 
             ui.update();
         }
@@ -7895,9 +8001,10 @@ void AbstractUserInterfaceTest::state() {
     }
 
     /* Add one more layer with an attached animator to check data & layer
-       removal behavior, should set no state flags again */
+       removal behavior, should set no state flags again. Unlike the first one
+       it doesn't enable compositing ever. */
     LayerHandle anotherLayer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(anotherLayer));
+    ui.setLayerInstance(Containers::pointer<Layer>(anotherLayer, LayerFeatures{}));
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     /* GCC in Release mode complains that some of these may be used
        uninitialized, MSVC as well. They aren't. */
@@ -8049,12 +8156,17 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{}, {}},
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
         bool expectedNodesEnabled[]{
             /* Again all enabled except invisible, notInOrder and nested2 */
             true, true, true, true, false, false, false
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         for(LayerHandle i: {layer, anotherLayer}) {
             CORRADE_ITERATION(i);
             /* Removing attached data means the draw order needs an update.
@@ -8268,15 +8380,23 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{}, {165.0f, 156.0f}}
+        };
+        /* Removing a node causes just node order and enabled state to get
+           updated, however again with the coarseness of UserInterfaceState
+           bits it's together with offset/size as well */
+        /** @todo separate */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        /* The other layer doesn't have compositing enabled ever */
+        ui.layer<Layer>(anotherLayer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
         ui.layer<Layer>(layer).expectedDataIdsToRemove = expectedDataIdsToRemove;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
         for(LayerHandle i: {layer, anotherLayer}) {
-            /* Removing a node causes just node order and enabled state to get
-               updated, however again with the coarseness of UserInterfaceState
-               bits it's together with offset/size as well */
-            /** @todo separate */
-            ui.layer<Layer>(i).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+            CORRADE_ITERATION(i);
             ui.layer<Layer>(i).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
             ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
             ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
@@ -8389,12 +8509,20 @@ void AbstractUserInterfaceTest::state() {
                 {{}, {}},
                 {{}, {}}
             };
+            Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+                {{}, {165.0f, 156.0f}}
+            };
+            /* Removing a layouter means node offsets/sizes can change but also
+               the set of visible nodes and enabled state */
+            ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+            /* The other layer doesn't have compositing enabled ever */
+            ui.layer<Layer>(anotherLayer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
             ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
             ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+            if(data.compositingLayer)
+                ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
             for(LayerHandle i: {layer, anotherLayer}) {
-                /* Removing a layouter means node offsets/sizes can change but
-                   also the set of visible nodes and enabled state */
-                ui.layer<Layer>(i).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
+                CORRADE_ITERATION(i);
                 ui.layer<Layer>(i).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
                 ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
                 ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
@@ -8540,7 +8668,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         void doClean(Containers::BitArrayView) override {
             ++cleanCallCount;
         }
-        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             /* The doUpdate() should never get the NeedsAttachmentUpdate, only
                the NeedsNodeOrderUpdate that's a subset of it */
             CORRADE_VERIFY(!(state >= LayerState::NeedsAttachmentUpdate));
@@ -9261,11 +9389,11 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_COMPARE(framebufferSize, (Vector2i{400, 500}));
         }
 
-        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, std::size_t, std::size_t) override {
             CORRADE_FAIL("This shouldn't be called");
         }
 
-        void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             CORRADE_ITERATION(handle());
             CORRADE_COMPARE(states, LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate);
             /* doSetSize() should have been called exactly once at this point
@@ -9297,6 +9425,12 @@ void AbstractUserInterfaceTest::draw() {
                 TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(clipRectSizes,
                 expectedClipRectOffsetsSizes.slice(&Containers::Pair<Vector2, Vector2>::second),
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectOffsets,
+                Containers::ArrayView<Vector2>{},
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(compositeRectSizes,
+                Containers::ArrayView<Vector2>{},
                 TestSuite::Compare::Container);
             actualDataIds = dataIds;
             actualClipRectIds = clipRectIds;
@@ -9710,38 +9844,61 @@ void AbstractUserInterfaceTest::drawComposite() {
             CORRADE_COMPARE(framebufferSize, (Vector2i{400, 500}));
         }
 
-        void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& offsets, const Containers::StridedArrayView1D<const Vector2>& sizes) override {
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             CORRADE_ITERATION(handle());
-            /* doSetSize() should have been called exactly once at this point */
+            ++updateCallCount;
+            if(expectedCompositeOffsetsSizes.isEmpty()) {
+                CORRADE_COMPARE_AS(compositeRectOffsets,
+                    Containers::ArrayView<Vector2>{},
+                    TestSuite::Compare::Container);
+                CORRADE_COMPARE_AS(compositeRectSizes,
+                    Containers::ArrayView<Vector2>{},
+                    TestSuite::Compare::Container);
+            } else {
+                {
+                    CORRADE_EXPECT_FAIL("Currently the whole framebuffer is being composited");
+                    CORRADE_COMPARE_AS(compositeRectOffsets,
+                        expectedCompositeOffsetsSizes
+                            .slice(&Containers::Pair<Vector2, Vector2>::first),
+                        TestSuite::Compare::Container);
+                    CORRADE_COMPARE_AS(compositeRectSizes,
+                        expectedCompositeOffsetsSizes
+                            .slice(&Containers::Pair<Vector2, Vector2>::second),
+                        TestSuite::Compare::Container);
+                }
+                CORRADE_COMPARE_AS(compositeRectOffsets, Containers::arrayView({
+                    Vector2{}
+                }), TestSuite::Compare::Container);
+                CORRADE_COMPARE_AS(compositeRectSizes, Containers::arrayView({
+                    Vector2{200.0f, 300.0f}
+                }), TestSuite::Compare::Container);
+            }
+            actualCompositeRectOffsets = compositeRectOffsets;
+            actualCompositeRectSizes = compositeRectSizes;
+        }
+
+        void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes, std::size_t offset, std::size_t count) override {
+            CORRADE_ITERATION(handle());
+            /* doSetSize() should have been called exactly once at this point,
+               doUpdate() as well */
             CORRADE_COMPARE(setSizeCallCount, 1);
+            CORRADE_COMPARE(updateCallCount, 1);
 
             CORRADE_VERIFY(features & LayerFeature::Composite);
             CORRADE_COMPARE(renderer.framebufferSize(), (Vector2i{400, 500}));
-            {
-                CORRADE_EXPECT_FAIL("Currently the whole framebuffer is being composited");
-                CORRADE_COMPARE_AS(offsets,
-                    expectedCompositeOffsetsSizes
-                        .sliceSize(compositeOffsetsSizesOffset, 1)
-                        .slice(&Containers::Pair<Vector2, Vector2>::first),
-                    TestSuite::Compare::Container);
-                CORRADE_COMPARE_AS(sizes,
-                    expectedCompositeOffsetsSizes
-                        .sliceSize(compositeOffsetsSizesOffset, 1)
-                        .slice(&Containers::Pair<Vector2, Vector2>::second),
-                    TestSuite::Compare::Container);
-                ++compositeOffsetsSizesOffset;
-            }
-            CORRADE_COMPARE_AS(offsets, Containers::arrayView({
-                Vector2{}
-            }), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(sizes, Containers::arrayView({
-                Vector2{200.0f, 300.0f}
-            }), TestSuite::Compare::Container);
+            /* Currently the whole framebuffer is being composited */
+            CORRADE_COMPARE(offset, 0);
+            CORRADE_COMPARE(count, 1);
+
+            CORRADE_COMPARE(compositeRectOffsets.data(), actualCompositeRectOffsets.data());
+            CORRADE_COMPARE(compositeRectOffsets.size(), actualCompositeRectOffsets.size());
+            CORRADE_COMPARE(compositeRectOffsets.stride(), actualCompositeRectOffsets.stride());
+            CORRADE_COMPARE(compositeRectSizes.data(), actualCompositeRectSizes.data());
+            CORRADE_COMPARE(compositeRectSizes.size(), actualCompositeRectSizes.size());
+            CORRADE_COMPARE(compositeRectSizes.stride(), actualCompositeRectSizes.stride());
 
             arrayAppend(*compositeDrawCalls, InPlaceInit, handle(), Composite, Containers::Pair<std::size_t, std::size_t>{});
         }
-
-        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {}
 
         void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             CORRADE_ITERATION(handle());
@@ -9756,11 +9913,14 @@ void AbstractUserInterfaceTest::drawComposite() {
 
         LayerFeatures features;
         Containers::StridedArrayView1D<const Containers::Pair<Vector2, Vector2>> expectedCompositeOffsetsSizes;
-        UnsignedInt compositeOffsetsSizesOffset = 0;
         Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
         Int setSizeCallCount = 0;
+        Int updateCallCount = 0;
         Containers::Array<Containers::Triple<LayerHandle, Int,
             Containers::Pair<std::size_t, std::size_t>>>* compositeDrawCalls;
+
+        Containers::StridedArrayView1D<const Vector2> actualCompositeRectOffsets;
+        Containers::StridedArrayView1D<const Vector2> actualCompositeRectSizes;
     };
 
     /* Only drawing layers used here, non-drawing layers and their exclusion
@@ -9912,7 +10072,7 @@ void AbstractUserInterfaceTest::drawRendererTransitions() {
 
         LayerFeatures doFeatures() const override { return _features; }
 
-        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, std::size_t, std::size_t) override {
             arrayAppend(_called, InPlaceInit,
                 Containers::pair(handle(), Int(Composite)),
                 Containers::Pair<RendererTargetState, RendererTargetState>{},
@@ -10059,7 +10219,7 @@ void AbstractUserInterfaceTest::drawEmpty() {
 
         LayerFeatures doFeatures() const override { return LayerFeature::Draw; }
 
-        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             CORRADE_COMPARE(state, LayerState::NeedsDataUpdate|(_node ? LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate : LayerStates{}));
             CORRADE_COMPARE(dataIds.size(), 0);
             CORRADE_COMPARE(clipRectIds.size(), 0);
@@ -10069,6 +10229,8 @@ void AbstractUserInterfaceTest::drawEmpty() {
             CORRADE_COMPARE(nodesEnabled.size(), _node ? 1 : 0);
             CORRADE_COMPARE(clipRectOffsets.size(), 0);
             CORRADE_COMPARE(clipRectSizes.size(), 0);
+            CORRADE_COMPARE(compositeRectOffsets.size(), 0);
+            CORRADE_COMPARE(compositeRectSizes.size(), 0);
             ++updateCallCount;
         }
 

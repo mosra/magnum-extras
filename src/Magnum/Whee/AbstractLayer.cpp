@@ -101,6 +101,7 @@ Debug& operator<<(Debug& debug, const LayerState value) {
         _c(NeedsDataUpdate)
         _c(NeedsCommonDataUpdate)
         _c(NeedsSharedDataUpdate)
+        _c(NeedsCompositeOffsetSizeUpdate)
         _c(NeedsDataClean)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -126,6 +127,7 @@ Debug& operator<<(Debug& debug, const LayerStates value) {
         LayerState::NeedsDataUpdate,
         LayerState::NeedsCommonDataUpdate,
         LayerState::NeedsSharedDataUpdate,
+        LayerState::NeedsCompositeOffsetSizeUpdate,
         LayerState::NeedsDataClean
     });
 }
@@ -213,7 +215,9 @@ LayerHandle AbstractLayer::handle() const {
 LayerStates AbstractLayer::state() const {
     const LayerStates state = doState();
     #ifndef CORRADE_NO_ASSERT
-    constexpr LayerStates expectedStates = LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate;
+    LayerStates expectedStates = LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate;
+    if(features() >= LayerFeature::Composite)
+        expectedStates |= LayerState::NeedsCompositeOffsetSizeUpdate;
     #endif
     CORRADE_ASSERT(state <= expectedStates,
         "Whee::AbstractLayer::state(): implementation expected to return a subset of" << expectedStates << "but got" << state, {});
@@ -224,7 +228,9 @@ LayerStates AbstractLayer::doState() const { return {}; }
 
 void AbstractLayer::setNeedsUpdate(const LayerStates state) {
     #ifndef CORRADE_NO_ASSERT
-    constexpr LayerStates expectedStates = LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate;
+    LayerStates expectedStates = LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate;
+    if(features() >= LayerFeature::Composite)
+        expectedStates |= LayerState::NeedsCompositeOffsetSizeUpdate;
     #endif
     CORRADE_ASSERT(state && state <= expectedStates,
         "Whee::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of" << expectedStates << "but got" << state, );
@@ -305,6 +311,8 @@ DataHandle AbstractLayer::create(const NodeHandle node) {
         data->used.node = node;
         state.state |= LayerState::NeedsAttachmentUpdate|
                        LayerState::NeedsNodeOffsetSizeUpdate;
+        if(features() >= LayerFeature::Composite)
+            state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
     }
 
     return dataHandle(state.handle, (data - state.data), data->used.generation);
@@ -427,8 +435,11 @@ void AbstractLayer::attachInternal(const UnsignedInt id, const NodeHandle node) 
 
     state.data[id].used.node = node;
     state.state |= LayerState::NeedsAttachmentUpdate;
-    if(node != NodeHandle::Null)
+    if(node != NodeHandle::Null) {
         state.state |= LayerState::NeedsNodeOffsetSizeUpdate;
+        if(features() >= LayerFeature::Composite)
+            state.state |= LayerState::NeedsCompositeOffsetSizeUpdate;
+    }
 }
 
 NodeHandle AbstractLayer::node(DataHandle data) const {
@@ -549,9 +560,11 @@ void AbstractLayer::doAdvanceAnimations(Nanoseconds, const Containers::Iterable<
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractLayer::advanceAnimations(): style animation advertised but not implemented", );
 }
 
-void AbstractLayer::update(const LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
+void AbstractLayer::update(const LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) {
     #ifndef CORRADE_NO_ASSERT
-    constexpr LayerStates expectedStates = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsAttachmentUpdate;
+    LayerStates expectedStates = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsAttachmentUpdate;
+    if(features() >= LayerFeature::Composite)
+        expectedStates |= LayerState::NeedsCompositeOffsetSizeUpdate;
     #endif
     CORRADE_ASSERT(state && state <= expectedStates,
         "Whee::AbstractLayer::update(): expected a non-empty subset of" << expectedStates << "but got" << state, );
@@ -562,23 +575,29 @@ void AbstractLayer::update(const LayerStates state, const Containers::StridedArr
         "Whee::AbstractLayer::update(): expected node offset, size and enabled views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << "and" << nodesEnabled.size(), );
     CORRADE_ASSERT(clipRectOffsets.size() == clipRectSizes.size(),
         "Whee::AbstractLayer::update(): expected clip rect offset and size views to have the same size but got" << clipRectOffsets.size() << "and" << clipRectSizes.size(), );
+    CORRADE_ASSERT(compositeRectOffsets.size() == compositeRectSizes.size(),
+        "Whee::AbstractLayer::update(): expected composite rect offset and size views to have the same size but got" << compositeRectOffsets.size() << "and" << compositeRectSizes.size(), );
+    CORRADE_ASSERT(features() >= LayerFeature::Composite || compositeRectOffsets.isEmpty(),
+        "Whee::AbstractLayer::update(): compositing not supported but got" << compositeRectOffsets.size() << "composite rects", );
     /* Don't pass the NeedsAttachmentUpdate bit to the implementation as it
        shouldn't need that, just NeedsNodeOrderUpdate that's a subset of it */
-    doUpdate(state & ~(LayerState::NeedsAttachmentUpdate & ~LayerState::NeedsNodeOrderUpdate), dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+    doUpdate(state & ~(LayerState::NeedsAttachmentUpdate & ~LayerState::NeedsNodeOrderUpdate), dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes, compositeRectOffsets, compositeRectSizes);
     _state->state &= ~state;
 }
 
-void AbstractLayer::doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
+void AbstractLayer::doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
 
-void AbstractLayer::composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& rectOffsets, const Containers::StridedArrayView1D<const Vector2>& rectSizes) {
+void AbstractLayer::composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes, const std::size_t offset, const std::size_t count) {
     CORRADE_ASSERT(features() & LayerFeature::Composite,
         "Whee::AbstractLayer::composite(): feature not supported", );
-    CORRADE_ASSERT(rectOffsets.size() == rectSizes.size(),
-        "Whee::AbstractLayer::composite(): expected rect offset and size views to have the same size but got" << rectOffsets.size() << "and" << rectSizes.size(), );
-    doComposite(renderer, rectOffsets, rectSizes);
+    CORRADE_ASSERT(compositeRectOffsets.size() == compositeRectSizes.size(),
+        "Whee::AbstractLayer::composite(): expected rect offset and size views to have the same size but got" << compositeRectOffsets.size() << "and" << compositeRectSizes.size(), );
+    CORRADE_ASSERT(offset + count <= compositeRectOffsets.size(),
+        "Whee::AbstractLayer::composite(): offset" << offset << "and count" << count << "out of range for" << compositeRectOffsets.size() << "items", );
+    doComposite(renderer, compositeRectOffsets, compositeRectSizes, offset, count);
 }
 
-void AbstractLayer::doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void AbstractLayer::doComposite(AbstractRenderer&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, std::size_t, std::size_t) {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractLayer::composite(): feature advertised but not implemented", );
 }
 
