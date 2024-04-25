@@ -195,6 +195,30 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
         AbstractStyle& setBaseLayerDynamicStyleCount(UnsignedInt count);
 
         /**
+         * @brief Additional flags for the base layer
+         *
+         * Expects that @ref StyleFeature::BaseLayer is supported. The returned
+         * value is passed to @ref BaseLayer::Shared::Configuration::setFlags()
+         * by @ref UserInterfaceGL::setStyle(). Call @ref setBaseLayerFlags()
+         * to supply additional flags to add or clear from the set if needed.
+         */
+        BaseLayerSharedFlags baseLayerFlags() const;
+
+        /**
+         * @brief Set additional base layer flags
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref StyleFeature::BaseLayer is supported, @p add is a
+         * subset of @ref BaseLayerSharedFlag::SubdividedQuads, and @p clear is a
+         * subset of @ref BaseLayerSharedFlag::NoRoundedCorners and
+         * @relativeref{BaseLayerSharedFlag,NoOutline}. Flags used are a union
+         * of what the style itself returned and what was requested in @p add,
+         * with everything in @p clear cleared from the set.
+         * @see @ref baseLayerFlags(), @ref features()
+         */
+        AbstractStyle& setBaseLayerFlags(BaseLayerSharedFlags add, BaseLayerSharedFlags clear);
+
+        /**
          * @brief Style uniform count for the text layer
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
@@ -428,6 +452,17 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
         virtual UnsignedInt doBaseLayerDynamicStyleCount() const;
 
         /**
+         * @brief Implementation for @ref baseLayerFlags()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::BaseLayer. Expects that the implementation
+         * returns a subset of @ref BaseLayerSharedFlag::NoRoundedCorners and
+         * @relativeref{BaseLayerSharedFlag,NoOutline}. Default implementation
+         * returns an empty set.
+         */
+        virtual BaseLayerSharedFlags doBaseLayerFlags() const;
+
+        /**
          * @brief Implementation for @ref textLayerStyleUniformCount()
          *
          * Guaranteed to be called only if @ref doFeatures() contains
@@ -542,6 +577,7 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
         UnsignedInt _textLayerDynamicStyleCount = 0;
         Vector3i _textLayerGlyphCacheSize;
         Vector2i _textLayerGlyphCachePadding;
+        BaseLayerSharedFlags _baseLayerFlagsAdd, _baseLayerFlagsClear;
 };
 
 }}

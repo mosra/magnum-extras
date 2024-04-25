@@ -108,6 +108,29 @@ AbstractStyle& AbstractStyle::setBaseLayerDynamicStyleCount(const UnsignedInt co
     return *this;
 }
 
+BaseLayerSharedFlags AbstractStyle::baseLayerFlags() const {
+    CORRADE_ASSERT(features() >= StyleFeature::BaseLayer,
+        "Whee::AbstractStyle::baseLayerDynamicStyleCount(): feature not supported", {});
+    const BaseLayerSharedFlags flags = doBaseLayerFlags();
+    CORRADE_ASSERT(flags <= (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners),
+        "Whee::AbstractStyle::baseLayerFlags(): implementation returned disallowed" << (flags & ~(BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)), {});
+    return (flags|_baseLayerFlagsAdd)&~_baseLayerFlagsClear;
+}
+
+BaseLayerSharedFlags AbstractStyle::doBaseLayerFlags() const {
+    return {};
+}
+
+AbstractStyle& AbstractStyle::setBaseLayerFlags(const BaseLayerSharedFlags add, const BaseLayerSharedFlags clear) {
+    CORRADE_ASSERT(add <= BaseLayerSharedFlag::SubdividedQuads,
+        "Whee::AbstractStyle::setBaseLayerFlags():" << (add & ~BaseLayerSharedFlag::SubdividedQuads) << "isn't allowed to be added", *this);
+    CORRADE_ASSERT(clear <= (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners),
+        "Whee::AbstractStyle::setBaseLayerFlags():" << (clear & ~(BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)) << "isn't allowed to be cleared", *this);
+    _baseLayerFlagsAdd = add;
+    _baseLayerFlagsClear = clear;
+    return *this;
+}
+
 UnsignedInt AbstractStyle::textLayerStyleUniformCount() const {
     CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
         "Whee::AbstractStyle::textLayerStyleUniformCount(): feature not supported", {});

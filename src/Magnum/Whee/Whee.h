@@ -65,6 +65,8 @@ class BaseLayerStyleAnimator;
 #ifdef MAGNUM_TARGET_GL
 class BaseLayerGL;
 #endif
+enum class BaseLayerSharedFlag: UnsignedByte;
+typedef Containers::EnumSet<BaseLayerSharedFlag> BaseLayerSharedFlags;
 
 class EventConnection;
 class EventLayer;

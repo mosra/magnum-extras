@@ -59,6 +59,10 @@ struct AbstractStyleTest: TestSuite::Tester {
 
     void setBaseLayerDynamicStyleCount();
 
+    void baseLayerFlags();
+    void baseLayerFlagsNotImplementedDefaults();
+    void baseLayerFlagsInvalid();
+
     void textLayerGlyphCacheProperties();
     void textLayerGlyphCachePropertiesNotSupported();
     void textLayerGlyphCachePropertiesNotImplemented();
@@ -126,6 +130,10 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::styleCountNotImplementedDefaults,
 
               &AbstractStyleTest::setBaseLayerDynamicStyleCount,
+
+              &AbstractStyleTest::baseLayerFlags,
+              &AbstractStyleTest::baseLayerFlagsNotImplementedDefaults,
+              &AbstractStyleTest::baseLayerFlagsInvalid,
 
               &AbstractStyleTest::textLayerGlyphCacheProperties,
               &AbstractStyleTest::textLayerGlyphCachePropertiesNotSupported,
@@ -379,6 +387,93 @@ void AbstractStyleTest::setBaseLayerDynamicStyleCount() {
     /* Setting a value smaller than what style says picks the style instead */
     style.setBaseLayerDynamicStyleCount(3);
     CORRADE_COMPARE(style.baseLayerDynamicStyleCount(), 9);
+}
+
+void AbstractStyleTest::baseLayerFlags() {
+    struct Style: AbstractStyle {
+        explicit Style(BaseLayerSharedFlags flags): _flags{flags} {}
+
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer|StyleFeature(0x10);
+        }
+        BaseLayerSharedFlags doBaseLayerFlags() const override {
+            return _flags;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+
+        private:
+            BaseLayerSharedFlags _flags;
+    } styleNeither{BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners},
+      styleNoRoundedCorners{BaseLayerSharedFlag::NoRoundedCorners};
+
+    /* By default it returns what the style says */
+    CORRADE_COMPARE(styleNeither.baseLayerFlags(), BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners);
+    CORRADE_COMPARE(styleNoRoundedCorners.baseLayerFlags(), BaseLayerSharedFlag::NoRoundedCorners);
+
+    /* Adding / clearing no flags doesn't change anything */
+    styleNoRoundedCorners.setBaseLayerFlags({}, {});
+    CORRADE_COMPARE(styleNoRoundedCorners.baseLayerFlags(), BaseLayerSharedFlag::NoRoundedCorners);
+
+    /* Clearing a flag that isn't there doesn't change anything */
+    /** @todo test also adding a flag that is there, once such a flag is
+        allowed */
+    styleNoRoundedCorners.setBaseLayerFlags({}, BaseLayerSharedFlag::NoOutline);
+    CORRADE_COMPARE(styleNoRoundedCorners.baseLayerFlags(), BaseLayerSharedFlag::NoRoundedCorners);
+
+    /* Adding a flag that isn't there updates the style, clearing a flag that
+       is there updates it also */
+    styleNoRoundedCorners.setBaseLayerFlags(BaseLayerSharedFlag::SubdividedQuads, {});
+    styleNeither.setBaseLayerFlags({}, BaseLayerSharedFlag::NoOutline);
+    CORRADE_COMPARE(styleNoRoundedCorners.baseLayerFlags(), BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::NoRoundedCorners);
+    CORRADE_COMPARE(styleNeither.baseLayerFlags(), BaseLayerSharedFlag::NoRoundedCorners);
+
+    /* Adding no flags returns to the previous state */
+    styleNeither.setBaseLayerFlags({}, {});
+    styleNoRoundedCorners.setBaseLayerFlags({}, {});
+    CORRADE_COMPARE(styleNeither.baseLayerFlags(), BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners);
+    CORRADE_COMPARE(styleNoRoundedCorners.baseLayerFlags(), BaseLayerSharedFlag::NoRoundedCorners);
+}
+
+void AbstractStyleTest::baseLayerFlagsNotImplementedDefaults() {
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+    } style;
+
+    CORRADE_COMPARE(style.baseLayerFlags(), BaseLayerSharedFlags{});
+}
+
+void AbstractStyleTest::baseLayerFlagsInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Style: AbstractStyle {
+        explicit Style(BaseLayerSharedFlags flags): _flags{flags} {}
+
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer|StyleFeature(0x10);
+        }
+        BaseLayerSharedFlags doBaseLayerFlags() const override {
+            return _flags;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override { return {}; }
+
+        private:
+            BaseLayerSharedFlags _flags;
+    } style{{}},
+      styleReturnedInvalid{BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured|BaseLayerSharedFlag::NoOutline};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    styleReturnedInvalid.baseLayerFlags();
+    style.setBaseLayerFlags(BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured, {});
+    style.setBaseLayerFlags({}, BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::Textured);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractStyle::baseLayerFlags(): implementation returned disallowed Whee::BaseLayerSharedFlag::Textured|Whee::BaseLayerSharedFlag::SubdividedQuads\n"
+        "Whee::AbstractStyle::setBaseLayerFlags(): Whee::BaseLayerSharedFlag::Textured|Whee::BaseLayerSharedFlag::NoOutline isn't allowed to be added\n"
+        "Whee::AbstractStyle::setBaseLayerFlags(): Whee::BaseLayerSharedFlag::Textured|Whee::BaseLayerSharedFlag::SubdividedQuads isn't allowed to be cleared\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractStyleTest::textLayerGlyphCacheProperties() {
