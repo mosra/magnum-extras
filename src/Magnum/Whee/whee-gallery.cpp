@@ -166,6 +166,7 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             Whee::BaseLayerGL::Shared::Configuration{2}
                 .setDynamicStyleCount(10)
                 .setFlags(Whee::BaseLayerGL::Shared::Flag::BackgroundBlur)
+                .addFlags(Whee::BaseLayerGL::Shared::Flag::SubdividedQuads)
                 .setBackgroundBlurRadius(31)}
                 ;
         _backgroundBlurBaseLayerShared
