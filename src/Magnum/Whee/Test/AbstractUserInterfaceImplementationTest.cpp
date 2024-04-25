@@ -73,6 +73,9 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
 
     void compactDraws();
 
+    void compositeRectsEdges();
+    void compositingRects();
+
     void partitionedAnimatorsInsert();
     void partitionedAnimatorsInsertNoLayers();
     void partitionedAnimatorsRemove();
@@ -510,6 +513,9 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
               &AbstractUserInterfaceImplementationTest::countOrderNodeDataForEventHandling,
 
               &AbstractUserInterfaceImplementationTest::compactDraws,
+
+              &AbstractUserInterfaceImplementationTest::compositeRectsEdges,
+              &AbstractUserInterfaceImplementationTest::compositingRects,
 
               &AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert,
               &AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsertNoLayers,
@@ -2228,6 +2234,261 @@ void AbstractUserInterfaceImplementationTest::compactDraws() {
         {4, {0, 6777}, {1, 233}},
         {4, {6777, 2}, {233, 16}}
     })), TestSuite::Compare::Container);
+}
+
+void AbstractUserInterfaceImplementationTest::compositeRectsEdges() {
+    /* Offsets + sizes like in cullVisibleNodesEdges(), without the outside.
+       The double-line rectangle is one side of the culling, the 0 to 13
+       rectangles are the other. There's enough combinations so that it's
+       sufficient to test just one rectangle always. Combination of more
+       nodes and clip rectangles is tested in drawBounds() below.
+
+        -1 0 12 3 4   5 6 78 9 10
+      -1        +-------+
+       0  +-----|-+...+-|-----+
+          |0    | | 1 | |    2|
+       1  |  +==|=|===|=|==+  |
+       2  |  |  +-------+  |  |
+       3 +----+   | 3 |   +----+
+       4 |+---|---+...+---|---+|
+         | 4 || 6 .   . 7 || 5 |
+       5 |+---|---+...+---|---+|
+       6 +----+   | 8 |   +----+
+       7  |  |  +-------+  |  |
+       8  |  +==|=|===|=|==+  |
+          |10   | | 9 | |   11|
+       9  +-----|-+   +-|-----+
+      10        +-------+      13 */
+    const Containers::Pair<Vector2, Vector2> offsetsSizes[]{
+        {{ 0.0f,  0.0f}, {4.0f, 4.0f}}, /*  0, top left */
+        {{ 3.0f, -1.0f}, {3.0f, 3.0f}}, /*  1, top */
+        {{ 5.0f,  0.0f}, {4.0f, 4.0f}}, /*  2, top right */
+        {{ 0.0f,  0.0f}, {9.0f, 4.0f}}, /*  3, top left + right */
+        {{-1.0f,  3.0f}, {3.0f, 3.0f}}, /*  4, left */
+        {{ 7.0f,  3.0f}, {3.0f, 3.0f}}, /*  5, right */
+        {{ 0.0f,  0.0f}, {4.0f, 9.0f}}, /*  6, left top + bottom */
+        {{ 5.0f,  0.0f}, {4.0f, 9.0f}}, /*  7, right top + bottom */
+        {{ 0.0f,  5.0f}, {9.0f, 4.0f}}, /*  8, bottom left + right */
+        {{ 3.0f,  7.0f}, {3.0f, 3.0f}}, /*  9, bottom */
+        {{ 0.0f,  5.0f}, {4.0f, 4.0f}}, /* 10, bottom left */
+        {{ 5.0f,  5.0f}, {4.0f, 4.0f}}, /* 11, bottom right */
+        {{ 4.0f,  4.0f}, {2.0f, 2.0f}}, /* 12, in the center */
+        {{ 0.0f,  0.0f}, {9.0f, 9.0f}}, /* 13, covering whole area */
+    };
+    const Containers::Pair<Vector2, Vector2> expectedOffsetsSizes[]{
+        {{1.0f, 1.0f}, {3.0f, 3.0f}}, /*  0 */
+        {{3.0f, 1.0f}, {3.0f, 1.0f}}, /*  1 */
+        {{5.0f, 1.0f}, {3.0f, 3.0f}}, /*  2 */
+        {{1.0f, 1.0f}, {7.0f, 3.0f}}, /*  3 */
+        {{1.0f, 3.0f}, {1.0f, 3.0f}}, /*  4 */
+        {{7.0f, 3.0f}, {1.0f, 3.0f}}, /*  5 */
+        {{1.0f, 1.0f}, {3.0f, 7.0f}}, /*  6 */
+        {{5.0f, 1.0f}, {3.0f, 7.0f}}, /*  7 */
+        {{1.0f, 5.0f}, {7.0f, 3.0f}}, /*  8 */
+        {{3.0f, 7.0f}, {3.0f, 1.0f}}, /*  9 */
+        {{1.0f, 5.0f}, {3.0f, 3.0f}}, /* 10 */
+        {{5.0f, 5.0f}, {3.0f, 3.0f}}, /* 11 */
+        {{4.0f, 4.0f}, {2.0f, 2.0f}}, /* 12 */
+        {{1.0f, 1.0f}, {7.0f, 7.0f}}, /* 13 */
+    };
+    CORRADE_COMPARE(Containers::arraySize(expectedOffsetsSizes), Containers::arraySize(offsetsSizes));
+
+    for(UnsignedInt i = 0; i != Containers::arraySize(offsetsSizes); ++i) {
+        CORRADE_ITERATION(i);
+
+        Containers::Pair<Vector2, Vector2> compositeRectOffsetsSizes[1];
+
+        /* No clip rect and a large enough UI rect should result in no
+           clipping */
+        Implementation::compositeRectsInto(
+            Vector2{-1.0f}, Vector2{11.0f},
+            Containers::arrayView({0u}),
+            Containers::arrayView({0u}),
+            Containers::arrayView({1u}),
+            Containers::arrayView({nodeHandle(i, 0xece)}),
+            stridedArrayView(offsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(offsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second),
+            Containers::arrayView({Vector2{}}),
+            Containers::arrayView({Vector2{}}),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second));
+        CORRADE_COMPARE(compositeRectOffsetsSizes[0], offsetsSizes[i]);
+
+        /* Large enough UI size with a clip rect should clip */
+        Implementation::compositeRectsInto(
+            Vector2{-1.0f}, Vector2{11.0f},
+            Containers::arrayView({0u}),
+            Containers::arrayView({0u}),
+            Containers::arrayView({1u}),
+            Containers::arrayView({nodeHandle(i, 0xece)}),
+            stridedArrayView(offsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(offsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second),
+            Containers::arrayView({Vector2{1.0f}}),
+            Containers::arrayView({Vector2{7.0f}}),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second));
+        CORRADE_COMPARE(compositeRectOffsetsSizes[0], expectedOffsetsSizes[i]);
+
+        /* Small UI size and no clip rect should clip the same way */
+        Implementation::compositeRectsInto(
+            Vector2{1.0f}, Vector2{7.0f},
+            Containers::arrayView({0u}),
+            Containers::arrayView({0u}),
+            Containers::arrayView({1u}),
+            Containers::arrayView({nodeHandle(i, 0xece)}),
+            stridedArrayView(offsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(offsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second),
+            Containers::arrayView({Vector2{}}),
+            Containers::arrayView({Vector2{}}),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second));
+        CORRADE_COMPARE(compositeRectOffsetsSizes[0], expectedOffsetsSizes[i]);
+
+        /* Swapping the node size and the clip rect should give the same
+           result */
+        Implementation::compositeRectsInto(
+            Vector2{-1.0f}, Vector2{11.0f},
+            Containers::arrayView({0u}),
+            Containers::arrayView({0u}),
+            Containers::arrayView({1u}),
+            Containers::arrayView({nodeHandle(0, 0xece)}),
+            Containers::arrayView({Vector2{1.0f}}),
+            Containers::arrayView({Vector2{7.0f}}),
+            Containers::arrayView({offsetsSizes[i].first()}),
+            Containers::arrayView({offsetsSizes[i].second()}),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second));
+        CORRADE_COMPARE(compositeRectOffsetsSizes[0], expectedOffsetsSizes[i]);
+
+        /* Swapping the node size and the UI size with an no clip rect should
+           give the same result */
+        Implementation::compositeRectsInto(
+            offsetsSizes[i].first(), offsetsSizes[i].second(),
+            Containers::arrayView({0u}),
+            Containers::arrayView({0u}),
+            Containers::arrayView({1u}),
+            Containers::arrayView({nodeHandle(0, 0xece)}),
+            Containers::arrayView({Vector2{1.0f}}),
+            Containers::arrayView({Vector2{7.0f}}),
+            Containers::arrayView({Vector2{}}),
+            Containers::arrayView({Vector2{}}),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second));
+        CORRADE_COMPARE(compositeRectOffsetsSizes[0], expectedOffsetsSizes[i]);
+    }
+}
+
+void AbstractUserInterfaceImplementationTest::compositingRects() {
+    /* Verifying just that the clip rects get used for the right nodes. In
+       particular, the data -> node mapping is nontrivial and each node is
+       only visible in the clip rect it should belong to. The intersection
+       calculation is tested in drawBoundsEdges() above, this verifies that the
+       union is calculated correctly as well.
+
+           0 1 2 3   4 5 6 7   8 9  10 11
+         0
+         1     +-----------+
+         2     |     +---+ |
+         3   +---+   | 3 | |
+         4   | 2 |   +---+ |   +-----+
+         5   +---+     +-------|  6  |-+
+         6     |       |       +-----+ |
+         7     +-------|   +---+       |
+         8   rect 0    |   | 7 | +---+ |
+         9             +---+---+-| 4 |-+
+        10             rect 2    +---+    */
+
+    UnsignedInt dataIds[]{
+        1, 8, 0, 10, /* first clip rect, two data using the same node */
+        5, 9         /* second clip rect */
+    };
+    NodeHandle dataNodes[]{
+        nodeHandle(6, 0xcec), /* 0 */
+        nodeHandle(7, 0xcec), /* 1 */
+        NodeHandle::Null,     /* 2, unused */
+        NodeHandle::Null,     /* 3, unused */
+        NodeHandle::Null,     /* 4, unused */
+        nodeHandle(3, 0xcec), /* 5 */
+        NodeHandle::Null,     /* 6, unused */
+        NodeHandle::Null,     /* 7, unused */
+        nodeHandle(4, 0xcec), /* 8 */
+        nodeHandle(2, 0xcec), /* 9 */
+        nodeHandle(6, 0xcec), /* 10 */
+    };
+    Containers::Pair<Vector2, Vector2> nodeOffsetsSizes[]{
+        {},                           /* 0, unused */
+        {},                           /* 1, unused */
+        {{1.0f, 3.0f}, {2.0f, 2.0f}}, /* 2 */
+        {{4.0f, 2.0f}, {2.0f, 2.0f}}, /* 3 */
+        {{9.0f, 8.0f}, {1.0f, 2.0f}}, /* 4 */
+        {},                           /* 5, unused */
+        {{8.0f, 4.0f}, {2.0f, 2.0f}}, /* 6 */
+        {{7.0f, 7.0f}, {1.0f, 2.0f}}, /* 7 */
+    };
+    Containers::Pair<Vector2, Vector2> clipRectOffsetsSizes[]{
+        {{2.0f, 1.0f}, {5.0f, 6.0f}}, /* 0 */
+        {},                           /* 1, unused */
+        {{5.0f, 5.0f}, {6.0f, 4.0f}}, /* 2 */
+    };
+
+    /* With a sufficiently large UI size it should clip just on the left and
+       bottom */
+    {
+        Containers::Pair<Vector2, Vector2> compositeRectOffsetsSizes[Containers::arraySize(dataIds)];
+
+        Implementation::compositeRectsInto(
+            {0.0f, 0.0f}, {100.0f, 100.0f},
+            dataIds,
+            Containers::arrayView({2u, 0u}),
+            Containers::arrayView({4u, 2u}),
+            dataNodes,
+            stridedArrayView(nodeOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(nodeOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second),
+            stridedArrayView(clipRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(clipRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second));
+        CORRADE_COMPARE_AS(Containers::arrayView(compositeRectOffsetsSizes), (Containers::arrayView<Containers::Pair<Vector2, Vector2>>({
+            {{7.0f, 7.0f}, {1.0f, 2.0f}}, /* 1, node 7 */
+            {{9.0f, 8.0f}, {1.0f, 1.0f}}, /* 8, node 4, clipped on the bottom */
+            {{8.0f, 5.0f}, {2.0f, 1.0f}}, /* 0, node 6, clipped on the top */
+            {{8.0f, 5.0f}, {2.0f, 1.0f}}, /* 10, node 6 again, cliped again */
+            {{4.0f, 2.0f}, {2.0f, 2.0f}}, /* 5, node 3 */
+            {{2.0f, 3.0f}, {1.0f, 2.0f}}  /* 9, node 2, clipped on the left */
+        })), TestSuite::Compare::Container);
+    }
+
+    /* With a smaller UI size it clips also on the top and right. The clip
+       rects are expected to be clipped against the UI rect already. */
+    {
+        Containers::Pair<Vector2, Vector2> compositeRectOffsetsSizes[Containers::arraySize(dataIds)];
+
+        Containers::Pair<Vector2, Vector2> clipRectOffsetsSizesUiClipped[]{
+            {{2.0f, 3.0f}, {5.0f, 3.0f}},
+            {},
+            {{5.0f, 5.0f}, {4.5f, 4.0f}},
+        };
+        Implementation::compositeRectsInto(
+            {0.0f, 3.0f}, {9.5f, 100.0f},
+            dataIds,
+            Containers::arrayView({2u, 0u}),
+            Containers::arrayView({4u, 2u}),
+            dataNodes,
+            stridedArrayView(nodeOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(nodeOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second),
+            stridedArrayView(clipRectOffsetsSizesUiClipped).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(clipRectOffsetsSizesUiClipped).slice(&Containers::Pair<Vector2, Vector2>::second),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::first),
+            stridedArrayView(compositeRectOffsetsSizes).slice(&Containers::Pair<Vector2, Vector2>::second));
+        CORRADE_COMPARE_AS(Containers::arrayView(compositeRectOffsetsSizes), (Containers::arrayView<Containers::Pair<Vector2, Vector2>>({
+            {{7.0f, 7.0f}, {1.0f, 2.0f}}, /* 1, node 7 */
+            {{9.0f, 8.0f}, {0.5f, 1.0f}}, /* 8, node 4, bottom & right */
+            {{8.0f, 5.0f}, {1.5f, 1.0f}}, /* 0, node 6, top & right */
+            {{8.0f, 5.0f}, {1.5f, 1.0f}}, /* 10, node 6 again, cliped again */
+            {{4.0f, 3.0f}, {2.0f, 1.0f}}, /* 5, node 3 top */
+            {{2.0f, 3.0f}, {1.0f, 2.0f}}  /* 9, node 2, left */
+        })), TestSuite::Compare::Container);
+    }
 }
 
 void AbstractUserInterfaceImplementationTest::partitionedAnimatorsInsert() {
