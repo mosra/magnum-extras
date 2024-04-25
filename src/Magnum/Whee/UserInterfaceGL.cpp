@@ -96,7 +96,8 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         state.baseLayerShared = BaseLayerGL::Shared{
             BaseLayer::Shared::Configuration{style.baseLayerStyleUniformCount(),
                                              style.baseLayerStyleCount()}
-                .setDynamicStyleCount(style.baseLayerDynamicStyleCount())};
+                .setDynamicStyleCount(style.baseLayerDynamicStyleCount())
+                .addFlags(BaseLayer::Shared::Flag::SubdividedQuads)};
         setBaseLayerInstance(Containers::pointer<BaseLayerGL>(createLayer(), state.baseLayerShared));
     }
     if(features >= StyleFeature::TextLayer) {
