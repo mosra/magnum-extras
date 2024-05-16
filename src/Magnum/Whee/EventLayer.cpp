@@ -211,7 +211,44 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
     if(data.eventType == Implementation::EventType::Press && (event.type() == Pointer::MouseLeft || event.type() == Pointer::Finger || event.type() == Pointer::Pen)) {
         static_cast<Containers::Function<void()>&>(data.slot)();
         event.setAccepted();
+        return;
     }
+
+    /* Accept also a press of appropriate pointers that precede a tap/click,
+       drag, right click or middle click. Otherwise it could get propagated
+       further, causing the subsequent release or move to get called on some
+       entirely other node. */
+    if(
+        ((data.eventType == Implementation::EventType::TapOrClick ||
+          data.eventType == Implementation::EventType::Drag) &&
+            (event.type() == Pointer::MouseLeft ||
+             event.type() == Pointer::Finger ||
+             event.type() == Pointer::Pen)) ||
+        (data.eventType == Implementation::EventType::MiddleClick &&
+            event.type() == Pointer::MouseMiddle) ||
+        (data.eventType == Implementation::EventType::RightClick &&
+            event.type() == Pointer::MouseRight)
+    )
+        event.setAccepted();
+}
+
+void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
+    Data& data = _state->data[dataId];
+
+    /* Accept a release of appropriate pointers that precede a tap/click,
+       middle click or right click. Otherwise it could get propagated further,
+       causing the subsequent tap/click to not get called at all. */
+    if(
+        (data.eventType == Implementation::EventType::TapOrClick &&
+            (event.type() == Pointer::MouseLeft ||
+             event.type() == Pointer::Finger ||
+             event.type() == Pointer::Pen)) ||
+        (data.eventType == Implementation::EventType::MiddleClick &&
+            event.type() == Pointer::MouseMiddle) ||
+        (data.eventType == Implementation::EventType::RightClick &&
+            event.type() == Pointer::MouseRight)
+    )
+        event.setAccepted();
 }
 
 void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent& event) {

@@ -351,6 +351,7 @@ class MAGNUM_WHEE_EXPORT EventLayer: public AbstractLayer {
         MAGNUM_WHEE_LOCAL void doClean(Containers::BitArrayView dataIdsToRemove) override;
 
         MAGNUM_WHEE_LOCAL void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override;
+        MAGNUM_WHEE_LOCAL void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override;
         MAGNUM_WHEE_LOCAL void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event) override;
         MAGNUM_WHEE_LOCAL void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
 
