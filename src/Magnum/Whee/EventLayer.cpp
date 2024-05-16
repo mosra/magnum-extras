@@ -42,7 +42,10 @@ static_assert(Implementation::LayerDataHandleIdBits + Implementation::LayerDataH
 
 namespace Implementation {
     enum class EventType: UnsignedByte {
+        Enter,
+        Leave,
         Press,
+        Release,
         TapOrClick,
         MiddleClick,
         RightClick,
@@ -158,6 +161,10 @@ DataHandle EventLayer::onPress(const NodeHandle node, Containers::Function<void(
     return create(node, Implementation::EventType::Press, Utility::move(slot));
 }
 
+DataHandle EventLayer::onRelease(const NodeHandle node, Containers::Function<void()>&& slot) {
+    return create(node, Implementation::EventType::Release, Utility::move(slot));
+}
+
 DataHandle EventLayer::onTapOrClick(const NodeHandle node, Containers::Function<void()>&& slot) {
     return create(node, Implementation::EventType::TapOrClick, Utility::move(slot));
 }
@@ -172,6 +179,14 @@ DataHandle EventLayer::onRightClick(const NodeHandle node, Containers::Function<
 
 DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
     return create(node, Implementation::EventType::Drag, Utility::move(slot));
+}
+
+DataHandle EventLayer::onEnter(const NodeHandle node, Containers::Function<void()>&& slot) {
+    return create(node, Implementation::EventType::Enter, Utility::move(slot));
+}
+
+DataHandle EventLayer::onLeave(const NodeHandle node, Containers::Function<void()>&& slot) {
+    return create(node, Implementation::EventType::Leave, Utility::move(slot));
 }
 
 void EventLayer::remove(DataHandle handle) {
@@ -234,8 +249,17 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
 
 void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
     Data& data = _state->data[dataId];
+    if(data.eventType == Implementation::EventType::Release &&
+        (event.type() == Pointer::MouseLeft ||
+         event.type() == Pointer::Finger ||
+         event.type() == Pointer::Pen))
+    {
+        static_cast<Containers::Function<void()>&>(data.slot)();
+        event.setAccepted();
+        return;
+    }
 
-    /* Accept a release of appropriate pointers that precede a tap/click,
+    /* Accept also a release of appropriate pointers that precede a tap/click,
        middle click or right click. Otherwise it could get propagated further,
        causing the subsequent tap/click to not get called at all. */
     if(
@@ -277,6 +301,30 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
             case when capture is not there? */
         static_cast<Containers::Function<void(const Vector2&)>&>(data.slot)(event.relativePosition());
         event.setAccepted();
+    }
+
+    /* Accept also a move that's needed in order to synthesize an enter/leave
+       event */
+    if(data.eventType == Implementation::EventType::Enter ||
+       data.eventType == Implementation::EventType::Leave)
+        event.setAccepted();
+}
+
+void EventLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent&) {
+    Data& data = _state->data[dataId];
+    if(data.eventType == Implementation::EventType::Enter) {
+        static_cast<Containers::Function<void()>&>(data.slot)();
+        /* Accept status is ignored on enter/leave events, no need to call
+           setAccepted() */
+    }
+}
+
+void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent&) {
+    Data& data = _state->data[dataId];
+    if(data.eventType == Implementation::EventType::Leave) {
+        static_cast<Containers::Function<void()>&>(data.slot)();
+        /* Accept status is ignored on enter/leave events, no need to call
+           setAccepted() */
     }
 }
 
