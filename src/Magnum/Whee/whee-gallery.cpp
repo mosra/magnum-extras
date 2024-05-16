@@ -323,7 +323,11 @@ void WheeGallery::popup() {
         _ui.setNodeOffset(popup, _ui.nodeOffset(popup) + offset);
     });
     _ui.eventLayer().onPress(popup, [this, popup, popupBackground]{
-        _styleAnimator->create(0, 1, Animation::Easing::backInOut, now(), 1.3_sec, popupBackground);
+        _styleAnimator->create(0, 1, Animation::Easing::circularIn, now(), 0.3_sec, popupBackground);
+        _ui.setNodeOrder(popup, Whee::NodeHandle::Null);
+    });
+    _ui.eventLayer().onRelease(popup, [this, popup, popupBackground]{
+        _styleAnimator->create(1, 0, Animation::Easing::smoothstep, now(), 1.3_sec, popupBackground);
         _ui.setNodeOrder(popup, Whee::NodeHandle::Null);
     });
 
