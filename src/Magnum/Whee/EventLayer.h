@@ -204,6 +204,31 @@ class MAGNUM_WHEE_EXPORT EventLayer: public AbstractLayer {
         }
 
         /**
+         * @brief Connect to a finger / pen tap or left mouse release
+         *
+         * The @p slot is called when a @ref Pointer::MouseLeft,
+         * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
+         * @p node.
+         *
+         * Use @ref onTapOrClick() for a combined press and release. The
+         * returned @ref DataHandle is automatically removed once @p node or
+         * any of its parents is removed, it's the caller responsibility to
+         * ensure it doesn't outlive the state captured in the @p slot. See
+         * @ref onReleaseScoped() for a scoped alternative.
+         */
+        DataHandle onRelease(NodeHandle node, Containers::Function<void()>&& slot);
+
+        /**
+         * @brief Scoped connection to a finger / pen tap or left mouse release
+         *
+         * Compared to @ref onRelease() the connection is removed automatically
+         * when the returned @ref EventConnection gets destroyed.
+         */
+        EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void()>&& slot) {
+            return EventConnection{*this, onRelease(node, Utility::move(slot))};
+        }
+
+        /**
          * @brief Connect to a finger / pen tap or left mouse click
          *
          * The @p slot is called when a @ref Pointer::MouseLeft,
@@ -316,6 +341,52 @@ class MAGNUM_WHEE_EXPORT EventLayer: public AbstractLayer {
         }
 
         /**
+         * @brief Connect to a pointer enter
+         *
+         * The @p slot is called when a pointer moves over the @p node area.
+         *
+         * Use @ref onLeave() to hadle the opposite case. The returned
+         * @ref DataHandle is automatically removed once @p node or any of its
+         * parents is removed, it's the caller responsibility to ensure it
+         * doesn't outlive the state captured in the @p slot. See
+         * @ref onEnterScoped() for a scoped alternative.
+         */
+        DataHandle onEnter(NodeHandle node, Containers::Function<void()>&& slot);
+
+        /**
+         * @brief Scoped connection to a pointer enter
+         *
+         * Compared to @ref onEnter() the connection is removed automatically
+         * when the returned @ref EventConnection gets destroyed.
+         */
+        EventConnection onEnterScoped(NodeHandle node, Containers::Function<void()>&& slot) {
+            return EventConnection{*this, onEnter(node, Utility::move(slot))};
+        }
+
+        /**
+         * @brief Connect to a pointer leave
+         *
+         * The @p slot is called when a pointer moves out of the @p node area.
+         *
+         * Use @ref onEnter() to hadle the opposite case. The returned
+         * @ref DataHandle is automatically removed once @p node or any of its
+         * parents is removed, it's the caller responsibility to ensure it
+         * doesn't outlive the state captured in the @p slot. See
+         * @ref onLeaveScoped() for a scoped alternative.
+         */
+        DataHandle onLeave(NodeHandle node, Containers::Function<void()>&& slot);
+
+        /**
+         * @brief Scoped connection to a pointer leave
+         *
+         * Compared to @ref onLeave() the connection is removed automatically
+         * when the returned @ref EventConnection gets destroyed.
+         */
+        EventConnection onLeaveScoped(NodeHandle node, Containers::Function<void()>&& slot) {
+            return EventConnection{*this, onLeave(node, Utility::move(slot))};
+        }
+
+        /**
          * @brief Remove a connection
          *
          * Delegates to @ref AbstractLayer::remove(DataHandle) and additionally
@@ -354,6 +425,8 @@ class MAGNUM_WHEE_EXPORT EventLayer: public AbstractLayer {
         MAGNUM_WHEE_LOCAL void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override;
         MAGNUM_WHEE_LOCAL void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event) override;
         MAGNUM_WHEE_LOCAL void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
+        MAGNUM_WHEE_LOCAL void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
+        MAGNUM_WHEE_LOCAL void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
 
         struct State;
         Containers::Pointer<State> _state;
