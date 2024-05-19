@@ -592,11 +592,18 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
         MAGNUM_WHEE_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);
         MAGNUM_WHEE_LOCAL void setOutlineWidthInternal(UnsignedInt id, const Vector4& width);
 
-        /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
-           tests causes linker errors */
+        /* These can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class
+           in tests causes linker errors */
+
         /* Advertises LayerFeature::Draw but *does not* implement doDraw(),
            that's on the subclass */
         LayerFeatures doFeatures() const override;
+
+        void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override;
+        void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override;
+        void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
+        void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
+        void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
 };
 
 /**
@@ -634,6 +641,79 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared {
          */
         UnsignedInt styleCount() const;
 
+        /**
+         * @brief Set type-erased style transition functions
+         * @return Reference to self (for method chaining)
+         *
+         * The @p toPressedBlur and @p toPressedHover change a style index to a
+         * pressed blurred or hovered one, for example after a pointer was
+         * pressed on a hovered button, after an activated but blur button was
+         * pressed via a keyboard, but also after a pointer leaves a pressed
+         * button, making it blur or re-enters it, making it hovered again.
+         *
+         * The @p toInactiveBlur and @p toInactiveHover change a style index to
+         * an inactive blurred or hovered one, for example when a mouse enters
+         * or leaves an area of otherwise inactive and not pressed button, but
+         * also when a button is released again or an input is no longer
+         * active.
+         *
+         * If any of the functions is @cpp nullptr @ce, given transition is
+         * a no-op, keeping the same index.
+         *
+         * For correct behavior, all functions should be mutually invertible,
+         * e.g. @cpp toPressedHover(toInactiveBlur(style)) == style @ce if the
+         * `style` was a pressed hovered style to begin with (and both
+         * transition functions were defined), and similarly for other
+         * transitions. If the style doesn't handle hover in any way, for
+         * example for touch-only interfaces, you can use
+         * @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
+         * instead, which doesn't make any distinction between the hover and
+         * blur states and uses the same transition function for both.
+         */
+        Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt));
+
+        /**
+         * @brief Set style transition functions
+         * @return Reference to self (for method chaining)
+         *
+         * Like @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))",
+         * but allows to use a concrete enum type instead of a typeless index.
+         * Same as with the type-erased variant, if any of the function
+         * template parameters is @cpp nullptr @ce, given transition is a
+         * no-op, keeping the same index. Example usage:
+         *
+         * @snippet Whee.cpp BaseLayer-Shared-setStyleTransition
+         */
+        template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> Shared& setStyleTransition();
+
+        /**
+         * @brief Set style transition functions without hover state
+         * @return Reference to self (for method chaining)
+         *
+         * Same as calling @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
+         * with @p toPressed used for both @p toPressedBlur and
+         * @p toPressedHover and @p toInactive used for both @p toInactiveBlur
+         * and @p toInactiveHover. Useful in case the style doesn't handle
+         * hover in any way, for example for touch-only interfaces.
+         */
+        Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt)) {
+            return setStyleTransition(toPressed, toPressed, toInactive, toInactive);
+        }
+
+        /**
+         * @brief Set style transition functions
+         * @return Reference to self (for method chaining)
+         *
+         * Same as calling @ref setStyleTransition() with @p toPressed used for
+         * both @p toPressedBlur and @p toPressedHover and @p toInactive used
+         * for both @p toInactiveBlur and @p toInactiveHover. Useful in case
+         * the style doesn't handle hover in any way, for example for
+         * touch-only interfaces.
+         */
+        template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex)> Shared& setStyleTransition() {
+            return setStyleTransition<StyleIndex, toPressed, toPressed, toInactive, toInactive>();
+        }
+
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
@@ -650,6 +730,29 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared {
 
         Containers::Pointer<State> _state;
 };
+
+/* The damn thing fails to match these to the declarations above */
+#ifndef DOXYGEN_GENERATING_OUTPUT
+template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> BaseLayer::Shared& BaseLayer::Shared::setStyleTransition() {
+    /* No matter what simplification I do, GCC warns about "implicit conversion
+       to bool", so it's this obvious ugly == here. The + for the lambdas needs
+       to be there to turn them into function pointers, otherwise the ?: is
+       confused. UGH C++. */
+    return setStyleTransition(
+        toPressedBlur == nullptr ? nullptr : +[](UnsignedInt index) {
+            return UnsignedInt(toPressedBlur(StyleIndex(index)));
+        },
+        toPressedHover == nullptr ? nullptr : +[](UnsignedInt index) {
+            return UnsignedInt(toPressedHover(StyleIndex(index)));
+        },
+        toInactiveBlur == nullptr ? nullptr : +[](UnsignedInt index) {
+            return UnsignedInt(toInactiveBlur(StyleIndex(index)));
+        },
+        toInactiveHover == nullptr ? nullptr : +[](UnsignedInt index) {
+            return UnsignedInt(toInactiveHover(StyleIndex(index)));
+        });
+}
+#endif
 
 }}
 
