@@ -39,6 +39,13 @@ set_directory_properties(PROPERTIES
 find_package(Magnum COMPONENTS Sdl2Application)
 
 if(MAGNUM_WITH_UI)
+    add_library(snippets-Whee STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
+        Whee.cpp)
+    target_link_libraries(snippets-Whee PRIVATE MagnumWhee)
+    if(CORRADE_TESTSUITE_TEST_TARGET)
+        add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Whee)
+    endif()
+
     if(MAGNUM_TARGET_GL)
         add_library(snippets-Whee-gl STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
             Whee-gl.cpp)

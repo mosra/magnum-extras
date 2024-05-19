@@ -36,6 +36,10 @@
 
 namespace Magnum { namespace Whee {
 
+namespace Implementation {
+    constexpr UnsignedInt styleTransitionPassthrough(UnsignedInt index) { return index; }
+}
+
 struct BaseLayer::Shared::State {
     explicit State(const UnsignedInt styleCount) noexcept: styleCount{styleCount} {}
     /* Assumes that the derived state struct either in BaseLayerGL::Shared or
@@ -51,6 +55,10 @@ struct BaseLayer::Shared::State {
     virtual ~State() = default;
 
     UnsignedInt styleCount;
+    UnsignedInt(*styleTransitionToPressedBlur)(UnsignedInt) = Implementation::styleTransitionPassthrough;
+    UnsignedInt(*styleTransitionToPressedHover)(UnsignedInt) = Implementation::styleTransitionPassthrough;
+    UnsignedInt(*styleTransitionToInactiveBlur)(UnsignedInt) = Implementation::styleTransitionPassthrough;
+    UnsignedInt(*styleTransitionToInactiveHover)(UnsignedInt) = Implementation::styleTransitionPassthrough;
 };
 
 namespace Implementation {

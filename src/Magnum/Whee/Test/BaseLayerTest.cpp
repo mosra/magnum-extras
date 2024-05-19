@@ -25,12 +25,15 @@
 
 #include <new>
 #include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
+#include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/BaseLayer.h"
+#include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/baseLayerState.h" /* for updateDataOrder() */
 
@@ -68,6 +71,12 @@ struct BaseLayerTest: TestSuite::Tester {
 
     void updateEmpty();
     void updateDataOrder();
+
+    void eventStyleTransitionNoOp();
+    void eventStyleTransition();
+    void eventStyleTransitionNoHover();
+    void eventStyleTransitionNoCapture();
+    void eventStyleTransitionOutOfRange();
 };
 
 const struct {
@@ -83,6 +92,64 @@ enum class Enum: UnsignedShort {};
 Debug& operator<<(Debug& debug, Enum value) {
     return debug << UnsignedInt(value);
 }
+
+/* The enum is deliberately not 32-bit to verify the APIs can work with smaller
+   types too */
+enum class StyleIndex: UnsignedByte {
+    Green = 0,
+    GreenHover = 1,
+    GreenPressed = 2,
+    GreenPressedHover = 3,
+
+    Red = 4,
+    RedHover = 5,
+    RedPressed = 6,
+    RedPressedHover = 7,
+
+    Blue = 8,
+    BluePressed = 9,
+
+    White = 10,
+    WhiteHover = 11,
+};
+
+Debug& operator<<(Debug& debug, StyleIndex value) {
+    switch(value) {
+        #define _c(value) case StyleIndex::value: return debug << "StyleIndex::" #value;
+        _c(Green)
+        _c(GreenHover)
+        _c(GreenPressed)
+        _c(GreenPressedHover)
+        _c(Red)
+        _c(RedHover)
+        _c(RedPressed)
+        _c(RedPressedHover)
+        _c(Blue)
+        _c(BluePressed)
+        _c(White)
+        _c(WhiteHover)
+        #undef _c
+    }
+
+    return debug << UnsignedInt(value);
+}
+
+const struct {
+    const char* name;
+    bool update;
+} EventStyleTransitionData[]{
+    {"update before", true},
+    {"", false},
+};
+
+const struct {
+    const char* name;
+    bool disableCapture;
+    StyleIndex blurStyle, hoverStyle;
+} EventStyleTransitionNoCaptureData[]{
+    {"", false, StyleIndex::GreenPressed, StyleIndex::GreenPressedHover},
+    {"capture disabled", true, StyleIndex::Green, StyleIndex::GreenHover},
+};
 
 BaseLayerTest::BaseLayerTest() {
     addTests({&BaseLayerTest::styleSizeAlignment<BaseLayerStyleCommon>,
@@ -119,6 +186,18 @@ BaseLayerTest::BaseLayerTest() {
 
     addInstancedTests({&BaseLayerTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
+
+    addTests({&BaseLayerTest::eventStyleTransitionNoOp});
+
+    addInstancedTests({&BaseLayerTest::eventStyleTransition},
+        Containers::arraySize(EventStyleTransitionData));
+
+    addTests({&BaseLayerTest::eventStyleTransitionNoHover});
+
+    addInstancedTests({&BaseLayerTest::eventStyleTransitionNoCapture},
+        Containers::arraySize(EventStyleTransitionNoCaptureData));
+
+    addTests({&BaseLayerTest::eventStyleTransitionOutOfRange});
 }
 
 using namespace Math::Literals;
@@ -331,8 +410,6 @@ void BaseLayerTest::construct() {
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-
-        LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(137, 0xfe), shared};
 
     /* There isn't anything to query on the BaseLayer itself */
@@ -351,8 +428,6 @@ void BaseLayerTest::constructMove() {
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-
-        LayerFeatures doFeatures() const override { return {}; }
     };
 
     LayerShared shared{3};
@@ -368,8 +443,8 @@ void BaseLayerTest::constructMove() {
     c = Utility::move(b);
     CORRADE_COMPARE(c.handle(), layerHandle(137, 0xfe));
 
-    CORRADE_VERIFY(std::is_nothrow_move_constructible<Layer>::value);
-    CORRADE_VERIFY(std::is_nothrow_move_assignable<Layer>::value);
+    CORRADE_VERIFY(std::is_nothrow_move_constructible<BaseLayer>::value);
+    CORRADE_VERIFY(std::is_nothrow_move_assignable<BaseLayer>::value);
 }
 
 template<class T> void BaseLayerTest::create() {
@@ -381,8 +456,6 @@ template<class T> void BaseLayerTest::create() {
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-
-        LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1), shared};
 
     /* Just to be sure the getters aren't picking up the first ever data
@@ -414,12 +487,12 @@ template<class T> void BaseLayerTest::create() {
     } {
         DataHandle data = layer.create(T(37), 0xff3366_rgbf, {3.0f, 2.0f, 1.0f, 4.0f});
         CORRADE_COMPARE(layer.style(data), 37);
-        /* Can't use T, as the function restrict to enum types which woulf fail
-           for T == UnsignedInt */
+        /* Can't use T, as the function restricts to enum types which would
+           fail for T == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(data), Enum(37));
         CORRADE_COMPARE(layer.style(dataHandleData(data)), 37);
-        /* Can't use T, as the function restrict to enum types which woulf fail
-           for T == UnsignedInt */
+        /* Can't use T, as the function restricts to enum types which would
+           fail for T == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(data)), Enum(37));
         CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.color(dataHandleData(data)), 0xff3366_rgbf);
@@ -440,8 +513,6 @@ template<class T> void BaseLayerTest::setStyle() {
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-
-        LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1), shared};
 
     /* Just to be sure the setters aren't picking up the first ever data
@@ -470,8 +541,6 @@ void BaseLayerTest::setColor() {
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-
-        LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1), shared};
 
     /* Just to be sure the setters aren't picking up the first ever data
@@ -500,8 +569,6 @@ void BaseLayerTest::setOutlineWidth() {
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-
-        LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1), shared};
 
     /* Just to be sure the setters aren't picking up the first ever data
@@ -542,8 +609,6 @@ void BaseLayerTest::invalidHandle() {
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-
-        LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1), shared};
 
     std::ostringstream out;
@@ -584,8 +649,6 @@ void BaseLayerTest::styleOutOfRange() {
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-
-        LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1), shared};
 
     DataHandle data = layer.create(2);
@@ -632,8 +695,6 @@ void BaseLayerTest::updateDataOrder() {
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
         const BaseLayer::State& stateData() const { return *_state; }
-
-        LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1), shared};
 
     /* Create 10 data handles. Only three get filled and actually used. */
@@ -731,6 +792,720 @@ void BaseLayerTest::updateDataOrder() {
             {-10.0f,  2.5f},
             { 10.0f,  2.5f},
         }), TestSuite::Compare::Container);
+    }
+}
+
+StyleIndex styleIndexTransitionToInactiveBlur(StyleIndex index) {
+    switch(index) {
+        case StyleIndex::Green:
+        case StyleIndex::GreenHover:
+        case StyleIndex::GreenPressed:
+        case StyleIndex::GreenPressedHover:
+            return StyleIndex::Green;
+        case StyleIndex::Red:
+        case StyleIndex::RedHover:
+        case StyleIndex::RedPressed:
+        case StyleIndex::RedPressedHover:
+            return StyleIndex::Red;
+        case StyleIndex::Blue:
+        case StyleIndex::BluePressed:
+            return StyleIndex::Blue;
+        case StyleIndex::White:
+        case StyleIndex::WhiteHover:
+            return StyleIndex::White;
+    }
+    CORRADE_FAIL("Called with" << UnsignedInt(index));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+StyleIndex styleIndexTransitionToInactiveHover(StyleIndex index) {
+    switch(index) {
+        case StyleIndex::Green:
+        case StyleIndex::GreenHover:
+        case StyleIndex::GreenPressed:
+        case StyleIndex::GreenPressedHover:
+            return StyleIndex::GreenHover;
+        case StyleIndex::Red:
+        case StyleIndex::RedHover:
+        case StyleIndex::RedPressed:
+        case StyleIndex::RedPressedHover:
+            return StyleIndex::RedHover;
+        case StyleIndex::Blue:
+        case StyleIndex::BluePressed:
+            return StyleIndex::Blue;
+        case StyleIndex::White:
+        case StyleIndex::WhiteHover:
+            return StyleIndex::WhiteHover;
+    }
+    CORRADE_FAIL("Called with" << UnsignedInt(index));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+StyleIndex styleIndexTransitionToPressedBlur(StyleIndex index) {
+    switch(index) {
+        case StyleIndex::Green:
+        case StyleIndex::GreenHover:
+        case StyleIndex::GreenPressed:
+        case StyleIndex::GreenPressedHover:
+            return StyleIndex::GreenPressed;
+        case StyleIndex::Red:
+        case StyleIndex::RedHover:
+        case StyleIndex::RedPressed:
+        case StyleIndex::RedPressedHover:
+            return StyleIndex::RedPressed;
+        case StyleIndex::Blue:
+        case StyleIndex::BluePressed:
+            return StyleIndex::BluePressed;
+        case StyleIndex::White:
+        case StyleIndex::WhiteHover:
+            return StyleIndex::White;
+    }
+    CORRADE_FAIL("Called with" << UnsignedInt(index));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+StyleIndex styleIndexTransitionToPressedHover(StyleIndex index) {
+    switch(index) {
+        case StyleIndex::Green:
+        case StyleIndex::GreenHover:
+        case StyleIndex::GreenPressed:
+        case StyleIndex::GreenPressedHover:
+            return StyleIndex::GreenPressedHover;
+        case StyleIndex::Red:
+        case StyleIndex::RedHover:
+        case StyleIndex::RedPressed:
+        case StyleIndex::RedPressedHover:
+            return StyleIndex::RedPressedHover;
+        case StyleIndex::Blue:
+        case StyleIndex::BluePressed:
+            return StyleIndex::BluePressed;
+        case StyleIndex::White:
+        case StyleIndex::WhiteHover:
+            return StyleIndex::WhiteHover;
+    }
+    CORRADE_FAIL("Called with" << UnsignedInt(index));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+void BaseLayerTest::eventStyleTransitionNoOp() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+    } shared{4};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    /* Deliberately setting a style that isn't the "default" */
+    DataHandle data = layer.create(StyleIndex::GreenPressedHover);
+    layer.attach(data, node);
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Press, release, hover, hovered press, hovered release, blur should all
+       do nothing by default */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({5.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null toPressedBlur transition will do nothing for a press */
+    shared.setStyleTransition<StyleIndex,
+        nullptr,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveHover>();
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null toInactiveBlur transition will do nothing for a release */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        nullptr,
+        styleIndexTransitionToInactiveHover>();
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null toInactiveHover will do nothing for a hover */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        nullptr>();
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({1.5f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null toPressedHover will do nothing for a hovered press */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        nullptr,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveHover>();
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null combined toPressed will do nothing for a press */
+    shared.setStyleTransition<StyleIndex,
+        nullptr,
+        styleIndexTransitionToInactiveBlur>();
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null combined toInactive will do nothing for a release */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        nullptr>();
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+}
+
+void BaseLayerTest::eventStyleTransition() {
+    auto&& data = EventStyleTransitionData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+    } shared{12};
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveHover>();
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /*   1  2  3  4  5  6
+       2 +-----+  +-----+
+       3 |green|  | red |
+       4 +-----+  +-----+
+       5 +-----+  +-----+
+       6 |blue |  |white|
+       7 +-----+  +-----+ */
+    NodeHandle nodeGreen = ui.createNode({1.0f, 2.0f}, {2.0f, 2.0f});
+    NodeHandle nodeRed = ui.createNode({4.0f, 2.0f}, {2.0f, 2.0f});
+    NodeHandle nodeBlue = ui.createNode({1.0f, 5.0f}, {2.0f, 2.0f});
+    NodeHandle nodeWhite = ui.createNode({4.0f, 5.0f}, {2.0f, 2.0f});
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    /* One extra data to verify it's mapping from nodes to data correctly */
+    layer.create(StyleIndex::Green);
+    DataHandle dataGreen = layer.create(StyleIndex::Green);
+    DataHandle dataRed = layer.create(StyleIndex::Red);
+    DataHandle dataBlue = layer.create(StyleIndex::Blue);
+    DataHandle dataWhite = layer.create(StyleIndex::White);
+    layer.attach(dataGreen, nodeGreen);
+    layer.attach(dataRed, nodeRed);
+    layer.attach(dataBlue, nodeBlue);
+    layer.attach(dataWhite, nodeWhite);
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Press on the green node. The node isn't registered as hovered, so it's
+       a press without a hover. Which usually happens with taps, for example,
+       although it's not restricted to a particular Pointer type. */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    }
+
+    /* Presence (or not) of the update call tests two things -- that the
+       NeedsUpdate flag is set for each event properly, and that the style is
+       changed independently of whether the layer needs update or not */
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Release on the green node. Again, the node isn't registered as hovered,
+       so neither the hover stays. */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Move on the red node makes it hovered */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({5.0f, 3.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeRed);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Tap on it makes it hovered & pressed */
+    {
+        PointerEvent event{Pointer::Finger};
+        CORRADE_VERIFY(ui.pointerPressEvent({4.5f, 3.5f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), nodeRed);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Move away makes it only pressed, without hover, as implicit capture is
+       in effect */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({7.0f, 3.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), nodeRed);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressed);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Move back makes it hovered & pressed again */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({5.5f, 3.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), nodeRed);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Release makes it only hover again */
+    {
+        PointerEvent event{Pointer::Finger};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({5.0f, 2.5f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Move away makes it not hovered anymore */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({7.0f, 2.5f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Move on and away from the blue is accepted but makes no change to it,
+       thus no update is needed */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 6.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeBlue);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({2.5f, 8.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Press and release on the white is accepted but makes no change to it,
+       thus no update is needed */
+    {
+        PointerEvent event{Pointer::Pen};
+        CORRADE_VERIFY(ui.pointerPressEvent({5.0f, 5.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), nodeWhite);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        PointerEvent event{Pointer::Pen};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({5.5f, 4.5f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Press and release on the green node again, but with a right click. Such
+       event isn't even accepted and should cause no change either. */
+    {
+        PointerEvent event{Pointer::MouseRight};
+        CORRADE_VERIFY(!ui.pointerPressEvent({2.0f, 3.0f}, event));
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        PointerEvent event{Pointer::MouseRight};
+        CORRADE_VERIFY(!ui.pointerReleaseEvent({1.5f, 2.5f}, event));
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+}
+
+void BaseLayerTest::eventStyleTransitionNoHover() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        State& state() { return *_state; }
+    } shared{4};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    DataHandle data = layer.create(StyleIndex::Green);
+    layer.attach(data, node);
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToInactiveBlur>();
+
+    auto testPressRelease = [&]{
+        {
+            PointerEvent event{Pointer::MouseLeft};
+            CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
+            CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressed);
+            CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        }
+
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        {
+            PointerEvent event{Pointer::MouseLeft};
+            CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
+            CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
+            CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        }
+
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    };
+
+    /* Test press & release without a hover */
+    testPressRelease();
+
+    /* Moving onto the node should do nothing */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Press & release with a hover should behave the same as without */
+    testPressRelease();
+
+    /* Moving away should do nothing again */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+}
+
+void BaseLayerTest::eventStyleTransitionNoCapture() {
+    auto&& data = EventStyleTransitionNoCaptureData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+    } shared{4};
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveHover>();
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct EventLayer: AbstractLayer {
+        explicit EventLayer(LayerHandle handle, bool disableCapture): AbstractLayer{handle}, disableCapture{disableCapture} {}
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+
+        void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
+            if(disableCapture) {
+                event.setCaptured(false);
+                event.setAccepted();
+            }
+        }
+
+        bool disableCapture;
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    DataHandle layerData = layer.create(StyleIndex::Green);
+    layer.attach(layerData, node);
+
+    EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer(), data.disableCapture));
+    DataHandle eventData = eventLayer.create();
+    eventLayer.attach(eventData, node);
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Move onto the node is capture-independent */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenHover);
+
+    /* Press will enable the capture, maybe */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventCapturedNode(), data.disableCapture ? NodeHandle::Null : node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenPressedHover);
+
+    /* Move away will only preserve the press if capture is set */
+    } {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_COMPARE(ui.pointerMoveEvent({7.0f, 2.0f}, event), !data.disableCapture);
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.blurStyle);
+
+    /* Move back will only preserve the press if capture is set */
+    } {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.hoverStyle);
+    }
+}
+
+StyleIndex styleIndexTransitionOutOfRange(StyleIndex) {
+    return StyleIndex(12);
+}
+
+void BaseLayerTest::eventStyleTransitionOutOfRange() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): BaseLayer::Shared{styleCount} {}
+        State& state() { return *_state; }
+    } shared{12};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    DataHandle data = layer.create(StyleIndex::Red);
+    layer.attach(data, node);
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Tests an OOB condition happening in any of the four functions, and
+       checked in any of the four event handlers. Does not exhaustively test
+       all possible combinations, as that should not be needed. */
+
+    /* OOB toPressedBlur transition */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveHover>();
+    {
+        PointerEvent event{Pointer::MouseLeft};
+
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.pointerPressEvent({2.0f, 2.0f}, event);
+        CORRADE_COMPARE(out.str(), "Whee::BaseLayer::pointerPressEvent(): style transition from 4 to 12 out of range for 12 styles\n");
+    }
+
+    /* OOB toPressedHover transition in the press event. Doing a
+       (non-asserting) move before so the hovered node is properly
+       registered. */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionToInactiveHover>();
+    {
+        PointerMoveEvent moveEvent{{}, {}};
+        ui.pointerMoveEvent({1.5f, 2.0f}, moveEvent);
+        PointerEvent event{Pointer::MouseLeft};
+
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.pointerPressEvent({2.0f, 2.0f}, event);
+        CORRADE_COMPARE(out.str(), "Whee::BaseLayer::pointerPressEvent(): style transition from 5 to 12 out of range for 12 styles\n");
+    }
+
+    /* OOB toInactiveHover transition */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionOutOfRange>();
+    {
+        PointerEvent event{Pointer::MouseLeft};
+
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.pointerReleaseEvent({1.5f, 2.5f}, event);
+        CORRADE_COMPARE(out.str(), "Whee::BaseLayer::pointerReleaseEvent(): style transition from 5 to 12 out of range for 12 styles\n");
+    }
+
+    /* OOB toInactiveBlur transition in the leave event */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToInactiveHover>();
+    {
+        PointerMoveEvent event{{}, {}};
+
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.pointerMoveEvent({8.5f, 2.0f}, event);
+        CORRADE_COMPARE(out.str(), "Whee::BaseLayer::pointerLeaveEvent(): style transition from 5 to 12 out of range for 12 styles\n");
+    }
+
+    /* OOB toInactiveHover transition in the enter event */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedBlur,
+        styleIndexTransitionToPressedHover,
+        styleIndexTransitionToInactiveBlur,
+        styleIndexTransitionOutOfRange>();
+    {
+        PointerMoveEvent event{{}, {}};
+
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.pointerMoveEvent({1.5f, 2.0f}, event);
+        CORRADE_COMPARE(out.str(), "Whee::BaseLayer::pointerEnterEvent(): style transition from 5 to 12 out of range for 12 styles\n");
     }
 }
 

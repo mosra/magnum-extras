@@ -31,6 +31,7 @@
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Matrix3.h>
 
+#include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/baseLayerState.h"
 
@@ -50,6 +51,18 @@ BaseLayer::Shared& BaseLayer::Shared::operator=(Shared&&) noexcept = default;
 
 UnsignedInt BaseLayer::Shared::styleCount() const {
     return _state->styleCount;
+}
+
+BaseLayer::Shared& BaseLayer::Shared::setStyleTransition(UnsignedInt(*const toPressedBlur)(UnsignedInt), UnsignedInt(*const toPressedHover)(UnsignedInt), UnsignedInt(*const toInactiveBlur)(UnsignedInt), UnsignedInt(*const toInactiveHover)(UnsignedInt)) {
+    _state->styleTransitionToPressedBlur = toPressedBlur ? toPressedBlur :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToPressedHover = toPressedHover ? toPressedHover :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToInactiveBlur = toInactiveBlur ? toInactiveBlur :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToInactiveHover = toInactiveHover ? toInactiveHover :
+        Implementation::styleTransitionPassthrough;
+    return *this;
 }
 
 BaseLayer::BaseLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractLayer{handle}, _state{Utility::move(state)} {}
@@ -170,7 +183,7 @@ void BaseLayer::setOutlineWidthInternal(const UnsignedInt id, const Vector4& wid
 }
 
 LayerFeatures BaseLayer::doFeatures() const {
-    return LayerFeature::Draw;
+    return LayerFeature::Event|LayerFeature::Draw;
 }
 
 void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
@@ -223,6 +236,99 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             vertex.color = data.color;
             vertex.style = data.style;
         }
+    }
+}
+
+void BaseLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
+    /* Only reacting to pointer types typically used to click/tap on things */
+    if(event.type() != Pointer::MouseLeft &&
+       event.type() != Pointer::Finger &&
+       event.type() != Pointer::Pen)
+        return;
+
+    /* A press can be not hovering if it happened without a preceding move
+       event (such as for pointer types that don't support hover like touches,
+       or if move events aren't propagated from the application) */
+    State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+        sharedState.styleTransitionToPressedHover :
+        sharedState.styleTransitionToPressedBlur;
+
+    Implementation::BaseLayerData& data = state.data[dataId];
+    const UnsignedInt nextStyle = transition(data.style);
+    CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+        "Whee::BaseLayer::pointerPressEvent(): style transition from" << data.style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+    if(nextStyle != data.style) {
+        data.style = nextStyle;
+        setNeedsUpdate();
+    }
+    event.setAccepted();
+}
+
+void BaseLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
+    /* Only reacting to pointer types typically used to click/tap on things */
+    if(event.type() != Pointer::MouseLeft &&
+       event.type() != Pointer::Finger &&
+       event.type() != Pointer::Pen)
+        return;
+
+    /* A release can be not hovering if it happened without a preceding move
+       event (such as for pointer types that don't support hover like touches,
+       or if move events aren't propagated from the application) */
+    State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+        sharedState.styleTransitionToInactiveHover :
+        sharedState.styleTransitionToInactiveBlur;
+
+    Implementation::BaseLayerData& data = state.data[dataId];
+    const UnsignedInt nextStyle = transition(data.style);
+    CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+        "Whee::BaseLayer::pointerReleaseEvent(): style transition from" << data.style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+    if(nextStyle != data.style) {
+        data.style = nextStyle;
+        setNeedsUpdate();
+    }
+    event.setAccepted();
+}
+
+void BaseLayer::doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) {
+    /* In order to have Enter/Leave emitted as well */
+    event.setAccepted();
+}
+
+void BaseLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
+        sharedState.styleTransitionToPressedHover :
+        sharedState.styleTransitionToInactiveHover;
+
+    Implementation::BaseLayerData& data = state.data[dataId];
+    const UnsignedInt nextStyle = transition(data.style);
+    CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+        "Whee::BaseLayer::pointerEnterEvent(): style transition from" << data.style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+    if(nextStyle != data.style) {
+        data.style = nextStyle;
+        setNeedsUpdate();
+    }
+}
+
+void BaseLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
+        sharedState.styleTransitionToPressedBlur :
+        sharedState.styleTransitionToInactiveBlur;
+
+    Implementation::BaseLayerData& data = state.data[dataId];
+    const UnsignedInt nextStyle = transition(data.style);
+    CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+        "Whee::BaseLayer::pointerLeaveEvent(): style transition from" << data.style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+    if(nextStyle != data.style) {
+        data.style = nextStyle;
+        setNeedsUpdate();
     }
 }
 

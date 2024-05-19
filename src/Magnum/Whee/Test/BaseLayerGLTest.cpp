@@ -45,6 +45,7 @@
 
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/BaseLayerGL.h"
+#include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 
 #include "configure.h"
@@ -78,6 +79,8 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void drawSetup();
     void drawTeardown();
     void drawOrder();
+
+    void eventStyleTransition();
 
     private:
         PluginManager::Manager<Trade::AbstractImporter> _manager;
@@ -228,6 +231,10 @@ BaseLayerGLTest::BaseLayerGLTest() {
         Containers::arraySize(DrawOrderData),
         &BaseLayerGLTest::drawSetup,
         &BaseLayerGLTest::drawTeardown);
+
+    addTests({&BaseLayerGLTest::eventStyleTransition},
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
 
     /* Prefer the StbImageImporter so we can keep files small but always import
        them as four-channel */
@@ -649,6 +656,70 @@ void BaseLayerGLTest::drawOrder() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/draw-order.png"),
+        DebugTools::CompareImageToFile{_manager});
+}
+
+void BaseLayerGLTest::eventStyleTransition() {
+    /* Switches between the "default" and "gradient" cases from render() after
+       a press event. Everything else is tested in BaseLayerTest already. */
+
+    AbstractUserInterface ui{RenderSize};
+
+    struct {
+        BaseLayerStyleCommon common;
+        BaseLayerStyleItem defaults;
+        BaseLayerStyleItem gradient;
+    } style;
+    style.gradient.setColor(0xeeddaa_rgbf, 0x774422_rgbf);
+
+    BaseLayerGL::Shared layerShared{2};
+    layerShared
+        .setStyle(style)
+        .setStyleTransition(
+            [](UnsignedInt style) -> UnsignedInt {
+                if(style == 0) return 1;
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            },
+            [](UnsignedInt) -> UnsignedInt {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            });
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0);
+    ui.attachData(node, nodeData);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+    Image2D before = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
+
+    PointerEvent event{Pointer::MouseLeft};
+    CORRADE_VERIFY(ui.pointerPressEvent({64.0f, 24.0f}, event));
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+    Image2D after = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(before,
+        Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/default.png"),
+        DebugTools::CompareImageToFile{_manager});
+    CORRADE_COMPARE_WITH(after,
+        Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/gradient.png"),
         DebugTools::CompareImageToFile{_manager});
 }
 
