@@ -46,17 +46,17 @@ A move-only owning wrapper over a @ref NodeHandle. The @ref BasicWidget
 template and the @ref Widget typedef then restrict the type to a concrete user
 interface instance.
 
-Stateful widgets are meant to be used when their visual state will need be
-modified during their lifetime (for example, a button changing its color or
-text), or when the widget implementation maintains a state that is regularly
-queried by the application (for example, an input text label, or a list
-selection).
+Stateful widgets (such as a @ref Button) are meant to be used when their visual
+state will need be modified during their lifetime (for example, a button
+changing its color or text), or when the widget implementation maintains a
+state that is regularly queried by the application (for example, an input text
+label, or a list selection).
 
-In comparison, stateless widgets are only set up once and then live until
-removed, either explicitly through their @ref NodeHandle, or implicitly when
-the parent nodes are removed. Stateless widgets are more lightweight as no
-individual destructors need to be called for them and should be preferred where
-possible.
+In comparison, stateless widgets (such as a @ref button()) are only set up once
+and then live until removed, either explicitly through their @ref NodeHandle,
+or implicitly when the parent nodes are removed. Stateless widgets are more
+lightweight as no individual destructors need to be called for them and should
+be preferred where possible.
 */
 class MAGNUM_WHEE_EXPORT AbstractWidget {
     public:

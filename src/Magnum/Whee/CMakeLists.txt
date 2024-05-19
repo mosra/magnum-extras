@@ -40,9 +40,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
                ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
 
 set(MagnumWhee_SRCS
+    Button.cpp
     Event.cpp
     Handle.cpp
-    NodeFlags.cpp)
+    NodeFlags.cpp
+    Style.cpp)
 
 set(MagnumWhee_GracefulAssert_SRCS
     AbstractAnimator.cpp
@@ -77,11 +79,14 @@ set(MagnumWhee_HEADERS
     Application.h
     BaseLayer.h
     BaseLayerAnimator.h
+    Button.h
     Event.h
     EventLayer.h
     Handle.h
     NodeFlags.h
     SnapLayouter.h
+    Style.h
+    Style.hpp
     TextLayer.h
     TextLayerAnimator.h
     TextProperties.h
@@ -95,12 +100,17 @@ set(MagnumWhee_PRIVATE_HEADERS
     Implementation/abstractVisualLayerState.h
     Implementation/abstractVisualLayerAnimatorState.h
     Implementation/baseLayerState.h
+    Implementation/baseStyleUniformsMcssDark.h
     Implementation/textLayerState.h
+    Implementation/textStyleMcssDark.h
+    Implementation/textStyleUniformsMcssDark.h
     Implementation/userInterfaceState.h)
 
 if(MAGNUM_TARGET_GL)
     corrade_add_resource(MagnumWhee_RESOURCES resources.conf)
     list(APPEND MagnumWhee_SRCS
+        # TODO this contains the font and icons as well, split into multiple
+        #   files once non-GL / Vulkan builds become desirable
         ${MagnumWhee_RESOURCES})
     list(APPEND MagnumWhee_GracefulAssert_SRCS
         BaseLayerGL.cpp
