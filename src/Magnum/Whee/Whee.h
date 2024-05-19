@@ -84,6 +84,7 @@ enum class StyleFeature: UnsignedByte;
 typedef Containers::EnumSet<StyleFeature, 15> StyleFeatures;
 class AbstractStyle;
 
+enum class Icon: UnsignedInt;
 class UserInterface;
 class UserInterfaceGL;
 class Anchor;

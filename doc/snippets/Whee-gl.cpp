@@ -28,6 +28,7 @@
 #include <Magnum/GL/Renderer.h>
 
 #include "Magnum/Whee/RendererGL.h"
+#include "Magnum/Whee/Style.h"
 #include "Magnum/Whee/UserInterfaceGL.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
@@ -85,9 +86,10 @@ DOXYGEN_ELLIPSIS()
 _ui.setRendererInstance(Containers::pointer<Whee::RendererGL>(
     Whee::RendererGL::Flag::CompositingFramebuffer));
 
-/* Then add appropriate compositing layers, etc */
+/* Then add appropriate compositing layers, set a style, etc */
 _ui
     .setSize(DOXYGEN_ELLIPSIS({}))
+    .setStyle(DOXYGEN_ELLIPSIS(Whee::McssDarkStyle{}))
     DOXYGEN_ELLIPSIS();
 /* [RendererGL-compositing-framebuffer] */
 }
