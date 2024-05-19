@@ -235,6 +235,10 @@ TextLayerGL::TextLayerGL(const LayerHandle handle, Shared& sharedState): TextLay
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
 }
 
+LayerFeatures TextLayerGL::doFeatures() const {
+    return TextLayer::doFeatures()|LayerFeature::DrawUsesBlending|LayerFeature::DrawUsesScissor;
+}
+
 void TextLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize) {
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
@@ -299,11 +303,6 @@ void TextLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
     #ifdef CORRADE_NO_ASSERT
     static_cast<void>(count);
     #endif
-
-    /** @todo this should be done on the UI level only on the transition
-        between a layer that uses scissor and a layer that doesn't (or for the
-        last layer), not again for every layer */
-    GL::Renderer::setScissor({{}, state.framebufferSize});
 }
 
 }}
