@@ -36,30 +36,10 @@ using namespace Magnum;
 void mainWheeGL();
 void mainWheeGL() {
 {
-/* [BaseLayerGL-renderer] */
-GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
-GL::Renderer::enable(GL::Renderer::Feature::Blending);
-GL::Renderer::setBlendFunction(
-    GL::Renderer::BlendFunction::One,
-    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-/* [BaseLayerGL-renderer] */
-}
-
-{
 /* [RendererGL] */
 GL::Renderer::setBlendFunction(
     GL::Renderer::BlendFunction::One,
     GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 /* [RendererGL] */
-}
-
-{
-/* [TextLayerGL-renderer] */
-GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
-GL::Renderer::enable(GL::Renderer::Feature::Blending);
-GL::Renderer::setBlendFunction(
-    GL::Renderer::BlendFunction::One,
-    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-/* [TextLayerGL-renderer] */
 }
 }
