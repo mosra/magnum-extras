@@ -139,7 +139,7 @@ class PointerEvent {
         /**
          * @brief Whether the event is called on a node that's currently hovered
          *
-         * Returns @cpp true @ce if @ref AbstractUserInterface::pointerEventHoveredNode()
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
          * is the same as the node the event is called on, @cpp false @ce
          * otherwise. In particular, is @cpp false @ce for a press or release
          * event that happened without a preceding move on given node, is also
@@ -276,7 +276,7 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
         /**
          * @brief Whether the event is called on a node that's currently hovered
          *
-         * Returns @cpp true @ce if @ref AbstractUserInterface::pointerEventHoveredNode()
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
          * is the same as the node the event is called on, @cpp false @ce
          * otherwise. In particular, is @cpp false @ce for the first move event
          * happening on a node, @cpp true @ce for the enter event and all
@@ -286,7 +286,7 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
          *
          * Note that even if this function returns @cpp true @ce, the event
          * handler still controls whether the node actually appears in
-         * @ref AbstractUserInterface::pointerEventHoveredNode() afterwards.
+         * @ref AbstractUserInterface::currentHoveredNode() afterwards.
          * Accepting the event makes the node appear there. Not accepting it
          * makes the event potentially fall through to other nodes which may
          * then become hovered, if there are none then the hovered node becomes

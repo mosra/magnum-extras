@@ -170,9 +170,9 @@ void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterfa
 
     const Shared::State& sharedState = state.shared;
     const NodeHandle node = this->node(handle);
-    const bool hovered = ui.pointerEventHoveredNode() == node;
+    const bool hovered = ui.currentHoveredNode() == node;
     UnsignedInt(*transition)(UnsignedInt);
-    if(ui.pointerEventPressedNode() == node) transition = hovered ?
+    if(ui.currentPressedNode() == node) transition = hovered ?
         sharedState.styleTransitionToPressedOver :
         sharedState.styleTransitionToPressedOut;
     else transition = hovered ?

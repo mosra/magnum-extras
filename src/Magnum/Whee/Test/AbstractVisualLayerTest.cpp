@@ -517,8 +517,8 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     DataHandle data2 = layer.create(InactiveOut2, node2);
 
     /* Nothing is hovered or pressed initially. */
-    CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-    CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
     /* Setting a transitioned style picks InactiveOut. Switching the IDs to be
        sure it actually changed. */
@@ -531,8 +531,8 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node2);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node2);
         CORRADE_COMPARE(layer.style(data2), InactiveOver1);
     }
 
@@ -548,8 +548,8 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node2);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node2);
+        CORRADE_COMPARE(ui.currentPressedNode(), node2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node2);
         CORRADE_COMPARE(layer.style(data2), PressedOver2);
     }
 
@@ -566,8 +566,8 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 75}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node2);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style(data2), PressedOut1);
     }
 
@@ -583,8 +583,8 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 75}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style(data2), InactiveOut2);
     }
 
@@ -922,43 +922,43 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({5.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -973,8 +973,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -989,8 +989,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1005,8 +1005,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({1.5f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1021,8 +1021,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1035,8 +1035,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1049,8 +1049,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1135,8 +1135,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), nodeGreen);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
     }
@@ -1158,8 +1158,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
     }
@@ -1177,8 +1177,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({5.0f, 3.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
     }
@@ -1196,9 +1196,9 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerEvent event{Pointer::Finger};
         CORRADE_VERIFY(ui.pointerPressEvent({4.5f, 3.5f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), nodeRed);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeRed);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
     }
@@ -1217,9 +1217,9 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({7.0f, 3.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), nodeRed);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressed);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
     }
@@ -1237,9 +1237,9 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({5.5f, 3.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), nodeRed);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeRed);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
     }
@@ -1257,9 +1257,9 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerEvent event{Pointer::Finger};
         CORRADE_VERIFY(ui.pointerReleaseEvent({5.0f, 2.5f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeRed);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
     }
@@ -1277,8 +1277,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({7.0f, 2.5f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
     }
@@ -1297,15 +1297,15 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 6.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), nodeBlue);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeBlue);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({2.5f, 8.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1315,17 +1315,17 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerEvent event{Pointer::Pen};
         CORRADE_VERIFY(ui.pointerPressEvent({5.0f, 5.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), nodeWhite);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), nodeWhite);
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeWhite);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeWhite);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{Pointer::Pen};
         CORRADE_VERIFY(ui.pointerReleaseEvent({5.5f, 4.5f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1421,7 +1421,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1433,7 +1433,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1638,32 +1638,32 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenHover);
 
     /* Press will enable the capture, maybe */
     } {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), data.disableCapture ? NodeHandle::Null : node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), data.disableCapture ? NodeHandle::Null : node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenPressedHover);
 
     /* Move away will only preserve the press if capture is set */
     } {
         PointerMoveEvent event{{}, {}};
         CORRADE_COMPARE(ui.pointerMoveEvent({7.0f, 2.0f}, event), !data.disableCapture);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), data.disableCapture ? NodeHandle::Null : node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), data.disableCapture ? NodeHandle::Null : node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.outStyle);
 
     /* Move back will only preserve the press if capture is set */
     } {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), data.disableCapture ? NodeHandle::Null : node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), data.disableCapture ? NodeHandle::Null : node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.overStyle);
     }
 }
@@ -1829,8 +1829,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
     {
         PointerEvent event{Pointer::MouseLeft};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressed);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
@@ -1842,8 +1842,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
         PointerEvent event{Pointer::MouseLeft};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
@@ -1851,8 +1851,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
     } {
         PointerEvent event{Pointer::MouseLeft};
         ui.pointerReleaseEvent({1.5f, 2.5f}, event);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
@@ -1860,8 +1860,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
     } {
         PointerMoveEvent event{{}, {}};
         ui.pointerMoveEvent({8.5f, 2.0f}, event);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
@@ -1869,8 +1869,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
     } {
         PointerMoveEvent event{{}, {}};
         ui.pointerMoveEvent({1.5f, 2.0f}, event);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
