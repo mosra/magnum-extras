@@ -383,7 +383,8 @@ Draws quads with a color gradient, variable rounded corners and outline. You'll
 most likely instantiate the class through @ref BaseLayerGL, which contains a
 concrete OpenGL implementation.
 @see @ref UserInterface::baseLayer(),
-    @ref UserInterface::setBaseLayerInstance(), @ref StyleFeature::BaseLayer
+    @ref UserInterface::setBaseLayerInstance(), @ref StyleFeature::BaseLayer,
+    @ref BaseLayerStyleAnimator
 */
 class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
     public:
@@ -432,6 +433,17 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * Default pass count is @cpp 1 @ce.
          */
         BaseLayer& setBackgroundBlurPassCount(UnsignedInt count);
+
+        /**
+         * @brief Set this layer to be associated with a style animator
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that @ref Shared::dynamicStyleCount() is non-zero and that
+         * given @p animator wasn't passed to @ref setAnimator() on any layer
+         * yet. On the other hand, it's possible to associate multiple
+         * different animators with the same layer.
+         */
+        BaseLayer& setAnimator(BaseLayerStyleAnimator& animator);
 
         /**
          * @brief Dynamic style uniforms
@@ -936,6 +948,10 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         MAGNUM_WHEE_LOCAL Vector3 textureCoordinateOffsetInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL Vector2 textureCoordinateSizeInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL void setTextureCoordinatesInternal(UnsignedInt id, const Vector3& offset, const Vector2& size);
+
+        /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
+           tests causes linker errors */
+        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
 };
 
 /**
@@ -1108,6 +1124,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     #endif
         struct State;
         friend BaseLayer;
+        friend BaseLayerStyleAnimator;
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
