@@ -160,12 +160,12 @@ BaseLayerGL::Shared::Shared(const UnsignedInt styleCount): BaseLayer::Shared{Con
 
 BaseLayerGL::Shared::Shared(NoCreateT) noexcept: BaseLayer::Shared{NoCreate} {}
 
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items) {
-    return static_cast<Shared&>(BaseLayer::Shared::setStyle(common, items));
+BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding) {
+    return static_cast<Shared&>(BaseLayer::Shared::setStyle(common, items, itemPadding));
 }
 
-BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerStyleCommon& common, const std::initializer_list<BaseLayerStyleItem> items) {
-    return static_cast<Shared&>(BaseLayer::Shared::setStyle(common, items));
+BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerStyleCommon& common, const std::initializer_list<BaseLayerStyleItem> items, const std::initializer_list<Vector4> itemPadding) {
+    return static_cast<Shared&>(BaseLayer::Shared::setStyle(common, items, itemPadding));
 }
 
 void BaseLayerGL::Shared::doSetStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items) {

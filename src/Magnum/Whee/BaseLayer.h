@@ -640,6 +640,70 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
             setOutlineWidth(handle, Vector4{width});
         }
 
+        /**
+         * @brief Quad custom padding
+         *
+         * In order left, top. right, bottom. Expects that @p handle is valid.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        Vector4 padding(DataHandle handle) const;
+
+        /**
+         * @brief Quad custom padding assuming it belongs to this layer
+         *
+         * In order left, top. right, bottom. Expects that @p handle is valid.
+         * @see @ref isHandleValid(LayerDataHandle) const
+         */
+        Vector4 padding(LayerDataHandle handle) const;
+
+        /**
+         * @brief Set quad custom padding
+         *
+         * Expects that @p handle is valid. The @p padding is in order left,
+         * top, right, bottom and is added to the per-style padding values
+         * specified in @ref Shared::setStyle(). By default the padding is a
+         * zero vector, i.e. the quad fills the node area completely.
+         *
+         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        void setPadding(DataHandle handle, const Vector4& padding);
+
+        /**
+         * @brief Set quad custom padding assuming it belongs to this layer
+         *
+         * Like @ref setPadding(DataHandle, const Vector4&) but without
+         * checking that @p handle indeed belongs to this layer. See its
+         * documentation for more information.
+         */
+        void setPadding(LayerDataHandle handle, const Vector4& padding);
+
+        /**
+         * @brief Set quad custom padding with all edges having the same value
+         *
+         * Expects that @p handle is valid. The @p padding is added to the
+         * per-style padding values specified in @ref Shared::setStyle(). By
+         * default there's zero padding, i.e. the quad fills the node area
+         * completely.
+         *
+         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        void setPadding(DataHandle handle, Float padding) {
+            setPadding(handle, Vector4{padding});
+        }
+
+        /**
+         * @brief Set quad custom padding with all edges having the same value assuming it belongs to this layer
+         *
+         * Like @ref setPadding(DataHandle, Float) but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         */
+        void setPadding(LayerDataHandle handle, Float padding) {
+            setPadding(handle, Vector4{padding});
+        }
+
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
@@ -658,6 +722,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
     private:
         MAGNUM_WHEE_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);
         MAGNUM_WHEE_LOCAL void setOutlineWidthInternal(UnsignedInt id, const Vector4& width);
+        MAGNUM_WHEE_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
 
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
@@ -679,14 +744,18 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          * @brief Set style data
          * @param common        Data common to all styles
          * @param items         Individual style data
+         * @param itemPadding   Padding inside the node in order left, top,
+         *      right, bottom for each style
          * @return Reference to self (for method chaining)
          *
          * The @p items view is expected to have the same size as
-         * @ref styleCount().
+         * @ref styleCount(). The @p padding view is expected to either have
+         * the same size as @ref styleCount() or be empty, in which case all
+         * paddings are implicitly zero.
          */
-        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items);
+        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding);
         /** @overload */
-        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items);
+        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items, std::initializer_list<Vector4> itemPadding);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -698,6 +767,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     #else
     protected:
     #endif
+        struct State;
         friend BaseLayer;
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);

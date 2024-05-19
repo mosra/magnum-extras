@@ -28,8 +28,10 @@
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Matrix3.h>
+#include <Magnum/Math/Swizzle.h>
 
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
@@ -43,21 +45,30 @@ BaseLayer::Shared::Shared(const UnsignedInt styleCount): Shared{Containers::poin
 
 BaseLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCreate} {}
 
-BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items) {
+BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& common, const Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(items.size() == state.styleCount,
         "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleCount << "style items, got" << items.size(), *this);
+    CORRADE_ASSERT(itemPadding.isEmpty() || itemPadding.size() == state.styleCount,
+        "Whee::BaseLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << itemPadding.size(), *this);
+    if(itemPadding.isEmpty()) {
+        /** @todo some Utility::fill() for this */
+        for(Implementation::BaseLayerStyle& style: state.styles)
+            style.padding = {};
+    } else {
+        Utility::copy(itemPadding, stridedArrayView(state.styles).slice(&Implementation::BaseLayerStyle::padding));
+    }
     doSetStyle(common, items);
     return *this;
 }
 
-BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& common, const std::initializer_list<BaseLayerStyleItem> items) {
-    return setStyle(common, Containers::arrayView(items));
+BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerStyleCommon& common, const std::initializer_list<BaseLayerStyleItem> items, const std::initializer_list<Vector4> itemPadding) {
+    return setStyle(common, Containers::arrayView(items), Containers::arrayView(itemPadding));
 }
 
 BaseLayer::BaseLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
 
-BaseLayer::BaseLayer(const LayerHandle handle, Shared& shared): BaseLayer{handle, Containers::pointer<State>(*shared._state)} {}
+BaseLayer::BaseLayer(const LayerHandle handle, Shared& shared): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*shared._state))} {}
 
 DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const Vector4& outlineWidth, const NodeHandle node) {
     State& state = static_cast<State&>(*_state);
@@ -76,6 +87,17 @@ DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const
 
     Implementation::BaseLayerData& data = state.data[id];
     data.outlineWidth = outlineWidth;
+    /** @todo is there a way to have create() with all possible per-data
+        options that doesn't make it ambiguous / impossible to extend further?
+        adding a padding argument would make it kind of clash with
+        outlineWidth because the type is the same and there's no clear ordering
+        between the two, furthermore later adding also cornerRadius and
+        possibly innerOutlineCornerRadius would make it even more error-prone
+        to use, and annoying as well as it won't really be possible to specify
+        just a subset without getting ambiguous ... OTOH in Python this would
+        be simple and desirable to do with keyword-only arguments that all have
+        a default */
+    data.padding = {};
     data.color = color;
     data.style = style;
     return handle;
@@ -139,12 +161,42 @@ void BaseLayer::setOutlineWidthInternal(const UnsignedInt id, const Vector4& wid
     setNeedsUpdate();
 }
 
+Vector4 BaseLayer::padding(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::padding(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).data[dataHandleId(handle)].padding;
+}
+
+Vector4 BaseLayer::padding(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::padding(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).data[layerDataHandleId(handle)].padding;
+}
+
+void BaseLayer::setPadding(const DataHandle handle, const Vector4& padding) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::setPadding(): invalid handle" << handle, );
+    setPaddingInternal(dataHandleId(handle), padding);
+}
+
+void BaseLayer::setPadding(const LayerDataHandle handle, const Vector4& padding) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::setPadding(): invalid handle" << handle, );
+    setPaddingInternal(layerDataHandleId(handle), padding);
+}
+
+void BaseLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding) {
+    static_cast<State&>(*_state).data[id].padding = padding;
+    setNeedsUpdate();
+}
+
 LayerFeatures BaseLayer::doFeatures() const {
     return AbstractVisualLayer::doFeatures()|LayerFeature::Draw;
 }
 
 void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     auto& state = static_cast<State&>(*_state);
+    auto& sharedState = static_cast<Shared::State&>(state.shared);
 
     /* Fill in indices in desired order */
     arrayResize(state.indices, NoInit, dataIds.size()*6);
@@ -178,10 +230,11 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
            |   |
            |   |
            2---3 */
-        const Vector2 size = nodeSizes[nodeId];
-        const Vector2 min = nodeOffsets[nodeId];
-        const Vector2 max = min + size;
-        const Vector2 sizeHalf = size*0.5f;
+        const Vector4 padding = sharedState.styles[data.style].padding + data.padding;
+        const Vector2 offset = nodeOffsets[nodeId];
+        const Vector2 min = offset + padding.xy();
+        const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
+        const Vector2 sizeHalf = (max - min)*0.5f;
         const Vector2 sizeHalfNegative = -sizeHalf;
         for(UnsignedByte i = 0; i != 4; ++i) {
             Implementation::BaseLayerVertex& vertex = state.vertices[dataId*4 + i];

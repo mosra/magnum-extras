@@ -72,6 +72,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void render();
     void renderCustomColor();
     void renderCustomOutlineWidth();
+    void renderPadding();
     void renderChangeStyle();
 
     void drawSetup();
@@ -183,6 +184,30 @@ const struct {
 const struct {
     const char* name;
     bool partialUpdate;
+    Vector2 nodeOffset, nodeSize;
+    Vector4 paddingFromStyle, paddingFromData;
+} RenderPaddingData[]{
+    {"no padding", false,
+        {8.0f, 8.0f}, {112.0f, 48.0f}, {}, {}},
+    /* Deliberately having one excessively shifted to left/top and the other to
+       bottom/right. It shouldn't cause any strange artifacts. */
+    {"from style", false,
+        {-64.0f, -128.0f}, {192.0f, 192.0f},
+        {72.0f, 136.0f, 8.0f, 8.0f}, {}},
+    {"from data", false,
+        {0.0f, 0.0f}, {192.0f, 192.0f},
+        {}, {8.0f, 8.0f, 72.0f, 136.0f}},
+    {"from both", false,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
+    {"from both, partial update", true,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
+};
+
+const struct {
+    const char* name;
+    bool partialUpdate;
 } RenderChangeStyleData[]{
     {"", false},
     {"partial update", true},
@@ -215,6 +240,11 @@ BaseLayerGLTest::BaseLayerGLTest() {
     addInstancedTests({&BaseLayerGLTest::renderCustomColor,
                        &BaseLayerGLTest::renderCustomOutlineWidth},
         Containers::arraySize(RenderCustomColorOutlineWidthData),
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::renderPadding},
+        Containers::arraySize(RenderPaddingData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
@@ -344,7 +374,9 @@ void BaseLayerGLTest::render() {
         data.styleItem
     };
     BaseLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleItems))};
-    layerShared.setStyle(data.styleCommon, styleItems);
+    /* The (lack of any) effect of padding on rendered output is tested
+       thoroughly in renderPadding() */
+    layerShared.setStyle(data.styleCommon, styleItems, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -384,7 +416,7 @@ void BaseLayerGLTest::renderCustomColor() {
     layerShared.setStyle(BaseLayerStyleCommon{}, {
         BaseLayerStyleItem{}
             .setColor(0xeeddaa_rgbf/0x336699_rgbf, 0x774422_rgbf/0x336699_rgbf)
-    });
+    }, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -440,7 +472,7 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
         BaseLayerStyleItem{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setOutlineWidth({16.0f, 2.0f, 4.0f, 0.0f})
-    });
+    }, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -483,6 +515,67 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
         DebugTools::CompareImageToFile{_manager});
 }
 
+void BaseLayerGLTest::renderPadding() {
+    auto&& data = RenderPaddingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Basically the same as the "outline, rounded corners, different" case in
+       render(), except that the node offset, size and style or data padding
+       changes. The result should always be the same as if the padding was
+       applied directly to the node offset and size itself. */
+
+    AbstractUserInterface ui{RenderSize};
+
+    BaseLayerGL::Shared layerShared{1};
+    layerShared.setStyle(
+        BaseLayerStyleCommon{}
+            .setSmoothness(1.0f),
+        {BaseLayerStyleItem{}
+            .setOutlineColor(0x7f7f7f_rgbf)
+            /* Top left, bottom left, top right, bottom right */
+            .setCornerRadius({36.0f, 12.0f, 4.0f, 0.0f})
+            .setInnerOutlineCornerRadius({18.0f, 6.0f, 0.0f, 18.0f})
+            /* Left, top, right, bottom  */
+            .setOutlineWidth({18.0f, 8.0f, 0.0f, 4.0f})},
+        {data.paddingFromStyle});
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
+
+    NodeHandle node = ui.createNode(data.nodeOffset, data.nodeSize);
+    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
+
+    if(data.partialUpdate) {
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    if(!data.paddingFromData.isZero()) {
+        ui.layer<BaseLayerGL>(layer).setPadding(nodeData, data.paddingFromData);
+        CORRADE_COMPARE_AS(ui.state(),
+            UserInterfaceState::NeedsDataUpdate,
+            TestSuite::Compare::GreaterOrEqual);
+    }
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/outline-rounded-corners-both-different.png"),
+        DebugTools::CompareImageToFile{_manager});
+}
+
 void BaseLayerGLTest::renderChangeStyle() {
     auto&& data = RenderChangeStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -497,7 +590,7 @@ void BaseLayerGLTest::renderChangeStyle() {
         BaseLayerStyleItem{},
         BaseLayerStyleItem{}
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
-    });
+    }, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -572,7 +665,7 @@ void BaseLayerGLTest::drawOrder() {
             .setColor(0x00ff00_rgbf),
         BaseLayerStyleItem{}            /* 2, blue */
             .setColor(0x0000ff_rgbf)
-    });
+    }, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
@@ -633,7 +726,7 @@ void BaseLayerGLTest::eventStyleTransition() {
             BaseLayerStyleItem{},           /* default */
             BaseLayerStyleItem{}            /* gradient */
                 .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
-        })
+        }, {})
         .setStyleTransition(
             [](UnsignedInt style) -> UnsignedInt {
                 if(style == 0) return 1;
