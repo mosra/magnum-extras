@@ -123,6 +123,22 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
             return setStyleInternal(&style, sizeof(style));
         }
 
+        /* Overloads to remove a WTF factor from method chaining order */
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt)) {
+            return static_cast<Shared&>(BaseLayer::Shared::setStyleTransition(toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover));
+        }
+        template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> Shared& setStyleTransition() {
+            return static_cast<Shared&>(BaseLayer::Shared::setStyleTransition<StyleIndex, toPressedBlur, toPressedHover, toInactiveBlur, toInactiveHover>());
+        }
+        Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt)) {
+            return static_cast<Shared&>(BaseLayer::Shared::setStyleTransition(toPressed, toInactive));
+        }
+        template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex)> Shared& setStyleTransition() {
+            return static_cast<Shared&>(BaseLayer::Shared::setStyleTransition<StyleIndex, toPressed, toInactive>());
+        }
+        #endif
+
     private:
         struct State;
         friend BaseLayerGL;
