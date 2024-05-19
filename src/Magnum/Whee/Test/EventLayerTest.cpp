@@ -781,8 +781,8 @@ void EventLayerTest::tapOrClickFromUserInterface() {
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
@@ -791,8 +791,8 @@ void EventLayerTest::tapOrClickFromUserInterface() {
     } {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
@@ -985,8 +985,8 @@ void EventLayerTest::middleClickFromUserInterface() {
     {
         PointerEvent event{Pointer::MouseMiddle};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
@@ -995,8 +995,8 @@ void EventLayerTest::middleClickFromUserInterface() {
     } {
         PointerEvent event{Pointer::MouseMiddle};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
@@ -1189,8 +1189,8 @@ void EventLayerTest::rightClickFromUserInterface() {
     {
         PointerEvent event{Pointer::MouseRight};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
@@ -1199,8 +1199,8 @@ void EventLayerTest::rightClickFromUserInterface() {
     } {
         PointerEvent event{Pointer::MouseRight};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 65}, event));
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
@@ -1378,9 +1378,9 @@ void EventLayerTest::dragFromUserInterface() {
     {
         PointerMoveEvent event{{}, Pointer::Finger};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, event));
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
@@ -1388,9 +1388,9 @@ void EventLayerTest::dragFromUserInterface() {
     } {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, event));
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
@@ -1399,9 +1399,9 @@ void EventLayerTest::dragFromUserInterface() {
     } {
         PointerEvent event{Pointer::Pen};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
 
@@ -1409,9 +1409,9 @@ void EventLayerTest::dragFromUserInterface() {
     } {
         PointerMoveEvent event{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerMoveEvent({45, 60}, event));
-        CORRADE_COMPARE(ui.pointerEventHoveredNode(), node);
-        CORRADE_COMPARE(ui.pointerEventPressedNode(), node);
-        CORRADE_COMPARE(ui.pointerEventCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 2);
         CORRADE_COMPARE(belowCalled, 0);
     }
