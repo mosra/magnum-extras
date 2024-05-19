@@ -106,8 +106,8 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
         MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION()
-        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items);
-        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items);
+        Shared& setStyle(const BaseLayerStyleCommon& common, Containers::ArrayView<const BaseLayerStyleItem> items, const Containers::StridedArrayView1D<const Vector4>& itemPadding);
+        Shared& setStyle(const BaseLayerStyleCommon& common, std::initializer_list<BaseLayerStyleItem> items, std::initializer_list<Vector4> itemPadding);
         #endif
 
     private:

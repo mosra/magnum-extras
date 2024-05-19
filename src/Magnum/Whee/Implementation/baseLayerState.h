@@ -38,7 +38,23 @@ namespace Magnum { namespace Whee {
 
 namespace Implementation {
 
+struct BaseLayerStyle {
+    Vector4 padding;
+};
+
+}
+
+struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
+    explicit State(UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount}, styles{ValueInit, styleCount} {}
+
+    /* Padding values assigned to each style */
+    Containers::Array<Implementation::BaseLayerStyle> styles;
+};
+
+namespace Implementation {
+
 struct BaseLayerData {
+    Vector4 padding;
     Vector4 outlineWidth;
     Color3 color;
     UnsignedInt style;
