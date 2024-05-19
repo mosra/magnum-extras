@@ -29,12 +29,15 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Swizzle.h>
+#include <Magnum/Math/Time.h>
 
+#include "Magnum/Whee/BaseLayerAnimator.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/baseLayerState.h"
@@ -196,6 +199,15 @@ BaseLayer& BaseLayer::setBackgroundBlurPassCount(UnsignedInt count) {
     CORRADE_ASSERT(count,
         "Whee::BaseLayer::setBackgroundBlurPassCount(): expected at least one pass", *this);
     state.backgroundBlurPassCount = count;
+    return *this;
+}
+
+BaseLayer& BaseLayer::setAnimator(BaseLayerStyleAnimator& animator) {
+    CORRADE_ASSERT(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount,
+        "Whee::BaseLayer::setAnimator(): can't animate a layer with zero dynamic styles", *this);
+
+    AbstractLayer::setAnimator(animator);
+    animator.setLayerInstance(*this, &_state->shared);
     return *this;
 }
 
@@ -412,7 +424,27 @@ void BaseLayer::setTextureCoordinatesInternal(const UnsignedInt id, const Vector
 }
 
 LayerFeatures BaseLayer::doFeatures() const {
-    return AbstractVisualLayer::doFeatures()|LayerFeature::Draw|(static_cast<const Shared::State&>(_state->shared).flags & Shared::Flag::BackgroundBlur ? LayerFeature::Composite : LayerFeatures{});
+    auto& sharedState = static_cast<const Shared::State&>(_state->shared);
+    return AbstractVisualLayer::doFeatures()|(sharedState.dynamicStyleCount ? LayerFeature::AnimateStyles : LayerFeatures{})|LayerFeature::Draw|(sharedState.flags & Shared::Flag::BackgroundBlur ? LayerFeature::Composite : LayerFeatures{});
+}
+
+void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) {
+    auto& state = static_cast<State&>(*_state);
+
+    BaseLayerStyleAnimations animations;
+    for(AbstractStyleAnimator& animator: animators) {
+        if(!(animator.state() >= AnimatorState::NeedsAdvance))
+            continue;
+
+        animations |= static_cast<BaseLayerStyleAnimator&>(animator).advance(time, state.dynamicStyleUniforms, state.dynamicStylePaddings, stridedArrayView(state.data).slice(&Implementation::BaseLayerData::style));
+    }
+
+    if(animations & (BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Padding))
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    if(animations >= BaseLayerStyleAnimation::Uniform) {
+        setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+        state.dynamicStyleChanged = true;
+    }
 }
 
 LayerStates BaseLayer::doState() const {

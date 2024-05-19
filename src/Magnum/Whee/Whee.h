@@ -61,6 +61,7 @@ class AbstractUserInterface;
 class BaseLayer;
 struct BaseLayerCommonStyleUniform;
 struct BaseLayerStyleUniform;
+class BaseLayerStyleAnimator;
 #ifdef MAGNUM_TARGET_GL
 class BaseLayerGL;
 #endif
