@@ -431,9 +431,10 @@ void TextLayerGLTest::renderSetup() {
         .bind();
 
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
-    GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
-    GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    /* The RendererGL should enable these on its own if needed */
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
+    GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
 void TextLayerGLTest::renderTeardown() {
@@ -778,9 +779,10 @@ void TextLayerGLTest::drawSetup() {
         .bind();
 
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
-    GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
-    GL::Renderer::enable(GL::Renderer::Feature::Blending);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    /* The RendererGL should enable these on its own if needed */
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
+    GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
 void TextLayerGLTest::drawTeardown() {

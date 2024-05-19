@@ -26,6 +26,7 @@
 #include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Pair.h>
+#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
