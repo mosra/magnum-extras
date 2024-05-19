@@ -27,6 +27,11 @@
 # property that would have to be set on each target separately.
 set(CMAKE_FOLDER "Magnum/Whee/Test")
 
+if(MAGNUM_BUILD_STATIC)
+    find_package(Magnum COMPONENTS AnyImageImporter)
+    find_package(MagnumPlugins COMPONENTS StbImageImporter StbTrueTypeFont)
+endif()
+
 corrade_add_test(WheeAbstractAnimatorTest AbstractAnimatorTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractLayerTest AbstractLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeAbstractLayouterTest AbstractLayouterTest.cpp LIBRARIES MagnumWheeTestLib)
@@ -40,11 +45,25 @@ corrade_add_test(WheeApplicationTest ApplicationTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeBaseLayerTest BaseLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeBaseLayerStyleAnimatorTest BaseLayerStyleAnimatorTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeBlurShaderTest BlurShaderTest.cpp LIBRARIES MagnumWhee)
+corrade_add_test(WheeButtonTest ButtonTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventLayerTest EventLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumWheeTestLib)
+
+corrade_add_test(WheeStyleTest StyleTest.cpp LIBRARIES MagnumWhee)
+if(MAGNUM_BUILD_STATIC)
+    if(Magnum_AnyImageImporter_FOUND)
+        target_link_libraries(WheeStyleTest PRIVATE Magnum::AnyImageImporter)
+    endif()
+    if(MagnumPlugins_StbImageImporter_FOUND)
+        target_link_libraries(WheeStyleTest PRIVATE MagnumPlugins::StbImageImporter)
+    endif()
+    if(MagnumPlugins_StbTrueTypeFont_FOUND)
+        target_link_libraries(WheeStyleTest PRIVATE MagnumPlugins::StbTrueTypeFont)
+    endif()
+endif()
 
 corrade_add_test(WheeTextLayerTest TextLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeTextLayerStyleAnimatorTest TextLayerStyleAnimatorTest.cpp LIBRARIES MagnumWheeTestLib)
@@ -171,10 +190,6 @@ endif()
 
 if(MAGNUM_BUILD_GL_TESTS)
     find_package(Magnum REQUIRED OpenGLTester)
-    if(MAGNUM_BUILD_STATIC)
-        find_package(Magnum COMPONENTS AnyImageImporter)
-        find_package(MagnumPlugins COMPONENTS StbImageImporter StbTrueTypeFont)
-    endif()
 
     if(CORRADE_TARGET_EMSCRIPTEN OR CORRADE_TARGET_ANDROID)
         set(WHEE_TEST_DIR .)
@@ -292,6 +307,28 @@ if(MAGNUM_BUILD_GL_TESTS)
         LIBRARIES
             MagnumWheeTestLib
             Magnum::OpenGLTester)
+
+    corrade_add_test(WheeStyleGLTest StyleGLTest.cpp
+        LIBRARIES
+            MagnumWhee
+            Magnum::DebugTools
+            Magnum::OpenGLTester
+        FILES
+            StyleTestFiles/mcss-dark-button-text-icon.png
+            StyleTestFiles/mcss-dark-button-text.png
+            StyleTestFiles/mcss-dark-button-icon.png)
+    target_include_directories(WheeStyleGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+    if(MAGNUM_BUILD_STATIC)
+        if(Magnum_AnyImageImporter_FOUND)
+            target_link_libraries(WheeStyleGLTest PRIVATE Magnum::AnyImageImporter)
+        endif()
+        if(MagnumPlugins_StbImageImporter_FOUND)
+            target_link_libraries(WheeStyleGLTest PRIVATE MagnumPlugins::StbImageImporter)
+        endif()
+        if(MagnumPlugins_StbTrueTypeFont_FOUND)
+            target_link_libraries(WheeStyleGLTest PRIVATE MagnumPlugins::StbTrueTypeFont)
+        endif()
+    endif()
 
     corrade_add_test(WheeTextLayerGLTest TextLayerGLTest.cpp
         LIBRARIES
