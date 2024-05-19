@@ -170,14 +170,13 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @brief Set data style index, potentially transitioning it based on user interface state
          *
          * Like @ref setStyle(), but if @p handle is assigned to a node that's
-         * referenced from @ref AbstractUserInterface::pointerEventPressedNode()
-         * or @relativeref{AbstractUserInterface,pointerEventHoveredNode()},
-         * applies style transition functions set in
-         * @ref Shared::setStyleTransition() to it first. Expects that
-         * @p handle is valid and @p style is less than
-         * @ref Shared::styleCount(). Not @ref Shared::totalStyleCount() ---
-         * the style transition functions are not allowed to use the dynamic
-         * style indices.
+         * referenced from @ref AbstractUserInterface::currentPressedNode() or
+         * @relativeref{AbstractUserInterface,currentHoveredNode()}, applies
+         * style transition functions set in @ref Shared::setStyleTransition()
+         * to it first. Expects that @p handle is valid and @p style is less
+         * than @ref Shared::styleCount(). Not @ref Shared::totalStyleCount()
+         * --- the style transition functions are not allowed to use the
+         * dynamic style indices.
          *
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const
