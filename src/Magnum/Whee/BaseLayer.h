@@ -734,20 +734,19 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         /* Used by tests to avoid having to include / allocate the state */
         explicit BaseLayer(LayerHandle handle, Shared& shared);
 
-        /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
-           tests causes linker errors */
+        /* These can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class
+           in tests causes linker errors */
+
+        /* Advertises LayerFeature::Draw but *does not* implement doDraw(),
+           that's on the subclass */
+        LayerFeatures doFeatures() const override;
+
         void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
 
     private:
         MAGNUM_WHEE_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);
         MAGNUM_WHEE_LOCAL void setOutlineWidthInternal(UnsignedInt id, const Vector4& width);
         MAGNUM_WHEE_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
-
-        /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
-           tests causes linker errors */
-        /* Advertises LayerFeature::Draw but *does not* implement doDraw(),
-           that's on the subclass */
-        LayerFeatures doFeatures() const override;
 };
 
 /**
