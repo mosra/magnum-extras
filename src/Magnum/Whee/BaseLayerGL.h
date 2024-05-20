@@ -112,18 +112,44 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
         }
         #endif
 
+    protected:
+        /**
+         * @copybrief AbstractLayer::doComposite()
+         *
+         * It's possible for a subclass to override this function to perform
+         * extra GL state changes and then delegate to the parent
+         * implementation. As the implementation doesn't track current GL state
+         * in any way at the moment, the state should be reset back to the
+         * previous afterwards. See @ref AbstractLayer::doComposite() for more
+         * information about how this function is called.
+         */
+        void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& compositingRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositingRectSizes, std::size_t offset, std::size_t count) override;
+
+        /**
+         * @copybrief AbstractLayer::doDraw()
+         *
+         * It's possible for a subclass to override this function to perform
+         * extra GL state changes and then delegate to the parent
+         * implementation. As the implementation doesn't track current GL state
+         * in any way at the moment, the state should be reset back to the
+         * previous afterwards. Note that blending and scissor *enabled* state
+         * is already taken care of by @ref LayerFeature::DrawUsesBlending and
+         * @ref LayerFeature::DrawUsesScissor. See @ref AbstractLayer::doDraw()
+         * for more information about how this function is called.
+         */
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
+
     private:
         struct State;
 
-        MAGNUM_WHEE_LOCAL LayerFeatures doFeatures() const override;
+        /* These can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class
+           causes linker errors. See BaseLayerGLTest::constructDerived() for a
+           repro case. */
+        LayerFeatures doFeatures() const override;
 
-        MAGNUM_WHEE_LOCAL void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override;
+        void doSetSize(const Vector2& size, const Vector2i& framebufferSize) override;
 
-        MAGNUM_WHEE_LOCAL void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
-
-        MAGNUM_WHEE_LOCAL void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& compositingRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositingRectSizes, std::size_t offset, std::size_t count) override;
-
-        MAGNUM_WHEE_LOCAL void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
+        void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
 };
 
 /**

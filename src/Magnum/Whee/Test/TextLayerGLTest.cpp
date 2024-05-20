@@ -72,6 +72,7 @@ struct TextLayerGLTest: GL::OpenGLTester {
     void sharedSetGlyphCacheTakeOwnership();
 
     void construct();
+    void constructDerived();
     void constructCopy();
     void constructMove();
 
@@ -328,6 +329,7 @@ TextLayerGLTest::TextLayerGLTest() {
               &TextLayerGLTest::sharedSetGlyphCacheTakeOwnership,
 
               &TextLayerGLTest::construct,
+              &TextLayerGLTest::constructDerived,
               &TextLayerGLTest::constructCopy,
               &TextLayerGLTest::constructMove,
 
@@ -455,6 +457,22 @@ void TextLayerGLTest::construct() {
     CORRADE_COMPARE(&layer.shared(), &shared);
     /* Const overload */
     CORRADE_COMPARE(&static_cast<const TextLayerGL&>(layer).shared(), &shared);
+}
+
+void TextLayerGLTest::constructDerived() {
+    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
+
+    /* Verify just that subclassing works without hitting linker errors due to
+       virtual symbols not being exported or due to the delegated-to functions
+       being private */
+    struct: TextLayerGL {
+        using TextLayerGL::TextLayerGL;
+
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+            return TextLayerGL::doDraw(dataIds, offset, count, clipRectIds, clipRectDataCounts, clipRectOffset, clipRectCount, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+        }
+    } layer{layerHandle(137, 0xfe), shared};
+    CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
 }
 
 void TextLayerGLTest::constructCopy() {

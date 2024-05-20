@@ -69,6 +69,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void sharedConstructMove();
 
     void construct();
+    void constructDerived();
     void constructCopy();
     void constructMove();
 
@@ -632,6 +633,7 @@ BaseLayerGLTest::BaseLayerGLTest() {
               &BaseLayerGLTest::sharedConstructMove,
 
               &BaseLayerGLTest::construct,
+              &BaseLayerGLTest::constructDerived,
               &BaseLayerGLTest::constructCopy,
               &BaseLayerGLTest::constructMove,
 
@@ -755,6 +757,26 @@ void BaseLayerGLTest::construct() {
     CORRADE_COMPARE(&layer.shared(), &shared);
     /* Const overload */
     CORRADE_COMPARE(&static_cast<const BaseLayerGL&>(layer).shared(), &shared);
+}
+
+void BaseLayerGLTest::constructDerived() {
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3}};
+
+    /* Verify just that subclassing works without hitting linker errors due to
+       virtual symbols not being exported or due to the delegated-to functions
+       being private */
+    struct: BaseLayerGL {
+        using BaseLayerGL::BaseLayerGL;
+
+        void doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes, std::size_t offset, std::size_t count) override {
+            return BaseLayerGL::doComposite(renderer, compositeRectOffsets, compositeRectSizes, offset, count);
+        }
+
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+            return BaseLayerGL::doDraw(dataIds, offset, count, clipRectIds, clipRectDataCounts, clipRectOffset, clipRectCount, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+        }
+    } layer{layerHandle(137, 0xfe), shared};
+    CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
 }
 
 void BaseLayerGLTest::constructCopy() {
