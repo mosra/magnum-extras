@@ -323,15 +323,21 @@ template<class Event> Modifiers modifiersFor(typename Event::Modifiers modifiers
     return out;
 }
 
-template<class Event> struct KeyEventConverter<Event, typename std::enable_if<sizeof(typename Event::Key)
-    /* Without this, Clang (16, but probably others too) is only able to match
-       this if KeyEvent::Key is 8-bit and not 32. I suppose the boolean
-       conversion in SFINAE contexts has some funny "optimization" that doesn't
-       take the higher bits into account or some such. */
-    #ifdef CORRADE_TARGET_CLANG
-    >= 0
+template<class Event> struct KeyEventConverter<Event,
+    #ifndef CORRADE_TARGET_MSVC
+    typename std::enable_if<sizeof(typename Event::Key)
+        /* Without this, Clang (16, but probably others too) is only able to
+           match this if KeyEvent::Key is 8-bit and not 32. I suppose the
+           boolean conversion in SFINAE contexts has some funny "optimization"
+           that doesn't take the higher bits into account or some such. */
+        #ifdef CORRADE_TARGET_CLANG
+        >= 0
+        #endif
+    >::type
+    #else
+    void
     #endif
->::type> {
+> {
     static bool press(AbstractUserInterface& ui, Event& event) {
         const Key key = keyFor<Event>(event.key());
         if(key == Key{})
@@ -361,7 +367,13 @@ template<class Event> struct KeyEventConverter<Event, typename std::enable_if<si
     }
 };
 
-template<class Event> struct TextInputEventConverter<Event, typename std::enable_if<sizeof(&TextInputEvent::text) >= 0>::type> {
+template<class Event> struct TextInputEventConverter<Event,
+    #ifndef CORRADE_TARGET_MSVC
+    typename std::enable_if<sizeof(&TextInputEvent::text) >= 0>::type
+    #else
+    void
+    #endif
+> {
     static bool trigger(AbstractUserInterface& ui, Event& event) {
         TextInputEvent e{event.text()};
         if(ui.textInputEvent(e)) {
