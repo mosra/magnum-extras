@@ -362,7 +362,18 @@ template<class Event> struct KeyEventConverter<Event, typename std::enable_if<si
     }
 };
 
-template<class Event> struct TextInputEventConverter<Event, typename std::enable_if<sizeof(&Event::text) >= 0>::type> {
+template<class Event> struct TextInputEventConverter<Event,
+    /* Unfortunately TextInputEvent doesn't have any nested type like other
+       event classes, this doesn't work on MSVC and neither does
+       sizeof(std::declval<Event>().text()), so for now I'm leaving this
+       specialization unrestricted. Needs a real fix this once a different
+       TextInputEventConverter needs to be added for an incompatible type. */
+    #ifndef CORRADE_TARGET_MSVC
+    typename std::enable_if<sizeof(&Event::text) >= 0>::type
+    #else
+    void
+    #endif
+> {
     static bool trigger(AbstractUserInterface& ui, Event& event) {
         TextInputEvent e{event.text()};
         if(ui.textInputEvent(e)) {
