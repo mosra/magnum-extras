@@ -3112,15 +3112,17 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
 
     const NodeHandle called = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, event);
 
-    /* If the event was accepted by any node, remember that node for potential
-       future tap or click event */
-    if(called != NodeHandle::Null) {
-        state.currentPressedNode = called;
+    /* If the event was accepted by any node and capture is desired, remember
+       the concrete node for it. Otherwise reset the captured node. */
+    if(called != NodeHandle::Null && event._captured)
+        state.currentCapturedNode = called;
+    else
+        state.currentCapturedNode = NodeHandle::Null;
 
-        /* If capture is desired, remember the concrete node for it as well */
-        if(event._captured)
-            state.currentCapturedNode = called;
-    }
+    /* Remember the node that accepted the event for potential future tap or
+       click event. If no node accepted it, called is null, and the current
+       pressed node gets reset. */
+    state.currentPressedNode = called;
 
     /* Update the last relative position with this one */
     state.currentGlobalPointerPosition = globalPositionScaled;

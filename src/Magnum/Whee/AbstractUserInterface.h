@@ -1666,6 +1666,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * removed from a later @ref pointerMoveEvent(). Any node that was
          * already captured when calling this function is ignored.
          *
+         * If no node accepted the event or there wasn't any visible event
+         * handling node at given position, the previously remembered pressed
+         * and captured nodes are reset.
+         *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),

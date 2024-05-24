@@ -176,7 +176,10 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventEdges();
 
     void eventPointerPress();
+    void eventPointerPressNotAccepted();
+
     void eventPointerRelease();
+
     void eventPointerMove();
     void eventPointerMoveRelativePositionWithPressRelease();
     void eventPointerMoveNotAccepted();
@@ -974,8 +977,13 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addTests({&AbstractUserInterfaceTest::eventEdges});
 
-    addInstancedTests({&AbstractUserInterfaceTest::eventPointerPress,
-                       &AbstractUserInterfaceTest::eventPointerRelease,
+    addInstancedTests({&AbstractUserInterfaceTest::eventPointerPress},
+        Containers::arraySize(UpdateData));
+
+    addTests({&AbstractUserInterfaceTest::eventPointerPressNotAccepted});
+
+    addInstancedTests({&AbstractUserInterfaceTest::eventPointerRelease,
+
                        &AbstractUserInterfaceTest::eventPointerMove},
         Containers::arraySize(UpdateData));
 
@@ -10916,9 +10924,128 @@ void AbstractUserInterfaceTest::eventPointerPress() {
             {data3, {10.0f, 5.0f}},
             {data2, {10.0f, 5.0f}}
         })), TestSuite::Compare::Container);
+
+    /* Pressing outside after a node was hit should reset the current pressed
+       node */
+    } {
+        ui.layer<Layer>(layer).eventCalls = {};
+
+        PointerEvent event1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event1));
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
+
+        PointerEvent event2{Pointer::MouseLeft};
+        CORRADE_VERIFY(!ui.pointerPressEvent({1000.0f, 10000.0f}, event2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{100.0f, 100.0f}));
+
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+            {data3, {10.0f, 5.0f}},
+            {data2, {10.0f, 5.0f}}
+        })), TestSuite::Compare::Container);
     }
 
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+}
+
+void AbstractUserInterfaceTest::eventPointerPressNotAccepted() {
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Event {
+        Accepted = 1,
+        Press = 2
+    };
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Event; }
+
+        void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
+            if(dataId == 0 || (dataId == 2 && accept2) || (dataId == 1 && accept1))
+                event.setAccepted();
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Press|(event.isAccepted() ? Accepted : 0),
+                dataHandle(handle(), dataId, 1), event.position());
+        }
+
+        Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
+        bool accept1 = true,
+            accept2 = true;
+    };
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    /* 10 --------     accepts maybe
+       01     -------- accepts maybe
+       00     -------- accepts always */
+    NodeHandle node0 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
+    NodeHandle node1 = ui.createNode({10.0f, 0.0f}, {20.0f, 20.0f});
+    DataHandle data00 = layer.create(node0);
+    DataHandle data01 = layer.create(node0);
+    DataHandle data10 = layer.create(node1);
+
+    /* Second press on node 1 doesn't get accepted and falls back to node 0 */
+    {
+        layer.eventCalls = {};
+
+        PointerEvent eventPress1{Pointer::MouseLeft};
+        layer.accept2 = true;
+        CORRADE_VERIFY(ui.pointerPressEvent({15.0f, 10.0f}, eventPress1));
+        CORRADE_COMPARE(ui.currentPressedNode(), node1);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node1);
+
+        PointerEvent eventPress2{Pointer::Finger};
+        layer.accept2 = false;
+        CORRADE_VERIFY(ui.pointerPressEvent({25.0f, 15.0f}, eventPress2));
+        CORRADE_COMPARE(ui.currentPressedNode(), node0);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node0);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Accepted, data10, {5.0f, 10.0f}},
+            {Press, data10, {15.0f, 15.0f}}, /* not accepted */
+            {Press|Accepted, data01, {5.0f, 15.0f}},
+            {Press|Accepted, data00, {5.0f, 15.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Second press on node 1 doesn't get accepted and falls back outside of
+       any other node, resetting the current pressed node */
+    } {
+        layer.eventCalls = {};
+
+        PointerEvent eventPress1{Pointer::MouseLeft};
+        layer.accept2 = true;
+        CORRADE_VERIFY(ui.pointerPressEvent({25.0f, 10.0f}, eventPress1));
+        CORRADE_COMPARE(ui.currentPressedNode(), node1);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node1);
+
+        /* Yes, it's rather unlikely that another press happens without a
+           release first, needing such specific handling, but let's have that
+           covered because if some events get lost it'd be really hard to
+           debug */
+        PointerEvent eventPress2{Pointer::Finger};
+        layer.accept2 = false;
+        CORRADE_VERIFY(!ui.pointerPressEvent({15.0f, 15.0f}, eventPress2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Accepted, data10, {15.0f, 10.0f}},
+            {Press, data10, {5.0f, 15.0f}}, /* not accepted */
+            /* No other node to call press on */
+        })), TestSuite::Compare::Container);
+    }
 }
 
 void AbstractUserInterfaceTest::eventPointerRelease() {
