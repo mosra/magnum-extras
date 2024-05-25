@@ -2898,6 +2898,10 @@ void AbstractLayerTest::pointerEvent() {
             CORRADE_COMPARE(event.type(), Pointer::Finger);
             called *= 13;
         }
+        void doPointerCancelEvent(UnsignedInt dataId, PointerCancelEvent&) override {
+            CORRADE_COMPARE(dataId, 7);
+            called *= 17;
+        }
 
         int called = 1;
     } layer{layerHandle(0, 1)};
@@ -2905,6 +2909,7 @@ void AbstractLayerTest::pointerEvent() {
     /* Capture correct test case name */
     CORRADE_VERIFY(true);
 
+    layer.create();
     layer.create();
     layer.create();
     layer.create();
@@ -2930,8 +2935,11 @@ void AbstractLayerTest::pointerEvent() {
     } {
         PointerMoveEvent event{Pointer::Finger, {}};
         layer.pointerLeaveEvent(6, event);
+    } {
+        PointerCancelEvent event;
+        layer.pointerCancelEvent(7, event);
     }
-    CORRADE_COMPARE(layer.called, 2*3*5*7*11*13);
+    CORRADE_COMPARE(layer.called, 2*3*5*7*11*13*17);
 }
 
 void AbstractLayerTest::pointerEventNotSupported() {
@@ -2947,19 +2955,23 @@ void AbstractLayerTest::pointerEventNotSupported() {
     Error redirectError{&out};
     PointerEvent event{Pointer::MouseMiddle};
     PointerMoveEvent moveEvent{{}, {}};
+    PointerCancelEvent cancelEvent;
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerTapOrClickEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
-    CORRADE_COMPARE(out.str(),
+    layer.pointerCancelEvent(0, cancelEvent);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerTapOrClickEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerMoveEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerEnterEvent(): feature not supported\n"
-        "Whee::AbstractLayer::pointerLeaveEvent(): feature not supported\n");
+        "Whee::AbstractLayer::pointerLeaveEvent(): feature not supported\n"
+        "Whee::AbstractLayer::pointerCancelEvent(): feature not supported\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::pointerEventNotImplemented() {
@@ -2976,12 +2988,14 @@ void AbstractLayerTest::pointerEventNotImplemented() {
 
     PointerEvent event{Pointer::MouseMiddle};
     PointerMoveEvent moveEvent{{}, {}};
+    PointerCancelEvent cancelEvent;
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerTapOrClickEvent(0, event);
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
+    layer.pointerCancelEvent(0, cancelEvent);
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
@@ -3006,19 +3020,23 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     Error redirectError{&out};
     PointerEvent event{Pointer::MouseMiddle};
     PointerMoveEvent moveEvent{{}, {}};
+    PointerCancelEvent cancelEvent;
     layer.pointerPressEvent(2, event);
     layer.pointerReleaseEvent(2, event);
     layer.pointerTapOrClickEvent(2, event);
     layer.pointerMoveEvent(2, moveEvent);
     layer.pointerEnterEvent(2, moveEvent);
     layer.pointerLeaveEvent(2, moveEvent);
-    CORRADE_COMPARE(out.str(),
+    layer.pointerCancelEvent(2, cancelEvent);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerTapOrClickEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerEnterEvent(): index 2 out of range for 2 data\n"
-        "Whee::AbstractLayer::pointerLeaveEvent(): index 2 out of range for 2 data\n");
+        "Whee::AbstractLayer::pointerLeaveEvent(): index 2 out of range for 2 data\n"
+        "Whee::AbstractLayer::pointerCancelEvent(): index 2 out of range for 2 data\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::pointerEventAlreadyAccepted() {
@@ -3047,6 +3065,7 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
+    /* PointerCancelEvent is not acceptable */
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): event already accepted\n"

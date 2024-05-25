@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::KeyEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
+ * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::PointerCancelEvent, @ref Magnum::Whee::KeyEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
  * @m_since_latest
  */
 
@@ -323,6 +323,19 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
         bool _accepted = false;
         bool _captured = false;
         bool _hovering = false;
+};
+
+/**
+@brief Pointer cancel event
+@m_since_latest
+
+@see @ref AbstractUserInterface::update(),
+    @ref AbstractLayer::pointerCancelEvent()
+*/
+class PointerCancelEvent {
+    public:
+        /** @brief Constructor */
+        explicit PointerCancelEvent() = default;
 };
 
 /**

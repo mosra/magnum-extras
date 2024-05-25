@@ -1551,9 +1551,12 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      instances set and calls @ref AbstractLayer::update() with the
          *      ordered data
          * -    Resets @ref currentPressedNode(), @ref currentCapturedNode() or
-         *      @ref currentHoveredNode() if the nodes no longer exist, are not
-         *      visible or have @ref NodeFlag::NoEvents or
-         *      @ref NodeFlag::Disabled set on them or their parents
+         *      @ref currentHoveredNode() if they no longer exist
+         * -    Calls @ref AbstractLayer::pointerCancelEvent() and resets
+         *      @ref currentPressedNode(), @ref currentCapturedNode() or
+         *      @ref currentHoveredNode() if they are not visible or have
+         *      @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled set on them
+         *      or their parents.
          *
          * After calling this function, @ref state() is empty apart from
          * @ref UserInterfaceState::NeedsAnimationAdvance, which may be present
@@ -1953,6 +1956,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /* Used by setNodeOrder() and clearNodeOrder() */
         MAGNUM_WHEE_LOCAL void clearNodeOrderInternal(NodeHandle handle);
         /* Used by *Event() functions */
+        MAGNUM_WHEE_LOCAL void callPointerCancelEventOnNode(UnsignedInt nodeId, PointerCancelEvent& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, UnsignedInt nodeId, Event& event, bool rememberCaptureOnUnaccepted = false);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);

@@ -46,6 +46,7 @@ struct EventTest: TestSuite::Tester {
     void pointerMoveRelativePosition();
     void pointerMoveNoPointer();
     void pointerMoveNoPointerRelativePosition();
+    void pointerCancel();
 
     void key();
 };
@@ -62,6 +63,7 @@ EventTest::EventTest() {
               &EventTest::pointerMoveRelativePosition,
               &EventTest::pointerMoveNoPointer,
               &EventTest::pointerMoveNoPointerRelativePosition,
+              &EventTest::pointerCancel,
 
               &EventTest::key});
 }
@@ -163,6 +165,14 @@ void EventTest::pointerMoveNoPointerRelativePosition() {
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
     CORRADE_VERIFY(!event.isAccepted());
+}
+
+void EventTest::pointerCancel() {
+    PointerCancelEvent event;
+
+    /* No properties in this one */
+    static_cast<void>(event);
+    CORRADE_VERIFY(true);
 }
 
 void EventTest::key() {

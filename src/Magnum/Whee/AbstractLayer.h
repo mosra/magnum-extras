@@ -742,6 +742,19 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         void pointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
         /**
+         * @brief Handle a pointer cancel event
+         *
+         * Used internally from @ref AbstractUserInterface::update(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data. Delegates to
+         * @ref doPointerCancelEvent(), see its documentation for more
+         * information.
+         */
+        void pointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event);
+
+        /**
          * @brief Handle a key press event
          *
          * Used internally from @ref AbstractUserInterface::keyPressEvent().
@@ -1336,6 +1349,24 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Default implementation does nothing.
          */
         virtual void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
+
+        /**
+         * @brief Handle a pointer cancel event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data
+         *
+         * Implementation for @ref pointerCancelEvent(), which is called from
+         * @ref AbstractUserInterface::update() if the currently hovered,
+         * pressed or captured node containing @p dataId can no longer receive
+         * events due to @ref NodeFlag::Hidden, @ref NodeFlag::NoEvents or
+         * @ref NodeFlag::Disabled being set on the node or any of its parents.
+         * It's guaranteed that @ref doUpdate() was called before this function
+         * with up-to-date data for @p dataId.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doPointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event);
 
         /**
          * @brief Handle a key press event

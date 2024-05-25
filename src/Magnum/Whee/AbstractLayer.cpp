@@ -685,6 +685,16 @@ void AbstractLayer::pointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent
 
 void AbstractLayer::doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) {}
 
+void AbstractLayer::pointerCancelEvent(const UnsignedInt dataId, PointerCancelEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::pointerCancelEvent(): feature not supported", );
+    CORRADE_ASSERT(dataId < _state->data.size(),
+        "Whee::AbstractLayer::pointerCancelEvent(): index" << dataId << "out of range for" << _state->data.size() << "data", );
+    return doPointerCancelEvent(dataId, event);
+}
+
+void AbstractLayer::doPointerCancelEvent(UnsignedInt, PointerCancelEvent&) {}
+
 void AbstractLayer::keyPressEvent(const UnsignedInt dataId, KeyEvent& event) {
     CORRADE_ASSERT(features() & LayerFeature::Event,
         "Whee::AbstractLayer::keyPressEvent(): feature not supported", );
