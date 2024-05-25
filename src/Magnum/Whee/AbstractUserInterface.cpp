@@ -3055,7 +3055,15 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> NodeH
        true. */
     CORRADE_INTERNAL_ASSERT(!event._accepted);
     State& state = *_state;
+
+    /* If the node isn't in the set of visible nodes accepting events (so for
+       example has NodeFlag::NoEvents or Disabled set), do nothing. If we
+       wouldn't return early, it wouldn't call anything anyway because the
+       `state.visibleNodeEventDataOffsets` ranges for these is empty but why do
+       all that extra work in the first place. */
     const UnsignedInt nodeId = state.visibleNodeIds[visibleNodeIndex];
+    if(!state.visibleEventNodeMask[nodeId])
+        return {};
 
     /* If the position is outside the node, we got nothing */
     const Vector2 nodeOffset = state.absoluteNodeOffsets[nodeId];
