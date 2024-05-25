@@ -713,4 +713,14 @@ void AbstractLayer::keyReleaseEvent(const UnsignedInt dataId, KeyEvent& event) {
 
 void AbstractLayer::doKeyReleaseEvent(UnsignedInt, KeyEvent&) {}
 
+void AbstractLayer::visibilityLostEvent(const UnsignedInt dataId, VisibilityLostEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::visibilityLostEvent(): feature not supported", );
+    CORRADE_ASSERT(dataId < _state->data.size(),
+        "Whee::AbstractLayer::visibilityLostEvent(): index" << dataId << "out of range for" << _state->data.size() << "data", );
+    return doVisibilityLostEvent(dataId, event);
+}
+
+void AbstractLayer::doVisibilityLostEvent(UnsignedInt, VisibilityLostEvent&) {}
+
 }}
