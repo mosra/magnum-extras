@@ -2302,6 +2302,12 @@ AbstractUserInterface& AbstractUserInterface::update() {
     Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack;
     Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets;
     Containers::ArrayView<UnsignedInt> visibleNodeDataIds;
+    /* Contains a copy of state.visibleEventNodeMask (allocated below) together
+       with additional bits set for nodes that need visibility lost events
+       emitted. The bits used for visibility lost events are gradually cleared
+       to avoid calling the same event multiple times, so this mask isn't
+       usable for anything else afterwards. */
+    Containers::MutableBitArrayView visibleOrVisibilityLostEventNodeMask;
     Containers::ArrayTuple storage{
         /* Running children offset (+1) for each node */
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
@@ -2326,6 +2332,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         /* One more item for the stack root, which is the whole UI size */
         {NoInit, state.nodes.size() + 1, clipStack},
         {NoInit, dataCount, visibleNodeDataIds},
+        {NoInit, state.nodes.size(), visibleOrVisibilityLostEventNodeMask},
     };
 
     /* If no node update is needed, the data in `state.nodeStateStorage` and
@@ -2527,7 +2534,11 @@ AbstractUserInterface& AbstractUserInterface::update() {
     }
 
     /* If no node enabled state update is needed, the `state.visibleNodeMask`
-       and `state.visibleEnabledNodeMask` are up-to-date */
+       and `state.visibleEnabledNodeMask` are up-to-date.
+
+       Note that `visibleOrVisibilityLostEventNodeMask` is *not* up-to-date as
+       it got allocated anew in each update() allocation. It's used only in the
+       `NeedsDataAttachmentUpdate` branch below, so it's also filled there. */
     if(states >= UserInterfaceState::NeedsNodeEnabledUpdate) {
         /** @todo copy() for a BitArrayView, finally */
         CORRADE_INTERNAL_ASSERT(
@@ -2564,6 +2575,30 @@ AbstractUserInterface& AbstractUserInterface::update() {
        /** @todo FFS this is rather horrible, exhibit 2 of 2 */
        (states >= UserInterfaceState::NeedsDataUpdate && state.layers.size() + 1 != state.dataToUpdateLayerOffsets.size()))
     {
+        /* Make visibleOrVisibilityLostEventNodeMask a copy of
+           visibleEventNodeMask with additional bits set for state.current*Node
+           that are valid but possibly now hidden or not taking events. This
+           mask will get used to ensure data IDs are collected for those in
+           case visibilityLostEvent() needs to be called below.
+
+           Cannot be done in the UserInterfaceState::NeedsNodeEnabledUpdate
+           branch above because the visibleOrVisibilityLostEventNodeMask is
+           allocated anew every update() call, so with just
+           NeedsDataAttachmentUpdate set it'd be left at random garbage. */
+        /** @todo copy() for a BitArrayView, finally */
+        CORRADE_INTERNAL_ASSERT(visibleOrVisibilityLostEventNodeMask.offset() == 0);
+        {
+            const std::size_t sizeWholeBytes = (state.visibleNodeMask.size() + 7)/8;
+            Utility::copy(
+                Containers::arrayView(state.visibleEventNodeMask.data(), sizeWholeBytes),
+                Containers::arrayView(visibleOrVisibilityLostEventNodeMask.data(), sizeWholeBytes));
+        }
+        for(const NodeHandle node: {state.currentPressedNode,
+                                    state.currentCapturedNode,
+                                    state.currentHoveredNode})
+            if(isHandleValid(node))
+                visibleOrVisibilityLostEventNodeMask.set(nodeHandleId(node));
+
         /* Calculate count of visible top-level nodes and layers that draw in
            order to accurately size the array with draws */
         UnsignedInt visibleTopLevelNodeCount = 0;
@@ -2696,12 +2731,17 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     }
 
                     /* If the layer has LayerFeature::Event, count the data for
-                       it, accumulating them across all event layers */
+                       it, accumulating them across all event layers. The
+                       visibleOrVisibilityLostEventNodeMask is used instead of
+                       state.visibleEventNodeMask to make sure data get
+                       collected also for nodes that may no longer participate
+                       in event handling but still need visibilityLostEvent()
+                       called. */
                     if(layerItem.used.features >= LayerFeature::Event)
                         Implementation::countNodeDataForEventHandlingInto(
                             instance->nodes(),
                             state.visibleNodeEventDataOffsets,
-                            state.visibleEventNodeMask);
+                            visibleOrVisibilityLostEventNodeMask);
 
                     /* If the layer has LayerFeature::Composite, calculate
                        rects for compositing */
@@ -2772,7 +2812,12 @@ AbstractUserInterface& AbstractUserInterface::update() {
                            need to explicitly check that as well. */
                         layerItem.used.instance->nodes(),
                         state.visibleNodeEventDataOffsets,
-                        state.visibleEventNodeMask,
+                        /* Again the visibleOrVisibilityLostEventNodeMask is
+                           used instead of state.visibleEventNodeMask to make
+                           sure data get collected also for nodes that may no
+                           longer participate in event handling but still need
+                           visibilityLostEvent() called. */
+                        visibleOrVisibilityLostEventNodeMask,
                         state.visibleNodeEventData);
                 }
 
@@ -2792,7 +2837,47 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.dataToDrawClipRectSizes);
     }
 
-    /* 14. Decide what all to update on all layers */
+    /* 14. Refresh the event handling state based on visible nodes. Because
+       this may call visibilityLostEvent() on layer data, do it before calling
+       layer update() so any changes from the events can be directly reflected
+       in the update. */
+    /** @todo may want to restrict what the event handler can do, like, it
+        definitely shouldn't attempt to remove anything */
+    if(states >= UserInterfaceState::NeedsNodeEnabledUpdate) {
+        /* If the pressed / captured / hovered node is no longer valid, is now
+           invisible or doesn't react to events, call visibilityLostEvent() on
+           it and reset it */
+        for(NodeHandle& node: {Containers::reference(state.currentPressedNode),
+                               Containers::reference(state.currentCapturedNode),
+                               Containers::reference(state.currentHoveredNode)}) {
+            const bool valid = isHandleValid(node);
+            const UnsignedInt nodeId = nodeHandleId(node);
+            if(valid && state.visibleEventNodeMask[nodeId])
+                continue;
+
+            /* Call visibilityLostEvent() only if it wasn't called for this
+               node yet -- initially the `visibleOrVisibilityLostEventNodeMask`
+               has the bits set for all valid `state.current*Event` nodes but
+               after each `visibilityLostEvent()` call we reset the
+               corresponding bit to not have it called multiple times if the
+               same node was pressed, hovered and captured at the same time,
+               e.g.. */
+            if(valid && visibleOrVisibilityLostEventNodeMask[nodeId]) {
+                VisibilityLostEvent event;
+                callVisibilityLostEventOnNode(nodeId, event);
+                visibleOrVisibilityLostEventNodeMask.reset(nodeId);
+            }
+
+            node = NodeHandle::Null;
+        }
+    }
+
+    /* As this mask might have gotten some bits reset above, it's not really
+       reliably useful for anything after this point. Reset it to be sure it
+       doesn't get used. */
+    visibleOrVisibilityLostEventNodeMask = {};
+
+    /* 15. Decide what all to update on all layers */
     LayerStates allLayerStateToUpdate;
     LayerStates allCompositeLayerStateToUpdate;
     /** @todo might be worth to have a dedicated state bit for just the
@@ -2818,7 +2903,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
            to update , supply just the subset it should care about */
         allLayerStateToUpdate |= LayerState::NeedsNodeOrderUpdate;
 
-    /* 15. For each layer (if there are actually any) submit an update of
+    /* 16. For each layer (if there are actually any) submit an update of
        visible data across all visible top-level nodes. If no data update is
        needed, the data in layers is already up-to-date. */
     if(states >= UserInterfaceState::NeedsDataUpdate && state.firstLayer != LayerHandle::Null) {
@@ -2884,30 +2969,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
     }
 
     /** @todo layer-specific cull/clip step? */
-
-    /* 16. Refresh the event handling state based on visible nodes. */
-    if(states >= UserInterfaceState::NeedsNodeEnabledUpdate) {
-        /* If the pressed node is no longer valid, is now invisible or doesn't
-           react to events, reset it */
-        if(!isHandleValid(state.currentPressedNode) ||
-           !state.visibleEventNodeMask[nodeHandleId(state.currentHoveredNode)]) {
-            state.currentPressedNode = NodeHandle::Null;
-        }
-
-        /* If the node capturing pointer events is no longer valid, is now
-           invisible or doesn't react to events, reset it */
-        if(!isHandleValid(state.currentCapturedNode) ||
-           !state.visibleEventNodeMask[nodeHandleId(state.currentCapturedNode)]) {
-            state.currentCapturedNode = NodeHandle::Null;
-        }
-
-        /* If the hovered node is no longer valid, is now invisible or
-           doesn't react to events, reset it */
-        if(!isHandleValid(state.currentHoveredNode) ||
-           !state.visibleEventNodeMask[nodeHandleId(state.currentHoveredNode)]) {
-            state.currentHoveredNode = NodeHandle::Null;
-        }
-    }
 
     /* Unmark the UI as needing an update() call. No other states should be
        left after that, i.e. the UI should be ready for drawing and event
@@ -3003,6 +3064,20 @@ AbstractUserInterface& AbstractUserInterface::draw() {
        it goes just from Initial to Final. */
     renderer.transition(RendererTargetState::Final, {});
     return *this;
+}
+
+/* Used only in update() but put here to have the loops and other event-related
+   handling of all call*Event*() APIs together */
+void AbstractUserInterface::callVisibilityLostEventOnNode(const UnsignedInt nodeId, VisibilityLostEvent& event) {
+    State& state = *_state;
+    /* Note that unlike callEvent() below, here it *does not* check the
+       `state.visibleEventNodeMask` for the `nodeId` because we may actually
+       want to call visibilityLostEvent() on nodes that no longer accept
+       events. */
+    for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
+        const DataHandle data = state.visibleNodeEventData[j];
+        state.layers[dataHandleLayerId(data)].used.instance->visibilityLostEvent(dataHandleId(data), event);
+    }
 }
 
 template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEventOnNode(const Vector2& globalPositionScaled, const UnsignedInt nodeId, Event& event, const bool rememberCaptureOnUnaccepted) {

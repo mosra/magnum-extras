@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::KeyEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
+ * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::KeyEvent, @ref Magnum::Whee::VisibilityLostEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
  * @m_since_latest
  */
 
@@ -684,6 +684,21 @@ class MAGNUM_WHEE_EXPORT KeyEvent {
         bool _accepted = false;
         bool _captured = false;
         bool _hovering = false;
+};
+
+/**
+@brief Visibility lost event
+@m_since_latest
+
+Unlike all other events, this event is fired from
+@ref AbstractUserInterface::update() and is without any relation to events
+coming from the application.
+@see @ref AbstractLayer::visibilityLostEvent()
+*/
+class VisibilityLostEvent {
+    public:
+        /** @brief Constructor */
+        explicit VisibilityLostEvent() = default;
 };
 
 }}

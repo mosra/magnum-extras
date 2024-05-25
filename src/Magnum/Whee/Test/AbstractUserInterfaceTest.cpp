@@ -11752,7 +11752,9 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
     enum Event {
         Move = 0,
         Enter = 1,
-        Leave = 2
+        Leave = 2,
+        VisibilityLost = 3,
+        Update = 4
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -11775,6 +11777,14 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Leave, dataHandle(handle(), dataId, 1), event.position());
+        }
+        void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent&) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, VisibilityLost, dataHandle(handle(), dataId, 1), Vector2{});
+        }
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(eventCalls, InPlaceInit, Update, DataHandle::Null, Vector2{});
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -11833,8 +11843,13 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
     CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        {Update, {}, {}},
         {Move, nestedData, {10.0f, 10.0f}},
         {Enter, nestedData, {10.0f, 10.0f}},
+        /* The visibility lost event gets emitted before a doUpdate() so the
+           changes can be directly reflected */
+        {VisibilityLost, nestedData, {}},
+        {Update, {}, {}},
         /* There's no node to execute the Move on, neither a Leave can be
            emitted as the node isn't part of the visible hierarchy and thus its
            absolute offset is unknown */
@@ -11876,6 +11891,9 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Leave, dataHandle(handle(), dataId, 1), event.position());
+        }
+        void doVisibilityLostEvent(UnsignedInt, VisibilityLostEvent&) override {
+            CORRADE_FAIL("This function shouldn't be called.");
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -11977,6 +11995,9 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Leave, dataHandle(handle(), dataId, 1), event.position());
+        }
+        void doVisibilityLostEvent(UnsignedInt, VisibilityLostEvent&) override {
+            CORRADE_FAIL("This function shouldn't be called.");
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -13758,6 +13779,9 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
         }
         /* No enter/leave events, those are tested in
            eventPointerMoveNodePositionUpdated() already */
+        void doVisibilityLostEvent(UnsignedInt, VisibilityLostEvent&) override {
+            CORRADE_FAIL("This function shouldn't be called.");
+        }
 
         Containers::Array<Containers::Pair<DataHandle, Vector2>> eventCalls;
     };
@@ -13827,6 +13851,14 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
     /* Event scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
 
+    enum Event {
+        Captured = 1,
+        Press = 2,
+        Release = 4,
+        Move = 6,
+        VisibilityLost = 8,
+        Update = 10
+    };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
         using AbstractLayer::create;
@@ -13836,13 +13868,13 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position(), event.isCaptured());
+            arrayAppend(eventCalls, InPlaceInit, Press|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position(), event.isCaptured());
+            arrayAppend(eventCalls, InPlaceInit, Release|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
         /* tapOrClick event test in a dedicated eventTapOrClick() below as it
@@ -13850,13 +13882,21 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position(), event.isCaptured());
+            arrayAppend(eventCalls, InPlaceInit, Move|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
         /* No enter/leave events, those are tested in
            eventPointerMoveNodeHidden() already */
+        void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent&) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, VisibilityLost, dataHandle(handle(), dataId, 1), Vector2{});
+        }
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(eventCalls, InPlaceInit, Update, DataHandle::Null, Vector2{});
+        }
 
-        Containers::Array<Containers::Triple<DataHandle, Vector2, bool>> eventCalls;
+        Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
     /* Two nodes next to each other, nested in order to verify that the
@@ -13889,7 +13929,14 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
 
     PointerEvent eventPress{Pointer::MouseLeft};
     CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+    CORRADE_COMPARE(ui.currentPressedNode(), leftNested);
     CORRADE_COMPARE(ui.currentCapturedNode(), leftNested);
+
+    if(data.move) {
+        PointerMoveEvent eventMove{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentHoveredNode(), leftNested);
+    }
 
     if(data.flags)
         ui.addNodeFlags(left, data.flags);
@@ -13899,12 +13946,14 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
     /* The current captured node stays after setting the flags, is only updated
        after update() -- there it also handles if any parent gets the flag as
        well */
+    CORRADE_COMPARE(ui.currentPressedNode(), leftNested);
     CORRADE_COMPARE(ui.currentCapturedNode(), leftNested);
     CORRADE_COMPARE(ui.state(), data.expectedState);
 
     if(data.update) {
         ui.update();
 
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -13917,14 +13966,37 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
+    CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
-    CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<DataHandle, Vector2, bool>>({
-        {leftData, {10.0f, 10.0f}, true},
-        /* The release / move event isn't happening on a captured node, so
-           isCaptured() is false for it */
-        {rightData, {10.0f, 10.0f}, false},
-    })), TestSuite::Compare::Container);
+    if(data.move) {
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Update, {}, {}},
+            {Press|Captured, leftData, {10.0f, 10.0f}},
+            {Move|Captured, leftData, {10.0f, 10.0f}},
+            /* The node used to be pressed, captured and hovered, but only one
+               visibility lost event is submitted for all. It's emitted before
+               a doUpdate() so the changes can be directly reflected. */
+            {VisibilityLost, leftData, {}},
+            {Update, {}, {}},
+            /* The move event isn't happening on a captured node, so
+               isCaptured() is false for it */
+            {Move, rightData, {10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+    } else {
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Update, {}, {}},
+            {Press|Captured, leftData, {10.0f, 10.0f}},
+            /* The node used to be both pressed and captured, but only one
+               visibility lost event is submitted for both. It's emitted before
+               a doUpdate() so the changes can be directly reflected. */
+            {VisibilityLost, leftData, {}},
+            {Update, {}, {}},
+            /* The release event isn't happening on a captured node, so
+                isCaptured() is false for it */
+            {Release, rightData, {10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+    }
 
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 }
@@ -13964,6 +14036,9 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
         }
         /* No enter/leave events, those are tested in
            eventPointerMoveNodeRemoved() already */
+        void doVisibilityLostEvent(UnsignedInt, VisibilityLostEvent&) override {
+            CORRADE_FAIL("This function shouldn't be called.");
+        }
 
         Containers::Array<Containers::Triple<DataHandle, Vector2, bool>> eventCalls;
     };
@@ -14075,6 +14150,9 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
         }
         /* No enter/leave events, those are tested in
            eventPointerMoveDataRemoved() already */
+        void doVisibilityLostEvent(UnsignedInt, VisibilityLostEvent&) override {
+            CORRADE_FAIL("This function shouldn't be called.");
+        }
 
         Containers::Array<Containers::Triple<DataHandle, Vector2, bool>> eventCalls;
     };
@@ -14658,7 +14736,9 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
     enum Event {
         Press = 0,
         Release = 1,
-        TapOrClick = 2
+        TapOrClick = 2,
+        VisibilityLost = 3,
+        Update = 4
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -14683,6 +14763,14 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, TapOrClick, dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
+        }
+        void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent&) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, VisibilityLost, dataHandle(handle(), dataId, 1), Vector2{});
+        }
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(eventCalls, InPlaceInit, Update, DataHandle::Null, Vector2{});
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -14716,6 +14804,7 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
     PointerEvent eventPress{Pointer::MouseLeft};
     CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
     CORRADE_COMPARE(ui.currentPressedNode(), nested);
+    CORRADE_COMPARE(ui.currentCapturedNode(), nested);
 
     if(data.flags)
         ui.addNodeFlags(node, data.flags);
@@ -14726,12 +14815,14 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
        after update() -- there it also handles if any parent gets the flag as
        well */
     CORRADE_COMPARE(ui.currentPressedNode(), nested);
+    CORRADE_COMPARE(ui.currentCapturedNode(), nested);
     CORRADE_COMPARE(ui.state(), data.expectedState);
 
     if(data.update) {
         ui.update();
 
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
@@ -14739,9 +14830,16 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
     /* There's no node to execute the release on */
     CORRADE_VERIFY(!ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
     CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        {Update, {}, {}},
         {Press, nestedData, {10.0f, 10.0f}},
+        /* The node used to be both pressed and captured, but only one
+           visibility lost event is submitted for both. It's emitted before a
+           doUpdate() so the changes can be directly reflected. */
+        {VisibilityLost, nestedData, {}},
+        {Update, {}, {}},
         /* There's no node to execute the Release on, and thus neither a
            TapOrClick is emitted */
     })), TestSuite::Compare::Container);
@@ -14784,6 +14882,9 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeRemoved() {
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, TapOrClick, dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
+        }
+        void doVisibilityLostEvent(UnsignedInt, VisibilityLostEvent&) override {
+            CORRADE_FAIL("This function shouldn't be called.");
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -14888,6 +14989,9 @@ void AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved() {
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, TapOrClick, dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
+        }
+        void doVisibilityLostEvent(UnsignedInt, VisibilityLostEvent&) override {
+            CORRADE_FAIL("This function shouldn't be called.");
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;

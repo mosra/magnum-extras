@@ -1580,7 +1580,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate or
          * @ref UserInterfaceState::NeedsNodeUpdate, this function is a no-op,
          * otherwise it performs a subset of the following depending on the
-         * state:
+         * state, in order:
          *
          * -    Orders visible nodes back-to-front for drawing and
          *      front-to-back for event processing
@@ -1591,13 +1591,16 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Propagates @ref NodeFlag::Disabled and @ref NodeFlag::NoEvents
          *      to child nodes
          * -    Orders data attachments in each layer by draw order
+         * -    Resets @ref currentPressedNode(), @ref currentCapturedNode() or
+         *      @ref currentHoveredNode() if they no longer exist
+         * -    Calls @ref AbstractLayer::visibilityLostEvent() and resets
+         *      @ref currentPressedNode(), @ref currentCapturedNode() or
+         *      @ref currentHoveredNode() if they are not visible or have
+         *      @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled set on them
+         *      or their parents.
          * -    Goes in a back to front order through layers that have
          *      instances set and calls @ref AbstractLayer::update() with the
          *      ordered data
-         * -    Resets @ref currentPressedNode(), @ref currentCapturedNode() or
-         *      @ref currentHoveredNode() if the nodes no longer exist, are not
-         *      visible or have @ref NodeFlag::NoEvents or
-         *      @ref NodeFlag::Disabled set on them or their parents
          *
          * After calling this function, @ref state() is empty apart from
          * @ref UserInterfaceState::NeedsAnimationAdvance, which may be present
@@ -1997,6 +2000,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /* Used by setNodeOrder() and clearNodeOrder() */
         MAGNUM_WHEE_LOCAL void clearNodeOrderInternal(NodeHandle handle);
         /* Used by *Event() functions */
+        MAGNUM_WHEE_LOCAL void callVisibilityLostEventOnNode(UnsignedInt nodeId, VisibilityLostEvent& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, UnsignedInt nodeId, Event& event, bool rememberCaptureOnUnaccepted = false);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);

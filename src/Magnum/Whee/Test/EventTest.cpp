@@ -48,6 +48,8 @@ struct EventTest: TestSuite::Tester {
     void pointerMoveNoPointerRelativePosition();
 
     void key();
+
+    void visibilityLost();
 };
 
 EventTest::EventTest() {
@@ -63,7 +65,9 @@ EventTest::EventTest() {
               &EventTest::pointerMoveNoPointer,
               &EventTest::pointerMoveNoPointerRelativePosition,
 
-              &EventTest::key});
+              &EventTest::key,
+
+              &EventTest::visibilityLost});
 }
 
 void EventTest::debugPointer() {
@@ -179,6 +183,14 @@ void EventTest::key() {
 
     event.setAccepted(false);
     CORRADE_VERIFY(!event.isAccepted());
+}
+
+void EventTest::visibilityLost() {
+    VisibilityLostEvent event;
+
+    /* No properties in this one */
+    static_cast<void>(event);
+    CORRADE_VERIFY(true);
 }
 
 }}}}

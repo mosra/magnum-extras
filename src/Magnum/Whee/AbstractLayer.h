@@ -787,6 +787,19 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          */
         void keyReleaseEvent(UnsignedInt dataId, KeyEvent& event);
 
+        /**
+         * @brief Handle a visibility lost event
+         *
+         * Used internally from @ref AbstractUserInterface::update(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data. Delegates to
+         * @ref doVisibilityLostEvent(), see its documentation for more
+         * information.
+         */
+        void visibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent& event);
+
     protected:
         /**
          * @brief Create a data
@@ -1246,6 +1259,14 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * released after this event, thus calling
          * @ref PointerEvent::setCaptured() has no effect.
          *
+         * @m_class{m-note m-info}
+         *
+         * @par
+         *      Note that this function is *not* called in case the currently
+         *      pressed node becomes invisible or no longer accepts events. In
+         *      that case @ref doVisibilityLostEvent() is called instead, see
+         *      its documentation for details about differences in semantics.
+         *
          * Default implementation does nothing, i.e. the @p event gets
          * implicitly propagated further.
          */
@@ -1356,6 +1377,14 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * remaining pointer events can be changed using
          * @ref PointerMoveEvent::setCaptured() here as well.
          *
+         * @m_class{m-note m-info}
+         *
+         * @par
+         *      Note that this function is *not* called in case the currently
+         *      hovered node becomes invisible or no longer accepts events. In
+         *      that case @ref doVisibilityLostEvent() is called instead, see
+         *      its documentation for details about differences in semantics.
+         *
          * Default implementation does nothing.
          */
         virtual void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
@@ -1400,6 +1429,33 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * implicitly propagated further.
          */
         virtual void doKeyReleaseEvent(UnsignedInt dataId, KeyEvent& event);
+
+        /**
+         * @brief Handle a visibility lost event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data
+         *
+         * Implementation for @ref visibilityLostEvent(), which is called from
+         * @ref AbstractUserInterface::update() if the currently hovered,
+         * pressed or captured node containing @p dataId can no longer receive
+         * events due to @ref NodeFlag::Hidden, @ref NodeFlag::NoEvents or
+         * @ref NodeFlag::Disabled being set on the node or any of its parents.
+         *
+         * @m_class{m-note m-warning}
+         *
+         * @par
+         *      Unlike other events, for which it's guaranteed that they're
+         *      called *after* a @ref doUpdate(), this event is always called
+         *      *before* the corresponding @ref doUpdate() in order to make the
+         *      changes it performs immediately applied. Which also means the
+         *      implementation should only perform operations that don't
+         *      require a global UI state rebuild, such as node or data
+         *      removal.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent& event);
 
         /* Common implementations for foo(DataHandle, ...) and
            foo(LayerDataHandle, ...) */
