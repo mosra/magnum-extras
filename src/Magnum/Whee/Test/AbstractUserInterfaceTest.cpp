@@ -155,7 +155,9 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void updateRecycledLayerWithoutInstance();
 
     /* Tests update() and clean() calls on AbstractLayer, AbstractLayouter and
-       AbstractAnimator */
+       AbstractAnimator, and that the UserInterfaceState flags cause the right
+       subset of these to be called. Does *not* verify the state update
+       behavior consistency for events, that's done in event*() cases below. */
     void state();
     /* Tests update() and clean() calls triggered by advanceAnimations() */
     void stateAnimations();
@@ -10537,6 +10539,18 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     NodeHandle topNestedOutside = ui.createNode(topNested,
         baseNodeOffset + Vector2{7.5f, 7.5f},
         baseNodeScale*Vector2{10.0f, 10.0f});
+
+    /* Update explicitly before adding the layouters / layers as
+       NeedsLayoutUpdate and NeedsDataAttachmentUpdate is a subset of this, and
+       having just those set may uncover accidental omissions in internal
+       state updates compared to updating just once after creating both nodes
+       and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
     if(data.layouter) {
         Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
         layouter.add(bottom);
@@ -10548,6 +10562,14 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
         layouter.add(noEvents);
         layouter.add(notInOrder);
         layouter.add(topNestedOutside);
+
+        /* Again update explicitly before adding the layers to verify updating
+           just the layouters doesn't break it for layers */
+        if(data.update) {
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+            ui.update();
+            CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        }
     }
 
     LayerHandle layer1 = ui.createLayer();
@@ -10587,6 +10609,14 @@ void AbstractUserInterfaceTest::eventNodePropagation() {
     ui.setLayerInstance(Utility::move(layer1Instance));
     ui.setLayerInstance(Utility::move(layer2Instance));
     ui.setLayerInstance(Utility::move(layer3Instance));
+
+    /* Update again to verify updating just data attachments doesn't break it
+       for the subsequent operations */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
 
     ui.clearNodeOrder(notInOrder);
     ui.removeNode(removed);
@@ -10889,14 +10919,24 @@ void AbstractUserInterfaceTest::eventPointerPress() {
 
     NodeHandle node = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f});
 
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
     /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
     DataHandle data2 = ui.layer<Layer>(layer).create(node);
     DataHandle data3 = ui.layer<Layer>(layer).create(node);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -11092,14 +11132,24 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
 
     NodeHandle node = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f});
 
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
     /*DataHandle data1 =*/ ui.layer<Layer>(layer).create();
     DataHandle data2 = ui.layer<Layer>(layer).create(node);
     DataHandle data3 = ui.layer<Layer>(layer).create(node);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -11186,17 +11236,28 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector4>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle leftData1 = ui.layer<Layer>(layer).create(left);
     DataHandle leftData2 = ui.layer<Layer>(layer).create(left);
     DataHandle rightData = ui.layer<Layer>(layer).create(right);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -11624,16 +11685,27 @@ void AbstractUserInterfaceTest::eventPointerMoveNodePositionUpdated() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Nested node in order to verify that the hidden flag gets propagated
        through the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -11708,16 +11780,27 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Nested node in order to verify that the hidden/disabled/... flag gets
        propagated through the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -11798,16 +11881,27 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeRemoved() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Nested node in order to verify that the removal gets propagated through
        the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -11888,13 +11982,24 @@ void AbstractUserInterfaceTest::eventPointerMoveAllDataRemoved() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
+    NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
-    NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     DataHandle nodeData = ui.layer<Layer>(layer).create(node);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -13657,16 +13762,27 @@ void AbstractUserInterfaceTest::eventCaptureNodePositionUpdated() {
         Containers::Array<Containers::Pair<DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* A nested node to verify the event receives up-to-date position after its
        parent gets moved */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -13743,18 +13859,30 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
         Containers::Array<Containers::Triple<DataHandle, Vector2, bool>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Two nodes next to each other, nested in order to verify that the
        hidden/disabled/... flag gets propagated through the hierarchy */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle leftNested = ui.createNode(left, {}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
+
     DataHandle leftData = ui.layer<Layer>(layer).create(leftNested);
     DataHandle rightData = ui.layer<Layer>(layer).create(right);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -13840,18 +13968,29 @@ void AbstractUserInterfaceTest::eventCaptureNodeRemoved() {
         Containers::Array<Containers::Triple<DataHandle, Vector2, bool>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Two nodes next to each other, nested in order to verify that the removal
        gets propagated through the hierarchy */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle leftNested = ui.createNode(left, {}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle leftData = ui.layer<Layer>(layer).create(leftNested);
     DataHandle rightData = ui.layer<Layer>(layer).create(right);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -13940,16 +14079,27 @@ void AbstractUserInterfaceTest::eventCaptureAllDataRemoved() {
         Containers::Array<Containers::Triple<DataHandle, Vector2, bool>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Two nodes next to each other */
     NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle leftData = ui.layer<Layer>(layer).create(left);
     /*DataHandle rightData =*/ ui.layer<Layer>(layer).create(right);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -14538,16 +14688,27 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Nested node in order to verify that the hidden/disabled/... flag gets
        propagated through the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -14628,16 +14789,27 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeRemoved() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
     /* Nested node in order to verify that the removal gets propagated through
        the hierarchy */
     NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     NodeHandle nested = ui.createNode(node, {}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<Layer>(layer));
     DataHandle nestedData = ui.layer<Layer>(layer).create(nested);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -14721,13 +14893,24 @@ void AbstractUserInterfaceTest::eventTapOrClickAllDataRemoved() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
+    NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<Layer>(layer));
-
-    NodeHandle node = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
     DataHandle nodeData = ui.layer<Layer>(layer).create(node);
 
     if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
@@ -14862,21 +15045,43 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
     NodeHandle right = ui.createNode(
         baseNodeOffset + Vector2{40.0f, 0.0f},
         baseNodeScale*Vector2{20.0f, 20.0f});
+
+    /* Update explicitly before adding the layouter as
+       NeedsLayoutAssignmentUpdate is a subset of this, and having just that
+       one set may uncover accidental omissions in internal state updates
+       compared to updating just once after creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
     if(data.layouter) {
         Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
         layouter.add(left);
         layouter.add(right);
-    }
 
-    if(data.update) {
-        ui.update();
-        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        /* Update explicitly before adding the layer as
+           NeedsDataAttachmentUpdate is a subset of this, and having just that
+           one set may uncover accidental omissions in internal state updates
+           compared to updating just once after creating both nodes and data */
+        if(data.update) {
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+            ui.update();
+            CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        }
     }
 
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
     DataHandle leftData1 = layer.create(left);
     DataHandle leftData2 = layer.create(left);
     DataHandle rightData = layer.create(right);
+
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
 
     /* Press / release with no preceding pointer event isn't propagated
        anywhere */
