@@ -146,6 +146,11 @@ struct AbstractLayerTest: TestSuite::Tester {
     void keyEventNotImplemented();
     void keyEventOutOfRange();
     void keyEventAlreadyAccepted();
+
+    void visibilityLostEvent();
+    void visibilityLostEventNotSupported();
+    void visibilityLostEventNotImplemented();
+    void visibilityLostEventOutOfRange();
 };
 
 using namespace Math::Literals;
@@ -271,7 +276,12 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::keyEventNotSupported,
               &AbstractLayerTest::keyEventNotImplemented,
               &AbstractLayerTest::keyEventOutOfRange,
-              &AbstractLayerTest::keyEventAlreadyAccepted});
+              &AbstractLayerTest::keyEventAlreadyAccepted,
+
+              &AbstractLayerTest::visibilityLostEvent,
+              &AbstractLayerTest::visibilityLostEventNotSupported,
+              &AbstractLayerTest::visibilityLostEventNotImplemented,
+              &AbstractLayerTest::visibilityLostEventOutOfRange});
 }
 
 void AbstractLayerTest::debugFeature() {
@@ -2997,13 +3007,14 @@ void AbstractLayerTest::pointerEventNotSupported() {
     layer.pointerMoveEvent(0, moveEvent);
     layer.pointerEnterEvent(0, moveEvent);
     layer.pointerLeaveEvent(0, moveEvent);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerTapOrClickEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerMoveEvent(): feature not supported\n"
         "Whee::AbstractLayer::pointerEnterEvent(): feature not supported\n"
-        "Whee::AbstractLayer::pointerLeaveEvent(): feature not supported\n");
+        "Whee::AbstractLayer::pointerLeaveEvent(): feature not supported\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::pointerEventNotImplemented() {
@@ -3056,13 +3067,14 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     layer.pointerMoveEvent(2, moveEvent);
     layer.pointerEnterEvent(2, moveEvent);
     layer.pointerLeaveEvent(2, moveEvent);
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractLayer::pointerPressEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerReleaseEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerTapOrClickEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerMoveEvent(): index 2 out of range for 2 data\n"
         "Whee::AbstractLayer::pointerEnterEvent(): index 2 out of range for 2 data\n"
-        "Whee::AbstractLayer::pointerLeaveEvent(): index 2 out of range for 2 data\n");
+        "Whee::AbstractLayer::pointerLeaveEvent(): index 2 out of range for 2 data\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::pointerEventAlreadyAccepted() {
@@ -3227,6 +3239,96 @@ void AbstractLayerTest::keyEventAlreadyAccepted() {
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::keyPressEvent(): event already accepted\n"
         "Whee::AbstractLayer::keyReleaseEvent(): event already accepted\n");
+}
+
+void AbstractLayerTest::visibilityLostEvent() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+
+        void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent&) override {
+            CORRADE_COMPARE(dataId, 1);
+            called *= 2;
+        }
+
+        int called = 1;
+    } layer{layerHandle(0, 1)};
+
+    /* Capture correct test case name */
+    CORRADE_VERIFY(true);
+
+    layer.create();
+    layer.create();
+    {
+        VisibilityLostEvent event;
+        layer.visibilityLostEvent(1, event);
+    }
+    CORRADE_COMPARE(layer.called, 2);
+}
+
+void AbstractLayerTest::visibilityLostEventNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    VisibilityLostEvent event;
+    layer.visibilityLostEvent(0, event);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::visibilityLostEvent(): feature not supported\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::visibilityLostEventNotImplemented() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    VisibilityLostEvent event;
+    layer.visibilityLostEvent(0, event);
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::visibilityLostEventOutOfRange() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+    layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    VisibilityLostEvent event;
+    layer.visibilityLostEvent(2, event);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::visibilityLostEvent(): index 2 out of range for 2 data\n",
+        TestSuite::Compare::String);
 }
 
 }}}}
