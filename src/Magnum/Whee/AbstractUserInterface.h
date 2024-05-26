@@ -1536,7 +1536,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref UserInterfaceState::NeedsLayoutAssignmentUpdate or
          * @ref UserInterfaceState::NeedsNodeUpdate, this function is a no-op,
          * otherwise it performs a subset of the following depending on the
-         * state:
+         * state, in order:
          *
          * -    Orders visible nodes back-to-front for drawing and
          *      front-to-back for event processing
@@ -1547,9 +1547,6 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Propagates @ref NodeFlag::Disabled and @ref NodeFlag::NoEvents
          *      to child nodes
          * -    Orders data attachments in each layer by draw order
-         * -    Goes in a back to front order through layers that have
-         *      instances set and calls @ref AbstractLayer::update() with the
-         *      ordered data
          * -    Resets @ref currentPressedNode(), @ref currentCapturedNode() or
          *      @ref currentHoveredNode() if they no longer exist
          * -    Calls @ref AbstractLayer::pointerCancelEvent() and resets
@@ -1557,6 +1554,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      @ref currentHoveredNode() if they are not visible or have
          *      @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled set on them
          *      or their parents.
+         * -    Goes in a back to front order through layers that have
+         *      instances set and calls @ref AbstractLayer::update() with the
+         *      ordered data
          *
          * After calling this function, @ref state() is empty apart from
          * @ref UserInterfaceState::NeedsAnimationAdvance, which may be present

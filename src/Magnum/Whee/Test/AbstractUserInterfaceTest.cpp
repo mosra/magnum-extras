@@ -11733,7 +11733,8 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
         Move = 0,
         Enter = 1,
         Leave = 2,
-        Cancel = 3
+        Cancel = 3,
+        Update = 4
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -11761,6 +11762,9 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Cancel, dataHandle(handle(), dataId, 1), Vector2{});
+        }
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(eventCalls, InPlaceInit, Update, DataHandle::Null, Vector2{});
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -11819,9 +11823,13 @@ void AbstractUserInterfaceTest::eventPointerMoveNodeBecomesHiddenDisabledNoEvent
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
     CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        {Update, {}, {}},
         {Move, nestedData, {10.0f, 10.0f}},
         {Enter, nestedData, {10.0f, 10.0f}},
+        /* The cancel event gets emitted before a doUpdate() so the changes can
+           be directly reflected */
         {Cancel, nestedData, {}},
+        {Update, {}, {}},
         /* There's no node to execute the Move on, neither a Leave can be
            emitted as the node isn't part of the visible hierarchy and thus its
            absolute offset is unknown */
@@ -13840,7 +13848,8 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
         Press = 2,
         Release = 4,
         Move = 6,
-        Cancel = 8
+        Cancel = 8,
+        Update = 10
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -13874,6 +13883,9 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Cancel, dataHandle(handle(), dataId, 1), Vector2{});
+        }
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(eventCalls, InPlaceInit, Update, DataHandle::Null, Vector2{});
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -13951,21 +13963,27 @@ void AbstractUserInterfaceTest::eventCaptureNodeBecomesHiddenDisabledNoEvents() 
 
     if(data.move) {
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Update, {}, {}},
             {Press|Captured, leftData, {10.0f, 10.0f}},
             {Move|Captured, leftData, {10.0f, 10.0f}},
             /* The node used to be pressed, captured and hovered, but only one
-               cancel event is submitted for all */
+               cancel event is submitted for all. It's emitted before a
+               doUpdate() so the changes can be directly reflected. */
             {Cancel, leftData, {}},
+            {Update, {}, {}},
             /* The move event isn't happening on a captured node, so
                isCaptured() is false for it */
             {Move, rightData, {10.0f, 10.0f}},
         })), TestSuite::Compare::Container);
     } else {
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Update, {}, {}},
             {Press|Captured, leftData, {10.0f, 10.0f}},
             /* The node used to be both pressed and captured, but only one
-               cancel event is submitted for both */
+               cancel event is submitted for both. It's emitted before a
+               doUpdate() so the changes can be directly reflected. */
             {Cancel, leftData, {}},
+            {Update, {}, {}},
             /* The release event isn't happening on a captured node, so
                 isCaptured() is false for it */
             {Release, rightData, {10.0f, 10.0f}},
@@ -14714,7 +14732,8 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
         Press = 0,
         Release = 1,
         TapOrClick = 2,
-        Cancel = 3
+        Cancel = 3,
+        Update = 4
     };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -14744,6 +14763,9 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Cancel, dataHandle(handle(), dataId, 1), Vector2{});
+        }
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            arrayAppend(eventCalls, InPlaceInit, Update, DataHandle::Null, Vector2{});
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -14806,10 +14828,13 @@ void AbstractUserInterfaceTest::eventTapOrClickNodeBecomesHiddenDisabledNoEvents
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
     CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+        {Update, {}, {}},
         {Press, nestedData, {10.0f, 10.0f}},
         /* The node used to be both pressed and captured, but only one cancel
-           event is submitted for both */
+           event is submitted for both. It's emitted before a doUpdate() so the
+           changes can be directly reflected. */
         {Cancel, nestedData, {}},
+        {Update, {}, {}},
         /* There's no node to execute the Release on, and thus neither a
            TapOrClick is emitted */
     })), TestSuite::Compare::Container);

@@ -2814,7 +2814,46 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.dataToDrawClipRectSizes);
     }
 
-    /* 14. Decide what all to update on all layers */
+    /* 14. Refresh the event handling state based on visible nodes. Because
+       this may call pointerCancelEvent() on layer data, do it before calling
+       layer update() so any changes from the events can be directly reflected
+       in the update. */
+    /** @todo may want to restrict what the event handler can do, like, it
+        definitely shouldn't attempt to remove anything */
+    if(states >= UserInterfaceState::NeedsNodeEnabledUpdate) {
+        /* If the pressed / captured / hovered node is no longer valid, is now
+           invisible or doesn't react to events, call pointerCancelEvent() on
+           it and reset it */
+        for(NodeHandle& node: {Containers::reference(state.currentPressedNode),
+                               Containers::reference(state.currentCapturedNode),
+                               Containers::reference(state.currentHoveredNode)}) {
+            const bool valid = isHandleValid(node);
+            const UnsignedInt nodeId = nodeHandleId(node);
+            if(valid && state.visibleEventNodeMask[nodeId])
+                continue;
+
+            /* Call pointerCancelEvent() only if it wasn't called for this node
+               yet -- initially the `visibleOrCancelEventNodeMask` has the bits
+               set for all valid `state.current*Event` nodes but after each
+               `pointerCancelEvent()` call we reset the corresponding bit to
+               not have it called multiple times if the same node was pressed,
+               hovered and captured at the same time, e.g.. */
+            if(valid && visibleOrCancelEventNodeMask[nodeId]) {
+                PointerCancelEvent event;
+                callPointerCancelEventOnNode(nodeId, event);
+                visibleOrCancelEventNodeMask.reset(nodeId);
+            }
+
+            node = NodeHandle::Null;
+        }
+    }
+
+    /* As this mask might have gotten some bits reset above, it's not really
+       reliably useful for anything after this point. Reset it to be sure it
+       doesn't get used. */
+    visibleOrCancelEventNodeMask = {};
+
+    /* 15. Decide what all to update on all layers */
     LayerStates allLayerStateToUpdate;
     LayerStates allCompositeLayerStateToUpdate;
     /** @todo might be worth to have a dedicated state bit for just the
@@ -2840,7 +2879,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
            to update , supply just the subset it should care about */
         allLayerStateToUpdate |= LayerState::NeedsNodeOrderUpdate;
 
-    /* 15. For each layer (if there are actually any) submit an update of
+    /* 16. For each layer (if there are actually any) submit an update of
        visible data across all visible top-level nodes. If no data update is
        needed, the data in layers is already up-to-date. */
     if(states >= UserInterfaceState::NeedsDataUpdate && state.firstLayer != LayerHandle::Null) {
@@ -2906,35 +2945,6 @@ AbstractUserInterface& AbstractUserInterface::update() {
     }
 
     /** @todo layer-specific cull/clip step? */
-
-    /* 16. Refresh the event handling state based on visible nodes. */
-    if(states >= UserInterfaceState::NeedsNodeEnabledUpdate) {
-        /* If the pressed / captured / hovered node is no longer valid, is now
-           invisible or doesn't react to events, call pointerCancelEvent() on
-           it and reset it */
-        for(NodeHandle& node: {Containers::reference(state.currentPressedNode),
-                               Containers::reference(state.currentCapturedNode),
-                               Containers::reference(state.currentHoveredNode)}) {
-            const bool valid = isHandleValid(node);
-            const UnsignedInt nodeId = nodeHandleId(node);
-            if(valid && state.visibleEventNodeMask[nodeId])
-                continue;
-
-            /* Call pointerCancelEvent() only if it wasn't called for this node
-               yet -- initially the `visibleOrCancelEventNodeMask` has the bits
-               set for all valid `state.current*Event` nodes but after each
-               `pointerCancelEvent()` call we reset the corresponding bit to
-               not have it called multiple times if the same node was pressed,
-               hovered and captured at the same time, e.g.. */
-            if(valid && visibleOrCancelEventNodeMask[nodeId]) {
-                PointerCancelEvent event;
-                callPointerCancelEventOnNode(nodeId, event);
-                visibleOrCancelEventNodeMask.reset(nodeId);
-            }
-
-            node = NodeHandle::Null;
-        }
-    }
 
     /* Unmark the UI as needing an update() call. No other states should be
        left after that, i.e. the UI should be ready for drawing and event
