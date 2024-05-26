@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::PointerCancelEvent, @ref Magnum::Whee::KeyEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
+ * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::PointerCancelEvent, @ref Magnum::Whee::FocusEvent, @ref Magnum::Whee::KeyEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
  * @m_since_latest
  */
 
@@ -86,7 +86,7 @@ CORRADE_ENUMSET_OPERATORS(Pointers)
     @ref AbstractUserInterface::pointerReleaseEvent(),
     @ref AbstractLayer::pointerPressEvent(),
     @ref AbstractLayer::pointerReleaseEvent(),
-    @ref AbstractLayer::pointerTapOrClickEvent()
+    @ref AbstractLayer::pointerTapOrClickEvent(), @ref FocusEvent
 */
 class PointerEvent {
     public:
@@ -336,6 +336,70 @@ class PointerCancelEvent {
     public:
         /** @brief Constructor */
         explicit PointerCancelEvent() = default;
+};
+
+/**
+@brief Focus or blur event
+@m_since_latest
+
+@see @ref AbstractUserInterface::pointerPressEvent(),
+    @ref AbstractUserInterface::focusEvent(),
+    @ref AbstractUserInterface::update(), @ref AbstractLayer::focusEvent(),
+    @ref AbstractLayer::blurEvent()
+*/
+class FocusEvent {
+    public:
+        /**
+         * @brief Constructor
+         *
+         * The pressed and hover properties are set from
+         * @ref AbstractUserInterface event handler internals.
+         */
+        explicit FocusEvent() {}
+
+        /**
+         * @brief Whether the event is called on a node that's currently pressed
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentPressedNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise.
+         * @see @ref isHovering(), @ref setAccepted()
+         */
+        bool isPressed() const { return _pressed; }
+
+        /**
+         * @brief Whether the event is called on a node that's currently hovered
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise.
+         * @see @ref isPressed(), @ref setAccepted()
+         */
+        bool isHovering() const { return _hovering; }
+
+        /**
+         * @brief Whether the event is accepted
+         *
+         * Implicitly @cpp false @ce.
+         */
+        bool isAccepted() const { return _accepted; }
+
+        /**
+         * @brief Set the event as accepted
+         *
+         * The node receiving the event is treated as focused only if the event
+         * is accepted.
+         */
+        void setAccepted(bool accepted = true) {
+            _accepted = accepted;
+        }
+
+    private:
+        friend AbstractUserInterface;
+
+        bool _accepted = false;
+        bool _pressed = false;
+        bool _hovering = false;
 };
 
 /**

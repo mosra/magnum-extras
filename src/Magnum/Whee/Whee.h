@@ -92,6 +92,8 @@ class PointerEvent;
 class PointerMoveEvent;
 class PointerCancelEvent;
 
+class FocusEvent;
+
 enum class Key: UnsignedShort;
 enum class Modifier: UnsignedByte;
 typedef Containers::EnumSet<Modifier> Modifiers;

@@ -755,6 +755,37 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         void pointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event);
 
         /**
+         * @brief Handle a focus event
+         *
+         * Used internally from @ref AbstractUserInterface::focusEvent() and
+         * @ref AbstractUserInterface::pointerPressEvent(). Exposed just for
+         * testing purposes, there should be no need to call this function
+         * directly. Expects that the layer supports @ref LayerFeature::Event
+         * and @p dataId is less than @ref capacity(), with the assumption that
+         * the ID points to a valid data. The event is expected to not be
+         * accepted yet. Delegates to @ref doFocusEvent(), see its
+         * documentation for more information.
+         * @see @ref FocusEvent::isAccepted(), @ref FocusEvent::setAccepted()
+         */
+        void focusEvent(UnsignedInt dataId, FocusEvent& event);
+
+        /**
+         * @brief Handle a blur event
+         *
+         * Used internally from @ref AbstractUserInterface::focusEvent(),
+         * @ref AbstractUserInterface::pointerPressEvent() and
+         * @ref AbstractUserInterface::update(). Exposed just for testing
+         * purposes, there should be no need to call this function directly.
+         * Expects that the layer supports @ref LayerFeature::Event and
+         * @p dataId is less than @ref capacity(), with the assumption that the
+         * ID points to a valid data. The event is expected to not be accepted
+         * yet. Delegates to @ref doBlurEvent(), see its documentation for more
+         * information.
+         * @see @ref FocusEvent::isAccepted(), @ref FocusEvent::setAccepted()
+         */
+        void blurEvent(UnsignedInt dataId, FocusEvent& event);
+
+        /**
          * @brief Handle a key press event
          *
          * Used internally from @ref AbstractUserInterface::keyPressEvent().
@@ -1367,6 +1398,52 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Default implementation does nothing.
          */
         virtual void doPointerCancelEvent(UnsignedInt dataId, PointerCancelEvent& event);
+
+        /**
+         * @brief Handle a focus event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data
+         *
+         * Implementation for @ref focusEvent(), which is called from
+         * @ref AbstractUserInterface::focusEvent() and
+         * @ref AbstractUserInterface::pointerPressEvent(). See their
+         * documentation for more information about focus and blur event
+         * behavior. It's guaranteed that @ref doUpdate() was called before
+         * this function with up-to-date data for @p dataId.
+         *
+         * If the implementation handles the event, it's expected to call
+         * @ref FocusEvent::setAccepted() on it to cause the node to be marked
+         * as focused. If it doesn't, the node doesn't get marked as focused
+         * and depending on what @ref AbstractUserInterface API the event
+         * originated in, the previously focused node stays or gets blurred.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doFocusEvent(UnsignedInt dataId, FocusEvent& event);
+
+        /**
+         * @brief Handle a blur event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data
+         *
+         * Implementation for @ref blurEvent(), which is called from
+         * @ref AbstractUserInterface::focusEvent(),
+         * @ref AbstractUserInterface::pointerPressEvent() and
+         * @ref AbstractUserInterface::update(). See their documentation for
+         * more information about focus and blur event behavior. It's
+         * guaranteed that @ref doUpdate() was called before this function with
+         * up-to-date data for @p dataId.
+         *
+         * Unlike @ref doFocusEvent(), the accept status is ignored for blur
+         * events, as the node is still unmarked as focused if the event is not
+         * handled. Thus calling @ref FocusEvent::setAccepted() has no effect
+         * here.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doBlurEvent(UnsignedInt dataId, FocusEvent& event);
 
         /**
          * @brief Handle a key press event
