@@ -405,4 +405,24 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
     }
 }
 
+void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, VisibilityLostEvent&) {
+    const State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
+    UnsignedInt& style = state.styles[dataId];
+
+    /* Transition the style to inactive out if it's not dynamic */
+    if(style >= sharedState.styleCount) {
+        CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
+    } else {
+        const UnsignedInt nextStyle = sharedState.styleTransitionToInactiveOut(style);
+        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+            "Whee::AbstractVisualLayer::visibilityLostEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+        if(nextStyle != style) {
+            style = nextStyle;
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
+        }
+    }
+}
+
 }}

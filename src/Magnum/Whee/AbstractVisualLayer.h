@@ -292,6 +292,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
+        void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent& event) override;
 };
 
 /**
