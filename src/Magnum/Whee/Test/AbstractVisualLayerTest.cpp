@@ -67,6 +67,7 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
 
     void eventStyleTransitionNoOp();
     void eventStyleTransition();
+    void eventStyleTransitionNodeBecomesHiddenDisabledNoEvents();
     void eventStyleTransitionNoHover();
     void eventStyleTransitionDisabled();
     void eventStyleTransitionNoCapture();
@@ -173,6 +174,23 @@ const struct {
 
 const struct {
     const char* name;
+    NodeFlags flags;
+    bool clearOrder;
+    StyleIndex expectedGreenStyle, expectedRedStyle;
+    bool becomesHidden;
+} EventStyleTransitionNodeBecomesHiddenDisabledNoEventsData[]{
+    {"removed from top level order", {}, true,
+        StyleIndex::Green, StyleIndex::Red, true},
+    {"hidden", NodeFlag::Hidden, false,
+        StyleIndex::Green, StyleIndex::Red, true},
+    {"no events", NodeFlag::NoEvents, false,
+        StyleIndex::Green, StyleIndex::Red, false},
+    {"disabled", NodeFlag::Disabled, false,
+        StyleIndex::GreenDisabled, StyleIndex::RedBlueDisabled, false}
+};
+
+const struct {
+    const char* name;
     UnsignedInt dynamicStyleCount;
 } EventStyleTransitionOutOfRangeData[]{
     {"", 0},
@@ -216,6 +234,9 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNoCapture},
         Containers::arraySize(EventStyleTransitionNoCaptureData));
+
+    addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEvents},
+        Containers::arraySize(EventStyleTransitionNodeBecomesHiddenDisabledNoEventsData));
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionOutOfRange},
         Containers::arraySize(EventStyleTransitionOutOfRangeData));
@@ -1681,6 +1702,164 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
     }
 }
 
+void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEvents() {
+    auto&& data = EventStyleTransitionNodeBecomesHiddenDisabledNoEventsData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Transition for dynamic styles tested in
+       eventStyleTransitionDynamicStyle() instead */
+    StyleLayerShared shared{14, 0};
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToDisabled>();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Both nodes are children of the root node, on which the flags get set, to
+       verify it correctly propagates downwards
+
+         1  2  3  4  5  6
+       2 +-----+  +-----+
+       3 |green|  | red |
+       4 +-----+  +-----+ */
+    NodeHandle root = ui.createNode({}, {10.0f, 10.0f});
+    NodeHandle nodeGreen = ui.createNode(root, {1.0f, 2.0f}, {2.0f, 2.0f});
+    NodeHandle nodeRed = ui.createNode(root, {4.0f, 2.0f}, {2.0f, 2.0f});
+
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    /* One extra data to verify it's mapping from nodes to data correctly */
+    layer.create(StyleIndex::Green);
+    DataHandle dataGreen = layer.create(StyleIndex::Green, nodeGreen);
+    DataHandle dataRed = layer.create(StyleIndex::Red, nodeRed);
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+
+    /* Press on the green node, hover on the red */
+    {
+        PointerMoveEvent moveEvent{{}, {}};
+        PointerEvent pressEvent{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerMoveEvent({5.0f, 3.0f}, moveEvent));
+        CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, pressEvent));
+
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressed);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedHover);
+
+    /* Changing the flags makes the node not react to events anymore, which
+       means it should lose all pressed/hover visual state */
+    if(data.flags)
+        ui.addNodeFlags(root, data.flags);
+    else if(data.clearOrder)
+        ui.clearNodeOrder(root);
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+    /* A single update() call should be enough, not the update itself
+       scheduling another update in the doVisibilityLostEvent() */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Unless the node is hidden (at which point the data don't get touched at
+       all), the style should be updated */
+    if(!data.becomesHidden) {
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), data.expectedGreenStyle);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), data.expectedRedStyle);
+    }
+
+    /* Changing the flags back should not regain pressed/hover state */
+    if(data.flags)
+        ui.clearNodeFlags(root, data.flags);
+    else if(data.clearOrder)
+        ui.setNodeOrder(root, NodeHandle::Null);
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+
+    /* Both press & hover on the green node */
+    {
+        PointerMoveEvent moveEvent{{}, {}};
+        PointerEvent pressEvent{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 3.0f}, moveEvent));
+        CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, pressEvent));
+
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressedHover);
+
+    /* Resetting from this state again */
+    if(data.flags)
+        ui.addNodeFlags(root, data.flags);
+    else if(data.clearOrder)
+        ui.clearNodeOrder(root);
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+    /* Unless the node is hidden (at which point the data don't get touched at
+       all), the style should be updated */
+    if(!data.becomesHidden) {
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), data.expectedGreenStyle);
+    }
+
+    /* Changing the flags back should not regain pressed/hover state */
+    if(data.flags)
+        ui.clearNodeFlags(root, data.flags);
+    else if(data.clearOrder)
+        ui.setNodeOrder(root, NodeHandle::Null);
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+
+    /* Hover on the green node but then marking it as disabled */
+    {
+        PointerMoveEvent moveEvent{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 3.0f}, moveEvent));
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
+
+        ui.addNodeFlags(nodeGreen, NodeFlag::Disabled);
+    }
+
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenDisabled);
+
+    /* Resetting from this state doesn't reset the disabled bit */
+    if(data.flags)
+        ui.addNodeFlags(root, data.flags);
+    else if(data.clearOrder)
+        ui.clearNodeOrder(root);
+    else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenDisabled);
+}
+
 StyleIndex styleIndexTransitionOutOfRange(StyleIndex) {
     return StyleIndex(14);
 }
@@ -1796,6 +1975,22 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from 5 to 14 out of range for 14 styles\n");
     }
 
+    /* OOB toInactiveOut transition in the visibility lost event */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    ui.addNodeFlags(node, NodeFlag::NoEvents);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+    {
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.update();
+        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::visibilityLostEvent(): style transition from 5 to 14 out of range for 14 styles\n");
+    }
+
     /* OOB toDisabled transition in doUpdate() */
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionToPressedOut,
@@ -1887,6 +2082,17 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
 
+    /* toInactiveOut transition in doUpdate() */
+    } {
+        ui.addNodeFlags(node, NodeFlag::NoEvents);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+        ui.update();
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
+        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(data)]), StyleIndex::Green);
+        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], 14);
+
     /* toDisabled transition in doUpdate() */
     } {
         ui.addNodeFlags(node, NodeFlag::Disabled);
@@ -1894,7 +2100,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
         /* Only the calculated style changes, not the public one */
         ui.update();
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
         CORRADE_COMPARE(layer.style(dataDynamic), 14);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(data)]), StyleIndex::GreenDisabled);
         CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], 14);
