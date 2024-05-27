@@ -3141,6 +3141,32 @@ template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> bool Abstract
     return acceptedByAnyData;
 }
 
+/* Used only in keyPressOrReleaseEvent() but put here to have the loops and
+   other event-related handling of all call*Event*() APIs together */
+template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUserInterface::callKeyEventOnNode(const UnsignedInt nodeId, KeyEvent& event) {
+    /* Set isHovering() if the event is called on node that is hovered. Unlike
+       callEventOnNode() below, this is set unconditionally as these events
+       don't have any associated position. */
+    State& state = *_state;
+    event._hovering = state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
+
+    bool acceptedByAnyData = false;
+    for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
+        const DataHandle data = state.visibleNodeEventData[j];
+        event._accepted = false;
+        ((*state.layers[dataHandleLayerId(data)].used.instance).*function)(dataHandleId(data), event);
+        if(event._accepted)
+            acceptedByAnyData = true;
+
+        /* So far this function is only used for KeyEvent called on a focused
+           node. The KeyEvent doesn't have any way to change the capture, and
+           on a focused node the isCaptured() is always false */
+        CORRADE_INTERNAL_ASSERT(!event._captured);
+    }
+
+    return acceptedByAnyData;
+}
+
 template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEventOnNode(const Vector2& globalPositionScaled, const UnsignedInt nodeId, Event& event, const bool rememberCaptureOnUnaccepted) {
     State& state = *_state;
 
@@ -3634,10 +3660,23 @@ template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUs
 
     State& state = *_state;
 
-    /* If we have a pointer position from a previous pointer event, send the
-       key event based on that */
+    /* If there's a focused node, direct the event there */
     bool acceptedByAnyData = false;
-    if(state.currentGlobalPointerPosition) {
+    if(state.currentFocusedNode != NodeHandle::Null) {
+        CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentFocusedNode));
+
+        /* event._captured is false, event._hovering is set by
+           callNonPositionedEventOnNode() itself */
+
+        acceptedByAnyData = callKeyEventOnNode<function>(nodeHandleId(state.currentFocusedNode), event);
+
+        /* Changing the capture state isn't possible from a key event, and for
+           the event being called on a focused node it's always false */
+        CORRADE_INTERNAL_ASSERT(!event._captured);
+
+    /* Otherwise, if we have a pointer position from a previous pointer event,
+       send the key event based on that */
+    } else if(state.currentGlobalPointerPosition) {
         /* If there's a node capturing events, call the event on it directly.
            Given that update() was called, it should be either null or
            valid. */

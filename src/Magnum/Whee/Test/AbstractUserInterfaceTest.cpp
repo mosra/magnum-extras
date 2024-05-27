@@ -16588,11 +16588,13 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
 
     enum Event {
         Captured = 1,
-        Hovering = 2,
-        /* All below have to be multiples of 4 to not clash with the above */
-        Press = 4,
-        Release = 8,
-        PointerMove = 12
+        Pressed = 2,
+        Hovering = 4,
+        /* All below have to be multiples of 8 to not clash with the above */
+        Press = 8,
+        Release = 16,
+        PointerMove = 24,
+        Focus = 32
     };
 
     struct Layer: AbstractLayer {
@@ -16632,6 +16634,15 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
                 event.setCaptured(*capturePointerMove);
             event.setAccepted();
         }
+        void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isPressed() ? Pressed : 0)|
+                (event.isHovering() ? Hovering : 0)|Focus,
+                dataHandle(handle(), dataId, 1), Containers::NullOpt);
+            event.setAccepted();
+        }
 
         bool acceptPress = true,
             acceptRelease = true;
@@ -16661,10 +16672,10 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
     Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
     NodeHandle left = ui.createNode(
         baseNodeOffset + Vector2{20.0f, 0.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{20.0f, 20.0f}, NodeFlag::Focusable);
     NodeHandle right = ui.createNode(
         baseNodeOffset + Vector2{40.0f, 0.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{20.0f, 20.0f}, NodeFlag::Focusable);
 
     /* Update explicitly before adding the layouter as
        NeedsLayoutAssignmentUpdate is a subset of this, and having just that
@@ -16728,6 +16739,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         CORRADE_VERIFY(!ui.pointerMoveEvent({200.0f, 5000.0f}, eventMove));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 50.0f}));
 
         KeyEvent eventPress{Key::C, {}};
@@ -16751,6 +16763,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove));
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 10.0f}));
 
         KeyEvent eventRelease{Key::C, {}};
@@ -16776,6 +16789,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         CORRADE_VERIFY(ui.pointerMoveEvent({550.0f, 1000.0f}, eventMove));
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{55.0f, 10.0f}));
 
         KeyEvent eventPress{Key::C, {}};
@@ -16803,6 +16817,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         CORRADE_VERIFY(ui.pointerMoveEvent({300.0f, 1000.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{30.0f, 10.0f}));
 
         PointerMoveEvent eventMove2{{}, {}};
@@ -16810,6 +16825,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove1));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 10.0f}));
 
         KeyEvent eventPress{Key::C, {}};
@@ -16850,6 +16866,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove));
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{50.0f, 10.0f}));
 
         KeyEvent eventPress{Key::C, {}};
@@ -16862,6 +16879,84 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
             {PointerMove, rightData, Vector2{10.0f, 10.0f}},
+            {Press|Captured|Hovering, rightData, Vector2{10.0f, 10.0f}},
+            {Release|Captured|Hovering, rightData, Vector2{10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* If a node is focused, it receives the events instead of a captured /
+       hovered node */
+    } {
+        layer.eventCalls = {};
+
+        FocusEvent eventFocus;
+        CORRADE_VERIFY(ui.focusEvent(left, eventFocus));
+        CORRADE_COMPARE(ui.currentCapturedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentFocusedNode(), left);
+
+        KeyEvent eventPress{Key::E, {}};
+        layer.acceptPress = true;
+        CORRADE_VERIFY(ui.keyPressEvent(eventPress));
+
+        KeyEvent eventRelease{Key::D, {}};
+        layer.acceptRelease = true;
+        CORRADE_VERIFY(ui.keyReleaseEvent(eventRelease));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {Focus, leftData2, Containers::NullOpt},
+            {Focus, leftData1, Containers::NullOpt},
+            {Press, leftData2, Containers::NullOpt},
+            {Press, leftData1, Containers::NullOpt},
+            {Release, leftData2, Containers::NullOpt},
+            {Release, leftData1, Containers::NullOpt},
+        })), TestSuite::Compare::Container);
+
+    /* If the node is focused but also captured and hovered, the hovered bit is
+       set but not captured, and the position is still omitted like in the
+       above case */
+    } {
+        layer.eventCalls = {};
+
+        FocusEvent eventFocus;
+        CORRADE_VERIFY(ui.focusEvent(right, eventFocus));
+        CORRADE_COMPARE(ui.currentCapturedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentFocusedNode(), right);
+
+        KeyEvent eventPress{Key::E, {}};
+        layer.acceptPress = true;
+        CORRADE_VERIFY(ui.keyPressEvent(eventPress));
+
+        KeyEvent eventRelease{Key::D, {}};
+        layer.acceptRelease = true;
+        CORRADE_VERIFY(ui.keyReleaseEvent(eventRelease));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
+            {Focus|Hovering, rightData, Containers::NullOpt},
+            {Press|Hovering, rightData, Containers::NullOpt},
+            {Release|Hovering, rightData, Containers::NullOpt},
+        })), TestSuite::Compare::Container);
+
+    /* Removing the focus makes it behave the same as before, i.e. picking the
+       node based on capture */
+    } {
+        layer.eventCalls = {};
+
+        FocusEvent eventFocus;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, eventFocus));
+        CORRADE_COMPARE(ui.currentCapturedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        KeyEvent eventPress{Key::E, {}};
+        layer.acceptPress = true;
+        CORRADE_VERIFY(ui.keyPressEvent(eventPress));
+
+        KeyEvent eventRelease{Key::D, {}};
+        layer.acceptRelease = true;
+        CORRADE_VERIFY(ui.keyReleaseEvent(eventRelease));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
             {Press|Captured|Hovering, rightData, Vector2{10.0f, 10.0f}},
             {Release|Captured|Hovering, rightData, Vector2{10.0f, 10.0f}},
         })), TestSuite::Compare::Container);

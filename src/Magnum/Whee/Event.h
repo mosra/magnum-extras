@@ -693,20 +693,24 @@ class MAGNUM_WHEE_EXPORT KeyEvent {
         /**
          * @brief Event position
          *
-         * If the event was preceded by a pointer press, release or move event
-         * and the node was picked based on pointer event position, returns a
-         * position relative to that node. Otherwise returns
-         * @ref Containers::NullOpt.
+         * If the event was called on a
+         * @ref AbstractUserInterface::currentFocusedNode(), returns
+         * @ref Containers::NullOpt. Otherwise the node was picked based on
+         * pointer position from a preceding pointer press, release or move
+         * event, and the function returns a position relative to that node.
          */
         Containers::Optional<Vector2> position() const;
 
         /**
          * @brief Whether the event is captured on a node
          *
-         * Returns @cpp true @ce if @ref AbstractUserInterface::currentCapturedNode()
-         * is the same as the node the event is called on, @cpp false @ce
-         * otherwise. Unlike @ref PointerEvent or @ref PointerMoveEvent, key
-         * events don't have a possibility to modify the captured status.
+         * If the event is called on a
+         * @ref AbstractUserInterface::currentFocusedNode(), returns
+         * @cpp false @ce. Otherwise returns @cpp true @ce if
+         * @ref AbstractUserInterface::currentCapturedNode() is the same as the
+         * node the event is called on, @cpp false @ce otherwise. Unlike
+         * @ref PointerEvent or @ref PointerMoveEvent, key events don't have a
+         * possibility to modify the captured status.
          * @see @ref isHovering()
          */
         bool isCaptured() const { return _captured; }
