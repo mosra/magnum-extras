@@ -1913,7 +1913,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Implicitly calls @ref update(), which in turn implicitly calls
          * @ref clean() and @ref updateRenderer().
          *
-         * If @ref currentGlobalPointerPosition() is not
+         * If @ref currentFocusedNode() is not @ref NodeHandle::Null, calls
+         * @ref AbstractLayer::keyPressEvent() on all data attached to it
+         * belonging to layers that support @ref LayerFeature::Event.
+         *
+         * Otherwise, if @ref currentGlobalPointerPosition() is not
          * @ref Containers::NullOpt, finds the front-most node under it and
          * calls @ref AbstractLayer::keyPressEvent() on all data attached to it
          * belonging to layers that support @ref LayerFeature::Event. If no
@@ -1925,10 +1929,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * which given data is attached.
          *
          * Returns @cpp true @ce if the event was accepted by at least one
-         * data, @cpp false @ce if it wasn't, if there wasn't any visible event
-         * handling node at given position or if
-         * @ref currentGlobalPointerPosition() is @ref Containers::NullOpt, and
-         * thus the event should be propagated further.
+         * data; @cpp false @ce if it wasn't, if @ref currentFocusedNode() is
+         * @ref NodeHandle::Null and there either wasn't any visible event
+         * handling node at given position or @ref currentGlobalPointerPosition()
+         * is @ref Containers::NullOpt, and thus the event should be propagated
+         * further.
          *
          * Expects that the event is not accepted yet.
          * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
@@ -1952,7 +1957,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Implicitly calls @ref update(), which in turn implicitly calls
          * @ref clean() and @ref updateRenderer().
          *
-         * If @ref currentGlobalPointerPosition() is not
+         * If @ref currentFocusedNode() is not @ref NodeHandle::Null, calls
+         * @ref AbstractLayer::keyReleaseEvent() on all data attached to it
+         * belonging to layers that support @ref LayerFeature::Event.
+         *
+         * Otherwise, if @ref currentGlobalPointerPosition() is not
          * @ref Containers::NullOpt, finds the front-most node under it and
          * calls @ref AbstractLayer::keyReleaseEvent() on all data attached to
          * it belonging to layers that support @ref LayerFeature::Event. If no
@@ -1964,10 +1973,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * which given data is attached.
          *
          * Returns @cpp true @ce if the event was accepted by at least one
-         * data, @cpp false @ce if it wasn't, if there wasn't any visible event
-         * handling node at given position or if
-         * @ref currentGlobalPointerPosition() is @ref Containers::NullOpt, and
-         * thus the event should be propagated further.
+         * data; @cpp false @ce if it wasn't, if @ref currentFocusedNode() is
+         * @ref NodeHandle::Null and there either wasn't any visible event
+         * handling node at given position or @ref currentGlobalPointerPosition()
+         * is @ref Containers::NullOpt, and thus the event should be propagated
+         * further.
          *
          * Expects that the event is not accepted yet.
          * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
@@ -2102,6 +2112,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /* Used by *Event() functions */
         MAGNUM_WHEE_LOCAL void callVisibilityLostEventOnNode(UnsignedInt nodeId, VisibilityLostEvent& event, bool canBePressedOrHovering);
         template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> MAGNUM_WHEE_LOCAL bool callFocusEventOnNode(UnsignedInt nodeId, FocusEvent& event);
+        template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_WHEE_LOCAL bool callKeyEventOnNode(UnsignedInt nodeId, KeyEvent& even);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, UnsignedInt nodeId, Event& event, bool rememberCaptureOnUnaccepted = false);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);
