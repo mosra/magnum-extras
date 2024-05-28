@@ -819,6 +819,21 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         void keyReleaseEvent(UnsignedInt dataId, KeyEvent& event);
 
         /**
+         * @brief Handle a text input event
+         *
+         * Used internally from @ref AbstractUserInterface::textInputEvent().
+         * Exposed just for testing purposes, there should be no need to call
+         * this function directly. Expects that the layer supports
+         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
+         * with the assumption that the ID points to a valid data. The event is
+         * expected to not be accepted yet. Delegates to
+         * @ref doTextInputEvent(), see its documentation for more information.
+         * @see @ref TextInputEvent::isAccepted(),
+         *      @ref TextInputEvent::setAccepted()
+         */
+        void textInputEvent(UnsignedInt dataId, TextInputEvent& event);
+
+        /**
          * @brief Handle a visibility lost event
          *
          * Used internally from @ref AbstractUserInterface::update(). Exposed
@@ -1514,6 +1529,27 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * implicitly propagated further.
          */
         virtual void doKeyReleaseEvent(UnsignedInt dataId, KeyEvent& event);
+
+        /**
+         * @brief Handle a text input event
+         * @param dataId            Data ID the event happens on. Guaranteed to
+         *      be less than @ref capacity() and point to a valid data.
+         * @param event             Event data
+         *
+         * Implementation for @ref textInputEvent(), which is called from
+         * @ref AbstractUserInterface::textInputEvent(). See its documentation
+         * for more information about text input event behavior. It's
+         * guaranteed that @ref doUpdate() was called before this function with
+         * up-to-date data for @p dataId.
+         *
+         * If the implementation handles the event, it's expected to call
+         * @ref TextInputEvent::setAccepted() on it to prevent it from being
+         * propagated further.
+         *
+         * Default implementation does nothing, i.e. the @p event gets
+         * implicitly propagated further.
+         */
+        virtual void doTextInputEvent(UnsignedInt dataId, TextInputEvent& event);
 
         /**
          * @brief Handle a visibility lost event

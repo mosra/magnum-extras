@@ -3167,6 +3167,23 @@ template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUs
     return acceptedByAnyData;
 }
 
+/* Used only in textInputEvent() but put here to have the loops and other
+   event-related handling of all call*Event*() APIs together */
+bool AbstractUserInterface::callTextInputEventOnNode(const UnsignedInt nodeId, TextInputEvent& event) {
+    State& state = *_state;
+    bool acceptedByAnyData = false;
+    for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
+        const DataHandle data = state.visibleNodeEventData[j];
+        event._accepted = false;
+        state.layers[dataHandleLayerId(data)].used.instance->textInputEvent(dataHandleId(data), event);
+
+        if(event._accepted)
+            acceptedByAnyData = true;
+    }
+
+    return acceptedByAnyData;
+}
+
 template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEventOnNode(const Vector2& globalPositionScaled, const UnsignedInt nodeId, Event& event, const bool rememberCaptureOnUnaccepted) {
     State& state = *_state;
 
@@ -3723,6 +3740,25 @@ bool AbstractUserInterface::keyReleaseEvent(KeyEvent& event) {
         "Whee::AbstractUserInterface::keyReleaseEvent(): event already accepted", {});
 
     return keyPressOrReleaseEvent<&AbstractLayer::keyReleaseEvent>(event);
+}
+
+bool AbstractUserInterface::textInputEvent(TextInputEvent& event) {
+    CORRADE_ASSERT(!event._accepted,
+        "Whee::AbstractUserInterface::textInputEvent(): event already accepted", {});
+
+    /* Do an update. That may cause the currently focused node to be cleared,
+       for example because it's now in a disabled/hidden hierarchy. */
+    update();
+
+    State& state = *_state;
+
+    /* If no node is focused, the function is a no-op */
+    if(state.currentFocusedNode == NodeHandle::Null)
+        return false;
+
+    /* Call the event on the focused node. There's no fallback to anywhere else
+       at the moment. */
+    return callTextInputEventOnNode(nodeHandleId(state.currentFocusedNode), event);
 }
 
 NodeHandle AbstractUserInterface::currentPressedNode() const {

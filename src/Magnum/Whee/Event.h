@@ -26,10 +26,11 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::FocusEvent, @ref Magnum::Whee::KeyEvent, @ref Magnum::Whee::VisibilityLostEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
+ * @brief Class @ref Magnum::Whee::PointerEvent, @ref Magnum::Whee::PointerMoveEvent, @ref Magnum::Whee::FocusEvent, @ref Magnum::Whee::KeyEvent, @ref Magnum::Whee::TextInputEvent, @ref Magnum::Whee::VisibilityLostEvent, enum @ref Magnum::Whee::Pointer, @ref Magnum::Whee::Key, @ref Magnum::Whee::Modifier, enum set @ref Magnum::Whee::Pointers, @ref Magnum::Whee::Modifiers
  * @m_since_latest
  */
 
+#include <Corrade/Containers/StringView.h>
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Whee/Whee.h"
@@ -751,6 +752,50 @@ class MAGNUM_WHEE_EXPORT KeyEvent {
         bool _accepted = false;
         bool _captured = false;
         bool _hovering = false;
+};
+
+/**
+@brief Text input event
+@m_since_latest
+
+@see @ref AbstractUserInterface::textInputEvent(),
+    @ref AbstractLayer::textInputEvent()
+*/
+class TextInputEvent {
+    public:
+        /**
+         * @brief Constructor
+         * @param text      Text produced by the event
+         *
+         * Expects that @p text is valid for the whole lifetime of the text
+         * input event.
+         */
+        explicit TextInputEvent(Containers::StringView text): _text{text} {}
+
+        /** @brief Input text */
+        Containers::StringView text() const { return _text; }
+
+        /**
+         * @brief Whether the event is accepted
+         *
+         * Implicitly @cpp false @ce.
+         */
+        bool isAccepted() const { return _accepted; }
+
+        /**
+         * @brief Set the event as accepted
+         *
+         * Once an event is accepted, it doesn't propagate further.
+         */
+        void setAccepted(bool accepted = true) {
+            _accepted = accepted;
+        }
+
+    private:
+        friend AbstractUserInterface;
+
+        Containers::StringView _text;
+        bool _accepted = false;
 };
 
 /**

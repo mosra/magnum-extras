@@ -1996,6 +1996,27 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         }
 
         /**
+         * @brief Handle a text input event
+         *
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean() and @ref updateRenderer().
+         *
+         * If @ref currentFocusedNode() is not @ref NodeHandle::Null, calls
+         * @ref AbstractLayer::textInputEvent() on all data attached to it
+         * belonging to layers that support @ref LayerFeature::Event.
+         *
+         * Returns @cpp true @ce if the event was accepted by at least one
+         * data; @cpp false @ce if it wasn't or if @ref currentFocusedNode() is
+         * @ref NodeHandle::Null, and thus the event should be propagated
+         * further.
+         *
+         * Expects that the event is not accepted yet.
+         * @see @ref TextInputEvent::isAccepted(),
+         *      @ref TextInputEvent::setAccepted()
+         */
+        bool textInputEvent(TextInputEvent& event);
+
+        /**
          * @brief Node pressed by last pointer event
          *
          * Returns handle of a node that was under the pointer for the last
@@ -2113,6 +2134,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         MAGNUM_WHEE_LOCAL void callVisibilityLostEventOnNode(UnsignedInt nodeId, VisibilityLostEvent& event, bool canBePressedOrHovering);
         template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> MAGNUM_WHEE_LOCAL bool callFocusEventOnNode(UnsignedInt nodeId, FocusEvent& event);
         template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_WHEE_LOCAL bool callKeyEventOnNode(UnsignedInt nodeId, KeyEvent& even);
+        MAGNUM_WHEE_LOCAL bool callTextInputEventOnNode(UnsignedInt nodeId, TextInputEvent& even);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, UnsignedInt nodeId, Event& event, bool rememberCaptureOnUnaccepted = false);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);
