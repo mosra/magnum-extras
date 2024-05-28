@@ -373,6 +373,12 @@ void ApplicationTest::mousePressEvent() {
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
         void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -433,6 +439,12 @@ void ApplicationTest::mouseReleaseEvent() {
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
         void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -490,6 +502,12 @@ void ApplicationTest::mouseMoveEvent() {
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
         void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -544,6 +562,12 @@ void ApplicationTest::keyPressEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doKeyPressEvent(UnsignedInt, KeyEvent& event) override {
@@ -611,6 +635,12 @@ void ApplicationTest::keyReleaseEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
