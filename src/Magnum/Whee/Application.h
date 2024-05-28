@@ -362,6 +362,18 @@ template<class Event> struct KeyEventConverter<Event, typename std::enable_if<si
     }
 };
 
+template<class Event> struct TextInputEventConverter<Event, typename std::enable_if<sizeof(&Event::text) >= 0>::type> {
+    static bool trigger(AbstractUserInterface& ui, Event& event) {
+        TextInputEvent e{event.text()};
+        if(ui.textInputEvent(e)) {
+            event.setAccepted();
+            return true;
+        }
+
+        return false;
+    }
+};
+
 }}}
 #endif
 
