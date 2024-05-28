@@ -164,6 +164,14 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
             event.setAccepted();
         }
 
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            Fatal{} << "Focus event shouldn't be called.";
+        }
+
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            Fatal{} << "Blur event shouldn't be called.";
+        }
+
         void doKeyPressEvent(UnsignedInt, Whee::KeyEvent& event) override {
             Debug{} << event.key() << "press with" << event.modifiers();
             event.setAccepted();
