@@ -743,4 +743,16 @@ void AbstractLayer::keyReleaseEvent(const UnsignedInt dataId, KeyEvent& event) {
 
 void AbstractLayer::doKeyReleaseEvent(UnsignedInt, KeyEvent&) {}
 
+void AbstractLayer::textInputEvent(const UnsignedInt dataId, TextInputEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::textInputEvent(): feature not supported", );
+    CORRADE_ASSERT(dataId < _state->data.size(),
+        "Whee::AbstractLayer::textInputEvent(): index" << dataId << "out of range for" << _state->data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::textInputEvent(): event already accepted", );
+    return doTextInputEvent(dataId, event);
+}
+
+void AbstractLayer::doTextInputEvent(UnsignedInt, TextInputEvent&) {}
+
 }}
