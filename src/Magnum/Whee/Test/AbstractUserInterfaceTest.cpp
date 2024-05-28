@@ -218,6 +218,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventFocusBlurByPointerPressNodeDisabledNoEvents();
 
     void eventKeyPressRelease();
+    void eventTextInput();
 
     void eventConvertExternal();
 };
@@ -1164,6 +1165,9 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addInstancedTests({&AbstractUserInterfaceTest::eventKeyPressRelease},
         Containers::arraySize(EventLayouterUpdateData));
+
+    addInstancedTests({&AbstractUserInterfaceTest::eventTextInput},
+        Containers::arraySize(UpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventConvertExternal});
 }
@@ -10531,6 +10535,7 @@ void AbstractUserInterfaceTest::eventEmpty() {
     PointerMoveEvent pointerMoveEvent{{}, {}};
     FocusEvent focusEvent;
     KeyEvent keyEvent{Key::C, {}};
+    TextInputEvent textInputEvent{"hola"};
     CORRADE_VERIFY(!ui.pointerPressEvent({15, 36}, pointerEvent));
     CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{15.0f, 36.0f}));
     CORRADE_VERIFY(!pointerEvent.isAccepted());
@@ -10546,6 +10551,8 @@ void AbstractUserInterfaceTest::eventEmpty() {
     CORRADE_VERIFY(!keyEvent.isAccepted());
     CORRADE_VERIFY(!ui.keyReleaseEvent(keyEvent));
     CORRADE_VERIFY(!keyEvent.isAccepted());
+    CORRADE_VERIFY(!ui.textInputEvent(textInputEvent));
+    CORRADE_VERIFY(!textInputEvent.isAccepted());
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
@@ -10566,6 +10573,8 @@ void AbstractUserInterfaceTest::eventAlreadyAccepted() {
     focusEvent.setAccepted();
     KeyEvent keyEvent{Key::F, {}};
     keyEvent.setAccepted();
+    TextInputEvent textInputEvent{"nope"};
+    textInputEvent.setAccepted();
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -10575,13 +10584,15 @@ void AbstractUserInterfaceTest::eventAlreadyAccepted() {
     ui.focusEvent(NodeHandle::Null, focusEvent);
     ui.keyPressEvent(keyEvent);
     ui.keyReleaseEvent(keyEvent);
+    ui.textInputEvent(textInputEvent);
     CORRADE_COMPARE_AS(out.str(),
         "Whee::AbstractUserInterface::pointerPressEvent(): event already accepted\n"
         "Whee::AbstractUserInterface::pointerReleaseEvent(): event already accepted\n"
         "Whee::AbstractUserInterface::pointerMoveEvent(): event already accepted\n"
         "Whee::AbstractUserInterface::focusEvent(): event already accepted\n"
         "Whee::AbstractUserInterface::keyPressEvent(): event already accepted\n"
-        "Whee::AbstractUserInterface::keyReleaseEvent(): event already accepted\n",
+        "Whee::AbstractUserInterface::keyReleaseEvent(): event already accepted\n"
+        "Whee::AbstractUserInterface::textInputEvent(): event already accepted\n",
         TestSuite::Compare::String);
 }
 
@@ -16959,6 +16970,159 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
             {Press|Captured|Hovering, rightData, Vector2{10.0f, 10.0f}},
             {Release|Captured|Hovering, rightData, Vector2{10.0f, 10.0f}},
+        })), TestSuite::Compare::Container);
+    }
+}
+
+void AbstractUserInterfaceTest::eventTextInput() {
+    auto&& data = UpdateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Event {
+        PointerMove = 0,
+        Focus = 1,
+        TextInput = 2
+    };
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Event; }
+
+        void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, PointerMove,
+                dataHandle(handle(), dataId, 1), "");
+            event.setAccepted();
+        }
+        void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Focus,
+                dataHandle(handle(), dataId, 1), "");
+            event.setAccepted();
+        }
+        void doTextInputEvent(UnsignedInt dataId, TextInputEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, TextInput,
+                dataHandle(handle(), dataId, 1), event.text());
+            if(accept)
+                event.setAccepted();
+        }
+
+        bool accept = true;
+        Containers::Array<Containers::Triple<Int, DataHandle, Containers::StringView>> eventCalls;
+    };
+
+    /* Two nodes next to each other */
+    NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f}, NodeFlag::Focusable);
+    NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f}, NodeFlag::Focusable);
+
+    /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
+       is a subset of this, and having just that one set may uncover accidental
+       omissions in internal state updates compared to updating just once after
+       creating both nodes and data */
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    DataHandle leftData1 = layer.create(left);
+    DataHandle leftData2 = layer.create(left);
+    DataHandle rightData = layer.create(right);
+
+    if(data.update) {
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    /* Text input event with no focused node isn't propagated anywhere */
+    {
+        layer.eventCalls = {};
+
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        TextInputEvent event{"hello"};
+        layer.accept = true;
+        CORRADE_VERIFY(!ui.textInputEvent(event));
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::StringView>>({
+        })), TestSuite::Compare::Container);
+
+    /* A hovered node doesn't propagate it anywhere either */
+    } {
+        layer.eventCalls = {};
+
+        PointerMoveEvent eventMove{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentHoveredNode(), left);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        TextInputEvent event{"hello"};
+        layer.accept = true;
+        CORRADE_VERIFY(!ui.textInputEvent(event));
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::StringView>>({
+            {PointerMove, leftData2, {}},
+            {PointerMove, leftData1, {}},
+        })), TestSuite::Compare::Container);
+
+    /* With a focused node it gets propagated; focusing another directs it
+       elsewhere, it gets called on all data */
+    } {
+        /* Just to reset the hover */
+        /** @todo have a pointerCancelEvent() for this */
+        PointerMoveEvent eventMoveReset{{}, {}};
+        ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+
+        layer.eventCalls = {};
+
+        FocusEvent eventFocus1;
+        CORRADE_VERIFY(ui.focusEvent(right, eventFocus1));
+
+        TextInputEvent event1{"hello"};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.textInputEvent(event1));
+
+        FocusEvent eventFocus2;
+        CORRADE_VERIFY(ui.focusEvent(left, eventFocus2));
+
+        TextInputEvent event2{"bye"};
+        layer.accept = true;
+        CORRADE_VERIFY(ui.textInputEvent(event2));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::StringView>>({
+            {Focus, rightData, {}},
+            {TextInput, rightData, "hello"},
+            {Focus, leftData2, {}},
+            {Focus, leftData1, {}},
+            {TextInput, leftData2, "bye"},
+            {TextInput, leftData1, "bye"},
+        })), TestSuite::Compare::Container);
+
+    /* Not accepting the event gets correctly propagated */
+    } {
+        layer.eventCalls = {};
+
+        FocusEvent eventFocus;
+        CORRADE_VERIFY(ui.focusEvent(right, eventFocus));
+
+        TextInputEvent event{"nope"};
+        layer.accept = false;
+        CORRADE_VERIFY(!ui.textInputEvent(event));
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::StringView>>({
+            {Focus, rightData, {}},
+            {TextInput, rightData, "nope"},
         })), TestSuite::Compare::Container);
     }
 }

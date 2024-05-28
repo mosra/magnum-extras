@@ -153,12 +153,19 @@ struct AbstractLayerTest: TestSuite::Tester {
     void keyEventOutOfRange();
     void keyEventAlreadyAccepted();
 
+    void textInputEvent();
+    void textInputEventNotSupported();
+    void textInputEventNotImplemented();
+    void textInputEventOutOfRange();
+    void textInputEventAlreadyAccepted();
+
     void visibilityLostEvent();
     void visibilityLostEventNotSupported();
     void visibilityLostEventNotImplemented();
     void visibilityLostEventOutOfRange();
 };
 
+using namespace Containers::Literals;
 using namespace Math::Literals;
 
 const struct {
@@ -289,6 +296,12 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::keyEventNotImplemented,
               &AbstractLayerTest::keyEventOutOfRange,
               &AbstractLayerTest::keyEventAlreadyAccepted,
+
+              &AbstractLayerTest::textInputEvent,
+              &AbstractLayerTest::textInputEventNotSupported,
+              &AbstractLayerTest::textInputEventNotImplemented,
+              &AbstractLayerTest::textInputEventOutOfRange,
+              &AbstractLayerTest::textInputEventAlreadyAccepted,
 
               &AbstractLayerTest::visibilityLostEvent,
               &AbstractLayerTest::visibilityLostEventNotSupported,
@@ -3377,6 +3390,120 @@ void AbstractLayerTest::keyEventAlreadyAccepted() {
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::keyPressEvent(): event already accepted\n"
         "Whee::AbstractLayer::keyReleaseEvent(): event already accepted\n");
+}
+
+void AbstractLayerTest::textInputEvent() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+
+        void doTextInputEvent(UnsignedInt dataId, TextInputEvent& event) override {
+            CORRADE_COMPARE(dataId, 1);
+            CORRADE_COMPARE(event.text(), "hello");
+            CORRADE_COMPARE(event.text().flags(), Containers::StringViewFlag::Global);
+            called *= 2;
+        }
+
+        int called = 1;
+    } layer{layerHandle(0, 1)};
+
+    /* Capture correct test case name */
+    CORRADE_VERIFY(true);
+
+    layer.create();
+    layer.create();
+    {
+        /* To verify the string view doesn't get copied anywhere on the way */
+        TextInputEvent event{"hello!"_s.exceptSuffix(1)};
+        layer.textInputEvent(1, event);
+    }
+    CORRADE_COMPARE(layer.called, 2);
+}
+
+void AbstractLayerTest::textInputEventNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    TextInputEvent event{"oh"};
+    layer.textInputEvent(0, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::textInputEvent(): feature not supported\n");
+}
+
+void AbstractLayerTest::textInputEventNotImplemented() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    TextInputEvent event{"hey"};
+    layer.textInputEvent(0, event);
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::textInputEventOutOfRange() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+    layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    TextInputEvent event{"ooh"};
+    layer.textInputEvent(2, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::textInputEvent(): index 2 out of range for 2 data\n");
+}
+
+void AbstractLayerTest::textInputEventAlreadyAccepted() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    TextInputEvent event{"welp"};
+    event.setAccepted();
+    layer.textInputEvent(0, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::textInputEvent(): event already accepted\n");
 }
 
 void AbstractLayerTest::visibilityLostEvent() {

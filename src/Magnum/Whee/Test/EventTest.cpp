@@ -50,9 +50,12 @@ struct EventTest: TestSuite::Tester {
     void focus();
 
     void key();
+    void textInput();
 
     void visibilityLost();
 };
+
+using namespace Containers::Literals;
 
 EventTest::EventTest() {
     addTests({&EventTest::debugPointer,
@@ -70,6 +73,7 @@ EventTest::EventTest() {
               &EventTest::focus,
 
               &EventTest::key,
+              &EventTest::textInput,
 
               &EventTest::visibilityLost});
 }
@@ -200,6 +204,24 @@ void EventTest::key() {
 
     event.setAccepted(false);
     CORRADE_VERIFY(!event.isAccepted());
+}
+
+void EventTest::textInput() {
+    /* The input string view isn't copied anywhere */
+    TextInputEvent event1{"hello!"_s.exceptSuffix(1)};
+    TextInputEvent event2{"hello"};
+    CORRADE_COMPARE(event1.text(), "hello");
+    CORRADE_COMPARE(event2.text(), "hello");
+    CORRADE_COMPARE(event1.text().flags(), Containers::StringViewFlag::Global);
+    CORRADE_COMPARE(event2.text().flags(), Containers::StringViewFlag::NullTerminated);
+    CORRADE_VERIFY(!event1.isAccepted());
+    CORRADE_VERIFY(!event2.isAccepted());
+
+    event1.setAccepted();
+    CORRADE_VERIFY(event1.isAccepted());
+
+    event1.setAccepted(false);
+    CORRADE_VERIFY(!event1.isAccepted());
 }
 
 void EventTest::visibilityLost() {
