@@ -96,6 +96,7 @@ enum class Key: UnsignedShort;
 enum class Modifier: UnsignedByte;
 typedef Containers::EnumSet<Modifier> Modifiers;
 class KeyEvent;
+class TextInputEvent;
 
 class VisibilityLostEvent;
 #endif
