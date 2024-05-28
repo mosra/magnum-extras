@@ -17159,6 +17159,12 @@ template<> struct KeyEventConverter<CustomEvent> {
         return ui.keyReleaseEvent(e);
     }
 };
+template<> struct TextInputEventConverter<CustomEvent> {
+    static bool trigger(AbstractUserInterface& ui, CustomEvent&) {
+        TextInputEvent e{"e"};
+        return ui.textInputEvent(e);
+    }
+};
 
 }
 
@@ -17174,6 +17180,7 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
         PointerMove = 2,
         KeyPress = 3,
         KeyRelease = 4,
+        TextInput = 5,
     };
 
     struct Layer: AbstractLayer {
@@ -17194,6 +17201,11 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
             arrayAppend(eventCalls, PointerMove);
             event.setAccepted();
         }
+        void doFocusEvent(UnsignedInt, FocusEvent& event) override {
+            /* Just so we can accept text input events, not testing any
+               EventConverter */
+            event.setAccepted();
+        }
         void doKeyPressEvent(UnsignedInt, KeyEvent& event) override {
             arrayAppend(eventCalls, KeyPress);
             event.setAccepted();
@@ -17202,14 +17214,22 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
             arrayAppend(eventCalls, KeyRelease);
             event.setAccepted();
         }
+        void doTextInputEvent(UnsignedInt, TextInputEvent& event) override {
+            arrayAppend(eventCalls, TextInput);
+            event.setAccepted();
+        }
 
         Containers::Array<Int> eventCalls;
     };
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
 
     /* Node with single data */
-    NodeHandle node = ui.createNode({0.0f, 0.0f}, {20.0f, 20.0f});
+    NodeHandle node = ui.createNode({0.0f, 0.0f}, {20.0f, 20.0f}, NodeFlag::Focusable);
     layer.create(node);
+
+    /* Focus the node so it's able to take text input events */
+    FocusEvent focusEvent;
+    CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
 
     CustomEvent e;
     CORRADE_VERIFY(ui.pointerPressEvent(e));
@@ -17217,12 +17237,14 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
     CORRADE_VERIFY(ui.pointerMoveEvent(e));
     CORRADE_VERIFY(ui.keyPressEvent(e));
     CORRADE_VERIFY(ui.keyReleaseEvent(e));
+    CORRADE_VERIFY(ui.textInputEvent(e));
     CORRADE_COMPARE_AS(layer.eventCalls, Containers::arrayView<Int>({
         PointerPress,
         PointerRelease,
         PointerMove,
         KeyPress,
         KeyRelease,
+        TextInput,
     }), TestSuite::Compare::Container);
 }
 

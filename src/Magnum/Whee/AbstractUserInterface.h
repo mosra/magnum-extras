@@ -248,6 +248,7 @@ namespace Implementation {
     template<class, class = void> struct PointerEventConverter;
     template<class, class = void> struct PointerMoveEventConverter;
     template<class, class = void> struct KeyEventConverter;
+    template<class, class = void> struct TextInputEventConverter;
 }
 
 /**
@@ -261,10 +262,10 @@ want to instantiate the @ref UserInterface subclass instead.
 
 By including @ref Magnum/Whee/Application.h it's possible to pass event
 instances from @ref Platform::Sdl2Application "Platform::*Application" classes directly to event handlers. They get internally converted to a corresponding
-@ref PointerEvent, @ref PointerMoveEvent or @ref KeyEvent instance with a
-subset of information given application provides. Then, if the event is
-accepted by the user interface, the original application event is marked as
-accepted as well, to prevent it from propagating further in certain
+@ref PointerEvent, @ref PointerMoveEvent, @ref KeyEvent or @ref TextInputEvent
+instance with a subset of information given application provides. Then, if the
+event is accepted by the user interface, the original application event is
+marked as accepted as well, to prevent it from propagating further in certain
 circumstances (such as to the browser window when compiling for the web).
 Example usage:
 
@@ -2015,6 +2016,17 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *      @ref TextInputEvent::setAccepted()
          */
         bool textInputEvent(TextInputEvent& event);
+
+        /**
+         * @brief Handle an external text input event
+         *
+         * Converts the @p event to a @ref TextInputEvent and delegates to
+         * @ref textInputEvent(), see its documentation and
+         * @ref Whee-AbstractUserInterface-application for more information.
+         */
+        template<class Event, class = decltype(Implementation::TextInputEventConverter<Event>::trigger(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool textInputEvent(Event& event) {
+            return Implementation::TextInputEventConverter<Event>::trigger(*this, event);
+        }
 
         /**
          * @brief Node pressed by last pointer event

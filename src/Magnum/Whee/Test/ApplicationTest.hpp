@@ -30,6 +30,7 @@
 #include "Magnum/Whee/Application.h"
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/AbstractUserInterface.h"
+#include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
@@ -117,6 +118,18 @@ struct ApplicationTest: Platform::Application {
         }
     }
 
+    void textInputEvent(TextInputEvent& event) override {
+        if(!_ui.textInputEvent(event))
+            Debug{} << "text input event not accepted";
+        if(!event.isAccepted())
+            Debug{} << "text input event accept not propagated";
+
+        if(_ui.state()) {
+            Debug{} << "redraw triggered by" << _ui.state();
+            redraw();
+        }
+    }
+
     AbstractUserInterface _ui;
 };
 
@@ -164,12 +177,14 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
             event.setAccepted();
         }
 
-        void doFocusEvent(UnsignedInt, FocusEvent&) override {
-            Fatal{} << "Focus event shouldn't be called.";
+        void doFocusEvent(UnsignedInt, FocusEvent& event) override {
+            Debug{} << "Focus event";
+            event.setAccepted();
         }
 
-        void doBlurEvent(UnsignedInt, FocusEvent&) override {
-            Fatal{} << "Blur event shouldn't be called.";
+        void doBlurEvent(UnsignedInt, FocusEvent& event) override {
+            Debug{} << "Blur event";
+            event.setAccepted();
         }
 
         void doKeyPressEvent(UnsignedInt, Whee::KeyEvent& event) override {
@@ -181,11 +196,16 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
             Debug{} << event.key() << "release with" << event.modifiers();
             event.setAccepted();
         }
+
+        void doTextInputEvent(UnsignedInt, Whee::TextInputEvent& event) override {
+            Debug{} << "Text input:" << event.text();
+            event.setAccepted();
+        }
     };
     Layer& layer = _ui.setLayerInstance(Containers::pointer<Layer>(_ui.createLayer()));
 
     /* Create a single node covering 75% of the window */
-    layer.create(_ui.createNode(_ui.size()*0.125f, _ui.size()*0.75f));
+    layer.create(_ui.createNode(_ui.size()*0.125f, _ui.size()*0.75f, NodeFlag::Focusable));
 }
 #endif
 

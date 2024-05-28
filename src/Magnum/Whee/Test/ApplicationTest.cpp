@@ -30,6 +30,7 @@
 #include "Magnum/Whee/AbstractLayer.h"
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
 
@@ -45,6 +46,7 @@ struct ApplicationTest: TestSuite::Tester {
     void mouseMoveEvent();
     void keyPressEvent();
     void keyReleaseEvent();
+    void textInputEvent();
 };
 
 struct CustomMouseEvent {
@@ -332,6 +334,26 @@ const struct {
         Key{}, {}, false},
 };
 
+struct CustomTextInputEvent {
+    explicit CustomTextInputEvent(Containers::StringView text): _text{text} {}
+
+    Containers::StringView text() const { return _text; }
+    void setAccepted() { accepted = true; }
+
+    bool accepted = false;
+
+    private:
+        Containers::StringView _text;
+};
+
+const struct {
+    const char* name;
+    bool accept;
+} TextInputEventData[]{
+    {"not accepted", false},
+    {"", true}
+};
+
 ApplicationTest::ApplicationTest() {
     addInstancedTests({&ApplicationTest::mousePressEvent},
         Containers::arraySize(MousePressReleaseEventData));
@@ -347,6 +369,9 @@ ApplicationTest::ApplicationTest() {
 
     addInstancedTests({&ApplicationTest::keyReleaseEvent},
         Containers::arraySize(KeyPressReleaseEventData));
+
+    addInstancedTests({&ApplicationTest::textInputEvent},
+        Containers::arraySize(TextInputEventData));
 }
 
 void ApplicationTest::mousePressEvent() {
@@ -397,6 +422,9 @@ void ApplicationTest::mousePressEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
@@ -465,6 +493,9 @@ void ApplicationTest::mouseReleaseEvent() {
         void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
 
         Pointer expectedPointer;
         bool accept;
@@ -526,6 +557,9 @@ void ApplicationTest::mouseMoveEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
@@ -592,6 +626,9 @@ void ApplicationTest::keyPressEvent() {
             ++called;
         }
         void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
@@ -667,6 +704,9 @@ void ApplicationTest::keyReleaseEvent() {
             event.setAccepted(accept);
             ++called;
         }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
 
         Key expectedKey;
         Modifiers expectedModifiers;
@@ -687,6 +727,78 @@ void ApplicationTest::keyReleaseEvent() {
     CORRADE_COMPARE(ui.keyReleaseEvent(e), data.accept);
     /* Should be called only if there's a key to translate to */
     CORRADE_COMPARE(layer.called, data.expectedKey == Key{} ? 0 : 1);
+    CORRADE_COMPARE(e.accepted, data.accept);
+}
+
+void ApplicationTest::textInputEvent() {
+    auto&& data = TextInputEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The events should internally still be reported relative to the UI size,
+       same as when passed directly. I.e., scaled by {0.1f, 10.0f}; framebuffer
+       size isn't used for anything here. */
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, bool accept): AbstractLayer{handle}, accept{accept} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        /* Move and enter event gets called in order to remember the pointer
+           position, the move has to accept */
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+            event.setAccepted();
+        }
+        void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent& event) override {
+            event.setAccepted();
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent& event) override {
+            CORRADE_COMPARE(event.text(), "hello");
+            event.setAccepted(accept);
+            ++called;
+        }
+
+        bool accept;
+        Int called = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.accept));
+    NodeHandle node = ui.createNode({}, ui.size(), NodeFlag::Focusable);
+    layer.create(node);
+
+    /* Have to first submit an event that actually makes a node focused, to
+       have something to call the event on */
+    FocusEvent focusEvent;
+    CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+    CORRADE_COMPARE(ui.currentFocusedNode(), node);
+
+    CustomTextInputEvent e{"hello"};
+    /* Should return true only if it's accepted */
+    CORRADE_COMPARE(ui.textInputEvent(e), data.accept);
+    CORRADE_COMPARE(layer.called, 1);
     CORRADE_COMPARE(e.accepted, data.accept);
 }
 

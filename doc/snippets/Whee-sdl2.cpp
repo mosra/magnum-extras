@@ -69,6 +69,7 @@ struct MyApplication: Platform::Application {
     void mouseMoveEvent(MouseMoveEvent& event) override;
     void keyPressEvent(KeyEvent& event) override;
     void keyReleaseEvent(KeyEvent& event) override;
+    void textInputEvent(TextInputEvent& event) override;
     Whee::AbstractUserInterface _ui;
 };
 
@@ -112,6 +113,14 @@ void MyApplication::keyPressEvent(KeyEvent& event) {
 
 void MyApplication::keyReleaseEvent(KeyEvent& event) {
     if(!_ui.keyReleaseEvent(event)) {
+        /* Handle an event that wasn't accepted by the UI */
+    }
+
+    DOXYGEN_ELLIPSIS()
+}
+
+void MyApplication::textInputEvent(TextInputEvent& event) {
+    if(!_ui.textInputEvent(event)) {
         /* Handle an event that wasn't accepted by the UI */
     }
 
