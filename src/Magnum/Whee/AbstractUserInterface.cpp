@@ -3144,11 +3144,12 @@ template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> bool Abstract
 /* Used only in keyPressOrReleaseEvent() but put here to have the loops and
    other event-related handling of all call*Event*() APIs together */
 template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUserInterface::callKeyEventOnNode(const UnsignedInt nodeId, KeyEvent& event) {
-    /* Set isHovering() if the event is called on node that is hovered. Unlike
-       callEventOnNode() below, this is set unconditionally as these events
-       don't have any associated position. */
+    /* Set isHovering() / isFocused() if the event is called on node that is
+       hovered / focused. Unlike callEventOnNode() below, this is set
+       unconditionally as these events don't have any associated position. */
     State& state = *_state;
     event._hovering = state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
+    event._focused = state.currentFocusedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentFocusedNode);
 
     bool acceptedByAnyData = false;
     for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
@@ -3195,6 +3196,12 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
     const bool hovering = event._hovering;
     if(state.currentHoveredNode == NodeHandle::Null || nodeId != nodeHandleId(state.currentHoveredNode))
         event._hovering = false;
+
+    /* On the other hand, isFocused() is set unconditionally -- the event
+       handler can then check if it was called on a focused node but outside of
+       it by looking at isHovering(), no need to encode that information
+       twice. */
+    event._focused = state.currentFocusedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentFocusedNode);
 
     /* Remember the initial event capture state to reset it after each
        non-accepted event handler call */

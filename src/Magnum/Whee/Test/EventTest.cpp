@@ -114,6 +114,7 @@ void EventTest::pointer() {
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isFocused());
     CORRADE_VERIFY(!event.isAccepted());
 
     event.setCaptured(true);
@@ -134,6 +135,7 @@ void EventTest::pointerMove() {
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isFocused());
     CORRADE_VERIFY(!event.isAccepted());
 
     event.setCaptured(true);
@@ -154,6 +156,7 @@ void EventTest::pointerMoveRelativePosition() {
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isFocused());
     CORRADE_VERIFY(!event.isAccepted());
 }
 
@@ -164,6 +167,7 @@ void EventTest::pointerMoveNoPointer() {
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isFocused());
     CORRADE_VERIFY(!event.isAccepted());
 }
 
@@ -174,6 +178,7 @@ void EventTest::pointerMoveNoPointerRelativePosition() {
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isFocused());
     CORRADE_VERIFY(!event.isAccepted());
 }
 
@@ -197,6 +202,7 @@ void EventTest::key() {
     CORRADE_COMPARE(event.position(), Containers::NullOpt);
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isFocused());
     CORRADE_VERIFY(!event.isAccepted());
 
     event.setAccepted();
