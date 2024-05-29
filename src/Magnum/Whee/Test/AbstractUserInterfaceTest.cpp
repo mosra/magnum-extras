@@ -15231,10 +15231,17 @@ void AbstractUserInterfaceTest::eventFocus() {
     enum Event {
         Hovering = 1,
         Pressed = 2,
-        Press = 4,
-        Move = 8,
-        Focus = 12,
-        Blur = 16
+        Focused = 4,
+        /* All below have to be multiplies of 8 to not clash with the above */
+        Press = 8,
+        Release = 16,
+        Move = 24,
+        Enter = 32,
+        Leave = 40,
+        Focus = 48,
+        Blur = 56,
+        KeyPress = 64,
+        KeyRelease = 72
     };
 
     struct Layer: AbstractLayer {
@@ -15246,14 +15253,45 @@ void AbstractUserInterfaceTest::eventFocus() {
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Press|(event.isHovering() ? Hovering : 0),
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|
+                (event.isFocused() ? Focused : 0)|Press,
+                dataHandle(handle(), dataId, 1));
+            event.setAccepted();
+        }
+        void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|
+                (event.isFocused() ? Focused : 0)|Release,
                 dataHandle(handle(), dataId, 1));
             event.setAccepted();
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, Move|(event.isHovering() ? Hovering : 0),
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|
+                (event.isFocused() ? Focused : 0)|Move,
+                dataHandle(handle(), dataId, 1));
+            event.setAccepted();
+        }
+        void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|
+                (event.isFocused() ? Focused : 0)|Enter,
+                dataHandle(handle(), dataId, 1));
+            event.setAccepted();
+        }
+        void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|
+                (event.isFocused() ? Focused : 0)|Leave,
                 dataHandle(handle(), dataId, 1));
             event.setAccepted();
         }
@@ -15273,6 +15311,24 @@ void AbstractUserInterfaceTest::eventFocus() {
                 (event.isHovering() ? Hovering : 0)|
                 (event.isPressed() ? Pressed : 0)|Blur,
                 dataHandle(handle(), dataId, 1));
+        }
+        void doKeyPressEvent(UnsignedInt dataId, KeyEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|
+                (event.isFocused() ? Focused : 0)|KeyPress,
+                dataHandle(handle(), dataId, 1));
+            event.setAccepted();
+        }
+        void doKeyReleaseEvent(UnsignedInt dataId, KeyEvent& event) override {
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit,
+                (event.isHovering() ? Hovering : 0)|
+                (event.isFocused() ? Focused : 0)|KeyRelease,
+                dataHandle(handle(), dataId, 1));
+            event.setAccepted();
         }
 
         Containers::Array<Containers::Pair<Int, DataHandle>> eventCalls;
@@ -15370,6 +15426,8 @@ void AbstractUserInterfaceTest::eventFocus() {
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
             {Move, dataFocusable12},
             {Move, dataFocusable11},
+            {Enter|Hovering, dataFocusable12},
+            {Enter|Hovering, dataFocusable11},
             {Focus|Hovering, dataFocusable12},
             {Focus|Hovering, dataFocusable11},
             {Focus, dataFocusable2},
@@ -15462,6 +15520,175 @@ void AbstractUserInterfaceTest::eventFocus() {
             {Blur|Pressed, dataFocusable12},
             {Blur|Pressed, dataFocusable11},
             {Blur, dataFocusable2},
+        })), TestSuite::Compare::Container);
+
+    /* If called on a focused node, it gets shown in all pointer and key
+       events. If some other node is focused, it doesn't get. */
+    } {
+        layer.eventCalls = {};
+
+        /* Same node focused */
+        FocusEvent focus1;
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable2, focus1));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
+
+        PointerEvent press1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press1));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
+
+        PointerEvent release1{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({55.0f, 35.0f}, release1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
+
+        PointerMoveEvent moveEnter1{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 35.0f}, moveEnter1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
+
+        PointerMoveEvent moveLeave1{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({1000.0f, 1000.0f}, moveLeave1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
+
+        KeyEvent keyPress1{Key::C, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(keyPress1));
+
+        KeyEvent keyRelease1{Key::C, {}};
+        CORRADE_VERIFY(ui.keyReleaseEvent(keyRelease1));
+
+        /* Different node focused */
+        FocusEvent focus2;
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable1, focus2));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
+
+        PointerEvent press2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press2));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
+
+        /* Press changed the focused node, add it back */
+        /** @todo some NodeFlag::NotChangingFocus for this */
+        FocusEvent focus3;
+        CORRADE_VERIFY(ui.focusEvent(nodeFocusable1, focus3));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
+
+        PointerEvent release2{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({55.0f, 35.0f}, release2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
+
+        PointerMoveEvent moveEnter2{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 35.0f}, moveEnter2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
+
+        PointerMoveEvent moveLeave2{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({1000.0f, 1000.0f}, moveLeave2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
+
+        /* Key events always go to the focused node so they'll have Focused
+           set, no reason to call them here as they'd be no different from
+           above */
+
+        /* No node focused */
+        FocusEvent focus4;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, focus4));
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        /* Press would change the focused node, temporarily remove the
+           Focusable from the node to avoid that */
+        /** @todo some NodeFlag::FocusableButNotByPointer for this */
+        ui.clearNodeFlags(nodeFocusable2, NodeFlag::Focusable);
+
+        PointerEvent press3{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press3));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        ui.addNodeFlags(nodeFocusable2, NodeFlag::Focusable);
+
+        PointerEvent release3{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({55.0f, 35.0f}, release3));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        PointerMoveEvent moveEnter3{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 35.0f}, moveEnter3));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        /* With no focused node, the key events go to the hovered node, so they
+           have to be before the leave event */
+        KeyEvent keyPress3{Key::C, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(keyPress3));
+
+        KeyEvent keyRelease3{Key::C, {}};
+        CORRADE_VERIFY(ui.keyReleaseEvent(keyRelease3));
+
+        PointerMoveEvent moveLeave3{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({1000.0f, 1000.0f}, moveLeave3));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
+            {Focus, dataFocusable2},
+            {Press|Focused, dataFocusable2},
+            /** @todo some FocusableButNotByPointer for this */
+            {Focus|Pressed, dataFocusable2}, /* Implied by the press */
+            {Release|Focused, dataFocusable2},
+            {Move|Focused, dataFocusable2},
+            {Enter|Focused|Hovering, dataFocusable2},
+            /* Move outside of any node not sent anywhere, just Leave */
+            {Leave|Focused, dataFocusable2},
+            {KeyPress|Focused, dataFocusable2},
+            {KeyRelease|Focused, dataFocusable2},
+
+            /* Focusing a different node, none of these are Focused anymore */
+            {Focus, dataFocusable12},
+            {Focus, dataFocusable11},
+            {Blur, dataFocusable2},
+            {Press, dataFocusable2},
+            /* The press focuses a different node so there's another focus
+               event putting it back */
+            /** @todo some NodeFlag::NotChangingFocus for this */
+            {Blur, dataFocusable12},
+            {Blur, dataFocusable11},
+            {Focus|Pressed, dataFocusable2},
+            {Focus, dataFocusable12},
+            {Focus, dataFocusable11},
+            {Blur|Pressed, dataFocusable2},
+            {Release, dataFocusable2},
+            {Move, dataFocusable2},
+            {Enter|Hovering, dataFocusable2},
+            /* Move outside of any node not sent anywhere, just Leave */
+            {Leave, dataFocusable2},
+
+            /* Focusing nothing at all, none of these are Focused either */
+            {Blur, dataFocusable12},
+            {Blur, dataFocusable11},
+            {Press, dataFocusable2},
+            {Release, dataFocusable2},
+            {Move, dataFocusable2},
+            {Enter|Hovering, dataFocusable2},
+            {KeyPress|Hovering, dataFocusable2},
+            {KeyRelease|Hovering, dataFocusable2},
+            /* Move outside of any node not sent anywhere, just Leave */
+            {Leave, dataFocusable2},
         })), TestSuite::Compare::Container);
     }
 }
