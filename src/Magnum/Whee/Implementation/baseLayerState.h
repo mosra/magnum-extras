@@ -25,41 +25,16 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* Definition of BaseLayer::State and BaseLayer::Shared::State structs to be
-   used by both BaseLayer and BaseLayerGL as well as BaseLayer tests, and (if
-   this header gets published) eventually possibly also 3rd party renderer
-   implementations */
+/* Definition of the BaseLayer::State struct to be used by both BaseLayer and
+   BaseLayerGL as well as BaseLayer tests, and (if this header gets published)
+   eventually possibly also 3rd party renderer implementations */
 
 #include <Corrade/Containers/Array.h>
 
 #include "Magnum/Whee/BaseLayer.h"
+#include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
 
 namespace Magnum { namespace Whee {
-
-namespace Implementation {
-    constexpr UnsignedInt styleTransitionPassthrough(UnsignedInt index) { return index; }
-}
-
-struct BaseLayer::Shared::State {
-    explicit State(const UnsignedInt styleCount) noexcept: styleCount{styleCount} {}
-    /* Assumes that the derived state struct either in BaseLayerGL::Shared or
-       other GPU-API-specific implementations has non-trivially-destructible
-       members. Without a virtual destructor those wouldn't be destructed
-       properly when deleting from the base pointer. This is also checked with
-       a static_assert() in the Pointer class itself.
-
-       Another possibility would be to let the derived class have its own state
-       allocation, but I feel that having a base with a virtual destructor is
-       less nasty and nicer to caches than two loose allocations of non-virtual
-       types. */
-    virtual ~State() = default;
-
-    UnsignedInt styleCount;
-    UnsignedInt(*styleTransitionToPressedBlur)(UnsignedInt) = Implementation::styleTransitionPassthrough;
-    UnsignedInt(*styleTransitionToPressedHover)(UnsignedInt) = Implementation::styleTransitionPassthrough;
-    UnsignedInt(*styleTransitionToInactiveBlur)(UnsignedInt) = Implementation::styleTransitionPassthrough;
-    UnsignedInt(*styleTransitionToInactiveHover)(UnsignedInt) = Implementation::styleTransitionPassthrough;
-};
 
 namespace Implementation {
 
@@ -79,24 +54,12 @@ struct BaseLayerVertex {
 
 }
 
-struct BaseLayer::State {
-    explicit State(Shared::State& shared): shared(shared) {}
-    /* Assumes that the derived state struct either in BaseLayerGL or other
-       GPU-API-specific implementations also has non-trivially-destructible
-       members. Without a virtual destructor those wouldn't be destructed
-       properly when deleting from the base pointer. This is also checked with
-       a static_assert() in the Pointer class itself.
-
-       Another possibility would be to let the derived class have its own state
-       allocation, but I feel that having a base with a virtual destructor is
-       less nasty and nicer to caches than two loose allocations of non-virtual
-       types. */
-    virtual ~State() = default;
+struct BaseLayer::State: AbstractVisualLayer::State {
+    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared} {}
 
     Containers::Array<Implementation::BaseLayerData> data;
     Containers::Array<Implementation::BaseLayerVertex> vertices;
     Containers::Array<UnsignedInt> indices;
-    Shared::State& shared;
 };
 
 }}
