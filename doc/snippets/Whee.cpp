@@ -23,16 +23,16 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include "Magnum/Whee/BaseLayer.h"
+#include "Magnum/Whee/AbstractVisualLayer.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
 
 using namespace Magnum;
 
-Whee::BaseLayer::Shared baseLayerShared();
+Whee::AbstractVisualLayer::Shared& abstractVisualLayerShared();
 namespace {
-/* [BaseLayer-Shared-setStyleTransition] */
+/* [AbstractVisualLayer-Shared-setStyleTransition] */
 enum StyleIndex {
     DOXYGEN_ELLIPSIS()
 };
@@ -52,11 +52,11 @@ StyleIndex styleIndexTransitionToPressedHover(StyleIndex index) {
 
 DOXYGEN_ELLIPSIS(} int main() {)
 
-Whee::BaseLayer::Shared shared = DOXYGEN_ELLIPSIS(baseLayerShared());
+Whee::AbstractVisualLayer::Shared& shared = DOXYGEN_ELLIPSIS(abstractVisualLayerShared());
 shared.setStyleTransition<StyleIndex,
     styleIndexTransitionToPressedBlur,
     styleIndexTransitionToPressedHover,
     styleIndexTransitionToInactiveBlur,
     styleIndexTransitionToInactiveHover>();
-/* [BaseLayer-Shared-setStyleTransition] */
+/* [AbstractVisualLayer-Shared-setStyleTransition] */
 }

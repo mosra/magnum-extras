@@ -46,12 +46,14 @@ set(MagnumWhee_SRCS
 set(MagnumWhee_GracefulAssert_SRCS
     AbstractLayer.cpp
     AbstractUserInterface.cpp
+    AbstractVisualLayer.cpp
     BaseLayer.cpp
     EventLayer.cpp)
 
 set(MagnumWhee_HEADERS
     AbstractLayer.h
     AbstractUserInterface.h
+    AbstractVisualLayer.h
     BaseLayer.h
     Event.h
     EventLayer.h
@@ -61,6 +63,7 @@ set(MagnumWhee_HEADERS
 
 set(MagnumWhee_PRIVATE_HEADERS
     Implementation/abstractUserInterface.h
+    Implementation/abstractVisualLayerState.h
     Implementation/baseLayerState.h)
 
 if(MAGNUM_TARGET_GL)
