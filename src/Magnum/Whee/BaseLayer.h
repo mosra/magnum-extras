@@ -32,7 +32,7 @@
 
 #include <Magnum/Math/Color.h>
 
-#include "Magnum/Whee/AbstractLayer.h"
+#include "Magnum/Whee/AbstractVisualLayer.h"
 
 namespace Magnum { namespace Whee {
 
@@ -273,28 +273,9 @@ Draws quads with a color gradient, variable rounded corners and outline. You'll
 most likely instantiate the class through @ref BaseLayerGL, which contains a
 concrete OpenGL implementation.
 */
-class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
+class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
     public:
         class Shared;
-
-        /** @brief Copying is not allowed */
-        BaseLayer(const BaseLayer&) = delete;
-
-        /**
-         * @brief Move constructor
-         *
-         * Performs a destructive move, i.e. the original object isn't usable
-         * afterwards anymore.
-         */
-        BaseLayer(BaseLayer&&) noexcept;
-
-        ~BaseLayer();
-
-        /** @brief Copying is not allowed */
-        BaseLayer& operator=(const BaseLayer&) = delete;
-
-        /** @brief Move assignment */
-        BaseLayer& operator=(BaseLayer&&) noexcept;
 
         /**
          * @brief Create a quad
@@ -470,91 +451,6 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
         }
 
         /**
-         * @brief Type-erased quad style index
-         *
-         * Expects that @p handle is valid.
-         * @see @ref isHandleValid(DataHandle) const
-         */
-        UnsignedInt style(DataHandle handle) const;
-
-        /**
-         * @brief Quad style index in a concrete enum type
-         *
-         * Expects that @p handle is valid.
-         */
-        template<class StyleIndex> StyleIndex style(DataHandle handle) const {
-            static_assert(std::is_enum<StyleIndex>::value, "expected an enum type");
-            return StyleIndex(style(handle));
-        }
-
-        /**
-         * @brief Type-erased quad style index assuming it belongs to this layer
-         *
-         * Expects that @p handle is valid.
-         * @see @ref isHandleValid(LayerDataHandle) const
-         */
-        UnsignedInt style(LayerDataHandle handle) const;
-
-        /**
-         * @brief Quad style index in a concrete enum type assuming it belongs to this layer
-         *
-         * Expects that @p handle is valid.
-         */
-        template<class StyleIndex> StyleIndex style(LayerDataHandle handle) const {
-            static_assert(std::is_enum<StyleIndex>::value, "expected an enum type");
-            return StyleIndex(style(handle));
-        }
-
-        /**
-         * @brief Set quad style index
-         *
-         * Expects that @p handle is valid and @p style is less than
-         * @ref Shared::styleCount(). Styling becomes driven from the
-         * @ref BaseLayerStyleItem at index @p style.
-         *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
-         * @see @ref isHandleValid(DataHandle) const
-         */
-        void setStyle(DataHandle handle, UnsignedInt style);
-
-        /**
-         * @brief Set quad style index in a concrete enum type
-         *
-         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref setStyle(DataHandle, UnsignedInt).
-         */
-        template<class StyleIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
-            #endif
-        > void setStyle(DataHandle handle, StyleIndex style) {
-            setStyle(handle, UnsignedInt(style));
-        }
-
-        /**
-         * @brief Set quad style index assuming it belongs to this layer
-         *
-         * Like @ref setStyle(DataHandle, UnsignedInt) but without checking
-         * that @p handle indeed belongs to this layer. See its documentation
-         * for more information.
-         */
-        void setStyle(LayerDataHandle handle, UnsignedInt style);
-
-        /**
-         * @brief Set quad style index in a concrete enum type assuming it belongs to this layer
-         *
-         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref setStyle(LayerDataHandle, UnsignedInt).
-         */
-        template<class StyleIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
-            #endif
-        > void setStyle(LayerDataHandle handle, StyleIndex style) {
-            setStyle(handle, UnsignedInt(style));
-        }
-
-        /**
          * @brief Quad custom base color
          *
          * Expects that @p handle is valid.
@@ -673,25 +569,15 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
            tests causes linker errors */
         void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
 
-        Containers::Pointer<State> _state;
-
     private:
-        MAGNUM_WHEE_LOCAL void setStyleInternal(UnsignedInt id, UnsignedInt style);
         MAGNUM_WHEE_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);
         MAGNUM_WHEE_LOCAL void setOutlineWidthInternal(UnsignedInt id, const Vector4& width);
 
-        /* These can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class
-           in tests causes linker errors */
-
+        /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
+           tests causes linker errors */
         /* Advertises LayerFeature::Draw but *does not* implement doDraw(),
            that's on the subclass */
         LayerFeatures doFeatures() const override;
-
-        void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override;
-        void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override;
-        void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
-        void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
-        void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
 };
 
 /**
@@ -700,114 +586,12 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractLayer {
 You'll most likely instantiate the class through @ref BaseLayerGL::Shared,
 which contains a concrete OpenGL implementation.
 */
-class MAGNUM_WHEE_EXPORT BaseLayer::Shared {
-    public:
-        /** @brief Copying is not allowed */
-        Shared(const Shared&) = delete;
-
-        /**
-         * @brief Move constructor
-         *
-         * Performs a destructive move, i.e. the original object isn't usable
-         * afterwards anymore.
-         */
-        Shared(Shared&&) noexcept;
-
-        ~Shared();
-
-        /** @brief Copying is not allowed */
-        Shared& operator=(const Shared&) = delete;
-
-        /** @brief Move assignment */
-        Shared& operator=(Shared&&) noexcept;
-
-        /**
-         * @brief Style count
-         *
-         * @see @ref BaseLayerGL::Shared::Shared(UnsignedInt),
-         *      @ref BaseLayerGL::Shared::setStyle()
-         */
-        UnsignedInt styleCount() const;
-
-        /**
-         * @brief Set type-erased style transition functions
-         * @return Reference to self (for method chaining)
-         *
-         * The @p toPressedBlur and @p toPressedHover change a style index to a
-         * pressed blurred or hovered one, for example after a pointer was
-         * pressed on a hovered button, after an activated but blur button was
-         * pressed via a keyboard, but also after a pointer leaves a pressed
-         * button, making it blur or re-enters it, making it hovered again.
-         *
-         * The @p toInactiveBlur and @p toInactiveHover change a style index to
-         * an inactive blurred or hovered one, for example when a mouse enters
-         * or leaves an area of otherwise inactive and not pressed button, but
-         * also when a button is released again or an input is no longer
-         * active.
-         *
-         * If any of the functions is @cpp nullptr @ce, given transition is
-         * a no-op, keeping the same index.
-         *
-         * For correct behavior, all functions should be mutually invertible,
-         * e.g. @cpp toPressedHover(toInactiveBlur(style)) == style @ce if the
-         * `style` was a pressed hovered style to begin with (and both
-         * transition functions were defined), and similarly for other
-         * transitions. If the style doesn't handle hover in any way, for
-         * example for touch-only interfaces, you can use
-         * @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
-         * instead, which doesn't make any distinction between the hover and
-         * blur states and uses the same transition function for both.
-         */
-        Shared& setStyleTransition(UnsignedInt(*toPressedBlur)(UnsignedInt), UnsignedInt(*toPressedHover)(UnsignedInt), UnsignedInt(*toInactiveBlur)(UnsignedInt), UnsignedInt(*toInactiveHover)(UnsignedInt));
-
-        /**
-         * @brief Set style transition functions
-         * @return Reference to self (for method chaining)
-         *
-         * Like @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))",
-         * but allows to use a concrete enum type instead of a typeless index.
-         * Same as with the type-erased variant, if any of the function
-         * template parameters is @cpp nullptr @ce, given transition is a
-         * no-op, keeping the same index. Example usage:
-         *
-         * @snippet Whee.cpp BaseLayer-Shared-setStyleTransition
-         */
-        template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> Shared& setStyleTransition();
-
-        /**
-         * @brief Set style transition functions without hover state
-         * @return Reference to self (for method chaining)
-         *
-         * Same as calling @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
-         * with @p toPressed used for both @p toPressedBlur and
-         * @p toPressedHover and @p toInactive used for both @p toInactiveBlur
-         * and @p toInactiveHover. Useful in case the style doesn't handle
-         * hover in any way, for example for touch-only interfaces.
-         */
-        Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt)) {
-            return setStyleTransition(toPressed, toPressed, toInactive, toInactive);
-        }
-
-        /**
-         * @brief Set style transition functions
-         * @return Reference to self (for method chaining)
-         *
-         * Same as calling @ref setStyleTransition() with @p toPressed used for
-         * both @p toPressedBlur and @p toPressedHover and @p toInactive used
-         * for both @p toInactiveBlur and @p toInactiveHover. Useful in case
-         * the style doesn't handle hover in any way, for example for
-         * touch-only interfaces.
-         */
-        template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex)> Shared& setStyleTransition() {
-            return setStyleTransition<StyleIndex, toPressed, toPressed, toInactive, toInactive>();
-        }
-
+class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
     protected:
     #endif
-        struct State;
         friend BaseLayer;
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
@@ -815,35 +599,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared {
         explicit Shared(UnsignedInt styleCount);
         /* Can't be MAGNUM_WHEE_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
-
-        Containers::Pointer<State> _state;
 };
-
-/* The damn thing fails to match these to the declarations above */
-#ifndef DOXYGEN_GENERATING_OUTPUT
-template<class StyleIndex, StyleIndex(*toPressedBlur)(StyleIndex), StyleIndex(*toPressedHover)(StyleIndex), StyleIndex(*toInactiveBlur)(StyleIndex), StyleIndex(*toInactiveHover)(StyleIndex)> BaseLayer::Shared& BaseLayer::Shared::setStyleTransition() {
-    /* No matter what simplification I do, GCC warns about "implicit conversion
-       to bool", so it's this obvious ugly == here. There could be either + for
-       the lambdas to turn them into function pointers to avoid ?: getting
-       confused, but that doesn't work on MSVC 2015 so instead it's the nullptr
-       being cast. */
-    /** @todo revert back to the + once CORRADE_MSVC2015_COMPATIBILITY is
-        dropped */
-    return setStyleTransition(
-        toPressedBlur == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
-            return UnsignedInt(toPressedBlur(StyleIndex(index)));
-        },
-        toPressedHover == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
-            return UnsignedInt(toPressedHover(StyleIndex(index)));
-        },
-        toInactiveBlur == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
-            return UnsignedInt(toInactiveBlur(StyleIndex(index)));
-        },
-        toInactiveHover == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
-            return UnsignedInt(toInactiveHover(StyleIndex(index)));
-        });
-}
-#endif
 
 }}
 
