@@ -2210,12 +2210,14 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.padding(firstGlyph), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
-    /* Custom color, testing also the getter overloads and templates */
+    /* Custom color, testing also the getter overloads and templates; having a
+       non-default alignment */
     DataHandle second = layer.create(
         StyleIndex(2),
         "ahoy",
         TextProperties{}
-            .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null),
+            .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
+            .setAlignment(Text::Alignment::BottomRight),
         0xff3366_rgbf,
         data.node);
     CORRADE_COMPARE(layer.node(second), data.node);
@@ -2245,7 +2247,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         StyleIndex(2),
         GlyphIndex(66),
         TextProperties{}
-            .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null),
+            .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
+            .setAlignment(Text::Alignment::BottomRight),
         0xff3366_rgbf,
         data.node);
     CORRADE_COMPARE(layer.node(secondGlyph), data.node);
@@ -2275,7 +2278,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         StyleIndex(0),
         "hi",
         TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null),
+            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+            .setAlignment(Text::Alignment::LineLeft),
         data.node);
     CORRADE_COMPARE(layer.node(fourth), data.node);
     CORRADE_COMPARE(layer.style(fourth), 0);
@@ -2325,15 +2329,15 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         /* Single (invalid) glyph 22. Its size is {16, 24} and offset {4, -2},
            scaled to 0.5, aligned to MiddleCenter */
         {-6.0f, -5.0f},
-        /* "ahoy", single glyph */
-        { 0.5f, -1.5f},
+        /* "ahoy", single glyph, aligned to BottomRight */
+        {-2.0f, 0.0f},
         /* Single glyph 66. Its size is {8, 12} and offset {2, -1},
-           scaled to 2.0, aligned to MiddleCenter */
-        {-12.0f, -10.0f},
+           scaled to 2.0, aligned to BottomRight */
+        {-20.0f, 2.0f},
         /* Third text is empty */
-        /* "hi", aligned to MiddleCenter */
-        {-1.25f, -0.5f},
-        { 0.25f,  0.0f}
+        /* "hi", aligned to LineLeft */
+        {0.0f, 0.5f},
+        {1.5f, 1.0f}
     }), TestSuite::Compare::Container);
 
     /* Removing a text marks the original run as unused, and as it's not
@@ -2362,22 +2366,20 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
        In this case the `second` text from the one-glyph font becomes a single
        glyph, and `secondGlyph` glyph from the one-glyph font becomes a text,
        and they optionally switch to the three-glyph font as well. */
+    TextProperties textProperties;
+    textProperties
+        .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+        .setAlignment(Text::Alignment::BottomRight);
     if(data.layerDataHandleOverloads) {
-        layer.setText(dataHandleData(secondGlyph), "hey",
-            TextProperties{}
-                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+        layer.setText(dataHandleData(secondGlyph), "hey", textProperties);
         layer.setGlyph(dataHandleData(second),
             data.customFont ? GlyphIndex(13) : GlyphIndex(66),
-            TextProperties{}
-                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+            textProperties);
     } else {
-        layer.setText(secondGlyph, "hey",
-            TextProperties{}
-                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+        layer.setText(secondGlyph, "hey", textProperties);
         layer.setGlyph(second,
             data.customFont ? GlyphIndex(13) : GlyphIndex(66),
-            TextProperties{}
-                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+            textProperties);
     }
 
     CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
@@ -2424,21 +2426,21 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             { 4.0f,  1.5f},
             /* Single (invalid) glyph 22 */
             {-6.0f, -5.0f},
-            /* Now-unused "ahoy" text */
-            { 0.5f, -1.5f},
-            /* Now-unused single glyph 66 */
-            {-12.0f, -10.0f},
+            /* Now-unused "ahoy" text, aligned to BottomRight */
+            {-2.0f, 0.0f},
+            /* Now-unused single glyph 66, aligned to BottomRight */
+            {-20.0f, 2.0f},
             /* Third text is empty */
-            /* "hi", aligned to MiddleCenter */
-            {-1.25f, -0.5f},
-            { 0.25f,  0.0f},
-            /* "hey", aligned to MiddleCenter */
-            {-2.25f, -0.5f},
-            {-0.75f,  0.0f},
-            { 1.25f,  0.5f},
+            /* "hi", aligned to LineLeft */
+            {0.0f, 0.5f},
+            {1.5f, 1.0f},
+            /* "hey", aligned to BottomRight */
+            {-4.5f, 2.5f},
+            {-3.0f, 3.0f},
+            {-1.0f, 3.5f},
             /* Single glyph 13. Its size is {24, 16} and offset {2, -4},
-               scaled to 0.5, aligned to MiddleCenter */
-            {-7.0f, -2.0f}
+               scaled to 0.5, aligned to BottomRight */
+            {-13.0f, 2.0f}
         }), TestSuite::Compare::Container);
     } else {
         CORRADE_COMPARE(layer.glyphCount(secondGlyph), 1);
@@ -2474,18 +2476,18 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             { 4.0f,  1.5f},
             /* Single (invalid) glyph 22 */
             {-6.0f, -5.0f},
-            /* Now-unused "ahoy" text */
-            { 0.5f, -1.5f},
-            /* Now-unused single glyph 66 */
-            {-12.0f, -10.0f},
+            /* Now-unused "ahoy" text, aligned to BottomRight */
+            {-2.0f, 0.0f},
+            /* Now-unused single glyph 66, aligned to BottomRight */
+            {-20.0f, 2.0f},
             /* Third text is empty */
-            /* "hi", aligned to MiddleCenter */
-            {-1.25f, -0.5f},
-            { 0.25f,  0.0f},
-            /* "hey", aligned to MiddleCenter */
-            { 0.5f, -1.5f},
-            /* Single glyph 66 again, aligned to MiddleCenter */
-            {-12.0f, -10.0f},
+            /* "hi", aligned to LineLeft */
+            {0.0f, 0.5f},
+            {1.5f, 1.0f},
+            /* "hey", aligned to BottomRight */
+            {-2.0f, 0.0f},
+            /* Single glyph 66 again, aligned to BottomRight */
+            {-20.0f, 2.0f},
         }), TestSuite::Compare::Container);
     }
 }
@@ -3371,14 +3373,14 @@ void TextLayerTest::updateCleanDataOrder() {
     layer.create(0, "", {});                            /* 4, quad 8 */
     /* Node 6 is disabled, but style 4 has no disabled transition so this stays
        the same */
-    DataHandle data5 = layer.createGlyph(4, 13, {}, 0xcceeff_rgbf, node6);
-                                                        /* 5, quad 9 */
+    DataHandle data5 = layer.createGlyph(4, 13,         /* 5, quad 9 */
+        Text::Alignment::TopCenter, 0xcceeff_rgbf, node6);
     layer.create(0, "", {});                            /* 6, quad 10 */
-    DataHandle data7 = layer.create(1, "ahoy", {}, 0x112233_rgbf, node15);
-                                                        /* 7, quad 11 */
+    DataHandle data7 = layer.create(1, "ahoy",          /* 7, quad 11 */
+        Text::Alignment::BottomRight, 0x112233_rgbf, node15);
     layer.create(0, "", {});                            /* 8, quad 12 */
-    DataHandle data9 = layer.create(3, "hi", {}, 0x663399_rgbf, node15);
-                                                        /* 9, quad 13 to 14 */
+    DataHandle data9 = layer.create(3, "hi",            /* 9, quad 13 to 14 */
+        Text::Alignment::LineLeft, 0x663399_rgbf, node15);
 
     if(!data.paddingFromData.isZero()) {
         layer.setPadding(data3, data.paddingFromData);
@@ -3497,10 +3499,10 @@ void TextLayerTest::updateCleanDataOrder() {
         Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
         Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::textureCoordinates);
 
-        /* Text 3 and glyph 5 are attached to node 6, which has a center of
-           {6.0, 9.5}. Shaped positions should match what's in create() however
-           as the coordinate system has Y up, the glyph positions have Y
-           flipped compared in comparison to create():
+        /* Text 3 and glyph 5 are attached to node 6, which has offset
+           {1.0, 2.0} and a center of {6.0, 9.5}. Shaped positions should match
+           what's in create() however as the coordinate system has Y up, the
+           glyph positions have Y flipped compared in comparison to create():
 
             2--3
             |  |
@@ -3537,34 +3539,35 @@ void TextLayerTest::updateCleanDataOrder() {
             {6.0f + 4.0f + 2.0f + 8.0f, 9.5f - 1.5f + 4.0f - 8.0f},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(positions.sliceSize(9*4, 1*4), Containers::arrayView<Vector2>({
-            /* Glyph 13 again, centered */
-            {6.0f - 4.0f        + 0.0f, 9.5f + 4.0f        - 0.0f},
-            {6.0f - 4.0f        + 8.0f, 9.5f + 4.0f        - 0.0f},
-            {6.0f - 4.0f        + 0.0f, 9.5f + 4.0f        - 8.0f},
-            {6.0f - 4.0f        + 8.0f, 9.5f + 4.0f        - 8.0f},
+            /* Glyph 13 again, but TopCenter */
+            {6.0f - 4.0f        + 0.0f, 10.0f             - 0.0f},
+            {6.0f - 4.0f        + 8.0f, 10.0f             - 0.0f},
+            {6.0f - 4.0f        + 0.0f, 10.0f             - 8.0f},
+            {6.0f - 4.0f        + 8.0f, 10.0f             - 8.0f},
         }), TestSuite::Compare::Container);
 
-        /* Text 7 and 9 are both attached to node 15, which has a center of
-           {13.0, 6.5} */
+        /* Text 7 and 9 are both attached to node 15, which has offset {3, 4}
+           and size {20, 5}. They're aligned to BottomRight and LineLeft
+           respectively, instead of MiddleCenter. */
         CORRADE_COMPARE_AS(positions.sliceSize(11*4, 1*4), Containers::arrayView<Vector2>({
             /* Glyph 66. No offset, size {16, 16}, scaled to 2.0. */
-            {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 0.0f},
-            {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 0.0f},
-            {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 32.f},
-            {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 32.f},
+            {23.f - 2.0f       + 0.0f, 9.0f + 0.0f        - 0.0f},
+            {23.f - 2.0f       + 32.f, 9.0f + 0.0f        - 0.0f},
+            {23.f - 2.0f       + 0.0f, 9.0f + 0.0f        - 32.f},
+            {23.f - 2.0f       + 32.f, 9.0f + 0.0f        - 32.f},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(positions.sliceSize(13*4, 2*4), Containers::arrayView<Vector2>({
             /* Glyph 22, not in cache */
-            {13.f - 1.25f,              6.5f + 0.5f},
-            {13.f - 1.25f,              6.5f + 0.5f},
-            {13.f - 1.25f,              6.5f + 0.5f},
-            {13.f - 1.25f,              6.5f + 0.5f},
+            {3.0f + 0.0f,              6.5f - 0.5f},
+            {3.0f + 0.0f,              6.5f - 0.5f},
+            {3.0f + 0.0f,              6.5f - 0.5f},
+            {3.0f + 0.0f,              6.5f - 0.5f},
 
             /* Glyph 13. Offset {4, -8}, size {16, 16}, scaled to 0.5. */
-            {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-            {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-            {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 8.0f},
-            {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 8.0f},
+            {3.0f + 1.5f + 2.f + 0.0f, 6.5f - 1.0f + 4.0f - 0.0f},
+            {3.0f + 1.5f + 2.f + 8.0f, 6.5f - 1.0f + 4.0f - 0.0f},
+            {3.0f + 1.5f + 2.f + 0.0f, 6.5f - 1.0f + 4.0f - 8.0f},
+            {3.0f + 1.5f + 2.f + 8.0f, 6.5f - 1.0f + 4.0f - 8.0f},
         }), TestSuite::Compare::Container);
 
         /* Texture coordinates however stay the same, with Y up:
@@ -3693,21 +3696,21 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Text 7 and 9, now quads 5 and 7 to 8 */
     CORRADE_COMPARE_AS(positions.sliceSize(5*4, 1*4), Containers::arrayView<Vector2>({
-        {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 0.0f},
-        {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 0.0f},
-        {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 32.f},
-        {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 32.f},
+        {23.f - 2.0f       + 0.0f, 9.0f + 0.0f        - 0.0f},
+        {23.f - 2.0f       + 32.f, 9.0f + 0.0f        - 0.0f},
+        {23.f - 2.0f       + 0.0f, 9.0f + 0.0f        - 32.f},
+        {23.f - 2.0f       + 32.f, 9.0f + 0.0f        - 32.f},
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(positions.sliceSize(7*4, 2*4), Containers::arrayView<Vector2>({
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
+        {3.0f + 0.0f,              6.5f - 0.5f},
+        {3.0f + 0.0f,              6.5f - 0.5f},
+        {3.0f + 0.0f,              6.5f - 0.5f},
+        {3.0f + 0.0f,              6.5f - 0.5f},
 
-        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 8.0f},
-        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 8.0f},
+        {3.0f + 1.5f + 2.f + 0.0f, 6.5f - 1.0f + 4.0f - 0.0f},
+        {3.0f + 1.5f + 2.f + 8.0f, 6.5f - 1.0f + 4.0f - 0.0f},
+        {3.0f + 1.5f + 2.f + 0.0f, 6.5f - 1.0f + 4.0f - 8.0f},
+        {3.0f + 1.5f + 2.f + 8.0f, 6.5f - 1.0f + 4.0f - 8.0f},
     }), TestSuite::Compare::Container);
 
     /* Glyph 22, now only at quad 7 */
@@ -3795,15 +3798,15 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Text 9, now quad 6 to 7 */
     CORRADE_COMPARE_AS(positions.sliceSize(6*4, 2*4), Containers::arrayView<Vector2>({
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
+        {3.0f + 0.0f,              6.5f - 0.5f},
+        {3.0f + 0.0f,              6.5f - 0.5f},
+        {3.0f + 0.0f,              6.5f - 0.5f},
+        {3.0f + 0.0f,              6.5f - 0.5f},
 
-        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 8.0f},
-        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 8.0f},
+        {3.0f + 1.5f + 2.f + 0.0f, 6.5f - 1.0f + 4.0f - 0.0f},
+        {3.0f + 1.5f + 2.f + 8.0f, 6.5f - 1.0f + 4.0f - 0.0f},
+        {3.0f + 1.5f + 2.f + 0.0f, 6.5f - 1.0f + 4.0f - 8.0f},
+        {3.0f + 1.5f + 2.f + 8.0f, 6.5f - 1.0f + 4.0f - 8.0f},
     }), TestSuite::Compare::Container);
 
     /* Glyph 22, now only at quad 6 */
