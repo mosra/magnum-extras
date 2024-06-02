@@ -230,69 +230,71 @@ const struct {
     bool createLayerAfterSetStyle;
     bool secondaryStyleUpload;
     bool secondaryDynamicStyleUpload;
-    bool explicitFont;
+    bool explicitFont, explicitAlignment;
 } RenderDynamicStylesData[]{
     {"default, static", "default.png", 1,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
-        false, false, false, false},
+        false, false, false, false, false},
     {"default, static, create layer after setStyle()", "default.png", 1,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
-        true, false, false, false},
+        true, false, false, false, false},
     {"default, dynamic with no upload", "default.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
-        false, false, false, true},
+        /* Default dynamic alignment is MiddleCenter as well, so it doesn't
+           need to be passed explicitly */
+        false, false, false, true, false},
     {"default, dynamic", "default.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}, 0.0f,
-        false, false, false, false},
+        false, false, false, false, false},
     {"styled, static", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
-        false, false, false, false},
+        false, false, false, false, false},
     {"styled, static, create layer after setStyle()", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
-        true, false, false, false},
+        true, false, false, false, false},
     {"styled, static with padding", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 128.0f,
         {}, 0.0f,
-        false, false, false, false},
+        false, false, false, false, false},
     {"styled, dynamic", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
-        false, false, false, false},
+        false, false, false, false, false},
     {"styled, dynamic with padding", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 128.0f,
-        false, false, false, false},
+        false, false, false, false, false},
     {"styled, static, secondary upload", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
-        false, true, false, true},
+        false, true, false, true, true},
     {"styled, static, secondary dynamic upload", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         TextLayerStyleUniform{}, 0.0f,
-        false, false, true, false},
+        false, false, true, false, false},
     {"styled, dynamic, secondary upload", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
-        false, false, true, true},
+        false, false, true, true, true},
     {"styled, dynamic, secondary static upload", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
-        false, true, false, false},
+        false, true, false, false, false},
 };
 
 const struct {
@@ -586,12 +588,16 @@ void TextLayerGLTest::render() {
     FontHandle fontHandle[]{
         layerShared.addFont(*_font, 32.0f)
     };
+    Text::Alignment alignment[]{
+        Text::Alignment::MiddleCenter
+    };
     /* The (lack of any) effect of padding on rendered output is tested
        thoroughly in renderAlignmentPadding() */
     layerShared.setStyle(TextLayerCommonStyleUniform{},
         styleUniforms,
         styleToUniform,
         Containers::stridedArrayView(fontHandle).broadcasted<0>(5),
+        Containers::stridedArrayView(alignment).broadcasted<0>(5),
         {});
 
     LayerHandle layer = ui.createLayer();
@@ -645,15 +651,14 @@ void TextLayerGLTest::renderAlignmentPadding() {
     layerShared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
+        {data.alignment},
         {data.paddingFromStyle});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode(data.nodeOffset, data.nodeSize);
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi",
-        TextProperties{}.setAlignment(data.alignment),
-        node);
+    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, node);
 
     if(data.partialUpdate) {
         ui.update();
@@ -711,6 +716,7 @@ void TextLayerGLTest::renderCustomColor() {
         {TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf/0x336699_rgbf)},
         {fontHandle},
+        {Text::Alignment::MiddleCenter},
         {});
 
     LayerHandle layer = ui.createLayer();
@@ -779,6 +785,7 @@ void TextLayerGLTest::renderChangeStyle() {
          TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)},
         {fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter},
         {});
 
     LayerHandle layer = ui.createLayer();
@@ -840,6 +847,7 @@ void TextLayerGLTest::renderChangeText() {
     layerShared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
+        {Text::Alignment::MiddleCenter},
         {});
 
     LayerHandle layer = ui.createLayer();
@@ -911,12 +919,17 @@ void TextLayerGLTest::renderDynamicStyles() {
                should cause it to be updated */
             {2, 1, 1, 0},
             {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+            {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
             {});
     } else {
         layerShared.setStyle(TextLayerCommonStyleUniform{},
             {TextLayerStyleUniform{}, TextLayerStyleUniform{}, data.styleUniform},
             {1, 2, 0, 1},
             {FontHandle::Null, fontHandle, FontHandle::Null, FontHandle::Null},
+            {Text::Alignment::BottomRight,
+             Text::Alignment::MiddleCenter,
+             Text::Alignment::TopCenterIntegral,
+             Text::Alignment::LineLeft},
             {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
     }
 
@@ -937,11 +950,13 @@ void TextLayerGLTest::renderDynamicStyles() {
             layer->setDynamicStyle(1,
                 TextLayerStyleUniform{},
                 FontHandle::Null,
+                Text::Alignment{},
                 {});
         } else {
             layer->setDynamicStyle(1,
                 *data.dynamicStyleUniform,
                 fontHandle,
+                Text::Alignment::MiddleCenter,
                 {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
         }
 
@@ -954,11 +969,13 @@ void TextLayerGLTest::renderDynamicStyles() {
     NodeHandle node = ui.createNode(
         {8.0f - data.leftPadding - data.dynamicLeftPadding, 8.0f},
         {112.0f + data.leftPadding + data.dynamicLeftPadding, 48.0f});
-    /* If a dynamic style with a null font handle is used, need to pass it
-       explicitly to create() instead */
+    /* If a dynamic style with a null font handle / bogus alignment is used,
+       need to pass it explicitly to create() instead */
     TextProperties properties;
     if(data.explicitFont)
         properties.setFont(fontHandle);
+    if(data.explicitAlignment)
+        properties.setAlignment(Text::Alignment::MiddleCenter);
     /* There isn't any difference in handling of text ḿade with create() or
        createGlyph() inside draw() so this tests just one */
     layer->create(data.styleIndex, "Maggi", properties, node);
@@ -976,6 +993,10 @@ void TextLayerGLTest::renderDynamicStyles() {
             {TextLayerStyleUniform{}, TextLayerStyleUniform{}, data.styleUniform},
             {1, 2, 0, 1},
             {FontHandle::Null, fontHandle, FontHandle::Null, FontHandle::Null},
+            {Text::Alignment::BottomRight,
+             Text::Alignment::MiddleCenter,
+             Text::Alignment::TopCenterIntegral,
+             Text::Alignment::LineLeft},
             {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
         CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
     }
@@ -983,6 +1004,7 @@ void TextLayerGLTest::renderDynamicStyles() {
         layer->setDynamicStyle(1,
             *data.dynamicStyleUniform,
             fontHandle,
+            Text::Alignment::MiddleCenter,
             {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
         CORRADE_COMPARE(layer->state(), LayerState::NeedsCommonDataUpdate);
     }
@@ -1120,6 +1142,11 @@ void TextLayerGLTest::drawOrder() {
         fontHandleSmall,
         fontHandleLarge,
         fontHandleSmall
+    }, {
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter
     }, {});
 
     LayerHandle layer = ui.createLayer();
@@ -1258,6 +1285,12 @@ void TextLayerGLTest::drawClipping() {
         fontHandleSmall,
         fontHandleLarge,
         fontHandleSmall
+    }, {
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter
     }, {});
 
     TextLayerGL& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
@@ -1348,7 +1381,10 @@ void TextLayerGLTest::eventStyleTransition() {
             TextLayerStyleUniform{},        /* default */
             TextLayerStyleUniform{}         /* colored */
                 .setColor(0x3bd267_rgbf)
-        }, {fontHandle, fontHandle}, {})
+        }, {fontHandle, fontHandle}, {
+            Text::Alignment::MiddleCenter,
+            Text::Alignment::MiddleCenter
+        }, {})
         .setStyleTransition(
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();

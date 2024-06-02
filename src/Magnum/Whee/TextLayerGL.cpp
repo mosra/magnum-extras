@@ -183,20 +183,20 @@ TextLayerGL::Shared& TextLayerGL::Shared::setGlyphCache(Text::GlyphCache&& cache
     return setGlyphCache(*state.glyphCacheStorage);
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Vector4>& paddings) {
-    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, fonts, paddings));
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, fonts, alignments, paddings));
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Vector4> paddings) {
-    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, fonts, paddings));
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Text::Alignment> alignments, const std::initializer_list<Vector4> paddings) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, fonts, alignments, paddings));
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
-    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, styleFonts, stylePaddings));
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, styleFonts, styleAlignments, stylePaddings));
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Vector4> stylePaddings) {
-    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, styleFonts, stylePaddings));
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Text::Alignment> styleAlignments, const std::initializer_list<Vector4> stylePaddings) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(commonUniform, uniforms, styleToUniform, styleFonts, styleAlignments, stylePaddings));
 }
 
 void TextLayerGL::Shared::doSetStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms) {
