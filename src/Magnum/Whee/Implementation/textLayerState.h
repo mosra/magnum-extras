@@ -35,6 +35,7 @@
 #include <Corrade/Containers/Reference.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
+#include <Magnum/Text/Alignment.h>
 
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
@@ -61,6 +62,8 @@ struct TextLayerStyle {
     UnsignedInt uniform;
 
     FontHandle font;
+    Text::Alignment alignment;
+    /* 1 byte free */
     Vector4 padding;
 };
 
@@ -88,8 +91,9 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
     Containers::Array<Implementation::TextLayerFont> fonts;
 
     Containers::ArrayTuple styleStorage;
-    /* Uniform mapping, fonts and padding values assigned to each style.
-       Initially empty to be able to detect whether setStyle() was called. */
+    /* Uniform mapping, fonts, alignments and padding values assigned to each
+       style. Initially empty to be able to detect whether setStyle() was
+       called. */
     Containers::ArrayView<Implementation::TextLayerStyle> styles;
     /* Uniform values to be copied to layer-specific uniform buffers. Initially
        empty to be able to detect whether setStyle() was called, stays empty
@@ -151,7 +155,8 @@ struct TextLayerVertex {
 
 struct TextLayerDynamicStyle {
     FontHandle font = FontHandle::Null;
-    /* 2 bytes free */
+    Text::Alignment alignment = Text::Alignment::MiddleCenter;
+    /* 1 byte free */
     Vector4 padding;
 };
 

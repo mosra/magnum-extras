@@ -147,8 +147,9 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
          * information.
          *
          * The animation affects the @ref TextLayerStyleUniform and the padding
-         * value, if it differs between the styles. Font being different
-         * between the two styles doesn't affect the animation in any way.
+         * value, if it differs between the styles. Font or alignment being
+         * different between the two styles doesn't affect the animation in any
+         * way.
          */
         AnimationHandle create(UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float), Nanoseconds played, Nanoseconds duration, DataHandle data, UnsignedInt repeatCount = 1, AnimationFlags flags = {});
 
