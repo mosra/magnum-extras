@@ -119,8 +119,9 @@ struct TextLayerTest: TestSuite::Tester {
     /* remove() and setText() tested here as well */
     template<class StyleIndex, class GlyphIndex> void createRemoveSet();
     void createRemoveHandleRecycle();
+    void createNoStyleSet();
+
     void createSetTextTextProperties();
-    void createNoSharedGlyphCache();
 
     void setColor();
     void setPadding();
@@ -186,41 +187,38 @@ const struct {
     const char* name;
     NodeHandle node;
     LayerStates state;
-    bool layerDataHandleOverloads, customFont, nullStyleFonts, noStyle;
+    bool layerDataHandleOverloads, customFont, nullStyleFonts;
     UnsignedInt styleCount, dynamicStyleCount;
 } CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0},
+        false, false, false, 3, 0},
     {"create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0},
+        false, false, false, 3, 0},
     {"LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, false, false, false, 3, 0},
+        true, false, false, 3, 0},
     {"custom fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, false, 3, 0},
+        false, true, false, 3, 0},
     {"custom fonts, null style fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, true, false, 3, 0},
-    {"custom fonts, no style set",
-        NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, true, 3, 0},
+        false, true, true, 3, 0},
     {"custom fonts, LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, true, false, false, 3, 0},
+        true, true, false, 3, 0},
     {"dynamic styles",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 1, 2},
+        false, false, false, 1, 2},
 };
 
 const struct {
     const char* name;
-    bool setStyle;
-} NoSharedStyleFontsData[]{
-    {"no style set", false},
-    {"style with null font set", true}
+    UnsignedInt dynamicStyleCount;
+} CreateUpdateNoStyleSetData[]{
+    {"", 0},
+    {"dynamic styles", 5}
 };
 
 const struct {
@@ -350,14 +348,6 @@ const struct {
 const struct {
     const char* name;
     UnsignedInt dynamicStyleCount;
-} UpdateNoStyleSetData[]{
-    {"", 0},
-    {"dynamic styles", 5}
-};
-
-const struct {
-    const char* name;
-    UnsignedInt dynamicStyleCount;
     LayerStates extraState;
 } SharedNeedsUpdateStatePropagatedToLayersData[]{
     {"", 0, {}},
@@ -434,20 +424,20 @@ TextLayerTest::TextLayerTest() {
         &TextLayerTest::createRemoveSet<Enum, Enum>},
         Containers::arraySize(CreateRemoveSetData));
 
-    addTests({&TextLayerTest::createRemoveHandleRecycle,
-              &TextLayerTest::createSetTextTextProperties,
-              &TextLayerTest::createNoSharedGlyphCache,
+    addTests({&TextLayerTest::createRemoveHandleRecycle});
+
+    addInstancedTests({&TextLayerTest::createNoStyleSet},
+        Containers::arraySize(CreateUpdateNoStyleSetData));
+
+    addTests({&TextLayerTest::createSetTextTextProperties,
 
               &TextLayerTest::setColor,
               &TextLayerTest::setPadding,
 
               &TextLayerTest::invalidHandle,
-              &TextLayerTest::invalidFontHandle});
-
-    addInstancedTests({&TextLayerTest::noSharedStyleFonts},
-        Containers::arraySize(NoSharedStyleFontsData));
-
-    addTests({&TextLayerTest::noFontInstance});
+              &TextLayerTest::invalidFontHandle,
+              &TextLayerTest::noSharedStyleFonts,
+              &TextLayerTest::noFontInstance});
 
     addInstancedTests({&TextLayerTest::styleOutOfRange},
         Containers::arraySize(StyleOutOfRangeData));
@@ -466,7 +456,7 @@ TextLayerTest::TextLayerTest() {
         Containers::arraySize(UpdateAlignmentPaddingData));
 
     addInstancedTests({&TextLayerTest::updateNoStyleSet},
-        Containers::arraySize(UpdateNoStyleSetData));
+        Containers::arraySize(CreateUpdateNoStyleSetData));
 
     addInstancedTests({&TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers},
         Containers::arraySize(SharedNeedsUpdateStatePropagatedToLayersData));
@@ -2152,20 +2142,18 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
        anything. Padding from the style is tested in setPadding() instead,
        effect of the style->uniform mapping in updateCleanDataOrder()
        instead, here they're both implicit. */
-    if(!data.noStyle) {
-        TextLayerStyleUniform uniforms[3];
-        FontHandle fonts[3];
-        if(!data.customFont)
-            Utility::copy({threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle}, fonts);
-        else if(data.nullStyleFonts)
-            Utility::copy({FontHandle::Null, FontHandle::Null, FontHandle::Null}, fonts);
-        else
-            Utility::copy({oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle}, fonts);
-        shared.setStyle(TextLayerCommonStyleUniform{},
-            Containers::arrayView(uniforms).prefix(data.styleCount),
-            Containers::arrayView(fonts).prefix(data.styleCount),
-            {});
-    }
+    TextLayerStyleUniform uniforms[3];
+    FontHandle fonts[3];
+    if(!data.customFont)
+        Utility::copy({threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle}, fonts);
+    else if(data.nullStyleFonts)
+        Utility::copy({FontHandle::Null, FontHandle::Null, FontHandle::Null}, fonts);
+    else
+        Utility::copy({oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle}, fonts);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        Containers::arrayView(uniforms).prefix(data.styleCount),
+        Containers::arrayView(fonts).prefix(data.styleCount),
+        {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2552,6 +2540,35 @@ void TextLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
 }
 
+void TextLayerTest::createNoStyleSet() {
+    auto&& data = CreateUpdateNoStyleSetData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{2, 3}
+        /* The check should work correctly even with dynamic styles, where
+           different state gets filled */
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.create(2, "", {});
+    layer.createGlyph(1, 0, {});
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::create(): no style data was set\n"
+        "Whee::TextLayer::createGlyph(): no style data was set\n");
+}
+
 void TextLayerTest::createSetTextTextProperties() {
     /* A font that just checks what has been sent to the shaper */
     struct: Text::AbstractFont {
@@ -2680,28 +2697,6 @@ void TextLayerTest::createSetTextTextProperties() {
     CORRADE_COMPARE(font.setLanguageCalled, 2);
     CORRADE_COMPARE(font.setDirectionCalled, 2);
     CORRADE_COMPARE(font.shapeCalled, 2);
-}
-
-void TextLayerTest::createNoSharedGlyphCache() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2, 3}};
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    layer.create(2, "", {});
-    layer.createGlyph(1, 0, {});
-    CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::create(): no glyph cache was set\n"
-        "Whee::TextLayer::createGlyph(): no glyph cache was set\n");
 }
 
 void TextLayerTest::setColor() {
@@ -2969,9 +2964,6 @@ void TextLayerTest::invalidFontHandle() {
 }
 
 void TextLayerTest::noSharedStyleFonts() {
-    auto&& data = NoSharedStyleFontsData[testCaseInstanceId()];
-    setTestCaseDescription(data.name);
-
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: Text::AbstractFont {
@@ -3006,7 +2998,7 @@ void TextLayerTest::noSharedStyleFonts() {
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
-    if(data.setStyle) shared.setStyle(TextLayerCommonStyleUniform{},
+    shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {fontHandle, FontHandle::Null, fontHandle, FontHandle::Null},
         {});
@@ -3127,14 +3119,21 @@ void TextLayerTest::styleOutOfRange() {
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
 
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        Containers::arrayView({TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}}),
+        Containers::arrayView({0u, 1u, 2u}).prefix(data.styleCount),
+        Containers::arrayView({fontHandle, fontHandle, fontHandle}).prefix(data.styleCount),
+        {});
+
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.create(3, "", TextProperties{}.setFont(fontHandle));
-    layer.createGlyph(3, 0, TextProperties{}.setFont(fontHandle));
+    layer.create(3, "", {});
+    layer.createGlyph(3, 0, {});
     CORRADE_COMPARE(out.str(),
         "Whee::TextLayer::create(): style 3 out of range for 3 styles\n"
         "Whee::TextLayer::createGlyph(): style 3 out of range for 3 styles\n");
@@ -4219,7 +4218,7 @@ void TextLayerTest::updatePaddingGlyph() {
 }
 
 void TextLayerTest::updateNoStyleSet() {
-    auto&& data = UpdateNoStyleSetData[testCaseInstanceId()];
+    auto&& data = CreateUpdateNoStyleSetData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     CORRADE_SKIP_IF_NO_ASSERT();
