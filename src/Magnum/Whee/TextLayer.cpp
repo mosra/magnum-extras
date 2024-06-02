@@ -328,7 +328,7 @@ void TextLayer::shapeTextInternal(
     FontHandle font = properties.font();
     if(font == FontHandle::Null) {
         if(style < sharedState.styleCount) {
-            CORRADE_ASSERT(!sharedState.styles.isEmpty() && sharedState.styles[style].font != FontHandle::Null,
+            CORRADE_ASSERT(sharedState.styles[style].font != FontHandle::Null,
                 messagePrefix << "style" << style << "has no font set and no custom font was supplied", );
             font = sharedState.styles[style].font;
         } else {
@@ -429,7 +429,7 @@ void TextLayer::shapeGlyphInternal(
     FontHandle font = properties.font();
     if(font == FontHandle::Null) {
         if(style < sharedState.styleCount) {
-            CORRADE_ASSERT(!sharedState.styles.isEmpty() && sharedState.styles[style].font != FontHandle::Null,
+            CORRADE_ASSERT(sharedState.styles[style].font != FontHandle::Null,
                 messagePrefix << "style" << style << "has no font set and no custom font was supplied", );
             font = sharedState.styles[style].font;
         } else {
@@ -513,8 +513,8 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
     #ifndef CORRADE_NO_ASSERT
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     #endif
-    CORRADE_ASSERT(sharedState.glyphCache,
-        "Whee::TextLayer::create(): no glyph cache was set", {});
+    CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+        "Whee::TextLayer::create(): no style data was set", {});
     CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
         "Whee::TextLayer::create(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
 
@@ -546,8 +546,8 @@ DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt gly
     #ifndef CORRADE_NO_ASSERT
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     #endif
-    CORRADE_ASSERT(sharedState.glyphCache,
-        "Whee::TextLayer::createGlyph(): no glyph cache was set", {});
+    CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+        "Whee::TextLayer::createGlyph(): no style data was set", {});
     CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
         "Whee::TextLayer::createGlyph(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
 

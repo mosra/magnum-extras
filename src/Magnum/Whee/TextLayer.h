@@ -300,8 +300,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @ref Shared::setGlyphCache() has been called, @p style
-         * is less than @ref Shared::totalStyleCount() and
+         * Expects that @ref Shared::setStyle() has been called, @p style is
+         * less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
          * index @p style. If @ref TextProperties::font() is not null it's
@@ -354,8 +354,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @ref Shared::setGlyphCache() has been called, @p style
-         * is less than @ref Shared::totalStyleCount() and
+         * Expects that @ref Shared::setStyle() has been called, @p style is
+         * less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
          * index @p style. If @ref TextProperties::font() is not null it's
@@ -405,8 +405,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @ref Shared::setGlyphCache() has been called, @p style
-         * is less than @ref Shared::totalStyleCount() and
+         * Expects that @ref Shared::setStyle() has been called, @p style is
+         * less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
          * index @p style. If @ref TextProperties::font() is not null it's
@@ -507,8 +507,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @ref Shared::setGlyphCache() has been called, @p style
-         * is less than @ref Shared::totalStyleCount() and
+         * Expects that @ref Shared::setStyle() has been called, @p style is
+         * less than @ref Shared::totalStyleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
          * index @p style. If @ref TextProperties::font() is not null it's
