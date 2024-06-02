@@ -107,6 +107,7 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedSetStyleImplicitMappingImplicitPadding();
     void sharedSetStyleImplicitMappingInvalidSize();
     void sharedSetStyleInvalidFontHandle();
+    void sharedSetStyleInvalidAlignment();
 
     void construct();
     void constructCopy();
@@ -158,22 +159,55 @@ const struct {
 const struct {
     const char* name;
     bool changeFont;
+    Text::Alignment alignment1, alignment2;
     Vector4 padding1, padding2;
     LayerStates expectedStates;
 } DynamicStyleData[]{
-    {"default font and padding",
-        false, {}, {},
+    {"default font, alignment and padding",
+        false,
+        Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter,
+        {}, {},
         LayerState::NeedsCommonDataUpdate},
-    {"different font, default padding",
+    {"different font, default alignment and padding",
         /* Doesn't cause NeedsUpdate as it's impossible to change a font of an
-           already layouted text, have to set it again in that case */
-        true, {}, {},
+           already laid out text, have to set it again in that case */
+        true,
+        Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter,
+        {}, {},
         LayerState::NeedsCommonDataUpdate},
-    {"default font, non-zero padding",
-        false, {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
+    {"different alignment, default font and padding",
+        /* Similarly, doesn't cause NeedsUpdate as it's impossible to change
+           alignment of an already laid out text (it'd have to remember line
+           breaks to align each line differently, etc.) */
+        false,
+        Text::Alignment::LineLeft, Text::Alignment::TopRight,
+        {}, {},
+        LayerState::NeedsCommonDataUpdate},
+    {"different font and alignment, default padding",
+        /* The two above combined */
+        true,
+        Text::Alignment::TopRight, Text::Alignment::LineLeft,
+        {}, {},
+        LayerState::NeedsCommonDataUpdate},
+    {"default font and alignment, non-zero padding",
+        false,
+        Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter,
+        {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
         LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
-    {"different font, non-zero padding",
-        true, {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
+    {"different font, default alignment, non-zero padding",
+        true,
+        Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter,
+        {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+    {"different alignment, default font, non-zero padding",
+        false,
+        Text::Alignment::MiddleCenterIntegral, Text::Alignment::TopLeft,
+        {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+    {"different font and alignment, non-zero padding",
+        true,
+        Text::Alignment::TopLeft, Text::Alignment::MiddleCenterIntegral,
+        {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
         LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
 };
 
@@ -187,30 +221,36 @@ const struct {
     const char* name;
     NodeHandle node;
     LayerStates state;
-    bool layerDataHandleOverloads, customFont, nullStyleFonts;
+    bool layerDataHandleOverloads, customFont, customAlignment, nullStyleFonts;
     UnsignedInt styleCount, dynamicStyleCount;
 } CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, 3, 0},
+        false, false, false, false, 3, 0},
     {"create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, 3, 0},
+        false, false, false, false, 3, 0},
     {"LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, false, false, 3, 0},
+        true, false, false, false, 3, 0},
     {"custom fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, 3, 0},
+        false, true, false, false, 3, 0},
     {"custom fonts, null style fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, true, 3, 0},
+        false, true, false, true, 3, 0},
     {"custom fonts, LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, true, false, 3, 0},
+        true, true, false, false, 3, 0},
+    {"custom alignment",
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        false, false, true, false, 3, 0},
     {"dynamic styles",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, 1, 2},
+        false, false, false, false, 1, 2},
+    {"dynamic styles, custom alignment",
+        NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
+        false, false, true, false, 1, 2},
 };
 
 const struct {
@@ -406,6 +446,7 @@ TextLayerTest::TextLayerTest() {
         Containers::arraySize(SharedSetStyleData));
 
     addTests({&TextLayerTest::sharedSetStyleInvalidFontHandle,
+              &TextLayerTest::sharedSetStyleInvalidAlignment,
 
               &TextLayerTest::construct,
               &TextLayerTest::constructCopy,
@@ -1338,6 +1379,11 @@ void TextLayerTest::sharedSetStyle() {
          TextLayerStyleUniform{}},
         {2, 1, 0, 0, 1},
         {first, second, first, second, second},
+        {Text::Alignment::MiddleLeft,
+         Text::Alignment::TopRight,
+         Text::Alignment::BottomRight,
+         Text::Alignment::LineLeft,
+         Text::Alignment::LineCenterIntegral},
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f},
@@ -1363,6 +1409,13 @@ void TextLayerTest::sharedSetStyle() {
         first,
         second,
         second
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::alignment), Containers::stridedArrayView({
+        Text::Alignment::MiddleLeft,
+        Text::Alignment::TopRight,
+        Text::Alignment::BottomRight,
+        Text::Alignment::LineLeft,
+        Text::Alignment::LineCenterIntegral
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
         Vector4{1.0f, 2.0f, 3.0f, 4.0f},
@@ -1430,6 +1483,11 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
          TextLayerStyleUniform{}},
         {2, 1, 0, 0, 1},
         {first, second, first, second, second},
+        {Text::Alignment::MiddleLeft,
+         Text::Alignment::TopRight,
+         Text::Alignment::BottomRight,
+         Text::Alignment::LineLeft,
+         Text::Alignment::LineCenterIntegral},
         {});
     if(data.dynamicStyleCount == 0) {
         CORRADE_COMPARE(shared.setStyleCalled, 1);
@@ -1452,6 +1510,13 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
         second,
         second
     }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::alignment), Containers::stridedArrayView({
+        Text::Alignment::MiddleLeft,
+        Text::Alignment::TopRight,
+        Text::Alignment::BottomRight,
+        Text::Alignment::LineLeft,
+        Text::Alignment::LineCenterIntegral
+    }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
         Vector4{},
         Vector4{},
@@ -1470,6 +1535,11 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
          TextLayerStyleUniform{}},
         {2, 1, 0, 0, 1},
         {first, second, first, second, second},
+        {Text::Alignment::MiddleLeft,
+         Text::Alignment::TopRight,
+         Text::Alignment::BottomRight,
+         Text::Alignment::LineLeft,
+         Text::Alignment::LineCenterIntegral},
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f},
@@ -1483,6 +1553,11 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
          TextLayerStyleUniform{}},
         {2, 1, 0, 0, 1},
         {first, second, first, second, second},
+        {Text::Alignment::MiddleLeft,
+         Text::Alignment::TopRight,
+         Text::Alignment::BottomRight,
+         Text::Alignment::LineLeft,
+         Text::Alignment::LineCenterIntegral},
         {});
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
         Vector4{},
@@ -1515,27 +1590,39 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {0, 1, 2, 3, 4},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {0, 1, 2},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {0, 1, 2, 3, 4},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {0, 1, 2, 3, 4},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
+        {{}, {}, {}, {}, {}});
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {0, 1, 2, 3, 4},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {{}, {}, {}});
-    CORRADE_COMPARE(out.str(),
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::TextLayer::Shared::setStyle(): expected 3 uniforms, got 2\n"
         "Whee::TextLayer::Shared::setStyle(): expected 5 style uniform indices, got 3\n"
         "Whee::TextLayer::Shared::setStyle(): expected 5 font handles, got 3\n"
-        "Whee::TextLayer::Shared::setStyle(): expected either no or 5 paddings, got 3\n");
+        "Whee::TextLayer::Shared::setStyle(): expected 5 alignment values, got 3\n"
+        "Whee::TextLayer::Shared::setStyle(): expected either no or 5 paddings, got 3\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::sharedSetStyleImplicitMapping() {
@@ -1594,6 +1681,9 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
             .setColor(0xc0ffee_rgbf),
          TextLayerStyleUniform{}},
         {first, second, first},
+        {Text::Alignment::MiddleLeft,
+         Text::Alignment::TopRight,
+         Text::Alignment::LineCenterIntegral},
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f}});
@@ -1615,6 +1705,11 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
         first,
         second,
         first
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::alignment), Containers::stridedArrayView({
+        Text::Alignment::MiddleLeft,
+        Text::Alignment::TopRight,
+        Text::Alignment::LineCenterIntegral
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
         Vector4{1.0f, 2.0f, 3.0f, 4.0f},
@@ -1679,6 +1774,9 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
             .setColor(0xc0ffee_rgbf),
          TextLayerStyleUniform{}},
         {first, second, first},
+        {Text::Alignment::MiddleLeft,
+         Text::Alignment::TopRight,
+         Text::Alignment::LineCenterIntegral},
         {});
     if(data.dynamicStyleCount == 0) {
         CORRADE_COMPARE(shared.setStyleCalled, 1);
@@ -1699,6 +1797,11 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
         second,
         first
     }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::alignment), Containers::stridedArrayView({
+        Text::Alignment::MiddleLeft,
+        Text::Alignment::TopRight,
+        Text::Alignment::LineCenterIntegral
+    }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
         Vector4{},
         Vector4{},
@@ -1714,6 +1817,9 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
             .setColor(0xc0ffee_rgbf),
          TextLayerStyleUniform{}},
         {first, second, first},
+        {Text::Alignment::MiddleLeft,
+         Text::Alignment::TopRight,
+         Text::Alignment::LineCenterIntegral},
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f}});
@@ -1724,6 +1830,9 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
             .setColor(0xc0ffee_rgbf),
          TextLayerStyleUniform{}},
         {first, second, first},
+        {Text::Alignment::MiddleLeft,
+         Text::Alignment::TopRight,
+         Text::Alignment::LineCenterIntegral},
         {});
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
         Vector4{},
@@ -1753,6 +1862,7 @@ void TextLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {{}, {}, {}, {}, {}});
     CORRADE_COMPARE(out.str(),
         "Whee::TextLayer::Shared::setStyle(): there's 3 uniforms for 5 styles, provide an explicit mapping\n");
@@ -1796,6 +1906,7 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {handle, handle, FontHandle::Null, handle},
+        {Text::Alignment::MiddleLeft, Text::Alignment::TopRight, Text::Alignment::BottomRight, Text::Alignment::LineLeft},
         {});
 
     std::ostringstream out;
@@ -1805,9 +1916,34 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {handle, FontHandle(0x12ab), handle, handle},
+        {Text::Alignment::MiddleLeft, Text::Alignment::TopRight, Text::Alignment::BottomRight, Text::Alignment::LineLeft},
         {});
     CORRADE_COMPARE(out.str(),
         "Whee::TextLayer::Shared::setStyle(): invalid handle Whee::FontHandle(0x12ab, 0x0) at index 1\n");
+}
+
+void TextLayerTest::sharedSetStyleInvalidAlignment() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{2}};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    /* Testing just the implicit mapping variant, as both variants delegate to
+       the same internal helper */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {FontHandle::Null, FontHandle::Null},
+        {Text::Alignment::MiddleLeft, Text::Alignment::LineCenterGlyphBounds},
+        {});
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::Shared::setStyle(): unsupported Text::Alignment::LineCenterGlyphBounds at index 1\n");
 }
 
 void TextLayerTest::construct() {
@@ -1917,6 +2053,11 @@ void TextLayerTest::dynamicStyle() {
         FontHandle::Null,
         FontHandle::Null
     }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter,
+        Text::Alignment::MiddleCenter,
+    }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(layer.dynamicStylePaddings(), Containers::arrayView({
         Vector4{0.0f},
         Vector4{0.0f},
@@ -1933,11 +2074,13 @@ void TextLayerTest::dynamicStyle() {
         TextLayerStyleUniform{}
             .setColor(0x11223344_rgbaf),
         data.changeFont ? fontHandle : FontHandle::Null,
+        data.alignment1,
         data.padding1);
     layer.setDynamicStyle(2,
         TextLayerStyleUniform{}
             .setColor(0xff3366_rgbf),
         FontHandle::Null, /* Null is allowed */
+        data.alignment2,
         data.padding2);
     CORRADE_COMPARE_AS(stridedArrayView(layer.dynamicStyleUniforms()).slice(&TextLayerStyleUniform::color), Containers::arrayView({
         0xffffffff_rgbaf,
@@ -1948,6 +2091,11 @@ void TextLayerTest::dynamicStyle() {
         FontHandle::Null,
         data.changeFont ? fontHandle : FontHandle::Null,
         FontHandle::Null
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+        Text::Alignment::MiddleCenter,
+        data.alignment1,
+        data.alignment2
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(layer.dynamicStylePaddings(), Containers::arrayView({
         Vector4{0.0f},
@@ -1971,6 +2119,7 @@ void TextLayerTest::dynamicStyleNoDynamicStyles() {
 
     CORRADE_COMPARE(layer.dynamicStyleUniforms().size(), 0);
     CORRADE_COMPARE(layer.dynamicStyleFonts().size(), 0);
+    CORRADE_COMPARE(layer.dynamicStyleAlignments().size(), 0);
     CORRADE_COMPARE(layer.dynamicStylePaddings().size(), 0);
 }
 
@@ -1992,15 +2141,17 @@ void TextLayerTest::dynamicStyleInvalid() {
     } layer{layerHandle(0, 1), shared};
 
     /* Using a null font handle is fine */
-    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle::Null, {});
+    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment::MiddleCenter, {});
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.setDynamicStyle(3, TextLayerStyleUniform{}, FontHandle::Null, {});
-    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle(0x12ab), {});
+    layer.setDynamicStyle(3, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment::MiddleCenter, {});
+    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle(0x12ab), Text::Alignment::MiddleCenter, {});
+    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle::Null, Text::Alignment::BottomCenterGlyphBounds, {});
     CORRADE_COMPARE_AS(out.str(),
         "Whee::TextLayer::setDynamicStyle(): index 3 out of range for 3 dynamic styles\n"
-        "Whee::TextLayer::setDynamicStyle(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n",
+        "Whee::TextLayer::setDynamicStyle(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
+        "Whee::TextLayer::setDynamicStyle(): Text::Alignment::BottomCenterGlyphBounds is not supported\n",
         TestSuite::Compare::String);
 }
 
@@ -2141,7 +2292,10 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
        different or not set them at all -- they shouldn't get used for
        anything. Padding from the style is tested in setPadding() instead,
        effect of the style->uniform mapping in updateCleanDataOrder()
-       instead, here they're both implicit. */
+       instead, here they're both implicit.
+
+       Similarly, if using custom alignment, set the style to something
+       completely different to verify the custom values get picked instead. */
     TextLayerStyleUniform uniforms[3];
     FontHandle fonts[3];
     if(!data.customFont)
@@ -2150,9 +2304,15 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         Utility::copy({FontHandle::Null, FontHandle::Null, FontHandle::Null}, fonts);
     else
         Utility::copy({oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle}, fonts);
+    Text::Alignment alignment[3];
+    if(!data.customAlignment)
+        Utility::copy({Text::Alignment::LineLeft, Text::Alignment::MiddleCenter, Text::Alignment::BottomRight}, alignment);
+    else
+        Utility::copy({Text::Alignment::TopRight, Text::Alignment::BottomLeft, Text::Alignment::MiddleCenter}, alignment);
     shared.setStyle(TextLayerCommonStyleUniform{},
         Containers::arrayView(uniforms).prefix(data.styleCount),
         Containers::arrayView(fonts).prefix(data.styleCount),
+        Containers::arrayView(alignment).prefix(data.styleCount),
         {});
 
     struct Layer: TextLayer {
@@ -2164,8 +2324,12 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     } layer{layerHandle(0, 1), shared};
 
     if(data.dynamicStyleCount == 2) {
-        layer.setDynamicStyle(0, TextLayerStyleUniform{}, threeGlyphFontHandle, {});
-        layer.setDynamicStyle(1, TextLayerStyleUniform{}, oneGlyphFontHandle, {});
+        /* If custom alignment specified in TextProperties is used, these have
+           it both set to a bogus value */
+        layer.setDynamicStyle(0, TextLayerStyleUniform{}, threeGlyphFontHandle,
+            data.customAlignment ? Text::Alignment::LineLeft : Text::Alignment::MiddleCenter, {});
+        layer.setDynamicStyle(1, TextLayerStyleUniform{}, oneGlyphFontHandle,
+            data.customAlignment ? Text::Alignment::MiddleCenter : Text::Alignment::BottomRight, {});
     } else CORRADE_INTERNAL_ASSERT(data.dynamicStyleCount == 0);
 
     /* Default color */
@@ -2173,7 +2337,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         StyleIndex(1),
         "hello",
         TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null),
+            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
         data.node);
     CORRADE_COMPARE(layer.node(first), data.node);
     CORRADE_COMPARE(layer.style(first), 1);
@@ -2188,7 +2353,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         StyleIndex(1),
         GlyphIndex(22),
         TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null),
+            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
         data.node);
     CORRADE_COMPARE(layer.node(firstGlyph), data.node);
     CORRADE_COMPARE(layer.style(firstGlyph), 1);
@@ -2205,7 +2371,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         "ahoy",
         TextProperties{}
             .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
-            .setAlignment(Text::Alignment::BottomRight),
+            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
         0xff3366_rgbf,
         data.node);
     CORRADE_COMPARE(layer.node(second), data.node);
@@ -2236,7 +2402,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         GlyphIndex(66),
         TextProperties{}
             .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
-            .setAlignment(Text::Alignment::BottomRight),
+            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
         0xff3366_rgbf,
         data.node);
     CORRADE_COMPARE(layer.node(secondGlyph), data.node);
@@ -2252,7 +2418,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         StyleIndex(1),
         "",
         TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null),
+            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
         data.node);
     CORRADE_COMPARE(layer.node(third), data.node);
     CORRADE_COMPARE(layer.style(third), 1);
@@ -2267,7 +2434,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         "hi",
         TextProperties{}
             .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
-            .setAlignment(Text::Alignment::LineLeft),
+            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::LineLeft) : Containers::NullOpt),
         data.node);
     CORRADE_COMPARE(layer.node(fourth), data.node);
     CORRADE_COMPARE(layer.style(fourth), 0);
@@ -2514,6 +2681,7 @@ void TextLayerTest::createRemoveHandleRecycle() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
         {});
 
     struct Layer: TextLayer {
@@ -2654,7 +2822,7 @@ void TextLayerTest::createSetTextTextProperties() {
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 16.0f);
-    shared.setStyle(TextLayerCommonStyleUniform{}, {TextLayerStyleUniform{}}, {fontHandle}, {});
+    shared.setStyle(TextLayerCommonStyleUniform{}, {TextLayerStyleUniform{}}, {fontHandle}, {Text::Alignment::MiddleCenter}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2733,6 +2901,7 @@ void TextLayerTest::setColor() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
         {});
 
     struct Layer: TextLayer {
@@ -2801,6 +2970,7 @@ void TextLayerTest::setPadding() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
         {});
 
     struct Layer: TextLayer {
@@ -2942,6 +3112,7 @@ void TextLayerTest::invalidFontHandle() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {shared.addFont(font, 1.0f)},
+        {Text::Alignment{}},
         {});
 
     struct Layer: TextLayer {
@@ -3001,6 +3172,7 @@ void TextLayerTest::noSharedStyleFonts() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {fontHandle, FontHandle::Null, fontHandle, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {});
 
     struct Layer: TextLayer {
@@ -3057,6 +3229,7 @@ void TextLayerTest::noFontInstance() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle1},
+        {Text::Alignment{}},
         {});
 
     struct Layer: TextLayer {
@@ -3124,6 +3297,7 @@ void TextLayerTest::styleOutOfRange() {
         Containers::arrayView({TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}}),
         Containers::arrayView({0u, 1u, 2u}).prefix(data.styleCount),
         Containers::arrayView({fontHandle, fontHandle, fontHandle}).prefix(data.styleCount),
+        Containers::arrayView({Text::Alignment{}, Text::Alignment{}, Text::Alignment{}}).prefix(data.styleCount),
         {});
 
     struct Layer: TextLayer {
@@ -3167,6 +3341,7 @@ void TextLayerTest::glyphOutOfRange() {
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {0, 1, 0},
         {fontHandle, fontHandle, fontHandle},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {});
 
     struct Layer: TextLayer {
@@ -3218,6 +3393,7 @@ void TextLayerTest::updateEmpty() {
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
+        {Text::Alignment::MiddleCenter},
         {});
 
     struct Layer: TextLayer {
@@ -3322,12 +3498,14 @@ void TextLayerTest::updateCleanDataOrder() {
                transitioned. */
             {1, 2, 0, 1, 1, 666},
             {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
+            {Text::Alignment::MiddleCenter, Text::Alignment::BottomRight, Text::Alignment::MiddleCenter, Text::Alignment::LineLeft, Text::Alignment::TopCenter, Text::Alignment::MiddleCenter},
             {{}, {}, data.paddingFromStyle, {}, data.paddingFromStyle, Vector4{666}});
     } else if(data.styleCount == 4) {
         shared.setStyle(TextLayerCommonStyleUniform{},
             {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
             {1, 2, 0, 1},
             {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
+            {Text::Alignment::MiddleCenter, Text::Alignment::BottomRight, Text::Alignment::MiddleCenter, Text::Alignment::LineLeft},
             {{}, {}, data.paddingFromStyle, {}});
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
@@ -3353,8 +3531,8 @@ void TextLayerTest::updateCleanDataOrder() {
            data5 (so the same case as with padding from non-dynamic style or
            from data) */
         CORRADE_COMPARE(data.styleCount + 0, 4);
-        layer.setDynamicStyle(0, TextLayerStyleUniform{}, threeGlyphFontHandle, data.paddingFromStyle);
-        layer.setDynamicStyle(1, TextLayerStyleUniform{}, threeGlyphFontHandle, data.paddingFromStyle);
+        layer.setDynamicStyle(0, TextLayerStyleUniform{}, threeGlyphFontHandle, Text::Alignment::TopCenter, data.paddingFromStyle);
+        layer.setDynamicStyle(1, TextLayerStyleUniform{}, threeGlyphFontHandle, Text::Alignment::MiddleCenter, data.paddingFromStyle);
     }
 
     /* Two node handles to attach the data to */
@@ -3905,6 +4083,10 @@ void TextLayerTest::updateAlignment() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
+        /* Alignment supplied in the style; alignment in TextProperties tested
+           in updatePadding() below, combination of both with a subset of the
+           alignment values in updateCleanDataOrder() above */
+        {data.alignment},
         {});
 
     struct Layer: TextLayer {
@@ -3918,7 +4100,7 @@ void TextLayerTest::updateAlignment() {
     NodeHandle node3 = nodeHandle(3, 0);
 
     /* 3 chars, size x2, so the bounding box is 9x11 */
-    layer.create(0, "hey", data.alignment, node3);
+    layer.create(0, "hey", {}, node3);
 
     Vector2 nodeOffsets[4];
     Vector2 nodeSizes[4];
@@ -3982,6 +4164,10 @@ void TextLayerTest::updateAlignmentGlyph() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
+        /* Alignment supplied in the style; alignment in TextProperties tested
+           in updatePaddingGlyph() below, combination of both with a subset of
+           the alignment values in updateCleanDataOrder() above */
+        {data.alignment},
         {});
 
     struct Layer: TextLayer {
@@ -3998,7 +4184,7 @@ void TextLayerTest::updateAlignmentGlyph() {
     layer.createGlyph(
         0,
         17,
-        TextProperties{}.setAlignment(data.alignment),
+        {},
         node3);
 
     Vector2 nodeOffsets[4];
@@ -4027,7 +4213,9 @@ void TextLayerTest::updatePadding() {
 
     /* Same as updateAlignment(), except that the node offset & size is
        different and only matches the original if padding is applied
-       correctly from both the data and the style */
+       correctly from both the data and the style. Additionally, in comparison
+       to updateAlignment(), the style-supplied alignment is a bogus value and
+       padding from the TextProperties is used instead. */
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
@@ -4099,6 +4287,9 @@ void TextLayerTest::updatePadding() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
+        /* Alignment set to an arbitrary value, the one from TextProperties
+           should get used instead */
+        {Text::Alignment::BottomRight},
         {{10.0f, 5.0f, 20.0f, 10.0f}});
 
     struct Layer: TextLayer {
@@ -4151,7 +4342,9 @@ void TextLayerTest::updatePaddingGlyph() {
 
     /* Same as updateAlignmentGlyph(), except that the node offset & size is
        different and only matches the original if padding is applied
-       correctly from both the data and the style */
+       correctly from both the data and the style. Additionally, in comparison
+       to updateAlignmentGlyph(), the style-supplied alignment is a bogus value
+       and padding from the TextProperties is used instead. */
 
     /* A trivial glyph cache. Goes both above and below the line to verify
        vertical alignment. */
@@ -4181,6 +4374,9 @@ void TextLayerTest::updatePaddingGlyph() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {fontHandle},
+        /* Alignment set to an arbitrary value, the one from TextProperties
+           should get used instead */
+        {Text::Alignment::BottomRight},
         {{10.0f, 5.0f, 20.0f, 10.0f}});
 
     struct Layer: TextLayer {
@@ -4275,6 +4471,7 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {FontHandle::Null},
+        {Text::Alignment{}},
         {});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
     CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
@@ -4298,6 +4495,7 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {FontHandle::Null},
+        {Text::Alignment{}},
         {});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
     CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
@@ -4316,6 +4514,7 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {FontHandle::Null},
+        {Text::Alignment{}},
         {});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
     CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);

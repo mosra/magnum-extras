@@ -26,6 +26,7 @@
 #include "TextProperties.h"
 
 #include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/String.h>
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/Direction.h>
@@ -43,7 +44,16 @@ struct TextProperties::State {
 
 /** @todo change LayoutDirection to Unspecified as well, once Text APIs don't
     enforce HorizontalTopToBottom anymore */
-TextProperties::TextProperties(): _script{Text::Script::Unspecified}, _font{FontHandle::Null}, _alignment{Text::Alignment::MiddleCenter}, _direction{UnsignedByte(Text::ShapeDirection::Unspecified)|(UnsignedByte(Text::LayoutDirection::HorizontalTopToBottom) << 4)} {}
+TextProperties::TextProperties(): _script{Text::Script::Unspecified}, _font{FontHandle::Null}, _alignment{Text::Alignment(0xff)}, _direction{UnsignedByte(Text::ShapeDirection::Unspecified)|(UnsignedByte(Text::LayoutDirection::HorizontalTopToBottom) << 4)} {}
+
+TextProperties::TextProperties(const Text::Alignment alignment): TextProperties{} {
+    setAlignment(alignment);
+}
+
+TextProperties::TextProperties(FontHandle font, Text::Alignment alignment): TextProperties{} {
+    setFont(font);
+    setAlignment(alignment);
+}
 
 TextProperties::TextProperties(TextProperties&&) noexcept = default;
 
@@ -51,10 +61,15 @@ TextProperties::~TextProperties() = default;
 
 TextProperties& TextProperties::operator=(TextProperties&&) noexcept = default;
 
-TextProperties& TextProperties::setAlignment(const Text::Alignment alignment) {
-    CORRADE_ASSERT(!(UnsignedByte(alignment) & Text::Implementation::AlignmentGlyphBounds),
+Containers::Optional<Text::Alignment> TextProperties::alignment() const {
+    return _alignment == Text::Alignment(0xff) ?
+        Containers::NullOpt : Containers::optional(_alignment);
+}
+
+TextProperties& TextProperties::setAlignment(const Containers::Optional<Text::Alignment>& alignment) {
+    CORRADE_ASSERT(!alignment || !(UnsignedByte(*alignment) & Text::Implementation::AlignmentGlyphBounds),
         "Whee::TextProperties::setAlignment():" << alignment << "is not supported", *this);
-    _alignment = alignment;
+    _alignment = alignment ? *alignment : Text::Alignment(0xff);
     return *this;
 }
 

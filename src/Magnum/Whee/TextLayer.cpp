@@ -180,7 +180,7 @@ Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
     return const_cast<Text::AbstractFont&>(const_cast<const TextLayer::Shared&>(*this).font(handle));
 }
 
-void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
     /* Allocation done before the asserts so if they fail in a graceful assert
        build, we don't hit another assert in Utility::copy(styleToUniform) in
@@ -193,14 +193,20 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleUniformCount << "uniforms, got" << uniforms.size(), );
     CORRADE_ASSERT(styleFonts.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "font handles, got" << styleFonts.size(), );
+    CORRADE_ASSERT(styleAlignments.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "alignment values, got" << styleAlignments.size(), );
     CORRADE_ASSERT(stylePaddings.isEmpty() || stylePaddings.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << stylePaddings.size(), );
     #ifndef CORRADE_NO_ASSERT
     for(std::size_t i = 0; i != styleFonts.size(); ++i)
         CORRADE_ASSERT(styleFonts[i] == FontHandle::Null || isHandleValid(styleFonts[i]),
             "Whee::TextLayer::Shared::setStyle(): invalid handle" << styleFonts[i] << "at index" << i, );
+    for(std::size_t i = 0; i != styleAlignments.size(); ++i)
+        CORRADE_ASSERT(!(UnsignedByte(styleAlignments[i]) & Text::Implementation::AlignmentGlyphBounds),
+            "Whee::TextLayer::Shared::setStyle(): unsupported" << styleAlignments[i] << "at index" << i, );
     #endif
     Utility::copy(styleFonts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::font));
+    Utility::copy(styleAlignments, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::alignment));
     if(stylePaddings.isEmpty()) {
         /** @todo some Utility::fill() for this */
         for(Implementation::TextLayerStyle& style: state.styles)
@@ -226,31 +232,31 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
     ++state.styleUpdateStamp;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(styleToUniform.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "style uniform indices, got" << styleToUniform.size(), *this);
-    setStyleInternal(commonUniform, uniforms, styleFonts, stylePaddings);
+    setStyleInternal(commonUniform, uniforms, styleFonts, styleAlignments, stylePaddings);
     Utility::copy(styleToUniform, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::uniform));
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Vector4> stylePaddings) {
-    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(styleFonts), Containers::stridedArrayView(stylePaddings));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Text::Alignment> styleAlignments, const std::initializer_list<Vector4> stylePaddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(styleFonts), Containers::stridedArrayView(styleAlignments), Containers::stridedArrayView(stylePaddings));
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, const Containers::StridedArrayView1D<const Vector4>& paddings) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(state.styleUniformCount == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): there's" << state.styleUniformCount << "uniforms for" << state.styleCount << "styles, provide an explicit mapping", *this);
-    setStyleInternal(commonUniform, uniforms, fonts, paddings);
+    setStyleInternal(commonUniform, uniforms, fonts, alignments, paddings);
     for(UnsignedInt i = 0; i != state.styleCount; ++i)
         state.styles[i].uniform = i;
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Vector4> paddings) {
-    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(fonts), Containers::stridedArrayView(paddings));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Text::Alignment> alignments, const std::initializer_list<Vector4> paddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(fonts), Containers::stridedArrayView(alignments), Containers::stridedArrayView(paddings));
 }
 
 TextLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {
@@ -286,16 +292,22 @@ Containers::StridedArrayView1D<const FontHandle> TextLayer::dynamicStyleFonts() 
     return stridedArrayView(static_cast<const State&>(*_state).dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::font);
 }
 
+Containers::StridedArrayView1D<const Text::Alignment> TextLayer::dynamicStyleAlignments() const {
+    return stridedArrayView(static_cast<const State&>(*_state).dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::alignment);
+}
+
 Containers::StridedArrayView1D<const Vector4> TextLayer::dynamicStylePaddings() const {
     return stridedArrayView(static_cast<const State&>(*_state).dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding);
 }
 
-void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Vector4& padding) {
+void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Vector4& padding) {
     auto& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(id < state.dynamicStyleUniforms.size(),
         "Whee::TextLayer::setDynamicStyle(): index" << id << "out of range for" << state.dynamicStyleUniforms.size() << "dynamic styles", );
     CORRADE_ASSERT(font == FontHandle::Null || Whee::isHandleValid(static_cast<const Shared::State&>(state.shared).fonts, font),
         "Whee::TextLayer::setDynamicStyle(): invalid handle" << font, );
+    CORRADE_ASSERT(!(UnsignedByte(alignment) & Text::Implementation::AlignmentGlyphBounds),
+        "Whee::TextLayer::setDynamicStyle():" << alignment << "is not supported", );
     state.dynamicStyleUniforms[id] = uniform;
 
     /* Mark the layer as needing the dynamic style data update. The additional
@@ -306,11 +318,13 @@ void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUnifor
 
     /* Mark the layer as changed only if the padding actually changes,
        otherwise it's not needed to trigger an update(). OTOH changing the font
-       doesn't / cannot trigger an update because we don't keep the source
-       text string. */
-    state.dynamicStyles[id].font = font;
-    if(state.dynamicStyles[id].padding != padding) {
-        state.dynamicStyles[id].padding = padding;
+       or alignment doesn't / cannot trigger an update because we don't keep
+       the source text string to be able to reshape or realign line by line. */
+    Implementation::TextLayerDynamicStyle& style = state.dynamicStyles[id];
+    style.font = font;
+    style.alignment = alignment;
+    if(style.padding != padding) {
+        style.padding = padding;
         setNeedsUpdate(LayerState::NeedsDataUpdate);
     }
 }
@@ -343,6 +357,16 @@ void TextLayer::shapeTextInternal(
     Implementation::TextLayerFont& fontState = sharedState.fonts[fontHandleId(font)];
     CORRADE_ASSERT(fontState.font,
         messagePrefix << font << "is an instance-less font", );
+
+    /* Decide on alignment */
+    Text::Alignment alignment;
+    if(!properties.alignment()) {
+        if(style < sharedState.styleCount)
+            alignment = sharedState.styles[style].alignment;
+        else
+            alignment = state.dynamicStyles[style - sharedState.styleCount].alignment;
+    } else
+        alignment = *properties.alignment();
 
     /** @todo once the TextProperties combine multiple fonts, scripts etc, this
         all should probably get wrapped in some higher level API in Text
@@ -387,17 +411,18 @@ void TextLayer::shapeTextInternal(
         const Range2D blockRectangle = Text::alignRenderedLine(
             lineRectangle,
             properties.layoutDirection(),
-            properties.alignment(),
+            alignment,
             glyphOffsetsPositions);
         size = Text::alignRenderedBlock(
             blockRectangle,
             properties.layoutDirection(),
-            properties.alignment(),
+            alignment,
             glyphOffsetsPositions).size();
     }
 
     /* Glyph cache. The create() (or createGlyph()) should have ensured that a
-       glyph cache is set, thus the subsequent setText() don't need to check again. */
+       glyph cache is set, thus the subsequent setText() doesn't need to check
+       again. */
     const Text::AbstractGlyphCache* const glyphCache = sharedState.glyphCache;
     CORRADE_INTERNAL_ASSERT(glyphCache);
 
@@ -412,7 +437,7 @@ void TextLayer::shapeTextInternal(
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
     data.size = size;
-    data.alignment = properties.alignment();
+    data.alignment = alignment;
     data.glyphRun = glyphRun;
 }
 
@@ -440,6 +465,16 @@ void TextLayer::shapeGlyphInternal(
         }
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
         messagePrefix << "invalid handle" << font, );
+
+    /* Decide on alignment */
+    Text::Alignment alignment;
+    if(!properties.alignment()) {
+        if(style < sharedState.styleCount)
+            alignment = sharedState.styles[style].alignment;
+        else
+            alignment = state.dynamicStyles[style - sharedState.styleCount].alignment;
+    } else
+        alignment = *properties.alignment();
 
     /* The createGlyph() (or create()) should have ensured that a glyph cache
        is set, thus the subsequent setGlyph() doesn't need to check again. */
@@ -469,13 +504,13 @@ void TextLayer::shapeGlyphInternal(
             glyphRectangle,
             /** @todo could the direction be abused for anything cool? */
             Text::LayoutDirection::HorizontalTopToBottom,
-            properties.alignment(),
+            alignment,
             glyphPosition);
         size = Text::alignRenderedBlock(
             blockRectangle,
             /** @todo could the direction be abused for anything cool? */
             Text::LayoutDirection::HorizontalTopToBottom,
-            properties.alignment(),
+            alignment,
             glyphPosition).size();
     }
 
@@ -491,7 +526,7 @@ void TextLayer::shapeGlyphInternal(
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
     data.size = size;
-    data.alignment = properties.alignment();
+    data.alignment = alignment;
     data.glyphRun = glyphRun;
 }
 

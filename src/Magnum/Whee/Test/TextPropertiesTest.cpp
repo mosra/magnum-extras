@@ -24,6 +24,7 @@
 */
 
 #include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
@@ -84,7 +85,7 @@ TextPropertiesTest::TextPropertiesTest() {
 void TextPropertiesTest::construct() {
     TextProperties properties = {};
 
-    CORRADE_COMPARE(properties.alignment(), Text::Alignment::MiddleCenter);
+    CORRADE_COMPARE(properties.alignment(), Containers::NullOpt);
     CORRADE_COMPARE(properties.font(), FontHandle::Null);
     CORRADE_COMPARE(properties.script(), Text::Script::Unspecified);
     CORRADE_COMPARE(properties.language(), "");
@@ -105,6 +106,12 @@ void TextPropertiesTest::constructAlignment() {
     CORRADE_COMPARE(properties.shapeDirection(), Text::ShapeDirection::Unspecified);
     CORRADE_COMPARE(properties.layoutDirection(), Text::LayoutDirection::HorizontalTopToBottom);
     CORRADE_VERIFY(properties.features().isEmpty());
+
+    /* It shouldn't be constructible from an optional or NullOpt, that makes no
+       sense -- simply don't pass anything in that case */
+    CORRADE_VERIFY(std::is_constructible<TextProperties, Text::Alignment>::value);
+    CORRADE_VERIFY(!std::is_constructible<TextProperties, Containers::Optional<Text::Alignment>>::value);
+    CORRADE_VERIFY(!std::is_constructible<TextProperties, Containers::NullOptT>::value);
 }
 
 void TextPropertiesTest::constructFont() {
@@ -112,7 +119,7 @@ void TextPropertiesTest::constructFont() {
 
     /* The other properties should be the same as if default-constructed, i.e.
        it should delegate to the default constructor */
-    CORRADE_COMPARE(properties.alignment(), Text::Alignment::MiddleCenter);
+    CORRADE_COMPARE(properties.alignment(), Containers::NullOpt);
     CORRADE_COMPARE(properties.font(), Whee::fontHandle(13, 1));
     CORRADE_COMPARE(properties.script(), Text::Script::Unspecified);
     CORRADE_COMPARE(properties.language(), "");
@@ -189,6 +196,10 @@ void TextPropertiesTest::setters() {
 
     CORRADE_COMPARE(properties.shapeDirection(), Text::ShapeDirection::BottomToTop);
     CORRADE_COMPARE(properties.layoutDirection(), Text::LayoutDirection::VerticalRightToLeft);
+
+    /* Resetting alignment should again make it NullOpt */
+    properties.setAlignment({});
+    CORRADE_COMPARE(properties.alignment(), Containers::NullOpt);
 }
 
 void TextPropertiesTest::alignmentInvalid() {

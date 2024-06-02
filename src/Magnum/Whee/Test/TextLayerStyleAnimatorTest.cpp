@@ -40,6 +40,7 @@
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
+#include <Magnum/Text/Alignment.h>
 
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/TextLayer.h"
@@ -269,6 +270,9 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
             .setColor(0x9933ff_rgbf)},
         {4, 1, 2},
         {fontHandle, fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
         {Vector4{1.0f},
          {2.0f, 3.0f, 4.0f, 5.0f},
          {}});
@@ -426,6 +430,8 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
          TextLayerStyleUniform{}
             .setColor(0x9933ff_rgbf)},
         {fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
         {Vector4{1.0f},
          Vector4{2.0f}});
 
@@ -495,6 +501,7 @@ void TextLayerStyleAnimatorTest::createInvalid() {
         {TextLayerStyleUniform{}},
         {0, 0, 0, 0, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {});
 
     struct Layer: TextLayer {
@@ -550,6 +557,7 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}},
         {});
 
     struct Layer: TextLayer {
@@ -625,6 +633,7 @@ void TextLayerStyleAnimatorTest::clean() {
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}},
         {});
 
     struct Layer: TextLayer {
@@ -708,6 +717,13 @@ void TextLayerStyleAnimatorTest::advance() {
         {3, 2, 3, 1, 3, 3, 0},
         {fontHandle, fontHandle, fontHandle, fontHandle,
          fontHandle, fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
         /* Paddings should not change between style 1 and 3 and should between
            style 3 and 6 */
         {{},                /* 0, not used for animation */
@@ -1047,6 +1063,9 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
             .setColor(Color4{0.75f}),
          TextLayerStyleUniform{}},
         {fontHandle, fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
         {});
 
     struct Layer: TextLayer {
@@ -1196,6 +1215,9 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
             .setColor(Color4{0.75f}),
          TextLayerStyleUniform{}},
         {fontHandle, fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
         {{}, Vector4{data.padding}, {}});
 
     struct Layer: TextLayer {

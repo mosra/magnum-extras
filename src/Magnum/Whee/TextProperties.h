@@ -57,9 +57,7 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * calling @ref setAlignment(). See its documentation for value
          * restrictions.
          */
-        /*implicit*/ TextProperties(Text::Alignment alignment): TextProperties{} {
-            setAlignment(alignment);
-        }
+        /*implicit*/ TextProperties(Text::Alignment alignment);
 
         /**
          * @brief Construct with a font
@@ -78,10 +76,7 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * calling @ref setFont() and @ref setAlignment(). See documentation of
          * the latter for value restrictions.
          */
-        /*implicit*/ TextProperties(FontHandle font, Text::Alignment alignment): TextProperties{} {
-            setFont(font);
-            setAlignment(alignment);
-        }
+        /*implicit*/ TextProperties(FontHandle font, Text::Alignment alignment);
 
         /** @brief Copying is not allowed */
         TextProperties(const TextProperties&) = delete;
@@ -98,13 +93,14 @@ class MAGNUM_WHEE_EXPORT TextProperties {
         ~TextProperties();
 
         /** @brief Alignment */
-        Text::Alignment alignment() const { return _alignment; }
+        Containers::Optional<Text::Alignment> alignment() const;
 
         /**
          * @brief Set alignment
          * @return Reference to self (for method chaining)
          *
-         * Default is @ref Text::Alignment::MiddleCenter. Expects that the
+         * Default is @ref Containers::NullOpt, i.e. an alignment specified by
+         * the style is used. If not @ref Containers::NullOpt, expects that the
          * @p alignment isn't `*GlyphBounds` as the implementation can only
          * align based on font metrics and cursor position, not actual glyph
          * bounds.
@@ -130,7 +126,7 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          *      `*Middle` makes the midpoint between font ascent and descent
          *      matched.
          */
-        TextProperties& setAlignment(Text::Alignment alignment);
+        TextProperties& setAlignment(const Containers::Optional<Text::Alignment>& alignment);
 
         /** @brief Font for the whole text */
         FontHandle font() const { return _font; }
@@ -272,6 +268,8 @@ class MAGNUM_WHEE_EXPORT TextProperties {
         Containers::StringView _language;
         Text::Script _script;
         FontHandle _font;
+        /* If 0xff, indicates that alignment is not set to avoid an Optional
+           wrapper that'd double the field size */
         Text::Alignment _alignment;
         /* Packs both shape and layout direction to avoid a 3/7 byte padding at
            the end */

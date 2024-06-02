@@ -35,6 +35,7 @@
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
+#include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/GlyphCache.h>
 
 #include "Magnum/Whee/AbstractUserInterface.h"
@@ -167,6 +168,7 @@ void TextLayerGLBenchmark::fragment() {
         {TextLayerStyleUniform{}
             .setColor(0xff3366_rgbf)},
         {fontHandle},
+        {Text::Alignment::MiddleCenter},
         {});
 
     TextLayerGL& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), shared));

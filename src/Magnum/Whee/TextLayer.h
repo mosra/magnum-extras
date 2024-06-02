@@ -235,8 +235,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * Size of the returned view is @ref Shared::dynamicStyleCount(). These
          * uniforms are used by style indices greater than or equal to
          * @ref Shared::styleCount().
-         * @see @ref dynamicStyleFonts(), @ref dynamicStylePaddings(),
-         *      @ref setDynamicStyle()
+         * @see @ref dynamicStyleFonts(), @ref dynamicStyleAlignments(),
+         *      @ref dynamicStylePaddings(), @ref setDynamicStyle()
          */
         Containers::ArrayView<const TextLayerStyleUniform> dynamicStyleUniforms() const;
 
@@ -246,10 +246,21 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * Size of the returned view is @ref Shared::dynamicStyleCount(). These
          * fonts are used by style indices greater than or equal to
          * @ref Shared::styleCount().
-         * @see @ref dynamicStyleUniforms(), @ref dynamicStylePaddings(),
-         *      @ref setDynamicStyle()
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleAlignments(),
+         *      @ref dynamicStylePaddings(), @ref setDynamicStyle()
          */
         Containers::StridedArrayView1D<const FontHandle> dynamicStyleFonts() const;
+
+        /**
+         * @brief Dynamic style alignments
+         *
+         * Size of the returned view is @ref Shared::dynamicStyleCount(). These
+         * alignments are used by style indices greater than or equal to
+         * @ref Shared::styleCount().
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStylePaddings(), @ref setDynamicStyle()
+         */
+        Containers::StridedArrayView1D<const Text::Alignment> dynamicStyleAlignments() const;
 
         /**
          * @brief Dynamic style paddings
@@ -258,7 +269,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * paddings are used by style indices greater than or equal to
          * @ref Shared::styleCount().
          * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
-         *      @ref setDynamicStyle()
+         *      @ref dynamicStyleAlignments(), @ref setDynamicStyle()
          */
         Containers::StridedArrayView1D<const Vector4> dynamicStylePaddings() const;
 
@@ -270,27 +281,31 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @param padding           Padding inside the node in order left, top,
          *      right, bottom
          *
-         * Expects that the @p id is less than @ref Shared::dynamicStyleCount()
-         * and @p font is either @ref FontHandle::Null or valid.
+         * Expects that the @p id is less than @ref Shared::dynamicStyleCount(),
+         * @p font is either @ref FontHandle::Null or valid and @p alignment is
+         * not `*GlyphBounds` as the implementation can only align based on
+         * font metrics and cursor position, not actual glyph bounds.
          * @ref Shared::styleCount() plus @p id is then a style index that can
          * be passed to @ref create(), @ref createGlyph() or @ref setStyle() in
          * order to use this style. Compared to @ref Shared::setStyle() the
          * mapping between dynamic styles and uniforms is implicit. All dynamic
          * styles are initially default-constructed @ref TextLayerStyleUniform
-         * instances, @ref FontHandle::Null and zero padding vectors.
+         * instances, @ref FontHandle::Null, @ref Text::Alignment::MiddleCenter
+         * and zero padding vectors.
          *
          * Calling this function causes @ref LayerState::NeedsCommonDataUpdate
          * to be set to trigger an upload of changed dynamic style uniform
          * data. If @p padding changed, @ref LayerState::NeedsDataUpdate gets
-         * set as well. On the other hand, changing the @p font doesn't cause
-         * @ref LayerState::NeedsDataUpdate to be set --- the @p font gets only
-         * used in the following call to @ref create(), @ref createGlyph(),
-         * @ref setText() or @ref setGlyph().
+         * set as well. On the other hand, changing the @p font or @p alignment
+         * doesn't cause @ref LayerState::NeedsDataUpdate to be set --- the
+         * @p font and @p alignment get only used in the following call to
+         * @ref create(), @ref createGlyph(), @ref setText() or
+         * @ref setGlyph().
          * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
-         *      @ref dynamicStylePaddings(), @ref allocateDynamicStyle(),
-         *      @ref recycleDynamicStyle()
+         *      @ref dynamicStyleAlignments(), @ref dynamicStylePaddings(),
+         *      @ref allocateDynamicStyle(), @ref recycleDynamicStyle()
          */
-        void setDynamicStyle(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, const Vector4& padding);
+        void setDynamicStyle(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, const Vector4& padding);
 
         /**
          * @brief Create a text
@@ -1056,22 +1071,28 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param commonUniform Common style uniform data
          * @param uniforms      Style uniforms
          * @param fonts         Font handles corresponding to style uniforms
+         * @param alignments    Text alignment corresponding to style uniforms
          * @param paddings      Padding inside the node in order left, top,
          *      right, bottom corresponding to style uniforms
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
-         * @ref styleUniformCount(), the @p fonts view the same size as
-         * @ref styleCount(). All font handles are expected to be either
-         * @ref FontHandle::Null or valid. The @p paddings view is expected to
-         * either have the same size as @ref styleCount() or be empty, in which
-         * case all paddings are implicitly zero.
+         * @ref styleUniformCount(), the @p fonts and @p alignments views the
+         * same size as @ref styleCount(). All font handles are expected to be
+         * either @ref FontHandle::Null or valid, all @p alignments values are
+         * expected to not be `*GlyphBounds` as the implementation can only
+         * align based on font metrics and cursor position, not actual glyph
+         * bounds. The @p paddings view is expected to either have the same
+         * size as @ref styleCount() or be empty, in which case all paddings
+         * are implicitly zero. See @ref TextProperties::setAlignment() for a
+         * detailed explanation of alignment behavior respectively to the nodes
+         * the text is attached to.
          *
          * Can only be called if @ref styleUniformCount() and @ref styleCount()
          * were set to the same value in @ref Configuration passed to the
          * constructor, otherwise you have to additionally provide a mapping
          * from styles to uniforms using
-         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Text::Alignment>&, const Containers::StridedArrayView1D<const Vector4>&)
          * instead.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
@@ -1081,9 +1102,9 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * upload of changed dynamic style uniform data.
          * @see @ref isHandleValid(FontHandle) const
          */
-        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Vector4>& paddings);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
-        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<FontHandle> fonts, std::initializer_list<Vector4> paddings);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<FontHandle> fonts, std::initializer_list<Text::Alignment> alignments, std::initializer_list<Vector4> paddings);
 
         /**
          * @brief Set style data
@@ -1091,23 +1112,29 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param uniforms          Style uniforms
          * @param styleToUniform    Style to style uniform mapping
          * @param styleFonts        Per-style font handles
+         * @param styleAlignments   Per-style text alignment
          * @param stylePaddings     Per-style padding inside the node in order
          *      left, top, right, bottom
          * @return Reference to self (for method chaining)
          *
          * The @p uniforms view is expected to have the same size as
-         * @ref styleUniformCount(), the @p styleToUniform and @p styleFonts
-         * views the same size as @ref styleCount(). All font handles are
-         * expected to be either @ref FontHandle::Null or valid. The
+         * @ref styleUniformCount(), the @p styleToUniform, @p styleFonts and
+         * @p styleAlignments views the same size as @ref styleCount(). All
+         * font handles are expected to be either @ref FontHandle::Null or
+         * valid, all @p styleAlignment values are expected to not be
+         * `*GlyphBounds` as the implementation can only align based on font
+         * metrics and cursor position, not actual glyph bounds. The
          * @p stylePaddings view is expected to either have the same size as
          * @ref styleCount() or be empty, in which case all paddings are
-         * implicitly zero.
+         * implicitly zero. See @ref TextProperties::setAlignment() for a
+         * detailed explanation of alignment behavior respectively to the nodes
+         * the text is attached to.
          *
          * Value of @cpp styleToUniform[i] @ce should give back an index into
          * the @p uniforms array for style @cpp i @ce. If
          * @ref styleUniformCount() and @ref styleCount() is the same and the
          * mapping is implicit, you can use the
-         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Text::Alignment>&, const Containers::StridedArrayView1D<const Vector4>&)
          * convenience overload instead.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
@@ -1117,9 +1144,9 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * upload of changed dynamic style uniform data.
          * @see @ref isHandleValid(FontHandle) const
          */
-        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
         /** @overload */
-        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<FontHandle> styleFonts, std::initializer_list<Vector4> stylePaddings);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<FontHandle> styleFonts, std::initializer_list<Text::Alignment> styleAlignments, std::initializer_list<Vector4> stylePaddings);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -1154,7 +1181,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         explicit Shared(NoCreateT) noexcept;
 
     private:
-        MAGNUM_WHEE_LOCAL void setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        MAGNUM_WHEE_LOCAL void setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
 
         /* The items are guaranteed to have the same size as
            styleUniformCount(). Called only if there are no dynamic styles,
