@@ -32,6 +32,7 @@
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/String.h>
+#include <Corrade/Utility/Algorithms.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Math/Range.h>
@@ -141,26 +142,37 @@ const struct {
     const char* name;
     NodeHandle node;
     LayerStates state;
-    bool layerDataHandleOverloads, customFont, noStyle;
+    bool layerDataHandleOverloads, customFont, nullStyleFonts, noStyle;
 } CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, LayerStates{},
-        false, false, false},
+        false, false, false, false},
     {"create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsAttachmentUpdate,
-        false, false, false},
+        false, false, false, false},
     {"LayerDataHandle overloads",
         NodeHandle::Null, LayerStates{},
-        true, false, false},
+        true, false, false, false},
     {"custom fonts",
         NodeHandle::Null, LayerStates{},
-        false, true, false},
+        false, true, false, false},
+    {"custom fonts, null style fonts",
+        NodeHandle::Null, LayerStates{},
+        false, true, true, false},
     {"custom fonts, no style set",
         NodeHandle::Null, LayerStates{},
-        false, true, true},
+        false, true, false, true},
     {"custom fonts, LayerDataHandle overloads",
         NodeHandle::Null, LayerStates{},
-        true, true, false},
+        true, true, false, false},
+};
+
+const struct {
+    const char* name;
+    bool setStyle;
+} NoSharedStyleFontsData[]{
+    {"no style set", false},
+    {"style with null font set", true}
 };
 
 const struct {
@@ -302,9 +314,12 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::setPadding,
 
               &TextLayerTest::invalidHandle,
-              &TextLayerTest::invalidFontHandle,
-              &TextLayerTest::noSharedStyleFonts,
-              &TextLayerTest::noFontInstance,
+              &TextLayerTest::invalidFontHandle});
+
+    addInstancedTests({&TextLayerTest::noSharedStyleFonts},
+        Containers::arraySize(NoSharedStyleFontsData));
+
+    addTests({&TextLayerTest::noFontInstance,
               &TextLayerTest::styleOutOfRange,
               &TextLayerTest::glyphOutOfRange,
 
@@ -1535,6 +1550,13 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
 
     FontHandle handle = shared.addFont(font, 13.0f);
 
+    /* Setting a null handle is okay, but create() etc that uses given style
+       then has to explicitly pass a font handle */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {handle, handle, FontHandle::Null, handle},
+        {});
+
     std::ostringstream out;
     Error redirectError{&out};
     /* Testing just the implicit mapping variant, as both variants delegate to
@@ -1543,13 +1565,8 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {handle, FontHandle(0x12ab), handle, handle},
         {});
-    shared.setStyle(TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {handle, handle, FontHandle::Null, handle},
-        {});
     CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::Shared::setStyle(): invalid handle Whee::FontHandle(0x12ab, 0x0) at index 1\n"
-        "Whee::TextLayer::Shared::setStyle(): invalid handle Whee::FontHandle::Null at index 2\n");
+        "Whee::TextLayer::Shared::setStyle(): invalid handle Whee::FontHandle(0x12ab, 0x0) at index 1\n");
 }
 
 void TextLayerTest::construct() {
@@ -1739,16 +1756,20 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
        anything. Padding from the style is tested in setPadding() instead,
        effect of the style->uniform mapping in updateCleanDataOrder()
        instead, here they're both implicit. */
-    if(!data.customFont)
+    if(!data.noStyle) {
+        TextLayerStyleUniform uniforms[3];
+        FontHandle fonts[3];
+        if(!data.customFont)
+            Utility::copy({threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle}, fonts);
+        else if(data.nullStyleFonts)
+            Utility::copy({FontHandle::Null, FontHandle::Null, FontHandle::Null}, fonts);
+        else
+            Utility::copy({oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle}, fonts);
         shared.setStyle(TextLayerCommonStyleUniform{},
-            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-            {threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle},
+            uniforms,
+            fonts,
             {});
-    else if(!data.noStyle)
-        shared.setStyle(TextLayerCommonStyleUniform{},
-            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-            {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle},
-            {});
+    }
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2491,6 +2512,9 @@ void TextLayerTest::invalidFontHandle() {
 }
 
 void TextLayerTest::noSharedStyleFonts() {
+    auto&& data = NoSharedStyleFontsData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: Text::AbstractFont {
@@ -2518,28 +2542,33 @@ void TextLayerTest::noSharedStyleFonts() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
+    } shared{TextLayer::Shared::Configuration{4}};
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
+
+    if(data.setStyle) shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {fontHandle, FontHandle::Null, fontHandle, FontHandle::Null},
+        {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    DataHandle data = layer.create(0, "", fontHandle);
+    DataHandle layerData = layer.create(1, "", fontHandle);
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.create(0, "", {});
-    layer.createGlyph(0, 0, {});
-    layer.setText(data, "", {});
-    layer.setGlyph(data, 0, {});
+    layer.create(1, "", {});
+    layer.createGlyph(3, 0, {});
+    layer.setText(layerData, "", {});
+    layer.setGlyph(layerData, 1, {});
     CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::create(): no style data was set and no custom font was supplied\n"
-        "Whee::TextLayer::createGlyph(): no style data was set and no custom font was supplied\n"
-        "Whee::TextLayer::setText(): no style data was set and no custom font was supplied\n"
-        "Whee::TextLayer::setGlyph(): no style data was set and no custom font was supplied\n");
+        "Whee::TextLayer::create(): style 1 has no font set and no custom font was supplied\n"
+        "Whee::TextLayer::createGlyph(): style 3 has no font set and no custom font was supplied\n"
+        "Whee::TextLayer::setText(): style 1 has no font set and no custom font was supplied\n"
+        "Whee::TextLayer::setGlyph(): style 1 has no font set and no custom font was supplied\n");
 }
 
 void TextLayerTest::noFontInstance() {
