@@ -129,8 +129,8 @@ class MAGNUM_WHEE_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
         MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION()
-        Shared& setStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts);
-        Shared& setStyle(const TextLayerStyleCommon& common, std::initializer_list<TextLayerStyleItem> items, std::initializer_list<FontHandle> itemFonts);
+        Shared& setStyle(const TextLayerStyleCommon& common, Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts, const Containers::StridedArrayView1D<const Vector4>& itemPadding);
+        Shared& setStyle(const TextLayerStyleCommon& common, std::initializer_list<TextLayerStyleItem> items, std::initializer_list<FontHandle> itemFonts, std::initializer_list<Vector4> itemPadding);
         #endif
 
     private:
