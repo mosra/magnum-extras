@@ -45,7 +45,8 @@
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/TextProperties.h"
-/* for createRemoveSetText(), updateCleanDataOrder() and updateAlignment() */
+/* for createRemoveSetText(), updateCleanDataOrder(), updateAlignment() and
+   updatePadding() */
 #include "Magnum/Whee/Implementation/textLayerState.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
@@ -86,6 +87,7 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedFontInvalidHandle();
 
     void sharedSetStyle();
+    void sharedSetStyleImplicitPadding();
     void sharedSetStyleInvalidSize();
     void sharedSetStyleInvalidFontHandle();
 
@@ -95,10 +97,12 @@ struct TextLayerTest: TestSuite::Tester {
 
     /* remove() and setText() tested here as well */
     template<class T> void createRemoveSetText();
+    void createRemoveHandleRecycle();
     void createSetTextTextProperties();
     void createNoSharedGlyphCache();
 
     void setColor();
+    void setPadding();
 
     void invalidHandle();
     void invalidFontHandle();
@@ -108,6 +112,7 @@ struct TextLayerTest: TestSuite::Tester {
     void updateEmpty();
     void updateCleanDataOrder();
     void updateAlignment();
+    void updatePadding();
 };
 
 enum class Enum: UnsignedShort {};
@@ -148,7 +153,7 @@ const struct {
     /* Node offset is {50.5, 20.5}, size {200.8, 100.4}; bounding box {9, 11},
        ascent 7, descent -4 */
     Vector2 offset;
-} UpdateAlignmentData[]{
+} UpdateAlignmentPaddingData[]{
     {"line left", Text::Alignment::LineLeft,
         {50.5f, 70.7f}},
     {"line right", Text::Alignment::LineRight,
@@ -181,9 +186,23 @@ const struct {
 const struct {
     const char* name;
     bool emptyUpdate;
+    Vector2 node6Offset, node6Size;
+    Vector4 paddingFromStyle;
+    Vector4 paddingFromData;
 } UpdateCleanDataOrderData[]{
-    {"empty update", true},
-    {"", false},
+    {"empty update", true,
+        {}, {}, {}, {}},
+    {"", false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
+    {"padding from style", false,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}},
+    {"padding from data", false,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {}, {2.0f, 0.5f, 1.0f, 1.5f}},
+    {"padding from both style and data", false,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}},
 };
 
 TextLayerTest::TextLayerTest() {
@@ -221,6 +240,7 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::sharedFontInvalidHandle,
 
               &TextLayerTest::sharedSetStyle,
+              &TextLayerTest::sharedSetStyleImplicitPadding,
               &TextLayerTest::sharedSetStyleInvalidSize,
               &TextLayerTest::sharedSetStyleInvalidFontHandle,
 
@@ -232,10 +252,12 @@ TextLayerTest::TextLayerTest() {
                                       &TextLayerTest::createRemoveSetText<Enum>},
         Containers::arraySize(CreateRemoveSetTextData));
 
-    addTests({&TextLayerTest::createSetTextTextProperties,
+    addTests({&TextLayerTest::createRemoveHandleRecycle,
+              &TextLayerTest::createSetTextTextProperties,
               &TextLayerTest::createNoSharedGlyphCache,
 
               &TextLayerTest::setColor,
+              &TextLayerTest::setPadding,
 
               &TextLayerTest::invalidHandle,
               &TextLayerTest::invalidFontHandle,
@@ -247,8 +269,9 @@ TextLayerTest::TextLayerTest() {
     addInstancedTests({&TextLayerTest::updateCleanDataOrder},
         Containers::arraySize(UpdateCleanDataOrderData));
 
-    addInstancedTests({&TextLayerTest::updateAlignment},
-        Containers::arraySize(UpdateAlignmentData));
+    addInstancedTests({&TextLayerTest::updateAlignment,
+                       &TextLayerTest::updatePadding},
+        Containers::arraySize(UpdateAlignmentPaddingData));
 }
 
 using namespace Containers::Literals;
@@ -880,11 +903,16 @@ void TextLayerTest::sharedSetStyle() {
     } shared{3};
     shared.setGlyphCache(cache);
 
-    /* By default there are all null font handles */
-    CORRADE_COMPARE_AS(shared.state().styleFonts, Containers::arrayView({
+    /* By default there are all null font handles and no padding */
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
         FontHandle::Null,
         FontHandle::Null,
         FontHandle::Null
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{}
     }), TestSuite::Compare::Container);
 
     Font font1, font2;
@@ -898,12 +926,111 @@ void TextLayerTest::sharedSetStyle() {
          TextLayerStyleItem{}
             .setColor(0xc0ffee_rgbf),
          TextLayerStyleItem{}},
-        {first, second, first});
+        {first, second, first},
+        {{1.0f, 2.0f, 3.0f, 4.0f},
+         {4.0f, 3.0f, 2.0f, 1.0f},
+         {2.0f, 1.0f, 4.0f, 3.0f}});
     CORRADE_COMPARE(shared.setStyleCalled, 1);
-    CORRADE_COMPARE_AS(shared.state().styleFonts, Containers::arrayView({
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
         first,
         second,
         first
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{1.0f, 2.0f, 3.0f, 4.0f},
+        Vector4{4.0f, 3.0f, 2.0f, 1.0f},
+        Vector4{2.0f, 1.0f, 4.0f, 3.0f}
+    }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::sharedSetStyleImplicitPadding() {
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+
+    struct Font: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return false; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    };
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        State& state() { return static_cast<State&>(*_state); }
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem> items) override {
+            /** @todo test the common style once it contains something */
+            CORRADE_COMPARE(items.size(), 3);
+            CORRADE_COMPARE(items[1].color, 0xc0ffee_rgbf);
+            ++setStyleCalled;
+        }
+
+        Int setStyleCalled = 0;
+    } shared{3};
+    shared.setGlyphCache(cache);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Font font1, font2;
+    cache.addFont(67, &font1);
+    cache.addFont(23, &font2);
+    FontHandle first = shared.addFont(font1, 13.0f);
+    FontHandle second = shared.addFont(font2, 6.0f);
+    shared.setStyle(
+        TextLayerStyleCommon{},
+        {TextLayerStyleItem{},
+         TextLayerStyleItem{}
+            .setColor(0xc0ffee_rgbf),
+         TextLayerStyleItem{}},
+        {first, second, first},
+        {});
+    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::font), Containers::stridedArrayView({
+        first,
+        second,
+        first
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{}
+    }), TestSuite::Compare::Container);
+
+    /* Setting a style with implicit padding after a non-implicit padding was
+       set should reset it back to zeros */
+    shared.setStyle(
+        TextLayerStyleCommon{},
+        {TextLayerStyleItem{},
+         TextLayerStyleItem{}
+            .setColor(0xc0ffee_rgbf),
+         TextLayerStyleItem{}},
+        {first, second, first},
+        {{1.0f, 2.0f, 3.0f, 4.0f},
+         {4.0f, 3.0f, 2.0f, 1.0f},
+         {2.0f, 1.0f, 4.0f, 3.0f}});
+    shared.setStyle(
+        TextLayerStyleCommon{},
+        {TextLayerStyleItem{},
+         TextLayerStyleItem{}
+            .setColor(0xc0ffee_rgbf),
+         TextLayerStyleItem{}},
+        {first, second, first},
+        {});
+    CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::padding), Containers::stridedArrayView({
+        Vector4{},
+        Vector4{},
+        Vector4{}
     }), TestSuite::Compare::Container);
 }
 
@@ -920,13 +1047,20 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
     Error redirectError{&out};
     shared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}, TextLayerStyleItem{}},
-        {FontHandle::Null, FontHandle::Null, FontHandle::Null});
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {{}, {}, {}});
     shared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
-        {FontHandle::Null, FontHandle::Null});
+        {FontHandle::Null, FontHandle::Null},
+        {{}, {}, {}});
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {{}, {}});
     CORRADE_COMPARE(out.str(),
         "Whee::TextLayer::Shared::setStyle(): expected 3 style items, got 2\n"
-        "Whee::TextLayer::Shared::setStyle(): expected 3 font handles, got 2\n");
+        "Whee::TextLayer::Shared::setStyle(): expected 3 font handles, got 2\n"
+        "Whee::TextLayer::Shared::setStyle(): expected either no or 3 paddings, got 2\n");
 }
 
 void TextLayerTest::sharedSetStyleInvalidFontHandle() {
@@ -966,10 +1100,12 @@ void TextLayerTest::sharedSetStyleInvalidFontHandle() {
     Error redirectError{&out};
     shared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
-        {handle, FontHandle(0x12ab), handle, handle});
+        {handle, FontHandle(0x12ab), handle, handle},
+        {});
     shared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
-        {handle, handle, FontHandle::Null, handle});
+        {handle, handle, FontHandle::Null, handle},
+        {});
     CORRADE_COMPARE(out.str(),
         "Whee::TextLayer::Shared::setStyle(): invalid handle Whee::FontHandle(0x12ab, 0x0) at index 1\n"
         "Whee::TextLayer::Shared::setStyle(): invalid handle Whee::FontHandle::Null at index 2\n");
@@ -1152,15 +1288,17 @@ template<class T> void TextLayerTest::createRemoveSetText() {
 
     /* If using custom fonts, set the style to either something completely
        different or not set them at all -- they shouldn't get used for
-       anything */
+       anything. Padding from the style is tested in setPadding() instead. */
     if(!data.customFont)
         shared.setStyle(TextLayerStyleCommon{},
             {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
-            {threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle});
+            {threeGlyphFontHandle, threeGlyphFontHandle, oneGlyphFontHandle},
+            {});
     else if(!data.noStyle)
         shared.setStyle(TextLayerStyleCommon{},
             {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
-            {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle});
+            {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle},
+            {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1180,6 +1318,7 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     CORRADE_COMPARE(layer.node(first), data.node);
     CORRADE_COMPARE(layer.style(first), 1);
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Custom color, testing also the getter overloads and templates */
@@ -1197,12 +1336,14 @@ template<class T> void TextLayerTest::createRemoveSetText() {
            fail for T == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(second)), Enum(2));
         CORRADE_COMPARE(layer.color(dataHandleData(second)), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.padding(dataHandleData(second)), Vector4{0.0f});
     } else {
         CORRADE_COMPARE(layer.style(second), 2);
         /* Can't use T, as the function restricts to enum types which would
            fail for T == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(second), Enum(2));
         CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     }
     CORRADE_COMPARE(layer.state(), data.state);
 
@@ -1216,6 +1357,7 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     CORRADE_COMPARE(layer.node(third), data.node);
     CORRADE_COMPARE(layer.style(third), 1);
     CORRADE_COMPARE(layer.color(third), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     DataHandle fourth = layer.create(
@@ -1227,6 +1369,7 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     CORRADE_COMPARE(layer.node(fourth), data.node);
     CORRADE_COMPARE(layer.style(fourth), 0);
     CORRADE_COMPARE(layer.color(fourth), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* There should be four glyph runs, assigned to the four data */
@@ -1378,6 +1521,59 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     }
 }
 
+void TextLayerTest::createRemoveHandleRecycle() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+    } shared{1};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {shared.addFont(font, 1.0f)},
+        {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle first = layer.create(0, "hello", {});
+    DataHandle second = layer.create(0, "again", {});
+    layer.setPadding(second, Vector4{5.0f});
+    CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
+    CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
+
+    /* Data that reuses a previous slot should have the padding cleared */
+    layer.remove(second);
+    DataHandle second2 = layer.create(0, "yes", {});
+    CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
+    CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
+}
+
 void TextLayerTest::createSetTextTextProperties() {
     /* A font that just checks what has been sent to the shaper */
     struct: Text::AbstractFont {
@@ -1463,7 +1659,7 @@ void TextLayerTest::createSetTextTextProperties() {
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 16.0f);
-    shared.setStyle(TextLayerStyleCommon{}, {TextLayerStyleItem{}}, {fontHandle});
+    shared.setStyle(TextLayerStyleCommon{}, {TextLayerStyleItem{}}, {fontHandle}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1552,7 +1748,8 @@ void TextLayerTest::setColor() {
        assert */
     shared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}},
-        {shared.addFont(font, 1.0f)});
+        {shared.addFont(font, 1.0f)},
+        {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1574,6 +1771,75 @@ void TextLayerTest::setColor() {
     /* Testing also the other overload */
     layer.setColor(dataHandleData(data), 0x112233_rgbf);
     CORRADE_COMPARE(layer.color(data), 0x112233_rgbf);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+}
+
+void TextLayerTest::setPadding() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+    } shared{1};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {shared.addFont(font, 1.0f)},
+        {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Just to be sure the setters aren't picking up the first ever data
+       always */
+    layer.create(0, "", {});
+
+    DataHandle data = layer.create(0, "", {});
+    CORRADE_COMPARE(layer.padding(data), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting a padding marks the layer as dirty */
+    layer.setPadding(data, {2.0f, 4.0f, 3.0f, 1.0f});
+    CORRADE_COMPARE(layer.padding(data), (Vector4{2.0f, 4.0f, 3.0f, 1.0f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+
+    /* Testing also the other overload */
+    layer.setPadding(dataHandleData(data), {1.0f, 2.0f, 3.0f, 4.0f});
+    CORRADE_COMPARE(layer.padding(dataHandleData(data)), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+
+    /* Single-value padding */
+    layer.setPadding(data, 4.0f);
+    CORRADE_COMPARE(layer.padding(data), Vector4{4.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+
+    /* Testing also the other overload */
+    layer.setPadding(dataHandleData(data), 3.0f);
+    CORRADE_COMPARE(layer.padding(dataHandleData(data)), Vector4{3.0f});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 }
 
@@ -1600,13 +1866,21 @@ void TextLayerTest::invalidHandle() {
     layer.color(LayerDataHandle::Null);
     layer.setColor(DataHandle::Null, {});
     layer.setColor(LayerDataHandle::Null, {});
+    layer.padding(DataHandle::Null);
+    layer.padding(LayerDataHandle::Null);
+    layer.setPadding(DataHandle::Null, {});
+    layer.setPadding(LayerDataHandle::Null, {});
     CORRADE_COMPARE_AS(out.str(),
         "Whee::TextLayer::setText(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::setText(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::color(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::color(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::setColor(): invalid handle Whee::DataHandle::Null\n"
-        "Whee::TextLayer::setColor(): invalid handle Whee::LayerDataHandle::Null\n",
+        "Whee::TextLayer::setColor(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::padding(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::padding(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::setPadding(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::setPadding(): invalid handle Whee::LayerDataHandle::Null\n",
         TestSuite::Compare::String);
 }
 
@@ -1645,7 +1919,8 @@ void TextLayerTest::invalidFontHandle() {
        assert */
     shared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}},
-        {shared.addFont(font, 1.0f)});
+        {shared.addFont(font, 1.0f)},
+        {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1853,7 +2128,8 @@ void TextLayerTest::updateCleanDataOrder() {
     FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
     shared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}, TextLayerStyleItem{}},
-        {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle});
+        {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
+        {{}, {}, data.paddingFromStyle, {}});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -1871,7 +2147,8 @@ void TextLayerTest::updateCleanDataOrder() {
     layer.create(0, "", {});                            /* 0, quad 0 */
     layer.create(0, "", {});                            /* 1, quad 1 */
     layer.create(0, "", {});                            /* 2, quad 2 */
-    layer.create(2, "hello", {}, 0xff3366_rgbf, node6); /* 3, quad 3 to 7 */
+    DataHandle data3 = layer.create(2, "hello", {}, 0xff3366_rgbf, node6);
+                                                        /* 3, quad 3 to 7 */
     layer.create(0, "", {});                            /* 4, quad 8 */
     layer.create(0, "", {});                            /* 5, quad 9 */
     layer.create(0, "", {});                            /* 6, quad 10 */
@@ -1879,6 +2156,9 @@ void TextLayerTest::updateCleanDataOrder() {
                                                         /* 7, quad 11 */
     layer.create(0, "", {});                            /* 8, quad 12 */
     layer.create(3, "hi", {}, 0x663399_rgbf, node15);   /* 9, quad 13 to 14 */
+
+    if(!data.paddingFromData.isZero())
+        layer.setPadding(data3, data.paddingFromData);
 
     /* There should be 10 glyph runs, assigned to the 10 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -1896,8 +2176,8 @@ void TextLayerTest::updateCleanDataOrder() {
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
-    nodeOffsets[6] = {1.0f, 2.0f};
-    nodeSizes[6] = {10.0f, 15.0f};
+    nodeOffsets[6] = data.node6Offset;
+    nodeSizes[6] = data.node6Size;
     nodeOffsets[15] = {3.0f, 4.0f};
     nodeSizes[15] = {20.0f, 5.0f};
 
@@ -2259,7 +2539,7 @@ void TextLayerTest::updateCleanDataOrder() {
 }
 
 void TextLayerTest::updateAlignment() {
-    auto&& data = UpdateAlignmentData[testCaseInstanceId()];
+    auto&& data = UpdateAlignmentPaddingData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     struct: Text::AbstractFont {
@@ -2331,7 +2611,8 @@ void TextLayerTest::updateAlignment() {
     FontHandle fontHandle = shared.addFont(font, 200.0f);
     shared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}},
-        {fontHandle});
+        {fontHandle},
+        {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2350,6 +2631,128 @@ void TextLayerTest::updateAlignment() {
     Vector2 nodeSizes[4];
     nodeOffsets[3] = {50.5f, 20.5f};
     nodeSizes[3] = {200.8f, 100.4f};
+    UnsignedInt dataIds[]{0};
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+
+    /* 2--3
+       |  |
+       0--1 */
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
+        Vector2{0.0f, 0.0f} + data.offset,
+        Vector2{2.0f, 0.0f} + data.offset,
+        Vector2{0.0f, -4.0f} + data.offset,
+        Vector2{2.0f, -4.0f} + data.offset,
+
+        Vector2{3.0f, 0.0f} + data.offset,
+        Vector2{5.0f, 0.0f} + data.offset,
+        Vector2{3.0f, -4.0f} + data.offset,
+        Vector2{5.0f, -4.0f} + data.offset,
+
+        Vector2{6.0f, 0.0f} + data.offset,
+        Vector2{8.0f, 0.0f} + data.offset,
+        Vector2{6.0f, -4.0f} + data.offset,
+        Vector2{8.0f, -4.0f} + data.offset,
+    }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::updatePadding() {
+    auto&& data = UpdateAlignmentPaddingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Same as updateAlignment(), except that the node offset & size is
+       different and only matches the original if padding is applied
+       correctly from both the data and the style */
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return _opened; }
+        Properties doOpenFile(Containers::StringView, Float) override {
+            _opened = true;
+            /* Font size and line height shouldn't be used for any alignment,
+               ascent / descent should */
+            return {100.0f, 3.5f, -2.0f, 200.0f, 1};
+        }
+        void doClose() override { _opened = false; }
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override {
+            struct Shaper: Text::AbstractShaper {
+                using Text::AbstractShaper::AbstractShaper;
+
+                UnsignedInt doShape(Containers::StringView text, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
+                    return text.size();
+                }
+                void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
+                    for(std::size_t i = 0; i != ids.size(); ++i)
+                        ids[i] = 0;
+                }
+                void doGlyphOffsetsAdvancesInto(const Containers::StridedArrayView1D<Vector2>& offsets, const Containers::StridedArrayView1D<Vector2>& advances) const override {
+                    for(std::size_t i = 0; i != offsets.size(); ++i) {
+                        offsets[i] = {};
+                        advances[i] = {1.5f, 0.0f};
+                    }
+                }
+                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {
+                    /** @todo implement when it actually does get called for
+                        cursor / selection */
+                    CORRADE_FAIL("This shouldn't be called.");
+                }
+            };
+            return Containers::pointer<Shaper>(*this);
+        }
+
+        bool _opened = false;
+    } font;
+    font.openFile({}, 100.0f);
+
+    /* A trivial glyph cache. While font's ascent/descent goes both above and
+       below the line, this is just above. */
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    /* Default padding is 1, resetting to 0 for simplicity */
+    } cache{PixelFormat::R8Unorm, {32, 32}, {}};
+    cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {1, 2}});
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount): TextLayer::Shared{styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerStyleCommon&, Containers::ArrayView<const TextLayerStyleItem>) override {}
+    } shared{1};
+    shared.setGlyphCache(cache);
+
+    /* Font scaled 2x, so all metrics coming from the font or the cache should
+       be scaled 2x */
+    FontHandle fontHandle = shared.addFont(font, 200.0f);
+    shared.setStyle(TextLayerStyleCommon{},
+        {TextLayerStyleItem{}},
+        {fontHandle},
+        {{10.0f, 5.0f, 20.0f, 10.0f}});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+
+        const State& stateData() const {
+            return static_cast<const State&>(*_state);
+        }
+    } layer{layerHandle(0, 1), shared};
+
+    NodeHandle node3 = nodeHandle(3, 0);
+
+    /* 3 chars, size x2, so the bounding box is 9x11 */
+    DataHandle node3Data = layer.create(0, "hey", data.alignment, node3);
+    layer.setPadding(node3Data, {20.0f, 5.0f, 50.0f, 30.0f});
+
+    Vector2 nodeOffsets[4];
+    Vector2 nodeSizes[4];
+    nodeOffsets[3] = {20.5f, 10.5f};
+    nodeSizes[3] = {300.8f, 150.4f};
     UnsignedInt dataIds[]{0};
     layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
 
