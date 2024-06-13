@@ -186,7 +186,7 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
         "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << stylePaddings.size(), );
     #ifndef CORRADE_NO_ASSERT
     for(std::size_t i = 0; i != styleFonts.size(); ++i)
-        CORRADE_ASSERT(isHandleValid(styleFonts[i]),
+        CORRADE_ASSERT(styleFonts[i] == FontHandle::Null || isHandleValid(styleFonts[i]),
             "Whee::TextLayer::Shared::setStyle(): invalid handle" << styleFonts[i] << "at index" << i, );
     #endif
     Utility::copy(styleFonts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::font));
@@ -248,8 +248,8 @@ void TextLayer::shapeTextInternal(
     /* Decide on a font */
     FontHandle font = properties.font();
     if(font == FontHandle::Null) {
-        CORRADE_ASSERT(!sharedState.styles.isEmpty(),
-            messagePrefix << "no style data was set and no custom font was supplied", );
+        CORRADE_ASSERT(!sharedState.styles.isEmpty() && sharedState.styles[style].font != FontHandle::Null,
+            messagePrefix << "style" << style << "has no font set and no custom font was supplied", );
         font = sharedState.styles[style].font;
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
         messagePrefix << "invalid handle" << font, );
@@ -341,8 +341,8 @@ void TextLayer::shapeGlyphInternal(
     /* Decide on a font */
     FontHandle font = properties.font();
     if(font == FontHandle::Null) {
-        CORRADE_ASSERT(!sharedState.styles.isEmpty(),
-            messagePrefix << "no style data was set and no custom font was supplied", );
+        CORRADE_ASSERT(!sharedState.styles.isEmpty() && sharedState.styles[style].font != FontHandle::Null,
+            messagePrefix << "style" << style << "has no font set and no custom font was supplied", );
         font = sharedState.styles[style].font;
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
         messagePrefix << "invalid handle" << font, );
