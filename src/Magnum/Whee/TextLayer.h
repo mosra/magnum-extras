@@ -229,13 +229,13 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * is less than @ref Shared::styleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
-         * index @p style but if @ref TextProperties::font() is not null it's
-         * used instead of the default @ref FontHandle assigned to given style.
-         * The @ref FontHandle, whether coming from the @p style or from
-         * @p properties, is expected to have a font instance. Instance-less
-         * fonts can be only used to create single glyphs (such as various
-         * icons or images) with @ref createGlyph(). Use
-         * @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, NodeHandle)
+         * index @p style. If @ref TextProperties::font() is not null it's
+         * used, otherwise the default @ref FontHandle assigned to given style
+         * is used and is expected to not be null. The @ref FontHandle, whether
+         * coming from the @p style or from @p properties, is expected to have
+         * a font instance. Instance-less fonts can be only used to create
+         * single glyphs (such as various icons or images) with
+         * @ref createGlyph(). Use @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, NodeHandle)
          * for creating a text with a custom color. This function is equivalent
          * to calling it with @cpp 0xffffff_srgbf @ce.
          * @see @ref Shared::hasFontInstance(), @ref setText()
@@ -283,13 +283,14 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * is less than @ref Shared::styleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
-         * index @p style but if @ref TextProperties::font() is not null it's
-         * used instead of the default @ref FontHandle assigned to given style.
-         * In addition @ref TextLayerStyleUniform::color is multiplied with
-         * @p color. The @ref FontHandle, whether coming from the @p style or
-         * from @p properties, is expected to have a font instance.
-         * Instance-less fonts can be only used to create single glyphs (such
-         * as various icons or images) with @ref createGlyph().
+         * index @p style. If @ref TextProperties::font() is not null it's
+         * used, otherwise the default @ref FontHandle assigned to given style
+         * is used and is expected to not be null. In addition
+         * @ref TextLayerStyleUniform::color is multiplied with @p color. The
+         * @ref FontHandle, whether coming from the @p style or from
+         * @p properties, is expected to have a font instance. Instance-less
+         * fonts can be only used to create single glyphs (such as various
+         * icons or images) with @ref createGlyph().
          * @see @ref create(UnsignedInt, Containers::StringView, const TextProperties&, NodeHandle),
          *      @ref Shared::hasFontInstance(), @ref setText()
          */
@@ -333,11 +334,11 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * is less than @ref Shared::styleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
-         * index @p style but if @ref TextProperties::font() is not null it's
-         * used instead of the default @ref FontHandle assigned to given style.
-         * The @p glyph is expected to be less than
-         * @ref Text::AbstractGlyphCache::fontGlyphCount() for given font. Use
-         * @ref createGlyph(UnsignedInt, UnsignedInt, const TextProperties&, const Color3&, NodeHandle)
+         * index @p style. If @ref TextProperties::font() is not null it's
+         * used, otherwise the default @ref FontHandle assigned to given style
+         * is used and is expected to not be null. The @p glyph is expected to
+         * be less than @ref Text::AbstractGlyphCache::fontGlyphCount() for
+         * given font. Use @ref createGlyph(UnsignedInt, UnsignedInt, const TextProperties&, const Color3&, NodeHandle)
          * for creating a glyph with a custom color. This function is
          * equivalent to calling it with @cpp 0xffffff_srgbf @ce.
          *
@@ -435,10 +436,11 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * is less than @ref Shared::styleCount() and
          * @ref TextProperties::font() is either @ref FontHandle::Null or
          * valid. Styling is driven from the @ref TextLayerStyleUniform at
-         * index @p style but if @ref TextProperties::font() is not null it's
-         * used instead of the default @ref FontHandle assigned to given style.
-         * In addition @ref TextLayerStyleUniform::color is multiplied with
-         * @p color. The @p glyphId is expected to be less than
+         * index @p style. If @ref TextProperties::font() is not null it's
+         * used, otherwise the default @ref FontHandle assigned to given style
+         * is used and is expected to not be null. In addition
+         * @ref TextLayerStyleUniform::color is multiplied with @p color. The
+         * @p glyphId is expected to be less than
          * @ref Text::AbstractGlyphCache::fontGlyphCount() for given font.
          *
          * Compared to @ref create(), the glyph is aligned according to
@@ -542,13 +544,14 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid and @ref TextProperties::font() is
          * either @ref FontHandle::Null or valid. If not null, the
-         * @ref TextProperties::font() is used instead of the default
-         * @ref FontHandle assigned to @ref style(). Note that it's not
-         * possible to change the font alone with @ref setStyle(), it only can
-         * be done when setting the text. The @ref FontHandle, whether coming
-         * from the style or from @p properties, is expected to have a font
-         * instance. Instance-less fonts can be only used to set single
-         * glyphs (such as various icons or images) with @ref setGlyph().
+         * @ref TextProperties::font() is used, otherwise the default
+         * @ref FontHandle assigned to @ref style() is used and expected to not
+         * be null. Note that it's not possible to change the font alone with
+         * @ref setStyle(), it only can be done when setting the text. The
+         * @ref FontHandle, whether coming from the style or from
+         * @p properties, is expected to have a font instance. Instance-less
+         * fonts can be only used to set single glyphs (such as various icons
+         * or images) with @ref setGlyph().
          *
          * Calling this function causes @ref LayerState::NeedsUpdate to be set.
          * @see @ref isHandleValid(DataHandle) const,
@@ -570,11 +573,12 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Expects that @p handle is valid and @ref TextProperties::font() is
          * either @ref FontHandle::Null or valid. If not null, the
-         * @ref TextProperties::font() is used instead of the default
-         * @ref FontHandle assigned to @ref style(). Note that it's not
-         * possible to change the font alone with @ref setStyle(), it only can
-         * be done when setting the glyph. The @p glyph is expected to be less
-         * than @ref Text::AbstractGlyphCache::fontGlyphCount() for given font.
+         * @ref TextProperties::font() is used, otherwise the default
+         * @ref FontHandle assigned to @ref style() is used and expected to not
+         * be null. Note that it's not possible to change the font alone with
+         * @ref setStyle(), it only can be done when setting the glyph. The
+         * @p glyph is expected to be less than
+         * @ref Text::AbstractGlyphCache::fontGlyphCount() for given font.
          *
          * Compared to @ref setText(), the glyph is aligned according to
          * @ref TextProperties::alignment() based on its bounding rectangle
@@ -937,10 +941,10 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          *
          * The @p uniforms view is expected to have the same size as
          * @ref styleUniformCount(), the @p fonts view the same size as
-         * @ref styleCount(). All font handles are expected to be valid. The
-         * @p paddings view is expected to either have the same size as
-         * @ref styleCount() or be empty, in which case all paddings are
-         * implicitly zero.
+         * @ref styleCount(). All font handles are expected to be either
+         * @ref FontHandle::Null or valid. The @p paddings view is expected to
+         * either have the same size as @ref styleCount() or be empty, in which
+         * case all paddings are implicitly zero.
          *
          * Can only be called if @ref styleUniformCount() and @ref styleCount()
          * were set to the same value in @ref Configuration passed to the
@@ -967,9 +971,10 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * The @p uniforms view is expected to have the same size as
          * @ref styleUniformCount(), the @p styleToUniform and @p styleFonts
          * views the same size as @ref styleCount(). All font handles are
-         * expected to be valid. The @p stylePaddings view is expected to
-         * either have the same size as @ref styleCount() or be empty, in which
-         * case all paddings are implicitly zero.
+         * expected to be either @ref FontHandle::Null or valid. The
+         * @p stylePaddings view is expected to either have the same size as
+         * @ref styleCount() or be empty, in which case all paddings are
+         * implicitly zero.
          *
          * Value of @cpp styleToUniform[i] @ce should give back an index into
          * the @p uniforms array for style @cpp i @ce. If
