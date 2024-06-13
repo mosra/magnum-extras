@@ -53,10 +53,15 @@ struct TextLayerFont {
     /* 4 bytes free */
 };
 
+struct TextLayerStyle {
+    FontHandle font;
+    Vector4 padding;
+};
+
 }
 
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount}, styleFonts{ValueInit, styleCount} {}
+    explicit State(UnsignedInt styleCount): AbstractVisualLayer::Shared::State{styleCount}, styles{ValueInit, styleCount} {}
 
     /* Glyph cache used by all fonts. It's expected to know about each font
        that's added. */
@@ -67,8 +72,8 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
        FontHandle generation counters doesn't need to exist here. */
     Containers::Array<Implementation::TextLayerFont> fonts;
 
-    /* Fonts assigned to each style */
-    Containers::Array<FontHandle> styleFonts;
+    /* Fonts and padding values assigned to each style */
+    Containers::Array<Implementation::TextLayerStyle> styles;
 };
 
 namespace Implementation {
@@ -97,6 +102,7 @@ struct TextLayerGlyphRun {
 };
 
 struct TextLayerData {
+    Vector4 padding;
     UnsignedInt glyphRun;
     UnsignedInt style;
     /* There's no way to change a font after a text has been laid out, it has

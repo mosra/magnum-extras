@@ -77,7 +77,7 @@ struct TextLayerGLTest: GL::OpenGLTester {
     void renderSetup();
     void renderTeardown();
     void render();
-    void renderAlignment();
+    void renderAlignmentPadding();
     void renderCustomColor();
     void renderChangeText();
     void renderChangeStyle();
@@ -127,21 +127,53 @@ constexpr Range2D RenderAlignmentBoundingBox{{0.0f, -9.26651f}, {84.6205f, 33.40
 const struct {
     const char* name;
     Text::Alignment alignment;
+    bool partialUpdate;
     Vector2 nodeOffset, nodeSize;
-} RenderAlignmentData[]{
+    Vector4 paddingFromStyle, paddingFromData;
+} RenderAlignmentPaddingData[]{
     /* Same as the "default" in RenderData */
-    {"middle center", Text::Alignment::MiddleCenter,
-        {8.0f, 8.0f}, {112.0f, 48.0f}},
+    {"middle center, no padding", Text::Alignment::MiddleCenter, false,
+        {8.0f, 8.0f}, {112.0f, 48.0f}, {}, {}},
+    /* Deliberately having one excessively shifted to left/top and the other to
+       bottom/right. It shouldn't cause any strange artifacts. */
+    {"middle center, padding from style", Text::Alignment::MiddleCenter, false,
+        {-64.0f, -128.0f}, {192.0f, 192.0f},
+        {72.0f, 136.0f, 8.0f, 8.0f}, {}},
+    {"middle center, padding from data", Text::Alignment::MiddleCenter, false,
+        {0.0f, 0.0f}, {192.0f, 192.0f},
+        {}, {8.0f, 8.0f, 72.0f, 136.0f}},
+    {"middle center, padding from both", Text::Alignment::MiddleCenter, false,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
+    {"middle center, padding from both, partial update", Text::Alignment::MiddleCenter, true,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
     /* The size isn't used for anything in this case so can be excessive */
-    {"top left", Text::Alignment::TopLeft,
-        (Vector2{RenderSize} - RenderAlignmentBoundingBox.size())/2.0f, {256.0f, 128.0f}},
+    {"top left, no padding", Text::Alignment::TopLeft, false,
+        (Vector2{RenderSize} - RenderAlignmentBoundingBox.size())/2.0f, {256.0f, 128.0f},
+        {}, {}},
+    {"top left, padding from data", Text::Alignment::TopLeft, false,
+        {0.0f, 0.0f}, {256.0f, 128.0f},
+        {}, {(RenderSize.x() - RenderAlignmentBoundingBox.size().x())/2.0f,
+             (RenderSize.y() - RenderAlignmentBoundingBox.size().y())/2.0f,
+             0.0f, 0.0f}},
     /* The min offset isn't used for anything in this case so can be
        excessive */
-    {"bottom right", Text::Alignment::BottomRight,
-        {-128.0f, -256.0f}, Vector2{128.0f, 256.0f} + (Vector2{RenderSize} + RenderAlignmentBoundingBox.size())/2.0f},
-    {"line right", Text::Alignment::LineRight,
+    {"bottom right, no padding", Text::Alignment::BottomRight, false,
+        {-128.0f, -256.0f}, Vector2{128.0f, 256.0f} + (Vector2{RenderSize} + RenderAlignmentBoundingBox.size())/2.0f,
+        {}, {}},
+    {"bottom right, padding from style", Text::Alignment::BottomRight, false,
+        {-128.0f, -256.0f}, Vector2{256.0f, 512.0f} + (Vector2{RenderSize} + RenderAlignmentBoundingBox.size())/2.0f,
+        {0.0f, 0.0f, 128.0f, 256.0f}, {}},
+    {"line right, no padding", Text::Alignment::LineRight, false,
         {0.0f, RenderSize.y()/2.0f + RenderAlignmentBoundingBox.max().y() - RenderAlignmentBoundingBox.sizeY()},
-        {(RenderSize.x() + RenderAlignmentBoundingBox.sizeX())/2.0f, RenderAlignmentBoundingBox.sizeY()}},
+        {(RenderSize.x() + RenderAlignmentBoundingBox.sizeX())/2.0f, RenderAlignmentBoundingBox.sizeY()},
+        {}, {}},
+    {"line right, padding from both", Text::Alignment::LineRight, false,
+        {0.0f, -RenderAlignmentBoundingBox.sizeY()},
+        {(RenderSize.x() + RenderAlignmentBoundingBox.sizeX())/2.0f, RenderAlignmentBoundingBox.sizeY() + RenderSize.y()/2.0f + RenderAlignmentBoundingBox.max().y()},
+        {0.0f, RenderSize.y()/2.0f, 0.0f, 0.0f},
+        {0.0f, RenderAlignmentBoundingBox.max().y(), 0.0f, 0.0f}},
 };
 
 const struct {
@@ -189,8 +221,8 @@ TextLayerGLTest::TextLayerGLTest() {
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
-    addInstancedTests({&TextLayerGLTest::renderAlignment},
-        Containers::arraySize(RenderAlignmentData),
+    addInstancedTests({&TextLayerGLTest::renderAlignmentPadding},
+        Containers::arraySize(RenderAlignmentPaddingData),
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
@@ -373,9 +405,12 @@ void TextLayerGLTest::render() {
     FontHandle fontHandle[]{
         layerShared.addFont(*_font, 32.0f)
     };
+    /* The (lack of any) effect of padding on rendered output is tested
+       thoroughly in renderAlignmentPadding() */
     layerShared.setStyle(TextLayerStyleCommon{},
         styleItems,
-        Containers::stridedArrayView(fontHandle).broadcasted<0>(2));
+        Containers::stridedArrayView(fontHandle).broadcasted<0>(2),
+        {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -404,8 +439,8 @@ void TextLayerGLTest::render() {
         DebugTools::CompareImageToFile{_importerManager});
 }
 
-void TextLayerGLTest::renderAlignment() {
-    auto&& data = RenderAlignmentData[testCaseInstanceId()];
+void TextLayerGLTest::renderAlignmentPadding() {
+    auto&& data = RenderAlignmentPaddingData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
@@ -423,15 +458,28 @@ void TextLayerGLTest::renderAlignment() {
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}},
-        {fontHandle});
+        {fontHandle},
+        {data.paddingFromStyle});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode(data.nodeOffset, data.nodeSize);
-    ui.layer<TextLayerGL>(layer).create(0, "Maggi",
+    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi",
         TextProperties{}.setAlignment(data.alignment),
         node);
+
+    if(data.partialUpdate) {
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    if(!data.paddingFromData.isZero()) {
+        ui.layer<TextLayerGL>(layer).setPadding(nodeData, data.paddingFromData);
+        CORRADE_COMPARE_AS(ui.state(),
+            UserInterfaceState::NeedsDataUpdate,
+            TestSuite::Compare::GreaterOrEqual);
+    }
 
     ui.draw();
 
@@ -475,7 +523,8 @@ void TextLayerGLTest::renderCustomColor() {
     layerShared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}
             .setColor(0x3bd267_rgbf/0x336699_rgbf)},
-        {fontHandle});
+        {fontHandle},
+        {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -541,7 +590,8 @@ void TextLayerGLTest::renderChangeStyle() {
         {TextLayerStyleItem{},
          TextLayerStyleItem{}
             .setColor(0x3bd267_rgbf)},
-        {fontHandle, fontHandle});
+        {fontHandle, fontHandle},
+        {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -600,7 +650,8 @@ void TextLayerGLTest::renderChangeText() {
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerStyleCommon{},
         {TextLayerStyleItem{}},
-        {fontHandle});
+        {fontHandle},
+        {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -741,7 +792,7 @@ void TextLayerGLTest::drawOrder() {
         fontHandleSmall,
         fontHandleLarge,
         fontHandleSmall
-    });
+    }, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -812,7 +863,7 @@ void TextLayerGLTest::eventStyleTransition() {
             TextLayerStyleItem{},           /* default */
             TextLayerStyleItem{}            /* colored */
                 .setColor(0x3bd267_rgbf)
-        }, {fontHandle, fontHandle})
+        }, {fontHandle, fontHandle}, {})
         .setStyleTransition(
             [](UnsignedInt style) -> UnsignedInt {
                 if(style == 0) return 1;

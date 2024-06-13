@@ -183,12 +183,12 @@ TextLayerGL::Shared& TextLayerGL::Shared::setGlyphCache(Text::GlyphCache&& cache
     return setGlyphCache(*state.glyphCacheStorage);
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts) {
-    return static_cast<Shared&>(TextLayer::Shared::setStyle(common, items, itemFonts));
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts, const Containers::StridedArrayView1D<const Vector4>& itemPadding) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(common, items, itemFonts, itemPadding));
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerStyleCommon& common, const std::initializer_list<TextLayerStyleItem> items, const std::initializer_list<FontHandle> itemFonts) {
-    return static_cast<Shared&>(TextLayer::Shared::setStyle(common, items, itemFonts));
+TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerStyleCommon& common, const std::initializer_list<TextLayerStyleItem> items, const std::initializer_list<FontHandle> itemFonts, const std::initializer_list<Vector4> itemPadding) {
+    return static_cast<Shared&>(TextLayer::Shared::setStyle(common, items, itemFonts, itemPadding));
 }
 
 void TextLayerGL::Shared::doSetStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items) {

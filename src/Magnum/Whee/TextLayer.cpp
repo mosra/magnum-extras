@@ -34,6 +34,7 @@
 #include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Matrix3.h>
+#include <Magnum/Math/Swizzle.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/Feature.h>
 #include <Magnum/Text/Renderer.h>
@@ -126,24 +127,33 @@ Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
     return const_cast<Text::AbstractFont&>(const_cast<const TextLayer::Shared&>(*this).font(handle));
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts) {
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& common, const Containers::ArrayView<const TextLayerStyleItem> items, const Containers::StridedArrayView1D<const FontHandle>& itemFonts, const Containers::StridedArrayView1D<const Vector4>& itemPadding) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(items.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "style items, got" << items.size(), *this);
     CORRADE_ASSERT(itemFonts.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "font handles, got" << itemFonts.size(), *this);
+    CORRADE_ASSERT(itemPadding.isEmpty() || itemPadding.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << itemPadding.size(), *this);
     #ifndef CORRADE_NO_ASSERT
     for(std::size_t i = 0; i != itemFonts.size(); ++i)
         CORRADE_ASSERT(isHandleValid(itemFonts[i]),
             "Whee::TextLayer::Shared::setStyle(): invalid handle" << itemFonts[i] << "at index" << i, *this);
     #endif
-    Utility::copy(itemFonts, state.styleFonts);
+    Utility::copy(itemFonts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::font));
+    if(itemPadding.isEmpty()) {
+        /** @todo some Utility::fill() for this */
+        for(Implementation::TextLayerStyle& style: state.styles)
+            style.padding = {};
+    } else {
+        Utility::copy(itemPadding, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::padding));
+    }
     doSetStyle(common, items);
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& common, const std::initializer_list<TextLayerStyleItem> items, const std::initializer_list<FontHandle> itemFonts) {
-    return setStyle(common, Containers::arrayView(items), Containers::stridedArrayView(itemFonts));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerStyleCommon& common, const std::initializer_list<TextLayerStyleItem> items, const std::initializer_list<FontHandle> itemFonts, const std::initializer_list<Vector4> itemPadding) {
+    return setStyle(common, Containers::arrayView(items), Containers::stridedArrayView(itemFonts), Containers::stridedArrayView(itemPadding));
 }
 
 TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}
@@ -166,7 +176,7 @@ void TextLayer::shapeInternal(
            call isHandleValid() on the Shared class somehow. setStyle() checks
            that all handles are non-null (and valid), so if a handle is null it
            means setStyle() wasn't called yet. */
-        font = sharedState.styleFonts[style];
+        font = sharedState.styles[style].font;
         CORRADE_ASSERT(font != FontHandle::Null,
             messagePrefix << "no style data was set and no custom font was supplied", );
     } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
@@ -268,6 +278,10 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
         #endif
         id, style, text, properties);
     Implementation::TextLayerData& data = state.data[id];
+    /** @todo is there a way to have create() with all possible per-data
+        options that doesn't make it ambiguous / impossible to extend further?
+        like, having both color and padding optional is ambiguous, etc. */
+    data.padding = {};
     /* glyphRun is filled by shapeInternal() */
     data.style = style;
     data.color = color;
@@ -360,6 +374,35 @@ void TextLayer::setColor(const LayerDataHandle handle, const Color3& color) {
 
 void TextLayer::setColorInternal(const UnsignedInt id, const Color3& color) {
     static_cast<State&>(*_state).data[id].color = color;
+    setNeedsUpdate();
+}
+
+Vector4 TextLayer::padding(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::padding(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).data[dataHandleId(handle)].padding;
+}
+
+Vector4 TextLayer::padding(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::padding(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).data[layerDataHandleId(handle)].padding;
+}
+
+void TextLayer::setPadding(const DataHandle handle, const Vector4& padding) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::setPadding(): invalid handle" << handle, );
+    setPaddingInternal(dataHandleId(handle), padding);
+}
+
+void TextLayer::setPadding(const LayerDataHandle handle, const Vector4& padding) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::setPadding(): invalid handle" << handle, );
+    setPaddingInternal(layerDataHandleId(handle), padding);
+}
+
+void TextLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding) {
+    static_cast<State&>(*_state).data[id].padding = padding;
     setNeedsUpdate();
 }
 
@@ -463,18 +506,19 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             vertexData.slice(&Implementation::TextLayerVertex::textureCoordinates));
 
         /* Align the glyph run relative to the node area */
-        Vector2 offset = nodeOffsets[nodeId];
-        const Vector2 nodeSize = nodeSizes[nodeId];
+        const Vector4 padding = sharedState.styles[data.style].padding + data.padding;
+        Vector2 offset = nodeOffsets[nodeId] + padding.xy();
+        const Vector2 size = nodeSizes[nodeId] - padding.xy() - Math::gather<'z', 'w'>(padding);
         const UnsignedByte alignmentHorizontal = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentHorizontal);
         if(alignmentHorizontal == Text::Implementation::AlignmentLeft) {
             offset.x() += 0.0f;
         } else if(alignmentHorizontal == Text::Implementation::AlignmentRight) {
-            offset.x() += nodeSize.x();
+            offset.x() += size.x();
         } else if(alignmentHorizontal == Text::Implementation::AlignmentCenter) {
             if(UnsignedByte(data.alignment) & Text::Implementation::AlignmentIntegral)
-                offset.x() += Math::round(nodeSize.x()*0.5f);
+                offset.x() += Math::round(size.x()*0.5f);
             else
-                offset.x() += nodeSize.x()*0.5f;
+                offset.x() += size.x()*0.5f;
         }
         const UnsignedByte alignmentVertical = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentVertical);
         /* For Line/Middle it's aligning either the line or bounding box middle
@@ -483,13 +527,13 @@ void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
         if(alignmentVertical == Text::Implementation::AlignmentTop) {
             offset.y() += 0.0f;
         } else if(alignmentVertical == Text::Implementation::AlignmentBottom) {
-            offset.y() += nodeSize.y();
+            offset.y() += size.y();
         } else if(alignmentVertical == Text::Implementation::AlignmentLine ||
                   alignmentVertical == Text::Implementation::AlignmentMiddle) {
             if(UnsignedByte(data.alignment) & Text::Implementation::AlignmentIntegral)
-                offset.y() += Math::round(nodeSize.y()*0.5f);
+                offset.y() += Math::round(size.y()*0.5f);
             else
-                offset.y() += nodeSize.y()*0.5f;
+                offset.y() += size.y()*0.5f;
         }
 
         /* Translate the (aligned) glyph run, fill color and style */
