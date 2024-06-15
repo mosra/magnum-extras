@@ -31,7 +31,6 @@
  */
 
 #include <Corrade/Containers/Pointer.h>
-#include <Corrade/Containers/StringView.h>
 #include <Magnum/Text/Text.h>
 
 #include "Magnum/Whee/Whee.h"
@@ -209,14 +208,11 @@ class MAGNUM_WHEE_EXPORT TextProperties {
         /**
          * @brief Language for the whole text
          *
-         * If the language passed to @ref setLanguage() was
-         * @relativeref{Corrade,Containers::StringViewFlag::Global}, the
-         * returned view is global as well. Otherwise the returned view is only
-         * guaranteed to be valid for as long as the @ref TextProperties
-         * instance is alive. If no language was set, the returned view is
-         * empty (and thus global as well).
+         * The returned view is only guaranteed to be valid for as long as the
+         * @ref TextProperties instance is alive, or until @ref setLanguage()
+         * is called.
          */
-        Containers::StringView language() const { return _language; }
+        Containers::StringView language() const;
 
         /**
          * @brief Set language for the whole text
@@ -225,9 +221,7 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * The language is expected to be a [BCP 47 language tag](https://en.wikipedia.org/wiki/IETF_language_tag),
          * either just the base tag such as @cpp "en" @ce or @cpp "cs" @ce
          * alone, or further differentiating with a region subtag like for
-         * example @cpp "en-US" @ce vs @cpp "en-GB" @ce. If @p language isn't
-         * @relativeref{Corrade,Containers::StringViewFlag::Global}, a copy is
-         * allocated internally.
+         * example @cpp "en-US" @ce vs @cpp "en-GB" @ce, at most 15 bytes long.
          *
          * Default is an empty string, i.e. the font shaper may attempt to
          * guess the language from the input text. See the documentation of
@@ -307,12 +301,18 @@ class MAGNUM_WHEE_EXPORT TextProperties {
     private:
         struct State;
 
-        /* The _state is only allocated when setting a non-global language
-           string view or when passing a feature list. Eventually it'll contain
-           also font/language/script/direction properties for sub-ranges of the
-           text. */
+        /* The _state is only allocated when passing a feature list. Eventually
+           it'll contain also font/language/script/direction properties for
+           sub-ranges of the text. */
         Containers::Pointer<State> _state;
-        Containers::StringView _language;
+        /* Language stored as a null-terminated string up to 15 characters. Has
+           the same size as a StringView on 64bit, but actually owns the data,
+           avoiding a need to allocate _state every time a non-global language
+           string is used. 15 bytes should be plenty even for the longer
+           examples at https://en.wikipedia.org/wiki/IETF_language_tag, worst
+           case we can always switch to storing a String (which has 22 bytes
+           for SSO on 64bit). */
+        char _language[16]{};
         Text::Script _script;
         FontHandle _font;
         /* If 0xff, indicates that alignment is not set to avoid an Optional
