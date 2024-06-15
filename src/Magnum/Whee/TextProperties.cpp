@@ -27,7 +27,8 @@
 
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
-#include <Corrade/Containers/String.h>
+#include <Corrade/Containers/StringView.h>
+#include <Corrade/Utility/Algorithms.h>
 #include <Magnum/Text/Alignment.h>
 #include <Magnum/Text/Direction.h>
 #include <Magnum/Text/Feature.h>
@@ -42,7 +43,6 @@ TextFeatureValue::operator Text::FeatureRange() const {
 }
 
 struct TextProperties::State {
-    Containers::String languageStorage;
     Containers::Array<Text::FeatureRange> features;
 };
 
@@ -77,17 +77,15 @@ TextProperties& TextProperties::setAlignment(const Containers::Optional<Text::Al
     return *this;
 }
 
-TextProperties& TextProperties::setLanguage(const Containers::StringView language) {
-    /* If the string is global, just save it, otherwise make a copy and
-       reference that */
-    if(language.flags() & Containers::StringViewFlag::Global) {
-        _language = language;
-    } else {
-        if(!_state)
-            _state.emplace();
-        _language = _state->languageStorage = language;
-    }
+Containers::StringView TextProperties::language() const {
+    return _language;
+}
 
+TextProperties& TextProperties::setLanguage(const Containers::StringView language) {
+    CORRADE_ASSERT(language.size() <= 15,
+        "Whee::TextProperties::setLanguage(): expected at most a 15-byte string, got" << language.size(), *this);
+    Utility::copy(language, Containers::arrayView(_language).prefix(language.size()));
+    _language[language.size()] = '\0';
     return *this;
 }
 
