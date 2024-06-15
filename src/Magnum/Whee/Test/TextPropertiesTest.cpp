@@ -54,6 +54,7 @@ struct TextPropertiesTest: TestSuite::Tester {
 
     void setters();
     void alignmentInvalid();
+    void languageInvalid();
     void directionValueOverflow();
     void copyLanguage();
     void copyFeatures();
@@ -83,6 +84,7 @@ TextPropertiesTest::TextPropertiesTest() {
 
               &TextPropertiesTest::setters,
               &TextPropertiesTest::alignmentInvalid,
+              &TextPropertiesTest::languageInvalid,
               &TextPropertiesTest::directionValueOverflow});
 
     addInstancedTests({&TextPropertiesTest::copyLanguage,
@@ -235,12 +237,10 @@ void TextPropertiesTest::setters() {
     CORRADE_COMPARE(properties.font(), Whee::fontHandle(13, 1));
     CORRADE_COMPARE(properties.script(), Text::Script::HanifiRohingya);
 
-    /* The language should stay global and the exact same pointer, no copy even
-       though it's not null-terminated. Copy is tested in
-       propertiesCopyLanguage() instead. */
+    /* The language is always copied to a local storage, even if global */
     CORRADE_COMPARE(properties.language(), "eh-UH");
-    CORRADE_COMPARE(properties.language().flags(), Containers::StringViewFlag::Global);
-    CORRADE_COMPARE(properties.language().data(), static_cast<const void*>(language.data()));
+    CORRADE_COMPARE(properties.language().flags(), Containers::StringViewFlag::NullTerminated);
+    CORRADE_VERIFY(properties.language().data() != static_cast<const void*>(language.data()));
 
     CORRADE_COMPARE(properties.shapeDirection(), Text::ShapeDirection::BottomToTop);
     CORRADE_COMPARE(properties.layoutDirection(), Text::LayoutDirection::VerticalRightToLeft);
@@ -259,6 +259,22 @@ void TextPropertiesTest::alignmentInvalid() {
     Error redirectError{&out};
     properties.setAlignment(Text::Alignment::LineCenterGlyphBounds);
     CORRADE_COMPARE(out.str(), "Whee::TextProperties::setAlignment(): Text::Alignment::LineCenterGlyphBounds is not supported\n");
+}
+
+void TextPropertiesTest::languageInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    TextProperties properties;
+
+    /* This is still fine */
+    properties.setLanguage("eh-UH-KindaLong");
+    CORRADE_COMPARE(properties.language(), "eh-UH-KindaLong");
+    CORRADE_COMPARE(properties.language().size(), 15);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    properties.setLanguage("eh-UH-MuchLonger");
+    CORRADE_COMPARE(out.str(), "Whee::TextProperties::setLanguage(): expected at most a 15-byte string, got 16\n");
 }
 
 void TextPropertiesTest::directionValueOverflow() {
