@@ -53,6 +53,7 @@ struct TextPropertiesTest: TestSuite::Tester {
     void constructMove();
 
     void setters();
+    void settersRvalue();
     void alignmentInvalid();
     void languageInvalid();
     void directionValueOverflow();
@@ -83,6 +84,7 @@ TextPropertiesTest::TextPropertiesTest() {
               &TextPropertiesTest::constructMove,
 
               &TextPropertiesTest::setters,
+              &TextPropertiesTest::settersRvalue,
               &TextPropertiesTest::alignmentInvalid,
               &TextPropertiesTest::languageInvalid,
               &TextPropertiesTest::directionValueOverflow});
@@ -248,6 +250,43 @@ void TextPropertiesTest::setters() {
     /* Resetting alignment should again make it NullOpt */
     properties.setAlignment({});
     CORRADE_COMPARE(properties.alignment(), Containers::NullOpt);
+}
+
+void TextPropertiesTest::settersRvalue() {
+    TextProperties propertiesStorage;
+
+    /* All these should delegate to the & overloads and return a && */
+    TextProperties&& properties = Utility::move(propertiesStorage)
+        .setAlignment(Text::Alignment::TopCenterIntegral)
+        .setFont(Whee::fontHandle(13, 1))
+        .setScript(Text::Script::HanifiRohingya)
+        .setLanguage("eh-UH")
+        .setShapeDirection(Text::ShapeDirection::BottomToTop)
+        .setLayoutDirection(Text::LayoutDirection::VerticalRightToLeft)
+        .setFeatures(Containers::arrayView<Text::FeatureRange>({
+            Text::Feature::Kerning
+        }));
+
+    CORRADE_COMPARE(&properties, &propertiesStorage);
+    CORRADE_COMPARE(properties.alignment(), Text::Alignment::TopCenterIntegral);
+    CORRADE_COMPARE(properties.font(), Whee::fontHandle(13, 1));
+    CORRADE_COMPARE(properties.script(), Text::Script::HanifiRohingya);
+    CORRADE_COMPARE(properties.language(), "eh-UH");
+    CORRADE_COMPARE(properties.shapeDirection(), Text::ShapeDirection::BottomToTop);
+    CORRADE_COMPARE(properties.layoutDirection(), Text::LayoutDirection::VerticalRightToLeft);
+    CORRADE_COMPARE(properties.features().size(), 1);
+    CORRADE_COMPARE(properties.features()[0].feature(), Text::Feature::Kerning);
+
+    /* Test the feature ínitializer list overload also */
+    TextProperties&& properties2 = Utility::move(properties)
+        .setFeatures({
+            Text::Feature::HistoricalLigatures,
+            Text::Feature::SmallCapitals
+        });
+    CORRADE_COMPARE(&properties2, &propertiesStorage);
+    CORRADE_COMPARE(properties2.features().size(), 2);
+    CORRADE_COMPARE(properties2.features()[0].feature(), Text::Feature::HistoricalLigatures);
+    CORRADE_COMPARE(properties2.features()[1].feature(), Text::Feature::SmallCapitals);
 }
 
 void TextPropertiesTest::alignmentInvalid() {
