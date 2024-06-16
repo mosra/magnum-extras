@@ -70,23 +70,31 @@ Containers::Optional<Text::Alignment> TextProperties::alignment() const {
         Containers::NullOpt : Containers::optional(_alignment);
 }
 
-TextProperties& TextProperties::setAlignment(const Containers::Optional<Text::Alignment>& alignment) {
+TextProperties& TextProperties::setAlignment(const Containers::Optional<Text::Alignment>& alignment) & {
     CORRADE_ASSERT(!alignment || !(UnsignedByte(*alignment) & Text::Implementation::AlignmentGlyphBounds),
         "Whee::TextProperties::setAlignment():" << alignment << "is not supported", *this);
     _alignment = alignment ? *alignment : Text::Alignment(0xff);
     return *this;
 }
 
+TextProperties&& TextProperties::setAlignment(const Containers::Optional<Text::Alignment>& alignment) && {
+    return Utility::move(setAlignment(alignment));
+}
+
 Containers::StringView TextProperties::language() const {
     return _language;
 }
 
-TextProperties& TextProperties::setLanguage(const Containers::StringView language) {
+TextProperties& TextProperties::setLanguage(const Containers::StringView language) & {
     CORRADE_ASSERT(language.size() <= 15,
         "Whee::TextProperties::setLanguage(): expected at most a 15-byte string, got" << language.size(), *this);
     Utility::copy(language, Containers::arrayView(_language).prefix(language.size()));
     _language[language.size()] = '\0';
     return *this;
+}
+
+TextProperties&& TextProperties::setLanguage(const Containers::StringView language) && {
+    return Utility::move(setLanguage(language));
 }
 
 Containers::ArrayView<const Text::FeatureRange> TextProperties::features() const {
@@ -95,7 +103,7 @@ Containers::ArrayView<const Text::FeatureRange> TextProperties::features() const
     return _state->features;
 }
 
-TextProperties& TextProperties::setFeatures(const Containers::ArrayView<const Text::FeatureRange> features) {
+TextProperties& TextProperties::setFeatures(const Containers::ArrayView<const Text::FeatureRange> features) & {
     if(!_state)
         _state.emplace();
     /* Using a growable array as the users may want to reuse instances to avoid
@@ -106,7 +114,11 @@ TextProperties& TextProperties::setFeatures(const Containers::ArrayView<const Te
     return *this;
 }
 
-TextProperties& TextProperties::setFeatures(const std::initializer_list<Text::FeatureRange> features) {
+TextProperties&& TextProperties::setFeatures(const Containers::ArrayView<const Text::FeatureRange> features) && {
+    return Utility::move(setFeatures(features));
+}
+
+TextProperties& TextProperties::setFeatures(const std::initializer_list<Text::FeatureRange> features) & {
     return setFeatures(Containers::arrayView(features));
 }
 

@@ -169,7 +169,9 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          *      `*Middle` makes the midpoint between font ascent and descent
          *      matched.
          */
-        TextProperties& setAlignment(const Containers::Optional<Text::Alignment>& alignment);
+        TextProperties& setAlignment(const Containers::Optional<Text::Alignment>& alignment) &;
+        /** @overload */
+        TextProperties&& setAlignment(const Containers::Optional<Text::Alignment>& alignment) &&;
 
         /** @brief Font for the whole text */
         FontHandle font() const { return _font; }
@@ -181,9 +183,13 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * Default is @ref FontHandle::Null, i.e. the default font for given
          * style is used.
          */
-        TextProperties& setFont(FontHandle font) {
+        TextProperties& setFont(FontHandle font) & {
             _font = font;
             return *this;
+        }
+        /** @overload */
+        TextProperties&& setFont(FontHandle font) && {
+            return Utility::move(setFont(font));
         }
 
         /** @brief Script for the whole text */
@@ -200,9 +206,13 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * text.
          * @see @ref setLanguage(), @ref setShapeDirection()
          */
-        TextProperties& setScript(Text::Script script) {
+        TextProperties& setScript(Text::Script script) & {
             _script = script;
             return *this;
+        }
+        /** @overload */
+        TextProperties&& setScript(Text::Script script) && {
+            return Utility::move(setScript(script));
         }
 
         /**
@@ -229,7 +239,9 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * language and direction setting affects the shaped text.
          * @see @ref setScript(), @ref setShapeDirection()
          */
-        TextProperties& setLanguage(Containers::StringView language);
+        TextProperties& setLanguage(Containers::StringView language) &;
+        /** @overload */
+        TextProperties&& setLanguage(Containers::StringView language) &&;
 
         /** @brief Shaping direction for the whole text */
         Text::ShapeDirection shapeDirection() const {
@@ -247,9 +259,13 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * text.
          * @see @ref setLayoutDirection(), @ref setScript(), @ref setLanguage()
          */
-        TextProperties& setShapeDirection(Text::ShapeDirection direction) {
+        TextProperties& setShapeDirection(Text::ShapeDirection direction) & {
             _direction = (_direction & 0xf0)|(UnsignedByte(direction) & 0x0f);
             return *this;
+        }
+        /** @overload */
+        TextProperties&& setShapeDirection(Text::ShapeDirection direction) && {
+            return Utility::move(setShapeDirection(direction));
         }
 
         /** @brief Layout direction */
@@ -267,9 +283,13 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * always for the whole text.
          * @see @ref setShapeDirection()
          */
-        TextProperties& setLayoutDirection(Text::LayoutDirection direction) {
+        TextProperties& setLayoutDirection(Text::LayoutDirection direction) & {
             _direction = (_direction & 0x0f)|(UnsignedByte(direction) << 4);
             return *this;
+        }
+        /** @overload */
+        TextProperties&& setLayoutDirection(Text::LayoutDirection direction) && {
+            return Utility::move(setLayoutDirection(direction));
         }
 
         /**
@@ -293,10 +313,15 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * constraints.
          * @see @ref TextLayer::Shared::setStyle()
          */
-        TextProperties& setFeatures(Containers::ArrayView<const Text::FeatureRange> features);
-
+        TextProperties& setFeatures(Containers::ArrayView<const Text::FeatureRange> features) &;
         /** @overload */
-        TextProperties& setFeatures(std::initializer_list<Text::FeatureRange> features);
+        TextProperties&& setFeatures(Containers::ArrayView<const Text::FeatureRange> features) &&;
+        /** @overload */
+        TextProperties& setFeatures(std::initializer_list<Text::FeatureRange> features) &;
+        /** @overload */
+        TextProperties&& setFeatures(std::initializer_list<Text::FeatureRange> features) && {
+            return Utility::move(setFeatures(features));
+        }
 
     private:
         struct State;
