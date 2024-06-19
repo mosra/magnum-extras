@@ -1630,4 +1630,43 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         state.styleUpdateStamp = sharedState.styleUpdateStamp;
 }
 
+void TextLayer::doKeyPressEvent(const UnsignedInt dataId, KeyEvent& event) {
+    State& state = static_cast<State&>(*_state);
+    Implementation::TextLayerData& data = state.data[dataId];
+    if(!(data.flags >= TextDataFlag::Editable))
+        return;
+
+    /* Key events are implicitly passed also to nodes under cursor, restrict
+       the editing and cursor movement to just when the node is focused to
+       avoid strange behavior */
+    if(event.isFocused() && !event.modifiers()) {
+        if(event.key() == Key::Backspace) {
+            editTextInternal(dataId, TextEdit::RemoveBeforeCursor, {});
+        } else if(event.key() == Key::Delete) {
+            editTextInternal(dataId, TextEdit::RemoveAfterCursor, {});
+        } else if(event.key() == Key::Home) {
+            editTextInternal(dataId, TextEdit::MoveCursorLineBegin, {});
+        } else if(event.key() == Key::End) {
+            editTextInternal(dataId, TextEdit::MoveCursorLineEnd, {});
+        } else if(event.key() == Key::Left) {
+            editTextInternal(dataId, TextEdit::MoveCursorLeft, {});
+        } else if(event.key() == Key::Right) {
+            editTextInternal(dataId, TextEdit::MoveCursorRight, {});
+        } else return;
+
+        event.setAccepted();
+    }
+}
+
+void TextLayer::doTextInputEvent(const UnsignedInt dataId, TextInputEvent& event) {
+    State& state = static_cast<State&>(*_state);
+    Implementation::TextLayerData& data = state.data[dataId];
+    if(!(data.flags >= TextDataFlag::Editable))
+        return;
+
+    editTextInternal(dataId, TextEdit::InsertBeforeCursor, event.text());
+
+    event.setAccepted();
+}
+
 }}

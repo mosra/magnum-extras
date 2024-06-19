@@ -48,6 +48,7 @@
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/TextProperties.h"
 /* for dynamicStyle(), createRemoveSetText(), updateCleanDataOrder(),
@@ -165,6 +166,8 @@ struct TextLayerTest: TestSuite::Tester {
     void updateNoStyleSet();
 
     void sharedNeedsUpdateStatePropagatedToLayers();
+
+    void keyTextEvent();
 };
 
 const struct {
@@ -843,6 +846,8 @@ TextLayerTest::TextLayerTest() {
 
     addInstancedTests({&TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers},
         Containers::arraySize(SharedNeedsUpdateStatePropagatedToLayersData));
+
+    addTests({&TextLayerTest::keyTextEvent});
 }
 
 using namespace Containers::Literals;
@@ -6892,6 +6897,247 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
        present */
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
     CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate|data.extraState);
+}
+
+void TextLayerTest::keyTextEvent() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<ThreeGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(98, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    NodeHandle node = ui.createNode({}, {100, 100}, NodeFlag::Focusable);
+
+    /* Use style 2 to verify it actually uses that one and not some other
+       in subsequent updateText(); have also some text before and after to
+       catch weird overlaps and OOB issues */
+    layer.create(0, "aaaa", {}, TextDataFlag::Editable);
+    DataHandle text = layer.create(0, "hello", {}, TextDataFlag::Editable, node);
+    layer.setCursor(text, 3);
+    layer.create(0, "bb", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.cursor(text), 3);
+
+    /* Create also a non-editable text attached to the same node, it shouldn't
+       get modified in any way */
+    layer.create(0, "hey", {}, node);
+
+    /* Reset state flags */
+    ui.update();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Hover the node */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 50}, event));
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+
+    /* Nothing should happen if not focused even if the node is under cursor */
+    } {
+        KeyEvent right{Key::Right, {}};
+        KeyEvent left{Key::Left, {}};
+        KeyEvent backspace{Key::Backspace, {}};
+        KeyEvent delete_{Key::Delete, {}};
+        KeyEvent home{Key::Home, {}};
+        KeyEvent end{Key::End, {}};
+        TextInputEvent input{"hello"};
+        CORRADE_VERIFY(!ui.keyPressEvent(right));
+        CORRADE_VERIFY(!ui.keyPressEvent(left));
+        CORRADE_VERIFY(!ui.keyPressEvent(backspace));
+        CORRADE_VERIFY(!ui.keyPressEvent(delete_));
+        CORRADE_VERIFY(!ui.keyPressEvent(home));
+        CORRADE_VERIFY(!ui.keyPressEvent(end));
+        CORRADE_VERIFY(!ui.textInputEvent(input));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), 3);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Move pointer away, focus the node instead */
+    } {
+        PointerMoveEvent move{{}, {}};
+        FocusEvent focus;
+        CORRADE_VERIFY(!ui.pointerMoveEvent({1000, 1000}, move));
+        CORRADE_VERIFY(ui.focusEvent(node, focus));
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Left / right arrow */
+    } {
+        KeyEvent event{Key::Left, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), 2);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        KeyEvent event{Key::Right, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), 3);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Home / end */
+    } {
+        KeyEvent event{Key::Home, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), 0);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        KeyEvent event{Key::End, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), 5);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Put cursor back into a non-trivial position for editing operations */
+    layer.setCursor(text, 3);
+
+    /* Backspace / delete */
+    {
+        KeyEvent event{Key::Backspace, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "helo");
+        CORRADE_COMPARE(layer.cursor(text), 2);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        KeyEvent event{Key::Delete, {}};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "heo");
+        CORRADE_COMPARE(layer.cursor(text), 2);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Text input */
+    } {
+        TextInputEvent event{"avenly may"};
+        CORRADE_VERIFY(ui.textInputEvent(event));
+        CORRADE_COMPARE(layer.text(text), "heavenly mayo");
+        CORRADE_COMPARE(layer.cursor(text), 12);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Nothing should happen with modifiers set, so far at least */
+    } {
+        KeyEvent right{Key::Right, Modifier::Ctrl};
+        KeyEvent left{Key::Left, Modifier::Ctrl};
+        KeyEvent backspace{Key::Backspace, Modifier::Ctrl};
+        KeyEvent delete_{Key::Delete, Modifier::Ctrl};
+        KeyEvent home{Key::Home, Modifier::Shift};
+        KeyEvent end{Key::End, Modifier::Shift};
+        CORRADE_VERIFY(!ui.keyPressEvent(right));
+        CORRADE_VERIFY(!ui.keyPressEvent(left));
+        CORRADE_VERIFY(!ui.keyPressEvent(backspace));
+        CORRADE_VERIFY(!ui.keyPressEvent(delete_));
+        CORRADE_VERIFY(!ui.keyPressEvent(home));
+        CORRADE_VERIFY(!ui.keyPressEvent(end));
+        CORRADE_COMPARE(layer.text(text), "heavenly mayo");
+        CORRADE_COMPARE(layer.cursor(text), 12);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Nothing should happen for a key release */
+    } {
+        KeyEvent right{Key::Right, Modifier::Ctrl};
+        KeyEvent left{Key::Left, Modifier::Ctrl};
+        KeyEvent backspace{Key::Backspace, Modifier::Ctrl};
+        KeyEvent delete_{Key::Delete, Modifier::Ctrl};
+        KeyEvent home{Key::Home, Modifier::Shift};
+        KeyEvent end{Key::End, Modifier::Shift};
+        CORRADE_VERIFY(!ui.keyReleaseEvent(right));
+        CORRADE_VERIFY(!ui.keyReleaseEvent(left));
+        CORRADE_VERIFY(!ui.keyReleaseEvent(backspace));
+        CORRADE_VERIFY(!ui.keyReleaseEvent(delete_));
+        CORRADE_VERIFY(!ui.keyReleaseEvent(home));
+        CORRADE_VERIFY(!ui.keyReleaseEvent(end));
+        CORRADE_COMPARE(layer.text(text), "heavenly mayo");
+        CORRADE_COMPARE(layer.cursor(text), 12);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Nothing happens with a focus lost again */
+    } {
+        FocusEvent blur;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, blur));
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        KeyEvent event{Key::Left, {}};
+        CORRADE_VERIFY(!ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "heavenly mayo");
+        CORRADE_COMPARE(layer.cursor(text), 12);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
 }
 
 }}}}

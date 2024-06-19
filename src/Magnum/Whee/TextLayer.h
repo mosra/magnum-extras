@@ -1411,6 +1411,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
            tests causes linker errors */
         void doClean(Containers::BitArrayView dataIdsToRemove) override;
         void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
+        void doKeyPressEvent(UnsignedInt dataId, KeyEvent& event) override;
+        void doTextInputEvent(UnsignedInt dataId, TextInputEvent& event) override;
 };
 
 /**
