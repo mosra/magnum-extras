@@ -450,11 +450,13 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Compared to @ref create(), the glyph is aligned according to
          * @ref TextProperties::alignment() based on its bounding rectangle
-         * coming from the glyph cache, not based on font metrics. The
+         * coming from the glyph cache, not based on font metrics. If the
+         * @ref Text::Alignment is `*Start` or `*End`, it's converted to an
+         * appropriate `*Left` or `*Right` value based on
+         * @ref TextProperties::layoutDirection() and
+         * @relativeref{TextProperties,shapeDirection()}. The
          * @ref TextProperties::script(),
-         * @relativeref{TextProperties,language()},
-         * @relativeref{TextProperties,shapeDirection()},
-         * @relativeref{TextProperties,layoutDirection()} and
+         * @relativeref{TextProperties,language()} and
          * @relativeref{TextProperties,features()} properties aren't used in
          * any way.
          * @see @ref Shared::glyphCacheFontId(), @ref setGlyph()

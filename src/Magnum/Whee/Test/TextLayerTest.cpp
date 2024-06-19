@@ -325,50 +325,80 @@ const struct {
 const struct {
     const char* name;
     Text::Alignment alignment;
+    Text::ShapeDirection shapeDirection;
     /* Node offset is {50.5, 20.5}, size {200.8, 100.4}; bounding box {9, 11},
        ascent 7, descent -4 */
     Vector2 offset;
     /* Glyph ounding box is {6, 8}, offset {-4, -6} */
     Vector2 offsetGlyph;
 } UpdateAlignmentPaddingData[]{
-    {"line left", Text::Alignment::LineLeft,
+    {"line left",
+        Text::Alignment::LineLeft, Text::ShapeDirection::Unspecified,
         /* 20.5 + 100.4/2 = 70.7 */
         {50.5f, 70.7f},
         {50.5f, 76.7f}},
-    {"line right", Text::Alignment::LineRight,
+    {"line right",
+        Text::Alignment::LineRight, Text::ShapeDirection::Unspecified,
         {50.5f + 200.8f - 9.0f, 70.7f},
         {50.5f + 200.8f - 6.0f, 76.7f}},
-    {"top center", Text::Alignment::TopCenter,
+    {"top center",
+        Text::Alignment::TopCenter, Text::ShapeDirection::Unspecified,
         {50.5f + 100.4f - 4.5f, 20.5f + 7.0f},
         {50.5f + 100.4f - 3.0f, 20.5f + 8.0f}},
-    {"top center, interal", Text::Alignment::TopCenterIntegral,
+    {"top center, interal",
+        Text::Alignment::TopCenterIntegral, Text::ShapeDirection::Unspecified,
         /* Only the offset inside the node and the bounding box is rounded,
            not the node offset itself; not the Y coordinate either */
         {50.5f + 100.0f - 5.0f, 20.5f + 7.0f},
         /* No change for the glyph as the glyph cache has integer sizes */
         {50.5f + 100.0f - 3.0f, 20.5f + 8.0f}},
-    {"bottom left", Text::Alignment::BottomLeft,
+    {"bottom left",
+        Text::Alignment::BottomLeft, Text::ShapeDirection::Unspecified,
         {50.5f, 120.9f - 4.0f},
         {50.5f, 120.9f}},
-    {"middle right", Text::Alignment::MiddleRight,
+    {"middle right",
+        Text::Alignment::MiddleRight, Text::ShapeDirection::Unspecified,
         {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
         {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
-    {"middle right, integral", Text::Alignment::MiddleRightIntegral,
+    {"middle right, integral",
+        Text::Alignment::MiddleRightIntegral, Text::ShapeDirection::Unspecified,
         /* Only the offset inside the node and the bounding box is rounded,
            not the node offset itself; not the X coordinate either. Note that
            the Y rounding is in the other direction compared to X because of Y
            flip. */
         {50.5f + 200.8f - 9.0f, 20.5f + 50.0f - 5.0f + 7.0f},
         {50.5f + 200.8f - 6.0f, 20.5f + 50.0f - 4.0f + 8.0f}},
-    {"middle center", Text::Alignment::MiddleCenter,
+    {"middle center",
+        Text::Alignment::MiddleCenter, Text::ShapeDirection::Unspecified,
         {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
         {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
-    {"middle center, integral", Text::Alignment::MiddleCenterIntegral,
+    {"middle center, integral",
+        Text::Alignment::MiddleCenterIntegral, Text::ShapeDirection::Unspecified,
         /* Only the offset inside the node and the bounding box is rounded,
            not the node offset itself. Note that the Y rounding is in the other
            direction compared to X because of Y flip. */
         {50.5f + 100.0f - 5.0f, 20.5f + 50.0f - 5.0f + 7.0f},
         {50.5f + 100.0f - 3.0f, 20.5f + 50.0f - 4.0f + 8.0f}},
+    {"line end, RTL",
+        Text::Alignment::LineEnd, Text::ShapeDirection::RightToLeft,
+        /* Same as line left */
+        {50.5f, 70.7f},
+        {50.5f, 76.7f}},
+    {"bottom start, unspecified direction",
+        Text::Alignment::BottomStart, Text::ShapeDirection::Unspecified,
+        /* Same as bottom start */
+        {50.5f, 120.9f - 4.0f},
+        {50.5f, 120.9f}},
+    {"middle start, RTL",
+        Text::Alignment::MiddleStart, Text::ShapeDirection::RightToLeft,
+        /* Same as middle right */
+        {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
+    {"middle center, RTL",
+        Text::Alignment::MiddleCenter, Text::ShapeDirection::RightToLeft,
+        /* No change compared to middle center above */
+        {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
+        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
 };
 
 const struct {
@@ -4789,6 +4819,13 @@ void TextLayerTest::updateAlignment() {
                 UnsignedInt doShape(Containers::StringView text, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
                     return text.size();
                 }
+                bool doSetDirection(Text::ShapeDirection direction) override {
+                    _direction = direction;
+                    return true;
+                }
+                Text::ShapeDirection doDirection() const override {
+                    return _direction;
+                }
                 void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
                     for(std::size_t i = 0; i != ids.size(); ++i)
                         ids[i] = 0;
@@ -4804,6 +4841,9 @@ void TextLayerTest::updateAlignment() {
                         cursor / selection */
                     CORRADE_FAIL("This shouldn't be called.");
                 }
+
+                private:
+                    Text::ShapeDirection _direction = Text::ShapeDirection::Unspecified;
             };
             return Containers::pointer<Shaper>(*this);
         }
@@ -4858,7 +4898,12 @@ void TextLayerTest::updateAlignment() {
     NodeHandle node3 = nodeHandle(3, 0);
 
     /* 3 chars, size x2, so the bounding box is 9x11 */
-    layer.create(0, "hey", {}, node3);
+    layer.create(0,
+        "hey",
+        /* Direction passed from TextProperties, direction returned from the
+           shaper tested in updatePadding() below */
+        TextProperties{}.setShapeDirection(data.shapeDirection),
+        node3);
 
     Vector2 nodeOffsets[4];
     Vector2 nodeSizes[4];
@@ -4945,7 +4990,10 @@ void TextLayerTest::updateAlignmentGlyph() {
     layer.createGlyph(
         0,
         17,
-        {},
+        /* There's no way to detect the direction as no shaper is used, so
+           compared to updateAlignment() / updatePadding() this is always
+           passed in via TextProperties */
+        TextProperties{}.setShapeDirection(data.shapeDirection),
         node3);
 
     Vector2 nodeOffsets[4];
@@ -4975,8 +5023,10 @@ void TextLayerTest::updatePadding() {
     /* Same as updateAlignment(), except that the node offset & size is
        different and only matches the original if padding is applied
        correctly from both the data and the style. Additionally, in comparison
-       to updateAlignment(), the style-supplied alignment is a bogus value and
-       padding from the TextProperties is used instead. */
+       to updateAlignment(), shape direction is returned from the shaper
+       directly instead of being passed from TextProperties, and the
+       style-supplied alignment is a bogus value and padding from the
+       TextProperties is used instead. */
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
@@ -4994,10 +5044,13 @@ void TextLayerTest::updatePadding() {
         Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
         Containers::Pointer<Text::AbstractShaper> doCreateShaper() override {
             struct Shaper: Text::AbstractShaper {
-                using Text::AbstractShaper::AbstractShaper;
+                explicit Shaper(Text::AbstractFont& font, Text::ShapeDirection direction): Text::AbstractShaper{font}, _direction{direction} {}
 
                 UnsignedInt doShape(Containers::StringView text, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
                     return text.size();
+                }
+                Text::ShapeDirection doDirection() const override {
+                    return _direction;
                 }
                 void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
                     for(std::size_t i = 0; i != ids.size(); ++i)
@@ -5014,12 +5067,18 @@ void TextLayerTest::updatePadding() {
                         cursor / selection */
                     CORRADE_FAIL("This shouldn't be called.");
                 }
+
+                Text::ShapeDirection _direction;
             };
-            return Containers::pointer<Shaper>(*this);
+            return Containers::pointer<Shaper>(*this, direction);
         }
 
+        Text::ShapeDirection direction;
         bool _opened = false;
     } font;
+    /* Direction returned from the shaper, direction passed through from
+       TextProperties tested in updateAlignment() above */
+    font.direction = data.shapeDirection;
     font.openFile({}, 100.0f);
 
     /* A trivial glyph cache. While font's ascent/descent goes both above and
@@ -5157,7 +5216,14 @@ void TextLayerTest::updatePaddingGlyph() {
     NodeHandle node3 = nodeHandle(3, 0);
 
     /* Size x2, so the bounding box is 6x8 */
-    DataHandle node3Data = layer.createGlyph(0, 17, data.alignment, node3);
+    DataHandle node3Data = layer.createGlyph(0, 17,
+        TextProperties{}
+            .setAlignment(data.alignment)
+            /* There's no way to detect the direction as no shaper is used, so
+               compared to updateAlignment() / updatePadding() this is always
+               passed in via TextProperties */
+            .setShapeDirection(data.shapeDirection),
+        node3);
     layer.setPadding(node3Data, {20.0f, 5.0f, 50.0f, 30.0f});
 
     Vector2 nodeOffsets[4];
