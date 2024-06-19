@@ -461,6 +461,11 @@ void TextLayer::shapeTextInternal(
     shaper.setDirection(properties.shapeDirection());
     const UnsignedInt glyphCount = shaper.shape(text, features);
 
+    /* Resolve the alignment based on direction */
+    const Text::Alignment resolvedAlignment = Text::alignmentForDirection(alignment,
+        properties.layoutDirection(),
+        shaper.direction());
+
     /* Add a new glyph run. Any previous run for this data was marked as unused
        in previous remove() or in setText() right before calling this
        function. */
@@ -489,12 +494,12 @@ void TextLayer::shapeTextInternal(
         const Range2D blockRectangle = Text::alignRenderedLine(
             lineRectangle,
             properties.layoutDirection(),
-            alignment,
+            resolvedAlignment,
             glyphOffsetsPositions);
         size = Text::alignRenderedBlock(
             blockRectangle,
             properties.layoutDirection(),
-            alignment,
+            resolvedAlignment,
             glyphOffsetsPositions).size();
     }
 
@@ -511,11 +516,12 @@ void TextLayer::shapeTextInternal(
             glyph.glyphId = glyphCache->glyphId(fontState.glyphCacheFontId, glyph.glyphId);
     }
 
-    /* Save scale, size, alignment and the glyph run reference */
+    /* Save scale, size, direction-resolved alignment and the glyph run
+       reference for use in doUpdate() later */
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
     data.size = size;
-    data.alignment = alignment;
+    data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
 }
 
@@ -554,6 +560,10 @@ void TextLayer::shapeGlyphInternal(
     } else
         alignment = *properties.alignment();
 
+    /* Resolve direction-based alignment based on the information passed in
+       TextProperties */
+    const Text::Alignment resolvedAlignment = Text::alignmentForDirection(alignment, properties.layoutDirection(), properties.shapeDirection());
+
     /* The createGlyph() (or create()) should have ensured that a glyph cache
        is set, thus the subsequent setGlyph() doesn't need to check again. */
     const Implementation::TextLayerFont& fontState = sharedState.fonts[fontHandleId(font)];
@@ -580,15 +590,13 @@ void TextLayer::shapeGlyphInternal(
     {
         const Range2D blockRectangle = Text::alignRenderedLine(
             glyphRectangle,
-            /** @todo could the direction be abused for anything cool? */
-            Text::LayoutDirection::HorizontalTopToBottom,
-            alignment,
+            properties.layoutDirection(),
+            resolvedAlignment,
             glyphPosition);
         size = Text::alignRenderedBlock(
             blockRectangle,
-            /** @todo could the direction be abused for anything cool? */
-            Text::LayoutDirection::HorizontalTopToBottom,
-            alignment,
+            properties.layoutDirection(),
+            resolvedAlignment,
             glyphPosition).size();
     }
 
@@ -600,11 +608,12 @@ void TextLayer::shapeGlyphInternal(
     arrayAppend(state.glyphData, InPlaceInit, *glyphPosition, cacheGlobalGlyphId);
     arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, 1u, id);
 
-    /* Save scale, size, alignment and the glyph run reference */
+    /* Save scale, size, direction-resolved alignment and the glyph run
+       reference for use in doUpdate() later */
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
     data.size = size;
-    data.alignment = alignment;
+    data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
 }
 
