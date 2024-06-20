@@ -76,7 +76,8 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
             BackgroundBlur = 1 << 1,
             NoRoundedCorners = 1 << 2,
             NoOutline = 1 << 3,
-            SubdividedQuads = 1 << 4
+            SubdividedQuads = 1 << 4,
+            TextureMask = 1 << 5,
         };
 
         typedef Containers::EnumSet<Flag> Flags;
@@ -170,6 +171,7 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
         .addSource(flags & Flag::NoRoundedCorners ? "#define NO_ROUNDED_CORNERS\n"_s : ""_s)
         .addSource(flags & Flag::NoOutline ? "#define NO_OUTLINE\n"_s : ""_s)
         .addSource(flags & Flag::SubdividedQuads ? "#define SUBDIVIDED_QUADS\n"_s : ""_s)
+        .addSource(flags & Flag::TextureMask ? "#define TEXTURE_MASK\n"_s : ""_s)
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("BaseShader.frag"_s));
 
@@ -321,12 +323,13 @@ BlurShaderGL::BlurShaderGL(UnsignedInt radius, Float limit) {
 
 struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
     explicit State(Shared& self, const Configuration& configuration): BaseLayer::Shared::State{self, configuration}, shader{
-        #define _c(flag) (flags & Flag::flag ? BaseShaderGL::Flag::flag : BaseShaderGL::Flags{})
+        #define _c(flag) (flags >= Flag::flag ? BaseShaderGL::Flag::flag : BaseShaderGL::Flags{})
         _c(BackgroundBlur)|
         _c(Textured)|
         _c(NoRoundedCorners)|
         _c(NoOutline)|
-        _c(SubdividedQuads),
+        _c(SubdividedQuads)|
+        _c(TextureMask),
         #undef _c
         configuration.styleUniformCount() + configuration.dynamicStyleCount()} {}
 
