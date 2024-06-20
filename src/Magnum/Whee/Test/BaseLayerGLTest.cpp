@@ -94,6 +94,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void renderOrDrawCompositeTeardown();
 
     void renderComposite();
+    void renderCompositeTextured();
     void renderCompositeNodeRects();
 
     void drawSetup();
@@ -284,30 +285,33 @@ const struct {
 
 const struct {
     const char* name;
-    const char* filename;
+    const char* textureFilename;
+    const char* expectedFilename;
     bool rvalue;
+    Color4 clearColor;
     Containers::Optional<Vector3> offset;
     Containers::Optional<Vector2> size;
+    BaseLayerGL::Shared::Flags extraFlags;
     BaseLayerStyleUniform styleUniform;
 } RenderTexturedData[]{
-    {"default offset and size", "textured-default.png",
-        false, {}, {},
+    {"default offset and size", "blur-input.png", "textured-default.png",
+        false, 0x1f1f1f_rgbf, {}, {}, {},
         BaseLayerStyleUniform{}},
-    {"", "textured.png",
-        false,
+    {"", "blur-input.png", "textured.png",
+        false, 0x1f1f1f_rgbf,
         /* The image is 160x106, want to render the bottom right 112x48 portion
            of it to avoid nasty scaling, and to verify the offset is taken from
            the right (bottom left) origin */
-        {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}},
+        {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
         BaseLayerStyleUniform{}},
-    {"r-value instance", "textured.png",
-        true,
-        {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}},
+    {"r-value instance", "blur-input.png", "textured.png",
+        true, 0x1f1f1f_rgbf,
+        {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
         BaseLayerStyleUniform{}},
-    {"colored", "textured-colored.png",
-        false,
+    {"colored", "blur-input.png", "textured-colored.png",
+        false, 0x1f1f1f_rgbf,
         /* Top left part of the image instead */
-        {{0.0f/160.0f, 58.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}},
+        {{0.0f/160.0f, 58.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setInnerOutlineCornerRadius(4.0f)
@@ -317,6 +321,70 @@ const struct {
                the texture should shine through if semi-transparent */
             .setOutlineWidth(8.0f)
             .setOutlineColor(0xa5c9eaff_rgbf*0.75f)},
+    {"alpha mask", "mask-premultiplied.png", "textured-mask.png",
+        /* Brighter than default clear color to verify the masked out parts
+           aren't just black */
+        false, 0x999999_rgbf,
+        /* The image is 128x64, rendering the actually visible 112x48 part of
+           it to avoid nasty scaling */
+        {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
+            /** @todo this is just to avoid a slight white outline, fix
+                properly in the shader */
+            .setOutlineColor(0x00000000_rgbaf)},
+    /* Should cause no difference compared to above */
+    {"alpha mask, TextureMask", "mask-premultiplied.png", "textured-mask.png",
+        false, 0x999999_rgbf,
+        {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
+        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
+            /** @todo this is just to avoid a slight white outline, fix
+                properly in the shader */
+            .setOutlineColor(0x00000000_rgbaf)},
+    {"alpha mask, colored", "mask-colored-premultiplied.png", "textured-mask-colored.png",
+        false, 0x999999_rgbf,
+        {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setColor(0xffffff_rgbf)
+            /** @todo this is just to avoid a slight white outline, fix
+                properly in the shader */
+            .setOutlineColor(0x00000000_rgbaf)},
+    /* Should cause no difference compared to above */
+    {"alpha mask, colored, TextureMask", "mask-colored-premultiplied.png", "textured-mask-colored.png",
+        false, 0x999999_rgbf,
+        {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
+        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setColor(0xffffff_rgbf)
+            /** @todo this is just to avoid a slight white outline, fix
+                properly in the shader */
+            .setOutlineColor(0x00000000_rgbaf)},
+    /* The outline is by default not affected by the mask */
+    {"alpha mask, outline", "mask-premultiplied.png", "textured-mask-outline-default.png",
+        false, 0x999999_rgbf,
+        {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setInnerOutlineCornerRadius(4.0f)
+            .setOutlineWidth(8.0f)
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
+            .setOutlineColor(0xf1e77f_rgbf)},
+    {"alpha mask, outline, TextureMask", "mask-premultiplied.png", "textured-mask-outline-mask.png",
+        false, 0x999999_rgbf,
+        {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
+        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setInnerOutlineCornerRadius(4.0f)
+            .setOutlineWidth(8.0f)
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
+            .setOutlineColor(0xf1e77f_rgbf)},
 };
 
 const struct {
@@ -565,6 +633,75 @@ const struct {
 
 const struct {
     const char* name;
+    const char* textureFilename;
+    const char* expectedFilename;
+    Vector3 offset;
+    Vector2 size;
+    BaseLayer::Shared::Flags extraFlags;
+    BaseLayerStyleUniform styleItem;
+} RenderCompositeTexturedData[]{
+    /* Transparent areas are blurred by default as well */
+    {"background blur, 50% opacity, radius 31, alpha mask",
+        "mask-premultiplied.png", "composite-background-blur-50-r31-mask-default.png",
+        /* The image is 128x64, rendering the actually visible 112x48 part of
+           it to avoid nasty scaling */
+        {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f}, {},
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f)
+            /** @todo this is just to avoid a slight white outline, fix
+                properly in the shader */
+            .setOutlineColor(0x00000000_rgbaf)},
+    {"background blur, 50% opacity, radius 31, alpha mask, TextureMask",
+        "mask-premultiplied.png", "composite-background-blur-50-r31-mask-mask.png",
+        {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f},
+        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f)
+            /** @todo this is just to avoid a slight white outline, fix
+                properly in the shader */
+            .setOutlineColor(0x00000000_rgbaf)},
+    {"background blur, 50% opacity, radius 31, alpha mask, colored",
+        "mask-colored-premultiplied.png", "composite-background-blur-50-r31-mask-colored-default.png",
+        {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f}, {},
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f)
+            /** @todo this is just to avoid a slight white outline, fix
+                properly in the shader */
+            .setOutlineColor(0x00000000_rgbaf)},
+    {"background blur, 50% opacity, radius 31, alpha mask, colored, TextureMask",
+        "mask-colored-premultiplied.png", "composite-background-blur-50-r31-mask-colored-mask.png",
+        {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f},
+        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f)
+            /** @todo this is just to avoid a slight white outline, fix
+                properly in the shader */
+            .setOutlineColor(0x00000000_rgbaf)},
+    /* Just to verify the outline is masked in this case as well, there should
+       be no interaction between these two features in the shader code tho */
+    {"background blur, 50% opacity, radius 31, alpha mask, outline, TextureMask",
+        "mask-premultiplied.png", "composite-background-blur-50-r31-mask-outline-mask.png",
+        {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f},
+        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerStyleUniform{}
+            .setCornerRadius(12.0f)
+            .setInnerOutlineCornerRadius(4.0f)
+            .setOutlineWidth(8.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f)
+            .setOutlineColor(0x2f83ccff_rgbaf*0.667f)},
+};
+
+const struct {
+    const char* name;
     const char* filename;
     Vector2 uiScale;
     UnsignedInt backgroundBlurRadius, backgroundBlurPassCount;
@@ -679,6 +816,11 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addInstancedTests({&BaseLayerGLTest::renderComposite},
         Containers::arraySize(RenderCompositeData),
+        &BaseLayerGLTest::renderOrDrawCompositeSetup,
+        &BaseLayerGLTest::renderOrDrawCompositeTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::renderCompositeTextured},
+        Containers::arraySize(RenderCompositeTexturedData),
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
@@ -1191,9 +1333,8 @@ void BaseLayerGLTest::renderTextured() {
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
 
-    /* Abusing the blur input image for a texture test */
     Containers::Pointer<Trade::AbstractImporter> importer = _manager.loadAndInstantiate("AnyImageImporter");
-    CORRADE_VERIFY(importer->openFile(Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/blur-input.png")));
+    CORRADE_VERIFY(importer->openFile(Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.textureFilename})));
 
     Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
     CORRADE_VERIFY(image);
@@ -1210,7 +1351,7 @@ void BaseLayerGLTest::renderTextured() {
 
     BaseLayerGL::Shared layerShared{
         BaseLayer::Shared::Configuration{2}
-            .addFlags(BaseLayer::Shared::Flag::Textured)};
+            .addFlags(BaseLayer::Shared::Flag::Textured|data.extraFlags)};
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
@@ -1231,6 +1372,8 @@ void BaseLayerGLTest::renderTextured() {
     if(data.offset)
         layer.setTextureCoordinates(nodeData, *data.offset, *data.size);
 
+    _framebuffer.clearColor(0, data.clearColor);
+
     ui.draw();
 
     MAGNUM_VERIFY_NO_GL_ERROR();
@@ -1246,7 +1389,7 @@ void BaseLayerGLTest::renderTextured() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
         DebugTools::CompareImageToFile{_manager});
 }
 
@@ -1442,6 +1585,82 @@ void BaseLayerGLTest::renderComposite() {
     CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
         (DebugTools::CompareImageToFile{_manager, data.maxThreshold, data.meanThreshold}));
+}
+
+void BaseLayerGLTest::renderCompositeTextured() {
+    auto&& data = RenderCompositeTexturedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    AbstractUserInterface ui{RenderSize};
+    RendererGL& renderer = ui.setRendererInstance(Containers::pointer<RendererGL>(RendererGL::Flag::CompositingFramebuffer));
+
+    Containers::Pointer<Trade::AbstractImporter> importer = _manager.loadAndInstantiate("AnyImageImporter");
+
+    CORRADE_VERIFY(importer->openFile(Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.textureFilename})));
+
+    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+    CORRADE_VERIFY(image);
+
+    GL::Texture2DArray texture;
+    texture
+        .setMinificationFilter(GL::SamplerFilter::Linear)
+        .setMagnificationFilter(GL::SamplerFilter::Linear)
+        .setStorage(1, GL::textureFormat(image->format()), Vector3i{image->size(), 8})
+        .setSubImage(0, {0, 0, Int(data.offset.z())}, ImageView2D{*image});
+
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}
+        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur|
+                  BaseLayer::Shared::Flag::Textured|
+                  data.extraFlags)
+        .setBackgroundBlurRadius(31)};
+    layerShared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(1.0f),
+        /* To verify it's not always picking the first uniform */
+        {BaseLayerStyleUniform{}, data.styleItem},
+        {});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+    layer.setTexture(texture);
+
+    /* Upload (a crop of) the blur source image as a framebuffer background */
+    CORRADE_VERIFY(importer->openFile(Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/blur-input.png")));
+
+    Containers::Optional<Trade::ImageData2D> backgroundImage = importer->image2D(0);
+    CORRADE_VERIFY(backgroundImage);
+    CORRADE_COMPARE(backgroundImage->format(), PixelFormat::RGBA8Unorm);
+    CORRADE_COMPARE_AS(backgroundImage->size(), RenderSize,
+        TestSuite::Compare::GreaterOrEqual);
+
+    Image2D imageCropped{PixelFormat::RGBA8Unorm, RenderSize, Containers::Array<char>{NoInit, std::size_t(RenderSize.product()*4)}};
+    Utility::copy(backgroundImage->pixels<Color4ub>().prefix({
+        std::size_t(RenderSize.y()),
+        std::size_t(RenderSize.x()),
+    }), imageCropped.pixels<Color4ub>());
+
+    renderer.compositingTexture().setSubImage(0, {}, imageCropped);
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    DataHandle nodeData = layer.create(1, node);
+    layer.setTextureCoordinates(nodeData, data.offset, data.size);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
+        (DebugTools::CompareImageToFile{_manager}));
 }
 
 void BaseLayerGLTest::renderCompositeNodeRects() {
