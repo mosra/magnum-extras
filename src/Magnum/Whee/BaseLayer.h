@@ -136,7 +136,9 @@ struct BaseLayerCommonStyleUniform {
      * between the color value and the blurred background. Making this value
      * less than @cpp 1.0f @ce makes the original unblurred framebuffer
      * contents show through as well, which can be used to achieve a glow-like
-     * effect. Default value is @cpp 1.0f @ce.
+     * effect. Default value is @cpp 1.0f @ce. A similar effect can also be
+     * achieved using @ref BaseLayer::Shared::Flag::TextureMask and pixel alpha
+     * values between @cpp 0.0f @ce and @cpp 1.0f @ce.
      */
     Float backgroundBlurAlpha;
 
@@ -982,6 +984,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * with a color coming from a texture set in
              * @ref BaseLayerGL::setTexture() and texture coordinates specified
              * with @ref setTextureCoordinates().
+             * @see @ref Flag::TextureMask
              */
             Textured = 1 << 0,
 
@@ -998,6 +1001,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * @ref setBackgroundBlurPassCount() to control the blur radius and
              * @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha to achieve
              * additional effects.
+             * @see @ref Flag::TextureMask
              */
             BackgroundBlur = 1 << 1,
 
@@ -1030,7 +1034,21 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * particular widget style doesn't use outlines at all.
              * @see @ref Flag::NoRoundedCorners
              */
-            NoOutline = 1 << 3
+            NoOutline = 1 << 3,
+
+            /**
+             * Use alpha channel of the texture to mask out the outline and
+             * background blur. By default the outline is drawn over the
+             * texture without taking the texture color or alpha into account;
+             * and the background is blurred for the whole area of the quad,
+             * with transparent areas of the texture causing just the blurred
+             * background to be shown. Enabling this flag causes the
+             * transparent areas to make holes in both the outline and the
+             * blurred background. Implies @ref Flag::Textured.
+             * @see @ref Flag::BackgroundBlur,
+             *      @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha
+             */
+            TextureMask = Textured|(1 << 4),
         };
 
         /**

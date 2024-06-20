@@ -143,13 +143,17 @@ void main() {
     /* Gradient, optionally textured */
     lowp vec4 gradientColor = interpolatedColor;
     #ifdef TEXTURED
-    gradientColor *= texture(textureData, interpolatedTextureCoordinates);
+    lowp vec4 textureColor = texture(textureData, interpolatedTextureCoordinates);
+    gradientColor *= textureColor;
     #endif
 
     #ifndef NO_OUTLINE
     /* Transition to outline color */
     lowp float innerOutlineSmoothness = style_innerOutlineSmoothness;
     lowp vec4 outlineColor = styles[interpolatedStyle].outlineColor;
+    #ifdef TEXTURE_MASK
+    outlineColor *= textureColor.a;
+    #endif
     lowp vec4 color = mix(outlineColor, gradientColor, smoothstep(-innerOutlineSmoothness, +innerOutlineSmoothness, outlineDist));
     #else
     lowp vec4 color = gradientColor;
@@ -160,6 +164,9 @@ void main() {
        blur alpha coming from the style. If less than 1, it achieves an effect
        where the unblurred background shines through. */
     lowp vec4 blurred = texture(backgroundBlurTextureData, backgroundBlurTextureCoordinates)*style_backgroundBlurAlpha;
+    #ifdef TEXTURE_MASK
+    blurred *= textureColor.a;
+    #endif
     /* Blend the color with the blurred background based on the alpha channel.
        The input colors are assumed to be premultiplied so it's not a mix() but
        a simpler operation. I.e., color.rgb*color.a is already done on

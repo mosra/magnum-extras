@@ -54,6 +54,7 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
         _c(BackgroundBlur)
         _c(NoRoundedCorners)
         _c(NoOutline)
+        _c(TextureMask)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -63,6 +64,8 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
 
 Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flags value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::BaseLayer::Shared::Flags{}", {
+        BaseLayer::Shared::Flag::TextureMask,
+        /* Implied by TextureMask, has to be after */
         BaseLayer::Shared::Flag::Textured,
         BaseLayer::Shared::Flag::BackgroundBlur,
         BaseLayer::Shared::Flag::NoRoundedCorners,
