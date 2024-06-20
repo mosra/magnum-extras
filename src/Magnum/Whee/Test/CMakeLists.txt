@@ -192,11 +192,27 @@ if(MAGNUM_BUILD_GL_TESTS)
             # Scaled-down mage from https://en.wikipedia.org/wiki/Gaussian_blur
             # by IkamusumeFan - Own work, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=41790217
             BaseLayerTestFiles/blur-input.png
+            # Exported by Inkscape from mask.svg as (non-premultiplied) RGBA8.
+            # Then processed with PngImporter and
+            #   magnum-imageconverter --in-place -i alphaMode=premultipliedLinear mask-premultiplied.png
+            # to have the alpha channel equal to the RGB channels because we're
+            # not generally sRGB-aware yet, and then ultimately with
+            #   pngcrush -ow mask-premultiplied.png
+            # which turns the RGBA8 to RG8 to save space, and which
+            # StbImageImporter will then expand back to RGBA8 on import.
+            BaseLayerTestFiles/mask-premultiplied.png
+            # Same, but the colored layer of mask.svg instead
+            BaseLayerTestFiles/mask-colored-premultiplied.png
             BaseLayerTestFiles/clipping-disabled.png
             BaseLayerTestFiles/clipping-enabled.png
             BaseLayerTestFiles/composite-background-blur-0.png
             BaseLayerTestFiles/composite-background-blur-50.png
             BaseLayerTestFiles/composite-background-blur-50-r31.png
+            BaseLayerTestFiles/composite-background-blur-50-r31-mask-default.png
+            BaseLayerTestFiles/composite-background-blur-50-r31-mask-mask.png
+            BaseLayerTestFiles/composite-background-blur-50-r31-mask-colored-default.png
+            BaseLayerTestFiles/composite-background-blur-50-r31-mask-colored-mask.png
+            BaseLayerTestFiles/composite-background-blur-50-r31-mask-outline-mask.png
             BaseLayerTestFiles/composite-background-blur-50-r31-80.png
             BaseLayerTestFiles/composite-background-blur-75-colored.png
             BaseLayerTestFiles/composite-default-50.png
@@ -220,6 +236,10 @@ if(MAGNUM_BUILD_GL_TESTS)
             BaseLayerTestFiles/rounded-corners-same.png
             BaseLayerTestFiles/textured-colored.png
             BaseLayerTestFiles/textured-default.png
+            BaseLayerTestFiles/textured-mask.png
+            BaseLayerTestFiles/textured-mask-colored.png
+            BaseLayerTestFiles/textured-mask-outline-default.png
+            BaseLayerTestFiles/textured-mask-outline-mask.png
             BaseLayerTestFiles/textured.png)
     target_include_directories(WheeBaseLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     if(MAGNUM_BUILD_STATIC)
