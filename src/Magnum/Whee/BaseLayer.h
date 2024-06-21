@@ -139,6 +139,22 @@ struct BaseLayerCommonStyleUniform {
      * effect. Default value is @cpp 1.0f @ce. A similar effect can also be
      * achieved using @ref BaseLayer::Shared::Flag::TextureMask and pixel alpha
      * values between @cpp 0.0f @ce and @cpp 1.0f @ce.
+     *
+     * @m_class{m-row}
+     *
+     * @parblock
+     *
+     * @m_div{m-col-s-6 m-text-center m-nopadt m-nopadx}
+     * @image html whee-baselayer-blur.png width=256px
+     * Default value of @cpp 1.0f @ce
+     * @m_enddiv
+     *
+     * @m_div{m-col-s-6 m-text-center m-nopadt m-nopadx}
+     * @image html whee-baselayer-blur-alpha.png width=256px
+     * Value of @cpp 0.75f @ce
+     * @m_enddiv
+     *
+     * @endparblock
      */
     Float backgroundBlurAlpha;
 
@@ -997,10 +1013,27 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * instead of performing a classical blending of the color and the
              * framebuffer contents underneath.
              *
+             * @m_class{m-row}
+             *
+             * @parblock
+             *
+             * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
+             * @image html whee-baselayer-default.png width=256px
+             * Without @ref Flag::BackgroundBlur
+             * @m_enddiv
+             *
+             * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
+             * @image html whee-baselayer-blur.png width=256px
+             * With @ref Flag::BackgroundBlur
+             * @m_enddiv
+             *
+             * @endparblock
+             *
              * Use @ref Configuration::setBackgroundBlurRadius() and
              * @ref setBackgroundBlurPassCount() to control the blur radius and
              * @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha to achieve
              * additional effects.
+             *
              * @see @ref Flag::TextureMask
              */
             BackgroundBlur = 1 << 1,
@@ -1045,6 +1078,23 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * background to be shown. Enabling this flag causes the
              * transparent areas to make holes in both the outline and the
              * blurred background. Implies @ref Flag::Textured.
+             *
+             * @m_class{m-row}
+             *
+             * @parblock
+             *
+             * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
+             * @image html whee-baselayer-blur-textured.png width=256px
+             * Default @ref Flag::Textured behavior
+             * @m_enddiv
+             *
+             * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
+             * @image html whee-baselayer-blur-textured-mask.png width=256px
+             * With @ref Flag::TextureMask
+             * @m_enddiv
+             *
+             * @endparblock
+             *
              * @see @ref Flag::BackgroundBlur,
              *      @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha
              */

@@ -69,3 +69,17 @@ ASAN_OPTIONS="color=always" LSAN_OPTIONS="color=always" CORRADE_TEST_COLOR=ON ct
 
 # Test install, after running the tests as for them it shouldn't be needed
 ninja install
+
+cd ..
+
+# Verify also compilation of the documentation image generators, if apps are
+# built
+if [ "$BUILD_APPLICATIONS" != "OFF" ]; then
+    mkdir build-doc-generated && cd build-doc-generated
+    cmake ../doc/generated \
+        -DCMAKE_CXX_FLAGS="$CMAKE_CXX_FLAGS" \
+        -DCMAKE_PREFIX_PATH=$HOME/deps \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -G Ninja
+    ninja
+fi
