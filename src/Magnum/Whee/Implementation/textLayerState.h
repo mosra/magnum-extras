@@ -38,6 +38,7 @@
 #include <Magnum/Text/Alignment.h>
 
 #include "Magnum/Whee/TextLayer.h"
+#include "Magnum/Whee/TextProperties.h"
 #include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
 
 namespace Magnum { namespace Whee {
@@ -64,6 +65,8 @@ struct TextLayerStyle {
     FontHandle font;
     Text::Alignment alignment;
     /* 1 byte free */
+    /* Points to styleFeatures */
+    UnsignedInt featureOffset, featureCount;
     Vector4 padding;
 };
 
@@ -90,10 +93,16 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
        FontHandle generation counters doesn't need to exist here. */
     Containers::Array<Implementation::TextLayerFont> fonts;
 
+    /* Font features used by all styles. Each style maps into this array using
+       TextLayerStyle::featureOffset and featureCount. It's a separate
+       allocation from styleStorage because each setStyle() call may be with a
+       different total feature count. */
+    Containers::Array<TextFeatureValue> styleFeatures;
+
     Containers::ArrayTuple styleStorage;
-    /* Uniform mapping, fonts, alignments and padding values assigned to each
-       style. Initially empty to be able to detect whether setStyle() was
-       called. */
+    /* Uniform mapping, fonts, alignments, font features and padding values
+       assigned to each style. Initially empty to be able to detect whether
+       setStyle() was called. */
     Containers::ArrayView<Implementation::TextLayerStyle> styles;
     /* Uniform values to be copied to layer-specific uniform buffers. Initially
        empty to be able to detect whether setStyle() was called, stays empty
@@ -157,6 +166,8 @@ struct TextLayerDynamicStyle {
     FontHandle font = FontHandle::Null;
     Text::Alignment alignment = Text::Alignment::MiddleCenter;
     /* 1 byte free */
+    /* Points to dynamicStyleFeatures */
+    UnsignedInt featureOffset, featureCount;
     Vector4 padding;
 };
 
@@ -214,7 +225,14 @@ struct TextLayer::State: AbstractVisualLayer::State {
     Containers::Array<UnsignedInt> indices;
     Containers::Array<UnsignedInt> indexDrawOffsets;
 
-    /* Used only if shared.dynamicStyleCount is non-zero */
+    /* All these are used only if shared.dynamicStyleCount is non-zero */
+
+    /* Each dynamic style points here with TextLayerDynamicStyle::featureOffset
+       and featureCount. It's a separate allocation from dynamicStyleStorage
+       because each setDynamicStyle() call may be with a different feature
+       count. */
+    Containers::Array<TextFeatureValue> dynamicStyleFeatures;
+
     Containers::ArrayTuple dynamicStyleStorage;
     Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms;
     Containers::ArrayView<Implementation::TextLayerDynamicStyle> dynamicStyles;
