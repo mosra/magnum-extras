@@ -37,6 +37,10 @@
 
 namespace Magnum { namespace Whee {
 
+TextFeatureValue::operator Text::FeatureRange() const {
+    return Text::FeatureRange{_feature, _value};
+}
+
 struct TextProperties::State {
     Containers::String languageStorage;
     Containers::Array<Text::FeatureRange> features;

@@ -180,7 +180,7 @@ Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
     return const_cast<Text::AbstractFont&>(const_cast<const TextLayer::Shared&>(*this).font(handle));
 }
 
-void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
     /* Allocation done before the asserts so if they fail in a graceful assert
        build, we don't hit another assert in Utility::copy(styleToUniform) in
@@ -198,15 +198,39 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
     CORRADE_ASSERT(stylePaddings.isEmpty() || stylePaddings.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << stylePaddings.size(), );
     #ifndef CORRADE_NO_ASSERT
+    if(!styleFeatures.isEmpty() || !styleFeatureOffsets.isEmpty() || !styleFeatureCounts.isEmpty()) {
+        CORRADE_ASSERT(styleFeatureOffsets.size() == state.styleCount,
+            "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "feature offsets, got" << styleFeatureOffsets.size(), );
+        CORRADE_ASSERT(styleFeatureCounts.size() == state.styleCount,
+            "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "feature counts, got" << styleFeatureCounts.size(), );
+    }
     for(std::size_t i = 0; i != styleFonts.size(); ++i)
         CORRADE_ASSERT(styleFonts[i] == FontHandle::Null || isHandleValid(styleFonts[i]),
             "Whee::TextLayer::Shared::setStyle(): invalid handle" << styleFonts[i] << "at index" << i, );
     for(std::size_t i = 0; i != styleAlignments.size(); ++i)
         CORRADE_ASSERT(!(UnsignedByte(styleAlignments[i]) & Text::Implementation::AlignmentGlyphBounds),
             "Whee::TextLayer::Shared::setStyle(): unsupported" << styleAlignments[i] << "at index" << i, );
+    for(std::size_t i = 0; i != styleFeatureOffsets.size(); ++i)
+        CORRADE_ASSERT(styleFeatureOffsets[i] + styleFeatureCounts[i] <= styleFeatures.size(),
+            "Whee::TextLayer::Shared::setStyle(): feature offset" << styleFeatureOffsets[i] << "and count" << styleFeatureCounts[i] << "out of range for" << styleFeatures.size() << "features" << "at index" << i, );
     #endif
     Utility::copy(styleFonts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::font));
     Utility::copy(styleAlignments, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::alignment));
+    if(styleFeatureOffsets.isEmpty()) {
+        arrayResize(state.styleFeatures, NoInit, 0);
+        /** @todo some Utility::fill() for this */
+        for(Implementation::TextLayerStyle& style: state.styles) {
+            style.featureOffset = 0;
+            style.featureCount = 0;
+        }
+    } else {
+        /* Resizing the array to reuse the memory in case of subsequent style
+           setting */
+        arrayResize(state.styleFeatures, NoInit, styleFeatures.size());
+        Utility::copy(styleFeatures, state.styleFeatures);
+        Utility::copy(styleFeatureOffsets, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::featureOffset));
+        Utility::copy(styleFeatureCounts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::featureCount));
+    }
     if(stylePaddings.isEmpty()) {
         /** @todo some Utility::fill() for this */
         for(Implementation::TextLayerStyle& style: state.styles)
@@ -232,31 +256,31 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
     ++state.styleUpdateStamp;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(styleToUniform.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "style uniform indices, got" << styleToUniform.size(), *this);
-    setStyleInternal(commonUniform, uniforms, styleFonts, styleAlignments, stylePaddings);
+    setStyleInternal(commonUniform, uniforms, styleFonts, styleAlignments, styleFeatures, styleFeatureOffsets, styleFeatureCounts, stylePaddings);
     Utility::copy(styleToUniform, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::uniform));
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Text::Alignment> styleAlignments, const std::initializer_list<Vector4> stylePaddings) {
-    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(styleFonts), Containers::stridedArrayView(styleAlignments), Containers::stridedArrayView(stylePaddings));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Text::Alignment> styleAlignments, const std::initializer_list<TextFeatureValue> styleFeatures, const std::initializer_list<UnsignedInt> styleFeatureOffsets, const std::initializer_list<UnsignedInt> styleFeatureCounts, const std::initializer_list<Vector4> stylePaddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(styleFonts), Containers::stridedArrayView(styleAlignments), Containers::arrayView(styleFeatures), Containers::stridedArrayView(styleFeatureOffsets), Containers::stridedArrayView(styleFeatureCounts), Containers::stridedArrayView(stylePaddings));
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, const Containers::ArrayView<const TextFeatureValue> features, const Containers::StridedArrayView1D<const UnsignedInt>& featureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& featureCounts, const Containers::StridedArrayView1D<const Vector4>& paddings) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(state.styleUniformCount == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): there's" << state.styleUniformCount << "uniforms for" << state.styleCount << "styles, provide an explicit mapping", *this);
-    setStyleInternal(commonUniform, uniforms, fonts, alignments, paddings);
+    setStyleInternal(commonUniform, uniforms, fonts, alignments, features, featureOffsets, featureCounts, paddings);
     for(UnsignedInt i = 0; i != state.styleCount; ++i)
         state.styles[i].uniform = i;
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Text::Alignment> alignments, const std::initializer_list<Vector4> paddings) {
-    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(fonts), Containers::stridedArrayView(alignments), Containers::stridedArrayView(paddings));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Text::Alignment> alignments, const std::initializer_list<TextFeatureValue> features, const std::initializer_list<UnsignedInt> featureOffsets, const std::initializer_list<UnsignedInt> featureCounts, const std::initializer_list<Vector4> paddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(fonts), Containers::stridedArrayView(alignments), Containers::arrayView(features), Containers::stridedArrayView(featureOffsets), Containers::stridedArrayView(featureCounts), Containers::stridedArrayView(paddings));
 }
 
 TextLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {
@@ -296,14 +320,23 @@ Containers::StridedArrayView1D<const Text::Alignment> TextLayer::dynamicStyleAli
     return stridedArrayView(static_cast<const State&>(*_state).dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::alignment);
 }
 
+Containers::ArrayView<const TextFeatureValue> TextLayer::dynamicStyleFeatures(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::dynamicStyleFeatures(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", {});
+    return state.dynamicStyleFeatures.sliceSize(
+        state.dynamicStyles[id].featureOffset,
+        state.dynamicStyles[id].featureCount);
+}
+
 Containers::StridedArrayView1D<const Vector4> TextLayer::dynamicStylePaddings() const {
     return stridedArrayView(static_cast<const State&>(*_state).dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding);
 }
 
-void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Vector4& padding) {
+void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding) {
     auto& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(id < state.dynamicStyleUniforms.size(),
-        "Whee::TextLayer::setDynamicStyle(): index" << id << "out of range for" << state.dynamicStyleUniforms.size() << "dynamic styles", );
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::setDynamicStyle(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", );
     CORRADE_ASSERT(font == FontHandle::Null || Whee::isHandleValid(static_cast<const Shared::State&>(state.shared).fonts, font),
         "Whee::TextLayer::setDynamicStyle(): invalid handle" << font, );
     CORRADE_ASSERT(!(UnsignedByte(alignment) & Text::Implementation::AlignmentGlyphBounds),
@@ -317,16 +350,42 @@ void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUnifor
     state.dynamicStyleChanged = true;
 
     /* Mark the layer as changed only if the padding actually changes,
-       otherwise it's not needed to trigger an update(). OTOH changing the font
-       or alignment doesn't / cannot trigger an update because we don't keep
-       the source text string to be able to reshape or realign line by line. */
+       otherwise it's not needed to trigger an update(). OTOH changing the
+       font, alignment or feature list doesn't / cannot trigger an update
+       because we don't keep the source text string to be able to reshape or
+       realign line by line. */
     Implementation::TextLayerDynamicStyle& style = state.dynamicStyles[id];
     style.font = font;
     style.alignment = alignment;
+    /* If the feature count is different from what was set for this style
+       before, remove them from the array, reindex the dynamic styles after and
+       make room for them at the end. This way the dynamic styles that have the
+       feature list size changing the most will eventually get moved to the
+       end, with the array prefix staying. */
+    /** @todo it may still become an annoying bottleneck if too many styles
+        with non-empty features get updated in a frame, consider setting a flag
+        and moving the recompacting to doUpdate() instead */
+    if(style.featureCount != features.size()) {
+        arrayRemove(state.dynamicStyleFeatures, style.featureOffset, style.featureCount);
+        /* The >= will change the feature offset for the style itself as well,
+           so compare to a copy */
+        const UnsignedInt originalFeatureOffset = style.featureOffset;
+        for(Implementation::TextLayerDynamicStyle& i: state.dynamicStyles)
+            if(i.featureOffset >= originalFeatureOffset)
+                i.featureOffset -= style.featureCount;
+        style.featureOffset = state.dynamicStyleFeatures.size();
+        style.featureCount = features.size();
+        arrayAppend(state.dynamicStyleFeatures, NoInit, features.size());
+    }
+    Utility::copy(features, state.dynamicStyleFeatures.sliceSize(style.featureOffset, style.featureCount));
     if(style.padding != padding) {
         style.padding = padding;
         setNeedsUpdate(LayerState::NeedsDataUpdate);
     }
+}
+
+void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const std::initializer_list<TextFeatureValue> features, const Vector4& padding) {
+    setDynamicStyle(id, uniform, font, alignment, Containers::arrayView(features), padding);
 }
 
 void TextLayer::shapeTextInternal(
@@ -368,6 +427,25 @@ void TextLayer::shapeTextInternal(
     } else
         alignment = *properties.alignment();
 
+    /* Put together features from the style and TextProperties. Style goes
+       first to make it possible to override it. */
+    /** @todo some bump allocator for this, ugh */
+    Containers::ArrayView<const TextFeatureValue> styleFeatures;
+    if(style < sharedState.styleCount)
+        styleFeatures = sharedState.styleFeatures.sliceSize(
+            sharedState.styles[style].featureOffset,
+            sharedState.styles[style].featureCount);
+    else
+        styleFeatures = state.dynamicStyleFeatures.sliceSize(
+            state.dynamicStyles[style - sharedState.styleCount].featureOffset,
+            state.dynamicStyles[style - sharedState.styleCount].featureCount);
+    Containers::Array<Text::FeatureRange> features{NoInit, styleFeatures.size() + properties.features().size()};
+    /* This performs a conversion from TextFeatureValue to Text::FeatureRange,
+       so can't use Utility::copy() */
+    for(std::size_t i = 0; i != styleFeatures.size(); ++i)
+        features[i] = styleFeatures[i];
+    Utility::copy(properties.features(), features.exceptPrefix(styleFeatures.size()));
+
     /** @todo once the TextProperties combine multiple fonts, scripts etc, this
         all should probably get wrapped in some higher level API in Text
         directly (AbstractLayouter?), which cuts the text to parts depending
@@ -381,7 +459,7 @@ void TextLayer::shapeTextInternal(
     shaper.setScript(properties.script());
     shaper.setLanguage(properties.language());
     shaper.setDirection(properties.shapeDirection());
-    const UnsignedInt glyphCount = shaper.shape(text, properties.features());
+    const UnsignedInt glyphCount = shaper.shape(text, features);
 
     /* Add a new glyph run. Any previous run for this data was marked as unused
        in previous remove() or in setText() right before calling this

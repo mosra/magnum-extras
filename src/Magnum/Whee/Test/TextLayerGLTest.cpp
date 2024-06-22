@@ -598,7 +598,9 @@ void TextLayerGLTest::render() {
         styleToUniform,
         Containers::stridedArrayView(fontHandle).broadcasted<0>(5),
         Containers::stridedArrayView(alignment).broadcasted<0>(5),
-        {});
+        /* There's nothing in features that would affect rendering in a way
+           that isn't already tested in TextLayerTest */
+        {}, {}, {}, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -652,7 +654,7 @@ void TextLayerGLTest::renderAlignmentPadding() {
         {TextLayerStyleUniform{}},
         {fontHandle},
         {data.alignment},
-        {data.paddingFromStyle});
+        {}, {}, {}, {data.paddingFromStyle});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -717,7 +719,7 @@ void TextLayerGLTest::renderCustomColor() {
             .setColor(0x3bd267_rgbf/0x336699_rgbf)},
         {fontHandle},
         {Text::Alignment::MiddleCenter},
-        {});
+        {}, {}, {}, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -786,7 +788,7 @@ void TextLayerGLTest::renderChangeStyle() {
             .setColor(0x3bd267_rgbf)},
         {fontHandle, fontHandle},
         {Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter},
-        {});
+        {}, {}, {}, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -848,7 +850,7 @@ void TextLayerGLTest::renderChangeText() {
         {TextLayerStyleUniform{}},
         {fontHandle},
         {Text::Alignment::MiddleCenter},
-        {});
+        {}, {}, {}, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -920,7 +922,7 @@ void TextLayerGLTest::renderDynamicStyles() {
             {2, 1, 1, 0},
             {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
             {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
-            {});
+            {}, {}, {}, {});
     } else {
         layerShared.setStyle(TextLayerCommonStyleUniform{},
             {TextLayerStyleUniform{}, TextLayerStyleUniform{}, data.styleUniform},
@@ -930,6 +932,9 @@ void TextLayerGLTest::renderDynamicStyles() {
              Text::Alignment::MiddleCenter,
              Text::Alignment::TopCenterIntegral,
              Text::Alignment::LineLeft},
+            /* There's nothing in features that would affect rendering in a way
+               that isn't already tested in TextLayerTest */
+            {}, {}, {},
             {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
     }
 
@@ -951,12 +956,13 @@ void TextLayerGLTest::renderDynamicStyles() {
                 TextLayerStyleUniform{},
                 FontHandle::Null,
                 Text::Alignment{},
-                {});
+                {}, {});
         } else {
             layer->setDynamicStyle(1,
                 *data.dynamicStyleUniform,
                 fontHandle,
                 Text::Alignment::MiddleCenter,
+                {},
                 {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
         }
 
@@ -997,6 +1003,9 @@ void TextLayerGLTest::renderDynamicStyles() {
              Text::Alignment::MiddleCenter,
              Text::Alignment::TopCenterIntegral,
              Text::Alignment::LineLeft},
+            /* There's nothing in features that would affect rendering in a way
+               that isn't already tested in TextLayerTest */
+            {}, {}, {},
             {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
         CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
     }
@@ -1005,6 +1014,7 @@ void TextLayerGLTest::renderDynamicStyles() {
             *data.dynamicStyleUniform,
             fontHandle,
             Text::Alignment::MiddleCenter,
+            {},
             {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
         CORRADE_COMPARE(layer->state(), LayerState::NeedsCommonDataUpdate);
     }
@@ -1147,7 +1157,7 @@ void TextLayerGLTest::drawOrder() {
         Text::Alignment::MiddleCenter,
         Text::Alignment::MiddleCenter,
         Text::Alignment::MiddleCenter
-    }, {});
+    }, {}, {}, {}, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -1291,7 +1301,7 @@ void TextLayerGLTest::drawClipping() {
         Text::Alignment::MiddleCenter,
         Text::Alignment::MiddleCenter,
         Text::Alignment::MiddleCenter
-    }, {});
+    }, {}, {}, {}, {});
 
     TextLayerGL& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
@@ -1384,7 +1394,7 @@ void TextLayerGLTest::eventStyleTransition() {
         }, {fontHandle, fontHandle}, {
             Text::Alignment::MiddleCenter,
             Text::Alignment::MiddleCenter
-        }, {})
+        }, {}, {}, {}, {})
         .setStyleTransition(
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
