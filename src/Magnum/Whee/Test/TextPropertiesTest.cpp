@@ -41,6 +41,10 @@ namespace Magnum { namespace Whee { namespace Test { namespace {
 struct TextPropertiesTest: TestSuite::Tester {
     explicit TextPropertiesTest();
 
+    void featureValue();
+    void featureValueBoolean();
+    void featureValueInteger();
+
     void construct();
     void constructAlignment();
     void constructFont();
@@ -66,7 +70,11 @@ const struct {
 };
 
 TextPropertiesTest::TextPropertiesTest() {
-    addTests({&TextPropertiesTest::construct,
+    addTests({&TextPropertiesTest::featureValue,
+              &TextPropertiesTest::featureValueBoolean,
+              &TextPropertiesTest::featureValueInteger,
+
+              &TextPropertiesTest::construct,
               &TextPropertiesTest::constructAlignment,
               &TextPropertiesTest::constructFont,
               &TextPropertiesTest::constructFontAlignment,
@@ -80,6 +88,46 @@ TextPropertiesTest::TextPropertiesTest() {
     addInstancedTests({&TextPropertiesTest::copyLanguage,
                        &TextPropertiesTest::copyFeatures},
         Containers::arraySize(PropertiesCopyData));
+}
+
+void TextPropertiesTest::featureValue() {
+    TextFeatureValue a = Text::Feature::AboveBaseMarkPositioning;
+    CORRADE_COMPARE(a.feature(), Text::Feature::AboveBaseMarkPositioning);
+    CORRADE_COMPARE(a.value(), 1);
+    CORRADE_VERIFY(a.isEnabled());
+
+    Text::FeatureRange b = a;
+    CORRADE_COMPARE(b.feature(), Text::Feature::AboveBaseMarkPositioning);
+    CORRADE_COMPARE(b.value(), 1);
+    CORRADE_VERIFY(b.isEnabled());
+    CORRADE_COMPARE(b.begin(), 0);
+    CORRADE_COMPARE(b.end(), 0xffffffffu);
+}
+
+void TextPropertiesTest::featureValueBoolean() {
+    TextFeatureValue a{Text::Feature::Kerning, false};
+    CORRADE_COMPARE(a.feature(), Text::Feature::Kerning);
+    CORRADE_COMPARE(a.value(), 0);
+    CORRADE_VERIFY(!a.isEnabled());
+
+    Text::FeatureRange b = a;
+    CORRADE_COMPARE(b.feature(), Text::Feature::Kerning);
+    CORRADE_COMPARE(b.value(), 0);
+    CORRADE_VERIFY(!b.isEnabled());
+    CORRADE_COMPARE(b.begin(), 0);
+    CORRADE_COMPARE(b.end(), 0xffffffffu);
+}
+
+void TextPropertiesTest::featureValueInteger() {
+    TextFeatureValue a{Text::Feature::AccessAllAlternates, 134};
+    CORRADE_COMPARE(a.feature(), Text::Feature::AccessAllAlternates);
+    CORRADE_COMPARE(a.value(), 134);
+
+    Text::FeatureRange b = a;
+    CORRADE_COMPARE(b.feature(), Text::Feature::AccessAllAlternates);
+    CORRADE_COMPARE(b.value(), 134);
+    CORRADE_COMPARE(b.begin(), 0);
+    CORRADE_COMPARE(b.end(), 0xffffffffu);
 }
 
 void TextPropertiesTest::construct() {

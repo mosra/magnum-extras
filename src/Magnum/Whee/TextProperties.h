@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::TextProperties
+ * @brief Class @ref Magnum::Whee::TextFeatureValue, @ref Magnum::Whee::TextProperties
  * @m_since_latest
  */
 
@@ -38,6 +38,50 @@
 #include "Magnum/Whee/visibility.h"
 
 namespace Magnum { namespace Whee {
+
+/**
+@brief OpenType feature value
+@m_since_latest
+
+A subset of @ref Text::FeatureRange that always affects the whole text. Meant
+to be used to supply default features for a style.
+@see @ref TextLayer::Shared::setStyle()
+*/
+class MAGNUM_WHEE_EXPORT TextFeatureValue {
+    public:
+        /**
+         * @brief Constructor
+         * @param feature   Feature to control
+         * @param value     Feature value to set
+         */
+        constexpr /*implicit*/ TextFeatureValue(Text::Feature feature, UnsignedInt value = true): _feature{feature}, _value{value} {}
+
+        /** @brief Feature to control */
+        constexpr Text::Feature feature() const { return _feature; }
+
+        /**
+         * @brief Whether to enable the feature
+         *
+         * Returns @cpp false @ce if @ref value() is @cpp 0 @ce, @cpp true @ce
+         * otherwise.
+         */
+        constexpr bool isEnabled() const { return _value; }
+
+        /** @brief Feature value to sest */
+        constexpr UnsignedInt value() const { return _value; }
+
+        /**
+         * @brief Conversion to @ref Text::FeatureRange
+         *
+         * The range has @ref Text::FeatureRange::begin() set to @cpp 0 @ce and
+         * @relativeref{Text::FeatureRange,end()} to @cpp 0xffffffffu @ce.
+         */
+        /*implicit*/ operator Text::FeatureRange() const;
+
+    private:
+        Text::Feature _feature;
+        UnsignedInt _value;
+};
 
 /**
 @brief Text properties
@@ -246,11 +290,14 @@ class MAGNUM_WHEE_EXPORT TextProperties {
          * @brief Set typographic features
          * @return Reference to self (for method chaining)
          *
-         * By default no features are explicitly set, relying on default
-         * behavior of a particular font file and a font plugin. A copy of
-         * @p features is made internally and it gets subsequently passed to
-         * @ref Text::AbstractShaper::shape(), see its documentation for
-         * details and information about various constraints.
+         * By default no features are explicitly set, relying on features
+         * supplied by the style, if any, and then default behavior of a
+         * particular font file and a font plugin. A copy of @p features is
+         * made internally, is *appended* to features coming from the style
+         * and subsequently passed to @ref Text::AbstractShaper::shape(). See
+         * its documentation for details and information about various
+         * constraints.
+         * @see @ref TextLayer::Shared::setStyle()
          */
         TextProperties& setFeatures(Containers::ArrayView<const Text::FeatureRange> features);
 

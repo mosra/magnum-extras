@@ -169,7 +169,7 @@ void TextLayerGLBenchmark::fragment() {
             .setColor(0xff3366_rgbf)},
         {fontHandle},
         {Text::Alignment::MiddleCenter},
-        {});
+        {}, {}, {}, {});
 
     TextLayerGL& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), shared));
 

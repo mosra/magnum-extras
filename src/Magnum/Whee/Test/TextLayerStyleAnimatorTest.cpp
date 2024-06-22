@@ -273,6 +273,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
         {Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
+        {}, {}, {},
         {Vector4{1.0f},
          {2.0f, 3.0f, 4.0f, 5.0f},
          {}});
@@ -432,6 +433,7 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
         {fontHandle, fontHandle},
         {Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
+        {}, {}, {},
         {Vector4{1.0f},
          Vector4{2.0f}});
 
@@ -502,7 +504,7 @@ void TextLayerStyleAnimatorTest::createInvalid() {
         {0, 0, 0, 0, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
-        {});
+        {}, {}, {}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -558,7 +560,7 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}},
-        {});
+        {}, {}, {}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -634,7 +636,7 @@ void TextLayerStyleAnimatorTest::clean() {
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}},
-        {});
+        {}, {}, {}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -724,6 +726,7 @@ void TextLayerStyleAnimatorTest::advance() {
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
+        {}, {}, {},
         /* Paddings should not change between style 1 and 3 and should between
            style 3 and 6 */
         {{},                /* 0, not used for animation */
@@ -1066,6 +1069,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         {Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
+        {}, {}, {},
         {});
 
     struct Layer: TextLayer {
@@ -1218,6 +1222,7 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
         {Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
+        {}, {}, {},
         {{}, Vector4{data.padding}, {}});
 
     struct Layer: TextLayer {

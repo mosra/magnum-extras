@@ -77,6 +77,7 @@ class TextLayerStyleAnimator;
 #ifdef MAGNUM_TARGET_GL
 class TextLayerGL;
 #endif
+class TextFeatureValue;
 class TextProperties;
 
 class RendererGL;
