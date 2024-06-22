@@ -41,6 +41,7 @@
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Shader.h>
 #include <Magnum/GL/Texture.h>
+#include <Magnum/GL/TextureArray.h>
 #include <Magnum/GL/TextureFormat.h>
 #include <Magnum/GL/Version.h>
 
@@ -65,13 +66,14 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
     private:
         enum: Int {
             StyleBufferBinding = 0,
-            /* 0 reserved for the "usual" texture for images and such */
+            TextureBinding = 0,
             BackgroundBlurTextureBinding = 1,
         };
 
     public:
         enum Flag: UnsignedByte {
-            BackgroundBlur = 1 << 0
+            Textured = 1 << 0,
+            BackgroundBlur = 1 << 1
         };
 
         typedef Containers::EnumSet<Flag> Flags;
@@ -81,6 +83,7 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
         typedef GL::Attribute<2, Vector4> OutlineWidth;
         typedef GL::Attribute<3, Vector3> Color3;
         typedef GL::Attribute<4, UnsignedInt> Style;
+        typedef GL::Attribute<5, Vector3> TextureCoordinates;
 
         explicit BaseShaderGL(NoCreateT): GL::AbstractShaderProgram{NoCreate} {}
         explicit BaseShaderGL(Flags flags, UnsignedInt styleCount);
@@ -92,6 +95,12 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
 
         BaseShaderGL& bindStyleBuffer(GL::Buffer& buffer) {
             buffer.bind(GL::Buffer::Target::Uniform, StyleBufferBinding);
+            return *this;
+        }
+
+        BaseShaderGL& bindTexture(GL::Texture2DArray& texture) {
+            CORRADE_INTERNAL_ASSERT(_flags & Flag::Textured);
+            texture.bind(TextureBinding);
             return *this;
         }
 
@@ -142,12 +151,14 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
     GL::Shader vert{version, GL::Shader::Type::Vertex};
     vert.addSource(Utility::format("#define STYLE_COUNT {}\n", styleCount))
         .addSource(flags & Flag::BackgroundBlur ? "#define BACKGROUND_BLUR\n"_s : ""_s)
+        .addSource(flags & Flag::Textured ? "#define TEXTURED\n"_s : ""_s)
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("BaseShader.vert"_s));
 
     GL::Shader frag{version, GL::Shader::Type::Fragment};
     frag.addSource(Utility::format("#define STYLE_COUNT {}\n", styleCount))
         .addSource(flags & Flag::BackgroundBlur ? "#define BACKGROUND_BLUR\n"_s : ""_s)
+        .addSource(flags & Flag::Textured ? "#define TEXTURED\n"_s : ""_s)
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("BaseShader.frag"_s));
 
@@ -171,6 +182,8 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
     if(version < GL::Version::GLES310)
     #endif
     {
+        if(flags & Flag::Textured)
+            setUniform(uniformLocation("textureData"_s), TextureBinding);
         if(flags & Flag::BackgroundBlur)
             setUniform(uniformLocation("backgroundBlurTextureData"_s), BackgroundBlurTextureBinding);
         setUniformBlockBinding(uniformBlockIndex("Style"_s), StyleBufferBinding);
@@ -296,7 +309,10 @@ BlurShaderGL::BlurShaderGL(UnsignedInt radius, Float limit) {
 }
 
 struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): BaseLayer::Shared::State{self, configuration}, shader{flags & Flag::BackgroundBlur ? BaseShaderGL::Flag::BackgroundBlur : BaseShaderGL::Flags{}, configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration): BaseLayer::Shared::State{self, configuration}, shader{
+        (flags & Flag::BackgroundBlur ? BaseShaderGL::Flag::BackgroundBlur : BaseShaderGL::Flags{})|
+        (flags & Flag::Textured ? BaseShaderGL::Flag::Textured : BaseShaderGL::Flags{}),
+        configuration.styleUniformCount()} {}
 
     BaseShaderGL shader;
     /* The buffer is NoCreate'd at first to be able to detect whether
@@ -316,7 +332,11 @@ BaseLayerGL::Shared::Shared(const Configuration& configuration): BaseLayer::Shar
     if(configuration.flags() & Flag::BackgroundBlur) {
         State& state = static_cast<State&>(*_state);
         /** @todo when multiple compositing rects are implemented, this needs
-            to be indexed & re-filled in doComposite() instead */
+            to be indexed & re-filled in doComposite() instead, i.e. moved to
+            the per-layer state, not shared, with an expectation that each
+            layer may have a semi-constant number of top-level nodes that need
+            blurring, compared to that getting changed back and forth if a
+            shared state would get updated every time */
         (state.backgroundBlurSquare = GL::Mesh{})
             .setPrimitive(GL::MeshPrimitive::TriangleStrip)
             .setCount(4)
@@ -373,17 +393,43 @@ struct BaseLayerGL::State: BaseLayer::State {
     GL::Mesh mesh;
     Vector2 clipScale;
     Vector2i framebufferSize;
+
+    /* Used only if Flag::Textured is enabled */
+    GL::Texture2DArray texture{NoCreate};
 };
 
 BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState._state))} {
     auto& state = static_cast<State&>(*_state);
-    state.mesh.addVertexBuffer(state.vertexBuffer, 0,
-        BaseShaderGL::Position{},
-        BaseShaderGL::CenterDistance{},
-        BaseShaderGL::OutlineWidth{},
-        BaseShaderGL::Color3{},
-        BaseShaderGL::Style{});
+    if(static_cast<const Shared::State&>(state.shared).flags & Shared::Flag::Textured) {
+        state.mesh.addVertexBuffer(state.vertexBuffer, 0,
+            BaseShaderGL::Position{},
+            BaseShaderGL::CenterDistance{},
+            BaseShaderGL::OutlineWidth{},
+            BaseShaderGL::Color3{},
+            BaseShaderGL::Style{},
+            BaseShaderGL::TextureCoordinates{});
+    } else {
+        state.mesh.addVertexBuffer(state.vertexBuffer, 0,
+            BaseShaderGL::Position{},
+            BaseShaderGL::CenterDistance{},
+            BaseShaderGL::OutlineWidth{},
+            BaseShaderGL::Color3{},
+            BaseShaderGL::Style{});
+    }
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
+}
+
+BaseLayerGL& BaseLayerGL::setTexture(GL::Texture2DArray& texture) {
+    auto& state = static_cast<State&>(*_state);
+    #ifndef CORRADE_NO_ASSERT
+    auto& sharedState = static_cast<Shared::State&>(state.shared);
+    #endif
+    CORRADE_ASSERT(sharedState.flags & Shared::Flag::Textured,
+        "Whee::BaseLayer::setTexture(): texturing not enabled", *this);
+    /* Make a non-owning reference instead of storing a pointer so the original
+       can still be moved and whatever */
+    state.texture = GL::Texture2DArray::wrap(texture.id());
+    return *this;
 }
 
 LayerFeatures BaseLayerGL::doFeatures() const {
@@ -425,8 +471,12 @@ void BaseLayerGL::doUpdate(const Containers::StridedArrayView1D<const UnsignedIn
     BaseLayer::doUpdate(dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
 
     State& state = static_cast<State&>(*_state);
+    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     state.indexBuffer.setData(state.indices);
-    state.vertexBuffer.setData(state.vertices);
+    if(sharedState.flags & Shared::Flag::Textured)
+        state.vertexBuffer.setData(state.texturedVertices);
+    else
+        state.vertexBuffer.setData(state.vertices);
     state.mesh.setCount(state.indices.size());
 }
 
@@ -467,8 +517,12 @@ void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
     auto& sharedState = static_cast<Shared::State&>(state.shared);
     CORRADE_ASSERT(sharedState.styleBuffer.id(),
         "Whee::BaseLayerGL::draw(): no style data was set", );
+    CORRADE_ASSERT(!(sharedState.flags & Shared::Flag::Textured) || state.texture.id(),
+        "Whee::BaseLayerGL::draw(): no texture to draw with was set", );
 
     sharedState.shader.bindStyleBuffer(sharedState.styleBuffer);
+    if(sharedState.flags & Shared::Flag::Textured)
+        sharedState.shader.bindTexture(state.texture);
     if(sharedState.flags & Shared::Flag::BackgroundBlur)
         sharedState.shader.bindBackgroundBlurTexture(sharedState.backgroundBlurTextureHorizontal);
 
