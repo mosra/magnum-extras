@@ -370,179 +370,336 @@ const struct {
 };
 
 const struct {
-    const char* name;
+    TestSuite::TestCaseDescriptionSourceLocation name;
     Text::ShapeDirection shapeDirection;
     const char* text;
     UnsignedInt cursor;
+    Containers::Optional<UnsignedInt> selection;
     TextEdit edit;
     const char* insert;
     const char* expected;
-    UnsignedInt expectedCursor;
+    Containers::Pair<UnsignedInt, UnsignedInt> expectedCursor;
     LayerStates expectedState;
 } EditData[]{
     {"move cursor left, direction unspecified",
         Text::ShapeDirection::Unspecified,
-        "hello", 3, TextEdit::MoveCursorLeft, "",
-        "hello", 2, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::MoveCursorLeft, "",
+        "hello", {2, 2}, LayerState::NeedsDataUpdate},
     {"move cursor left, RTL",
         Text::ShapeDirection::RightToLeft,
-        "hello", 3, TextEdit::MoveCursorLeft, "",
-        "hello", 4, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::MoveCursorLeft, "",
+        "hello", {4, 4}, LayerState::NeedsDataUpdate},
     {"move cursor left, UTF-8, LTR",
         Text::ShapeDirection::LeftToRight,
-        "běhnu", 3, TextEdit::MoveCursorLeft, "",
-        "běhnu", 1, LayerState::NeedsDataUpdate},
+        "běhnu", 3, {}, TextEdit::MoveCursorLeft, "",
+        "běhnu", {1, 1}, LayerState::NeedsDataUpdate},
     {"move cursor left, invalid UTF-8",
         Text::ShapeDirection::Unspecified,
-        "b\xff\xfehnu", 3, TextEdit::MoveCursorLeft, "",
-        "b\xff\xfehnu", 2, LayerState::NeedsDataUpdate},
+        "b\xff\xfehnu", 3, {}, TextEdit::MoveCursorLeft, "",
+        "b\xff\xfehnu", {2, 2}, LayerState::NeedsDataUpdate},
+    {"move cursor left, selection active",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 5, TextEdit::MoveCursorLeft, "",
+        "hello", {2, 2}, LayerState::NeedsDataUpdate},
+    {"extend selection left, no selection yet",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 3, TextEdit::ExtendSelectionLeft, "",
+        "hello", {2, 3}, LayerState::NeedsDataUpdate},
+    {"extend selection left, selection active",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 5, TextEdit::ExtendSelectionLeft, "",
+        "hello", {2, 5}, LayerState::NeedsDataUpdate},
+    {"extend selection left, selection active, different selection direction",
+        Text::ShapeDirection::Unspecified,
+        "hello", 5, 3, TextEdit::ExtendSelectionLeft, "",
+        "hello", {4, 3}, LayerState::NeedsDataUpdate},
     {"move cursor left, at the boundary, direction unspecified",
         Text::ShapeDirection::Unspecified,
-        "hello", 0, TextEdit::MoveCursorLeft, "",
-        "hello", 0, LayerStates{}},
+        "hello", 0, {}, TextEdit::MoveCursorLeft, "",
+        "hello", {0, 0}, LayerStates{}},
     {"move cursor left, at the boundary, LTR",
         Text::ShapeDirection::LeftToRight,
-        "hello", 0, TextEdit::MoveCursorLeft, "",
-        "hello", 0, LayerStates{}},
+        "hello", 0, {}, TextEdit::MoveCursorLeft, "",
+        "hello", {0, 0}, LayerStates{}},
+    {"move cursor left, at the boundary, LTR, selection active",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 0, 5, TextEdit::MoveCursorLeft, "",
+        "hello", {0, 0}, LayerState::NeedsDataUpdate},
+    {"extend selection left, at the boundary, LTR, no selection yet",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 0, 0, TextEdit::ExtendSelectionLeft, "",
+        "hello", {0, 0}, LayerStates{}},
+    {"extend selection left, at the boundary, LTR, selection active",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 0, 2, TextEdit::ExtendSelectionLeft, "",
+        "hello", {0, 2}, LayerStates{}},
     {"move cursor left, at the boundary, RTL",
         Text::ShapeDirection::RightToLeft,
-        "hello", 5, TextEdit::MoveCursorLeft, "",
-        "hello", 5, LayerStates{}},
+        "hello", 5, {}, TextEdit::MoveCursorLeft, "",
+        "hello", {5, 5}, LayerStates{}},
+    {"move cursor left, at the boundary, RTL, selection active",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 5, 2, TextEdit::MoveCursorLeft, "",
+        "hello", {5, 5}, LayerState::NeedsDataUpdate},
+    {"extend selection left, at the boundary, RTL, no selection yet",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 5, 5, TextEdit::ExtendSelectionLeft, "",
+        "hello", {5, 5}, LayerStates{}},
+    {"extend selection left, at the boundary, RTL, selection active",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 5, 3, TextEdit::ExtendSelectionLeft, "",
+        "hello", {5, 3}, LayerStates{}},
     {"move cursor right, LTR",
         Text::ShapeDirection::LeftToRight,
-        "hello", 3, TextEdit::MoveCursorRight, "",
-        "hello", 4, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::MoveCursorRight, "",
+        "hello", {4, 4}, LayerState::NeedsDataUpdate},
     {"move cursor right, RTL",
         Text::ShapeDirection::RightToLeft,
-        "hello", 3, TextEdit::MoveCursorRight, "",
-        "hello", 2, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::MoveCursorRight, "",
+        "hello", {2, 2}, LayerState::NeedsDataUpdate},
     {"move cursor right, UTF-8, direction unspecified",
         Text::ShapeDirection::Unspecified,
-        "sněhy", 2, TextEdit::MoveCursorRight, "",
-        "sněhy", 4, LayerState::NeedsDataUpdate},
+        "sněhy", 2, {}, TextEdit::MoveCursorRight, "",
+        "sněhy", {4, 4}, LayerState::NeedsDataUpdate},
     {"move cursor right, invalid UTF-8",
         Text::ShapeDirection::Unspecified,
-        "sn\xfe\xffhy", 2, TextEdit::MoveCursorRight, "",
-        "sn\xfe\xffhy", 3, LayerState::NeedsDataUpdate},
+        "sn\xfe\xffhy", 2, {}, TextEdit::MoveCursorRight, "",
+        "sn\xfe\xffhy", {3, 3}, LayerState::NeedsDataUpdate},
+    {"move cursor right, selection active",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 5, TextEdit::MoveCursorRight, "",
+        "hello", {4, 4}, LayerState::NeedsDataUpdate},
+    {"extend selection right, no selection yet",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 3, TextEdit::ExtendSelectionRight, "",
+        "hello", {4, 3}, LayerState::NeedsDataUpdate},
+    {"extend selection right, selection active",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 1, TextEdit::ExtendSelectionRight, "",
+        "hello", {4, 1}, LayerState::NeedsDataUpdate},
+    {"extend selection right, selection active, different selection direction",
+        Text::ShapeDirection::Unspecified,
+        "hello", 1, 3, TextEdit::ExtendSelectionRight, "",
+        "hello", {2, 3}, LayerState::NeedsDataUpdate},
     {"move cursor right, at the boundary, direction unspecified",
         Text::ShapeDirection::Unspecified,
-        "hello", 5, TextEdit::MoveCursorRight, "",
-        "hello", 5, LayerStates{}},
+        "hello", 5, {}, TextEdit::MoveCursorRight, "",
+        "hello", {5, 5}, LayerStates{}},
     {"move cursor right, at the boundary, LTR",
         Text::ShapeDirection::LeftToRight,
-        "hello", 5, TextEdit::MoveCursorRight, "",
-        "hello", 5, LayerStates{}},
+        "hello", 5, {}, TextEdit::MoveCursorRight, "",
+        "hello", {5, 5}, LayerStates{}},
+    {"move cursor right, at the boundary, LTR, selection active",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 5, 4, TextEdit::MoveCursorRight, "",
+        "hello", {5, 5}, LayerState::NeedsDataUpdate},
+    {"extend selection right, at the boundary, LTR, no selection yet",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 5, 5, TextEdit::ExtendSelectionRight, "",
+        "hello", {5, 5}, LayerStates{}},
+    {"extend selection right, at the boundary, LTR, selection active",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 5, 3, TextEdit::ExtendSelectionRight, "",
+        "hello", {5, 3}, LayerStates{}},
     {"move cursor right, at the boundary, RTL",
         Text::ShapeDirection::RightToLeft,
-        "hello", 0, TextEdit::MoveCursorRight, "",
-        "hello", 0, LayerStates{}},
+        "hello", 0, {}, TextEdit::MoveCursorRight, "",
+        "hello", {0, 0}, LayerStates{}},
+    {"move cursor right, at the boundary, RTL, selection active",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 0, 3, TextEdit::MoveCursorRight, "",
+        "hello", {0, 0}, LayerState::NeedsDataUpdate},
+    {"extend selection right, at the boundary, RTL, no selection yet",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 0, 0, TextEdit::ExtendSelectionRight, "",
+        "hello", {0, 0}, LayerStates{}},
+    {"extend selection right, at the boundary, RTL, selection active",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 0, 2, TextEdit::ExtendSelectionRight, "",
+        "hello", {0, 2}, LayerStates{}},
     {"move cursor at line begin",
         Text::ShapeDirection::Unspecified,
-        "hello", 3, TextEdit::MoveCursorLineBegin, "",
-        "hello", 0, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::MoveCursorLineBegin, "",
+        "hello", {0, 0}, LayerState::NeedsDataUpdate},
     /* It's still the first byte even with a RTL direction, it's different only
        optically */
     {"move cursor at line begin, RTL",
         Text::ShapeDirection::RightToLeft,
-        "hello", 3, TextEdit::MoveCursorLineBegin, "",
-        "hello", 0, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::MoveCursorLineBegin, "",
+        "hello", {0, 0}, LayerState::NeedsDataUpdate},
     /* Invalid UTF-8 should do nothing to anything here */
     {"move cursor at line begin, invalid UTF-8",
         Text::ShapeDirection::Unspecified,
-        "\xff\xfe\xfd\xfco", 3, TextEdit::MoveCursorLineBegin, "",
-        "\xff\xfe\xfd\xfco", 0, LayerState::NeedsDataUpdate},
+        "\xff\xfe\xfd\xfco", 3, {}, TextEdit::MoveCursorLineBegin, "",
+        "\xff\xfe\xfd\xfco", {0, 0}, LayerState::NeedsDataUpdate},
+    {"move cursor at line begin, selection active",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 2, TextEdit::MoveCursorLineBegin, "",
+        "hello", {0, 0}, LayerState::NeedsDataUpdate},
+    {"extend selection to line begin, no selection yet",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 3, TextEdit::ExtendSelectionLineBegin, "",
+        "hello", {0, 3}, LayerState::NeedsDataUpdate},
+    {"extend selection to line begin, selection active",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 4, TextEdit::ExtendSelectionLineBegin, "",
+        "hello", {0, 4}, LayerState::NeedsDataUpdate},
+    {"extend selection to line begin, selection active, different selection direction",
+        Text::ShapeDirection::Unspecified,
+        "hello", 4, 3, TextEdit::ExtendSelectionLineBegin, "",
+        "hello", {0, 3}, LayerState::NeedsDataUpdate},
     {"move cursor at line end",
         Text::ShapeDirection::Unspecified,
-        "hello", 3, TextEdit::MoveCursorLineEnd, "",
-        "hello", 5, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::MoveCursorLineEnd, "",
+        "hello", {5, 5}, LayerState::NeedsDataUpdate},
     /* It's still (one byte after) the last byte even with a RTL direction,
        it's different only optically */
     {"move cursor at line end, RTL",
         Text::ShapeDirection::RightToLeft,
-        "hello", 3, TextEdit::MoveCursorLineEnd, "",
-        "hello", 5, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::MoveCursorLineEnd, "",
+        "hello", {5, 5}, LayerState::NeedsDataUpdate},
     /* Invalid UTF-8 should do nothing to anything here */
     {"move cursor at line end, invalid UTF-8",
         Text::ShapeDirection::Unspecified,
-        "h\xff\xfe\xfd\xfc", 3, TextEdit::MoveCursorLineEnd, "",
-        "h\xff\xfe\xfd\xfc", 5, LayerState::NeedsDataUpdate},
+        "h\xff\xfe\xfd\xfc", 3, {}, TextEdit::MoveCursorLineEnd, "",
+        "h\xff\xfe\xfd\xfc", {5, 5}, LayerState::NeedsDataUpdate},
+    {"move cursor at line end, selection active",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 2, TextEdit::MoveCursorLineEnd, "",
+        "hello", {5, 5}, LayerState::NeedsDataUpdate},
+    {"extend selection to line end, no selection yet",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 3, TextEdit::ExtendSelectionLineEnd, "",
+        "hello", {5, 3}, LayerState::NeedsDataUpdate},
+    {"extend selection to line end, selection active",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 2, TextEdit::ExtendSelectionLineEnd, "",
+        "hello", {5, 2}, LayerState::NeedsDataUpdate},
+    {"extend selection to line end, selection active, different selection direction",
+        Text::ShapeDirection::Unspecified,
+        "hello", 2, 3, TextEdit::ExtendSelectionLineEnd, "",
+        "hello", {5, 3}, LayerState::NeedsDataUpdate},
     {"remove character before cursor",
         Text::ShapeDirection::Unspecified,
-        "hello", 3, TextEdit::RemoveBeforeCursor, "",
-        "helo", 2, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::RemoveBeforeCursor, "",
+        "helo", {2, 2}, LayerState::NeedsDataUpdate},
     /* There's no difference in behavior for RTL here */
     {"remove character before cursor, RTL",
         Text::ShapeDirection::RightToLeft,
-        "hello", 3, TextEdit::RemoveBeforeCursor, "",
-        "helo", 2, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::RemoveBeforeCursor, "",
+        "helo", {2, 2}, LayerState::NeedsDataUpdate},
     {"remove character before cursor, UTF-8",
         Text::ShapeDirection::Unspecified,
-        "běhnu", 3, TextEdit::RemoveBeforeCursor, "",
-        "bhnu", 1, LayerState::NeedsDataUpdate},
+        "běhnu", 3, {}, TextEdit::RemoveBeforeCursor, "",
+        "bhnu", {1, 1}, LayerState::NeedsDataUpdate},
     {"remove character before cursor, invalid UTF-8",
         Text::ShapeDirection::Unspecified,
-        "b\xfe\xffhnu", 3, TextEdit::RemoveBeforeCursor, "",
-        "b\xfehnu", 2, LayerState::NeedsDataUpdate},
+        "b\xfe\xffhnu", 3, {}, TextEdit::RemoveBeforeCursor, "",
+        "b\xfehnu", {2, 2}, LayerState::NeedsDataUpdate},
     {"remove character before cursor, at the boundary",
         Text::ShapeDirection::Unspecified,
-        "hello", 0, TextEdit::RemoveBeforeCursor, "",
-        "hello", 0, LayerStates{}},
+        "hello", 0, {}, TextEdit::RemoveBeforeCursor, "",
+        "hello", {0, 0}, LayerStates{}},
+    {"remove selection before cursor",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 1, TextEdit::RemoveBeforeCursor, "",
+        "hlo", {1, 1}, LayerState::NeedsDataUpdate},
+    /* Should have the same behavior no matter what the direction */
+    {"remove selection before cursor, different selection direction",
+        Text::ShapeDirection::Unspecified,
+        "hello", 1, 3, TextEdit::RemoveBeforeCursor, "",
+        "hlo", {1, 1}, LayerState::NeedsDataUpdate},
+    /* Cursor being 0 shouldn't stop this from removing */
+    {"remove selection before cursor, at the boundary",
+        Text::ShapeDirection::Unspecified,
+        "hello", 0, 3, TextEdit::RemoveBeforeCursor, "",
+        "lo", {0, 0}, LayerState::NeedsDataUpdate},
     {"remove character after cursor",
         Text::ShapeDirection::Unspecified,
-        "hello", 3, TextEdit::RemoveAfterCursor, "",
-        "helo", 3, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::RemoveAfterCursor, "",
+        "helo", {3, 3}, LayerState::NeedsDataUpdate},
     /* There's no difference in behavior for RTL here */
     {"remove character after cursor, RTL",
         Text::ShapeDirection::RightToLeft,
-        "hello", 3, TextEdit::RemoveAfterCursor, "",
-        "helo", 3, LayerState::NeedsDataUpdate},
+        "hello", 3, {}, TextEdit::RemoveAfterCursor, "",
+        "helo", {3, 3}, LayerState::NeedsDataUpdate},
     {"remove character after cursor, UTF-8",
         Text::ShapeDirection::Unspecified,
-        "sněhy", 2, TextEdit::RemoveAfterCursor, "",
-        "snhy", 2, LayerState::NeedsDataUpdate},
+        "sněhy", 2, {}, TextEdit::RemoveAfterCursor, "",
+        "snhy", {2, 2}, LayerState::NeedsDataUpdate},
     {"remove character after cursor, invalid UTF-8",
         Text::ShapeDirection::Unspecified,
-        "sn\xff\xfehy", 2, TextEdit::RemoveAfterCursor, "",
-        "sn\xfehy", 2, LayerState::NeedsDataUpdate},
+        "sn\xff\xfehy", 2, {}, TextEdit::RemoveAfterCursor, "",
+        "sn\xfehy", {2, 2}, LayerState::NeedsDataUpdate},
     {"remove character after cursor, at the boundary",
         Text::ShapeDirection::Unspecified,
-        "hello", 5, TextEdit::RemoveAfterCursor, "",
-        "hello", 5, LayerStates{}},
+        "hello", 5, {}, TextEdit::RemoveAfterCursor, "",
+        "hello", {5, 5}, LayerStates{}},
+    {"remove selection after cursor",
+        Text::ShapeDirection::Unspecified,
+        "hello", 1, 3, TextEdit::RemoveAfterCursor, "",
+        "hlo", {1, 1}, LayerState::NeedsDataUpdate},
+    /* Should have the same behavior no matter what the direction */
+    {"remove selection after cursor, different selection direction",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, 1, TextEdit::RemoveAfterCursor, "",
+        "hlo", {1, 1}, LayerState::NeedsDataUpdate},
+    /* Cursor being at the end shouldn't stop this from removing */
+    {"remove selection after cursor, at the boundary",
+        Text::ShapeDirection::Unspecified,
+        "hello", 5, 3, TextEdit::RemoveAfterCursor, "",
+        "hel", {3, 3}, LayerState::NeedsDataUpdate},
     {"insert before cursor",
         Text::ShapeDirection::Unspecified,
-        "sume", 2, TextEdit::InsertBeforeCursor, "mmerti",
-        "summertime", 8, LayerState::NeedsDataUpdate},
+        "sume", 2, {}, TextEdit::InsertBeforeCursor, "mmerti",
+        "summertime", {8, 8}, LayerState::NeedsDataUpdate},
     /* There's no difference in behavior for RTL here */
     {"insert before cursor, RTL",
         Text::ShapeDirection::RightToLeft,
-        "sume", 2, TextEdit::InsertBeforeCursor, "mmerti",
-        "summertime", 8, LayerState::NeedsDataUpdate},
+        "sume", 2, {}, TextEdit::InsertBeforeCursor, "mmerti",
+        "summertime", {8, 8}, LayerState::NeedsDataUpdate},
+    {"insert before cursor, selection active",
+        Text::ShapeDirection::Unspecified,
+        "summertime", 4, 9, TextEdit::InsertBeforeCursor, "ariz",
+        "summarize", {8, 8}, LayerState::NeedsDataUpdate},
+    {"insert before cursor, selection active, different selection direction",
+        Text::ShapeDirection::Unspecified,
+        "summertime", 9, 4, TextEdit::InsertBeforeCursor, "ariz",
+        "summarize", {8, 8}, LayerState::NeedsDataUpdate},
     {"insert after cursor",
         Text::ShapeDirection::Unspecified,
-        "sume", 2, TextEdit::InsertAfterCursor, "mmerti",
-        "summertime", 2, LayerState::NeedsDataUpdate},
+        "sume", 2, {}, TextEdit::InsertAfterCursor, "mmerti",
+        "summertime", {2, 2}, LayerState::NeedsDataUpdate},
     /* There's no difference in behavior for RTL here */
     {"insert after cursor, RTL",
         Text::ShapeDirection::RightToLeft,
-        "sume", 2, TextEdit::InsertAfterCursor, "mmerti",
-        "summertime", 2, LayerState::NeedsDataUpdate},
+        "sume", 2, {}, TextEdit::InsertAfterCursor, "mmerti",
+        "summertime", {2, 2}, LayerState::NeedsDataUpdate},
+    {"insert after cursor, selection active",
+        Text::ShapeDirection::Unspecified,
+        "summertime", 4, 9, TextEdit::InsertAfterCursor, "ariz",
+        "summarize", {4, 4}, LayerState::NeedsDataUpdate},
+    {"insert after cursor, selection active, different selection direction",
+        Text::ShapeDirection::Unspecified,
+        "summertime", 9, 4, TextEdit::InsertAfterCursor, "ariz",
+        "summarize", {4, 4}, LayerState::NeedsDataUpdate},
     /* Invalid UTF-8 should do nothing to anything here */
     {"insert before cursor, invalid original UTF-8",
         Text::ShapeDirection::Unspecified,
-        "s\xff\xff" "e", 2, TextEdit::InsertBeforeCursor, "ěží",
-        "s\xffěží\xff" "e", 8, LayerState::NeedsDataUpdate},
+        "s\xff\xff" "e", 2, {}, TextEdit::InsertBeforeCursor, "ěží",
+        "s\xffěží\xff" "e", {8, 8}, LayerState::NeedsDataUpdate},
     {"insert after cursor, invalid original UTF-8",
         Text::ShapeDirection::Unspecified,
-        "s\xff\xff" "e", 2, TextEdit::InsertAfterCursor, "ěží",
-        "s\xffěží\xff" "e", 2, LayerState::NeedsDataUpdate},
+        "s\xff\xff" "e", 2, {}, TextEdit::InsertAfterCursor, "ěží",
+        "s\xffěží\xff" "e", {2, 2}, LayerState::NeedsDataUpdate},
     {"insert before cursor, invalid inserted UTF-8",
         Text::ShapeDirection::Unspecified,
-        "snme", 2, TextEdit::InsertBeforeCursor, "\xff\xfež\xfd\xfc",
-        "sn\xff\xfež\xfd\xfcme", 8, LayerState::NeedsDataUpdate},
+        "snme", 2, {}, TextEdit::InsertBeforeCursor, "\xff\xfež\xfd\xfc",
+        "sn\xff\xfež\xfd\xfcme", {8, 8}, LayerState::NeedsDataUpdate},
     {"insert after cursor, invalid inserted UTF-8",
         Text::ShapeDirection::Unspecified,
-        "snme", 2, TextEdit::InsertAfterCursor, "\xff\xfež\xfd\xfc",
-        "sn\xff\xfež\xfd\xfcme", 2, LayerState::NeedsDataUpdate},
+        "snme", 2, {}, TextEdit::InsertAfterCursor, "\xff\xfež\xfd\xfc",
+        "sn\xff\xfež\xfd\xfcme", {2, 2}, LayerState::NeedsDataUpdate},
 };
 
 const struct {
@@ -3372,7 +3529,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.glyphCount(first), 5);
     CORRADE_COMPARE(layer.size(first), (Vector2{10.0f, 6.0f}));
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
-        CORRADE_COMPARE(layer.cursor(first), 5);
+        CORRADE_COMPARE(layer.cursor(first), Containers::pair(5u, 5u));
         /* textProperties() tested in createSetTextTextPropertiesEditable() */
         CORRADE_COMPARE(layer.text(first), "hello");
     }
@@ -3427,7 +3584,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.glyphCount(dataHandleData(second)), 1);
         CORRADE_COMPARE(layer.size(dataHandleData(second)), (Vector2{5.0f, 3.0f}));
         if(data.flags && *data.flags >= TextDataFlag::Editable) {
-            CORRADE_COMPARE(layer.cursor(dataHandleData(second)), 4);
+            CORRADE_COMPARE(layer.cursor(dataHandleData(second)), Containers::pair(4u, 4u));
             /* textProperties() tested in createSetTextTextPropertiesEditable() */
             CORRADE_COMPARE(layer.text(dataHandleData(second)), "ahoy");
         }
@@ -3442,7 +3599,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         CORRADE_COMPARE(layer.glyphCount(second), 1);
         CORRADE_COMPARE(layer.size(second), (Vector2{5.0f, 3.0f}));
         if(data.flags && *data.flags >= TextDataFlag::Editable) {
-            CORRADE_COMPARE(layer.cursor(second), 4);
+            CORRADE_COMPARE(layer.cursor(second), Containers::pair(4u, 4u));
             /* textProperties() tested in createSetTextTextPropertiesEditable() */
             CORRADE_COMPARE(layer.text(second), "ahoy");
         }
@@ -3493,7 +3650,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.glyphCount(third), 0);
     CORRADE_COMPARE(layer.size(third), (Vector2{0.0f, 6.0f}));
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
-        CORRADE_COMPARE(layer.cursor(third), 0);
+        CORRADE_COMPARE(layer.cursor(third), Containers::pair(0u, 0u));
         /* textProperties() tested in createSetTextTextPropertiesEditable() */
         CORRADE_COMPARE(layer.text(third), "");
     }
@@ -3523,7 +3680,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.glyphCount(fourth), 2);
     CORRADE_COMPARE(layer.size(fourth), (Vector2{2.5f, 6.0f}));
     if(data.flags && *data.flags >= TextDataFlag::Editable) {
-        CORRADE_COMPARE(layer.cursor(fourth), 2);
+        CORRADE_COMPARE(layer.cursor(fourth), Containers::pair(2u, 2u));
         /* textProperties() tested in createSetTextTextPropertiesEditable() */
         CORRADE_COMPARE(layer.text(fourth), "hi");
     }
@@ -4059,7 +4216,7 @@ void TextLayerTest::setCursor() {
     layer.create(0, "", {});
     DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
     layer.create(0, "", {});
-    CORRADE_COMPARE(layer.cursor(data), 7);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(7u, 7u));
 
     /* Clear the state flags */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
@@ -4067,7 +4224,7 @@ void TextLayerTest::setCursor() {
 
     /* Set to a different position updates the state flag */
     layer.setCursor(data, 5);
-    CORRADE_COMPARE(layer.cursor(data), 5);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(5u, 5u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -4076,7 +4233,26 @@ void TextLayerTest::setCursor() {
 
     /* LayerDataHandle overload */
     layer.setCursor(dataHandleData(data), 3);
-    CORRADE_COMPARE(layer.cursor(dataHandleData(data)), 3);
+    CORRADE_COMPARE(layer.cursor(dataHandleData(data)), Containers::pair(3u, 3u));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting a non-empty selection range updates the state flag */
+    layer.setCursor(data, 3, 5);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(3u, 5u));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting the range from the other direction updates the state flag;
+       LayerDataHandle overload */
+    layer.setCursor(dataHandleData(data), 5, 3);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(5u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -4084,13 +4260,13 @@ void TextLayerTest::setCursor() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting to the same position is a no-op */
-    layer.setCursor(data, 3);
-    CORRADE_COMPARE(layer.cursor(data), 3);
+    layer.setCursor(data, 5, 3);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(5u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState{});
 
     /* Setting it after all text should work */
     layer.setCursor(data, 7);
-    CORRADE_COMPARE(layer.cursor(data), 7);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(7u, 7u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -4099,7 +4275,7 @@ void TextLayerTest::setCursor() {
 
     /* Setting it before all text as well */
     layer.setCursor(data, 0);
-    CORRADE_COMPARE(layer.cursor(data), 0);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(0u, 0u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
@@ -4147,12 +4323,16 @@ void TextLayerTest::setCursorInvalid() {
     } layer{layerHandle(0, 1), shared};
 
     DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
-    CORRADE_COMPARE(layer.cursor(data), 7);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(7u, 7u));
 
     std::ostringstream out;
     Error redirectError{&out};
     layer.setCursor(data, 8);
-    CORRADE_COMPARE(out.str(), "Whee::TextLayer::setCursor(): position 8 out of range for a text of 7 bytes\n");
+    layer.setCursor(data, 7, 8);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::setCursor(): position 8 out of range for a text of 7 bytes\n"
+        "Whee::TextLayer::setCursor(): selection 8 out of range for a text of 7 bytes\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::updateText() {
@@ -4203,7 +4383,7 @@ void TextLayerTest::updateText() {
     DataHandle text = layer.create(2, "hello", {}, TextDataFlag::Editable);
     layer.create(2, "bb", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello");
-    CORRADE_COMPARE(layer.cursor(text), 5);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(layer.glyphCount(text), 5);
 
@@ -4213,9 +4393,11 @@ void TextLayerTest::updateText() {
 
     /* Various variants of a no-op operation, neither sets any flags */
     layer.updateText(text, 0, 0, 0, "", 5);
+    layer.updateText(text, 0, 0, 0, "", 5, 5);
     layer.updateText(text, 5, 0, 5, "", 5);
+    layer.updateText(text, 5, 0, 5, "", 5, 5);
     CORRADE_COMPARE(layer.text(text), "hello");
-    CORRADE_COMPARE(layer.cursor(text), 5);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
     CORRADE_COMPARE(layer.state(), LayerStates{});
     /* No reshaping should be done in this case */
     CORRADE_COMPARE(layer.glyphCount(text), 5);
@@ -4223,7 +4405,15 @@ void TextLayerTest::updateText() {
     /* Updating cursor location alone sets an update flag */
     layer.updateText(text, 0, 0, 0, "", 3);
     CORRADE_COMPARE(layer.text(text), "hello");
-    CORRADE_COMPARE(layer.cursor(text), 3);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 3u));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    /* No reshaping should be done in this case however */
+    CORRADE_COMPARE(layer.glyphCount(text), 5);
+
+    /* Updating just the selection sets an update flag as well */
+    layer.updateText(text, 0, 0, 0, "", 3, 4);
+    CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 4u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* No reshaping should be done in this case however */
     CORRADE_COMPARE(layer.glyphCount(text), 5);
@@ -4231,7 +4421,7 @@ void TextLayerTest::updateText() {
     /* Insertion at the very end, putting cursor right after */
     layer.updateText(text, 0, 0, 5, "oo?!", 9);
     CORRADE_COMPARE(layer.text(text), "hellooo?!");
-    CORRADE_COMPARE(layer.cursor(text), 9);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(9u, 9u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 9);
@@ -4240,10 +4430,11 @@ void TextLayerTest::updateText() {
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Removal at the very end, putting cursor back at the end */
-    layer.updateText(text, 6, 3, 0, "", 4);
+    /* Removal at the very end, putting cursor back at the end; LayerDataHandle
+       overload with implicit selection */
+    layer.updateText(dataHandleData(text), 6, 3, 0, "", 4);
     CORRADE_COMPARE(layer.text(text), "helloo");
-    CORRADE_COMPARE(layer.cursor(text), 4);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 4u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 6);
@@ -4252,10 +4443,11 @@ void TextLayerTest::updateText() {
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Insertion at the end after a removed portion, cursor inside it */
-    layer.updateText(text, 1, 4, 2, "vercrafts", 5);
+    /* Insertion at the end after a removed portion, cursor & selection inside
+       it */
+    layer.updateText(text, 1, 4, 2, "vercrafts", 5, 3);
     CORRADE_COMPARE(layer.text(text), "hovercrafts");
-    CORRADE_COMPARE(layer.cursor(text), 5);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 11);
@@ -4265,10 +4457,10 @@ void TextLayerTest::updateText() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Insertion before a removed portion, cursor inside it; LayerDataHandle
-       overload */
-    layer.updateText(dataHandleData(text), 5, 5, 2, "ldo", 4);
+       overload with explicit selection */
+    layer.updateText(dataHandleData(text), 5, 5, 2, "ldo", 4, 3);
     CORRADE_COMPARE(layer.text(text), "holdovers");
-    CORRADE_COMPARE(layer.cursor(text), 4);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 3u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 9);
@@ -4280,7 +4472,7 @@ void TextLayerTest::updateText() {
     /* Removing everything */
     layer.updateText(text, 0, 9, 0, "", 0);
     CORRADE_COMPARE(layer.text(text), "");
-    CORRADE_COMPARE(layer.cursor(text), 0);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 0);
@@ -4292,7 +4484,7 @@ void TextLayerTest::updateText() {
     /* This is a no-op again */
     layer.updateText(text, 0, 0, 0, "", 0);
     CORRADE_COMPARE(layer.text(text), "");
-    CORRADE_COMPARE(layer.cursor(text), 0);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
     CORRADE_COMPARE(layer.state(), LayerStates{});
     /* Lazy verification that the text gets implicitly reshaped */
     CORRADE_COMPARE(layer.glyphCount(text), 0);
@@ -4342,7 +4534,7 @@ void TextLayerTest::updateTextInvalid() {
     } layer{layerHandle(0, 1), shared};
 
     DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
-    CORRADE_COMPARE(layer.cursor(data), 7);
+    CORRADE_COMPARE(layer.cursor(data), Containers::pair(7u, 7u));
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -4358,6 +4550,7 @@ void TextLayerTest::updateTextInvalid() {
     layer.updateText(data, 3, 2, 0, "", 6);
     /* Text size got smaller by 2 here but larger by 3, yet still not enouh */
     layer.updateText(data, 3, 2, 0, "hey", 9);
+    layer.updateText(data, 3, 2, 0, "hey", 8, 9);
     CORRADE_COMPARE_AS(out.str(),
         "Whee::TextLayer::updateText(): remove offset 8 and size 0 out of range for a text of 7 bytes\n"
         "Whee::TextLayer::updateText(): remove offset 5 and size 3 out of range for a text of 7 bytes\n"
@@ -4367,7 +4560,8 @@ void TextLayerTest::updateTextInvalid() {
         "Whee::TextLayer::updateText(): cursor position 8 out of range for a text of 7 bytes\n"
         "Whee::TextLayer::updateText(): insert offset 6 out of range for a text of 5 bytes\n"
         "Whee::TextLayer::updateText(): cursor position 6 out of range for a text of 5 bytes\n"
-        "Whee::TextLayer::updateText(): cursor position 9 out of range for a text of 8 bytes\n",
+        "Whee::TextLayer::updateText(): cursor position 9 out of range for a text of 8 bytes\n"
+        "Whee::TextLayer::updateText(): selection position 9 out of range for a text of 8 bytes\n",
         TestSuite::Compare::String);
 }
 
@@ -4431,8 +4625,12 @@ void TextLayerTest::editText() {
 
     /* The cursor should always be at the end of the input text even in
        presence of weird data. Update it to what's desired. */
-    CORRADE_COMPARE(layer.cursor(text), Containers::StringView{data.text}.size());
-    layer.setCursor(text, data.cursor);
+    CORRADE_COMPARE(layer.cursor(text).first(), Containers::StringView{data.text}.size());
+    CORRADE_COMPARE(layer.cursor(text).second(), Containers::StringView{data.text}.size());
+    if(data.selection)
+        layer.setCursor(text, data.cursor, *data.selection);
+    else
+        layer.setCursor(text, data.cursor);
 
     /* Clear the state flags */
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
@@ -4822,7 +5020,7 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
             .setShapeDirection(Text::ShapeDirection::RightToLeft),
         TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello");
-    CORRADE_COMPARE(layer.cursor(text), 5);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
     /* Alignment wasn't set */
     CORRADE_COMPARE(layer.textProperties(text).alignment(), Containers::NullOpt);
     /* Font wasn't set in the properties but the actual used one got saved to
@@ -4841,7 +5039,7 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
     /* updateText() should pass the same */
     layer.updateText(text, 0, 0, 5, "!", 6);
     CORRADE_COMPARE(layer.text(text), "hello!");
-    CORRADE_COMPARE(layer.cursor(text), 6);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(6u, 6u));
     CORRADE_COMPARE(font.setScriptCalled, 2);
     CORRADE_COMPARE(font.setLanguageCalled, 2);
     CORRADE_COMPARE(font.setDirectionCalled, 2);
@@ -4877,7 +5075,7 @@ void TextLayerTest::createSetTextTextPropertiesEditable() {
        above */
     layer.editText(text, TextEdit::InsertBeforeCursor, "!");
     CORRADE_COMPARE(layer.text(text), "hello?!");
-    CORRADE_COMPARE(layer.cursor(text), 7);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(7u, 7u));
     CORRADE_COMPARE(font.setScriptCalled, 4);
     CORRADE_COMPARE(font.setLanguageCalled, 4);
     CORRADE_COMPARE(font.setDirectionCalled, 4);
@@ -6953,7 +7151,7 @@ void TextLayerTest::keyTextEvent() {
     layer.setCursor(text, 3);
     layer.create(0, "bb", {}, TextDataFlag::Editable);
     CORRADE_COMPARE(layer.text(text), "hello");
-    CORRADE_COMPARE(layer.cursor(text), 3);
+    CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 3u));
 
     /* Create also a non-editable text attached to the same node, it shouldn't
        get modified in any way */
@@ -6987,7 +7185,7 @@ void TextLayerTest::keyTextEvent() {
         CORRADE_VERIFY(!ui.keyPressEvent(end));
         CORRADE_VERIFY(!ui.textInputEvent(input));
         CORRADE_COMPARE(layer.text(text), "hello");
-        CORRADE_COMPARE(layer.cursor(text), 3);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 3u));
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Move pointer away, focus the node instead */
@@ -7008,7 +7206,7 @@ void TextLayerTest::keyTextEvent() {
         KeyEvent event{Key::Left, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
-        CORRADE_COMPARE(layer.cursor(text), 2);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(2u, 2u));
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
         /* Reset state flags */
@@ -7018,19 +7216,62 @@ void TextLayerTest::keyTextEvent() {
         KeyEvent event{Key::Right, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
-        CORRADE_COMPARE(layer.cursor(text), 3);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 3u));
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
         /* Reset state flags */
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Home / end */
+    /* Shift home / right / end / left, ordered like this so I don't need to
+       specially craft cursor positions for each */
+    } {
+        KeyEvent event{Key::Home, Modifier::Shift};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 3u));
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        KeyEvent event{Key::Right, Modifier::Shift};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(1u, 3u));
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        KeyEvent event{Key::End, Modifier::Shift};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 3u));
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        KeyEvent event{Key::Left, Modifier::Shift};
+        CORRADE_VERIFY(ui.keyPressEvent(event));
+        CORRADE_COMPARE(layer.text(text), "hello");
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 3u));
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+        /* Reset state flags */
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Home / end, resetting the selection again */
     } {
         KeyEvent event{Key::Home, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
-        CORRADE_COMPARE(layer.cursor(text), 0);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
         /* Reset state flags */
@@ -7040,7 +7281,7 @@ void TextLayerTest::keyTextEvent() {
         KeyEvent event{Key::End, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
-        CORRADE_COMPARE(layer.cursor(text), 5);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
         /* Reset state flags */
@@ -7056,7 +7297,7 @@ void TextLayerTest::keyTextEvent() {
         KeyEvent event{Key::Backspace, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "helo");
-        CORRADE_COMPARE(layer.cursor(text), 2);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(2u, 2u));
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
         /* Reset state flags */
@@ -7066,7 +7307,7 @@ void TextLayerTest::keyTextEvent() {
         KeyEvent event{Key::Delete, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "heo");
-        CORRADE_COMPARE(layer.cursor(text), 2);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(2u, 2u));
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
         /* Reset state flags */
@@ -7078,21 +7319,21 @@ void TextLayerTest::keyTextEvent() {
         TextInputEvent event{"avenly may"};
         CORRADE_VERIFY(ui.textInputEvent(event));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
-        CORRADE_COMPARE(layer.cursor(text), 12);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
         /* Reset state flags */
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Nothing should happen with modifiers set, so far at least */
+    /* Nothing should happen with other modifiers set */
     } {
         KeyEvent right{Key::Right, Modifier::Ctrl};
         KeyEvent left{Key::Left, Modifier::Ctrl};
         KeyEvent backspace{Key::Backspace, Modifier::Ctrl};
         KeyEvent delete_{Key::Delete, Modifier::Ctrl};
-        KeyEvent home{Key::Home, Modifier::Shift};
-        KeyEvent end{Key::End, Modifier::Shift};
+        KeyEvent home{Key::Home, Modifier::Ctrl};
+        KeyEvent end{Key::End, Modifier::Ctrl};
         CORRADE_VERIFY(!ui.keyPressEvent(right));
         CORRADE_VERIFY(!ui.keyPressEvent(left));
         CORRADE_VERIFY(!ui.keyPressEvent(backspace));
@@ -7100,7 +7341,17 @@ void TextLayerTest::keyTextEvent() {
         CORRADE_VERIFY(!ui.keyPressEvent(home));
         CORRADE_VERIFY(!ui.keyPressEvent(end));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
-        CORRADE_COMPARE(layer.cursor(text), 12);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Nothing should happen for other keys */
+    } {
+        KeyEvent a{Key::A, {}};
+        KeyEvent aShift{Key::A, Modifier::Shift};
+        CORRADE_VERIFY(!ui.keyPressEvent(a));
+        CORRADE_VERIFY(!ui.keyPressEvent(aShift));
+        CORRADE_COMPARE(layer.text(text), "heavenly mayo");
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Nothing should happen for a key release */
@@ -7109,8 +7360,8 @@ void TextLayerTest::keyTextEvent() {
         KeyEvent left{Key::Left, Modifier::Ctrl};
         KeyEvent backspace{Key::Backspace, Modifier::Ctrl};
         KeyEvent delete_{Key::Delete, Modifier::Ctrl};
-        KeyEvent home{Key::Home, Modifier::Shift};
-        KeyEvent end{Key::End, Modifier::Shift};
+        KeyEvent home{Key::Home, Modifier::Ctrl};
+        KeyEvent end{Key::End, Modifier::Ctrl};
         CORRADE_VERIFY(!ui.keyReleaseEvent(right));
         CORRADE_VERIFY(!ui.keyReleaseEvent(left));
         CORRADE_VERIFY(!ui.keyReleaseEvent(backspace));
@@ -7118,7 +7369,7 @@ void TextLayerTest::keyTextEvent() {
         CORRADE_VERIFY(!ui.keyReleaseEvent(home));
         CORRADE_VERIFY(!ui.keyReleaseEvent(end));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
-        CORRADE_COMPARE(layer.cursor(text), 12);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Nothing happens with a focus lost again */
@@ -7135,7 +7386,7 @@ void TextLayerTest::keyTextEvent() {
         KeyEvent event{Key::Left, {}};
         CORRADE_VERIFY(!ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
-        CORRADE_COMPARE(layer.cursor(text), 12);
+        CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 }

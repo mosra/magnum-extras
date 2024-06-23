@@ -240,9 +240,9 @@ MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, TextDataFlags value);
 */
 enum class TextEdit: UnsignedByte {
     /**
-     * Move cursor one character to the left, equivalent to the
-     * @m_class{m-label m-default} **Left** key. The @ref TextLayer::editText()
-     * @p text is expected to be empty.
+     * Move cursor one character to the left and discard any selection,
+     * equivalent to the @m_class{m-label m-default} **Left** key. The
+     * @ref TextLayer::editText() @p text is expected to be empty.
      *
      * If the character on the left to the @ref TextLayer::cursor() is a valid
      * UTF-8 byte sequence, it moves past the whole sequence, otherwise just by
@@ -258,12 +258,37 @@ enum class TextEdit: UnsignedByte {
      * @relativeref{Text::ShapeDirection,RightToLeft} after calling
      * @ref Text::AbstractShaper::shape() internally, the cursor still moves
      * *optically* to the left, although it's forward in the byte stream.
+     * @see @ref TextEdit::ExtendSelectionLeft
      */
     MoveCursorLeft,
 
     /**
-     * Move cursor one character to the right, equivalent to the
-     * @m_class{m-label m-default} **Right** key. The
+     * Extend or shrink selection to the left of the cursor, equivalent to the
+     * @m_class{m-label m-warning} **Shift** @m_class{m-label m-default} **Left**
+     * key combination. The @ref TextLayer::editText() @p text is expected to
+     * be empty.
+     *
+     * If the character on the left to the @ref TextLayer::cursor() is a valid
+     * UTF-8 byte sequence, it extends past the whole sequence, otherwise just
+     * by one byte. Note that, currently, if a character is combined out of
+     * multiple Unicode codepoints (such as combining diacritics), the cursor
+     * will not jump over the whole combined sequence but move inside.
+     *
+     * By default, the cursor moves backward in the byte stream, which is
+     * optically to the left for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, the cursor still moves
+     * *optically* to the left, although it's forward in the byte stream.
+     * @see @ref TextEdit::MoveCursorLeft
+     */
+    ExtendSelectionLeft,
+
+    /**
+     * Move cursor one character to the right and discard any selection,
+     * equivalent to the @m_class{m-label m-default} **Right** key. The
      * @ref TextLayer::editText() @p text is expected to be empty.
      *
      * If the character on the right to the @ref TextLayer::cursor() is a valid
@@ -280,13 +305,38 @@ enum class TextEdit: UnsignedByte {
      * @relativeref{Text::ShapeDirection,RightToLeft} after calling
      * @ref Text::AbstractShaper::shape() internally, the cursor still moves
      * *optically* to the right, although it's forward in the byte stream.
+     * @see @ref TextEdit::ExtendSelectionRight
      */
     MoveCursorRight,
 
     /**
-     * Move cursor at the beginning of the line, equivalent to the
-     * @m_class{m-label m-default} **Home** key. The @ref TextLayer::editText()
-     * @p text is expected to be empty.
+     * Extend or shrink selection to the right of the cursor, equivalent to the
+     * @m_class{m-label m-warning} **Shift** @m_class{m-label m-default} **Right**
+     * key combination. The @ref TextLayer::editText() @p text is expected to
+     * be empty.
+     *
+     * If the character on the right to the @ref TextLayer::cursor() is a valid
+     * UTF-8 byte sequence, it moves past the whole sequence, otherwise just by
+     * one byte. Note that, currently, if a character is combined out of
+     * multiple Unicode codepoints (such as combining diacritics), the cursor
+     * will not jump over the whole combined sequence but move inside.
+     *
+     * By default, the cursor moves backward in the byte stream, which is
+     * optically to the left for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, the cursor still moves
+     * *optically* to the right, although it's forward in the byte stream.
+     * @see @ref TextEdit::MoveCursorRight
+     */
+    ExtendSelectionRight,
+
+    /**
+     * Move cursor at the beginning of the line and discard any selection,
+     * equivalent to the @m_class{m-label m-default} **Home** key. The
+     * @ref TextLayer::editText() @p text is expected to be empty.
      *
      * The cursor moves to the begin of the byte stream, which is optically on
      * the left for left-to-right alphabets. If
@@ -296,13 +346,32 @@ enum class TextEdit: UnsignedByte {
      * @relativeref{Text::ShapeDirection,RightToLeft} after calling
      * @ref Text::AbstractShaper::shape() internally, it's still the begin of
      * the byte stream, but *optically* after the rightmost character.
+     * @see @ref TextEdit::ExtendSelectionLineBegin
      */
     MoveCursorLineBegin,
 
     /**
-     * Move cursor at the end of the line, equivalent to the
-     * @m_class{m-label m-default} **End** key. The @ref TextLayer::editText()
-     * @p text is expected to be empty.
+     * Extend selection to the beginning of the line, equivalent to the
+     * @m_class{m-label m-warning} **Shift** @m_class{m-label m-default} **Home**
+     * key combination. The @ref TextLayer::editText() @p text is expected to
+     * be empty.
+     *
+     * The cursor moves to the begin of the byte stream, which is optically on
+     * the left for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, it's still the begin of
+     * the byte stream, but *optically* after the rightmost character.
+     * @see @ref TextEdit::MoveCursorLineBegin
+     */
+    ExtendSelectionLineBegin,
+
+    /**
+     * Move cursor at the end of the line and discard any selection, equivalent
+     * to the @m_class{m-label m-default} **End** key. The
+     * @ref TextLayer::editText() @p text is expected to be empty.
      *
      * The cursor moves to the end of in the byte stream, which is optically on
      * the right for left-to-right alphabets. If
@@ -312,11 +381,30 @@ enum class TextEdit: UnsignedByte {
      * @relativeref{Text::ShapeDirection,RightToLeft} after calling
      * @ref Text::AbstractShaper::shape() internally, it's still the end ofthe
      * byte stream, but *optically* before the leftmost character.
+     * @see @ref TextEdit::ExtendSelectionLineEnd
      */
     MoveCursorLineEnd,
 
     /**
-     * Remove character before cursor, equivalent to the
+     * Extend selection to the end of the line, equivalent to the
+     * @m_class{m-label m-warning} **Shift** @m_class{m-label m-default} **End**
+     * key combination. The @ref TextLayer::editText() @p text is expected to
+     * be empty.
+     *
+     * The cursor moves to the end of in the byte stream, which is optically on
+     * the right for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, it's still the end ofthe
+     * byte stream, but *optically* before the leftmost character.
+     * @see @ref TextEdit::MoveCursorLineEnd
+     */
+    ExtendSelectionLineEnd,
+
+    /**
+     * Remove selection or character before cursor, equivalent to the
      * @m_class{m-label m-default} **Backspace** key. The
      * @ref TextLayer::editText() @p text is expected to be empty.
      *
@@ -334,11 +422,14 @@ enum class TextEdit: UnsignedByte {
      * @relativeref{Text::ShapeDirection,RightToLeft} after calling
      * @ref Text::AbstractShaper::shape() internally, the deletion still goes
      * backward in the byte stream, but *optically* it's to the right.
+     *
+     * For a non-empty selection the behavior is the same as
+     * @ref TextEdit::RemoveAfterCursor.
      */
     RemoveBeforeCursor,
 
     /**
-     * Remove character after cursor, equivalent to the
+     * Remove selection or character after cursor, equivalent to the
      * @m_class{m-label m-default} **Delete** key. The
      * @ref TextLayer::editText() @p text is expected to be empty.
      *
@@ -356,12 +447,16 @@ enum class TextEdit: UnsignedByte {
      * @relativeref{Text::ShapeDirection,RightToLeft} after calling
      * @ref Text::AbstractShaper::shape() internally, the deletion still goes
      * forward in the byte stream, but *optically* it's to the left.
+     *
+     * For a non-empty selection the behavior is the same as
+     * @ref TextEdit::RemoveBeforeCursor.
      */
     RemoveAfterCursor,
 
     /**
-     * Insert text before the cursor. This will cause the cursor to advance
-     * *after* the inserted text, which is the usual text editing behavior.
+     * Insert text before the cursor, replacing the selection if any. This will
+     * cause the cursor to advance *after* the inserted text, which is the
+     * usual text editing behavior.
      *
      * No UTF-8 byte sequence adjustment is performed in this case, i.e. it's
      * assumed that the cursor is at a valid UTF-8 character boundary and the
@@ -379,8 +474,8 @@ enum class TextEdit: UnsignedByte {
     InsertBeforeCursor,
 
     /**
-     * Insert text after the cursor. Compared to
-     * @ref TextEdit::InsertBeforeCursor, the cursor stays at the original
+     * Insert text after the cursor, replacing the selection if any. Compared
+     * to @ref TextEdit::InsertBeforeCursor, the cursor stays at the original
      * position, *before* the inserted text, other than that the behavior is
      * the same. Useful for autocompletion hints, for example.
      *
@@ -549,10 +644,11 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * If @p flags contain @ref TextDataFlag::Editable, the @p text and
          * @p properties are remembered and subsequently accessible through
-         * @ref text() and @ref textProperties(), @ref cursor() is set to
-         * @p text size. Currently, for editable text, the @p properties are
-         * expected to have empty @ref TextProperties::features() --- only the
-         * features supplied by the style are used for editable text.
+         * @ref text() and @ref textProperties(), @ref cursor() position and
+         * selection are both set to @p text size. Currently, for editable
+         * text, the @p properties are expected to have empty
+         * @ref TextProperties::features() --- only the features supplied by
+         * the style are used for editable text.
          *
          * Use @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, TextDataFlags, NodeHandle)
          * for creating a text with a custom color. This function is equivalent
@@ -629,10 +725,11 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * If @p flags contain @ref TextDataFlag::Editable, the @p text and
          * @p properties are remembered and subsequently accessible through
-         * @ref text() and @ref textProperties(), @ref cursor() is set to
-         * @p text size. Currently, for editable text, the @p properties are
-         * expected to have empty @ref TextProperties::features() --- only the
-         * features supplied by the style are used for editable text.
+         * @ref text() and @ref textProperties(), @ref cursor() position and
+         * selection are both set to @p text size. Currently, for editable
+         * text, the @p properties are expected to have empty
+         * @ref TextProperties::features() --- only the features supplied by
+         * the style are used for editable text.
          *
          * @see @ref create(UnsignedInt, Containers::StringView, const TextProperties&, TextDataFlags, NodeHandle),
          *      @ref Shared::hasFontInstance(), @ref setText(),
@@ -960,28 +1057,30 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         Vector2 size(LayerDataHandle handle) const;
 
         /**
-         * @brief Cursor position in an editable text
+         * @brief Cursor and selection position in an editable text
          *
          * Expects that @p handle is valid and the text was created or set with
-         * @ref TextDataFlag::Editable present. The cursor position is
-         * guaranteed to be always within bounds of a corresponding
-         * @ref text(DataHandle) const.
+         * @ref TextDataFlag::Editable present. Both values are guaranteed to
+         * be always within bounds of a corresponding
+         * @ref text(DataHandle) const. The first value is cursor position, the
+         * second value denotes the other end of the selection. If both are the
+         * same, there's no selection.
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref flags(DataHandle) const
          */
-        UnsignedInt cursor(DataHandle handle) const;
+        Containers::Pair<UnsignedInt, UnsignedInt> cursor(DataHandle handle) const;
 
         /**
-         * @brief Cursor position in an editable text assuming it belongs to this layer
+         * @brief Cursor and selection position in an editable text assuming it belongs to this layer
          *
          * Like @ref cursor(DataHandle) const but without checking that
          * @p handle indeed belongs to this layer. See its documentation for
          * more information.
          */
-        UnsignedInt cursor(LayerDataHandle handle) const;
+        Containers::Pair<UnsignedInt, UnsignedInt> cursor(LayerDataHandle handle) const;
 
         /**
-         * @brief Set cursor position in an editable text
+         * @brief Set cursor position and selection in an editable text
          *
          * Low-level interface for cursor positioning. See @ref updateText()
          * for a low-level interface to perform text modifications together
@@ -989,10 +1088,15 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * operations with UTF-8 and text directionality awareness.
          *
          * Expects that @p handle is valid and the text was created or set with
-         * @ref TextDataFlag::Editable enabled. The @p position is expected to
-         * be less or equal to @ref text() size. No UTF-8 sequence boundary
-         * adjustment is done, i.e. it's possible to move the cursor inside a
-         * multi-byte UTF-8 sequence.
+         * @ref TextDataFlag::Editable enabled. Both the @p position and
+         * @p selection is expected to be less or equal to @ref text() size.
+         * The distance between the two is what's selected --- if @p selection
+         * is less than @p position, the selection is before the cursor, if
+         * @p position is less than @p selection, the selection is after the
+         * cursor. If they're the same, there's no selection. No UTF-8 sequence
+         * boundary adjustment is done for either of the two, i.e. it's
+         * possible to move the cursor or selection inside a multi-byte UTF-8
+         * sequence.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, unless the operation performed is a no-op, which is when both
@@ -1001,16 +1105,38 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref flags(DataHandle) const
          */
-        void setCursor(DataHandle handle, UnsignedInt position);
+        void setCursor(DataHandle handle, UnsignedInt position, UnsignedInt selection);
+
+        /**
+         * @brief Set cursor position in an editable text
+         *
+         * Same as calling @ref setCursor(DataHandle, UnsignedInt, UnsignedInt)
+         * with @p position passed to both @p position and @p selection, i.e.
+         * with nothing selected.
+         */
+        void setCursor(DataHandle handle, UnsignedInt position) {
+            setCursor(handle, position, position);
+        }
+
+        /**
+         * @brief Set cursor position and selection in an editable text assuming it belongs to this layer
+         *
+         * Like @ref setCursor(DataHandle, UnsignedInt, UnsignedInt) but
+         * without checking that @p handle indeed belongs to this layer. See
+         * its documentation for more information.
+         */
+        void setCursor(LayerDataHandle handle, UnsignedInt position, UnsignedInt selection);
 
         /**
          * @brief Set cursor position in an editable text assuming it belongs to this layer
          *
-         * Like @ref setCursor(DataHandle, UnsignedInt) but without checking
-         * that @p handle indeed belongs to this layer. See its documentation
-         * for more information.
+         * Same as calling @ref setCursor(LayerDataHandle, UnsignedInt, UnsignedInt)
+         * with @p position passed to both @p position and @p selection, i.e.
+         * with nothing selected.
          */
-        void setCursor(LayerDataHandle handle, UnsignedInt position);
+        void setCursor(LayerDataHandle handle, UnsignedInt position) {
+            setCursor(handle, position, position);
+        }
 
         /**
          * @brief Properties used for shaping an editable text
@@ -1076,10 +1202,11 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * If @ref flags() contain @ref TextDataFlag::Editable, the @p text and
          * @p properties are remembered and subsequently accessible through
-         * @ref text() and @ref textProperties(), @ref cursor() is set to
-         * @p text size. Currently, for editable text, the @p properties are
-         * expected to have empty @ref TextProperties::features() --- only the
-         * features supplied by the style are used for editable text.
+         * @ref text() and @ref textProperties(), @ref cursor() position and
+         * selection are both set to @p text size. Currently, for editable
+         * text, the @p properties are expected to have empty
+         * @ref TextProperties::features() --- only the features supplied by
+         * the style are used for editable text.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -1117,13 +1244,15 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         void setText(LayerDataHandle handle, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
 
         /**
-         * @brief Update text and cursor position in an editable text
+         * @brief Update text, cursor position and selection in an editable text
          * @param handle        Handle which to update
          * @param removeOffset  Offset at which to remove
          * @param removeSize    Count of bytes to remove
          * @param insertOffset  Offset at which to insert after the removal
          * @param insertText    Text to insert after the removal
          * @param cursor        Cursor position to set after the removal and
+         *      subsequent insert
+         * @param selection     Selection to set after the removal and
          *      subsequent insert
          *
          * Low-level interface for text removal and insertion together with
@@ -1135,29 +1264,55 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @ref TextDataFlag::Editable enabled. The @p removeOffset together
          * with @p removeSize is expected to be less or equal to @ref text()
          * size; @p insertOffset then equal to the text size without
-         * @p removeSize; @p cursor then to text size without @p removeSize but
-         * with @p insertText size. No UTF-8 sequence boundary adjustment is
-         * done for any of these, i.e. it's possible to remove or insert
-         * partial multi-byte UTF-8 sequences and position the cursor inside
-         * them as well.
+         * @p removeSize; @p cursor and @p selection then to text size without
+         * @p removeSize but with @p insertText size. The distance between
+         * @p cursor and @p selection is what's selected --- if @p selection
+         * is less than @p cursor, the selection is before the cursor, if
+         * @p cursor is less than @p selection, the selection is after the
+         * cursor. If they're the same, there's no selection. No UTF-8
+         * sequence boundary adjustment is done for any of these, i.e. it's
+         * possible to remove or insert partial multi-byte UTF-8 sequences and
+         * position the cursor inside them as well.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set, unless the operation performed is a no-op, which is when both
          * @p removeSize and @p insertText size are both @cpp 0 @ce and
          * @p cursor is equal to @ref cursor().
          * @see @ref isHandleValid(DataHandle) const,
-         *      @ref flags(DataHandle) const
+         *      @ref flags(DataHandle) const, @ref setText()
          */
-        void updateText(DataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor);
+        void updateText(DataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor, UnsignedInt selection);
 
         /**
-         * @brief Update text and cursor position in an editable text assuming it belongs to this layer
+         * @brief Update text and cursor position in an editable text
          *
-         * Like @ref updateText(DataHandle, UnsignedInt, UnsignedInt, UnsignedInt, Containers::StringView, UnsignedInt)
+         * Same as calling @ref updateText(DataHandle, UnsignedInt, UnsignedInt, UnsignedInt, Containers::StringView, UnsignedInt, UnsignedInt)
+         * with @p position passed to both @p position and @p selection, i.e.
+         * with nothing selected.
+         */
+        void updateText(DataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor) {
+            updateText(handle, removeOffset, removeSize, insertOffset, insertText, cursor, cursor);
+        }
+
+        /**
+         * @brief Update text, cursor position and selection in an editable text assuming it belongs to this layer
+         *
+         * Like @ref updateText(DataHandle, UnsignedInt, UnsignedInt, UnsignedInt, Containers::StringView, UnsignedInt, UnsignedInt)
          * but without checking that @p handle indeed belongs to this layer.
          * See its documentation for more information.
          */
-        void updateText(LayerDataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor);
+        void updateText(LayerDataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor, UnsignedInt selection);
+
+        /**
+         * @brief Update text and cursor position in an editable text
+         *
+         * Same as calling @ref updateText(DataHandle, UnsignedInt, UnsignedInt, UnsignedInt, Containers::StringView, UnsignedInt, UnsignedInt)
+         * with @p position passed to both @p position and @p selection, i.e.
+         * with nothing selected.
+         */
+        void updateText(LayerDataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor) {
+            updateText(handle, removeOffset, removeSize, insertOffset, insertText, cursor, cursor);
+        }
 
         /**
          * @brief Edit text at current cursor position
@@ -1396,12 +1551,12 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
             #endif
             UnsignedInt id, UnsignedInt style, UnsignedInt glyphId, const TextProperties& properties);
         MAGNUM_WHEE_LOCAL void removeInternal(UnsignedInt id);
-        MAGNUM_WHEE_LOCAL UnsignedInt cursorInternal(UnsignedInt id) const;
-        MAGNUM_WHEE_LOCAL void setCursorInternal(UnsignedInt id, UnsignedInt position);
+        MAGNUM_WHEE_LOCAL Containers::Pair<UnsignedInt, UnsignedInt> cursorInternal(UnsignedInt id) const;
+        MAGNUM_WHEE_LOCAL void setCursorInternal(UnsignedInt id, UnsignedInt position, UnsignedInt selection);
         MAGNUM_WHEE_LOCAL TextProperties textPropertiesInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL Containers::StringView textInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL void setTextInternal(UnsignedInt id, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
-        MAGNUM_WHEE_LOCAL void updateTextInternal(UnsignedInt id, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView text, UnsignedInt cursor);
+        MAGNUM_WHEE_LOCAL void updateTextInternal(UnsignedInt id, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView text, UnsignedInt cursor, UnsignedInt selection);
         MAGNUM_WHEE_LOCAL void editTextInternal(UnsignedInt id, TextEdit edit, Containers::StringView text);
         MAGNUM_WHEE_LOCAL void setGlyphInternal(UnsignedInt id, UnsignedInt glyph, const TextProperties& properties);
         MAGNUM_WHEE_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);

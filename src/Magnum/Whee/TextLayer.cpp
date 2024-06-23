@@ -86,9 +86,13 @@ Debug& operator<<(Debug& debug, const TextEdit value) {
         /* LCOV_EXCL_START */
         #define _c(value) case TextEdit::value: return debug << "::" #value;
         _c(MoveCursorLeft)
+        _c(ExtendSelectionLeft)
         _c(MoveCursorRight)
+        _c(ExtendSelectionRight)
         _c(MoveCursorLineBegin)
+        _c(ExtendSelectionLineBegin)
         _c(MoveCursorLineEnd)
+        _c(ExtendSelectionLineEnd)
         _c(RemoveBeforeCursor)
         _c(RemoveAfterCursor)
         _c(InsertBeforeCursor)
@@ -607,7 +611,7 @@ void TextLayer::shapeRememberTextInternal(
         run.textOffset = textOffset;
         run.textSize = text.size();
         run.data = id;
-        run.cursor = text.size();
+        run.cursor = run.selection = text.size();
 
         /* Save the text properties. Copy the internals instead of saving the
            whole TextProperties instance to have the text runs trivially
@@ -876,41 +880,41 @@ Vector2 TextLayer::size(const LayerDataHandle handle) const {
     return state.data[layerDataHandleId(handle)].size;
 }
 
-UnsignedInt TextLayer::cursor(const DataHandle handle) const {
+Containers::Pair<UnsignedInt, UnsignedInt> TextLayer::cursor(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::cursor(): invalid handle" << handle, {});
     return cursorInternal(dataHandleId(handle));
 }
 
-UnsignedInt TextLayer::cursor(const LayerDataHandle handle) const {
+Containers::Pair<UnsignedInt, UnsignedInt> TextLayer::cursor(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::cursor(): invalid handle" << handle, {});
     return cursorInternal(layerDataHandleId(handle));
 }
 
-UnsignedInt TextLayer::cursorInternal(const UnsignedInt id) const {
+Containers::Pair<UnsignedInt, UnsignedInt> TextLayer::cursorInternal(const UnsignedInt id) const {
     const State& state = static_cast<const State&>(*_state);
     const Implementation::TextLayerData& data = state.data[id];
     CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
         "Whee::TextLayer::cursor(): text doesn't have" << TextDataFlag::Editable << "set", {});
     const Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
-    CORRADE_INTERNAL_ASSERT(run.cursor <= run.textSize);
-    return run.cursor;
+    CORRADE_INTERNAL_ASSERT(run.cursor <= run.textSize && run.selection <= run.textSize);
+    return {run.cursor, run.selection};
 }
 
-void TextLayer::setCursor(const DataHandle handle, const UnsignedInt position) {
+void TextLayer::setCursor(const DataHandle handle, const UnsignedInt position, const UnsignedInt selection) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::setCursor(): invalid handle" << handle, );
-    return setCursorInternal(dataHandleId(handle), position);
+    return setCursorInternal(dataHandleId(handle), position, selection);
 }
 
-void TextLayer::setCursor(const LayerDataHandle handle, const UnsignedInt position) {
+void TextLayer::setCursor(const LayerDataHandle handle, const UnsignedInt position, const UnsignedInt selection) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::setCursor(): invalid handle" << handle, );
-    return setCursorInternal(layerDataHandleId(handle), position);
+    return setCursorInternal(layerDataHandleId(handle), position, selection);
 }
 
-void TextLayer::setCursorInternal(const UnsignedInt id, const UnsignedInt position) {
+void TextLayer::setCursorInternal(const UnsignedInt id, const UnsignedInt position, const UnsignedInt selection) {
     State& state = static_cast<State&>(*_state);
     const Implementation::TextLayerData& data = state.data[id];
     CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
@@ -919,9 +923,12 @@ void TextLayer::setCursorInternal(const UnsignedInt id, const UnsignedInt positi
     Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
     CORRADE_ASSERT(position <= run.textSize,
         "Whee::TextLayer::setCursor(): position" << position << "out of range for a text of" << run.textSize << "bytes", );
+    CORRADE_ASSERT(selection <= run.textSize,
+        "Whee::TextLayer::setCursor(): selection" << selection << "out of range for a text of" << run.textSize << "bytes", );
 
-    if(position != run.cursor) {
+    if(position != run.cursor || selection != run.selection) {
         run.cursor = position;
+        run.selection = selection;
         setNeedsUpdate(LayerState::NeedsDataUpdate);
     }
 }
@@ -1029,19 +1036,19 @@ void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringVi
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
-void TextLayer::updateText(const DataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor) {
+void TextLayer::updateText(const DataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::updateText(): invalid handle" << handle, );
-    updateTextInternal(dataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor);
+    updateTextInternal(dataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor, selection);
 }
 
-void TextLayer::updateText(const LayerDataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor) {
+void TextLayer::updateText(const LayerDataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::updateText(): invalid handle" << handle, );
-    updateTextInternal(layerDataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor);
+    updateTextInternal(layerDataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor, selection);
 }
 
-void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor) {
+void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor, const UnsignedInt selection) {
     State& state = static_cast<State&>(*_state);
     Implementation::TextLayerData& data = state.data[id];
     CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
@@ -1060,11 +1067,13 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     const UnsignedInt textSize = textSizeBeforeInsert + insertText.size();
     CORRADE_ASSERT(cursor <= textSize,
         "Whee::TextLayer::updateText(): cursor position" << cursor << "out of range for a text of" << textSize << "bytes", );
+    CORRADE_ASSERT(selection <= textSize,
+        "Whee::TextLayer::updateText(): selection position" << selection << "out of range for a text of" << textSize << "bytes", );
 
     /* If there's nothing to remove or insert, update just the cursor and
        bail */
     if(!removeSize && !insertText) {
-        setCursorInternal(id, cursor);
+        setCursorInternal(id, cursor, selection);
         return;
     }
 
@@ -1155,7 +1164,7 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     shapeTextInternal(id, data.style, text, properties, run.font);
 
     /* Update the cursor position and all related state */
-    setCursorInternal(id, cursor);
+    setCursorInternal(id, cursor, selection);
 
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
@@ -1186,36 +1195,62 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
     Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
     const Containers::StringView text = state.textData.sliceSize(run.textOffset, run.textSize);
 
-    /* Simple cursor movement, delegate to setCursor() */
+    /* Simple cursor / selection movement, delegate to setCursor() */
     if(edit == TextEdit::MoveCursorLineBegin ||
        edit == TextEdit::MoveCursorLineEnd ||
        edit == TextEdit::MoveCursorLeft ||
-       edit == TextEdit::MoveCursorRight)
+       edit == TextEdit::MoveCursorRight ||
+       edit == TextEdit::ExtendSelectionLineBegin ||
+       edit == TextEdit::ExtendSelectionLineEnd ||
+       edit == TextEdit::ExtendSelectionLeft ||
+       edit == TextEdit::ExtendSelectionRight)
     {
         UnsignedInt cursor = run.cursor;
 
         /* Line begin / end movement has no special-casing for RTL direction
            -- it moves at the begin/end of the byte stream in both cases and
            differs only optically */
-        if(edit == TextEdit::MoveCursorLineBegin)
+        if(edit == TextEdit::MoveCursorLineBegin ||
+           edit == TextEdit::ExtendSelectionLineBegin)
             cursor = 0;
-        else if(edit == TextEdit::MoveCursorLineEnd)
+        else if(edit == TextEdit::MoveCursorLineEnd ||
+                edit == TextEdit::ExtendSelectionLineEnd)
             cursor = run.textSize;
         /* Cursor left / right movement has special-casing for RTL tho, the
            intent is for movement left to always go left, and not right, and
            vice versa */
         else if(run.cursor > 0 && (
-                (edit == TextEdit::MoveCursorLeft && data.usedDirection != Text::ShapeDirection::RightToLeft) ||
-                (edit == TextEdit::MoveCursorRight && data.usedDirection == Text::ShapeDirection::RightToLeft)))
+                ((edit == TextEdit::MoveCursorLeft ||
+                  edit == TextEdit::ExtendSelectionLeft)
+                    && data.usedDirection != Text::ShapeDirection::RightToLeft) ||
+                ((edit == TextEdit::MoveCursorRight ||
+                  edit == TextEdit::ExtendSelectionRight)
+                    && data.usedDirection == Text::ShapeDirection::RightToLeft)))
             cursor = Utility::Unicode::prevChar(text, run.cursor).second();
         else if(run.cursor < run.textSize && (
-                (edit == TextEdit::MoveCursorRight && data.usedDirection != Text::ShapeDirection::RightToLeft) ||
-                (edit == TextEdit::MoveCursorLeft && data.usedDirection == Text::ShapeDirection::RightToLeft)))
+                ((edit == TextEdit::MoveCursorRight ||
+                  edit == TextEdit::ExtendSelectionRight)
+                    && data.usedDirection != Text::ShapeDirection::RightToLeft) ||
+                ((edit == TextEdit::MoveCursorLeft ||
+                  edit == TextEdit::ExtendSelectionLeft)
+                    && data.usedDirection == Text::ShapeDirection::RightToLeft)))
             cursor = Utility::Unicode::nextChar(text, run.cursor).second();
 
+        /* If we're extending the selection, the other end of it stays,
+           otherwise the selection gets reset by setting both to the same
+           value */
+        UnsignedInt selection;
+        if(edit == TextEdit::ExtendSelectionLineBegin ||
+           edit == TextEdit::ExtendSelectionLineEnd ||
+           edit == TextEdit::ExtendSelectionLeft ||
+           edit == TextEdit::ExtendSelectionRight)
+            selection = run.selection;
+        else
+            selection = cursor;
+
         /* The function takes care of updating all needed data, LayerState etc
-           if the cursor position actually changes */
-        setCursorInternal(id, cursor);
+           if the cursor position / selection actually changes */
+        setCursorInternal(id, cursor, selection);
 
     /* Text removal & insertion with cursor adjustment */
     } else if(edit == TextEdit::RemoveBeforeCursor ||
@@ -1227,30 +1262,56 @@ void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, cons
         UnsignedInt removeSize = 0;
         UnsignedInt insertOffset = 0;
         UnsignedInt cursor = run.cursor;
-        /* Insertion has no special-casing for RTL -- it just inserts the
-           data at the place of the cursor and then either moves the cursor
-           after the inserted bytes or leaves it where it was, the difference
-           is only optical */
-        if(edit == TextEdit::InsertBeforeCursor) {
-            insertOffset = run.cursor;
-            cursor = run.cursor + insert.size();
-        } else if(edit == TextEdit::InsertAfterCursor) {
-            insertOffset = run.cursor;
-            cursor = run.cursor;
-        /* Deletion as well -- the difference is only optical, and compared to
-           left/right arrow keys the backspace and delete keys don't have any
-           implicit optical direction in the name that would need matching */
-        } else if(edit == TextEdit::RemoveBeforeCursor && run.cursor > 0) {
-            removeOffset = Utility::Unicode::prevChar(text, run.cursor).second();
-            removeSize = run.cursor - removeOffset;
-            cursor = removeOffset;
-        } else if(edit == TextEdit::RemoveAfterCursor && run.cursor < run.textSize) {
-            removeOffset = run.cursor;
-            removeSize = Utility::Unicode::nextChar(text, run.cursor).second() - run.cursor;
-            cursor = run.cursor;
+
+        /* No selection active */
+        if(run.cursor == run.selection) {
+            /* Insertion has no special-casing for RTL -- it just inserts the
+               data at the place of the cursor and then either moves the cursor
+               after the inserted bytes or leaves it where it was, the
+               difference is only optical */
+            if(edit == TextEdit::InsertBeforeCursor) {
+                insertOffset = run.cursor;
+                cursor = run.cursor + insert.size();
+            } else if(edit == TextEdit::InsertAfterCursor) {
+                insertOffset = run.cursor;
+                cursor = run.cursor;
+            /* Deletion as well -- the difference is only optical, and compared
+               to left/right arrow keys the backspace and delete keys don't
+               have any implicit optical direction in the name that would need
+               matching */
+            } else if(edit == TextEdit::RemoveBeforeCursor && run.cursor > 0) {
+                removeOffset = Utility::Unicode::prevChar(text, run.cursor).second();
+                removeSize = run.cursor - removeOffset;
+                cursor = removeOffset;
+            } else if(edit == TextEdit::RemoveAfterCursor && run.cursor < run.textSize) {
+                removeOffset = run.cursor;
+                removeSize = Utility::Unicode::nextChar(text, run.cursor).second() - run.cursor;
+                cursor = run.cursor;
+            }
+
+        /* With selection active it replaces it */
+        } else {
+            const Containers::Pair<UnsignedInt, UnsignedInt> selection = Math::minmax(run.cursor, run.selection);
+            removeOffset = selection.first();
+            removeSize = selection.second() - selection.first();
+
+            /* The rest is like above, just that the cursor is now always at
+               the now-removed-selection start, no matter whether the cursor
+               was at the beginning or end of the selection originally */
+            if(edit == TextEdit::InsertBeforeCursor) {
+                insertOffset = removeOffset;
+                cursor = removeOffset + insert.size();
+            } else if(edit == TextEdit::InsertAfterCursor) {
+                insertOffset = removeOffset;
+                cursor = removeOffset;
+            } else if(edit == TextEdit::RemoveBeforeCursor ||
+                      edit == TextEdit::RemoveAfterCursor) {
+                cursor = removeOffset;
+            }
         }
 
-        updateTextInternal(id, removeOffset, removeSize, insertOffset, insert, cursor);
+        /* All edit operations discard the selection */
+        updateTextInternal(id, removeOffset, removeSize, insertOffset, insert, cursor, cursor);
 
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
@@ -1639,19 +1700,31 @@ void TextLayer::doKeyPressEvent(const UnsignedInt dataId, KeyEvent& event) {
     /* Key events are implicitly passed also to nodes under cursor, restrict
        the editing and cursor movement to just when the node is focused to
        avoid strange behavior */
-    if(event.isFocused() && !event.modifiers()) {
-        if(event.key() == Key::Backspace) {
-            editTextInternal(dataId, TextEdit::RemoveBeforeCursor, {});
-        } else if(event.key() == Key::Delete) {
-            editTextInternal(dataId, TextEdit::RemoveAfterCursor, {});
-        } else if(event.key() == Key::Home) {
-            editTextInternal(dataId, TextEdit::MoveCursorLineBegin, {});
-        } else if(event.key() == Key::End) {
-            editTextInternal(dataId, TextEdit::MoveCursorLineEnd, {});
-        } else if(event.key() == Key::Left) {
-            editTextInternal(dataId, TextEdit::MoveCursorLeft, {});
-        } else if(event.key() == Key::Right) {
-            editTextInternal(dataId, TextEdit::MoveCursorRight, {});
+    if(event.isFocused()) {
+        if(!event.modifiers()) {
+            if(event.key() == Key::Backspace) {
+                editTextInternal(dataId, TextEdit::RemoveBeforeCursor, {});
+            } else if(event.key() == Key::Delete) {
+                editTextInternal(dataId, TextEdit::RemoveAfterCursor, {});
+            } else if(event.key() == Key::Home) {
+                editTextInternal(dataId, TextEdit::MoveCursorLineBegin, {});
+            } else if(event.key() == Key::End) {
+                editTextInternal(dataId, TextEdit::MoveCursorLineEnd, {});
+            } else if(event.key() == Key::Left) {
+                editTextInternal(dataId, TextEdit::MoveCursorLeft, {});
+            } else if(event.key() == Key::Right) {
+                editTextInternal(dataId, TextEdit::MoveCursorRight, {});
+            } else return;
+        } else if(event.modifiers() == Modifier::Shift) {
+            if(event.key() == Key::Home) {
+                editTextInternal(dataId, TextEdit::ExtendSelectionLineBegin, {});
+            } else if(event.key() == Key::End) {
+                editTextInternal(dataId, TextEdit::ExtendSelectionLineEnd, {});
+            } else if(event.key() == Key::Left) {
+                editTextInternal(dataId, TextEdit::ExtendSelectionLeft, {});
+            } else if(event.key() == Key::Right) {
+                editTextInternal(dataId, TextEdit::ExtendSelectionRight, {});
+            } else return;
         } else return;
 
         event.setAccepted();

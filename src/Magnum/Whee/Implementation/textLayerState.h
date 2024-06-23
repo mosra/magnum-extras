@@ -144,6 +144,9 @@ struct TextLayerTextRun {
     UnsignedInt data;
     /* Current editing position */
     UnsignedInt cursor;
+    /* The other end of a selection. If less than `cursor`, it's before the
+       cursor, if greater it's after, if the same, there's no selection. */
+    UnsignedInt selection;
 
     /* Subset of TextProperties to be used for reshaping the edited text,
        mirroring all packing as well */
