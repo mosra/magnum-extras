@@ -93,6 +93,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void renderOrDrawCompositeTeardown();
 
     void renderComposite();
+    void renderCompositeNodeRects();
 
     void drawSetup();
     void drawTeardown();
@@ -563,6 +564,33 @@ const struct {
 
 const struct {
     const char* name;
+    const char* filename;
+    Vector2 uiScale;
+    UnsignedInt backgroundBlurRadius, backgroundBlurPassCount;
+    Float maxThreshold, meanThreshold;
+} RenderCompositeNodeRectsData[]{
+    {"radius 0", "composite-node-rects-background-blur-r0.png",
+        {1.0f, 1.0f}, 0, 1, 0.0f, 0.0f},
+    {"radius 0, UI size different from framebuffer", "composite-node-rects-background-blur-r0.png",
+        {0.1f, 10.0f}, 0, 1, 0.0f, 0.0f},
+    /* Small radius to verify the compositing node area is correctly expanded.
+       If it wouldn't be, the cyan background would shine through. */
+    {"radius 1", "composite-node-rects-background-blur-r1.png",
+        {1.0f, 1.0f}, 1, 1, 0.0f, 0.0f},
+    {"radius 1, UI size different from framebuffer", "composite-node-rects-background-blur-r1.png",
+        {0.1f, 10.0f}, 1, 1, 0.0f, 0.0f},
+    {"radius 30", "composite-node-rects-background-blur-r30.png",
+        {1.0f, 1.0f}, 30, 1, 0.0f, 0.0f},
+    {"radius 30, UI size different from framebuffer", "composite-node-rects-background-blur-r30.png",
+        {0.1f, 10.0f}, 30, 1, 0.0f, 0.0f},
+    /* Should look roughly the same (minus rounding errors) with no apparent
+       edge artifacts caused by not including pass count into the padding */
+    {"radius 15, 4 passes", "composite-node-rects-background-blur-r30.png",
+        {1.0f, 1.0f}, 15, 4, 6.25f, 0.753f},
+};
+
+const struct {
+    const char* name;
     bool dataInNodeOrder;
 } DrawOrderData[]{
     {"data created in node order", true},
@@ -649,6 +677,11 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addInstancedTests({&BaseLayerGLTest::renderComposite},
         Containers::arraySize(RenderCompositeData),
+        &BaseLayerGLTest::renderOrDrawCompositeSetup,
+        &BaseLayerGLTest::renderOrDrawCompositeTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::renderCompositeNodeRects},
+        Containers::arraySize(RenderCompositeNodeRectsData),
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
@@ -1384,6 +1417,106 @@ void BaseLayerGLTest::renderComposite() {
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
+    CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+        (DebugTools::CompareImageToFile{_manager, data.maxThreshold, data.meanThreshold}));
+}
+
+void BaseLayerGLTest::renderCompositeNodeRects() {
+    auto&& data = RenderCompositeNodeRectsData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    /* Window size used only for events, can be anything */
+    AbstractUserInterface ui{Vector2{RenderSize}*data.uiScale, {345, 678}, RenderSize};
+    RendererGL& renderer = ui.setRendererInstance(Containers::pointer<RendererGL>(RendererGL::Flag::CompositingFramebuffer));
+
+    /* Upload (a crop of) the blur source image as a framebuffer background */
+    Containers::Pointer<Trade::AbstractImporter> importer = _manager.loadAndInstantiate("AnyImageImporter");
+    CORRADE_VERIFY(importer->openFile(Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/blur-input.png")));
+
+    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+    CORRADE_VERIFY(image);
+    CORRADE_COMPARE(image->format(), PixelFormat::RGBA8Unorm);
+    CORRADE_COMPARE_AS(image->size(), RenderSize,
+        TestSuite::Compare::GreaterOrEqual);
+
+    Image2D imageCropped{PixelFormat::RGBA8Unorm, RenderSize, Containers::Array<char>{NoInit, std::size_t(RenderSize.product()*4)}};
+    Utility::copy(image->pixels<Color4ub>().prefix({
+        std::size_t(RenderSize.y()),
+        std::size_t(RenderSize.x()),
+    }), imageCropped.pixels<Color4ub>());
+
+    BaseLayerGL::Shared layerShared{BaseLayerGL::Shared::Configuration{1}
+        .addFlags(BaseLayerGL::Shared::Flag::BackgroundBlur)
+        .setBackgroundBlurRadius(data.backgroundBlurRadius)};
+    layerShared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}
+            .setColor(0xffffffff_rgbaf*0.25f)},
+        {});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+    layer.setBackgroundBlurPassCount(data.backgroundBlurPassCount);
+
+    NodeHandle root = ui.createNode({}, ui.size());
+
+    /* Skipping early because can't really test the actual rendering anyway,
+       and the blur seems to be not drawn at all, giving back #00ffff again.
+       FFS, SwiftShader. */
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+
+    /* To make accidentally too small border better visible, first fill the
+       background with a cyan color and run it as a whole though the blur
+       process. */
+    renderer.compositingFramebuffer().clearColor(0, 0x00ffff_rgbf);
+    DataHandle wholeUiBlack = layer.create(0, root);
+    ui.draw();
+    CORRADE_COMPARE(renderer.compositingFramebuffer().read(Range2Di::fromSize(RenderSize/2, {1, 1}), {PixelFormat::RGBA8Unorm}).pixels<Color4ub>()[0][0], 0x40ffff_rgb);
+
+    /* Then remove the whole-UI blur, and replace the background with an
+       image */
+    layer.remove(wholeUiBlack);
+    renderer.compositingTexture().setSubImage(0, {}, imageCropped);
+
+    /* Four nodes in locations that:
+
+        -   are all the same top-level node hierarchy
+        -   are deliberately assymetric to verify the blur coordinates don't
+            get Y flipped, wrongly scaled or some such
+        -   have enough uncovered space to verify that the blurred background
+            area is properly expanded for large radii
+        -   expand beyond the UI size to verify it doesn't cause any strange
+            artifacts
+        -   partially overlap, but as they're both rendered at the same level
+            with the same blurred background it doesn't get lighter
+    */
+
+    /* This one expands out of the UI on -X */
+    layer.create(0, ui.createNode(root, data.uiScale*Vector2{-8.0f, 4.0f},
+                                        data.uiScale*Vector2{64.0f, 32.0f}));
+    /* These two are right above each other */
+    layer.create(0, ui.createNode(root, data.uiScale*Vector2{80.0f, 40.0f},
+                                        data.uiScale*Vector2{16.0f, 8.0f}));
+    /* This one expands out of the UI on +Y */
+    layer.create(0, ui.createNode(root, data.uiScale*Vector2{80.0f, 48.0f},
+                                        data.uiScale*Vector2{16.0f, 900.0f}));
+    /* This one is over the above node */
+    layer.create(0, ui.createNode(root, data.uiScale*Vector2{64.0f, 48.0f},
+                                        data.uiScale*Vector2{48.0f, 8.0f}));
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
     CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
         (DebugTools::CompareImageToFile{_manager, data.maxThreshold, data.meanThreshold}));
