@@ -119,24 +119,47 @@ const struct {
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
+    LayerStates states;
+    bool expectIndexDataUpdated, expectVertexDataUpdated;
 } UpdateDataOrderData[]{
     {"empty update", true, false,
-        {}, {}, {}, {}},
+        {}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
     {"empty update, textured", true, true,
-        {}, {}, {}, {}},
+        {}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
     {"", false, false,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
     {"textured", false, true,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    {"node offset/size update only", false, false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsNodeOffsetSizeUpdate, false, true},
+    {"node order update only", false, false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsNodeOrderUpdate, true, false},
+    {"node enabled update only", false, false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsNodeEnabledUpdate, false, true},
+    /* This shouldn't cause anything to be done in update(), and also no
+       crashes */
+    {"shared data update only", false, false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsSharedDataUpdate, false, false},
     {"padding from style", false, false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {2.0f, 0.5f, 1.0f, 1.5f}, {}},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {},
+        LayerState::NeedsDataUpdate, true, true},
     {"padding from data", false, false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {}, {2.0f, 0.5f, 1.0f, 1.5f}},
+        {}, {2.0f, 0.5f, 1.0f, 1.5f},
+        LayerState::NeedsDataUpdate, true, true},
     {"padding from both style and data", false, false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f},
+        LayerState::NeedsDataUpdate, true, true},
 };
 
 enum class Enum: UnsignedShort {};
@@ -1547,8 +1570,9 @@ void BaseLayerTest::updateDataOrder() {
     setTestCaseDescription(data.name);
 
     /* Does just extremely basic verification that the vertex and index data
-       get filled with correct contents and in correct order. The actual visual
-       output is checked in BaseLayerGLTest. */
+       get filled with correct contents and in correct order depending on
+       LayerStates passed in. The actual visual output is checked in
+       BaseLayerGLTest. */
 
     BaseLayer::Shared::Configuration configuration{3, 5};
     if(data.textured)
@@ -1617,112 +1641,123 @@ void BaseLayerTest::updateDataOrder() {
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
-        layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+        layer.update(data.states, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+        CORRADE_VERIFY(data.expectIndexDataUpdated);
         CORRADE_COMPARE_AS(layer.stateData().indices,
             Containers::ArrayView<const UnsignedInt>{},
             TestSuite::Compare::Container);
         return;
     }
 
-    /* Just the filled subset is getting updated */
+    /* Just the filled subset is getting updated, and just what was selected in
+       states */
     UnsignedInt dataIds[]{9, 7, 3};
-    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
-    /* The indices should be filled just for the three items */
-    CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
-        9*4 + 0, 9*4 + 2, 9*4 + 1, 9*4 + 2, 9*4 + 3, 9*4 + 1, /* quad 9 */
-        7*4 + 0, 7*4 + 2, 7*4 + 1, 7*4 + 2, 7*4 + 3, 7*4 + 1, /* quad 7 */
-        3*4 + 0, 3*4 + 2, 3*4 + 1, 3*4 + 2, 3*4 + 3, 3*4 + 1, /* quad 3 */
-    }), TestSuite::Compare::Container);
+    /* If nothing is to be done, we got nothing to check. Capture the test
+       function name at least in that case. */
+    if(!data.expectIndexDataUpdated && !data.expectVertexDataUpdated)
+        CORRADE_VERIFY(true);
 
-    /* Depending on whether texturing is enabled the vertex data contain a
-       different type. Make a view on the common type prefix. */
-    std::size_t typeSize = data.textured ?
-        sizeof(Implementation::BaseLayerTexturedVertex) :
-        sizeof(Implementation::BaseLayerVertex);
-    Containers::StridedArrayView1D<const Implementation::BaseLayerVertex> vertices{
-        layer.stateData().vertices,
-        reinterpret_cast<const Implementation::BaseLayerVertex*>(layer.stateData().vertices.data()),
-        layer.stateData().vertices.size()/typeSize,
-        std::ptrdiff_t(typeSize)};
-    CORRADE_COMPARE(vertices.size(), 10*4);
-
-    /* The vertices are there for all data, but only the actually used are
-       filled */
-    for(std::size_t i = 0; i != 4; ++i) {
-        CORRADE_ITERATION(i);
-        CORRADE_COMPARE(vertices[3*4 + i].color, 0xff3366_rgbf);
-        CORRADE_COMPARE(vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
-        /* Created with style 2, which is mapped to uniform 0 */
-        CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 0);
-
-        CORRADE_COMPARE(vertices[7*4 + i].color, 0x112233_rgbf);
-        CORRADE_COMPARE(vertices[7*4 + i].outlineWidth, Vector4{2.0f});
-        /* Created with style 1, which is mapped to uniform 2 */
-        CORRADE_COMPARE(vertices[7*4 + i].styleUniform, 2);
-
-        CORRADE_COMPARE(vertices[9*4 + i].color, 0x663399_rgbf);
-        CORRADE_COMPARE(vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
-        /* Created with style 3, which is mapped to uniform 1 */
-        CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 1);
-    }
-
-    Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::BaseLayerVertex::position);
-    Containers::StridedArrayView1D<const Vector2> centerDistances = vertices.slice(&Implementation::BaseLayerVertex::centerDistance);
-
-    /* Data 3 is attached to node 6 */
-    CORRADE_COMPARE_AS(positions.sliceSize(3*4, 4), Containers::arrayView<Vector2>({
-        {1.0f, 2.0f},
-        {11.0f, 2.0f},
-        {1.0f, 17.0f},
-        {11.0f, 17.0f},
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(centerDistances.sliceSize(3*4, 4), Containers::arrayView<Vector2>({
-        {-5.0f, -7.5f},
-        { 5.0f, -7.5f},
-        {-5.0f,  7.5f},
-        { 5.0f,  7.5f},
-    }), TestSuite::Compare::Container);
-
-    /* Data 7 and 9 are both attached to node 15 */
-    for(std::size_t i: {7, 9}) {
-        CORRADE_COMPARE_AS(positions.sliceSize(i*4, 4), Containers::arrayView<Vector2>({
-            {3.0f, 4.0f},
-            {23.0f, 4.0f},
-            {3.0f, 9.0f},
-            {23.0f, 9.0f},
-        }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(centerDistances.sliceSize(i*4, 4), Containers::arrayView<Vector2>({
-            {-10.0f, -2.5f},
-            { 10.0f, -2.5f},
-            {-10.0f,  2.5f},
-            { 10.0f,  2.5f},
+    if(data.expectIndexDataUpdated) {
+        /* The indices should be filled just for the three items */
+        CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
+            9*4 + 0, 9*4 + 2, 9*4 + 1, 9*4 + 2, 9*4 + 3, 9*4 + 1, /* quad 9 */
+            7*4 + 0, 7*4 + 2, 7*4 + 1, 7*4 + 2, 7*4 + 3, 7*4 + 1, /* quad 7 */
+            3*4 + 0, 3*4 + 2, 3*4 + 1, 3*4 + 2, 3*4 + 3, 3*4 + 1, /* quad 3 */
         }), TestSuite::Compare::Container);
     }
 
-    /* If textured, data 7 has texture coordinates set, the other two have the
-       default. The coordinates are Y-flipped compared to positions --
-       positions are Y down, while textures are with the Y up convention
-       matching GL. */
-    /** @todo which may get annoying with non-GL renderers that don't Y-flip
-        the projection, reconsider? */
-    if(data.textured) {
-        Containers::StridedArrayView1D<const Vector3> textureCoordinates = Containers::arrayCast<const Implementation::BaseLayerTexturedVertex>(vertices).slice(&Implementation::BaseLayerTexturedVertex::textureCoordinates);
+    if(data.expectVertexDataUpdated) {
+        /* Depending on whether texturing is enabled the vertex data contain a
+           different type. Make a view on the common type prefix. */
+        std::size_t typeSize = data.textured ?
+            sizeof(Implementation::BaseLayerTexturedVertex) :
+            sizeof(Implementation::BaseLayerVertex);
+        Containers::StridedArrayView1D<const Implementation::BaseLayerVertex> vertices{
+            layer.stateData().vertices,
+            reinterpret_cast<const Implementation::BaseLayerVertex*>(layer.stateData().vertices.data()),
+            layer.stateData().vertices.size()/typeSize,
+            std::ptrdiff_t(typeSize)};
+        CORRADE_COMPARE(vertices.size(), 10*4);
 
-        CORRADE_COMPARE_AS(textureCoordinates.sliceSize(7*4, 4), Containers::arrayView<Vector3>({
-            {0.25f, 0.625f, 37.0f},
-            {0.75f, 0.625f, 37.0f},
-            {0.25f, 0.5f, 37.0f},
-            {0.75f, 0.5f, 37.0f},
+        /* The vertices are there for all data, but only the actually used are
+           filled */
+        for(std::size_t i = 0; i != 4; ++i) {
+            CORRADE_ITERATION(i);
+            CORRADE_COMPARE(vertices[3*4 + i].color, 0xff3366_rgbf);
+            CORRADE_COMPARE(vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+            /* Created with style 2, which is mapped to uniform 0 */
+            CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 0);
+
+            CORRADE_COMPARE(vertices[7*4 + i].color, 0x112233_rgbf);
+            CORRADE_COMPARE(vertices[7*4 + i].outlineWidth, Vector4{2.0f});
+            /* Created with style 1, which is mapped to uniform 2 */
+            CORRADE_COMPARE(vertices[7*4 + i].styleUniform, 2);
+
+            CORRADE_COMPARE(vertices[9*4 + i].color, 0x663399_rgbf);
+            CORRADE_COMPARE(vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
+            /* Created with style 3, which is mapped to uniform 1 */
+            CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 1);
+        }
+
+        Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::BaseLayerVertex::position);
+        Containers::StridedArrayView1D<const Vector2> centerDistances = vertices.slice(&Implementation::BaseLayerVertex::centerDistance);
+
+        /* Data 3 is attached to node 6 */
+        CORRADE_COMPARE_AS(positions.sliceSize(3*4, 4), Containers::arrayView<Vector2>({
+            { 1.0f,  2.0f},
+            {11.0f,  2.0f},
+            { 1.0f, 17.0f},
+            {11.0f, 17.0f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(centerDistances.sliceSize(3*4, 4), Containers::arrayView<Vector2>({
+            {-5.0f, -7.5f},
+            { 5.0f, -7.5f},
+            {-5.0f,  7.5f},
+            { 5.0f,  7.5f},
         }), TestSuite::Compare::Container);
 
-        for(std::size_t i: {3, 9}) {
-            CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
-                {0.0f, 1.0f, 0.0f},
-                {1.0f, 1.0f, 0.0f},
-                {0.0f, 0.0f, 0.0f},
-                {1.0f, 0.0f, 0.0f},
+        /* Data 7 and 9 are both attached to node 15 */
+        for(std::size_t i: {7, 9}) {
+            CORRADE_COMPARE_AS(positions.sliceSize(i*4, 4), Containers::arrayView<Vector2>({
+                { 3.0f, 4.0f},
+                {23.0f, 4.0f},
+                { 3.0f, 9.0f},
+                {23.0f, 9.0f},
             }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(centerDistances.sliceSize(i*4, 4), Containers::arrayView<Vector2>({
+                {-10.0f, -2.5f},
+                { 10.0f, -2.5f},
+                {-10.0f,  2.5f},
+                { 10.0f,  2.5f},
+            }), TestSuite::Compare::Container);
+        }
+
+        /* If textured, data 7 has texture coordinates set, the other two have
+           the default. The coordinates are Y-flipped compared to positions --
+           positions are Y down, while textures are with the Y up convention
+           matching GL. */
+        /** @todo which may get annoying with non-GL renderers that don't
+            Y-flip the projection, reconsider? */
+        if(data.textured) {
+            Containers::StridedArrayView1D<const Vector3> textureCoordinates = Containers::arrayCast<const Implementation::BaseLayerTexturedVertex>(vertices).slice(&Implementation::BaseLayerTexturedVertex::textureCoordinates);
+
+            CORRADE_COMPARE_AS(textureCoordinates.sliceSize(7*4, 4), Containers::arrayView<Vector3>({
+                {0.25f, 0.625f, 37.0f},
+                {0.75f, 0.625f, 37.0f},
+                {0.25f, 0.5f, 37.0f},
+                {0.75f, 0.5f, 37.0f},
+            }), TestSuite::Compare::Container);
+
+            for(std::size_t i: {3, 9}) {
+                CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
+                    {0.0f, 1.0f, 0.0f},
+                    {1.0f, 1.0f, 0.0f},
+                    {0.0f, 0.0f, 0.0f},
+                    {1.0f, 0.0f, 0.0f},
+                }), TestSuite::Compare::Container);
+            }
         }
     }
 }
