@@ -212,7 +212,7 @@ LayerFeatures AbstractVisualLayer::doFeatures() const {
     return LayerFeature::Event;
 }
 
-void AbstractVisualLayer::doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     State& state = *_state;
     CORRADE_INTERNAL_ASSERT(
         state.styles.size() == capacity() &&
@@ -221,43 +221,50 @@ void AbstractVisualLayer::doUpdate(LayerStates, const Containers::StridedArrayVi
     /* Transition to disabled styles for all data that are attached to disabled
        nodes, copy the original style index otherwise. It's a copy to avoid a
        complicated logic with transitioning back from the disabled state, which
-       may not always be possible. */
-    const Shared::State& sharedState = state.shared;
-    if(UnsignedInt(*const toDisabled)(UnsignedInt) = sharedState.styleTransitionToDisabled) {
-        const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
-        const UnsignedInt styleCount = sharedState.styleCount;
-        for(const UnsignedInt id: dataIds) {
-            const UnsignedInt style = state.styles[id];
-            /** @todo Doing a function call for all data may be a bit horrible,
-                also especially if the code inside is a giant switch that the
-                compiler failed to turn into a LUT. Thus, ideally, the
-                transition should be done only for nodes that actually changed
-                their disabled status, which means recording the previous
-                nodesEnabled state, XORing the current with it, and then
-                performing transition only when the XOR is 1. Furthermore, that
-                may often be just a very tiny portion of nodes, so ideally
-                there would be a way to quickly get just the subset of *data*
-                IDs that actually changed (and not node IDs), to iterate over
-                them directly. */
-            /* Skipping data that have dynamic styles, those are passthrough */
-            if(style < styleCount && !nodesEnabled[nodeHandleId(nodes[id])]) {
-                const UnsignedInt nextStyle = toDisabled(style);
-                /** @todo a debug assert? or is it negligible compared to the
-                    function call? */
-                CORRADE_ASSERT(nextStyle < styleCount,
-                    "Whee::AbstractVisualLayer::update(): style transition from" << style << "to" << nextStyle << "out of range for" << styleCount << "styles", );
-                state.calculatedStyles[id] = nextStyle;
-            } else {
-                CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
-                state.calculatedStyles[id] = style;
-            }
-        }
+       may not always be possible.
 
-    /* If the transition function isn't set -- i.e., the transition is an
-       identity --, just copy them over. The subclass doUpdate() / doDraw() is
-       then assumed to handle that on its own, for example by applying
-       desaturation and fade out globally to all data. */
-    } else Utility::copy(state.styles, state.calculatedStyles);
+       Do this only if the data changed (i.e., possibly including style
+       assignment) or if the node enablement changed. */
+    if(states & (LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsDataUpdate)) {
+    const Shared::State& sharedState = state.shared;
+        if(UnsignedInt(*const toDisabled)(UnsignedInt) = sharedState.styleTransitionToDisabled) {
+            const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+            const UnsignedInt styleCount = sharedState.styleCount;
+            for(const UnsignedInt id: dataIds) {
+                const UnsignedInt style = state.styles[id];
+                /** @todo Doing a function call for all data may be a bit
+                    horrible, also especially if the code inside is a giant
+                    switch that the compiler failed to turn into a LUT. Thus,
+                    ideally, the transition should be done only for nodes that
+                    actually changed their disabled status, which means
+                    recording the previous nodesEnabled state, XORing the
+                    current with it, and then performing transition only when
+                    the XOR is 1. Furthermore, that may often be just a very
+                    tiny portion of nodes, so ideally there would be a way to
+                    quickly get just the subset of *data* IDs that actually
+                    changed (and not node IDs), to iterate over them
+                    directly. */
+                /* Skipping data that have dynamic styles, those are
+                   passthrough */
+                if(style < styleCount && !nodesEnabled[nodeHandleId(nodes[id])]) {
+                    const UnsignedInt nextStyle = toDisabled(style);
+                    /** @todo a debug assert? or is it negligible compared to
+                        the function call? */
+                    CORRADE_ASSERT(nextStyle < styleCount,
+                        "Whee::AbstractVisualLayer::update(): style transition from" << style << "to" << nextStyle << "out of range for" << styleCount << "styles", );
+                    state.calculatedStyles[id] = nextStyle;
+                } else {
+                    CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
+                    state.calculatedStyles[id] = style;
+                }
+            }
+
+        /* If the transition function isn't set -- i.e., the transition is an
+           identity --, just copy them over. The subclass doUpdate() / doDraw() is
+           then assumed to handle that on its own, for example by applying
+           desaturation and fade out globally to all data. */
+        } else Utility::copy(state.styles, state.calculatedStyles);
+    }
 }
 
 void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
