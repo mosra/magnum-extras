@@ -368,84 +368,93 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     CORRADE_ASSERT(!sharedState.styles.isEmpty(),
         "Whee::BaseLayer::update(): no style data was set", );
 
-    /* Fill in indices in desired order */
-    arrayResize(state.indices, NoInit, dataIds.size()*6);
-    for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
-        const UnsignedInt vertexOffset = dataIds[i]*4;
-        UnsignedInt indexOffset = i*6;
+    /* Fill in indices in desired order if either the data themselves or the
+       node order changed */
+    if(states & (LayerState::NeedsNodeOrderUpdate|LayerState::NeedsDataUpdate)) {
+        arrayResize(state.indices, NoInit, dataIds.size()*6);
+        for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
+            const UnsignedInt vertexOffset = dataIds[i]*4;
+            UnsignedInt indexOffset = i*6;
 
-        /* 0---1 0---2 5
-           |   | |  / /|
-           |   | | / / |
-           |   | |/ /  |
-           2---3 1 3---4 */
-        state.indices[indexOffset++] = vertexOffset + 0;
-        state.indices[indexOffset++] = vertexOffset + 2;
-        state.indices[indexOffset++] = vertexOffset + 1;
-        state.indices[indexOffset++] = vertexOffset + 2;
-        state.indices[indexOffset++] = vertexOffset + 3;
-        state.indices[indexOffset++] = vertexOffset + 1;
-    }
-
-    const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
-
-    /* Resize the vertex array to fit all data, make a view on the common type
-       prefix */
-    const std::size_t typeSize = sharedState.flags & Shared::Flag::Textured ?
-        sizeof(Implementation::BaseLayerTexturedVertex) :
-        sizeof(Implementation::BaseLayerVertex);
-    arrayResize(state.vertices, NoInit, capacity()*4*typeSize);
-    const Containers::StridedArrayView1D<Implementation::BaseLayerVertex> vertices{
-        state.vertices,
-        reinterpret_cast<Implementation::BaseLayerVertex*>(state.vertices.data()),
-        state.vertices.size()/typeSize,
-        std::ptrdiff_t(typeSize)};
-
-    /* Fill in quad corner positions and colors */
-    for(std::size_t i = 0; i != dataIds.size(); ++i) {
-        const UnsignedInt dataId = dataIds[i];
-        const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
-        const Implementation::BaseLayerData& data = state.data[dataId];
-
-        /* 0---1
-           |   |
-           |   |
-           |   |
-           2---3 */
-        const Vector4 padding = sharedState.styles[data.calculatedStyle].padding + data.padding;
-        const Vector2 offset = nodeOffsets[nodeId];
-        const Vector2 min = offset + padding.xy();
-        const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
-        const Vector2 sizeHalf = (max - min)*0.5f;
-        const Vector2 sizeHalfNegative = -sizeHalf;
-        for(UnsignedByte j = 0; j != 4; ++j) {
-            Implementation::BaseLayerVertex& vertex = vertices[dataId*4 + j];
-
-            /* ✨ */
-            vertex.position = Math::lerp(min, max, BitVector2{j});
-            vertex.centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{j});
-            vertex.outlineWidth = data.outlineWidth;
-            vertex.color = data.color;
-            vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
+            /* 0---1 0---2 5
+               |   | |  / /|
+               |   | | / / |
+               |   | |/ /  |
+               2---3 1 3---4 */
+            state.indices[indexOffset++] = vertexOffset + 0;
+            state.indices[indexOffset++] = vertexOffset + 2;
+            state.indices[indexOffset++] = vertexOffset + 1;
+            state.indices[indexOffset++] = vertexOffset + 2;
+            state.indices[indexOffset++] = vertexOffset + 3;
+            state.indices[indexOffset++] = vertexOffset + 1;
         }
     }
 
-    /* Fill in also quad texture coordinates if enabled */
-    if(sharedState.flags & Shared::Flag::Textured) {
-        const Containers::ArrayView<Implementation::BaseLayerTexturedVertex> texturedVertices = Containers::arrayCast<Implementation::BaseLayerTexturedVertex>(vertices).asContiguous();
+    /* Fill in vertex data if the data themselves, the node offset/size or node
+       enablement (and thus calculated styles) changed */
+    /** @todo split this further to just position-related data update and other
+        data if it shows to help with perf */
+    if(states & (LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsDataUpdate)) {
+        /* Resize the vertex array to fit all data, make a view on the common
+           type prefix */
+        const std::size_t typeSize = sharedState.flags & Shared::Flag::Textured ?
+            sizeof(Implementation::BaseLayerTexturedVertex) :
+            sizeof(Implementation::BaseLayerVertex);
+        arrayResize(state.vertices, NoInit, capacity()*4*typeSize);
+        const Containers::StridedArrayView1D<Implementation::BaseLayerVertex> vertices{
+            state.vertices,
+            reinterpret_cast<Implementation::BaseLayerVertex*>(state.vertices.data()),
+            state.vertices.size()/typeSize,
+            std::ptrdiff_t(typeSize)};
 
+        /* Fill in quad corner positions and colors */
+        const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
         for(std::size_t i = 0; i != dataIds.size(); ++i) {
             const UnsignedInt dataId = dataIds[i];
+            const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
             const Implementation::BaseLayerData& data = state.data[dataId];
 
-            /* The texture coordinates are Y-flipped compared to the positions
-               to account for Y-down (positions) vs Y-up (GL textures) */
-            /** @todo which may get annoying with non-GL renderers that don't
-                Y-flip the projection, reconsider? */
-            const Vector2 min = data.textureCoordinateOffset.xy() + Vector2::yAxis(data.textureCoordinateSize.y());
-            const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x());
-            for(UnsignedByte j = 0; j != 4; ++j)
-                texturedVertices[dataId*4 + j].textureCoordinates = {Math::lerp(min, max, BitVector2{j}), data.textureCoordinateOffset.z()};
+            /* 0---1
+               |   |
+               |   |
+               |   |
+               2---3 */
+            const Vector4 padding = sharedState.styles[data.calculatedStyle].padding + data.padding;
+            const Vector2 offset = nodeOffsets[nodeId];
+            const Vector2 min = offset + padding.xy();
+            const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
+            const Vector2 sizeHalf = (max - min)*0.5f;
+            const Vector2 sizeHalfNegative = -sizeHalf;
+            for(UnsignedByte j = 0; j != 4; ++j) {
+                Implementation::BaseLayerVertex& vertex = vertices[dataId*4 + j];
+
+                /* ✨ */
+                vertex.position = Math::lerp(min, max, BitVector2{j});
+                vertex.centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{j});
+                vertex.outlineWidth = data.outlineWidth;
+                vertex.color = data.color;
+                vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
+            }
+        }
+
+        /* Fill in also quad texture coordinates if enabled */
+        if(sharedState.flags & Shared::Flag::Textured) {
+            const Containers::ArrayView<Implementation::BaseLayerTexturedVertex> texturedVertices = Containers::arrayCast<Implementation::BaseLayerTexturedVertex>(vertices).asContiguous();
+
+            for(std::size_t i = 0; i != dataIds.size(); ++i) {
+                const UnsignedInt dataId = dataIds[i];
+                const Implementation::BaseLayerData& data = state.data[dataId];
+
+                /* The texture coordinates are Y-flipped compared to the
+                   positions to account for Y-down (positions) vs Y-up (GL
+                   textures) */
+                /** @todo which may get annoying with non-GL renderers that
+                    don't Y-flip the projection, reconsider? */
+                const Vector2 min = data.textureCoordinateOffset.xy() + Vector2::yAxis(data.textureCoordinateSize.y());
+                const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x());
+                for(UnsignedByte j = 0; j != 4; ++j)
+                    texturedVertices[dataId*4 + j].textureCoordinates = {Math::lerp(min, max, BitVector2{j}), data.textureCoordinateOffset.z()};
+            }
         }
     }
 }
