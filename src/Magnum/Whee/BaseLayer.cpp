@@ -199,6 +199,7 @@ BaseLayer& BaseLayer::setBackgroundBlurPassCount(UnsignedInt count) {
     CORRADE_ASSERT(count,
         "Whee::BaseLayer::setBackgroundBlurPassCount(): expected at least one pass", *this);
     state.backgroundBlurPassCount = count;
+    setNeedsUpdate(LayerState::NeedsCompositeOffsetSizeUpdate);
     return *this;
 }
 
@@ -428,6 +429,19 @@ LayerFeatures BaseLayer::doFeatures() const {
     return AbstractVisualLayer::doFeatures()|(sharedState.dynamicStyleCount ? LayerFeature::AnimateStyles : LayerFeatures{})|LayerFeature::Draw|(sharedState.flags & Shared::Flag::BackgroundBlur ? LayerFeature::Composite : LayerFeatures{});
 }
 
+void BaseLayer::doSetSize(const Vector2& size, const Vector2i& framebufferSize) {
+    auto& state = static_cast<State&>(*_state);
+    auto& sharedState = static_cast<Shared::State&>(state.shared);
+
+    /* Framebuffer size is used by background blur but also subsequently by
+       BaseLayerGL for scaling and Y-flipping clip rects, so not wrapping it in
+       any condition */
+    state.framebufferSize = framebufferSize;
+
+    if(sharedState.flags & Shared::Flag::BackgroundBlur)
+        state.backgroundBlurScale = 2.0f/size;
+}
+
 void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) {
     auto& state = static_cast<State&>(*_state);
 
@@ -469,6 +483,10 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
+    /* Framebuffer size is only needed for calculating compositing rectangles
+       right now */
+    CORRADE_ASSERT(!(sharedState.flags >= Shared::Flag::BackgroundBlur) || (!state.framebufferSize.isZero() && !state.backgroundBlurScale.isZero()),
+        "Whee::BaseLayer::update(): user interface size wasn't set", );
     /* Technically needed only if there's any actual data to update, but
        require it always for consistency (and easier testing) */
     CORRADE_ASSERT(!sharedState.styles.isEmpty(),
@@ -574,6 +592,52 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                 for(UnsignedByte i = 0; i != 4; ++i)
                     texturedVertices[dataId*4 + i].textureCoordinates = {Math::lerp(min, max, BitVector2{i}), data.textureCoordinateOffset.z()};
             }
+        }
+    }
+
+    /* Fill in quads for background blur. They're present only if the layer has
+       background blur (and thus compositing) enabled and need to be updated
+       only if the compositing rects actually changed */
+    if(states >= LayerState::NeedsCompositeOffsetSizeUpdate && sharedState.flags >= Shared::Flag::BackgroundBlur) {
+        arrayResize(state.backgroundBlurVertices, NoInit, compositeRectOffsets.size()*4);
+        arrayResize(state.backgroundBlurIndices, NoInit, compositeRectOffsets.size()*6);
+
+        /* Expand the quads to include the total blur radius among all passes,
+           which is calculated as sqrt(passCount*radius*radius). The radius is
+           in pixels, convert it to match the [-1, +1] coordinates, i.e.
+           multiply by 2. */
+        /** @todo exclude the cutoff from this? how does the sqrt count into
+            that? take a max of count*radiusWithCutoff and this? */
+        const Vector2 blurRadiusPadding = Math::sqrt(Float(state.backgroundBlurPassCount))*sharedState.backgroundBlurRadius*2.0f/Vector2{state.framebufferSize};
+
+        for(std::size_t i = 0; i != compositeRectOffsets.size(); ++i) {
+            /* The compositing vertices are converted from the [0, uiSize]
+               coordinate system to [-1, +1] (backgroundBlurScale is 2/uiSize),
+               the extra padding is added and additionally Y-flipped to match
+               GL's Y-up without having to do any additional transformation in
+               the shader itself. */
+            /** @todo which may get annoying with non-GL renderers that don't
+                Y-flip, reconsider? */
+            const Vector2 min = (compositeRectOffsets[i]*state.backgroundBlurScale - Vector2{1.0f} - blurRadiusPadding)*Vector2::yScale(-1.0f);
+            const Vector2 max = ((compositeRectOffsets[i] + compositeRectSizes[i])*state.backgroundBlurScale - Vector2{1.0f} + blurRadiusPadding)*Vector2::yScale(-1.0f);
+            const UnsignedInt vertexOffset = i*4;
+
+            /* 0---1 0---2 5
+               |   | |  / /|
+               |   | | / / |
+               |   | |/ /  |
+               2---3 1 3---4 */
+            for(UnsignedByte j = 0; j != 4; ++j)
+                /* ✨ */
+                state.backgroundBlurVertices[vertexOffset + j] = Math::lerp(min, max, BitVector2{j});
+
+            UnsignedInt indexOffset = i*6;
+            state.backgroundBlurIndices[indexOffset++] = vertexOffset + 0;
+            state.backgroundBlurIndices[indexOffset++] = vertexOffset + 2;
+            state.backgroundBlurIndices[indexOffset++] = vertexOffset + 1;
+            state.backgroundBlurIndices[indexOffset++] = vertexOffset + 2;
+            state.backgroundBlurIndices[indexOffset++] = vertexOffset + 3;
+            state.backgroundBlurIndices[indexOffset++] = vertexOffset + 1;
         }
     }
 

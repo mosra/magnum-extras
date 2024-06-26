@@ -200,6 +200,9 @@ if(MAGNUM_BUILD_GL_TESTS)
             BaseLayerTestFiles/composite-background-blur-50-r31-80.png
             BaseLayerTestFiles/composite-background-blur-75-colored.png
             BaseLayerTestFiles/composite-default-50.png
+            BaseLayerTestFiles/composite-node-rects-background-blur-r0.png
+            BaseLayerTestFiles/composite-node-rects-background-blur-r1.png
+            BaseLayerTestFiles/composite-node-rects-background-blur-r30.png
             BaseLayerTestFiles/default.png
             BaseLayerTestFiles/default-smooth.png
             BaseLayerTestFiles/draw-order.png

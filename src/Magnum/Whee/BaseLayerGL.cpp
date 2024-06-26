@@ -330,9 +330,7 @@ struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
     GL::Framebuffer backgroundBlurFramebufferVertical{NoCreate},
                     backgroundBlurFramebufferHorizontal{NoCreate};
     BlurShaderGL backgroundBlurShader{NoCreate};
-    GL::Mesh backgroundBlurSquare{NoCreate};
 };
-
 
 BaseLayerGL::Shared::State::State(Shared& self, const Configuration& configuration): BaseLayer::Shared::State{self, configuration}, shader{
     #define _c(flag) (flags & Flag::flag ? BaseShaderGL::Flag::flag : BaseShaderGL::Flags{})
@@ -343,29 +341,8 @@ BaseLayerGL::Shared::State::State(Shared& self, const Configuration& configurati
     #undef _c
     configuration.styleUniformCount() + configuration.dynamicStyleCount()}
 {
-    if(configuration.flags() & Flag::BackgroundBlur) {
-        /** @todo when multiple compositing rects are implemented, this needs
-            to be indexed & re-filled in doComposite() instead, i.e. moved to
-            the per-layer state, not shared, with an expectation that each
-            layer may have a semi-constant number of top-level nodes that need
-            blurring, compared to that getting changed back and forth if a
-            shared state would get updated every time */
-        (backgroundBlurSquare = GL::Mesh{})
-            .setPrimitive(GL::MeshPrimitive::TriangleStrip)
-            .setCount(4)
-            .addVertexBuffer(GL::Buffer{GL::Buffer::TargetHint::Array, {
-                /* 2--3
-                   |\ |
-                   | \|
-                   0--1 */
-                Vector2{-1.0f, -1.0f},
-                Vector2{ 1.0f, -1.0f},
-                Vector2{-1.0f,  1.0f},
-                Vector2{ 1.0f,  1.0f},
-            }}, 0, BlurShaderGL::Position{});
-
+    if(configuration.flags() & Flag::BackgroundBlur)
         backgroundBlurShader = BlurShaderGL{configuration.backgroundBlurRadius(), configuration.backgroundBlurCutoff()};
-    }
 }
 
 BaseLayerGL::Shared::Shared(const Configuration& configuration): BaseLayer::Shared{Containers::pointer<State>(*this, configuration)} {}
@@ -408,7 +385,6 @@ struct BaseLayerGL::State: BaseLayer::State {
     GL::Buffer vertexBuffer{GL::Buffer::TargetHint::Array}, indexBuffer{GL::Buffer::TargetHint::ElementArray};
     GL::Mesh mesh;
     Vector2 clipScale;
-    Vector2i framebufferSize;
 
     /* Used only if Flag::Textured is enabled. Is non-owning if
        setTexture(GL::Texture2DArray&) was called, owning if
@@ -420,11 +396,17 @@ struct BaseLayerGL::State: BaseLayer::State {
        advance, the NoCreate'd state is used to correctly perform the first
        ever style upload without having to implicitly set any LayerStates. */
     GL::Buffer styleBuffer{NoCreate};
+
+    /* Used only if Flag::BackgroundBlur is enabled */
+    GL::Buffer backgroundBlurVertexBuffer{NoCreate};
+    GL::Buffer backgroundBlurIndexBuffer{NoCreate};
+    GL::Mesh backgroundBlurMesh{NoCreate};
 };
 
-BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState._state))} {
+BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState_._state))} {
     auto& state = static_cast<State&>(*_state);
-    if(static_cast<const Shared::State&>(state.shared).flags & Shared::Flag::Textured) {
+    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
+    if(sharedState.flags >= Shared::Flag::Textured) {
         state.mesh.addVertexBuffer(state.vertexBuffer, 0,
             BaseShaderGL::Position{},
             BaseShaderGL::CenterDistance{},
@@ -441,6 +423,14 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState): BaseLay
             BaseShaderGL::Style{});
     }
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
+
+    if(sharedState.flags >= Shared::Flag::BackgroundBlur) {
+        state.backgroundBlurVertexBuffer = GL::Buffer{GL::Buffer::TargetHint::Array};
+        state.backgroundBlurIndexBuffer = GL::Buffer{GL::Buffer::TargetHint::ElementArray};
+        (state.backgroundBlurMesh = GL::Mesh{})
+            .addVertexBuffer(state.backgroundBlurVertexBuffer, 0, BlurShaderGL::Position{})
+            .setIndexBuffer(state.backgroundBlurIndexBuffer, 0, GL::MeshIndexType::UnsignedInt);
+    }
 }
 
 BaseLayerGL& BaseLayerGL::setTexture(GL::Texture2DArray& texture) {
@@ -463,6 +453,8 @@ LayerFeatures BaseLayerGL::doFeatures() const {
 }
 
 void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize) {
+    BaseLayer::doSetSize(size, framebufferSize);
+
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
 
@@ -476,7 +468,6 @@ void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize
 
     /* For scaling and Y-flipping the clip rects in doDraw() */
     state.clipScale = Vector2{framebufferSize}/size;
-    state.framebufferSize = framebufferSize;
 
     if(sharedState.flags & Shared::Flag::BackgroundBlur) {
         (sharedState.backgroundBlurTextureVertical = GL::Texture2D{})
@@ -520,6 +511,11 @@ void BaseLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
     {
         state.vertexBuffer.setData(state.vertices);
     }
+    if(states >= LayerState::NeedsCompositeOffsetSizeUpdate && sharedState.flags & Shared::Flag::BackgroundBlur) {
+        state.backgroundBlurIndexBuffer.setData(state.backgroundBlurIndices);
+        state.backgroundBlurVertexBuffer.setData(state.backgroundBlurVertices);
+        state.backgroundBlurMesh.setCount(state.backgroundBlurIndices.size());
+    }
 
     /* If we have dynamic styles and either NeedsCommonDataUpdate is set
        (meaning either the static style or the dynamic style changed) or
@@ -541,13 +537,14 @@ void BaseLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
     }
 }
 
-void BaseLayerGL::doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, std::size_t, std::size_t) {
+void BaseLayerGL::doComposite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, std::size_t offset, std::size_t count) {
     State& state = static_cast<State&>(*_state);
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     RendererGL& rendererGL = static_cast<RendererGL&>(renderer);
 
-    /** @todo use the offsets + sizes when they actually contain something
-        meaningful and not a single full size entry */
+    state.backgroundBlurMesh
+        .setIndexOffset(offset*6)
+        .setCount(count*6);
 
     /* Perform the blur in as many passes as desired. For the first pass the
        input is the compositing framebuffer texture, successive passes take
@@ -558,13 +555,13 @@ void BaseLayerGL::doComposite(AbstractRenderer& renderer, const Containers::Stri
         sharedState.backgroundBlurShader
             .setDirection(Vector2::yAxis(1.0f/state.framebufferSize.y()))
             .bindTexture(*input)
-            .draw(sharedState.backgroundBlurSquare);
+            .draw(state.backgroundBlurMesh);
 
         sharedState.backgroundBlurFramebufferHorizontal.bind();
         sharedState.backgroundBlurShader
             .setDirection(Vector2::xAxis(1.0f/state.framebufferSize.x()))
             .bindTexture(sharedState.backgroundBlurTextureVertical)
-            .draw(sharedState.backgroundBlurSquare);
+            .draw(state.backgroundBlurMesh);
 
         input = &sharedState.backgroundBlurTextureHorizontal;
     }
