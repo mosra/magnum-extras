@@ -688,8 +688,15 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     CORRADE_ASSERT(!sharedState.styles.isEmpty(),
         "Whee::TextLayer::update(): no style data was set", );
 
-    /* Recompact the glyph data by removing unused runs */
-    {
+    /* Recompact the glyph data by removing unused runs. Do this only if data
+       actually change, this isn't affected by anything node-related */
+    /** @todo further restrict this to just NeedsCommonDataUpdate which gets
+        set by setText(), remove() etc that actually produces unused runs, but
+        not setColor() and such? the recompaction however implies a need to
+        update the actual index buffer etc anyway, so a dedicated state won't
+        make that update any smaller, and we'd now trigger it from clean() and
+        remove() as well, which we didn't need to before */
+    if(states >= LayerState::NeedsDataUpdate) {
         std::size_t outputGlyphDataOffset = 0;
         std::size_t outputGlyphRunOffset = 0;
         for(std::size_t i = 0; i != state.glyphRuns.size(); ++i) {
@@ -727,90 +734,112 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         arrayResize(state.glyphRuns, outputGlyphRunOffset);
     }
 
-    /* Index offsets for each run, plus one more for the last run */
-    arrayResize(state.indexDrawOffsets, NoInit, dataIds.size() + 1);
+    /* Fill in indices in desired order if either the data themselves or the
+       node order changed */
+    if(states >= LayerState::NeedsNodeOrderUpdate ||
+       states >= LayerState::NeedsDataUpdate)
+    {
+        /* Index offsets for each run, plus one more for the last run */
+        arrayResize(state.indexDrawOffsets, NoInit, dataIds.size() + 1);
 
-    /* Calculate how many glyphs there are in total and how many we'll draw */
-    UnsignedInt totalGlyphCount = 0;
-    UnsignedInt drawGlyphCount = 0;
-    for(const Implementation::TextLayerGlyphRun& run: state.glyphRuns)
-        totalGlyphCount += run.glyphCount;
-    for(const UnsignedInt id: dataIds)
-        drawGlyphCount += state.glyphRuns[state.data[id].glyphRun].glyphCount;
+        /* Calculate how many glyphs we'll draw */
+        UnsignedInt drawGlyphCount = 0;
+        for(const UnsignedInt id: dataIds)
+            drawGlyphCount += state.glyphRuns[state.data[id].glyphRun].glyphCount;
 
-    const Containers::StridedArrayView1D<const Whee::NodeHandle> nodes = this->nodes();
+        /* Generate index data */
+        arrayResize(state.indices, NoInit, drawGlyphCount*6);
+        UnsignedInt indexOffset = 0;
+        for(std::size_t i = 0; i != dataIds.size(); ++i) {
+            const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[state.data[dataIds[i]].glyphRun];
 
-    /* Generate vertex and index data */
-    arrayResize(state.vertices, NoInit, totalGlyphCount*4);
-    arrayResize(state.indices, NoInit, drawGlyphCount*6);
-    UnsignedInt indexOffset = 0;
-    for(std::size_t i = 0; i != dataIds.size(); ++i) {
-        const UnsignedInt dataId = dataIds[i];
-        const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
-        const Implementation::TextLayerData& data = state.data[dataId];
-        const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
-
-        /* Fill in quad vertices in the same order as the original text runs */
-        /** @todo ideally this would only be done if some text actually
-            changes, not on every visibility change */
-        const Containers::StridedArrayView1D<const Implementation::TextLayerGlyphData> glyphData = state.glyphData.sliceSize(glyphRun.glyphOffset, glyphRun.glyphCount);
-        const Containers::StridedArrayView1D<Implementation::TextLayerVertex> vertexData = state.vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
-        Text::renderGlyphQuadsInto(
-            *sharedState.glyphCache,
-            data.scale,
-            glyphData.slice(&Implementation::TextLayerGlyphData::position),
-            glyphData.slice(&Implementation::TextLayerGlyphData::glyphId),
-            vertexData.slice(&Implementation::TextLayerVertex::position),
-            vertexData.slice(&Implementation::TextLayerVertex::textureCoordinates));
-
-        /* Align the glyph run relative to the node area */
-        const Vector4 padding = sharedState.styles[data.calculatedStyle].padding + data.padding;
-        Vector2 offset = nodeOffsets[nodeId] + padding.xy();
-        const Vector2 size = nodeSizes[nodeId] - padding.xy() - Math::gather<'z', 'w'>(padding);
-        const UnsignedByte alignmentHorizontal = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentHorizontal);
-        if(alignmentHorizontal == Text::Implementation::AlignmentLeft) {
-            offset.x() += 0.0f;
-        } else if(alignmentHorizontal == Text::Implementation::AlignmentRight) {
-            offset.x() += size.x();
-        } else if(alignmentHorizontal == Text::Implementation::AlignmentCenter) {
-            if(UnsignedByte(data.alignment) & Text::Implementation::AlignmentIntegral)
-                offset.x() += Math::round(size.x()*0.5f);
-            else
-                offset.x() += size.x()*0.5f;
-        }
-        const UnsignedByte alignmentVertical = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentVertical);
-        /* For Line/Middle it's aligning either the line or bounding box middle
-           (which is already at y=0 by the Text::alignRenderedLine()) to node
-           middle */
-        if(alignmentVertical == Text::Implementation::AlignmentTop) {
-            offset.y() += 0.0f;
-        } else if(alignmentVertical == Text::Implementation::AlignmentBottom) {
-            offset.y() += size.y();
-        } else if(alignmentVertical == Text::Implementation::AlignmentLine ||
-                  alignmentVertical == Text::Implementation::AlignmentMiddle) {
-            if(UnsignedByte(data.alignment) & Text::Implementation::AlignmentIntegral)
-                offset.y() += Math::round(size.y()*0.5f);
-            else
-                offset.y() += size.y()*0.5f;
+            /* Generate indices in draw order. Remeber the offset for each data
+               to draw from later. */
+            state.indexDrawOffsets[i] = indexOffset;
+            const Containers::ArrayView<UnsignedInt> indexData = state.indices.sliceSize(indexOffset, glyphRun.glyphCount*6);
+            Text::renderGlyphQuadIndicesInto(glyphRun.glyphOffset, indexData);
+            indexOffset += indexData.size();
         }
 
-        /* Translate the (aligned) glyph run, fill color and style */
-        for(Implementation::TextLayerVertex& vertex: vertexData) {
-            vertex.position = vertex.position*Vector2::yScale(-1.0f) + offset;
-            vertex.color = data.color;
-            vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
-        }
-
-        /* Generate indices in draw order. Remeber the offset for each data to
-           draw from later. */
-        state.indexDrawOffsets[i] = indexOffset;
-        const Containers::ArrayView<UnsignedInt> indexData = state.indices.sliceSize(indexOffset, glyphRun.glyphCount*6);
-        Text::renderGlyphQuadIndicesInto(glyphRun.glyphOffset, indexData);
-        indexOffset += indexData.size();
+        CORRADE_INTERNAL_ASSERT(indexOffset == drawGlyphCount*6);
+        state.indexDrawOffsets[dataIds.size()] = indexOffset;
     }
 
-    CORRADE_INTERNAL_ASSERT(indexOffset == drawGlyphCount*6);
-    state.indexDrawOffsets[dataIds.size()] = indexOffset;
+    /* Fill in vertex data if the data themselves, the node offset/size or node
+       enablement (and thus calculated styles) changed */
+    /** @todo split this further to just position-related data update and other
+        data if it shows to help with perf */
+    if(states >= LayerState::NeedsNodeOffsetSizeUpdate ||
+       states >= LayerState::NeedsNodeEnabledUpdate ||
+       states >= LayerState::NeedsDataUpdate)
+    {
+        /* Calculate how many glyphs there are in total */
+        UnsignedInt totalGlyphCount = 0;
+        for(const Implementation::TextLayerGlyphRun& run: state.glyphRuns)
+            totalGlyphCount += run.glyphCount;
+
+        const Containers::StridedArrayView1D<const Whee::NodeHandle> nodes = this->nodes();
+
+        /* Generate vertex data */
+        arrayResize(state.vertices, NoInit, totalGlyphCount*4);
+        for(const UnsignedInt dataId: dataIds) {
+            const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
+            const Implementation::TextLayerData& data = state.data[dataId];
+            const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
+
+            /* Fill in quad vertices in the same order as the original text
+               runs */
+            /** @todo ideally this would only be done if some text actually
+                changes, not on every visibility change */
+            const Containers::StridedArrayView1D<const Implementation::TextLayerGlyphData> glyphData = state.glyphData.sliceSize(glyphRun.glyphOffset, glyphRun.glyphCount);
+            const Containers::StridedArrayView1D<Implementation::TextLayerVertex> vertexData = state.vertices.sliceSize(glyphRun.glyphOffset*4, glyphRun.glyphCount*4);
+            Text::renderGlyphQuadsInto(
+                *sharedState.glyphCache,
+                data.scale,
+                glyphData.slice(&Implementation::TextLayerGlyphData::position),
+                glyphData.slice(&Implementation::TextLayerGlyphData::glyphId),
+                vertexData.slice(&Implementation::TextLayerVertex::position),
+                vertexData.slice(&Implementation::TextLayerVertex::textureCoordinates));
+
+            /* Align the glyph run relative to the node area */
+            const Vector4 padding = sharedState.styles[data.calculatedStyle].padding + data.padding;
+            Vector2 offset = nodeOffsets[nodeId] + padding.xy();
+            const Vector2 size = nodeSizes[nodeId] - padding.xy() - Math::gather<'z', 'w'>(padding);
+            const UnsignedByte alignmentHorizontal = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentHorizontal);
+            if(alignmentHorizontal == Text::Implementation::AlignmentLeft) {
+                offset.x() += 0.0f;
+            } else if(alignmentHorizontal == Text::Implementation::AlignmentRight) {
+                offset.x() += size.x();
+            } else if(alignmentHorizontal == Text::Implementation::AlignmentCenter) {
+                if(UnsignedByte(data.alignment) & Text::Implementation::AlignmentIntegral)
+                    offset.x() += Math::round(size.x()*0.5f);
+                else
+                    offset.x() += size.x()*0.5f;
+            }
+            const UnsignedByte alignmentVertical = (UnsignedByte(data.alignment) & Text::Implementation::AlignmentVertical);
+            /* For Line/Middle it's aligning either the line or bounding box
+               middle (which is already at y=0 by the Text::alignRenderedLine())
+               to node middle */
+            if(alignmentVertical == Text::Implementation::AlignmentTop) {
+                offset.y() += 0.0f;
+            } else if(alignmentVertical == Text::Implementation::AlignmentBottom) {
+                offset.y() += size.y();
+            } else if(alignmentVertical == Text::Implementation::AlignmentLine ||
+                      alignmentVertical == Text::Implementation::AlignmentMiddle) {
+                if(UnsignedByte(data.alignment) & Text::Implementation::AlignmentIntegral)
+                    offset.y() += Math::round(size.y()*0.5f);
+                else
+                    offset.y() += size.y()*0.5f;
+            }
+
+            /* Translate the (aligned) glyph run, fill color and style */
+            for(Implementation::TextLayerVertex& vertex: vertexData) {
+                vertex.position = vertex.position*Vector2::yScale(-1.0f) + offset;
+                vertex.color = data.color;
+                vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
+            }
+        }
+    }
 }
 
 }}

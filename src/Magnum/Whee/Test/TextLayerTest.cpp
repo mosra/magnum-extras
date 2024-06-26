@@ -31,6 +31,7 @@
 #include <Corrade/Containers/String.h>
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
+#include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/Algorithms.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
@@ -230,20 +231,41 @@ const struct {
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
+    LayerStates states;
+    bool expectIndexDataUpdated, expectVertexDataUpdated;
 } UpdateCleanDataOrderData[]{
     {"empty update", true,
-        {}, {}, {}, {}},
+        {}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
     {"", false,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    {"node offset/size update only", false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsNodeOffsetSizeUpdate, false, true},
+    {"node order update only", false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsNodeOrderUpdate, true, false},
+    {"node enabled update only", false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsNodeOrderUpdate, false, true},
+    /* This shouldn't cause anything to be done in update(), and also no
+       crashes */
+    {"shared data update only", false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsSharedDataUpdate, false, false},
     {"padding from style", false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {2.0f, 0.5f, 1.0f, 1.5f}, {}},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {},
+        LayerState::NeedsDataUpdate, true, true},
     {"padding from data", false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {}, {2.0f, 0.5f, 1.0f, 1.5f}},
+        {}, {2.0f, 0.5f, 1.0f, 1.5f},
+        LayerState::NeedsDataUpdate, true, true},
     {"padding from both style and data", false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f},
+        LayerState::NeedsDataUpdate, true, true},
 };
 
 TextLayerTest::TextLayerTest() {
@@ -2970,7 +2992,8 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
-        layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+        layer.update(data.states, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+        CORRADE_VERIFY(data.expectIndexDataUpdated);
         CORRADE_COMPARE_AS(layer.stateData().indices,
             Containers::ArrayView<const UnsignedInt>{},
             TestSuite::Compare::Container);
@@ -2980,178 +3003,183 @@ void TextLayerTest::updateCleanDataOrder() {
         return;
     }
 
-    /* Just the filled subset is getting updated */
+    /* Just the filled subset is getting updated, and just what was selected in
+       states */
     UnsignedInt dataIds[]{9, 5, 7, 3};
-    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
-    /* The indices should be filled just for the four items */
-    CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
-        /* Text 9, "hi", quads 13 to 14 */
-        13*4 + 0, 13*4 + 1, 13*4 + 2, 13*4 + 2, 13*4 + 1, 13*4 + 3,
-        14*4 + 0, 14*4 + 1, 14*4 + 2, 14*4 + 2, 14*4 + 1, 14*4 + 3,
-        /* Glyph 5, quad 9 */
-         9*4 + 0,  9*4 + 1,  9*4 + 2,  9*4 + 2,  9*4 + 1,  9*4 + 3,
-        /* Text 7, "ahoy", quad 11 */
-        11*4 + 0, 11*4 + 1, 11*4 + 2, 11*4 + 2, 11*4 + 1, 11*4 + 3,
-        /* Text 3, "hello", quads 3 to 7 */
-         3*4 + 0,  3*4 + 1,  3*4 + 2,  3*4 + 2,  3*4 + 1,  3*4 + 3,
-         4*4 + 0,  4*4 + 1,  4*4 + 2,  4*4 + 2,  4*4 + 1,  4*4 + 3,
-         5*4 + 0,  5*4 + 1,  5*4 + 2,  5*4 + 2,  5*4 + 1,  5*4 + 3,
-         6*4 + 0,  6*4 + 1,  6*4 + 2,  6*4 + 2,  6*4 + 1,  6*4 + 3,
-         7*4 + 0,  7*4 + 1,  7*4 + 2,  7*4 + 2,  7*4 + 1,  7*4 + 3,
-    }), TestSuite::Compare::Container);
+    if(data.expectIndexDataUpdated) {
+        /* The indices should be filled just for the four items */
+        CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
+            /* Text 9, "hi", quads 13 to 14 */
+            13*4 + 0, 13*4 + 1, 13*4 + 2, 13*4 + 2, 13*4 + 1, 13*4 + 3,
+            14*4 + 0, 14*4 + 1, 14*4 + 2, 14*4 + 2, 14*4 + 1, 14*4 + 3,
+            /* Glyph 5, quad 9 */
+             9*4 + 0,  9*4 + 1,  9*4 + 2,  9*4 + 2,  9*4 + 1,  9*4 + 3,
+            /* Text 7, "ahoy", quad 11 */
+            11*4 + 0, 11*4 + 1, 11*4 + 2, 11*4 + 2, 11*4 + 1, 11*4 + 3,
+            /* Text 3, "hello", quads 3 to 7 */
+             3*4 + 0,  3*4 + 1,  3*4 + 2,  3*4 + 2,  3*4 + 1,  3*4 + 3,
+             4*4 + 0,  4*4 + 1,  4*4 + 2,  4*4 + 2,  4*4 + 1,  4*4 + 3,
+             5*4 + 0,  5*4 + 1,  5*4 + 2,  5*4 + 2,  5*4 + 1,  5*4 + 3,
+             6*4 + 0,  6*4 + 1,  6*4 + 2,  6*4 + 2,  6*4 + 1,  6*4 + 3,
+             7*4 + 0,  7*4 + 1,  7*4 + 2,  7*4 + 2,  7*4 + 1,  7*4 + 3,
+        }), TestSuite::Compare::Container);
 
-    /* The vertices are there for all data, but only the actually used are
-       filled */
-    CORRADE_COMPARE(layer.stateData().vertices.size(), 15*4);
-    for(std::size_t i = 0; i != 5*4; ++i) {
-        CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
-        /* Created with style 2, transitioned from 5, which is mapped to
-           uniform 0 */
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 0);
-    }
-    for(std::size_t i = 0; i != 1*4; ++i) {
-        CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff_rgbf);
-        /* Created with style 4, which is mapped to uniform 1 */
-        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 1);
-    }
-    for(std::size_t i = 0; i != 1*4; ++i) {
-        CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x112233_rgbf);
-        /* Created with style 1, which is mapped to uniform 2 */
-        CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].styleUniform, 2);
-    }
-    for(std::size_t i = 0; i != 2*4; ++i) {
-        CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].color, 0x663399_rgbf);
-        /* Created with style 3, which is mapped to uniform 1 */
-        CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].styleUniform, 1);
-    }
-
-    Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
-    Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::textureCoordinates);
-
-    /* Text 3 and glyph 5 are attached to node 6, which has a center of
-       {6.0, 9.5}. Shaped positions should match what's in create() however as
-       the coordinate system has Y up, the glyph positions have Y flipped
-       compared in comparison to create():
-
-        2--3
-        |  |
-        0--1 */
-    CORRADE_COMPARE_AS(positions.sliceSize(3*4, 5*4), Containers::arrayView<Vector2>({
-        /* Glyph 22, not in cache */
-        {6.0f - 5.0f,               9.5f + 0.5f},
-        {6.0f - 5.0f,               9.5f + 0.5f},
-        {6.0f - 5.0f,               9.5f + 0.5f},
-        {6.0f - 5.0f,               9.5f + 0.5f},
-
-        /* Glyph 13. Offset {4, -8}, size {16, 16}, scaled to 0.5. */
-        {6.0f - 3.5f + 2.0f + 0.0f, 9.5f - 0.0f + 4.0f - 0.0f},
-        {6.0f - 3.5f + 2.0f + 8.0f, 9.5f - 0.0f + 4.0f - 0.0f},
-        {6.0f - 3.5f + 2.0f + 0.0f, 9.5f - 0.0f + 4.0f - 8.0f},
-        {6.0f - 3.5f + 2.0f + 8.0f, 9.5f - 0.0f + 4.0f - 8.0f},
-
-        /* Glyph 97. Offset {8, 4}, size {32, 16}, scaled to 0.5. */
-        {6.0f - 1.5f + 4.0f + 0.0f, 9.5f - 0.5f - 2.0f - 0.0f},
-        {6.0f - 1.5f + 4.0f + 16.f, 9.5f - 0.5f - 2.0f - 0.0f},
-        {6.0f - 1.5f + 4.0f + 0.0f, 9.5f - 0.5f - 2.0f - 8.0f},
-        {6.0f - 1.5f + 4.0f + 16.f, 9.5f - 0.5f - 2.0f - 8.0f},
-
-        /* Glyph 22, not in cache */
-        {6.0f + 1.0f,               9.5f - 1.0f},
-        {6.0f + 1.0f,               9.5f - 1.0f},
-        {6.0f + 1.0f,               9.5f - 1.0f},
-        {6.0f + 1.0f,               9.5f - 1.0f},
-
-        /* Glyph 13 again */
-        {6.0f + 4.0f + 2.0f + 0.0f, 9.5f - 1.5f + 4.0f - 0.0f},
-        {6.0f + 4.0f + 2.0f + 8.0f, 9.5f - 1.5f + 4.0f - 0.0f},
-        {6.0f + 4.0f + 2.0f + 0.0f, 9.5f - 1.5f + 4.0f - 8.0f},
-        {6.0f + 4.0f + 2.0f + 8.0f, 9.5f - 1.5f + 4.0f - 8.0f},
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(positions.sliceSize(9*4, 1*4), Containers::arrayView<Vector2>({
-        /* Glyph 13 again, centered */
-        {6.0f - 4.0f        + 0.0f, 9.5f + 4.0f        - 0.0f},
-        {6.0f - 4.0f        + 8.0f, 9.5f + 4.0f        - 0.0f},
-        {6.0f - 4.0f        + 0.0f, 9.5f + 4.0f        - 8.0f},
-        {6.0f - 4.0f        + 8.0f, 9.5f + 4.0f        - 8.0f},
-    }), TestSuite::Compare::Container);
-
-    /* Text 7 and 9 are both attached to node 15, which has a center of
-       {13.0, 6.5} */
-    CORRADE_COMPARE_AS(positions.sliceSize(11*4, 1*4), Containers::arrayView<Vector2>({
-        /* Glyph 66. No offset, size {16, 16}, scaled to 2.0. */
-        {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 0.0f},
-        {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 0.0f},
-        {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 32.f},
-        {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 32.f},
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(positions.sliceSize(13*4, 2*4), Containers::arrayView<Vector2>({
-        /* Glyph 22, not in cache */
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-
-        /* Glyph 13. Offset {4, -8}, size {16, 16}, scaled to 0.5. */
-        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 8.0f},
-        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 8.0f},
-    }), TestSuite::Compare::Container);
-
-    /* Texture coordinates however stay the same, with Y up:
-
-        +--+--+
-        |66|13|
-        3-----2
-        | 97  |
-        0-----1 */
-
-    /* Glyph 22, at quad 3, 6, 13, isn't in cache */
-    for(std::size_t i: {3, 6, 13}) {
-        CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
-            {},
-            {},
-            {},
-            {},
+        /* For drawing data 9, 5, 7, 3 it needs to draw the first 2 quads in
+           the index buffer, then next 1 quad, then next 1, then next 5 */
+        CORRADE_COMPARE_AS(layer.stateData().indexDrawOffsets, Containers::arrayView({
+            0u, 2u*6, 3u*6, 4u*6, 9u*6
         }), TestSuite::Compare::Container);
     }
 
-    /* Glyph 13, at quad 4, 7, 9, 14 */
-    for(std::size_t i: {4, 7, 9, 14}) {
-        CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
-            {0.5f, 0.5f, 0.0f},
-            {1.0f, 0.5f, 0.0f},
-            {0.5f, 1.0f, 0.0f},
-            {1.0f, 1.0f, 0.0f},
+    if(data.expectVertexDataUpdated) {
+        /* The vertices are there for all data, but only the actually used are
+           filled */
+        CORRADE_COMPARE(layer.stateData().vertices.size(), 15*4);
+        for(std::size_t i = 0; i != 5*4; ++i) {
+            CORRADE_ITERATION(i);
+            CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
+            /* Created with style 2, transitioned from 5, which is mapped to
+               uniform 0 */
+            CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 0);
+        }
+        for(std::size_t i = 0; i != 1*4; ++i) {
+            CORRADE_ITERATION(i);
+            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff_rgbf);
+            /* Created with style 4, which is mapped to uniform 1 */
+            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 1);
+        }
+        for(std::size_t i = 0; i != 1*4; ++i) {
+            CORRADE_ITERATION(i);
+            CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x112233_rgbf);
+            /* Created with style 1, which is mapped to uniform 2 */
+            CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].styleUniform, 2);
+        }
+        for(std::size_t i = 0; i != 2*4; ++i) {
+            CORRADE_ITERATION(i);
+            CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].color, 0x663399_rgbf);
+            /* Created with style 3, which is mapped to uniform 1 */
+            CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].styleUniform, 1);
+        }
+
+        Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
+        Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::textureCoordinates);
+
+        /* Text 3 and glyph 5 are attached to node 6, which has a center of
+           {6.0, 9.5}. Shaped positions should match what's in create() however
+           as the coordinate system has Y up, the glyph positions have Y
+           flipped compared in comparison to create():
+
+            2--3
+            |  |
+            0--1 */
+        CORRADE_COMPARE_AS(positions.sliceSize(3*4, 5*4), Containers::arrayView<Vector2>({
+            /* Glyph 22, not in cache */
+            {6.0f - 5.0f,               9.5f + 0.5f},
+            {6.0f - 5.0f,               9.5f + 0.5f},
+            {6.0f - 5.0f,               9.5f + 0.5f},
+            {6.0f - 5.0f,               9.5f + 0.5f},
+
+            /* Glyph 13. Offset {4, -8}, size {16, 16}, scaled to 0.5. */
+            {6.0f - 3.5f + 2.0f + 0.0f, 9.5f - 0.0f + 4.0f - 0.0f},
+            {6.0f - 3.5f + 2.0f + 8.0f, 9.5f - 0.0f + 4.0f - 0.0f},
+            {6.0f - 3.5f + 2.0f + 0.0f, 9.5f - 0.0f + 4.0f - 8.0f},
+            {6.0f - 3.5f + 2.0f + 8.0f, 9.5f - 0.0f + 4.0f - 8.0f},
+
+            /* Glyph 97. Offset {8, 4}, size {32, 16}, scaled to 0.5. */
+            {6.0f - 1.5f + 4.0f + 0.0f, 9.5f - 0.5f - 2.0f - 0.0f},
+            {6.0f - 1.5f + 4.0f + 16.f, 9.5f - 0.5f - 2.0f - 0.0f},
+            {6.0f - 1.5f + 4.0f + 0.0f, 9.5f - 0.5f - 2.0f - 8.0f},
+            {6.0f - 1.5f + 4.0f + 16.f, 9.5f - 0.5f - 2.0f - 8.0f},
+
+            /* Glyph 22, not in cache */
+            {6.0f + 1.0f,               9.5f - 1.0f},
+            {6.0f + 1.0f,               9.5f - 1.0f},
+            {6.0f + 1.0f,               9.5f - 1.0f},
+            {6.0f + 1.0f,               9.5f - 1.0f},
+
+            /* Glyph 13 again */
+            {6.0f + 4.0f + 2.0f + 0.0f, 9.5f - 1.5f + 4.0f - 0.0f},
+            {6.0f + 4.0f + 2.0f + 8.0f, 9.5f - 1.5f + 4.0f - 0.0f},
+            {6.0f + 4.0f + 2.0f + 0.0f, 9.5f - 1.5f + 4.0f - 8.0f},
+            {6.0f + 4.0f + 2.0f + 8.0f, 9.5f - 1.5f + 4.0f - 8.0f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(positions.sliceSize(9*4, 1*4), Containers::arrayView<Vector2>({
+            /* Glyph 13 again, centered */
+            {6.0f - 4.0f        + 0.0f, 9.5f + 4.0f        - 0.0f},
+            {6.0f - 4.0f        + 8.0f, 9.5f + 4.0f        - 0.0f},
+            {6.0f - 4.0f        + 0.0f, 9.5f + 4.0f        - 8.0f},
+            {6.0f - 4.0f        + 8.0f, 9.5f + 4.0f        - 8.0f},
+        }), TestSuite::Compare::Container);
+
+        /* Text 7 and 9 are both attached to node 15, which has a center of
+           {13.0, 6.5} */
+        CORRADE_COMPARE_AS(positions.sliceSize(11*4, 1*4), Containers::arrayView<Vector2>({
+            /* Glyph 66. No offset, size {16, 16}, scaled to 2.0. */
+            {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 0.0f},
+            {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 0.0f},
+            {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 32.f},
+            {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 32.f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(positions.sliceSize(13*4, 2*4), Containers::arrayView<Vector2>({
+            /* Glyph 22, not in cache */
+            {13.f - 1.25f,              6.5f + 0.5f},
+            {13.f - 1.25f,              6.5f + 0.5f},
+            {13.f - 1.25f,              6.5f + 0.5f},
+            {13.f - 1.25f,              6.5f + 0.5f},
+
+            /* Glyph 13. Offset {4, -8}, size {16, 16}, scaled to 0.5. */
+            {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 0.0f},
+            {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 0.0f},
+            {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 8.0f},
+            {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 8.0f},
+        }), TestSuite::Compare::Container);
+
+        /* Texture coordinates however stay the same, with Y up:
+
+            +--+--+
+            |66|13|
+            3-----2
+            | 97  |
+            0-----1 */
+
+        /* Glyph 22, at quad 3, 6, 13, isn't in cache */
+        for(std::size_t i: {3, 6, 13}) {
+            CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
+                {},
+                {},
+                {},
+                {},
+            }), TestSuite::Compare::Container);
+        }
+
+        /* Glyph 13, at quad 4, 7, 9, 14 */
+        for(std::size_t i: {4, 7, 9, 14}) {
+            CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
+                {0.5f, 0.5f, 0.0f},
+                {1.0f, 0.5f, 0.0f},
+                {0.5f, 1.0f, 0.0f},
+                {1.0f, 1.0f, 0.0f},
+            }), TestSuite::Compare::Container);
+        }
+
+        /* Glyph 66, at quad 11 */
+        CORRADE_COMPARE_AS(textureCoordinates.sliceSize(11*4, 4), Containers::arrayView<Vector3>({
+            {0.0f, 0.5f, 1.0f},
+            {0.5f, 0.5f, 1.0f},
+            {0.0f, 1.0f, 1.0f},
+            {0.5f, 1.0f, 1.0f},
+        }), TestSuite::Compare::Container);
+
+        /* Glyph 97, at quad 5 */
+        CORRADE_COMPARE_AS(textureCoordinates.sliceSize(5*4, 4), Containers::arrayView<Vector3>({
+            {0.0f, 0.0f, 2.0f},
+            {1.0f, 0.0f, 2.0f},
+            {0.0f, 0.5f, 2.0f},
+            {1.0f, 0.5f, 2.0f},
         }), TestSuite::Compare::Container);
     }
-
-    /* Glyph 66, at quad 11 */
-    CORRADE_COMPARE_AS(textureCoordinates.sliceSize(11*4, 4), Containers::arrayView<Vector3>({
-        {0.0f, 0.5f, 1.0f},
-        {0.5f, 0.5f, 1.0f},
-        {0.0f, 1.0f, 1.0f},
-        {0.5f, 1.0f, 1.0f},
-    }), TestSuite::Compare::Container);
-
-    /* Glyph 97, at quad 5 */
-    CORRADE_COMPARE_AS(textureCoordinates.sliceSize(5*4, 4), Containers::arrayView<Vector3>({
-        {0.0f, 0.0f, 2.0f},
-        {1.0f, 0.0f, 2.0f},
-        {0.0f, 0.5f, 2.0f},
-        {1.0f, 0.5f, 2.0f},
-    }), TestSuite::Compare::Container);
-
-    /* For drawing data 9, 5, 7, 3 it needs to draw the first 2 quads in the
-       index buffer, then next 1 quad, then next 1, then next 5 */
-    CORRADE_COMPARE_AS(layer.stateData().indexDrawOffsets, Containers::arrayView({
-        0u, 2u*6, 3u*6, 4u*6, 9u*6
-    }), TestSuite::Compare::Container);
 
     /* Removing a node with cleanNodes() marks the corresponding run as unused,
        and update() recompacts again */
@@ -3179,8 +3207,11 @@ void TextLayerTest::updateCleanDataOrder() {
         0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u
     }), TestSuite::Compare::Container);
 
+    /* Note that this adds LayerState::NeedsDataUpdate in order to force the
+       glyph run recompaction, thus we also don't branch on
+       data.expectIndexDataUpdated / data.expectVertexDataUpdated anymore */
     UnsignedInt dataIdsPostClean[]{9, 7};
-    layer.update(LayerState::NeedsDataUpdate, dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(data.states|LayerState::NeedsDataUpdate, dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* There should be just 9 glyph runs, assigned to the remaining 9 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -3225,6 +3256,9 @@ void TextLayerTest::updateCleanDataOrder() {
         /* Created with style 3, which is mapped to uniform 1 */
         CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].styleUniform, 1);
     }
+
+    Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
+    Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::textureCoordinates);
 
     /* Text 7 and 9, now quads 5 and 7 to 8 */
     CORRADE_COMPARE_AS(positions.sliceSize(5*4, 1*4), Containers::arrayView<Vector2>({
@@ -3278,13 +3312,19 @@ void TextLayerTest::updateCleanDataOrder() {
     /* Removing a text marks the corresponding run as unused, the next update()
        then recompacts it */
     layer.remove(data7);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataClean);
+    /* state() can additionally contain LayerState::NeedsNodeOffsetSizeUpdate
+       if we didn't pass it to the update() above, so test just that it
+       contains at least these flags */
+    CORRADE_COMPARE_AS(layer.state(),
+        LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataClean,
+        TestSuite::Compare::GreaterOrEqual);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 0xffffffffu, 6u, 7u
     }), TestSuite::Compare::Container);
 
+    /* Again this explicitly adds NeedsDataUpdate to force recompaction */
     UnsignedInt dataIdsPostRemoval[]{9};
-    layer.update(LayerState::NeedsDataUpdate, dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(data.states|LayerState::NeedsDataUpdate, dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* There should be just 7 glyph runs, assigned to the remaining 7 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
