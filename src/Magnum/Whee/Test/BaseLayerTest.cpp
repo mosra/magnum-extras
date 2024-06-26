@@ -117,6 +117,7 @@ struct BaseLayerTest: TestSuite::Tester {
     /* advanceAnimations() tested in BaseLayerStyleAnimatorTest */
 
     void updateDataOrder();
+    void updateNoSizeSet();
     void updateNoStyleSet();
 
     void sharedNeedsUpdateStatePropagatedToLayers();
@@ -147,72 +148,90 @@ const struct {
     const char* name;
     bool emptyUpdate, textured;
     UnsignedInt styleCount, dynamicStyleCount;
+    UnsignedInt backgroundBlurRadius, backgroundBlurPassCount;
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
+    Vector2 expectedBlurPadding;
     LayerStates states;
     bool expectIndexDataUpdated, expectVertexDataUpdated;
 } UpdateDataOrderData[]{
-    {"empty update", true, false, 5, 0,
-        {}, {}, {}, {},
+    {"empty update", true, false, 5, 0, 0, 0,
+        {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"empty update, textured", true, true, 5, 0,
-        {}, {}, {}, {},
+    {"empty update, textured", true, true, 5, 0, 0, 0,
+        {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"", false, false, 5, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"empty update, background blur", true, true, 5, 0, 16, 1,
+        {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"textured", false, true, 5, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"", false, false, 5, 0, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"node offset/size update only", false, false, 5, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"textured", false, true, 5, 0, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    {"node offset/size update only", false, false, 5, 0, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true},
-    {"node order update only", false, false, 5, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"node order update only", false, false, 5, 0, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOrderUpdate, true, false},
-    {"node enabled update only", false, false, 5, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"node enabled update only", false, false, 5, 0, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeEnabledUpdate, false, true},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
-    {"shared data update only", false, false, 5, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"shared data update only", false, false, 5, 0, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsSharedDataUpdate, false, false},
-    {"common data update only", false, false, 5, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"common data update only", false, false, 5, 0, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsCommonDataUpdate, false, false},
     /* This would cause an update of the dynamic style data in derived classes
        if appropriate internal flags would be set internally, but in the base
        class it's nothing */
-    {"common data update only, dynamic styles", false, false, 2, 3,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"common data update only, dynamic styles", false, false, 2, 3, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsCommonDataUpdate, false, false},
-    {"padding from style", false, false, 5, 0,
+    {"padding from style", false, false, 5, 0, 0, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {2.0f, 0.5f, 1.0f, 1.5f}, {},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"padding from data", false, false, 5, 0,
+    {"padding from data", false, false, 5, 0, 0, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {}, {2.0f, 0.5f, 1.0f, 1.5f},
+        {}, {2.0f, 0.5f, 1.0f, 1.5f}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"padding from both style and data", false, false, 5, 0,
+    {"padding from both style and data", false, false, 5, 0, 0, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"unused dynamic styles", false, false, 5, 17,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"unused dynamic styles", false, false, 5, 17, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"dynamic styles", false, false, 2, 3,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+    {"dynamic styles", false, false, 2, 3, 0, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"dynamic styles, padding from dynamic style", false, false, 2, 3,
+    {"dynamic styles, padding from dynamic style", false, false, 2, 3, 0, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {2.0f, 0.5f, 1.0f, 1.5f}, {},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"dynamic styles, padding from both dynamic style and data", false, false, 2, 3,
+    {"dynamic styles, padding from both dynamic style and data", false, false, 2, 3, 0, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    /* This one should result in no extra padding in composite rects */
+    {"background blur with zero radius", false, false, 5, 0, 0, 1,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    /* These two should result in the same padding; total radius is 36 and UI
+       size is {250, 5000}. The compositing rects are in the normalized [-1,
+       +1] range, so additionally times 2. */
+    {"background blur with radius 9 and 16 passes", false, false, 5, 0, 9, 16,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {72.0f/250.0f, 72.0f/5000.0f},
+        LayerState::NeedsDataUpdate, true, true},
+    {"background blur with radius 18 and 4 passes", false, false, 5, 0, 18, 4,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {72.0f/250.0f, 72.0f/5000.0f},
         LayerState::NeedsDataUpdate, true, true},
 };
 
@@ -345,6 +364,8 @@ BaseLayerTest::BaseLayerTest() {
 
     addInstancedTests({&BaseLayerTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
+
+    addTests({&BaseLayerTest::updateNoSizeSet});
 
     addInstancedTests({&BaseLayerTest::updateNoStyleSet},
         Containers::arraySize(UpdateNoStyleSetData));
@@ -1872,6 +1893,10 @@ void BaseLayerTest::updateDataOrder() {
     BaseLayer::Shared::Configuration configuration{3, data.styleCount};
     if(data.textured)
         configuration.addFlags(BaseLayer::Shared::Flag::Textured);
+    if(data.backgroundBlurPassCount)
+        configuration
+            .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+            .setBackgroundBlurRadius(data.backgroundBlurRadius);
     if(data.dynamicStyleCount)
         configuration.setDynamicStyleCount(data.dynamicStyleCount);
 
@@ -1911,6 +1936,9 @@ void BaseLayerTest::updateDataOrder() {
             return static_cast<const BaseLayer::State&>(*_state);
         }
     } layer{layerHandle(0, 1), shared};
+
+    if(data.backgroundBlurPassCount)
+        layer.setBackgroundBlurPassCount(data.backgroundBlurPassCount);
 
     /* Two node handles to attach the data to */
     NodeHandle node6 = nodeHandle(6, 0);
@@ -1953,6 +1981,12 @@ void BaseLayerTest::updateDataOrder() {
     nodeSizes[15] = {20.0f, 5.0f};
     nodesEnabled.set(15);
 
+    /* If the layer has background blur enabled, it needs to know how large the
+       framebuffer is to appropriately pad compositing rectangles. Framebuffer
+       size is (10, 100) times UI size. */
+    if(data.backgroundBlurPassCount)
+        layer.setSize({25, 50}, {250, 5000});
+
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
         layer.update(data.states, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
@@ -1960,17 +1994,43 @@ void BaseLayerTest::updateDataOrder() {
         CORRADE_COMPARE_AS(layer.stateData().indices,
             Containers::ArrayView<const UnsignedInt>{},
             TestSuite::Compare::Container);
+
+        /* And nothing for compositing either */
+        if(data.backgroundBlurPassCount) {
+            CORRADE_COMPARE_AS(layer.stateData().backgroundBlurVertices,
+                Containers::ArrayView<const Vector2>{},
+                TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(layer.stateData().backgroundBlurIndices,
+                Containers::ArrayView<const UnsignedInt>{},
+                TestSuite::Compare::Container);
+        }
+
         return;
     }
 
     /* Just the filled subset is getting updated, and just what was selected in
        states */
     UnsignedInt dataIds[]{9, 7, 3};
-    layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
+
+    /* Test also compositing mesh generation if background blur is enabled */
+    if(data.backgroundBlurPassCount) {
+        /* These are completely unrelated to the actual nodes being rendered,
+           which is fine -- the implementation shouldn't expect any relation */
+        Vector2 compositeRectOffsets[]{
+            {15.0f, 20.0f},
+            {5.0f, 0.0f}
+        };
+        Vector2 compositeRectSizes[]{
+            {10.0f, 15.0f},
+            {5.0f, 5.0f}
+        };
+        layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, compositeRectOffsets, compositeRectSizes);
+
+    } else layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     /* If nothing is to be done, we got nothing to check. Capture the test
        function name at least in that case. */
-    if(!data.expectIndexDataUpdated && !data.expectVertexDataUpdated)
+    if(!data.expectIndexDataUpdated && !data.expectVertexDataUpdated && !data.backgroundBlurPassCount)
         CORRADE_VERIFY(true);
 
     if(data.expectIndexDataUpdated) {
@@ -2087,6 +2147,60 @@ void BaseLayerTest::updateDataOrder() {
             }
         }
     }
+
+    if(data.backgroundBlurPassCount) {
+        CORRADE_COMPARE_AS(layer.stateData().backgroundBlurVertices, Containers::arrayView({
+            /* Rect from {15, 20} to {25, 35} in a UI of size {25, 50}; Y up,
+                0--1 0-2 5
+                |  | |/ /|
+                2--3 1 3-4 */
+            Vector2{ 0.2f,  0.2f} + data.expectedBlurPadding*Vector2{-1.0f, +1.0f},
+            Vector2{ 1.0f,  0.2f} + data.expectedBlurPadding*Vector2{+1.0f, +1.0f},
+            Vector2{ 0.2f, -0.4f} + data.expectedBlurPadding*Vector2{-1.0f, -1.0f},
+            Vector2{ 1.0f, -0.4f} + data.expectedBlurPadding*Vector2{+1.0f, -1.0f},
+
+            /* Rect from {5, 0} to {10, 5} */
+            Vector2{-0.6f,  1.0f} + data.expectedBlurPadding*Vector2{-1.0f, +1.0f},
+            Vector2{-0.2f,  1.0f} + data.expectedBlurPadding*Vector2{+1.0f, +1.0f},
+            Vector2{-0.6f,  0.8f} + data.expectedBlurPadding*Vector2{-1.0f, -1.0f},
+            Vector2{-0.2f,  0.8f} + data.expectedBlurPadding*Vector2{+1.0f, -1.0f}
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().backgroundBlurIndices, Containers::arrayView<UnsignedInt>({
+            0, 2, 1, 2, 3, 1,
+            4, 6, 5, 6, 7, 5
+        }), TestSuite::Compare::Container);
+    } else {
+        CORRADE_COMPARE_AS(layer.stateData().backgroundBlurVertices,
+            Containers::ArrayView<const Vector2>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().backgroundBlurIndices,
+            Containers::ArrayView<const UnsignedInt>{},
+            TestSuite::Compare::Container);
+    }
+}
+
+void BaseLayerTest::updateNoSizeSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{1}
+        /* User interface size is only needed for compositing right now.
+           Without this flag it's not required, which is tested in
+           updateDataOrder() above. */
+        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::update(): user interface size wasn't set\n");
 }
 
 void BaseLayerTest::updateNoStyleSet() {

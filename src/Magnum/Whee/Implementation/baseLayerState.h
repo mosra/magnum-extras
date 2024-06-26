@@ -49,7 +49,11 @@ struct BaseLayerStyle {
 }
 
 struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, flags{configuration.flags()}, styleUniformCount{configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()},
+        /* The radius is always at most 31, so can be a byte */
+        backgroundBlurRadius{UnsignedByte(configuration.backgroundBlurRadius())},
+        flags{configuration.flags()},
+        styleUniformCount{configuration.styleUniformCount()} {}
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -58,8 +62,13 @@ struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
        this one, returning LayerState::NeedsDataUpdate if it differs. */
     UnsignedShort styleUpdateStamp = 0;
 
+    /* Used by BaseLayerGL to expand the area used for processing the blur
+       so the second and subsequent passes don't tap outside. The radius is
+       always at most 31, so can be a byte. */
+    UnsignedByte backgroundBlurRadius;
+
     Flags flags;
-    /* 3 bytes free */
+    /* 2 bytes free */
     UnsignedInt styleUniformCount;
     /* 0/4 bytes free */
 
@@ -126,16 +135,22 @@ struct BaseLayer::State: AbstractVisualLayer::State {
 
     /* 3 bytes free */
 
-    /* Used only if Flag::BackgroundBlur is enabled */
-    UnsignedInt backgroundBlurPassCount = 1;
-
-    /* 0/4 bytes free */
-
     Containers::Array<Implementation::BaseLayerData> data;
     /* Is either Implementation::BaseLayerVertex or BaseLayerTexturedVertex
        based on whether texturing is enabled */
     Containers::Array<char> vertices;
     Containers::Array<UnsignedInt> indices;
+
+    /* Used by BaseLayerGL, and here if Flag::BackgroundBlur is enabled */
+    Vector2i framebufferSize;
+
+    /* Used only if Flag::BackgroundBlur is enabled */
+    Containers::Array<Vector2> backgroundBlurVertices;
+    Containers::Array<UnsignedInt> backgroundBlurIndices;
+    Vector2 backgroundBlurScale; /* 2/uiSize */
+    UnsignedInt backgroundBlurPassCount = 1;
+
+    /* 0/4 bytes free */
 
     /* Used only if shared.dynamicStyleCount is non-zero */
     Containers::ArrayTuple dynamicStyleStorage;
