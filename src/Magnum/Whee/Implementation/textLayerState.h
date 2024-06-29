@@ -70,6 +70,11 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
+    /* Incremented every time setStyle() is called. There's a corresponding
+       styleUpdateStamp variable in TextLayer::State that doState() compares to
+       this one, returning LayerState::NeedsDataUpdate if it differs. */
+    UnsignedShort styleUpdateStamp = 0;
+
     UnsignedInt styleUniformCount;
 
     /* Glyph cache used by all fonts. It's expected to know about each font
@@ -140,9 +145,21 @@ struct TextLayerVertex {
 }
 
 struct TextLayer::State: AbstractVisualLayer::State {
-    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared} {}
+    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared}, styleUpdateStamp{shared.styleUpdateStamp} {}
 
     /* First 2/6 bytes overlap with padding of the base struct */
+
+    /* Is compared to Shared::styleUpdateStamp in order to detect that
+       doUpdate() needs to be called to update to potentially new mappings
+       between styles and uniform IDs, paddings etc. When the two are the same,
+       it's assumed all style-dependent data are up-to-date.
+
+       Gets set to the shared value on construction to not implicitly mark a
+       fresh layer with no data as immediately needing an update.
+
+       See AbstractVisualLayer::State::styleTransitionToDisabledUpdateStamp for
+       discussion about when an update may get skipped by accident. */
+    UnsignedShort styleUpdateStamp;
 
     /* Glyph data. Only the items referenced from `glyphRuns` are valid, the
        rest is unused space that gets recompacted during each doUpdate(). */

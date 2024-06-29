@@ -52,9 +52,15 @@ struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
+    /* Incremented every time setStyle() is called. There's a corresponding
+       styleUpdateStamp variable in BaseLayer::State that doState() compares to
+       this one, returning LayerState::NeedsDataUpdate if it differs. */
+    UnsignedShort styleUpdateStamp = 0;
+
     Flags flags;
-    /* 1 byte free */
+    /* 3 bytes free */
     UnsignedInt styleUniformCount;
+    /* 0/4 bytes free */
 
     /* Uniform mapping and padding values assigned to each style. Initially
        empty to be able to detect whether setStyle() was called. */
@@ -91,9 +97,21 @@ struct BaseLayerTexturedVertex {
 }
 
 struct BaseLayer::State: AbstractVisualLayer::State {
-    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared} {}
+    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared}, styleUpdateStamp{shared.styleUpdateStamp} {}
 
     /* First 2/6 bytes overlap with padding of the base struct */
+
+    /* Is compared to Shared::styleUpdateStamp in order to detect that
+       doUpdate() needs to be called to update to potentially new mappings
+       between styles and uniform IDs, paddings etc. When the two are the same,
+       it's assumed all style-dependent data are up-to-date.
+
+       Gets set to the shared value on construction to not implicitly mark a
+       fresh layer with no data as immediately needing an update.
+
+       See AbstractVisualLayer::State::styleTransitionToDisabledUpdateStamp for
+       discussion about when an update may get skipped by accident. */
+    UnsignedShort styleUpdateStamp;
 
     /* Used only if Flag::BackgroundBlur is enabled */
     UnsignedInt backgroundBlurPassCount = 1;

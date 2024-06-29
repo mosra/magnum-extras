@@ -198,6 +198,12 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
         Utility::copy(stylePaddings, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::padding));
     }
     doSetStyle(commonUniform, uniforms);
+
+    /* Make doState() of all layers sharing this state return NeedsDataUpdate
+       in order to update style-to-uniform mappings, paddings and such. Setting
+       it only if those differ would trigger update only if actually needed,
+       but it may be prohibitively expensive compared to updating always. */
+    ++state.styleUpdateStamp;
 }
 
 TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
@@ -662,6 +668,17 @@ LayerFeatures TextLayer::doFeatures() const {
     return AbstractVisualLayer::doFeatures()|LayerFeature::Draw;
 }
 
+LayerStates TextLayer::doState() const {
+    LayerStates states = AbstractVisualLayer::doState();
+
+    auto& state = static_cast<const State&>(*_state);
+    auto& sharedState = static_cast<const Shared::State&>(state.shared);
+    if(state.styleUpdateStamp != sharedState.styleUpdateStamp)
+        /* Needed because uniform mapping and paddings can change */
+        states |= LayerState::NeedsDataUpdate;
+    return states;
+}
+
 void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
     State& state = static_cast<State&>(*_state);
 
@@ -839,6 +856,10 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                 vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
             }
         }
+
+        /* Sync the style update stamp to not have doState() return
+           NeedsDataUpdate again next time it's asked */
+        state.styleUpdateStamp = sharedState.styleUpdateStamp;
     }
 }
 
