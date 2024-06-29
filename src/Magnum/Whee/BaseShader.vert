@@ -41,15 +41,24 @@ layout(std140
     StyleEntry styles[STYLE_COUNT];
 };
 
+#define style_smoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.x
+// #ifndef NO_OUTLINE
+#define style_innerOutlineSmoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.y
+// #endif
+
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
 uniform highp mat3 transformationProjectionMatrix;
 
 layout(location = 0) in highp vec2 position;
-layout(location = 1) in mediump vec2 centerDistance;
+layout(location = 1) in mediump vec2 centerDistance; // TODO is this needed for subdivided quads at all? maybe only for texcoords
+#ifndef SUBDIVIDED_QUADS
 #ifndef NO_OUTLINE_WIDTH
 layout(location = 2) in mediump vec4 outlineWidth;
+#endif
+#else
+layout(location = 2) in mediump vec2 outlineWidth;
 #endif
 layout(location = 3) in lowp vec4 color;
 layout(location = 4) in mediump uint style;
@@ -58,19 +67,30 @@ layout(location = 5) in mediump vec3 textureCoordinates;
 #endif
 
 flat out mediump uint interpolatedStyle;
-flat out mediump vec2 halfQuadSize;
-flat out mediump vec4 outlineQuadSize;
 NOPERSPECTIVE out lowp vec4 interpolatedColor;
-NOPERSPECTIVE out mediump vec2 normalizedQuadPosition;
 #ifdef TEXTURED
 NOPERSPECTIVE out mediump vec3 interpolatedTextureCoordinates;
 #endif
 #ifdef BACKGROUND_BLUR
 NOPERSPECTIVE out highp vec2 backgroundBlurTextureCoordinates;
 #endif
+#ifndef SUBDIVIDED_QUADS
+flat out mediump vec2 halfQuadSize;
+flat out mediump vec4 outlineQuadSize;
+NOPERSPECTIVE out mediump vec2 normalizedQuadPosition;
+#else
+/* horizontal, vertical, outline horizontal, outline vertical */
+NOPERSPECTIVE out mediump vec4 edgeDistance;
+NOPERSPECTIVE out mediump vec2 radiusCenterDistance;
+NOPERSPECTIVE out mediump vec2 outlineRadiusCenterDistance;
+// TODO need only this and not the radiusCenterDistance + outlineRadiusCenterDistance
+flat out mediump float cornerRadius;
+flat out mediump float outlineCornerRadius;
+#endif
 
 void main() {
     interpolatedStyle = style;
+    #ifndef SUBDIVIDED_QUADS
     halfQuadSize = abs(centerDistance);
     #ifndef NO_OUTLINE_WIDTH
     /* Calculate the outline quad size here already to save a vec4 load in each
@@ -89,6 +109,119 @@ void main() {
     #endif
 
     gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
+    #else
+    /* Pick corner radii and horizontal/vertical outline width belonging to
+       this corner based on vertex ID
+
+        0---1---5---4
+        |   |   |   |
+        2---3---7---6
+        |   |   |   |
+        |   |   |   |
+        |   |   |   |
+        10-11---15-14
+        |   |   |   |
+        8---9---13-12
+    */
+//     float cornerRadius;
+//     float outlineCornerRadius;
+    mediump vec2 totalOutlineWidth = outlineWidth;
+    lowp int vertexId = gl_VertexID & 15;
+    lowp int cornerId = vertexId >> 2;
+//     vec2 shiftDirection;
+
+    // TODO nvidia driver complains that these may be unused, what to do? at
+    //  least one of the four branches below is always taken
+    cornerRadius = 0.0f;
+    outlineCornerRadius = 0.0f;
+
+
+    /* Top left */
+    if(cornerId == 0) { // TODO could be also depending on centerDistance, maybe one attribute less that way?
+        cornerRadius = styles[style].cornerRadius.x;
+        outlineCornerRadius = styles[style].outlineCornerRadius.x;
+        totalOutlineWidth += vec2(styles[style].outlineWidth.x,
+                                  styles[style].outlineWidth.y);
+//         shiftDirection = vec2(+1.0, +1.0);
+    } // TODO or else??
+    /* Top right */
+    if(cornerId == 1) {
+        cornerRadius = styles[style].cornerRadius.z;
+        outlineCornerRadius = styles[style].outlineCornerRadius.z;
+        totalOutlineWidth += vec2(styles[style].outlineWidth.z,
+                                  styles[style].outlineWidth.y);
+//         shiftDirection = vec2(-1.0, +1.0);
+    }
+    /* Bottom left */
+    // TODO could also be dynamic indexing, no? the driver should support that
+    // TODO need to fix the vertex order to match that tho .. or swizzle? that's stupid
+    if(cornerId == 2) {
+        cornerRadius = styles[style].cornerRadius.y;
+        outlineCornerRadius = styles[style].outlineCornerRadius.y;
+        totalOutlineWidth += vec2(styles[style].outlineWidth.x,
+                                  styles[style].outlineWidth.w);
+//         shiftDirection = vec2(+1.0, -1.0);
+    }
+    /* Bottom right */
+    if(cornerId == 3) {
+        cornerRadius = styles[style].cornerRadius.w;
+        outlineCornerRadius = styles[style].outlineCornerRadius.w;
+        totalOutlineWidth += vec2(styles[style].outlineWidth.z,
+                                  styles[style].outlineWidth.w);
+//         shiftDirection = vec2(-1.0, -1.0);
+    }
+
+    /* If not a corner point, move the position so it includes both radii and
+       outline width. Horizontal shift ... */
+    mediump vec2 shift = vec2(0.0);
+    edgeDistance = vec4(0.0, 0.0, -totalOutlineWidth);
+//     vec2 innerEdgeDistance = vec2(0.0);
+    if((vertexId & 1) == 1) {
+        // TODO could abuse sign() which returns 0 for 0
+        mediump float direction = (cornerId & 1) == 0 ? +1.0 : -1.0;
+        shift.x = direction*max(cornerRadius + style_smoothness, outlineCornerRadius + style_innerOutlineSmoothness + totalOutlineWidth.x);
+        // TODO needs to include smoothness radius also
+        // TODO simplify, the abs is unneeded
+        edgeDistance.x = max(1.0, abs(shift.x)); // TODO ?! why the 1
+        edgeDistance.z = max(1.0, abs(shift.x) - totalOutlineWidth.x); // TODO the 1 makes a mess!
+    }
+    /* ... vertical shift */
+    if((vertexId & 3) == 2 || (vertexId & 3) == 3) {
+        mediump float direction = (cornerId & 2) == 0 ? +1.0 : -1.0;
+        shift.y = direction*max(cornerRadius + style_smoothness, outlineCornerRadius + style_innerOutlineSmoothness + totalOutlineWidth.y);
+        // TODO needs to include smoothness radius also
+        // TODO simplify, the abs is unneeded
+        edgeDistance.y = max(1.0, abs(shift.y)); // TODO ?! why the 1
+        edgeDistance.w = max(1.0, abs(shift.y) - totalOutlineWidth.y); // TODO the 1 makes a mess!
+    }
+
+    gl_Position = vec4(transformationProjectionMatrix*vec3(shift + position, 1.0), 0.0).xywz;
+
+    /* Fill the output attributes. For outer points edge distance is 0 and
+       outline edge distance -outlineWidth. */
+    mediump vec2 absShift = abs(shift);
+//     edgeDistance = vec4(
+//         // TODO abs??
+//         outerEdgeDistance, // TODO ???
+//         -(outerEdgeDistance - outlineWidth)//, vec2(0.0)) // TODO doesn't work at all; also where's inner outline smoothness??
+//     );
+    /* For points inside the radius the center is positive in both coordinates,
+       for points outside it's negative */
+    // TODO abs??
+    radiusCenterDistance = vec2(cornerRadius) - abs(shift);
+    outlineRadiusCenterDistance = totalOutlineWidth + vec2(outlineCornerRadius) - abs(shift);
+
+    // TODO properly interpolate the gradient for inner vertices
+    // TODO ugh which means need a quadsize for this, but fortunately just one direction .. UHG
+    // TODO tho for texture coords i need both!
+    interpolatedColor = color;
+    if(cornerId < 2)
+        interpolatedColor *= styles[style].topColor;
+    else
+        interpolatedColor *= styles[style].bottomColor;
+
+    // TODO interpolatedTextureCoordinates, how to even do that?? pass a whole f matrix?! actually no, that's stupid, the user-facing API is restricted to offset+size, not 4 arbitrary coordinates, PHEW, so need just a vec2 that gives me a translation from pixel offset to texture offset
+    #endif
 
     #ifdef BACKGROUND_BLUR
     backgroundBlurTextureCoordinates = gl_Position.xy*0.5 + vec2(0.5);

@@ -62,12 +62,24 @@ uniform lowp sampler2D backgroundBlurTextureData;
 #endif
 
 flat in mediump uint interpolatedStyle;
+NOPERSPECTIVE in mediump vec4 interpolatedColor;
+#ifndef SUBDIVIDED_QUADS
 flat in mediump vec2 halfQuadSize;
 #ifndef NO_OUTLINE
 flat in mediump vec4 outlineQuadSize;
 #endif
-NOPERSPECTIVE in mediump vec4 interpolatedColor;
 NOPERSPECTIVE in mediump vec2 normalizedQuadPosition; /* -1 to +1 in both coordinates */
+#else
+/* horizontal, vertical, outline horizontal, outline vertical */
+NOPERSPECTIVE in mediump vec4 edgeDistance;
+// TODO the outline distance part could be also flat and just a difference maybe? er actually not, as it's differing on the edges if radii are different
+// TODO might not need all this, just a subset
+NOPERSPECTIVE in mediump vec2 radiusCenterDistance;
+NOPERSPECTIVE in mediump vec2 outlineRadiusCenterDistance;
+flat in mediump float cornerRadius; // TODO wait what does it do if the corners are different?
+// TODO it CAN NOT be flat .. wait uh it can, it's used only in primitives when the radius is the same so ALL FINE
+flat in mediump float outlineCornerRadius;
+#endif
 #ifdef TEXTURED
 NOPERSPECTIVE in mediump vec3 interpolatedTextureCoordinates;
 #endif
@@ -78,6 +90,7 @@ NOPERSPECTIVE in highp vec2 backgroundBlurTextureCoordinates;
 out lowp vec4 fragmentColor;
 
 void main() {
+    #ifndef SUBDIVIDED_QUADS
     mediump vec2 position = normalizedQuadPosition*halfQuadSize;
 
     lowp float dist;
@@ -137,6 +150,23 @@ void main() {
                 min(edgeDistance.x, edgeDistance.y),
                 min(edgeDistance.z, edgeDistance.w));
         }
+    }
+    #endif
+    #else
+    lowp float dist = min(edgeDistance.x, edgeDistance.y);
+    // TODO or else?
+    if(all(greaterThan(radiusCenterDistance, vec2(0.0)))) {
+//         radiusCenterDistance = edgeDistance.xy - vec2(cornerRadius);
+        dist = cornerRadius - length(radiusCenterDistance);
+    }
+
+    lowp float outlineDist = min(edgeDistance.z, edgeDistance.w);
+    // TODO or else?
+    if(all(greaterThan(outlineRadiusCenterDistance, vec2(0.0)))) {
+        // TODO errr no this is impossible to calculate, needs also a distance from the inner edge of the outline
+        // TODO f all this, do these only once everything works, which it doesn't yet
+//         radiusCenterDistance = edgeDistance.xy - vec2(cornerRadius);
+        outlineDist = outlineCornerRadius - length(outlineRadiusCenterDistance);
     }
     #endif
 

@@ -87,7 +87,7 @@ namespace Implementation {
 
 struct BaseLayerData {
     Vector4 padding;
-    Vector4 outlineWidth;
+    Vector4 outlineWidth; /* left, top, right, bottom */
     Color3 color;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     UnsignedInt style, calculatedStyle;
@@ -107,6 +107,19 @@ struct BaseLayerTexturedVertex {
     /* Has to be a member and not a base class because then is_standard_layout
        complains, making arrayCast() impossible. Sigh. */
     BaseLayerVertex vertex;
+    Vector3 textureCoordinates;
+};
+
+struct BaseLayerSubdividedVertex {
+    Vector2 position;
+    Vector2 centerDistance;
+    Vector2 outlineWidth;
+    Color3 color;
+    UnsignedInt styleUniform;
+};
+
+struct BaseLayerSubdividedTexturedVertex {
+    BaseLayerSubdividedVertex vertex;
     Vector3 textureCoordinates;
 };
 

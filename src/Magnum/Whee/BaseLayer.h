@@ -1008,7 +1008,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * enabled and the layer is used just to draw (alpha blended)
              * images, or if a particular widget style doesn't use rounded
              * corners at all.
-             * @see @ref Flag::NoOutline
+             * @see @ref Flag::NoOutline, @ref Flag::SubdividedQuads
              */
             NoRoundedCorners = 1 << 2,
 
@@ -1025,9 +1025,22 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * useful for example when @ref Flag::Textured is enabled and the
              * layer is used just to draw (alpha blended) images, or if a
              * particular widget style doesn't use outlines at all.
-             * @see @ref Flag::NoRoundedCorners
+             * @see @ref Flag::NoRoundedCorners, @ref Flag::SubdividedQuads
              */
-            NoOutline = 1 << 3
+            NoOutline = 1 << 3,
+
+            /**
+             * Render the quads subdivided into 9 quads, where each contains
+             * either a corner, an edge with an outline or the inside. This
+             * significantly simplifies the shader at the cost of uploading
+             * much more data to the GPU. May improve rendering speed on low
+             * performance GPUs but the extra bandwidth may have a negative
+             * effect on GPUs where the rendering wasn't bottlenecked on the
+             * fragment shader.
+             * @see @ref Flag::NoRoundedCorners, @ref Flag::NoOutline
+             */
+            // TODO fix interaction with NoRoundedCorners, NoOutline
+            SubdividedQuads = 1 << 4,
         };
 
         /**
