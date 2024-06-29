@@ -30,6 +30,7 @@
    eventually possibly also 3rd party renderer implementations */
 
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/ArrayTuple.h>
 
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
@@ -48,7 +49,7 @@ struct BaseLayerStyle {
 }
 
 struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), 0}, flags{configuration.flags()}, styleUniformCount{configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, flags{configuration.flags()}, styleUniformCount{configuration.styleUniformCount()} {}
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -62,9 +63,15 @@ struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
     UnsignedInt styleUniformCount;
     /* 0/4 bytes free */
 
+    Containers::ArrayTuple styleStorage;
     /* Uniform mapping and padding values assigned to each style. Initially
        empty to be able to detect whether setStyle() was called. */
-    Containers::Array<Implementation::BaseLayerStyle> styles;
+    Containers::ArrayView<Implementation::BaseLayerStyle> styles;
+    /* Uniform values to be copied to layer-specific uniform buffers. Initially
+       empty to be able to detect whether setStyle() was called, stays empty
+       and unused if dynamicStyleCount is 0. */
+    Containers::ArrayView<BaseLayerStyleUniform> styleUniforms;
+    BaseLayerCommonStyleUniform commonStyleUniform{NoInit};
 };
 
 namespace Implementation {
@@ -97,7 +104,7 @@ struct BaseLayerTexturedVertex {
 }
 
 struct BaseLayer::State: AbstractVisualLayer::State {
-    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared}, styleUpdateStamp{shared.styleUpdateStamp} {}
+    explicit State(Shared::State& shared);
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -112,15 +119,28 @@ struct BaseLayer::State: AbstractVisualLayer::State {
        See AbstractVisualLayer::State::styleTransitionToDisabledUpdateStamp for
        discussion about when an update may get skipped by accident. */
     UnsignedShort styleUpdateStamp;
+    /* Used to distinguish between needing an update of the shared part of the
+       style (which is triggered by differing styleUpdateStamp) and the dynamic
+       part */
+    bool dynamicStyleChanged = false;
+
+    /* 3 bytes free */
 
     /* Used only if Flag::BackgroundBlur is enabled */
     UnsignedInt backgroundBlurPassCount = 1;
+
+    /* 0/4 bytes free */
 
     Containers::Array<Implementation::BaseLayerData> data;
     /* Is either Implementation::BaseLayerVertex or BaseLayerTexturedVertex
        based on whether texturing is enabled */
     Containers::Array<char> vertices;
     Containers::Array<UnsignedInt> indices;
+
+    /* Used only if shared.dynamicStyleCount is non-zero */
+    Containers::ArrayTuple dynamicStyleStorage;
+    Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms;
+    Containers::ArrayView<Vector4> dynamicStylePaddings;
 };
 
 }}

@@ -318,7 +318,10 @@ struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
 
     BaseShaderGL shader;
     /* The buffer is NoCreate'd at first to be able to detect whether
-       setStyle() was called at all */
+       setStyle() was called at all -- it's created in doSetStyle(). In case
+       dynamic styles are present, this buffer is unused and each layer has its
+       own copy instead. Detection of whether setStyle() was called is then
+       done by checking the styleUniforms array, which is empty at first. */
     GL::Buffer styleBuffer{NoCreate};
 
     /* These are created only if Flag::BackgroundBlur is enabled */
@@ -338,7 +341,7 @@ BaseLayerGL::Shared::State::State(Shared& self, const Configuration& configurati
     _c(NoRoundedCorners)|
     _c(NoOutline),
     #undef _c
-    configuration.styleUniformCount()}
+    configuration.styleUniformCount() + configuration.dynamicStyleCount()}
 {
     if(configuration.flags() & Flag::BackgroundBlur) {
         /** @todo when multiple compositing rects are implemented, this needs
@@ -386,7 +389,10 @@ BaseLayerGL::Shared& BaseLayerGL::Shared::setStyle(const BaseLayerCommonStyleUni
 }
 
 void BaseLayerGL::Shared::doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms) {
+    /* This function should get called only if the dynamic style count is 0 */
     auto& state = static_cast<State&>(*_state);
+    CORRADE_INTERNAL_ASSERT(state.dynamicStyleCount == 0);
+
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     if(!state.styleBuffer.id())
@@ -408,6 +414,12 @@ struct BaseLayerGL::State: BaseLayer::State {
        setTexture(GL::Texture2DArray&) was called, owning if
        setTexture(GL::Texture2DArray&&). */
     GL::Texture2DArray texture{NoCreate};
+
+    /* Used only if shared.dynamicStyleCount is non-zero, in which case it's
+       created during the first doUpdate(). Even though the size is known in
+       advance, the NoCreate'd state is used to correctly perform the first
+       ever style upload without having to implicitly set any LayerStates. */
+    GL::Buffer styleBuffer{NoCreate};
 };
 
 BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState._state))} {
@@ -482,8 +494,17 @@ void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize
 }
 
 void BaseLayerGL::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
-    BaseLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
     State& state = static_cast<State&>(*_state);
+    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
+
+    /* Check whether the shared styles changed before calling into the base
+       doUpdate() that syncs the stamps. For dynamic styles, if the style
+       changed, it should be accompanied by NeedsCommonDataUpdate being set in
+       order to be correctly handled below. */
+    const bool sharedStyleChanged = sharedState.styleUpdateStamp != state.styleUpdateStamp;
+    CORRADE_INTERNAL_ASSERT(!sharedState.dynamicStyleCount || (!sharedStyleChanged && !state.dynamicStyleChanged) || states >= LayerState::NeedsCommonDataUpdate);
+
+    BaseLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
 
     /* The branching here mirrors how BaseLayer::doUpdate() restricts the
        updates */
@@ -498,6 +519,25 @@ void BaseLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
        states >= LayerState::NeedsDataUpdate)
     {
         state.vertexBuffer.setData(state.vertices);
+    }
+
+    /* If we have dynamic styles and either NeedsCommonDataUpdate is set
+       (meaning either the static style or the dynamic style changed) or
+       they haven't been uploaded yet at all, upload them. */
+    if(sharedState.dynamicStyleCount && ((states >= LayerState::NeedsCommonDataUpdate) || !state.styleBuffer.id())) {
+        const bool needsFirstUpload = !state.styleBuffer.id();
+        if(needsFirstUpload) {
+            /** @todo check if DynamicDraw has any effect on perf */
+            state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*(sharedState.styleUniformCount + sharedState.dynamicStyleCount)}, GL::BufferUsage::DynamicDraw};
+        }
+        if(needsFirstUpload || sharedStyleChanged) {
+            state.styleBuffer.setSubData(0, {&sharedState.commonStyleUniform, 1});
+            state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform), sharedState.styleUniforms);
+        }
+        if(needsFirstUpload || state.dynamicStyleChanged) {
+            state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*sharedState.styleUniformCount, state.dynamicStyleUniforms);
+            state.dynamicStyleChanged = false;
+        }
     }
 }
 
@@ -536,12 +576,20 @@ void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
         "Whee::BaseLayerGL::draw(): user interface size wasn't set", );
 
     auto& sharedState = static_cast<Shared::State&>(state.shared);
-    CORRADE_ASSERT(sharedState.styleBuffer.id(),
+    /* With dynamic styles, Shared::setStyle() fills styleUniforms instead of
+       creating the styleBuffer */
+    CORRADE_ASSERT(
+        (!sharedState.dynamicStyleCount && sharedState.styleBuffer.id()) ||
+        (sharedState.dynamicStyleCount && !sharedState.styleUniforms.isEmpty()),
         "Whee::BaseLayerGL::draw(): no style data was set", );
     CORRADE_ASSERT(!(sharedState.flags & Shared::Flag::Textured) || state.texture.id(),
         "Whee::BaseLayerGL::draw(): no texture to draw with was set", );
 
-    sharedState.shader.bindStyleBuffer(sharedState.styleBuffer);
+    /* If there are dynamic styles, bind the layer-specific buffer that
+       contains them, otherwise bind the shared buffer */
+    sharedState.shader.bindStyleBuffer(sharedState.dynamicStyleCount ?
+        state.styleBuffer : sharedState.styleBuffer);
+
     if(sharedState.flags & Shared::Flag::Textured)
         sharedState.shader.bindTexture(state.texture);
     if(sharedState.flags & Shared::Flag::BackgroundBlur)

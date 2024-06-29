@@ -61,41 +61,46 @@ constexpr Vector2i FragmentBenchmarkSize{2048, 2048};
 
 const struct {
     const char* name;
+    UnsignedInt dynamicStyleCount;
     BaseLayerGL::Shared::Flags flags;
 } VertexData[]{
-    {"default", {}},
-    {"no rounded corners",
+    {"default", 0, {}},
+    {"default, dynamic styles", 1, {}},
+    {"no rounded corners", 0,
         BaseLayerGL::Shared::Flag::NoRoundedCorners},
-    {"no outline",
+    {"no outline", 0,
         BaseLayerGL::Shared::Flag::NoOutline},
-    {"no rounded corners or outline",
+    {"no rounded corners or outline", 0,
         BaseLayerGL::Shared::Flag::NoRoundedCorners|
         BaseLayerGL::Shared::Flag::NoOutline},
 };
 
 const struct {
     const char* name;
+    UnsignedInt dynamicStyleCount;
     Float cornerRadius, outlineWidth;
     BaseLayerGL::Shared::Flags flags;
 } FragmentData[]{
     {"default",
-        0.0f, 0.0f, {}},
+        0, 0.0f, 0.0f, {}},
+    {"default, dynamic styles",
+        1, 0.0f, 0.0f, {}},
     {"no rounded corners",
-        0.0f, 0.0f,
+        0, 0.0f, 0.0f,
         BaseLayerGL::Shared::Flag::NoRoundedCorners},
     {"no outline",
-        0.0f, 0.0f,
+        0, 0.0f, 0.0f,
         BaseLayerGL::Shared::Flag::NoOutline},
     {"no rounded corners or outline",
-        0.0f, 0.0f,
+        0, 0.0f, 0.0f,
         BaseLayerGL::Shared::Flag::NoRoundedCorners|
         BaseLayerGL::Shared::Flag::NoOutline},
     {"just rounded corners",
-        FragmentBenchmarkSize.x()*0.5f, 0.0f, {}},
+        0, FragmentBenchmarkSize.x()*0.5f, 0.0f, {}},
     {"just outline",
-        0.0f, FragmentBenchmarkSize.x()*0.5f, {}},
+        0, 0.0f, FragmentBenchmarkSize.x()*0.5f, {}},
     {"just rounded corners and outline",
-        FragmentBenchmarkSize.x()*0.5f, FragmentBenchmarkSize.x()*0.5f, {}},
+        0, FragmentBenchmarkSize.x()*0.5f, FragmentBenchmarkSize.x()*0.5f, {}},
 };
 
 BaseLayerGLBenchmark::BaseLayerGLBenchmark() {
@@ -164,6 +169,7 @@ void BaseLayerGLBenchmark::vertex() {
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}
+        .setDynamicStyleCount(data.dynamicStyleCount)
         .setFlags(data.flags)
     };
     shared.setStyle(BaseLayerCommonStyleUniform{}, {
@@ -210,6 +216,7 @@ void BaseLayerGLBenchmark::fragment() {
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}
+        .setDynamicStyleCount(data.dynamicStyleCount)
         .setFlags(data.flags)
     };
     shared.setStyle(BaseLayerCommonStyleUniform{}, {

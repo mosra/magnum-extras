@@ -434,13 +434,57 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         BaseLayer& setBackgroundBlurPassCount(UnsignedInt count);
 
         /**
+         * @brief Dynamic style uniforms
+         *
+         * Size of the returned view is @ref Shared::dynamicStyleCount(). These
+         * uniforms are used by style indices greater than or equal to
+         * @ref Shared::styleCount().
+         * @see @ref dynamicStylePaddings(), @ref setDynamicStyle()
+         */
+        Containers::ArrayView<const BaseLayerStyleUniform> dynamicStyleUniforms() const;
+
+        /**
+         * @brief Dynamic style paddings
+         *
+         * Size of the returned view is @ref Shared::dynamicStyleCount(). These
+         * paddings are used by style indices greater than or equal to
+         * @ref Shared::styleCount().
+         * @see @ref dynamicStyleUniforms(), @ref setDynamicStyle()
+         */
+        Containers::StridedArrayView1D<const Vector4> dynamicStylePaddings() const;
+
+        /**
+         * @brief Set a dynamic style
+         * @param id                Dynamic style ID
+         * @param uniform           Style uniform
+         * @param padding           Padding inside the node in order left, top,
+         *      right, bottom
+         *
+         * Expects that the @p id is less than @ref Shared::dynamicStyleCount().
+         * @ref Shared::styleCount() plus @p id is then a style index that can
+         * be passed to @ref create() or @ref setStyle() in order to use this
+         * style. Compared to @ref Shared::setStyle() the mapping between
+         * dynamic styles and uniforms is implicit. All dynamic styles are
+         * initially default-constructed @ref BaseLayerStyleUniform instances
+         * and zero padding vectors.
+         *
+         * Calling this function causes @ref LayerState::NeedsCommonDataUpdate
+         * to be set to trigger an upload of changed dynamic style uniform
+         * data. If @p padding changed, @ref LayerState::NeedsDataUpdate gets
+         * set as well.
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStylePaddings(),
+         *      @ref allocateDynamicStyle(), @ref recycleDynamicStyle()
+         */
+        void setDynamicStyle(UnsignedInt id, const BaseLayerStyleUniform& uniform, const Vector4& padding);
+
+        /**
          * @brief Create a quad
          * @param style         Style index
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p style is less than @ref Shared::styleCount(). All
-         * styling is driven from the @ref BaseLayerStyleUniform at index
+         * Expects that @p style is less than @ref Shared::totalStyleCount().
+         * All styling is driven from the @ref BaseLayerStyleUniform at index
          * @p style. Use @ref create(UnsignedInt, const Color3&, NodeHandle) or
          * @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
          * for creating a quad with a custom color and outline width. This
@@ -484,7 +528,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p style is less than @ref Shared::styleCount().
+         * Expects that @p style is less than @ref Shared::totalStyleCount().
          * Styling is driven from the @ref BaseLayerStyleUniform at index
          * @p style, in addition @ref BaseLayerStyleUniform::topColor and
          * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
@@ -533,7 +577,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @param node          Node to attach to
          * @return New data handle
          *
-         * Expects that @p style is less than @ref Shared::styleCount().
+         * Expects that @p style is less than @ref Shared::totalStyleCount().
          * Styling is driven from the @ref BaseLayerStyleUniform at index
          * @p style, in addition @ref BaseLayerStyleUniform::topColor and
          * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
@@ -979,8 +1023,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         /**
          * @brief Style uniform count
          *
-         * Size of the style uniform buffer. May or may not be the same as
-         * @ref styleCount().
+         * Size of the style uniform buffer excluding dynamic styles. May or
+         * may not be the same as @ref styleCount(). For dynamic styles, the
+         * style uniform count is the same as @ref dynamicStyleCount().
          * @see @ref Configuration::Configuration(UnsignedInt, UnsignedInt),
          *      @ref setStyle()
          */
@@ -1011,6 +1056,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set on all layers that are constructed using this shared instance.
+         * If @ref dynamicStyleCount() is non-zero,
+         * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
+         * upload of changed dynamic style uniform data.
          */
         Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
@@ -1040,6 +1088,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set on all layers that are constructed using this shared instance.
+         * If @ref dynamicStyleCount() is non-zero,
+         * @ref LayerState::NeedsCommonDataUpdate is set as well to trigger an
+         * upload of changed dynamic style uniform data.
          */
         Shared& setStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
         /** @overload */
@@ -1068,7 +1119,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         MAGNUM_WHEE_LOCAL void setStyleInternal(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> styleUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
 
         /* The items are guaranteed to have the same size as
-           styleUniformCount() */
+           styleUniformCount(). Called only if there are no dynamic styles,
+           otherwise the data are copied to internal arrays to be subsequently
+           combined with dynamic uniforms and uploaded together in doDraw(). */
         virtual void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) = 0;
 };
 
@@ -1099,9 +1152,12 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
          * The @p styleUniformCount parameter specifies the size of the uniform
          * array, @p styleCount then the number of distinct styles to use for
          * drawing. The sizes are independent in order to allow styles with
-         * different paddings share the same uniform data. Both
-         * @p styleUniformCount and @p styleCount is expected to be non-zero.
-         * Style data are then set with @ref setStyle().
+         * different paddings share the same uniform data. Either both
+         * @p styleUniformCount and @p styleCount is expected to be non-zero,
+         * or both zero with a non-zero dynamic style count specified with
+         * @ref setDynamicStyleCount(). Style data are then set with
+         * @ref setStyle(), dynamic style data then with
+         * @ref BaseLayer::setDynamicStyle().
          */
         explicit Configuration(UnsignedInt styleUniformCount, UnsignedInt styleCount);
 
@@ -1118,6 +1174,24 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
 
         /** @brief Style count */
         UnsignedInt styleCount() const { return _styleCount; }
+
+        /** @brief Dynamic style count */
+        UnsignedInt dynamicStyleCount() const { return _dynamicStyleCount; }
+
+        /**
+         * @brief Set dynamic style count
+         * @return Reference to self (for method chaining)
+         *
+         * Initial count is @cpp 0 @ce.
+         * @see @ref Configuration(UnsignedInt, UnsignedInt),
+         *      @ref AbstractVisualLayer::allocateDynamicStyle(),
+         *      @ref AbstractVisualLayer::recycleDynamicStyle(),
+         *      @ref AbstractVisualLayer::dynamicStyleUsedCount()
+         */
+        Configuration& setDynamicStyleCount(UnsignedInt count) {
+            _dynamicStyleCount = count;
+            return *this;
+        }
 
         /** @brief Flags */
         Flags flags() const { return _flags; }
@@ -1195,6 +1269,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
 
     private:
         UnsignedInt _styleUniformCount, _styleCount;
+        UnsignedInt _dynamicStyleCount = 0;
         Flags _flags;
         UnsignedInt _backgroundBlurRadius = 4;
         Float _backgroundBlurCutoff = 0.5f/255.0f;
