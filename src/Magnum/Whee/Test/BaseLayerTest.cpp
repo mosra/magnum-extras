@@ -147,8 +147,8 @@ const struct {
 };
 
 const struct {
-    const char* name;
-    bool emptyUpdate, textured;
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    bool emptyUpdate, textured, subdivided;
     UnsignedInt styleCount, dynamicStyleCount;
     UnsignedInt backgroundBlurRadius, backgroundBlurPassCount;
     Float smoothness;
@@ -159,94 +159,156 @@ const struct {
     LayerStates states;
     bool expectIndexDataUpdated, expectVertexDataUpdated, expectCompositingDataUpdated;
 } UpdateDataOrderData[]{
-    {"empty update", true, false, 5, 0, 0, 0, 0.0f,
+    {"empty update",
+        true, false, false, 5, 0, 0, 0, 0.0f,
         {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"empty update, textured", true, true, 5, 0, 0, 0, 0.0f,
+    {"empty update, textured",
+        true, true, false, 5, 0, 0, 0, 0.0f,
         {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"empty update, background blur", true, true, 5, 0, 16, 1, 0.0f,
+    {"empty update, subdivided",
+        true, false, true, 5, 0, 0, 0, 0.0f,
         {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"", false, false, 5, 0, 0, 0, 0.0f,
+    {"empty update, background blur",
+        true, true, false, 5, 0, 16, 1, 0.0f,
+        {}, {}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"",
+        false, false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"smoothness expansion", false, false, 5, 0, 0, 0, 10.0f,
+    {"smoothness expansion",
+        false, false, false, 5, 0, 0, 0, 10.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"textured", false, true, 5, 0, 0, 0, 0.0f,
+    {"textured",
+        false, true, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"textured, smoothness expansion", false, true, 5, 0, 0, 0, 10.0f,
+    {"textured, smoothness expansion",
+        false, true, false, 5, 0, 0, 0, 10.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"node offset/size update only", false, false, 5, 0, 0, 0, 0.0f,
+    {"subdivided",
+        false, false, true, 5, 0, 0, 0, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"subdivided, (no) smoothness expansion",
+        false, false, true, 5, 0, 0, 0, 10.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"textured + subdivided",
+        false, true, true, 5, 0, 0, 0, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"textured + subdivided, (no) smoothness expansion",
+        false, true, true, 5, 0, 0, 0, 10.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"node offset/size update only",
+        false, false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true, false},
-    {"node order update only", false, false, 5, 0, 0, 0, 0.0f,
+    {"node offset/size update only, subdivided",
+        false, false, true, 5, 0, 0, 0, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsNodeOffsetSizeUpdate, false, true, false},
+    {"node order update only",
+        false, false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOrderUpdate, true, false, false},
-    {"node enabled update only", false, false, 5, 0, 0, 0, 0.0f,
+    {"node order update only, subdivided",
+        false, false, true, 5, 0, 0, 0, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsNodeOrderUpdate, true, false, false},
+    {"node enabled update only",
+        false, false, false, 5, 0, 0, 0, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsNodeEnabledUpdate, false, true, false},
+    {"node enabled update only, subdivided",
+        false, false, true, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeEnabledUpdate, false, true, false},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
-    {"shared data update only", false, false, 5, 0, 0, 0, 0.0f,
+    {"shared data update only",
+        false, false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsSharedDataUpdate, false, false, false},
-    {"common data update only", false, false, 5, 0, 0, 0, 0.0f,
+    {"common data update only",
+        false, false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsCommonDataUpdate, false, false, false},
     /* This would cause an update of the dynamic style data in derived classes
        if appropriate internal flags would be set internally, but in the base
        class it's nothing */
-    {"common data update only, dynamic styles", false, false, 2, 3, 0, 0, 0.0f,
+    {"common data update only, dynamic styles",
+        false, false, false, 2, 3, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsCommonDataUpdate, false, false, false},
-    {"padding from style", false, false, 5, 0, 0, 0, 0.0f,
+    {"padding from style",
+        false, false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"padding from data", false, false, 5, 0, 0, 0, 0.0f,
+    {"padding from data",
+        false, false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {}, {2.0f, 0.5f, 1.0f, 1.5f}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"padding from both style and data", false, false, 5, 0, 0, 0, 0.0f,
+    {"padding from both style and data",
+        false, false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"unused dynamic styles", false, false, 5, 17, 0, 0, 0.0f,
+    {"unused dynamic styles",
+        false, false, false, 5, 17, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles", false, false, 2, 3, 0, 0, 0.0f,
+    {"dynamic styles",
+        false, false, false, 2, 3, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles, padding from dynamic style", false, false, 2, 3, 0, 0, 0.0f,
+    {"dynamic styles, padding from dynamic style",
+        false, false, false, 2, 3, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles, padding from both dynamic style and data", false, false, 2, 3, 0, 0, 0.0f,
+    {"dynamic styles, padding from both dynamic style and data",
+        false, false, false, 2, 3, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         LayerState::NeedsDataUpdate, true, true, false},
     /* This one should result in no extra padding in composite rects */
-    {"background blur with zero radius", false, false, 5, 0, 0, 1, 0.0f,
+    {"background blur with zero radius",
+        false, false, false, 5, 0, 0, 1, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
+    /* It should be done independently of what other features are enabled */
+    {"background blur with zero radius, textured + subdivided",
+        false, true, true, 5, 0, 0, 1, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     /* These two should result in the same padding; total radius is 36 and UI
        size is {250, 5000}. The compositing rects are in the normalized [-1,
        +1] range, so additionally times 2. */
-    {"background blur with radius 9 and 16 passes", false, false, 5, 0, 9, 16, 0.0f,
+    {"background blur with radius 9 and 16 passes",
+        false, false, false, 5, 0, 9, 16, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {72.0f/250.0f, 72.0f/5000.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
-    {"background blur with radius 9 and 16 passes, smoothness expansion", false, false, 5, 0, 9, 16, 10.0f,
+    {"background blur with radius 9 and 16 passes, smoothness expansion",
+        false, false, false, 5, 0, 9, 16, 10.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
         {2*(36.0f + 10)/250.0f, 2*(36.0f + 10)/5000.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
-    {"background blur with radius 18 and 4 passes", false, false, 5, 0, 18, 4, 0.0f,
+    {"background blur with radius 18 and 4 passes",
+        false, false, false, 5, 0, 18, 4, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {72.0f/250.0f, 72.0f/5000.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
-    {"background blur with radius 18 and 4 passes, composite offset/size update only", false, false, 5, 0, 18, 4, 0.0f,
+    {"background blur with radius 18 and 4 passes, composite offset/size update only",
+        false, false, false, 5, 0, 18, 4, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {72.0f/250.0f, 72.0f/5000.0f},
         LayerState::NeedsCompositeOffsetSizeUpdate, false, false, true},
 };
@@ -742,8 +804,8 @@ void BaseLayerTest::sharedDebugFlag() {
 
 void BaseLayerTest::sharedDebugFlags() {
     std::ostringstream out;
-    Debug{&out} << (BaseLayer::Shared::Flag::BackgroundBlur|BaseLayer::Shared::Flag(0xb0)) << BaseLayer::Shared::Flags{};
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::Flag::BackgroundBlur|Whee::BaseLayer::Shared::Flag(0xb0) Whee::BaseLayer::Shared::Flags{}\n");
+    Debug{&out} << (BaseLayer::Shared::Flag::BackgroundBlur|BaseLayer::Shared::Flag(0x80)) << BaseLayer::Shared::Flags{};
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::Flag::BackgroundBlur|Whee::BaseLayer::Shared::Flag(0x80) Whee::BaseLayer::Shared::Flags{}\n");
 }
 
 void BaseLayerTest::sharedDebugFlagSupersets() {
@@ -1939,6 +2001,8 @@ void BaseLayerTest::updateDataOrder() {
     BaseLayer::Shared::Configuration configuration{4, data.styleCount};
     if(data.textured)
         configuration.addFlags(BaseLayer::Shared::Flag::Textured);
+    if(data.subdivided)
+        configuration.addFlags(BaseLayer::Shared::Flag::SubdividedQuads);
     if(data.backgroundBlurPassCount)
         configuration
             .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
@@ -2087,7 +2151,9 @@ void BaseLayerTest::updateDataOrder() {
     if(!data.expectIndexDataUpdated && !data.expectVertexDataUpdated && !data.backgroundBlurPassCount)
         CORRADE_VERIFY(true);
 
-    if(data.expectIndexDataUpdated) {
+    /* Each data is a single quad if subdivision isn't enabled. Flattening the
+       logic to avoid excessive indentation. */
+    if(!data.subdivided && data.expectIndexDataUpdated) {
         /* The indices should be filled just for the three items */
         CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
             9*4 + 0, 9*4 + 2, 9*4 + 1, 9*4 + 2, 9*4 + 3, 9*4 + 1, /* quad 9 */
@@ -2096,7 +2162,7 @@ void BaseLayerTest::updateDataOrder() {
         }), TestSuite::Compare::Container);
     }
 
-    if(data.expectVertexDataUpdated) {
+    if(!data.subdivided && data.expectVertexDataUpdated) {
         /* Depending on whether texturing is enabled the vertex data contain a
            different type. Make a view on the common type prefix. */
         std::size_t typeSize = data.textured ?
@@ -2113,6 +2179,8 @@ void BaseLayerTest::updateDataOrder() {
            filled */
         for(std::size_t i = 0; i != 4; ++i) {
             CORRADE_ITERATION(i);
+
+            /* Quad 3 */
             CORRADE_COMPARE(vertices[3*4 + i].color, 0xff3366_rgbf);
             CORRADE_COMPARE(vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
             /* Created with style 4, which if not dynamic is transitioned to 2
@@ -2125,11 +2193,13 @@ void BaseLayerTest::updateDataOrder() {
                 CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 6);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
+            /* Quad 7 */
             CORRADE_COMPARE(vertices[7*4 + i].color, 0x112233_rgbf);
             CORRADE_COMPARE(vertices[7*4 + i].outlineWidth, Vector4{2.0f});
             /* Created with style 1, which is mapped to uniform 2 */
             CORRADE_COMPARE(vertices[7*4 + i].styleUniform, 2);
 
+            /* Quad 9 */
             CORRADE_COMPARE(vertices[9*4 + i].color, 0x663399_rgbf);
             CORRADE_COMPARE(vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
             /* Created with style 3, which if not dynamic is mapped to uniform
@@ -2220,6 +2290,186 @@ void BaseLayerTest::updateDataOrder() {
         }
     }
 
+    /* Subdivided quads have much more data. Again flattening the logic to
+       avoid excessive indentation. */
+    if(data.subdivided && data.expectIndexDataUpdated) {
+        /* The (54 instead of 6 per quad) indices should be filled just for the
+           three items */
+        CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
+            /* Quad 9 */
+            9*16 +  0, 9*16 +  2, 9*16 +  1, 9*16 +  2, 9*16 +  3, 9*16 +  1,
+            9*16 +  1, 9*16 +  3, 9*16 +  5, 9*16 +  3, 9*16 +  7, 9*16 +  5,
+            9*16 +  5, 9*16 +  7, 9*16 +  4, 9*16 +  7, 9*16 +  6, 9*16 +  4,
+            9*16 +  2, 9*16 + 10, 9*16 +  3, 9*16 + 10, 9*16 + 11, 9*16 +  3,
+            9*16 +  3, 9*16 + 11, 9*16 +  7, 9*16 + 11, 9*16 + 15, 9*16 +  7,
+            9*16 +  7, 9*16 + 15, 9*16 +  6, 9*16 + 15, 9*16 + 14, 9*16 +  6,
+            9*16 + 10, 9*16 +  8, 9*16 + 11, 9*16 +  8, 9*16 +  9, 9*16 + 11,
+            9*16 + 11, 9*16 +  9, 9*16 + 15, 9*16 +  9, 9*16 + 13, 9*16 + 15,
+            9*16 + 15, 9*16 + 13, 9*16 + 14, 9*16 + 13, 9*16 + 12, 9*16 + 14,
+
+            /* Quad 7 */
+            7*16 +  0, 7*16 +  2, 7*16 +  1, 7*16 +  2, 7*16 +  3, 7*16 +  1,
+            7*16 +  1, 7*16 +  3, 7*16 +  5, 7*16 +  3, 7*16 +  7, 7*16 +  5,
+            7*16 +  5, 7*16 +  7, 7*16 +  4, 7*16 +  7, 7*16 +  6, 7*16 +  4,
+            7*16 +  2, 7*16 + 10, 7*16 +  3, 7*16 + 10, 7*16 + 11, 7*16 +  3,
+            7*16 +  3, 7*16 + 11, 7*16 +  7, 7*16 + 11, 7*16 + 15, 7*16 +  7,
+            7*16 +  7, 7*16 + 15, 7*16 +  6, 7*16 + 15, 7*16 + 14, 7*16 +  6,
+            7*16 + 10, 7*16 +  8, 7*16 + 11, 7*16 +  8, 7*16 +  9, 7*16 + 11,
+            7*16 + 11, 7*16 +  9, 7*16 + 15, 7*16 +  9, 7*16 + 13, 7*16 + 15,
+            7*16 + 15, 7*16 + 13, 7*16 + 14, 7*16 + 13, 7*16 + 12, 7*16 + 14,
+
+            /* Quad 3 */
+            3*16 +  0, 3*16 +  2, 3*16 +  1, 3*16 +  2, 3*16 +  3, 3*16 +  1,
+            3*16 +  1, 3*16 +  3, 3*16 +  5, 3*16 +  3, 3*16 +  7, 3*16 +  5,
+            3*16 +  5, 3*16 +  7, 3*16 +  4, 3*16 +  7, 3*16 +  6, 3*16 +  4,
+            3*16 +  2, 3*16 + 10, 3*16 +  3, 3*16 + 10, 3*16 + 11, 3*16 +  3,
+            3*16 +  3, 3*16 + 11, 3*16 +  7, 3*16 + 11, 3*16 + 15, 3*16 +  7,
+            3*16 +  7, 3*16 + 15, 3*16 +  6, 3*16 + 15, 3*16 + 14, 3*16 +  6,
+            3*16 + 10, 3*16 +  8, 3*16 + 11, 3*16 +  8, 3*16 +  9, 3*16 + 11,
+            3*16 + 11, 3*16 +  9, 3*16 + 15, 3*16 +  9, 3*16 + 13, 3*16 + 15,
+            3*16 + 15, 3*16 + 13, 3*16 + 14, 3*16 + 13, 3*16 + 12, 3*16 + 14,
+        }), TestSuite::Compare::Container);
+    }
+
+    if(data.subdivided && data.expectVertexDataUpdated) {
+        /* Depending on whether texturing is enabled the vertex data contain a
+           different type. Make a view on the common type prefix. */
+        std::size_t typeSize = data.textured ?
+            sizeof(Implementation::BaseLayerSubdividedTexturedVertex) :
+            sizeof(Implementation::BaseLayerSubdividedVertex);
+        Containers::StridedArrayView1D<const Implementation::BaseLayerSubdividedVertex> vertices{
+            layer.stateData().vertices,
+            reinterpret_cast<const Implementation::BaseLayerSubdividedVertex*>(layer.stateData().vertices.data()),
+            layer.stateData().vertices.size()/typeSize,
+            std::ptrdiff_t(typeSize)};
+        CORRADE_COMPARE(vertices.size(), 10*16);
+
+        /* The vertices are there for all data, but only the actually used are
+           filled */
+        for(std::size_t i = 0; i != 16; ++i) {
+            CORRADE_ITERATION(i);
+
+            /* Quad 3 */
+            CORRADE_COMPARE(vertices[3*16 + i].color, 0xff3366_rgbf);
+            /* Created with style 4, which if not dynamic is transitioned to 2
+               as the node is disabled, which is mapped to uniform 0. If
+               dynamic, it's implicitly `uniformCount + (id - styleCount)`,
+               thus 5. */
+            if(data.styleCount == 5)
+                CORRADE_COMPARE(vertices[3*16 + i].styleUniform, 0);
+            else if(data.styleCount == 2)
+                CORRADE_COMPARE(vertices[3*16 + i].styleUniform, 5);
+            else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
+            /* Quad 7 */
+            CORRADE_COMPARE(vertices[7*16 + i].color, 0x112233_rgbf);
+            /* Created with style 1, which is mapped to uniform 2 */
+            CORRADE_COMPARE(vertices[7*16 + i].styleUniform, 2);
+
+            /* Quad 9 */
+            CORRADE_COMPARE(vertices[9*16 + i].color, 0x663399_rgbf);
+            /* Created with style 3, which if not dynamic is mapped to uniform
+               1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
+               thus 4. */
+            if(data.styleCount == 5)
+                CORRADE_COMPARE(vertices[9*16 + i].styleUniform, 1);
+            else if(data.styleCount == 2)
+                CORRADE_COMPARE(vertices[9*16 + i].styleUniform, 4);
+            else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }
+
+        /* Outline width is just two values instead of four, matching given
+           corner */
+        for(std::size_t i = 0; i != 4; ++i) {
+            CORRADE_ITERATION(i);
+
+            /* Quad 3. Left top, right top, left bottom, right bottom. */
+            CORRADE_COMPARE(vertices[3*16 +  0 + i].outlineWidth, (Vector2{1.0f, 2.0f}));
+            CORRADE_COMPARE(vertices[3*16 +  4 + i].outlineWidth, (Vector2{3.0f, 2.0f}));
+            CORRADE_COMPARE(vertices[3*16 +  8 + i].outlineWidth, (Vector2{1.0f, 4.0f}));
+            CORRADE_COMPARE(vertices[3*16 + 12 + i].outlineWidth, (Vector2{3.0f, 4.0f}));
+
+            /* Quad 7. All corners the same. */
+            for(std::size_t j = 0; j != 16; j += 4)
+                CORRADE_COMPARE(vertices[7*16 + j + i].outlineWidth, (Vector2{2.0f}));
+
+            /* Quad 9. Left top, right top, left bottom, right bottom. */
+            CORRADE_COMPARE(vertices[9*16 +  0 + i].outlineWidth, (Vector2{3.0f, 2.0f}));
+            CORRADE_COMPARE(vertices[9*16 +  4 + i].outlineWidth, (Vector2{1.0f, 2.0f}));
+            CORRADE_COMPARE(vertices[9*16 +  8 + i].outlineWidth, (Vector2{3.0f, 4.0f}));
+            CORRADE_COMPARE(vertices[9*16 + 12 + i].outlineWidth, (Vector2{1.0f, 4.0f}));
+        }
+
+        Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::BaseLayerSubdividedVertex::position);
+        Containers::StridedArrayView1D<const Vector2> centerDistances = vertices.slice(&Implementation::BaseLayerSubdividedVertex::centerDistance);
+
+        /* Data 3 is attached to node 6. Each group of four vertices has the
+           same values, expansion is done in the vertex shader. */
+        CORRADE_COMPARE_AS(positions.sliceSize(3*16, 16), Containers::arrayView<Vector2>({
+            { 1.0f,  2.0f}, { 1.0f,  2.0f}, { 1.0f,  2.0f}, { 1.0f,  2.0f},
+            {11.0f,  2.0f}, {11.0f,  2.0f}, {11.0f,  2.0f}, {11.0f,  2.0f},
+            { 1.0f, 17.0f}, { 1.0f, 17.0f}, { 1.0f, 17.0f}, { 1.0f, 17.0f},
+            {11.0f, 17.0f}, {11.0f, 17.0f}, {11.0f, 17.0f}, {11.0f, 17.0f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(centerDistances.sliceSize(3*16, 16), Containers::arrayView<Vector2>({
+            {-5.0f, -7.5f}, {-5.0f, -7.5f}, {-5.0f, -7.5f}, {-5.0f, -7.5f},
+            { 5.0f, -7.5f}, { 5.0f, -7.5f}, { 5.0f, -7.5f}, { 5.0f, -7.5f},
+            {-5.0f,  7.5f}, {-5.0f,  7.5f}, {-5.0f,  7.5f}, {-5.0f,  7.5f},
+            { 5.0f,  7.5f}, { 5.0f,  7.5f}, { 5.0f,  7.5f}, { 5.0f,  7.5f},
+        }), TestSuite::Compare::Container);
+
+        /* Data 7 and 9 are both attached to node 15. Again each group of four
+           has the same values. */
+        for(std::size_t i: {7, 9}) {
+            CORRADE_COMPARE_AS(positions.sliceSize(i*16, 16), Containers::arrayView<Vector2>({
+                { 3.0f, 4.0f}, { 3.0f, 4.0f}, { 3.0f, 4.0f}, { 3.0f, 4.0f},
+                {23.0f, 4.0f}, {23.0f, 4.0f}, {23.0f, 4.0f}, {23.0f, 4.0f},
+                { 3.0f, 9.0f}, { 3.0f, 9.0f}, { 3.0f, 9.0f}, { 3.0f, 9.0f},
+                {23.0f, 9.0f}, {23.0f, 9.0f}, {23.0f, 9.0f}, {23.0f, 9.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(centerDistances.sliceSize(i*16, 16), Containers::arrayView<Vector2>({
+                {-10.0f, -2.5f}, {-10.0f, -2.5f}, {-10.0f, -2.5f}, {-10.0f, -2.5f},
+                { 10.0f, -2.5f}, { 10.0f, -2.5f}, { 10.0f, -2.5f}, { 10.0f, -2.5f},
+                {-10.0f,  2.5f}, {-10.0f,  2.5f}, {-10.0f,  2.5f}, {-10.0f,  2.5f},
+                { 10.0f,  2.5f}, { 10.0f,  2.5f}, { 10.0f,  2.5f}, { 10.0f,  2.5f},
+            }), TestSuite::Compare::Container);
+        }
+
+        /* If textured, data 7 has texture coordinates set, the other two have
+           the default. Again each group of four has the same values and
+           expansion is done in the vertex shader. */
+        if(data.textured) {
+            Containers::StridedArrayView1D<const Vector3> textureCoordinates = Containers::arrayCast<const Implementation::BaseLayerSubdividedTexturedVertex>(vertices).slice(&Implementation::BaseLayerSubdividedTexturedVertex::textureCoordinates);
+
+            CORRADE_COMPARE_AS(textureCoordinates.sliceSize(7*16, 16), Containers::arrayView<Vector3>({
+                {0.25f, 0.625f, 37.0f}, {0.25f, 0.625f, 37.0f},
+                    {0.25f, 0.625f, 37.0f}, {0.25f, 0.625f, 37.0f},
+                {0.75f, 0.625f, 37.0f}, {0.75f, 0.625f, 37.0f},
+                    {0.75f, 0.625f, 37.0f}, {0.75f, 0.625f, 37.0f},
+                {0.25f, 0.5f, 37.0f}, {0.25f, 0.5f, 37.0f},
+                    {0.25f, 0.5f, 37.0f}, {0.25f, 0.5f, 37.0f},
+                {0.75f, 0.5f, 37.0f}, {0.75f, 0.5f, 37.0f},
+                    {0.75f, 0.5f, 37.0f}, {0.75f, 0.5f, 37.0f},
+            }), TestSuite::Compare::Container);
+
+            for(std::size_t i: {3, 9}) {
+                CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*16, 16), Containers::arrayView<Vector3>({
+                    {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
+                        {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f},
+                    {1.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f},
+                        {1.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f},
+                    {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f},
+                        {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f},
+                    {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
+                        {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
+                }), TestSuite::Compare::Container);
+            }
+        }
+    }
+
+    /* If background blur is enabled, the update function fills in also the
+       composite node rects. This is (obviously) independent of quad
+       subdivision as they're rendered in doComposite(), not doDraw(). */
     if(data.expectCompositingDataUpdated) {
         CORRADE_COMPARE_AS(layer.stateData().backgroundBlurVertices, Containers::arrayView({
             /* Rect from {15, 20} to {25, 35} in a UI of size {25, 50}; Y up,
