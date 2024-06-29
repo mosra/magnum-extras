@@ -35,6 +35,7 @@
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/Algorithms.h>
+#include <Corrade/Utility/FormatStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Math/Range.h>
@@ -73,6 +74,10 @@ struct TextLayerTest: TestSuite::Tester {
     void fontHandle();
     void fontHandleInvalid();
     void debugFontHandle();
+
+    void debugDataFlag();
+    void debugDataFlags();
+    void debugEdit();
 
     void sharedConfigurationConstruct();
     void sharedConfigurationConstructSameStyleUniformCount();
@@ -126,13 +131,23 @@ struct TextLayerTest: TestSuite::Tester {
     void createRemoveHandleRecycle();
     void createNoStyleSet();
 
+    void setCursor();
+    void setCursorInvalid();
+    void updateText();
+    void updateTextInvalid();
+    void editText();
+    void editTextInvalid();
+
     void createSetTextTextProperties();
+    void createSetTextTextPropertiesEditable();
+    void createSetTextTextPropertiesEditableInvalid();
 
     void setColor();
     void setPadding();
 
     void invalidHandle();
     void invalidFontHandle();
+    void nonEditableText();
     void noSharedStyleFonts();
     void noFontInstance();
     void styleOutOfRange();
@@ -268,34 +283,52 @@ const struct {
     LayerStates state;
     bool layerDataHandleOverloads, customFont, customAlignment, nullStyleFonts;
     UnsignedInt styleCount, dynamicStyleCount;
+    Containers::Optional<TextDataFlags> flags;
 } CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0},
+        false, false, false, false, 3, 0, {}},
     {"create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 3, 0},
+        false, false, false, false, 3, 0, {}},
     {"LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, false, false, false, 3, 0},
+        true, false, false, false, 3, 0, {}},
     {"custom fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, false, 3, 0},
+        false, true, false, false, 3, 0, {}},
     {"custom fonts, null style fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, true, 3, 0},
+        false, true, false, true, 3, 0, {}},
     {"custom fonts, LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, true, false, false, 3, 0},
+        true, true, false, false, 3, 0, {}},
     {"custom alignment",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, true, false, 3, 0},
+        false, false, true, false, 3, 0, {}},
     {"dynamic styles",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false, 1, 2},
+        false, false, false, false, 1, 2, {}},
     {"dynamic styles, custom alignment",
         NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
-        false, false, true, false, 1, 2},
+        false, false, true, false, 1, 2, {}},
+    {"editable",
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        false, false, false, false, 3, 0, ~~TextDataFlag::Editable},
+    {"editable, create and attach",
+        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
+        false, false, false, false, 3, 0, ~~TextDataFlag::Editable},
+    {"editable, LayerDataHandle overloads",
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
+        true, false, false, false, 3, 0, ~~TextDataFlag::Editable},
+};
+
+const struct {
+    const char* name;
+    TextDataFlags flags;
+} CreateRemoveHandleRecycleData[]{
+    {"", {}},
+    {"editable", TextDataFlag::Editable}
 };
 
 const struct {
@@ -312,6 +345,201 @@ const struct {
 } CreateSetTextTextPropertiesData[]{
     {"", 3, 0},
     {"dynamic styles", 1, 2},
+};
+
+const struct {
+    const char* name;
+    TextProperties properties;
+    const char* expected;
+} CreateSetTextTextPropertiesEditableInvalidData[]{
+    {"features",
+        TextProperties{}
+            .setFeatures({Text::Feature::SmallCapitals}),
+        "passing font features for an editable text is not implemented yet, sorry"},
+    {"top to bottom",
+        TextProperties{}
+            .setShapeDirection(Text::ShapeDirection::TopToBottom),
+        "vertical shape direction for an editable text is not implemented yet, sorry"},
+    {"bottom to top",
+        TextProperties{}
+            .setShapeDirection(Text::ShapeDirection::BottomToTop),
+        "vertical shape direction for an editable text is not implemented yet, sorry"},
+};
+
+const struct {
+    const char* name;
+    Text::ShapeDirection shapeDirection;
+    const char* text;
+    UnsignedInt cursor;
+    TextEdit edit;
+    const char* insert;
+    const char* expected;
+    UnsignedInt expectedCursor;
+    LayerStates expectedState;
+} EditData[]{
+    {"move cursor left, direction unspecified",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, TextEdit::MoveCursorLeft, "",
+        "hello", 2, LayerState::NeedsDataUpdate},
+    {"move cursor left, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 3, TextEdit::MoveCursorLeft, "",
+        "hello", 4, LayerState::NeedsDataUpdate},
+    {"move cursor left, UTF-8, LTR",
+        Text::ShapeDirection::LeftToRight,
+        "běhnu", 3, TextEdit::MoveCursorLeft, "",
+        "běhnu", 1, LayerState::NeedsDataUpdate},
+    {"move cursor left, invalid UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "b\xff\xfehnu", 3, TextEdit::MoveCursorLeft, "",
+        "b\xff\xfehnu", 2, LayerState::NeedsDataUpdate},
+    {"move cursor left, at the boundary, direction unspecified",
+        Text::ShapeDirection::Unspecified,
+        "hello", 0, TextEdit::MoveCursorLeft, "",
+        "hello", 0, LayerStates{}},
+    {"move cursor left, at the boundary, LTR",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 0, TextEdit::MoveCursorLeft, "",
+        "hello", 0, LayerStates{}},
+    {"move cursor left, at the boundary, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 5, TextEdit::MoveCursorLeft, "",
+        "hello", 5, LayerStates{}},
+    {"move cursor right, LTR",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 3, TextEdit::MoveCursorRight, "",
+        "hello", 4, LayerState::NeedsDataUpdate},
+    {"move cursor right, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 3, TextEdit::MoveCursorRight, "",
+        "hello", 2, LayerState::NeedsDataUpdate},
+    {"move cursor right, UTF-8, direction unspecified",
+        Text::ShapeDirection::Unspecified,
+        "sněhy", 2, TextEdit::MoveCursorRight, "",
+        "sněhy", 4, LayerState::NeedsDataUpdate},
+    {"move cursor right, invalid UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "sn\xfe\xffhy", 2, TextEdit::MoveCursorRight, "",
+        "sn\xfe\xffhy", 3, LayerState::NeedsDataUpdate},
+    {"move cursor right, at the boundary, direction unspecified",
+        Text::ShapeDirection::Unspecified,
+        "hello", 5, TextEdit::MoveCursorRight, "",
+        "hello", 5, LayerStates{}},
+    {"move cursor right, at the boundary, LTR",
+        Text::ShapeDirection::LeftToRight,
+        "hello", 5, TextEdit::MoveCursorRight, "",
+        "hello", 5, LayerStates{}},
+    {"move cursor right, at the boundary, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 0, TextEdit::MoveCursorRight, "",
+        "hello", 0, LayerStates{}},
+    {"move cursor at line begin",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, TextEdit::MoveCursorLineBegin, "",
+        "hello", 0, LayerState::NeedsDataUpdate},
+    /* It's still the first byte even with a RTL direction, it's different only
+       optically */
+    {"move cursor at line begin, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 3, TextEdit::MoveCursorLineBegin, "",
+        "hello", 0, LayerState::NeedsDataUpdate},
+    /* Invalid UTF-8 should do nothing to anything here */
+    {"move cursor at line begin, invalid UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "\xff\xfe\xfd\xfco", 3, TextEdit::MoveCursorLineBegin, "",
+        "\xff\xfe\xfd\xfco", 0, LayerState::NeedsDataUpdate},
+    {"move cursor at line end",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, TextEdit::MoveCursorLineEnd, "",
+        "hello", 5, LayerState::NeedsDataUpdate},
+    /* It's still (one byte after) the last byte even with a RTL direction,
+       it's different only optically */
+    {"move cursor at line end, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 3, TextEdit::MoveCursorLineEnd, "",
+        "hello", 5, LayerState::NeedsDataUpdate},
+    /* Invalid UTF-8 should do nothing to anything here */
+    {"move cursor at line end, invalid UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "h\xff\xfe\xfd\xfc", 3, TextEdit::MoveCursorLineEnd, "",
+        "h\xff\xfe\xfd\xfc", 5, LayerState::NeedsDataUpdate},
+    {"remove character before cursor",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, TextEdit::RemoveBeforeCursor, "",
+        "helo", 2, LayerState::NeedsDataUpdate},
+    /* There's no difference in behavior for RTL here */
+    {"remove character before cursor, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 3, TextEdit::RemoveBeforeCursor, "",
+        "helo", 2, LayerState::NeedsDataUpdate},
+    {"remove character before cursor, UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "běhnu", 3, TextEdit::RemoveBeforeCursor, "",
+        "bhnu", 1, LayerState::NeedsDataUpdate},
+    {"remove character before cursor, invalid UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "b\xfe\xffhnu", 3, TextEdit::RemoveBeforeCursor, "",
+        "b\xfehnu", 2, LayerState::NeedsDataUpdate},
+    {"remove character before cursor, at the boundary",
+        Text::ShapeDirection::Unspecified,
+        "hello", 0, TextEdit::RemoveBeforeCursor, "",
+        "hello", 0, LayerStates{}},
+    {"remove character after cursor",
+        Text::ShapeDirection::Unspecified,
+        "hello", 3, TextEdit::RemoveAfterCursor, "",
+        "helo", 3, LayerState::NeedsDataUpdate},
+    /* There's no difference in behavior for RTL here */
+    {"remove character after cursor, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "hello", 3, TextEdit::RemoveAfterCursor, "",
+        "helo", 3, LayerState::NeedsDataUpdate},
+    {"remove character after cursor, UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "sněhy", 2, TextEdit::RemoveAfterCursor, "",
+        "snhy", 2, LayerState::NeedsDataUpdate},
+    {"remove character after cursor, invalid UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "sn\xff\xfehy", 2, TextEdit::RemoveAfterCursor, "",
+        "sn\xfehy", 2, LayerState::NeedsDataUpdate},
+    {"remove character after cursor, at the boundary",
+        Text::ShapeDirection::Unspecified,
+        "hello", 5, TextEdit::RemoveAfterCursor, "",
+        "hello", 5, LayerStates{}},
+    {"insert before cursor",
+        Text::ShapeDirection::Unspecified,
+        "sume", 2, TextEdit::InsertBeforeCursor, "mmerti",
+        "summertime", 8, LayerState::NeedsDataUpdate},
+    /* There's no difference in behavior for RTL here */
+    {"insert before cursor, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "sume", 2, TextEdit::InsertBeforeCursor, "mmerti",
+        "summertime", 8, LayerState::NeedsDataUpdate},
+    {"insert after cursor",
+        Text::ShapeDirection::Unspecified,
+        "sume", 2, TextEdit::InsertAfterCursor, "mmerti",
+        "summertime", 2, LayerState::NeedsDataUpdate},
+    /* There's no difference in behavior for RTL here */
+    {"insert after cursor, RTL",
+        Text::ShapeDirection::RightToLeft,
+        "sume", 2, TextEdit::InsertAfterCursor, "mmerti",
+        "summertime", 2, LayerState::NeedsDataUpdate},
+    /* Invalid UTF-8 should do nothing to anything here */
+    {"insert before cursor, invalid original UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "s\xff\xff" "e", 2, TextEdit::InsertBeforeCursor, "ěží",
+        "s\xffěží\xff" "e", 8, LayerState::NeedsDataUpdate},
+    {"insert after cursor, invalid original UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "s\xff\xff" "e", 2, TextEdit::InsertAfterCursor, "ěží",
+        "s\xffěží\xff" "e", 2, LayerState::NeedsDataUpdate},
+    {"insert before cursor, invalid inserted UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "snme", 2, TextEdit::InsertBeforeCursor, "\xff\xfež\xfd\xfc",
+        "sn\xff\xfež\xfd\xfcme", 8, LayerState::NeedsDataUpdate},
+    {"insert after cursor, invalid inserted UTF-8",
+        Text::ShapeDirection::Unspecified,
+        "snme", 2, TextEdit::InsertAfterCursor, "\xff\xfež\xfd\xfc",
+        "sn\xff\xfež\xfd\xfcme", 2, LayerState::NeedsDataUpdate},
 };
 
 const struct {
@@ -408,63 +636,67 @@ const struct {
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
+    TextDataFlags flags;
     LayerStates states;
     bool expectIndexDataUpdated, expectVertexDataUpdated;
 } UpdateCleanDataOrderData[]{
     {"empty update", true, 6, 0,
-        {}, {}, {}, {},
+        {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
     {"", false, 6, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
     {"node offset/size update only", false, 6, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true},
     {"node order update only", false, 6, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOrderUpdate, true, false},
     {"node enabled update only", false, 6, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOrderUpdate, false, true},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
     {"shared data update only", false, 6, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsSharedDataUpdate, false, false},
     {"common data update only", false, 6, 0,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsCommonDataUpdate, false, false},
     /* This would cause an update of the dynamic style data in derived classes
        if appropriate internal flags would be set internally, but in the base
        class it's nothing */
     {"common data update only, dynamic styles", false, 4, 2,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsCommonDataUpdate, false, false},
     {"padding from style", false, 6, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {2.0f, 0.5f, 1.0f, 1.5f}, {},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
     {"padding from data", false, 6, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {}, {2.0f, 0.5f, 1.0f, 1.5f},
+        {}, {2.0f, 0.5f, 1.0f, 1.5f}, {},
         LayerState::NeedsDataUpdate, true, true},
     {"padding from both style and data", false, 6, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         LayerState::NeedsDataUpdate, true, true},
     {"unused dynamic styles", false, 6, 17,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
     {"dynamic styles", false, 4, 2,
-        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
     {"dynamic styles, padding from dynamic style", false, 4, 2,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {2.0f, 0.5f, 1.0f, 1.5f}, {},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
     {"dynamic styles, padding from both dynamic style and data", false, 4, 2,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
-        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    {"editable", false, 6, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, TextDataFlag::Editable,
         LayerState::NeedsDataUpdate, true, true},
 };
 
@@ -493,6 +725,10 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::fontHandle,
               &TextLayerTest::fontHandleInvalid,
               &TextLayerTest::debugFontHandle,
+
+              &TextLayerTest::debugDataFlag,
+              &TextLayerTest::debugDataFlags,
+              &TextLayerTest::debugEdit,
 
               &TextLayerTest::sharedConfigurationConstruct,
               &TextLayerTest::sharedConfigurationConstructSameStyleUniformCount,
@@ -552,19 +788,37 @@ TextLayerTest::TextLayerTest() {
         &TextLayerTest::createRemoveSet<Enum, Enum>},
         Containers::arraySize(CreateRemoveSetData));
 
-    addTests({&TextLayerTest::createRemoveHandleRecycle});
+    addInstancedTests({&TextLayerTest::createRemoveHandleRecycle},
+        Containers::arraySize(CreateRemoveHandleRecycleData));
 
     addInstancedTests({&TextLayerTest::createNoStyleSet},
         Containers::arraySize(CreateUpdateNoStyleSetData));
 
+    addTests({&TextLayerTest::setCursor,
+              &TextLayerTest::setCursorInvalid,
+              &TextLayerTest::updateText,
+              &TextLayerTest::updateTextInvalid});
+
+    addInstancedTests({&TextLayerTest::editText},
+        Containers::arraySize(EditData));
+
+    addTests({&TextLayerTest::editTextInvalid});
+
     addInstancedTests({&TextLayerTest::createSetTextTextProperties},
         Containers::arraySize(CreateSetTextTextPropertiesData));
+
+    addInstancedTests({&TextLayerTest::createSetTextTextPropertiesEditable},
+        Containers::arraySize(CreateSetTextTextPropertiesData));
+
+    addInstancedTests({&TextLayerTest::createSetTextTextPropertiesEditableInvalid},
+        Containers::arraySize(CreateSetTextTextPropertiesEditableInvalidData));
 
     addTests({&TextLayerTest::setColor,
               &TextLayerTest::setPadding,
 
               &TextLayerTest::invalidHandle,
               &TextLayerTest::invalidFontHandle,
+              &TextLayerTest::nonEditableText,
               &TextLayerTest::noSharedStyleFonts,
               &TextLayerTest::noFontInstance});
 
@@ -744,6 +998,24 @@ void TextLayerTest::debugFontHandle() {
     std::ostringstream out;
     Debug{&out} << FontHandle::Null << Whee::fontHandle(0x2bcd, 0x1);
     CORRADE_COMPARE(out.str(), "Whee::FontHandle::Null Whee::FontHandle(0x2bcd, 0x1)\n");
+}
+
+void TextLayerTest::debugDataFlag() {
+    std::ostringstream out;
+    Debug{&out} << TextDataFlag::Editable << TextDataFlag(0xbe);
+    CORRADE_COMPARE(out.str(), "Whee::TextDataFlag::Editable Whee::TextDataFlag(0xbe)\n");
+}
+
+void TextLayerTest::debugDataFlags() {
+    std::ostringstream out;
+    Debug{&out} << (TextDataFlag::Editable|TextDataFlag(0xa0)) << TextDataFlags{};
+    CORRADE_COMPARE(out.str(), "Whee::TextDataFlag::Editable|Whee::TextDataFlag(0xa0) Whee::TextDataFlags{}\n");
+}
+
+void TextLayerTest::debugEdit() {
+    std::ostringstream out;
+    Debug{&out} << TextEdit::MoveCursorLineBegin << TextEdit(0xbe);
+    CORRADE_COMPARE(out.str(), "Whee::TextEdit::MoveCursorLineBegin Whee::TextEdit(0xbe)\n");
 }
 
 void TextLayerTest::sharedConfigurationConstruct() {
@@ -2889,10 +3161,13 @@ void TextLayerTest::dynamicStyleInvalid() {
 }
 
 struct ThreeGlyphShaper: Text::AbstractShaper {
-    using Text::AbstractShaper::AbstractShaper;
+    explicit ThreeGlyphShaper(Text::AbstractFont& font, Text::ShapeDirection direction = Text::ShapeDirection::Unspecified): Text::AbstractShaper{font}, _direction{direction} {}
 
     UnsignedInt doShape(Containers::StringView text, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
         return text.size();
+    }
+    Text::ShapeDirection doDirection() const override {
+        return _direction;
     }
     void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
         /* Just cycling through three glyphs */
@@ -2918,6 +3193,9 @@ struct ThreeGlyphShaper: Text::AbstractShaper {
             selection */
         CORRADE_FAIL("This shouldn't be called.");
     }
+
+    private:
+        Text::ShapeDirection _direction;
 };
 
 struct OneGlyphShaper: Text::AbstractShaper {
@@ -3067,22 +3345,37 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     } else CORRADE_INTERNAL_ASSERT(data.dynamicStyleCount == 0);
 
     /* Default color */
-    DataHandle first = layer.create(
-        StyleIndex(1),
-        "hello",
-        TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
-            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
-        data.node);
+    DataHandle first = data.flags ?
+        layer.create(
+            StyleIndex(1),
+            "hello",
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
+            *data.flags,
+            data.node) :
+        layer.create(
+            StyleIndex(1),
+            "hello",
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
+            data.node);
     CORRADE_COMPARE(layer.node(first), data.node);
     CORRADE_COMPARE(layer.style(first), 1);
+    CORRADE_COMPARE(layer.flags(first), data.flags ? *data.flags : TextDataFlags{});
     CORRADE_COMPARE(layer.glyphCount(first), 5);
     CORRADE_COMPARE(layer.size(first), (Vector2{10.0f, 6.0f}));
+    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE(layer.cursor(first), 5);
+        /* textProperties() tested in createSetTextTextPropertiesEditable() */
+        CORRADE_COMPARE(layer.text(first), "hello");
+    }
     CORRADE_COMPARE(layer.color(first), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
-    /* Single (invalid) glyph */
+    /* Single (invalid) glyph; createGlyph() takes no TextDataFlags */
     DataHandle firstGlyph = layer.createGlyph(
         StyleIndex(1),
         GlyphIndex(22),
@@ -3092,6 +3385,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         data.node);
     CORRADE_COMPARE(layer.node(firstGlyph), data.node);
     CORRADE_COMPARE(layer.style(firstGlyph), 1);
+    CORRADE_COMPARE(layer.flags(firstGlyph), TextDataFlags{});
     CORRADE_COMPARE(layer.glyphCount(firstGlyph), 1);
     CORRADE_COMPARE(layer.size(firstGlyph), (Vector2{8.0f, 12.0f}));
     CORRADE_COMPARE(layer.color(firstGlyph), 0xffffff_rgbf);
@@ -3100,22 +3394,38 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
 
     /* Custom color, testing also the getter overloads and templates; having a
        non-default alignment */
-    DataHandle second = layer.create(
-        StyleIndex(2),
-        "ahoy",
-        TextProperties{}
-            .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
-            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
-        0xff3366_rgbf,
-        data.node);
+    DataHandle second = data.flags ?
+        layer.create(
+            StyleIndex(2),
+            "ahoy",
+            TextProperties{}
+                .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
+            0xff3366_rgbf,
+            *data.flags,
+            data.node) :
+        layer.create(
+            StyleIndex(2),
+            "ahoy",
+            TextProperties{}
+                .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
+            0xff3366_rgbf,
+            data.node);
     CORRADE_COMPARE(layer.node(second), data.node);
     if(data.layerDataHandleOverloads) {
         CORRADE_COMPARE(layer.style(dataHandleData(second)), 2);
         /* Can't use StyleIndex, as the function restricts to enum types which
            would fail for StyleIndex == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(second)), Enum(2));
+        CORRADE_COMPARE(layer.flags(dataHandleData(second)), data.flags ? *data.flags : TextDataFlags{});
         CORRADE_COMPARE(layer.glyphCount(dataHandleData(second)), 1);
         CORRADE_COMPARE(layer.size(dataHandleData(second)), (Vector2{5.0f, 3.0f}));
+        if(data.flags && *data.flags >= TextDataFlag::Editable) {
+            CORRADE_COMPARE(layer.cursor(dataHandleData(second)), 4);
+            /* textProperties() tested in createSetTextTextPropertiesEditable() */
+            CORRADE_COMPARE(layer.text(dataHandleData(second)), "ahoy");
+        }
         CORRADE_COMPARE(layer.color(dataHandleData(second)), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.padding(dataHandleData(second)), Vector4{0.0f});
     } else {
@@ -3123,14 +3433,21 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         /* Can't use StyleIndex, as the function restricts to enum types which
            would fail for StyleIndex == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(second), Enum(2));
+        CORRADE_COMPARE(layer.flags(second), data.flags ? *data.flags : TextDataFlags{});
         CORRADE_COMPARE(layer.glyphCount(second), 1);
         CORRADE_COMPARE(layer.size(second), (Vector2{5.0f, 3.0f}));
+        if(data.flags && *data.flags >= TextDataFlag::Editable) {
+            CORRADE_COMPARE(layer.cursor(second), 4);
+            /* textProperties() tested in createSetTextTextPropertiesEditable() */
+            CORRADE_COMPARE(layer.text(second), "ahoy");
+        }
         CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     }
     CORRADE_COMPARE(layer.state(), data.state);
 
-    /* Single glyph with custom color */
+    /* Single glyph with custom color; again createGlyph() takes no
+       TextDataFlags */
     DataHandle secondGlyph = layer.createGlyph(
         StyleIndex(2),
         GlyphIndex(66),
@@ -3141,6 +3458,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         data.node);
     CORRADE_COMPARE(layer.node(secondGlyph), data.node);
     CORRADE_COMPARE(layer.style(secondGlyph), 2);
+    CORRADE_COMPARE(layer.flags(secondGlyph), TextDataFlags{});
     CORRADE_COMPARE(layer.glyphCount(secondGlyph), 1);
     CORRADE_COMPARE(layer.size(secondGlyph), (Vector2{16.0f, 24.0f}));
     CORRADE_COMPARE(layer.color(secondGlyph), 0xff3366_rgbf);
@@ -3148,32 +3466,62 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Empty text */
-    DataHandle third = layer.create(
-        StyleIndex(1),
-        "",
-        TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
-            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
-        data.node);
+    DataHandle third = data.flags ?
+        layer.create(
+            StyleIndex(1),
+            "",
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
+            *data.flags,
+            data.node) :
+        layer.create(
+            StyleIndex(1),
+            "",
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::MiddleCenter) : Containers::NullOpt),
+            data.node);
     CORRADE_COMPARE(layer.node(third), data.node);
     CORRADE_COMPARE(layer.style(third), 1);
+    CORRADE_COMPARE(layer.flags(third), data.flags ? *data.flags : TextDataFlags{});
     CORRADE_COMPARE(layer.glyphCount(third), 0);
     CORRADE_COMPARE(layer.size(third), (Vector2{0.0f, 6.0f}));
+    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE(layer.cursor(third), 0);
+        /* textProperties() tested in createSetTextTextPropertiesEditable() */
+        CORRADE_COMPARE(layer.text(third), "");
+    }
     CORRADE_COMPARE(layer.color(third), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
-    DataHandle fourth = layer.create(
-        StyleIndex(0),
-        "hi",
-        TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
-            .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::LineLeft) : Containers::NullOpt),
-        data.node);
+    DataHandle fourth = data.flags ?
+        layer.create(
+            StyleIndex(0),
+            "hi",
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::LineLeft) : Containers::NullOpt),
+            *data.flags,
+            data.node) :
+        layer.create(
+            StyleIndex(0),
+            "hi",
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::LineLeft) : Containers::NullOpt),
+            data.node);
     CORRADE_COMPARE(layer.node(fourth), data.node);
     CORRADE_COMPARE(layer.style(fourth), 0);
+    CORRADE_COMPARE(layer.flags(fourth), data.flags ? *data.flags : TextDataFlags{});
     CORRADE_COMPARE(layer.glyphCount(fourth), 2);
     CORRADE_COMPARE(layer.size(fourth), (Vector2{2.5f, 6.0f}));
+    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE(layer.cursor(fourth), 2);
+        /* textProperties() tested in createSetTextTextPropertiesEditable() */
+        CORRADE_COMPARE(layer.text(fourth), "hi");
+    }
     CORRADE_COMPARE(layer.color(fourth), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
@@ -3229,6 +3577,48 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         {1.5f, 1.0f}
     }), TestSuite::Compare::Container);
 
+    /* For editable text, there should be also text runs, except for single
+       glyphs that never have it */
+    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
+            0u, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0u, 5u, 9u, 9u,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            5u, 4u, 0u, 2u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
+            0u, 2u, 4u, 5u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "hello"
+            "ahoy"
+            ""
+            "hi",
+            TestSuite::Compare::String);
+
+    /* And no runs if no text is editable */
+    } else {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView<UnsignedInt>({
+            0xffffffffu, 0xffffffffu, 0xffffffffu,
+            0xffffffffu, 0xffffffffu, 0xffffffffu
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "",
+            TestSuite::Compare::String);
+    }
+
     /* Removing a text marks the original run as unused, and as it's not
        attached to any node, also not any state flag. The remaining data don't
        need any refresh, they still draw correctly. */
@@ -3249,6 +3639,47 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         0u, 1u, 2u, 3u, 4u, 5u
     }), TestSuite::Compare::Container);
 
+    /* Similarly for text runs for editable text */
+    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
+            0u, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0u, 5u, 9u, 0xffffffffu,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            5u, 4u, 0u, 2u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
+            0u, 2u, 4u, 5u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "hello"
+            "ahoy"
+            ""
+            "hi", /* now unused */
+            TestSuite::Compare::String);
+
+    /* Nothing changes if no text is editable */
+    } else {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView<UnsignedInt>({
+            0xffffffffu, 0xffffffffu, 0xffffffffu,
+            0xffffffffu, 0xffffffffu, 0xffffffffu
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "",
+            TestSuite::Compare::String);
+    }
+
     /* Modifying a text creates a new run at the end, marks the original run as
        unused and marks the layer as needing an update. It's possible to switch
        to a different font, and between a single-glyph and text data as well.
@@ -3259,17 +3690,27 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     textProperties
         .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null)
         .setAlignment(Text::Alignment::BottomRight);
+    CORRADE_COMPARE(layer.flags(second), data.flags ? *data.flags : TextDataFlags{});
+    CORRADE_COMPARE(layer.flags(secondGlyph), TextDataFlags{});
     if(data.layerDataHandleOverloads) {
-        layer.setText(dataHandleData(secondGlyph), "hey", textProperties);
+        data.flags ?
+            /* Have to pass the flags explicitly because otherwise it'll retain
+               the previous (empty) flags */
+            layer.setText(dataHandleData(secondGlyph), "hey", textProperties, *data.flags) :
+            layer.setText(dataHandleData(secondGlyph), "hey", textProperties);
         layer.setGlyph(dataHandleData(second),
             data.customFont ? GlyphIndex(13) : GlyphIndex(66),
             textProperties);
     } else {
-        layer.setText(secondGlyph, "hey", textProperties);
+        data.flags ?
+            layer.setText(secondGlyph, "hey", textProperties, *data.flags) :
+            layer.setText(secondGlyph, "hey", textProperties);
         layer.setGlyph(second,
             data.customFont ? GlyphIndex(13) : GlyphIndex(66),
             textProperties);
     }
+    CORRADE_COMPARE(layer.flags(second), TextDataFlags{});
+    CORRADE_COMPARE(layer.flags(secondGlyph), data.flags ? *data.flags : TextDataFlags{});
 
     CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -3379,9 +3820,195 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             {-20.0f, 2.0f},
         }), TestSuite::Compare::Container);
     }
+
+    /* Similarly for text runs for editable text. What was a glyph before is
+       now text and what was a text is now glyph. */
+    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
+            0u, 0xffffffffu, 0xffffffffu, 4u, 2u, 3u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0u, 0xffffffffu, 9u, 0xffffffffu, 11u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            5u, 4u, 0u, 2u, 3u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
+            0u, 2u, 4u, 5u, 3u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "hello"
+            "ahoy" /* now unused */
+            ""
+            "hi"   /* now unused */
+            "hey",
+            TestSuite::Compare::String);
+
+    /* Nothing changes if no text is editable */
+    } else {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView<UnsignedInt>({
+            0xffffffffu, 0xffffffffu, 0xffffffffu,
+            0xffffffffu, 0xffffffffu, 0xffffffffu
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data),
+            Containers::ArrayView<UnsignedInt>{},
+            TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "",
+            TestSuite::Compare::String);
+    }
+
+    /* Finally, modify the text and glyph without switching to each other. In
+       case of editable text, it should properly mark the existing text run as
+       unused, OTOH in case of the glyph it shouldn't as there's no existing
+       text run. */
+    if(data.flags && *data.flags >= TextDataFlag::Editable) {
+        /* Not passing any flags will preserve the previous flags */
+        data.layerDataHandleOverloads ?
+            layer.setText(dataHandleData(secondGlyph), "ahoy", textProperties) :
+            layer.setText(secondGlyph, "ahoy", textProperties);
+        layer.setGlyph(second,
+            data.customFont ? GlyphIndex(66) : GlyphIndex(13),
+            textProperties);
+        CORRADE_COMPARE(layer.flags(second), TextDataFlags{});
+        CORRADE_COMPARE(layer.flags(secondGlyph), data.flags ? *data.flags : TextDataFlags{});
+
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
+            0u, 0xffffffffu, 0xffffffffu, 5u, 2u, 3u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0u, 0xffffffffu, 9u, 0xffffffffu, 0xffffffffu, 14u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            5u, 4u, 0u, 2u, 3u, 4u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
+            0u, 2u, 4u, 5u, 3u, 3u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "hello"
+            "ahoy" /* now unused */
+            ""
+            "hi"   /* now unused */
+            "hey"  /* now unused */
+            "ahoy",
+            TestSuite::Compare::String);
+    }
 }
 
 void TextLayerTest::createRemoveHandleRecycle() {
+    auto&& data = CreateRemoveHandleRecycleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+
+        const State& stateData() const {
+            return static_cast<const State&>(*_state);
+        }
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle first = layer.create(0, "hello", {}, data.flags);
+    DataHandle second = layer.create(0, "again", {}, data.flags);
+    layer.setPadding(first, Vector4{15.0f});
+    layer.setPadding(second, Vector4{5.0f});
+    CORRADE_COMPARE(layer.padding(first), Vector4{15.0f});
+    CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].flags, data.flags);
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first)].textRun, data.flags >= TextDataFlag::Editable ? 0 : 0xffffffffu);
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].flags, data.flags);
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second)].textRun, data.flags >= TextDataFlag::Editable ? 1 : 0xffffffffu);
+
+    /* Data that reuses a previous slot should have the padding cleared, as
+       well as the flags and text run if the previous one was editable */
+    layer.remove(second);
+    DataHandle second2 = layer.create(0, "yes", {});
+    CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
+    CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].flags, TextDataFlags{});
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(second2)].textRun, 0xffffffffu);
+
+    /* Same for a glyph */
+    layer.remove(first);
+    DataHandle first2 = layer.createGlyph(0, 0, {});
+    CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
+    CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].flags, TextDataFlags{});
+    CORRADE_COMPARE(layer.stateData().data[dataHandleId(first2)].textRun, 0xffffffffu);
+}
+
+void TextLayerTest::createNoStyleSet() {
+    auto&& data = CreateUpdateNoStyleSetData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{2, 3}
+        /* The check should work correctly even with dynamic styles, where
+           different state gets filled */
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.create(2, "", {});
+    layer.createGlyph(1, 0, {});
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::create(): no style data was set\n"
+        "Whee::TextLayer::createGlyph(): no style data was set\n");
+}
+
+void TextLayerTest::setCursor() {
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
         bool doIsOpened() const override { return true; }
@@ -3422,53 +4049,450 @@ void TextLayerTest::createRemoveHandleRecycle() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    DataHandle first = layer.create(0, "hello", {});
-    DataHandle second = layer.create(0, "again", {});
-    layer.setPadding(first, Vector4{15.0f});
-    layer.setPadding(second, Vector4{5.0f});
-    CORRADE_COMPARE(layer.padding(first), Vector4{15.0f});
-    CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
+    /* Just to be sure the setters aren't picking up the first ever data
+       always */
+    layer.create(0, "", {});
+    DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
+    layer.create(0, "", {});
+    CORRADE_COMPARE(layer.cursor(data), 7);
 
-    /* Data that reuses a previous slot should have the padding cleared */
-    layer.remove(second);
-    DataHandle second2 = layer.create(0, "yes", {});
-    CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
-    CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Same for a glyph */
-    layer.remove(first);
-    DataHandle first2 = layer.createGlyph(0, 0, {});
-    CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
-    CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
+    /* Set to a different position updates the state flag */
+    layer.setCursor(data, 5);
+    CORRADE_COMPARE(layer.cursor(data), 5);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* LayerDataHandle overload */
+    layer.setCursor(dataHandleData(data), 3);
+    CORRADE_COMPARE(layer.cursor(dataHandleData(data)), 3);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting to the same position is a no-op */
+    layer.setCursor(data, 3);
+    CORRADE_COMPARE(layer.cursor(data), 3);
+    CORRADE_COMPARE(layer.state(), LayerState{});
+
+    /* Setting it after all text should work */
+    layer.setCursor(data, 7);
+    CORRADE_COMPARE(layer.cursor(data), 7);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting it before all text as well */
+    layer.setCursor(data, 0);
+    CORRADE_COMPARE(layer.cursor(data), 0);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
-void TextLayerTest::createNoStyleSet() {
-    auto&& data = CreateUpdateNoStyleSetData[testCaseInstanceId()];
-    setTestCaseDescription(data.name);
-
+void TextLayerTest::setCursorInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
+        using TextLayer::Shared::setGlyphCache;
+
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2, 3}
-        /* The check should work correctly even with dynamic styles, where
-           different state gets filled */
-        .setDynamicStyleCount(data.dynamicStyleCount)
-    };
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
+    DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.cursor(data), 7);
+
     std::ostringstream out;
     Error redirectError{&out};
-    layer.create(2, "", {});
-    layer.createGlyph(1, 0, {});
-    CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::create(): no style data was set\n"
-        "Whee::TextLayer::createGlyph(): no style data was set\n");
+    layer.setCursor(data, 8);
+    CORRADE_COMPARE(out.str(), "Whee::TextLayer::setCursor(): position 8 out of range for a text of 7 bytes\n");
+}
+
+void TextLayerTest::updateText() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<ThreeGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(98, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{3}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {FontHandle::Null, FontHandle::Null, shared.addFont(font, 1.0f)},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment::MiddleCenter},
+        {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Use style 2 to verify it actually uses that one and not some other
+       in subsequent updateText(); have also some text before and after to
+       catch weird overlaps and OOB issues */
+    layer.create(2, "aaaa", {}, TextDataFlag::Editable);
+    DataHandle text = layer.create(2, "hello", {}, TextDataFlag::Editable);
+    layer.create(2, "bb", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.cursor(text), 5);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.glyphCount(text), 5);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Various variants of a no-op operation, neither sets any flags */
+    layer.updateText(text, 0, 0, 0, "", 5);
+    layer.updateText(text, 5, 0, 5, "", 5);
+    CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.cursor(text), 5);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    /* No reshaping should be done in this case */
+    CORRADE_COMPARE(layer.glyphCount(text), 5);
+
+    /* Updating cursor location alone sets an update flag */
+    layer.updateText(text, 0, 0, 0, "", 3);
+    CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.cursor(text), 3);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    /* No reshaping should be done in this case however */
+    CORRADE_COMPARE(layer.glyphCount(text), 5);
+
+    /* Insertion at the very end, putting cursor right after */
+    layer.updateText(text, 0, 0, 5, "oo?!", 9);
+    CORRADE_COMPARE(layer.text(text), "hellooo?!");
+    CORRADE_COMPARE(layer.cursor(text), 9);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    /* Lazy verification that the text gets implicitly reshaped */
+    CORRADE_COMPARE(layer.glyphCount(text), 9);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Removal at the very end, putting cursor back at the end */
+    layer.updateText(text, 6, 3, 0, "", 4);
+    CORRADE_COMPARE(layer.text(text), "helloo");
+    CORRADE_COMPARE(layer.cursor(text), 4);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    /* Lazy verification that the text gets implicitly reshaped */
+    CORRADE_COMPARE(layer.glyphCount(text), 6);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Insertion at the end after a removed portion, cursor inside it */
+    layer.updateText(text, 1, 4, 2, "vercrafts", 5);
+    CORRADE_COMPARE(layer.text(text), "hovercrafts");
+    CORRADE_COMPARE(layer.cursor(text), 5);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    /* Lazy verification that the text gets implicitly reshaped */
+    CORRADE_COMPARE(layer.glyphCount(text), 11);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Insertion before a removed portion, cursor inside it; LayerDataHandle
+       overload */
+    layer.updateText(dataHandleData(text), 5, 5, 2, "ldo", 4);
+    CORRADE_COMPARE(layer.text(text), "holdovers");
+    CORRADE_COMPARE(layer.cursor(text), 4);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    /* Lazy verification that the text gets implicitly reshaped */
+    CORRADE_COMPARE(layer.glyphCount(text), 9);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Removing everything */
+    layer.updateText(text, 0, 9, 0, "", 0);
+    CORRADE_COMPARE(layer.text(text), "");
+    CORRADE_COMPARE(layer.cursor(text), 0);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    /* Lazy verification that the text gets implicitly reshaped */
+    CORRADE_COMPARE(layer.glyphCount(text), 0);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* This is a no-op again */
+    layer.updateText(text, 0, 0, 0, "", 0);
+    CORRADE_COMPARE(layer.text(text), "");
+    CORRADE_COMPARE(layer.cursor(text), 0);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    /* Lazy verification that the text gets implicitly reshaped */
+    CORRADE_COMPARE(layer.glyphCount(text), 0);
+}
+
+void TextLayerTest::updateTextInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.cursor(data), 7);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.updateText(data, 8, 0, 0, "", 0);
+    layer.updateText(data, 5, 3, 0, "", 0);
+    /* These overflow if checked incorrectly, causing the assert to pass */
+    layer.updateText(data, 0xffffffffu, 1, 0, "", 0);
+    layer.updateText(data, 1, 0xffffffffu, 0, "", 0);
+    layer.updateText(data, 0, 0, 8, "", 0);
+    layer.updateText(data, 0, 0, 0, "", 8);
+    /* Text size got smaller by 2 in these two */
+    layer.updateText(data, 3, 2, 6, "", 0);
+    layer.updateText(data, 3, 2, 0, "", 6);
+    /* Text size got smaller by 2 here but larger by 3, yet still not enouh */
+    layer.updateText(data, 3, 2, 0, "hey", 9);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::updateText(): remove offset 8 and size 0 out of range for a text of 7 bytes\n"
+        "Whee::TextLayer::updateText(): remove offset 5 and size 3 out of range for a text of 7 bytes\n"
+        "Whee::TextLayer::updateText(): remove offset 4294967295 and size 1 out of range for a text of 7 bytes\n"
+        "Whee::TextLayer::updateText(): remove offset 1 and size 4294967295 out of range for a text of 7 bytes\n"
+        "Whee::TextLayer::updateText(): insert offset 8 out of range for a text of 7 bytes\n"
+        "Whee::TextLayer::updateText(): cursor position 8 out of range for a text of 7 bytes\n"
+        "Whee::TextLayer::updateText(): insert offset 6 out of range for a text of 5 bytes\n"
+        "Whee::TextLayer::updateText(): cursor position 6 out of range for a text of 5 bytes\n"
+        "Whee::TextLayer::updateText(): cursor position 9 out of range for a text of 8 bytes\n",
+        TestSuite::Compare::String);
+}
+
+void TextLayerTest::editText() {
+    auto&& data = EditData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct Font: Text::AbstractFont {
+        explicit Font(Text::ShapeDirection shapeDirection): _shapeDirection{shapeDirection} {}
+
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<ThreeGlyphShaper>(*this, _shapeDirection); }
+
+        private:
+            Text::ShapeDirection _shapeDirection;
+    /* The actual used direction is returned by the shaper, not passed in via
+       TextProperties */
+    } font{data.shapeDirection};
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(98, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{3}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {FontHandle::Null, FontHandle::Null, shared.addFont(font, 1.0f)},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment::MiddleCenter},
+        {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Use style 2 to verify it actually uses that one and not some other
+       in subsequent editText(); have also some text before and after to
+       catch weird overlaps and OOB issues */
+    layer.create(2, "aaaa", {}, TextDataFlag::Editable);
+    DataHandle text = layer.create(2, data.text, {}, TextDataFlag::Editable);
+    layer.create(2, "bb", {}, TextDataFlag::Editable);
+
+    /* The cursor should always be at the end of the input text even in
+       presence of weird data. Update it to what's desired. */
+    CORRADE_COMPARE(layer.cursor(text), Containers::StringView{data.text}.size());
+    layer.setCursor(text, data.cursor);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    layer.editText(text, data.edit, data.insert);
+    CORRADE_COMPARE(layer.text(text), data.expected);
+    CORRADE_COMPARE(layer.cursor(text), data.expectedCursor);
+    CORRADE_COMPARE(layer.state(), data.expectedState);
+}
+
+void TextLayerTest::editTextInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.create(0, "hello!!", {}, TextDataFlag::Editable);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.editText(data, TextEdit::RemoveAfterCursor, "ah");
+    /* Test one more enum value, and the LayerDataHandle overload */
+    layer.editText(dataHandleData(data), TextEdit::MoveCursorLeft, "ah");
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::editText(): Whee::TextEdit::RemoveAfterCursor requires no text to insert\n"
+        "Whee::TextLayer::editText(): Whee::TextEdit::MoveCursorLeft requires no text to insert\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::createSetTextTextProperties() {
@@ -3640,6 +4664,292 @@ void TextLayerTest::createSetTextTextProperties() {
     CORRADE_COMPARE(font.setLanguageCalled, 2);
     CORRADE_COMPARE(font.setDirectionCalled, 2);
     CORRADE_COMPARE(font.shapeCalled, 2);
+}
+
+void TextLayerTest::createSetTextTextPropertiesEditable() {
+    auto&& data = CreateSetTextTextPropertiesData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Variant of createSetTextTextProperties() without features passed through
+       TextProperties and checking behavior of updateText() and edit() as well.
+       The actual behavior and corner cases of updateText() and edit() is
+       tested in dedicated test cases below. */
+
+    /* A font that just checks what has been sent to the shaper */
+    struct Font: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return _opened; }
+        Properties doOpenFile(Containers::StringView, Float) override {
+            _opened = true;
+            return {1.0f, 1.0f, 1.0f, 2.0f, 1};
+        }
+        void doClose() override { _opened = false; }
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override {
+            struct Shaper: Text::AbstractShaper {
+                explicit Shaper(Text::AbstractFont& font, int& setScriptCalled, int& setLanguageCalled, int& setDirectionCalled, int& shapeCalled): Text::AbstractShaper{font}, setScriptCalled(setScriptCalled), setLanguageCalled(setLanguageCalled), setDirectionCalled(setDirectionCalled), shapeCalled(shapeCalled) {}
+
+                bool doSetScript(Text::Script script) override {
+                    CORRADE_COMPARE(script, static_cast<Font&>(font()).expectedScript);
+                    ++setScriptCalled;
+                    return true;
+                }
+                bool doSetLanguage(Containers::StringView language) override {
+                    CORRADE_COMPARE(language, static_cast<Font&>(font()).expectedLanguage);
+                    ++setLanguageCalled;
+                    return true;
+                }
+                bool doSetDirection(Text::ShapeDirection direction) override {
+                    CORRADE_COMPARE(direction, static_cast<Font&>(font()).expectedDirection);
+                    ++setDirectionCalled;
+                    return true;
+                }
+                UnsignedInt doShape(Containers::StringView, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange> features) override {
+                    /* Only features from the (dynamic) style, create() doesn't
+                       allow them for editable texts */
+                    CORRADE_COMPARE(features.size(), 2);
+                    CORRADE_COMPARE(features[0].feature(), Text::Feature::AccessAllAlternates);
+                    CORRADE_COMPARE(features[0].value(), 57);
+                    CORRADE_COMPARE(features[1].feature(), Text::Feature::TabularFigures);
+                    ++shapeCalled;
+                    return 0;
+                }
+                void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {}
+                void doGlyphOffsetsAdvancesInto(const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) const override {}
+                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {}
+
+                int& setScriptCalled;
+                int& setLanguageCalled;
+                int& setDirectionCalled;
+                int& shapeCalled;
+            };
+
+            return Containers::pointer<Shaper>(*this, setScriptCalled, setLanguageCalled, setDirectionCalled, shapeCalled);
+        }
+
+        Text::Script expectedScript;
+        Containers::StringView expectedLanguage;
+        Text::ShapeDirection expectedDirection;
+
+        int setScriptCalled = 0;
+        int setLanguageCalled = 0;
+        int setDirectionCalled = 0;
+        int shapeCalled = 0;
+
+        bool _opened = false;
+    } font;
+    font.openFile({}, 16.0f);
+
+    /* A trivial glyph cache */
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    /* Default padding is 1, resetting to 0 for simplicity */
+    } cache{PixelFormat::R8Unorm, {32, 32}, {}};
+    cache.addGlyph(cache.addFont(1, &font), 0, {}, {});
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)};
+    shared.setGlyphCache(cache);
+
+    FontHandle fontHandle = shared.addFont(font, 16.0f);
+    FontHandle fontHandle2 = shared.addFont(font, 12.0f);
+    if(!data.dynamicStyleCount)
+        shared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{},
+             TextLayerStyleUniform{},
+             TextLayerStyleUniform{}},
+            {fontHandle, fontHandle, fontHandle},
+            {Text::Alignment::MiddleCenter,
+             Text::Alignment::MiddleCenter,
+             Text::Alignment::MiddleCenter},
+            {Text::Feature::SlashedZero,
+             {Text::Feature::AccessAllAlternates, 57},
+             Text::Feature::TabularFigures},
+            {2, 3, 1},
+            {1, 0, 2},
+            {});
+    else
+        shared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}},
+            {fontHandle},
+            {Text::Alignment::MiddleCenter},
+            {Text::Feature::TabularFigures},
+            {0},
+            {1},
+            {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    if(data.dynamicStyleCount)
+        layer.setDynamicStyle(1,
+            TextLayerStyleUniform{},
+            fontHandle,
+            Text::Alignment::MiddleCenter,
+            {{Text::Feature::AccessAllAlternates, 57},
+             Text::Feature::TabularFigures},
+            {});
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    /* create() should save the properties */
+    font.expectedScript = Text::Script::HanifiRohingya;
+    font.expectedLanguage = "eh-UH";
+    font.expectedDirection = Text::ShapeDirection::RightToLeft;
+    DataHandle text = layer.create(2, "hello",
+        TextProperties{}
+            .setScript(Text::Script::HanifiRohingya)
+            .setLanguage("eh-UH")
+            .setShapeDirection(Text::ShapeDirection::RightToLeft),
+        TextDataFlag::Editable);
+    CORRADE_COMPARE(layer.text(text), "hello");
+    CORRADE_COMPARE(layer.cursor(text), 5);
+    /* Alignment wasn't set */
+    CORRADE_COMPARE(layer.textProperties(text).alignment(), Containers::NullOpt);
+    /* Font wasn't set in the properties but the actual used one got saved to
+       not need to go through the same font selection logic on every edit */
+    CORRADE_COMPARE(layer.textProperties(text).font(), fontHandle);
+    CORRADE_COMPARE(layer.textProperties(text).script(), Text::Script::HanifiRohingya);
+    CORRADE_COMPARE(layer.textProperties(text).language(), "eh-UH");
+    CORRADE_COMPARE(layer.textProperties(text).shapeDirection(), Text::ShapeDirection::RightToLeft);
+    CORRADE_COMPARE(layer.textProperties(text).layoutDirection(), Text::LayoutDirection::HorizontalTopToBottom);
+    CORRADE_VERIFY(layer.textProperties(text).features().isEmpty());
+    CORRADE_COMPARE(font.setScriptCalled, 1);
+    CORRADE_COMPARE(font.setLanguageCalled, 1);
+    CORRADE_COMPARE(font.setDirectionCalled, 1);
+    CORRADE_COMPARE(font.shapeCalled, 1);
+
+    /* updateText() should pass the same */
+    layer.updateText(text, 0, 0, 5, "!", 6);
+    CORRADE_COMPARE(layer.text(text), "hello!");
+    CORRADE_COMPARE(layer.cursor(text), 6);
+    CORRADE_COMPARE(font.setScriptCalled, 2);
+    CORRADE_COMPARE(font.setLanguageCalled, 2);
+    CORRADE_COMPARE(font.setDirectionCalled, 2);
+    CORRADE_COMPARE(font.shapeCalled, 2);
+
+    /* setText() with different properties should overwrite the previous */
+    font.expectedScript = Text::Script::EgyptianHieroglyphs;
+    font.expectedLanguage = "eg-HE";
+    font.expectedDirection = Text::ShapeDirection::Unspecified;
+    layer.setText(text, "hello?",
+        TextProperties{}
+            .setScript(Text::Script::EgyptianHieroglyphs)
+            .setLanguage("eg-HE")
+            .setShapeDirection(Text::ShapeDirection::Unspecified)
+            /* Testing that these are now set. The font is the same but under a
+               different handle. */
+            .setFont(fontHandle2)
+            .setAlignment(Text::Alignment::BottomCenter));
+    /* Testing the LayerDataHandle overload */
+    CORRADE_COMPARE(layer.textProperties(dataHandleData(text)).alignment(), Text::Alignment::BottomCenter);
+    CORRADE_COMPARE(layer.textProperties(dataHandleData(text)).font(), fontHandle2);
+    CORRADE_COMPARE(layer.textProperties(dataHandleData(text)).script(), Text::Script::EgyptianHieroglyphs);
+    CORRADE_COMPARE(layer.textProperties(dataHandleData(text)).language(), "eg-HE");
+    CORRADE_COMPARE(layer.textProperties(dataHandleData(text)).shapeDirection(), Text::ShapeDirection::Unspecified);
+    CORRADE_COMPARE(layer.textProperties(dataHandleData(text)).layoutDirection(), Text::LayoutDirection::HorizontalTopToBottom);
+    CORRADE_VERIFY(layer.textProperties(dataHandleData(text)).features().isEmpty());
+    CORRADE_COMPARE(font.setScriptCalled, 3);
+    CORRADE_COMPARE(font.setLanguageCalled, 3);
+    CORRADE_COMPARE(font.setDirectionCalled, 3);
+    CORRADE_COMPARE(font.shapeCalled, 3);
+
+    /* editText() should behave same as updateText(), i.e. pass what was saved
+       above */
+    layer.editText(text, TextEdit::InsertBeforeCursor, "!");
+    CORRADE_COMPARE(layer.text(text), "hello?!");
+    CORRADE_COMPARE(layer.cursor(text), 7);
+    CORRADE_COMPARE(font.setScriptCalled, 4);
+    CORRADE_COMPARE(font.setLanguageCalled, 4);
+    CORRADE_COMPARE(font.setDirectionCalled, 4);
+    CORRADE_COMPARE(font.shapeCalled, 4);
+}
+
+void TextLayerTest::createSetTextTextPropertiesEditableInvalid() {
+    auto&& data = CreateSetTextTextPropertiesEditableInvalidData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        /* Using some features in the style itself should be okay */
+        {{Text::Feature::Kerning, false}}, {0}, {1},
+        {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle nonEditable = layer.create(0, "hello", {});
+    DataHandle editable = layer.create(0, "hello", {}, TextDataFlag::Editable);
+    DataHandle editable2 = layer.create(0, "hello", {}, TextDataFlag::Editable);
+
+    /* Passing features to a text that was formerly editable but isn't anymore
+       is okay */
+    layer.setText(editable2, "hey", data.properties, TextDataFlags{});
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.create(0, "hello", data.properties, TextDataFlag::Editable);
+    layer.create(0, "hello", data.properties, 0xff3366_rgbf, TextDataFlag::Editable);
+    /* Should assert also if trying to pass features to a text that already has
+       the flag set */
+    layer.setText(editable, "hey", data.properties);
+    /* Or if passing features that didn't have the flag but now does */
+    layer.setText(nonEditable, "hey", data.properties, TextDataFlag::Editable);
+    CORRADE_COMPARE_AS(out.str(), Utility::formatString(
+        "Whee::TextLayer::create(): {0}\n"
+        "Whee::TextLayer::create(): {0}\n"
+        "Whee::TextLayer::setText(): {0}\n"
+        "Whee::TextLayer::setText(): {0}\n",
+    data.expected), TestSuite::Compare::String);
 }
 
 void TextLayerTest::setColor() {
@@ -3815,12 +5125,26 @@ void TextLayerTest::invalidHandle() {
 
     std::ostringstream out;
     Error redirectError{&out};
+    layer.flags(DataHandle::Null);
+    layer.flags(LayerDataHandle::Null);
     layer.glyphCount(DataHandle::Null);
     layer.glyphCount(LayerDataHandle::Null);
     layer.size(DataHandle::Null);
     layer.size(LayerDataHandle::Null);
+    layer.cursor(DataHandle::Null);
+    layer.cursor(LayerDataHandle::Null);
+    layer.setCursor(DataHandle::Null, 0);
+    layer.setCursor(LayerDataHandle::Null, 0);
+    layer.textProperties(DataHandle::Null);
+    layer.textProperties(LayerDataHandle::Null);
+    layer.text(DataHandle::Null);
+    layer.text(LayerDataHandle::Null);
     layer.setText(DataHandle::Null, "", {});
     layer.setText(LayerDataHandle::Null, "", {});
+    layer.updateText(DataHandle::Null, 0, 0, 0, {}, 0);
+    layer.updateText(LayerDataHandle::Null, 0, 0, 0, {}, 0);
+    layer.editText(DataHandle::Null, TextEdit::MoveCursorLeft, {});
+    layer.editText(LayerDataHandle::Null, TextEdit::MoveCursorLeft, {});
     layer.setGlyph(DataHandle::Null, 0, {});
     layer.setGlyph(LayerDataHandle::Null, 0, {});
     layer.color(DataHandle::Null);
@@ -3832,12 +5156,26 @@ void TextLayerTest::invalidHandle() {
     layer.setPadding(DataHandle::Null, {});
     layer.setPadding(LayerDataHandle::Null, {});
     CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::flags(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::flags(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::glyphCount(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::glyphCount(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::size(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::size(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::cursor(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::cursor(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::setCursor(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::setCursor(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::textProperties(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::textProperties(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::text(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::text(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::setText(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::setText(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::updateText(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::updateText(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::editText(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::editText(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::setGlyph(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::setGlyph(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::color(): invalid handle Whee::DataHandle::Null\n"
@@ -3907,6 +5245,82 @@ void TextLayerTest::invalidFontHandle() {
         "Whee::TextLayer::createGlyph(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
         "Whee::TextLayer::setText(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
         "Whee::TextLayer::setGlyph(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n");
+}
+
+void TextLayerTest::nonEditableText() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<OneGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment{}},
+        {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle text = layer.create(0, "", {});
+    DataHandle glyph = layer.createGlyph(0, 0, {});
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.cursor(text);
+    layer.cursor(glyph);
+    layer.setCursor(text, 0);
+    layer.setCursor(glyph, 0);
+    layer.textProperties(text);
+    layer.textProperties(glyph);
+    layer.text(text);
+    layer.text(glyph);
+    layer.updateText(text, 0, 0, 0, {}, 0);
+    layer.updateText(glyph, 0, 0, 0, {}, 0);
+    layer.editText(text, TextEdit::MoveCursorLeft, {});
+    layer.editText(glyph, TextEdit::MoveCursorLeft, {});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::cursor(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::cursor(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::setCursor(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::setCursor(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::textProperties(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::textProperties(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::text(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::text(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::updateText(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::updateText(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::editText(): text doesn't have Whee::TextDataFlag::Editable set\n"
+        "Whee::TextLayer::editText(): text doesn't have Whee::TextDataFlag::Editable set\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::noSharedStyleFonts() {
@@ -4330,8 +5744,8 @@ void TextLayerTest::updateCleanDataOrder() {
     layer.create(0, "", {});                            /* 2, quad 2 */
     /* Node 6 is disabled, so style 5 should get transitioned to 2 if not
        dynamic */
-    DataHandle data3 = layer.create(5, "hello", {}, 0xff3366_rgbf, node6);
-                                                        /* 3, quad 3 to 7 */
+    DataHandle data3 = layer.create(5, "hello",         /* 3, quad 3 to 7 */
+        {}, 0xff3366_rgbf, data.flags, node6);
     layer.create(0, "", {});                            /* 4, quad 8 */
     /* Node 6 is disabled, but style 4 has no disabled transition so this stays
        the same */
@@ -4339,10 +5753,10 @@ void TextLayerTest::updateCleanDataOrder() {
         Text::Alignment::TopCenter, 0xcceeff_rgbf, node6);
     layer.create(0, "", {});                            /* 6, quad 10 */
     DataHandle data7 = layer.create(1, "ahoy",          /* 7, quad 11 */
-        Text::Alignment::BottomRight, 0x112233_rgbf, node15);
+        Text::Alignment::BottomRight, 0x112233_rgbf, data.flags, node15);
     layer.create(0, "", {});                            /* 8, quad 12 */
     DataHandle data9 = layer.create(3, "hi",            /* 9, quad 13 to 14 */
-        Text::Alignment::LineLeft, 0x663399_rgbf, node15);
+        Text::Alignment::LineLeft, 0x663399_rgbf, data.flags, node15);
 
     if(!data.paddingFromData.isZero()) {
         layer.setPadding(data3, data.paddingFromData);
@@ -4362,6 +5776,27 @@ void TextLayerTest::updateCleanDataOrder() {
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u
     }), TestSuite::Compare::Container);
+
+    if(data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu,
+            0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0u, 5u, 9u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            5u, 4u, 2u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
+            3u, 7u, 9u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "hello"
+            "ahoy"
+            "hi",
+            TestSuite::Compare::String);
+    }
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
@@ -4394,14 +5829,14 @@ void TextLayerTest::updateCleanDataOrder() {
     if(data.expectIndexDataUpdated) {
         /* The indices should be filled just for the four items */
         CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
-            /* Text 9, "hi", quads 13 to 14 */
+            /* (Possibly editable) text 9, "hi", quads 13 to 14 */
             13*4 + 0, 13*4 + 1, 13*4 + 2, 13*4 + 2, 13*4 + 1, 13*4 + 3,
             14*4 + 0, 14*4 + 1, 14*4 + 2, 14*4 + 2, 14*4 + 1, 14*4 + 3,
             /* Glyph 5, quad 9 */
              9*4 + 0,  9*4 + 1,  9*4 + 2,  9*4 + 2,  9*4 + 1,  9*4 + 3,
-            /* Text 7, "ahoy", quad 11 */
+            /* (Possibly editable) text 7, "ahoy", quad 11 */
             11*4 + 0, 11*4 + 1, 11*4 + 2, 11*4 + 2, 11*4 + 1, 11*4 + 3,
-            /* Text 3, "hello", quads 3 to 7 */
+            /* (Possibly editable) text 3, "hello", quads 3 to 7 */
              3*4 + 0,  3*4 + 1,  3*4 + 2,  3*4 + 2,  3*4 + 1,  3*4 + 3,
              4*4 + 0,  4*4 + 1,  4*4 + 2,  4*4 + 2,  4*4 + 1,  4*4 + 3,
              5*4 + 0,  5*4 + 1,  5*4 + 2,  5*4 + 2,  5*4 + 1,  5*4 + 3,
@@ -4420,6 +5855,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* The vertices are there for all data, but only the actually used are
            filled */
         CORRADE_COMPARE(layer.stateData().vertices.size(), 15*4);
+        /* (Possibly editable) text 3, quads 3 to 7 */
         for(std::size_t i = 0; i != 5*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
@@ -4433,6 +5869,7 @@ void TextLayerTest::updateCleanDataOrder() {
                 CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 4);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
+        /* Glyph 5, quad 9 */
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff_rgbf);
@@ -4445,12 +5882,14 @@ void TextLayerTest::updateCleanDataOrder() {
                 CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 3);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
+        /* (Possibly editable) text 7, quad 11 */
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x112233_rgbf);
             /* Created with style 1, which is mapped to uniform 2 */
             CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].styleUniform, 2);
         }
+        /* (Possibly editable) text 9, quads 13 to 14 */
         for(std::size_t i = 0; i != 2*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].color, 0x663399_rgbf);
@@ -4603,6 +6042,27 @@ void TextLayerTest::updateCleanDataOrder() {
         0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u
     }), TestSuite::Compare::Container);
 
+    if(data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu,
+            0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0xffffffffu, 5u, 9u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            5u, 4u, 2u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
+            3u, 7u, 9u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "hello" /* now unused */
+            "ahoy"
+            "hi",
+            TestSuite::Compare::String);
+    }
+
     /* Note that this adds LayerState::NeedsDataUpdate in order to force the
        glyph run recompaction, thus we also don't branch on
        data.expectIndexDataUpdated / data.expectVertexDataUpdated anymore */
@@ -4627,12 +6087,37 @@ void TextLayerTest::updateCleanDataOrder() {
     CORRADE_COMPARE(layer.glyphCount(data7), 1u);
     CORRADE_COMPARE(layer.glyphCount(data9), 2u);
 
+    /* And 2 text runs, assigned to the remining 2 texts */
+    if(data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu, 1u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0u, 4u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            4u, 2u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
+            7u, 9u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "ahoy"
+            "hi",
+            TestSuite::Compare::String);
+
+        /* The text queries should still match also */
+        CORRADE_COMPARE(layer.text(data7), "ahoy");
+        CORRADE_COMPARE(layer.text(data9), "hi");
+    }
+
     /* Indices for remaining 3 visible glyphs */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
-        /* Text 9, "hi", quads 7 to 8 */
+        /* (Possibly editable) text 9, "hi", quads 7 to 8 */
         7*4 + 0, 7*4 + 1, 7*4 + 2, 7*4 + 2, 7*4 + 1, 7*4 + 3,
         8*4 + 0, 8*4 + 1, 8*4 + 2, 8*4 + 2, 8*4 + 1, 8*4 + 3,
-        /* Text 7, "ahoy", quad 5 */
+        /* (Possibly editable) text 7, "ahoy", quad 5 */
         5*4 + 0, 5*4 + 1, 5*4 + 2, 5*4 + 2, 5*4 + 1, 5*4 + 3,
         /* Text 3, "hello" is removed now */
         /* Glyph 5 is removed now */
@@ -4640,12 +6125,14 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Vertices for all remaining 9 glyphs */
     CORRADE_COMPARE(layer.stateData().vertices.size(), 9*4);
+    /* (Possibly editable) text 7, quad 5 */
     for(std::size_t i = 0; i != 1*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].color, 0x112233_rgbf);
         /* Created with style 1, which is mapped to uniform 2 */
         CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].styleUniform, 2);
     }
+    /* (Possibly editable) text 9, quads 7 to 8 */
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].color, 0x663399_rgbf);
@@ -4717,6 +6204,10 @@ void TextLayerTest::updateCleanDataOrder() {
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 0xffffffffu, 6u, 7u
     }), TestSuite::Compare::Container);
+    if(data.flags >= TextDataFlag::Editable)
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0xffffffffu, 4u
+        }), TestSuite::Compare::Container);
 
     /* Again this explicitly adds NeedsDataUpdate to force recompaction */
     UnsignedInt dataIdsPostRemoval[]{9};
@@ -4739,6 +6230,30 @@ void TextLayerTest::updateCleanDataOrder() {
     /* The glyph count queries should still match */
     CORRADE_COMPARE(layer.glyphCount(data9), 2u);
 
+    /* And 1 text run, assigned to the remining text */
+    if(data.flags >= TextDataFlag::Editable) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
+            0xffffffffu, 0u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
+            0u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
+            2u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
+            9u
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.stateData().textData,
+            "hi",
+            TestSuite::Compare::String);
+
+        /* The text queries should still match also */
+        CORRADE_COMPARE(layer.text(data9), "hi");
+    }
+
     /* Indices for remaining 2 visible glyphs */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
         /* Text 9, "hi", quads 6 to 7 */
@@ -4751,6 +6266,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Vertices for all remaining 8 glyphs */
     CORRADE_COMPARE(layer.stateData().vertices.size(), 8*4);
+    /* (Possibly editable) text 9, quads 6 to 7 */
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].color, 0x663399_rgbf);
