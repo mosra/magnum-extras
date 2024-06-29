@@ -25,6 +25,7 @@
 
 #include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
@@ -394,17 +395,25 @@ template<class T> void AbstractVisualLayerTest::setStyle() {
 
     DataHandle layerData = layer.create(17);
     CORRADE_COMPARE(layer.style(layerData), 17);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a style marks the layer as dirty */
     layer.setStyle(layerData, T(37));
     CORRADE_COMPARE(layer.style(layerData), 37);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setStyle(dataHandleData(layerData), T(66));
     CORRADE_COMPARE(layer.style(layerData), 66);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
 void AbstractVisualLayerTest::setTransitionedStyle() {
@@ -1097,7 +1106,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
     /* Presence (or not) of the update call tests two things -- that the
@@ -1120,7 +1129,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
     if(data.update) {
@@ -1139,7 +1148,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
     if(data.update) {
@@ -1159,7 +1168,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
     if(data.update) {
@@ -1180,7 +1189,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressed);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
     if(data.update) {
@@ -1200,7 +1209,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
     if(data.update) {
@@ -1220,7 +1229,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
     if(data.update) {
@@ -1239,7 +1248,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
-        CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
     if(data.update) {
@@ -1331,7 +1340,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
             PointerEvent event{Pointer::MouseLeft};
             CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
             CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressed);
-            CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+            CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
         }
 
         ui.update();
@@ -1341,7 +1350,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
             PointerEvent event{Pointer::MouseLeft};
             CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
             CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
-            CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+            CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
         }
 
         ui.update();
@@ -1414,7 +1423,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         styleIndexTransitionToDisabled>();
     /** @todo make this implicit from setStyleTransition() somehow? */
-    layer.setNeedsUpdate();
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
     CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
@@ -1452,7 +1461,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         nullptr>();
     /** @todo make this implicit from setStyleTransition() somehow? */
-    layer.setNeedsUpdate();
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
     CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
@@ -1470,7 +1479,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         styleIndexTransitionToDisabled>();
     /** @todo make this implicit from setStyleTransition() somehow? */
-    layer.setNeedsUpdate();
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
     CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
@@ -1488,7 +1497,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         nullptr>();
     /** @todo make this implicit from setStyleTransition() somehow? */
-    layer.setNeedsUpdate();
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
     CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);

@@ -232,7 +232,7 @@ void BaseLayer::setColor(const LayerDataHandle handle, const Color3& color) {
 
 void BaseLayer::setColorInternal(const UnsignedInt id, const Color3& color) {
     static_cast<State&>(*_state).data[id].color = color;
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 void BaseLayer::setOutlineWidth(const DataHandle handle, const Vector4& width) {
@@ -261,7 +261,7 @@ void BaseLayer::setOutlineWidth(const LayerDataHandle handle, const Vector4& wid
 
 void BaseLayer::setOutlineWidthInternal(const UnsignedInt id, const Vector4& width) {
     static_cast<State&>(*_state).data[id].outlineWidth = width;
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 Vector4 BaseLayer::padding(const DataHandle handle) const {
@@ -290,7 +290,7 @@ void BaseLayer::setPadding(const LayerDataHandle handle, const Vector4& padding)
 
 void BaseLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding) {
     static_cast<State&>(*_state).data[id].padding = padding;
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 Vector3 BaseLayer::textureCoordinateOffset(const DataHandle handle) const {
@@ -350,16 +350,16 @@ void BaseLayer::setTextureCoordinatesInternal(const UnsignedInt id, const Vector
     Implementation::BaseLayerData& data = state.data[id];
     data.textureCoordinateOffset = offset;
     data.textureCoordinateSize = size;
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 LayerFeatures BaseLayer::doFeatures() const {
     return AbstractVisualLayer::doFeatures()|LayerFeature::Draw|(static_cast<const Shared::State&>(_state->shared).flags & Shared::Flag::BackgroundBlur ? LayerFeature::Composite : LayerFeatures{});
 }
 
-void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
+void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     /* The base implementation populates data.calculatedStyle */
-    AbstractVisualLayer::doUpdate(dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+    AbstractVisualLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
 
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);

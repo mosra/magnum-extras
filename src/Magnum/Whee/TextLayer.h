@@ -591,7 +591,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * fonts can be only used to set single glyphs (such as various icons
          * or images) with @ref setGlyph().
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref Shared::isHandleValid(FontHandle) const
          */
@@ -630,7 +631,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * previously contained a text to a single glyph and vice versa --- the
          * internal representation of both is the same.
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const,
          *      @ref Shared::isHandleValid(FontHandle) const,
          *      @ref Shared::glyphCacheFontId()
@@ -696,7 +698,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid. @ref TextLayerStyleUniform::color is
          * multiplied with @p color.
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setColor(DataHandle handle, const Color3& color);
@@ -733,7 +736,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * top, right, bottom and is added to the per-style padding values
          * specified in @ref Shared::setStyle().
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setPadding(DataHandle handle, const Vector4& padding);
@@ -753,7 +757,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid. The @p padding is added to the
          * per-style padding values specified in @ref Shared::setStyle().
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setPadding(DataHandle handle, Float padding) {
@@ -789,7 +794,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
            that's on the subclass */
         LayerFeatures doFeatures() const override;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
+        void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
 
     private:
         MAGNUM_WHEE_LOCAL DataHandle createInternal(NodeHandle node);

@@ -144,25 +144,25 @@ const struct {
     bool layerDataHandleOverloads, customFont, nullStyleFonts, noStyle;
 } CreateRemoveSetData[]{
     {"create",
-        NodeHandle::Null, LayerStates{},
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
         false, false, false, false},
     {"create and attach",
-        nodeHandle(9872, 0xbeb), LayerState::NeedsAttachmentUpdate,
+        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
         false, false, false, false},
     {"LayerDataHandle overloads",
-        NodeHandle::Null, LayerStates{},
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
         true, false, false, false},
     {"custom fonts",
-        NodeHandle::Null, LayerStates{},
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
         false, true, false, false},
     {"custom fonts, null style fonts",
-        NodeHandle::Null, LayerStates{},
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
         false, true, true, false},
     {"custom fonts, no style set",
-        NodeHandle::Null, LayerStates{},
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
         false, true, false, true},
     {"custom fonts, LayerDataHandle overloads",
-        NodeHandle::Null, LayerStates{},
+        NodeHandle::Null, LayerState::NeedsDataUpdate,
         true, true, false, false},
 };
 
@@ -1967,7 +1967,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
                 .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
     }
 
-    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean|LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsDataClean|LayerState::NeedsDataUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
         0u, 1u, 7u, 6u, 4u, 5u
     }), TestSuite::Compare::Container);
@@ -2335,17 +2335,25 @@ void TextLayerTest::setColor() {
     /* There's nothing that would work differently for createGlyph() */
     DataHandle data = layer.create(0, "", {}, 0xff3366_rgbf);
     CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a color marks the layer as dirty */
     layer.setColor(data, 0xaabbc_rgbf);
     CORRADE_COMPARE(layer.color(data), 0xaabbc_rgbf);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setColor(dataHandleData(data), 0x112233_rgbf);
     CORRADE_COMPARE(layer.color(data), 0x112233_rgbf);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
 void TextLayerTest::setPadding() {
@@ -2395,27 +2403,43 @@ void TextLayerTest::setPadding() {
     /* There's nothing that would work differently for createGlyph() */
     DataHandle data = layer.create(0, "", {});
     CORRADE_COMPARE(layer.padding(data), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a padding marks the layer as dirty */
     layer.setPadding(data, {2.0f, 4.0f, 3.0f, 1.0f});
     CORRADE_COMPARE(layer.padding(data), (Vector4{2.0f, 4.0f, 3.0f, 1.0f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setPadding(dataHandleData(data), {1.0f, 2.0f, 3.0f, 4.0f});
     CORRADE_COMPARE(layer.padding(dataHandleData(data)), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Single-value padding */
     layer.setPadding(data, 4.0f);
     CORRADE_COMPARE(layer.padding(data), Vector4{4.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setPadding(dataHandleData(data), 3.0f);
     CORRADE_COMPARE(layer.padding(dataHandleData(data)), Vector4{3.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
 void TextLayerTest::invalidHandle() {
@@ -2883,7 +2907,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
-        layer.update({}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+        layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
         CORRADE_COMPARE_AS(layer.stateData().indices,
             Containers::ArrayView<const UnsignedInt>{},
             TestSuite::Compare::Container);
@@ -2895,7 +2919,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Just the filled subset is getting updated */
     UnsignedInt dataIds[]{9, 5, 7, 3};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* The indices should be filled just for the four items */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
@@ -3093,7 +3117,7 @@ void TextLayerTest::updateCleanDataOrder() {
     }), TestSuite::Compare::Container);
 
     UnsignedInt dataIdsPostClean[]{9, 7};
-    layer.update(dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIdsPostClean, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* There should be just 9 glyph runs, assigned to the remaining 9 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -3191,13 +3215,13 @@ void TextLayerTest::updateCleanDataOrder() {
     /* Removing a text marks the corresponding run as unused, the next update()
        then recompacts it */
     layer.remove(data7);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataClean);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 0xffffffffu, 6u, 7u
     }), TestSuite::Compare::Container);
 
     UnsignedInt dataIdsPostRemoval[]{9};
-    layer.update(dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* There should be just 7 glyph runs, assigned to the remaining 7 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -3362,7 +3386,7 @@ void TextLayerTest::updateAlignment() {
     nodeOffsets[3] = {50.5f, 20.5f};
     nodeSizes[3] = {200.8f, 100.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* 2--3
        |  |
@@ -3443,7 +3467,7 @@ void TextLayerTest::updateAlignmentGlyph() {
     nodeOffsets[3] = {50.5f, 20.5f};
     nodeSizes[3] = {200.8f, 100.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* 2--3
        |  |
@@ -3553,7 +3577,7 @@ void TextLayerTest::updatePadding() {
     nodeOffsets[3] = {20.5f, 10.5f};
     nodeSizes[3] = {300.8f, 150.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* 2--3
        |  |
@@ -3635,7 +3659,7 @@ void TextLayerTest::updatePaddingGlyph() {
     nodeOffsets[3] = {20.5f, 10.5f};
     nodeSizes[3] = {300.8f, 150.4f};
     UnsignedInt dataIds[]{0};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* 2--3
        |  |
@@ -3663,7 +3687,7 @@ void TextLayerTest::updateNoStyleSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::TextLayer::update(): no style data was set\n");
 }
 
