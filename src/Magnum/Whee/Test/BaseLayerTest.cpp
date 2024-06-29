@@ -111,6 +111,8 @@ struct BaseLayerTest: TestSuite::Tester {
     void updateEmpty();
     void updateDataOrder();
     void updateNoStyleSet();
+
+    void sharedNeedsUpdateStatePropagatedToLayers();
 };
 
 const struct {
@@ -255,7 +257,9 @@ BaseLayerTest::BaseLayerTest() {
     addInstancedTests({&BaseLayerTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
 
-    addTests({&BaseLayerTest::updateNoStyleSet});
+    addTests({&BaseLayerTest::updateNoStyleSet,
+
+              &BaseLayerTest::sharedNeedsUpdateStatePropagatedToLayers});
 }
 
 using namespace Math::Literals;
@@ -1779,6 +1783,95 @@ void BaseLayerTest::updateNoStyleSet() {
     Error redirectError{&out};
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::BaseLayer::update(): no style data was set\n");
+}
+
+void BaseLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{1}};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    };
+
+    /* Initially no state is set */
+    Layer layer1{layerHandle(0, 1), shared};
+    Layer layer2{layerHandle(0, 1), shared};
+    Layer layer3{layerHandle(0, 1), shared};
+    CORRADE_COMPARE(layer1.state(), LayerStates{});
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerStates{});
+
+    /* Explicitly set a non-trivial state on some of the layers */
+    layer1.setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+    layer3.setNeedsUpdate(LayerState::NeedsSharedDataUpdate);
+
+    /* Calling setStyle() sets LayerState::NeedsDataUpdate on all layers */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}},
+        {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Updating one doesn't cause the flag to be reset on others */
+    layer2.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Updating another still doesn't */
+    layer1.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Calling setStyle() again sets LayerState::NeedsDataUpdate again, even if
+       the data may be the same, as checking differences would be unnecessarily
+       expensive compared to just doing the update always */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}},
+        {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Creating a new layer with the shared state that had setStyle() called a
+       few times doesn't mark it as needing an update because there's no data
+       that would need it yet and the layer should do all other
+       shared-state-dependent setup during construction already */
+    Layer layer4{layerHandle(0, 1), shared};
+    CORRADE_COMPARE(layer4.state(), LayerStates{});
+
+    /* But calling setStyle() next time will */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}},
+        {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate);
+
+    /* Updating again resets just one */
+    layer3.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate);
+
+    /* Calling the AbstractVisualLayer setStyleTransition() should still cause
+       LayerState to be updated as well, i.e. the class should correctly
+       propagate to the parent doState() as well */
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        [](UnsignedInt a) { return a + 1; });
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate);
 }
 
 }}}}
