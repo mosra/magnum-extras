@@ -62,12 +62,22 @@ uniform lowp sampler2D backgroundBlurTextureData;
 #endif
 
 flat in mediump uint interpolatedStyle;
+NOPERSPECTIVE in mediump vec4 interpolatedColor;
+#ifndef SUBDIVIDED_QUADS
 flat in mediump vec2 halfQuadSize;
 #ifndef NO_OUTLINE
 flat in mediump vec4 outlineQuadSize;
 #endif
-NOPERSPECTIVE in mediump vec4 interpolatedColor;
 NOPERSPECTIVE in mediump vec2 interpolatedCenterDistance;
+#else
+/* Horizontal, vertical, outline horizontal, outline vertical */
+NOPERSPECTIVE in mediump vec4 edgeDistance;
+/* These are constant in corner quads and interpolated in the edge and center
+   quads. They only get used in the corner quads, because otherwise the
+   edgeDistance is always at least as large, cancelling them. */
+NOPERSPECTIVE in mediump float cornerRadius;
+NOPERSPECTIVE in mediump float outlineCornerRadius;
+#endif
 #ifdef TEXTURED
 NOPERSPECTIVE in mediump vec3 interpolatedTextureCoordinates;
 #endif
@@ -78,6 +88,7 @@ NOPERSPECTIVE in highp vec2 backgroundBlurTextureCoordinates;
 out lowp vec4 fragmentColor;
 
 void main() {
+    #ifndef SUBDIVIDED_QUADS
     mediump vec2 position = interpolatedCenterDistance;
 
     lowp float dist;
@@ -107,7 +118,7 @@ void main() {
                to be distance to the actual corner, not just to the closest
                edge */
             #ifdef NO_ROUNDED_CORNERS
-            if(edgeDistance.x < 0 && edgeDistance.y < 0)
+            if(edgeDistance.x < 0.0 && edgeDistance.y < 0.0)
                 dist = -length(edgeDistance);
             else
             #endif
@@ -147,12 +158,34 @@ void main() {
                 min(edgeDistance.x, edgeDistance.y),
                 min(edgeDistance.z, edgeDistance.w));
         }
-
-        /* Distance to the inner outline edge should be never larger than
-           distance to the outer edge (such as in case the inner radius is
-           smaller than outer) */
-        outlineDist = min(dist, outlineDist);
     }
+    #endif
+    #else
+    /* Is (0, 0) in centers of outer corner radii, positive in corners,
+       negative at the edges */
+    lowp vec2 cornerCenterDistance = vec2(cornerRadius) - edgeDistance.xy;
+    /* Distance from the actual (rounded) edge, positive inside, negative
+       outside */
+    lowp float dist =
+        /* (Negative) distance from the corner edge, or +radius if not inside
+           any corner */
+        cornerRadius - length(max(cornerCenterDistance, vec2(0.0)))
+        /* (Positive) distance from closest center of corner radii, or 0 if
+           at the edges */
+        - min(max(cornerCenterDistance.x, cornerCenterDistance.y), 0.0);
+
+    /* And similarly for the inner outline edge */
+    lowp vec2 outlineCornerCenterDistance = vec2(outlineCornerRadius) - edgeDistance.zw;
+    lowp float outlineDist =
+        outlineCornerRadius - length(max(outlineCornerCenterDistance, vec2(0.0)))
+        - min(max(outlineCornerCenterDistance.x, outlineCornerCenterDistance.y), 0.0);
+    #endif
+
+    #if !defined(NO_OUTLINE) || defined(SUBDIVIDED_QUADS)
+    /* Distance to the inner outline edge should be never larger than distance
+       to the outer edge (such as in case the inner radius is smaller than
+       outer) */
+    outlineDist = min(dist, outlineDist);
     #endif
 
     /* Gradient, optionally textured */
