@@ -27,6 +27,7 @@
 
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/Optional.h>
@@ -34,6 +35,7 @@
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/Triple.h>
 #include <Corrade/Utility/Algorithms.h>
+#include <Corrade/Utility/Unicode.h>
 #include <Magnum/Math/Functions.h>
 #include <Magnum/Math/Matrix3.h>
 #include <Magnum/Math/Swizzle.h>
@@ -55,6 +57,47 @@ Debug& operator<<(Debug& debug, const FontHandle value) {
     if(value == FontHandle::Null)
         return debug << "Whee::FontHandle::Null";
     return debug << "Whee::FontHandle(" << Debug::nospace << Debug::hex << fontHandleId(value) << Debug::nospace << "," << Debug::hex << fontHandleGeneration(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const TextDataFlag value) {
+    debug << "Whee::TextDataFlag" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case TextDataFlag::value: return debug << "::" #value;
+        _c(Editable)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
+
+Debug& operator<<(Debug& debug, const TextDataFlags value) {
+    return Containers::enumSetDebugOutput(debug, value, "Whee::TextDataFlags{}", {
+        TextDataFlag::Editable
+    });
+}
+
+Debug& operator<<(Debug& debug, const TextEdit value) {
+    debug << "Whee::TextEdit" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case TextEdit::value: return debug << "::" #value;
+        _c(MoveCursorLeft)
+        _c(MoveCursorRight)
+        _c(MoveCursorLineBegin)
+        _c(MoveCursorLineEnd)
+        _c(RemoveBeforeCursor)
+        _c(RemoveAfterCursor)
+        _c(InsertBeforeCursor)
+        _c(InsertAfterCursor)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
 TextLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {
@@ -388,34 +431,15 @@ void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUnifor
     setDynamicStyle(id, uniform, font, alignment, Containers::arrayView(features), padding);
 }
 
-void TextLayer::shapeTextInternal(
-    #ifndef CORRADE_NO_ASSERT
-    const char* const messagePrefix,
-    #endif
-    const UnsignedInt id, const UnsignedInt style, const Containers::StringView text, const TextProperties& properties)
-{
+void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const FontHandle font) {
     State& state = static_cast<State&>(*_state);
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
 
-    /* Decide on a font */
-    FontHandle font = properties.font();
-    if(font == FontHandle::Null) {
-        if(style < sharedState.styleCount) {
-            CORRADE_ASSERT(sharedState.styles[style].font != FontHandle::Null,
-                messagePrefix << "style" << style << "has no font set and no custom font was supplied", );
-            font = sharedState.styles[style].font;
-        } else {
-            CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
-            font = state.dynamicStyles[style - sharedState.styleCount].font;
-            CORRADE_ASSERT(font != FontHandle::Null,
-                messagePrefix << "dynamic style" << style - sharedState.styleCount << "has no font set and no custom font was supplied", );
-        }
-    } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
-        messagePrefix << "invalid handle" << font, );
-
+    /* The shapeRememberTextInternal() should originally have checked that the
+       font isn't null and has an instance, editShapeTextInternal() then just
+       passes what has been saved by shapeRememberTextInternal() */
     Implementation::TextLayerFont& fontState = sharedState.fonts[fontHandleId(font)];
-    CORRADE_ASSERT(fontState.font,
-        messagePrefix << font << "is an instance-less font", );
+    CORRADE_INTERNAL_ASSERT(font != FontHandle::Null && fontState.font);
 
     /* Decide on alignment */
     Text::Alignment alignment;
@@ -523,6 +547,84 @@ void TextLayer::shapeTextInternal(
     data.size = size;
     data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
+
+    /* Save extra properties used by editable text. These are not currently
+       used by anything else for non-editable text, but it's easier to just
+       save them here instead of adding extra logic to both
+       shapeRememberTextInternal() and updateText(). */
+    data.usedDirection = shaper.direction();
+}
+
+void TextLayer::shapeRememberTextInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const UnsignedInt id, const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const TextDataFlags flags)
+{
+    State& state = static_cast<State&>(*_state);
+    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
+
+    /* Decide on a font */
+    FontHandle font = properties.font();
+    if(font == FontHandle::Null) {
+        if(style < sharedState.styleCount) {
+            CORRADE_ASSERT(sharedState.styles[style].font != FontHandle::Null,
+                messagePrefix << "style" << style << "has no font set and no custom font was supplied", );
+            font = sharedState.styles[style].font;
+        } else {
+            CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
+            font = state.dynamicStyles[style - sharedState.styleCount].font;
+            CORRADE_ASSERT(font != FontHandle::Null,
+                messagePrefix << "dynamic style" << style - sharedState.styleCount << "has no font set and no custom font was supplied", );
+        }
+    } else CORRADE_ASSERT(Whee::isHandleValid(sharedState.fonts, font),
+        messagePrefix << "invalid handle" << font, );
+
+    CORRADE_ASSERT(sharedState.fonts[fontHandleId(font)].font,
+        messagePrefix << font << "is an instance-less font", );
+
+    shapeTextInternal(id, style, text, properties, font);
+
+    Implementation::TextLayerData& data = state.data[id];
+    data.flags = flags;
+
+    /* If the text is meant to be editable, remember the input string */
+    if(flags >= TextDataFlag::Editable) {
+        CORRADE_ASSERT(properties.features().isEmpty(),
+            messagePrefix << "passing font features for an editable text is not implemented yet, sorry", );
+        CORRADE_ASSERT(
+            properties.shapeDirection() != Text::ShapeDirection::TopToBottom &&
+            properties.shapeDirection() != Text::ShapeDirection::BottomToTop,
+            messagePrefix << "vertical shape direction for an editable text is not implemented yet, sorry", );
+
+        /* Add a new text run. Any previous run for this data was marked as
+           unused in previous remove() or in setText() before calling this
+           function. */
+        const UnsignedInt textRun = state.textRuns.size();
+        const UnsignedInt textOffset = state.textData.size();
+        arrayAppend(state.textData, text);
+        Implementation::TextLayerTextRun& run = arrayAppend(state.textRuns, NoInit, 1).front();
+        run.textOffset = textOffset;
+        run.textSize = text.size();
+        run.data = id;
+        run.cursor = text.size();
+
+        /* Save the text properties. Copy the internals instead of saving the
+           whole TextProperties instance to have the text runs trivially
+           copyable. */
+        Utility::copy(properties._language, run.language);
+        run.script = properties._script;
+        /* Save the actual font used to not have to do the above branching (and
+           assertions) on every updateText() / editText() */
+        run.font = font;
+        run.alignment = properties._alignment;
+        run.direction = properties._direction;
+
+        /* Save the text run reference */
+        data.textRun = textRun;
+
+    /* Otherwise mark it as having no associated text run */
+    } else data.textRun = ~UnsignedInt{};
 }
 
 void TextLayer::shapeGlyphInternal(
@@ -615,6 +717,8 @@ void TextLayer::shapeGlyphInternal(
     data.size = size;
     data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
+    data.textRun = ~UnsignedInt{};
+    data.flags = {};
 }
 
 DataHandle TextLayer::createInternal(const NodeHandle node) {
@@ -630,7 +734,7 @@ DataHandle TextLayer::createInternal(const NodeHandle node) {
     return handle;
 }
 
-DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const Color3& color, const NodeHandle node) {
+DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const Color3& color, const TextDataFlags flags, const NodeHandle node) {
     State& state = static_cast<State&>(*_state);
     #ifndef CORRADE_NO_ASSERT
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
@@ -644,18 +748,19 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
     const DataHandle handle = createInternal(node);
     const UnsignedInt id = dataHandleId(handle);
 
-    /* Shape the text, save its properties */
-    shapeTextInternal(
+    /* Shape the text, save its properties and optionally also the source
+       string if it's editable */
+    shapeRememberTextInternal(
         #ifndef CORRADE_NO_ASSERT
         "Whee::TextLayer::create():",
         #endif
-        id, style, text, properties);
+        id, style, text, properties, flags);
     Implementation::TextLayerData& data = state.data[id];
     /** @todo is there a way to have create() with all possible per-data
         options that doesn't make it ambiguous / impossible to extend further?
         like, having both color and padding optional is ambiguous, etc. */
     data.padding = {};
-    /* glyphRun is filled by shapeInternal() */
+    /* glyphRun, textRun and flags is filled by shapeTextInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     data.color = color;
@@ -688,7 +793,7 @@ DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt gly
         options that doesn't make it ambiguous / impossible to extend further?
         like, having both color and padding optional is ambiguous, etc. */
     data.padding = {};
-    /* glyphRun is filled by shapeGlyphInternal() */
+    /* glyphRun, textRun and flags is filled by shapeGlyphInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     data.color = color;
@@ -713,6 +818,11 @@ void TextLayer::removeInternal(const UnsignedInt id) {
        recompaction in doUpdate(). */
     state.glyphRuns[state.data[id].glyphRun].glyphOffset = ~UnsignedInt{};
 
+    /* If there's a text run, mark it as unused as well; it'll be removed in
+       doUpdate() too */
+    if(state.data[id].textRun != ~UnsignedInt{})
+        state.textRuns[state.data[id].textRun].textOffset = ~UnsignedInt{};
+
     /* Data removal doesn't need anything to be reuploaded to continue working
        correctly, thus setNeedsUpdate() isn't called.
 
@@ -724,6 +834,18 @@ void TextLayer::removeInternal(const UnsignedInt id) {
        wouldn't really fully solve that peak memory problem anyway, and on the
        other hand choosing to trigger update() manually after a lot of removals
        can achieve lower peak use than any automagic. */
+}
+
+TextDataFlags TextLayer::flags(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::flags(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).data[dataHandleId(handle)].flags;
+}
+
+TextDataFlags TextLayer::flags(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::flags(): invalid handle" << handle, {});
+    return static_cast<const State&>(*_state).data[layerDataHandleId(handle)].flags;
 }
 
 UnsignedInt TextLayer::glyphCount(const DataHandle handle) const {
@@ -754,19 +876,137 @@ Vector2 TextLayer::size(const LayerDataHandle handle) const {
     return state.data[layerDataHandleId(handle)].size;
 }
 
+UnsignedInt TextLayer::cursor(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::cursor(): invalid handle" << handle, {});
+    return cursorInternal(dataHandleId(handle));
+}
+
+UnsignedInt TextLayer::cursor(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::cursor(): invalid handle" << handle, {});
+    return cursorInternal(layerDataHandleId(handle));
+}
+
+UnsignedInt TextLayer::cursorInternal(const UnsignedInt id) const {
+    const State& state = static_cast<const State&>(*_state);
+    const Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+        "Whee::TextLayer::cursor(): text doesn't have" << TextDataFlag::Editable << "set", {});
+    const Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
+    CORRADE_INTERNAL_ASSERT(run.cursor <= run.textSize);
+    return run.cursor;
+}
+
+void TextLayer::setCursor(const DataHandle handle, const UnsignedInt position) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::setCursor(): invalid handle" << handle, );
+    return setCursorInternal(dataHandleId(handle), position);
+}
+
+void TextLayer::setCursor(const LayerDataHandle handle, const UnsignedInt position) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::setCursor(): invalid handle" << handle, );
+    return setCursorInternal(layerDataHandleId(handle), position);
+}
+
+void TextLayer::setCursorInternal(const UnsignedInt id, const UnsignedInt position) {
+    State& state = static_cast<State&>(*_state);
+    const Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+        "Whee::TextLayer::setCursor(): text doesn't have" << TextDataFlag::Editable << "set", );
+
+    Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
+    CORRADE_ASSERT(position <= run.textSize,
+        "Whee::TextLayer::setCursor(): position" << position << "out of range for a text of" << run.textSize << "bytes", );
+
+    if(position != run.cursor) {
+        run.cursor = position;
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
+}
+
+TextProperties TextLayer::textProperties(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::textProperties(): invalid handle" << handle, {});
+    return textPropertiesInternal(dataHandleId(handle));
+}
+
+TextProperties TextLayer::textProperties(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::textProperties(): invalid handle" << handle, {});
+    return textPropertiesInternal(layerDataHandleId(handle));
+}
+
+TextProperties TextLayer::textPropertiesInternal(const UnsignedInt id) const {
+    const State& state = static_cast<const State&>(*_state);
+    const Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+        "Whee::TextLayer::textProperties(): text doesn't have" << TextDataFlag::Editable << "set", {});
+    const Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
+
+    TextProperties properties{NoInit};
+    Utility::copy(run.language, properties._language);
+    properties._script = run.script;
+    /* Contrary to what was passed to create() or setText(), the font is always
+       non-null here. We'd have to maintain an additional state bit to
+       distinguish between font being taken from the style or from the
+       TextProperties, then do all the extra font selection logic, then handle
+       cases of the style font suddenly becoming null ... Not worth it. */
+    properties._font = run.font;
+    properties._alignment = run.alignment;
+    properties._direction = run.direction;
+    return properties;
+}
+
+Containers::StringView TextLayer::text(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::text(): invalid handle" << handle, {});
+    return textInternal(dataHandleId(handle));
+}
+
+Containers::StringView TextLayer::text(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::text(): invalid handle" << handle, {});
+    return textInternal(layerDataHandleId(handle));
+}
+
+Containers::StringView TextLayer::textInternal(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    const Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+        "Whee::TextLayer::text(): text doesn't have" << TextDataFlag::Editable << "set", {});
+
+    CORRADE_INTERNAL_ASSERT(data.textRun != ~UnsignedInt{});
+    return state.textData.sliceSize(state.textRuns[data.textRun].textOffset,
+                                    state.textRuns[data.textRun].textSize);
+}
+
+void TextLayer::setText(const DataHandle handle, const Containers::StringView text, const TextProperties& properties, const TextDataFlags flags) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::setText(): invalid handle" << handle, );
+    setTextInternal(dataHandleId(handle), text, properties, flags);
+}
+
 void TextLayer::setText(const DataHandle handle, const Containers::StringView text, const TextProperties& properties) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::setText(): invalid handle" << handle, );
-    setTextInternal(dataHandleId(handle), text, properties);
+    setTextInternal(dataHandleId(handle), text, properties, static_cast<const State&>(*_state).data[dataHandleId(handle)].flags);
+}
+
+void TextLayer::setText(const LayerDataHandle handle, const Containers::StringView text, const TextProperties& properties, const TextDataFlags flags) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::setText(): invalid handle" << handle, );
+    setTextInternal(layerDataHandleId(handle), text, properties, flags);
 }
 
 void TextLayer::setText(const LayerDataHandle handle, const Containers::StringView text, const TextProperties& properties) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::setText(): invalid handle" << handle, );
-    setTextInternal(layerDataHandleId(handle), text, properties);
+    setTextInternal(layerDataHandleId(handle), text, properties, static_cast<const State&>(*_state).data[layerDataHandleId(handle)].flags);
 }
 
-void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringView text, const TextProperties& properties) {
+void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringView text, const TextProperties& properties, const TextDataFlags flags) {
     State& state = static_cast<State&>(*_state);
     Implementation::TextLayerData& data = state.data[id];
 
@@ -774,13 +1014,245 @@ void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringVi
        recompaction in doUpdate(). */
     state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
 
-    /* Shape the text, mark the layer as needing an update */
-    shapeTextInternal(
+    /* If there's a text run, mark it as unused as well; it'll be removed in
+       doUpdate() too */
+    if(state.data[id].textRun != ~UnsignedInt{})
+        state.textRuns[state.data[id].textRun].textOffset = ~UnsignedInt{};
+
+    /* Shape the text, save its properties and optionally also the source
+       string if it's editable; mark the layer as needing an update */
+    shapeRememberTextInternal(
         #ifndef CORRADE_NO_ASSERT
         "Whee::TextLayer::setText():",
         #endif
-        id, data.style, text, properties);
+        id, data.style, text, properties, flags);
     setNeedsUpdate(LayerState::NeedsDataUpdate);
+}
+
+void TextLayer::updateText(const DataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::updateText(): invalid handle" << handle, );
+    updateTextInternal(dataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor);
+}
+
+void TextLayer::updateText(const LayerDataHandle handle, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::updateText(): invalid handle" << handle, );
+    updateTextInternal(layerDataHandleId(handle), removeOffset, removeSize, insertOffset, insertText, cursor);
+}
+
+void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt removeOffset, const UnsignedInt removeSize, const UnsignedInt insertOffset, const Containers::StringView insertText, const UnsignedInt cursor) {
+    State& state = static_cast<State&>(*_state);
+    Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+        "Whee::TextLayer::updateText(): text doesn't have" << TextDataFlag::Editable << "set", );
+
+    /* Getting a copy of the previous run and not a reference, as the textRuns
+       array is possibly getting reallocated below */
+    const Implementation::TextLayerTextRun previousRun = state.textRuns[data.textRun];
+    /* Not `removeOffset + removeSize <= previousRun.textSize` as that could
+       overflow and pass the check, for example if garbage memory is passed */
+    CORRADE_ASSERT(removeOffset <= previousRun.textSize && removeSize <= previousRun.textSize - removeOffset,
+        "Whee::TextLayer::updateText(): remove offset" << removeOffset << "and size" << removeSize << "out of range for a text of" << previousRun.textSize << "bytes", );
+    const UnsignedInt textSizeBeforeInsert = previousRun.textSize - removeSize;
+    CORRADE_ASSERT(insertOffset <= textSizeBeforeInsert,
+        "Whee::TextLayer::updateText(): insert offset" << insertOffset << "out of range for a text of" << textSizeBeforeInsert << "bytes", );
+    const UnsignedInt textSize = textSizeBeforeInsert + insertText.size();
+    CORRADE_ASSERT(cursor <= textSize,
+        "Whee::TextLayer::updateText(): cursor position" << cursor << "out of range for a text of" << textSize << "bytes", );
+
+    /* If there's nothing to remove or insert, update just the cursor and
+       bail */
+    if(!removeSize && !insertText) {
+        setCursorInternal(id, cursor);
+        return;
+    }
+
+    /* Add a new text run for the modified contents */
+    const UnsignedInt textRun = state.textRuns.size();
+    const UnsignedInt textOffset = state.textData.size();
+    Containers::ArrayView<char> text = arrayAppend(state.textData, NoInit, textSize);
+    Implementation::TextLayerTextRun& run = arrayAppend(state.textRuns, NoInit, 1).front();
+
+    /* Fill the new run properties */
+    run.textOffset = textOffset;
+    run.textSize = textSize;
+    run.data = id;
+    /* run.cursor updated by setCursorInternal() at the end */
+
+    /* Copy the TextProperties internals verbatim */
+    Utility::copy(previousRun.language, run.language);
+    run.script = previousRun.script;
+    run.font = previousRun.font;
+    run.alignment = previousRun.alignment;
+    run.direction = previousRun.direction;
+
+    /* We can insert either before the removed range, in which case the copy
+       before the removed range has to be split */
+    UnsignedInt copySrcBegin[3];
+    UnsignedInt copyDstBegin[3];
+    UnsignedInt copySrcEnd[3];
+    copySrcBegin[0] = 0;
+    copyDstBegin[0] = 0;
+    if(insertOffset < removeOffset) {
+        copySrcEnd[0] = insertOffset;
+
+        copySrcBegin[1] = insertOffset;
+        copyDstBegin[1] = insertOffset + insertText.size();
+        copySrcEnd[1] = removeOffset;
+
+        copySrcBegin[2] = removeOffset + removeSize;
+        copyDstBegin[2] = removeOffset + insertText.size();
+
+    /* Or insert after the removed range, in which case the copy after the
+       removed range has to be split (and the offsets there include the removed
+       size as well because the source doesn't have it removed yet) */
+    } else {
+        copySrcEnd[0] = removeOffset;
+
+        copySrcBegin[1] = removeOffset + removeSize;
+        copyDstBegin[1] = removeOffset;
+        copySrcEnd[1] = removeSize + insertOffset;
+
+        copySrcBegin[2] = removeSize + insertOffset;
+        copyDstBegin[2] = insertOffset + insertText.size();
+    }
+    copySrcEnd[2] = previousRun.textSize;
+
+    /* Copy the bits of the previous text, if not empty */
+    const Containers::StringView previousText = state.textData.sliceSize(previousRun.textOffset, previousRun.textSize);
+    for(std::size_t i: {0, 1, 2}) {
+        const UnsignedInt size = copySrcEnd[i] - copySrcBegin[i];
+        if(size) Utility::copy(
+            previousText.slice(copySrcBegin[i], copySrcEnd[i]),
+            text.sliceSize(copyDstBegin[i], size));
+    }
+
+    /* Copy the inserted text, if not empty */
+    if(insertText)
+        Utility::copy(insertText, text.sliceSize(insertOffset, insertText.size()));
+
+    /* Mark the previous run (potentially reallocated somewhere) as unused.
+       It'll be removed during the next recompaction run in doUpdate(). Save
+       the new run reference. */
+    state.textRuns[data.textRun].textOffset = ~UnsignedInt{};
+    data.textRun = textRun;
+
+    /* Shape the new text using properties saved in the run and mark the layer
+       as needing an update. Forming a TextProperties from the internal state
+       that was saved earlier in shapeRememberTextInternal() above. */
+    TextProperties properties{NoInit};
+    Utility::copy(run.language, properties._language);
+    properties._script = run.script;
+    /* The font is passed through an argument, shouldn't be taken from here */
+    properties._font = FontHandle::Null;
+    /* The saved alignment has a special value denoting NullOpt, so just
+       verbatinm copying it back */
+    properties._alignment = run.alignment;
+    /* Similarly, the direction is both the layout and shape directions
+       together, verbatim copy them back */
+    properties._direction = run.direction;
+    shapeTextInternal(id, data.style, text, properties, run.font);
+
+    /* Update the cursor position and all related state */
+    setCursorInternal(id, cursor);
+
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
+}
+
+void TextLayer::editText(const DataHandle handle, const TextEdit edit, const Containers::StringView insert) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::editText(): invalid handle" << handle, );
+    return editTextInternal(dataHandleId(handle), edit, insert);
+}
+
+void TextLayer::editText(const LayerDataHandle handle, const TextEdit edit, const Containers::StringView insert) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayer::editText(): invalid handle" << handle, );
+    return editTextInternal(layerDataHandleId(handle), edit, insert);
+}
+
+void TextLayer::editTextInternal(const UnsignedInt id, const TextEdit edit, const Containers::StringView insert) {
+    CORRADE_ASSERT(!insert ||
+        edit == TextEdit::InsertBeforeCursor ||
+        edit == TextEdit::InsertAfterCursor,
+        "Whee::TextLayer::editText():" << edit << "requires no text to insert", );
+
+    State& state = static_cast<State&>(*_state);
+    const Implementation::TextLayerData& data = state.data[id];
+    CORRADE_ASSERT(data.textRun != ~UnsignedInt{},
+        "Whee::TextLayer::editText(): text doesn't have" << TextDataFlag::Editable << "set", );
+
+    Implementation::TextLayerTextRun& run = state.textRuns[data.textRun];
+    const Containers::StringView text = state.textData.sliceSize(run.textOffset, run.textSize);
+
+    /* Simple cursor movement, delegate to setCursor() */
+    if(edit == TextEdit::MoveCursorLineBegin ||
+       edit == TextEdit::MoveCursorLineEnd ||
+       edit == TextEdit::MoveCursorLeft ||
+       edit == TextEdit::MoveCursorRight)
+    {
+        UnsignedInt cursor = run.cursor;
+
+        /* Line begin / end movement has no special-casing for RTL direction
+           -- it moves at the begin/end of the byte stream in both cases and
+           differs only optically */
+        if(edit == TextEdit::MoveCursorLineBegin)
+            cursor = 0;
+        else if(edit == TextEdit::MoveCursorLineEnd)
+            cursor = run.textSize;
+        /* Cursor left / right movement has special-casing for RTL tho, the
+           intent is for movement left to always go left, and not right, and
+           vice versa */
+        else if(run.cursor > 0 && (
+                (edit == TextEdit::MoveCursorLeft && data.usedDirection != Text::ShapeDirection::RightToLeft) ||
+                (edit == TextEdit::MoveCursorRight && data.usedDirection == Text::ShapeDirection::RightToLeft)))
+            cursor = Utility::Unicode::prevChar(text, run.cursor).second();
+        else if(run.cursor < run.textSize && (
+                (edit == TextEdit::MoveCursorRight && data.usedDirection != Text::ShapeDirection::RightToLeft) ||
+                (edit == TextEdit::MoveCursorLeft && data.usedDirection == Text::ShapeDirection::RightToLeft)))
+            cursor = Utility::Unicode::nextChar(text, run.cursor).second();
+
+        /* The function takes care of updating all needed data, LayerState etc
+           if the cursor position actually changes */
+        setCursorInternal(id, cursor);
+
+    /* Text removal & insertion with cursor adjustment */
+    } else if(edit == TextEdit::RemoveBeforeCursor ||
+              edit == TextEdit::RemoveAfterCursor ||
+              edit == TextEdit::InsertBeforeCursor ||
+              edit == TextEdit::InsertAfterCursor)
+    {
+        UnsignedInt removeOffset = 0;
+        UnsignedInt removeSize = 0;
+        UnsignedInt insertOffset = 0;
+        UnsignedInt cursor = run.cursor;
+        /* Insertion has no special-casing for RTL -- it just inserts the
+           data at the place of the cursor and then either moves the cursor
+           after the inserted bytes or leaves it where it was, the difference
+           is only optical */
+        if(edit == TextEdit::InsertBeforeCursor) {
+            insertOffset = run.cursor;
+            cursor = run.cursor + insert.size();
+        } else if(edit == TextEdit::InsertAfterCursor) {
+            insertOffset = run.cursor;
+            cursor = run.cursor;
+        /* Deletion as well -- the difference is only optical, and compared to
+           left/right arrow keys the backspace and delete keys don't have any
+           implicit optical direction in the name that would need matching */
+        } else if(edit == TextEdit::RemoveBeforeCursor && run.cursor > 0) {
+            removeOffset = Utility::Unicode::prevChar(text, run.cursor).second();
+            removeSize = run.cursor - removeOffset;
+            cursor = removeOffset;
+        } else if(edit == TextEdit::RemoveAfterCursor && run.cursor < run.textSize) {
+            removeOffset = run.cursor;
+            removeSize = Utility::Unicode::nextChar(text, run.cursor).second() - run.cursor;
+            cursor = run.cursor;
+        }
+
+        updateTextInternal(id, removeOffset, removeSize, insertOffset, insert, cursor);
+
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE(); /* LCOV_EXCL_LINE */
 }
 
 void TextLayer::setGlyph(const DataHandle handle, const UnsignedInt glyph, const TextProperties& properties) {
@@ -805,6 +1277,11 @@ void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, 
        that too), but this way makes the often-updated data clustered to the
        end, allowing potential savings in data upload. */
     state.glyphRuns[data.glyphRun].glyphOffset = ~UnsignedInt{};
+
+    /* If there's a text run, mark it as unused as well; it'll be removed in
+       doUpdate() too */
+    if(state.data[id].textRun != ~UnsignedInt{})
+        state.textRuns[state.data[id].textRun].textOffset = ~UnsignedInt{};
 
     /* Shape the glyph, mark the layer as needing an update */
     shapeGlyphInternal(
@@ -896,12 +1373,17 @@ LayerStates TextLayer::doState() const {
 void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
     State& state = static_cast<State&>(*_state);
 
-    /* Mark glyph runs attached to removed data as unused. They'll get removed
-       during the next recompaction in doUpdate(). */
+    /* Mark glyph / text runs attached to removed data as unused. They'll get
+       removed during the next recompaction in doUpdate(). */
     /** @todo some way to iterate set bits */
-    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i)
-        if(dataIdsToRemove[i])
-            state.glyphRuns[state.data[i].glyphRun].glyphOffset = ~UnsignedInt{};
+    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i) {
+        if(!dataIdsToRemove[i])
+            continue;
+
+        state.glyphRuns[state.data[i].glyphRun].glyphOffset = ~UnsignedInt{};
+        if(state.data[i].textRun != ~UnsignedInt{})
+            state.textRuns[state.data[i].textRun].textOffset = ~UnsignedInt{};
+    }
 
     /* Data removal doesn't need anything to be reuploaded to continue working
        correctly, thus setNeedsUpdate() isn't called, and neither is in
@@ -938,8 +1420,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     CORRADE_ASSERT(!sharedState.styles.isEmpty(),
         "Whee::TextLayer::update(): no style data was set", );
 
-    /* Recompact the glyph data by removing unused runs. Do this only if data
-       actually change, this isn't affected by anything node-related */
+    /* Recompact the glyph / text data by removing unused runs. Do this only if
+       data actually change, this isn't affected by anything node-related */
     /** @todo further restrict this to just NeedsCommonDataUpdate which gets
         set by setText(), remove() etc that actually produces unused runs, but
         not setColor() and such? the recompaction however implies a need to
@@ -982,6 +1464,46 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         CORRADE_INTERNAL_ASSERT(outputGlyphRunOffset <= state.glyphRuns.size());
         arrayResize(state.glyphData, outputGlyphDataOffset);
         arrayResize(state.glyphRuns, outputGlyphRunOffset);
+    }
+    /* Another scope to avoid accidental variable reuse, flattening it to avoid
+       excessive indentation */
+    if(states & LayerState::NeedsDataUpdate) {
+        std::size_t outputTextDataOffset = 0;
+        std::size_t outputTextRunOffset = 0;
+        for(std::size_t i = 0; i != state.textRuns.size(); ++i) {
+            Implementation::TextLayerTextRun& run = state.textRuns[i];
+            if(run.textOffset == ~UnsignedInt{})
+                continue;
+
+            /* Move the text data earlier if there were skipped runs before,
+               update the reference to it in the run */
+            if(run.textOffset != outputTextDataOffset) {
+                CORRADE_INTERNAL_DEBUG_ASSERT(run.textOffset > outputTextDataOffset);
+                CORRADE_INTERNAL_DEBUG_ASSERT(i != outputTextRunOffset);
+
+                std::memmove(state.textData.data() + outputTextDataOffset,
+                             state.textData.data() + run.textOffset,
+                             run.textSize);
+                run.textOffset = outputTextDataOffset;
+            }
+            outputTextDataOffset += run.textSize;
+
+            /* Move the text run info earlier if there were skipped runs
+               before, update the reference to it in the data */
+            if(i != outputTextRunOffset) {
+                CORRADE_INTERNAL_DEBUG_ASSERT(i > outputTextRunOffset);
+                CORRADE_INTERNAL_DEBUG_ASSERT(state.data[run.data].textRun != ~UnsignedInt{});
+                state.data[run.data].textRun = outputTextRunOffset;
+                state.textRuns[outputTextRunOffset] = run;
+            }
+            ++outputTextRunOffset;
+        }
+
+        /* Remove the now-unused data from the end */
+        CORRADE_INTERNAL_ASSERT(outputTextDataOffset <= state.textData.size());
+        CORRADE_INTERNAL_ASSERT(outputTextRunOffset <= state.textRuns.size());
+        arrayResize(state.textData, outputTextDataOffset);
+        arrayResize(state.textRuns, outputTextRunOffset);
     }
 
     /* Fill in indices in desired order if either the data themselves or the
