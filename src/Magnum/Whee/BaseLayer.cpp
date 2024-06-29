@@ -100,6 +100,12 @@ void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& comm
         Utility::copy(stylePaddings, stridedArrayView(state.styles).slice(&Implementation::BaseLayerStyle::padding));
     }
     doSetStyle(commonUniform, uniforms);
+
+    /* Make doState() of all layers sharing this state return NeedsDataUpdate
+       in order to update style-to-uniform mappings, paddings and such. Setting
+       it only if those differ would trigger update only if actually needed,
+       but it may be prohibitively expensive compared to updating always. */
+    ++state.styleUpdateStamp;
 }
 
 BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
@@ -357,6 +363,17 @@ LayerFeatures BaseLayer::doFeatures() const {
     return AbstractVisualLayer::doFeatures()|LayerFeature::Draw|(static_cast<const Shared::State&>(_state->shared).flags & Shared::Flag::BackgroundBlur ? LayerFeature::Composite : LayerFeatures{});
 }
 
+LayerStates BaseLayer::doState() const {
+    LayerStates states = AbstractVisualLayer::doState();
+
+    auto& state = static_cast<const State&>(*_state);
+    auto& sharedState = static_cast<const Shared::State&>(state.shared);
+    if(state.styleUpdateStamp != sharedState.styleUpdateStamp)
+        /* Needed because uniform mapping and paddings can change */
+        states |= LayerState::NeedsDataUpdate;
+    return states;
+}
+
 void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     /* The base implementation populates data.calculatedStyle */
     AbstractVisualLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
@@ -459,6 +476,10 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     texturedVertices[dataId*4 + i].textureCoordinates = {Math::lerp(min, max, BitVector2{i}), data.textureCoordinateOffset.z()};
             }
         }
+
+        /* Sync the style update stamp to not have doState() return
+           NeedsDataUpdate again next time it's asked */
+        state.styleUpdateStamp = sharedState.styleUpdateStamp;
     }
 }
 
