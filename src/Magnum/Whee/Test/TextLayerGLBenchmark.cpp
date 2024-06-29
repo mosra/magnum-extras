@@ -58,8 +58,17 @@ struct TextLayerGLBenchmark: GL::OpenGLTester {
 
 using namespace Math::Literals;
 
+const struct {
+    const char* name;
+    UnsignedInt dynamicStyleCount;
+} FragmentData[]{
+    {"", 0},
+    {"dynamic styles", 1},
+};
+
 TextLayerGLBenchmark::TextLayerGLBenchmark() {
-    addBenchmarks({&TextLayerGLBenchmark::fragment}, 10,
+    addInstancedBenchmarks({&TextLayerGLBenchmark::fragment}, 10,
+        Containers::arraySize(FragmentData),
         &TextLayerGLBenchmark::setup,
         &TextLayerGLBenchmark::teardown,
         BenchmarkType::GpuTime);
@@ -93,6 +102,9 @@ void TextLayerGLBenchmark::teardown() {
 }
 
 void TextLayerGLBenchmark::fragment() {
+    auto&& data = FragmentData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Renders a single data over the whole size to benchmark mainly the
        fragment shader invocation */
 
@@ -144,7 +156,9 @@ void TextLayerGLBenchmark::fragment() {
         cache.image().pixels<char>()[0]);
     cache.flushImage({{}, {32, 32}});
 
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{1}};
+    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{1}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 2048.0f);

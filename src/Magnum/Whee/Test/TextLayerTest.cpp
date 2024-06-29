@@ -29,6 +29,7 @@
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/String.h>
+#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Container.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
@@ -48,8 +49,9 @@
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/TextProperties.h"
-/* for createRemoveSetText(), updateCleanDataOrder(), updateAlignment(),
-   updateAlignmentGlyph(), updatePadding() and updatePaddingGlyph() */
+/* for dynamicStyle(), createRemoveSetText(), updateCleanDataOrder(),
+   updateAlignment(), updateAlignmentGlyph(), updatePadding() and
+   updatePaddingGlyph() */
 #include "Magnum/Whee/Implementation/textLayerState.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
@@ -74,13 +76,15 @@ struct TextLayerTest: TestSuite::Tester {
 
     void sharedConfigurationConstruct();
     void sharedConfigurationConstructSameStyleUniformCount();
-    void sharedConfigurationConstructZeroStyleCount();
+    void sharedConfigurationConstructZeroStyleOrUniformCount();
     void sharedConfigurationConstructCopy();
+    void sharedConfigurationSetters();
 
     void sharedConstruct();
     void sharedConstructNoCreate();
     void sharedConstructCopy();
     void sharedConstructMove();
+    void sharedConstructZeroStyleCount();
 
     void sharedSetGlyphCache();
     void sharedSetGlyphCacheAlreadySet();
@@ -107,6 +111,10 @@ struct TextLayerTest: TestSuite::Tester {
     void construct();
     void constructCopy();
     void constructMove();
+
+    void dynamicStyle();
+    void dynamicStyleNoDynamicStyles();
+    void dynamicStyleInvalid();
 
     /* remove() and setText() tested here as well */
     template<class StyleIndex, class GlyphIndex> void createRemoveSet();
@@ -135,6 +143,36 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedNeedsUpdateStatePropagatedToLayers();
 };
 
+const struct {
+    const char* name;
+    UnsignedInt dynamicStyleCount;
+} SharedSetStyleData[]{
+    {"", 0},
+    {"dynamic styles", 17}
+};
+
+const struct {
+    const char* name;
+    bool changeFont;
+    Vector4 padding1, padding2;
+    LayerStates expectedStates;
+} DynamicStyleData[]{
+    {"default font and padding",
+        false, {}, {},
+        LayerState::NeedsCommonDataUpdate},
+    {"different font, default padding",
+        /* Doesn't cause NeedsUpdate as it's impossible to change a font of an
+           already layouted text, have to set it again in that case */
+        true, {}, {},
+        LayerState::NeedsCommonDataUpdate},
+    {"default font, non-zero padding",
+        false, {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+    {"different font, non-zero padding",
+        true, {3.5f, 0.5f, 1.5f, 2.5f}, Vector4{2.0f},
+        LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate},
+};
+
 enum class Enum: UnsignedShort {};
 
 Debug& operator<<(Debug& debug, Enum value) {
@@ -146,28 +184,32 @@ const struct {
     NodeHandle node;
     LayerStates state;
     bool layerDataHandleOverloads, customFont, nullStyleFonts, noStyle;
+    UnsignedInt styleCount, dynamicStyleCount;
 } CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, false, false, false},
+        false, false, false, false, 3, 0},
     {"create and attach",
         nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate,
-        false, false, false, false},
+        false, false, false, false, 3, 0},
     {"LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, false, false, false},
+        true, false, false, false, 3, 0},
     {"custom fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, false},
+        false, true, false, false, 3, 0},
     {"custom fonts, null style fonts",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, true, false},
+        false, true, true, false, 3, 0},
     {"custom fonts, no style set",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        false, true, false, true},
+        false, true, false, true, 3, 0},
     {"custom fonts, LayerDataHandle overloads",
         NodeHandle::Null, LayerState::NeedsDataUpdate,
-        true, true, false, false},
+        true, true, false, false, 3, 0},
+    {"dynamic styles",
+        NodeHandle::Null, LayerState::NeedsCommonDataUpdate|LayerState::NeedsDataUpdate,
+        false, false, false, false, 1, 2},
 };
 
 const struct {
@@ -176,6 +218,14 @@ const struct {
 } NoSharedStyleFontsData[]{
     {"no style set", false},
     {"style with null font set", true}
+};
+
+const struct {
+    const char* name;
+    UnsignedInt styleCount, dynamicStyleCount;
+} StyleOutOfRangeData[]{
+    {"", 3, 0},
+    {"dynamic styles", 1, 2},
 };
 
 const struct {
@@ -230,44 +280,85 @@ const struct {
 const struct {
     const char* name;
     bool emptyUpdate;
+    UnsignedInt styleCount, dynamicStyleCount;
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
     LayerStates states;
     bool expectIndexDataUpdated, expectVertexDataUpdated;
 } UpdateCleanDataOrderData[]{
-    {"empty update", true,
+    {"empty update", true, 6, 0,
         {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"", false,
+    {"", false, 6, 0,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"node offset/size update only", false,
+    {"node offset/size update only", false, 6, 0,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true},
-    {"node order update only", false,
+    {"node order update only", false, 6, 0,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
         LayerState::NeedsNodeOrderUpdate, true, false},
-    {"node enabled update only", false,
+    {"node enabled update only", false, 6, 0,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
         LayerState::NeedsNodeOrderUpdate, false, true},
-    /* This shouldn't cause anything to be done in update(), and also no
+    /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
-    {"shared data update only", false,
+    {"shared data update only", false, 6, 0,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
         LayerState::NeedsSharedDataUpdate, false, false},
-    {"padding from style", false,
+    {"common data update only", false, 6, 0,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsCommonDataUpdate, false, false},
+    /* This would cause an update of the dynamic style data in derived classes
+       if appropriate internal flags would be set internally, but in the base
+       class it's nothing */
+    {"common data update only, dynamic styles", false, 4, 2,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsCommonDataUpdate, false, false},
+    {"padding from style", false, 6, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {},
         LayerState::NeedsDataUpdate, true, true},
-    {"padding from data", false,
+    {"padding from data", false, 6, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {}, {2.0f, 0.5f, 1.0f, 1.5f},
         LayerState::NeedsDataUpdate, true, true},
-    {"padding from both style and data", false,
+    {"padding from both style and data", false, 6, 0,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f},
         LayerState::NeedsDataUpdate, true, true},
+    {"unused dynamic styles", false, 6, 17,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    {"dynamic styles", false, 4, 2,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    {"dynamic styles, padding from dynamic style", false, 4, 2,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {2.0f, 0.5f, 1.0f, 1.5f}, {},
+        LayerState::NeedsDataUpdate, true, true},
+    {"dynamic styles, padding from both dynamic style and data", false, 4, 2,
+        {-1.0f, 1.5f}, {13.0f, 17.0f},
+        {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f},
+        LayerState::NeedsDataUpdate, true, true},
+};
+
+const struct {
+    const char* name;
+    UnsignedInt dynamicStyleCount;
+} UpdateNoStyleSetData[]{
+    {"", 0},
+    {"dynamic styles", 5}
+};
+
+const struct {
+    const char* name;
+    UnsignedInt dynamicStyleCount;
+    LayerStates extraState;
+} SharedNeedsUpdateStatePropagatedToLayersData[]{
+    {"", 0, {}},
+    {"dynamic styles", 5, LayerState::NeedsCommonDataUpdate}
 };
 
 TextLayerTest::TextLayerTest() {
@@ -289,15 +380,17 @@ TextLayerTest::TextLayerTest() {
 
               &TextLayerTest::sharedConfigurationConstruct,
               &TextLayerTest::sharedConfigurationConstructSameStyleUniformCount,
-              &TextLayerTest::sharedConfigurationConstructZeroStyleCount,
+              &TextLayerTest::sharedConfigurationConstructZeroStyleOrUniformCount,
               &TextLayerTest::sharedConfigurationConstructCopy,
+              &TextLayerTest::sharedConfigurationSetters,
 
               &TextLayerTest::sharedConstruct,
               &TextLayerTest::sharedConstructNoCreate,
               &TextLayerTest::sharedConstructCopy,
               &TextLayerTest::sharedConstructMove,
+              &TextLayerTest::sharedConstructZeroStyleCount});
 
-              &TextLayerTest::sharedSetGlyphCache,
+    addTests({&TextLayerTest::sharedSetGlyphCache,
               &TextLayerTest::sharedSetGlyphCacheAlreadySet,
               &TextLayerTest::sharedNoGlyphCache,
 
@@ -309,19 +402,27 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::sharedAddFontNoHandlesLeft,
               &TextLayerTest::sharedAddInstancelessFontHasInstance,
               &TextLayerTest::sharedFontInvalidHandle,
-              &TextLayerTest::sharedFontNoInstance,
+              &TextLayerTest::sharedFontNoInstance});
 
-              &TextLayerTest::sharedSetStyle,
-              &TextLayerTest::sharedSetStyleImplicitPadding,
-              &TextLayerTest::sharedSetStyleInvalidSize,
-              &TextLayerTest::sharedSetStyleImplicitMapping,
-              &TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding,
-              &TextLayerTest::sharedSetStyleImplicitMappingInvalidSize,
-              &TextLayerTest::sharedSetStyleInvalidFontHandle,
+    addInstancedTests({&TextLayerTest::sharedSetStyle,
+                       &TextLayerTest::sharedSetStyleImplicitPadding,
+                       &TextLayerTest::sharedSetStyleInvalidSize,
+                       &TextLayerTest::sharedSetStyleImplicitMapping,
+                       &TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding,
+                       &TextLayerTest::sharedSetStyleImplicitMappingInvalidSize},
+        Containers::arraySize(SharedSetStyleData));
+
+    addTests({&TextLayerTest::sharedSetStyleInvalidFontHandle,
 
               &TextLayerTest::construct,
               &TextLayerTest::constructCopy,
               &TextLayerTest::constructMove});
+
+    addInstancedTests({&TextLayerTest::dynamicStyle},
+        Containers::arraySize(DynamicStyleData));
+
+    addTests({&TextLayerTest::dynamicStyleNoDynamicStyles,
+              &TextLayerTest::dynamicStyleInvalid});
 
     addInstancedTests<TextLayerTest>({
         &TextLayerTest::createRemoveSet<UnsignedInt, UnsignedInt>,
@@ -343,9 +444,12 @@ TextLayerTest::TextLayerTest() {
     addInstancedTests({&TextLayerTest::noSharedStyleFonts},
         Containers::arraySize(NoSharedStyleFontsData));
 
-    addTests({&TextLayerTest::noFontInstance,
-              &TextLayerTest::styleOutOfRange,
-              &TextLayerTest::glyphOutOfRange,
+    addTests({&TextLayerTest::noFontInstance});
+
+    addInstancedTests({&TextLayerTest::styleOutOfRange},
+        Containers::arraySize(StyleOutOfRangeData));
+
+    addTests({&TextLayerTest::glyphOutOfRange,
 
               &TextLayerTest::updateEmpty});
 
@@ -358,9 +462,11 @@ TextLayerTest::TextLayerTest() {
                        &TextLayerTest::updatePaddingGlyph},
         Containers::arraySize(UpdateAlignmentPaddingData));
 
-    addTests({&TextLayerTest::updateNoStyleSet,
+    addInstancedTests({&TextLayerTest::updateNoStyleSet},
+        Containers::arraySize(UpdateNoStyleSetData));
 
-              &TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers});
+    addInstancedTests({&TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers},
+        Containers::arraySize(SharedNeedsUpdateStatePropagatedToLayersData));
 }
 
 using namespace Containers::Literals;
@@ -530,16 +636,21 @@ void TextLayerTest::sharedConfigurationConstructSameStyleUniformCount() {
     CORRADE_COMPARE(configuration.styleCount(), 3);
 }
 
-void TextLayerTest::sharedConfigurationConstructZeroStyleCount() {
+void TextLayerTest::sharedConfigurationConstructZeroStyleOrUniformCount() {
     CORRADE_SKIP_IF_NO_ASSERT();
+
+    /* Both being zero is fine */
+    TextLayer::Shared::Configuration{0, 0};
+    TextLayer::Shared::Configuration{0};
 
     std::ostringstream out;
     Error redirectError{&out};
     TextLayer::Shared::Configuration{0, 4};
     TextLayer::Shared::Configuration{4, 0};
-    CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::Shared::Configuration: expected non-zero style uniform count\n"
-        "Whee::TextLayer::Shared::Configuration: expected non-zero style count\n");
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::Shared::Configuration: expected style uniform count and style count to be either both zero or both non-zero, got 0 and 4\n"
+        "Whee::TextLayer::Shared::Configuration: expected style uniform count and style count to be either both zero or both non-zero, got 4 and 0\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::sharedConfigurationConstructCopy() {
@@ -560,15 +671,26 @@ void TextLayerTest::sharedConfigurationConstructCopy() {
     #endif
 }
 
+void TextLayerTest::sharedConfigurationSetters() {
+    TextLayer::Shared::Configuration configuration{3, 5};
+    CORRADE_COMPARE(configuration.dynamicStyleCount(), 0);
+
+    configuration
+        .setDynamicStyleCount(9);
+    CORRADE_COMPARE(configuration.dynamicStyleCount(), 9);
+}
+
 void TextLayerTest::sharedConstruct() {
     struct Shared: TextLayer::Shared {
         explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
+    } shared{TextLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(4)
+    };
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
-    CORRADE_COMPARE(shared.dynamicStyleCount(), 0);
+    CORRADE_COMPARE(shared.dynamicStyleCount(), 4);
 
     CORRADE_VERIFY(!shared.hasGlyphCache());
 
@@ -612,19 +734,42 @@ void TextLayerTest::sharedConstructMove() {
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
     };
 
-    Shared a{TextLayer::Shared::Configuration{3, 5}};
+    Shared a{TextLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(4)
+    };
 
     Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleUniformCount(), 3);
     CORRADE_COMPARE(b.styleCount(), 5);
+    CORRADE_COMPARE(b.dynamicStyleCount(), 4);
 
     Shared c{TextLayer::Shared::Configuration{5, 7}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleUniformCount(), 3);
     CORRADE_COMPARE(c.styleCount(), 5);
+    CORRADE_COMPARE(c.dynamicStyleCount(), 4);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
+}
+
+void TextLayerTest::sharedConstructZeroStyleCount() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    };
+
+    /* Zero style count or dynamic style count is fine on its own */
+    Shared{Shared::Configuration{0}.setDynamicStyleCount(1)};
+    Shared{Shared::Configuration{1}.setDynamicStyleCount(0)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    Shared{Shared::Configuration{0}.setDynamicStyleCount(0)};
+    CORRADE_COMPARE(out.str(), "Whee::TextLayer::Shared: expected non-zero total style count\n");
 }
 
 void TextLayerTest::sharedSetGlyphCache() {
@@ -1140,6 +1285,9 @@ void TextLayerTest::sharedFontNoInstance() {
 }
 
 void TextLayerTest::sharedSetStyle() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
 
@@ -1172,13 +1320,17 @@ void TextLayerTest::sharedSetStyle() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3, 5}};
+    } shared{TextLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
     shared.setGlyphCache(cache);
 
-    /* By default the shared.state().styles array is empty, it gets only filled
-       during the setStyle() call. The empty state is used to detect whether
-       setStyle() was called at all when calling update(). */
+    /* By default the shared.state().styles array (and styleUniforms, for
+       dynamic styles) is empty, it gets only filled during the setStyle()
+       call. The empty state is used to detect whether setStyle() was called at
+       all when calling update(). */
     CORRADE_VERIFY(shared.state().styles.isEmpty());
+    CORRADE_VERIFY(shared.state().styleUniforms.isEmpty());
 
     Font font1, font2;
     cache.addFont(67, &font1);
@@ -1198,7 +1350,17 @@ void TextLayerTest::sharedSetStyle() {
          {2.0f, 1.0f, 4.0f, 3.0f},
          {1.0f, 3.0f, 2.0f, 4.0f},
          {4.0f, 1.0f, 3.0f, 2.0f}});
-    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    if(data.dynamicStyleCount == 0) {
+        CORRADE_COMPARE(shared.setStyleCalled, 1);
+    } else {
+        CORRADE_COMPARE(shared.setStyleCalled, 0);
+        /* If there are dynamic styles, it's copied into an internal array
+           instead of calling doSetStyle(). The following is thus checking the
+           same as doSetStyle() but on the internal array. */
+        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
+        CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
+    }
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::uniform), Containers::stridedArrayView({
         2u, 1u, 0u, 0u, 1u
     }), TestSuite::Compare::Container);
@@ -1219,6 +1381,9 @@ void TextLayerTest::sharedSetStyle() {
 }
 
 void TextLayerTest::sharedSetStyleImplicitPadding() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
 
@@ -1251,7 +1416,9 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3, 5}};
+    } shared{TextLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
     shared.setGlyphCache(cache);
 
     /* Capture correct function name */
@@ -1271,7 +1438,17 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
         {2, 1, 0, 0, 1},
         {first, second, first, second, second},
         {});
-    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    if(data.dynamicStyleCount == 0) {
+        CORRADE_COMPARE(shared.setStyleCalled, 1);
+    } else {
+        CORRADE_COMPARE(shared.setStyleCalled, 0);
+        /* If there are dynamic styles, it's copied into an internal array
+           instead of calling doSetStyle(). The following is thus checking the
+           same as doSetStyle() but on the internal array. */
+        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
+        CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
+    }
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::uniform), Containers::stridedArrayView({
         2u, 1u, 0u, 0u, 1u
     }), TestSuite::Compare::Container);
@@ -1324,13 +1501,20 @@ void TextLayerTest::sharedSetStyleImplicitPadding() {
 }
 
 void TextLayerTest::sharedSetStyleInvalidSize() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: TextLayer::Shared {
         explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
+    } shared{TextLayer::Shared::Configuration{3, 5}
+        /* The checks should all deal with just the shared style count, not be
+           dependent on this */
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -1362,6 +1546,9 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
 }
 
 void TextLayerTest::sharedSetStyleImplicitMapping() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
 
@@ -1394,7 +1581,9 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3}};
+    } shared{TextLayer::Shared::Configuration{3}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
     shared.setGlyphCache(cache);
 
     /* Capture correct function name */
@@ -1415,7 +1604,17 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
         {{1.0f, 2.0f, 3.0f, 4.0f},
          {4.0f, 3.0f, 2.0f, 1.0f},
          {2.0f, 1.0f, 4.0f, 3.0f}});
-    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    if(data.dynamicStyleCount == 0) {
+        CORRADE_COMPARE(shared.setStyleCalled, 1);
+    } else {
+        CORRADE_COMPARE(shared.setStyleCalled, 0);
+        /* If there are dynamic styles, it's copied into an internal array
+           instead of calling doSetStyle(). The following is thus checking the
+           same as doSetStyle() but on the internal array. */
+        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
+        CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
+    }
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::uniform), Containers::stridedArrayView({
         0u, 1u, 2u
     }), TestSuite::Compare::Container);
@@ -1432,6 +1631,9 @@ void TextLayerTest::sharedSetStyleImplicitMapping() {
 }
 
 void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
 
@@ -1464,7 +1666,9 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
         }
 
         Int setStyleCalled = 0;
-    } shared{TextLayer::Shared::Configuration{3}};
+    } shared{TextLayer::Shared::Configuration{3}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
     shared.setGlyphCache(cache);
 
     /* Capture correct function name */
@@ -1483,7 +1687,17 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
          TextLayerStyleUniform{}},
         {first, second, first},
         {});
-    CORRADE_COMPARE(shared.setStyleCalled, 1);
+    if(data.dynamicStyleCount == 0) {
+        CORRADE_COMPARE(shared.setStyleCalled, 1);
+    } else {
+        CORRADE_COMPARE(shared.setStyleCalled, 0);
+        /* If there are dynamic styles, it's copied into an internal array
+           instead of calling doSetStyle(). The following is thus checking the
+           same as doSetStyle() but on the internal array. */
+        /** @todo test the common style once it has something */
+        CORRADE_COMPARE(shared.state().styleUniforms.size(), 3);
+        CORRADE_COMPARE(shared.state().styleUniforms[1].color, 0xc0ffee_rgbf);
+    }
     CORRADE_COMPARE_AS(stridedArrayView(shared.state().styles).slice(&Implementation::TextLayerStyle::uniform), Containers::stridedArrayView({
         0u, 1u, 2u
     }), TestSuite::Compare::Container);
@@ -1526,13 +1740,20 @@ void TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding() {
 }
 
 void TextLayerTest::sharedSetStyleImplicitMappingInvalidSize() {
+    auto&& data = SharedSetStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: TextLayer::Shared {
         explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 5}};
+    } shared{TextLayer::Shared::Configuration{3, 5}
+        /* The checks should all deal with just the shared style count, not be
+           dependent on this */
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -1645,6 +1866,149 @@ void TextLayerTest::constructMove() {
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<TextLayer>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<TextLayer>::value);
+}
+
+void TextLayerTest::dynamicStyle() {
+    auto&& data = DynamicStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{3, 5}
+        .setDynamicStyleCount(3)
+    };
+    shared.setGlyphCache(cache);
+
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+
+        TextLayer::State& stateData() {
+            return static_cast<TextLayer::State&>(*_state);
+        }
+    } layer{layerHandle(0, 1), shared};
+
+    /* All styles should be set to their defaults initially. Checking just a
+       subset of the uniform properties, should be enough. */
+    CORRADE_COMPARE_AS(stridedArrayView(layer.dynamicStyleUniforms()).slice(&TextLayerStyleUniform::color), Containers::arrayView({
+        0xffffffff_rgbaf,
+        0xffffffff_rgbaf,
+        0xffffffff_rgbaf
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+        FontHandle::Null,
+        FontHandle::Null,
+        FontHandle::Null
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(layer.dynamicStylePaddings(), Containers::arrayView({
+        Vector4{0.0f},
+        Vector4{0.0f},
+        Vector4{0.0f}
+    }), TestSuite::Compare::Container);
+    /* Neither LayerState nor the state bit is set initially, the initial
+       upload is done implicitly on the first update */
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_VERIFY(!layer.stateData().dynamicStyleChanged);
+
+    /* Setting a style should change these and flip the state bit on again */
+    layer.stateData().dynamicStyleChanged = false;
+    layer.setDynamicStyle(1,
+        TextLayerStyleUniform{}
+            .setColor(0x11223344_rgbaf),
+        data.changeFont ? fontHandle : FontHandle::Null,
+        data.padding1);
+    layer.setDynamicStyle(2,
+        TextLayerStyleUniform{}
+            .setColor(0xff3366_rgbf),
+        FontHandle::Null, /* Null is allowed */
+        data.padding2);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.dynamicStyleUniforms()).slice(&TextLayerStyleUniform::color), Containers::arrayView({
+        0xffffffff_rgbaf,
+        0x11223344_rgbaf,
+        0xff3366ff_rgbaf
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+        FontHandle::Null,
+        data.changeFont ? fontHandle : FontHandle::Null,
+        FontHandle::Null
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(layer.dynamicStylePaddings(), Containers::arrayView({
+        Vector4{0.0f},
+        data.padding1,
+        data.padding2
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE(layer.state(), data.expectedStates);
+    CORRADE_VERIFY(layer.stateData().dynamicStyleChanged);
+}
+
+void TextLayerTest::dynamicStyleNoDynamicStyles() {
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{12, 2}};
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    CORRADE_COMPARE(layer.dynamicStyleUniforms().size(), 0);
+    CORRADE_COMPARE(layer.dynamicStyleFonts().size(), 0);
+    CORRADE_COMPARE(layer.dynamicStylePaddings().size(), 0);
+}
+
+void TextLayerTest::dynamicStyleInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{12, 7}
+        /* Making sure it's less than both style count and uniform count to
+           verify it's not checked against those */
+        .setDynamicStyleCount(3)
+    };
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Using a null font handle is fine */
+    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle::Null, {});
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setDynamicStyle(3, TextLayerStyleUniform{}, FontHandle::Null, {});
+    layer.setDynamicStyle(2, TextLayerStyleUniform{}, FontHandle(0x12ab), {});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::setDynamicStyle(): index 3 out of range for 3 dynamic styles\n"
+        "Whee::TextLayer::setDynamicStyle(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n",
+        TestSuite::Compare::String);
 }
 
 struct ThreeGlyphShaper: Text::AbstractShaper {
@@ -1771,7 +2135,9 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3}};
+    } shared{TextLayer::Shared::Configuration{data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
     shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
@@ -1793,8 +2159,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         else
             Utility::copy({oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle}, fonts);
         shared.setStyle(TextLayerCommonStyleUniform{},
-            uniforms,
-            fonts,
+            Containers::arrayView(uniforms).prefix(data.styleCount),
+            Containers::arrayView(fonts).prefix(data.styleCount),
             {});
     }
 
@@ -1805,6 +2171,11 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             return static_cast<const State&>(*_state);
         }
     } layer{layerHandle(0, 1), shared};
+
+    if(data.dynamicStyleCount == 2) {
+        layer.setDynamicStyle(0, TextLayerStyleUniform{}, threeGlyphFontHandle, {});
+        layer.setDynamicStyle(1, TextLayerStyleUniform{}, oneGlyphFontHandle, {});
+    } else CORRADE_INTERNAL_ASSERT(data.dynamicStyleCount == 0);
 
     /* Default color */
     DataHandle first = layer.create(
@@ -2623,7 +2994,9 @@ void TextLayerTest::noSharedStyleFonts() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{4}};
+    } shared{TextLayer::Shared::Configuration{4}
+        .setDynamicStyleCount(2)
+    };
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
@@ -2638,18 +3011,28 @@ void TextLayerTest::noSharedStyleFonts() {
     } layer{layerHandle(0, 1), shared};
 
     DataHandle layerData = layer.create(1, "", fontHandle);
+    DataHandle layerDataDynamic = layer.create(5, "", fontHandle);
 
     std::ostringstream out;
     Error redirectError{&out};
     layer.create(1, "", {});
+    layer.create(4, "", {});
     layer.createGlyph(3, 0, {});
+    layer.createGlyph(5, 0, {});
     layer.setText(layerData, "", {});
+    layer.setText(layerDataDynamic, "", {});
     layer.setGlyph(layerData, 1, {});
-    CORRADE_COMPARE(out.str(),
+    layer.setGlyph(layerDataDynamic, 1, {});
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::TextLayer::create(): style 1 has no font set and no custom font was supplied\n"
+        "Whee::TextLayer::create(): dynamic style 0 has no font set and no custom font was supplied\n"
         "Whee::TextLayer::createGlyph(): style 3 has no font set and no custom font was supplied\n"
+        "Whee::TextLayer::createGlyph(): dynamic style 1 has no font set and no custom font was supplied\n"
         "Whee::TextLayer::setText(): style 1 has no font set and no custom font was supplied\n"
-        "Whee::TextLayer::setGlyph(): style 1 has no font set and no custom font was supplied\n");
+        "Whee::TextLayer::setText(): dynamic style 1 has no font set and no custom font was supplied\n"
+        "Whee::TextLayer::setGlyph(): style 1 has no font set and no custom font was supplied\n"
+        "Whee::TextLayer::setGlyph(): dynamic style 1 has no font set and no custom font was supplied\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::noFontInstance() {
@@ -2699,6 +3082,9 @@ void TextLayerTest::noFontInstance() {
 }
 
 void TextLayerTest::styleOutOfRange() {
+    auto&& data = StyleOutOfRangeData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: Text::AbstractFont {
@@ -2729,7 +3115,9 @@ void TextLayerTest::styleOutOfRange() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{6, 3}};
+    } shared{TextLayer::Shared::Configuration{6, data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
     shared.setGlyphCache(cache);
 
     FontHandle fontHandle = shared.addFont(font, 1.0f);
@@ -2912,20 +3300,33 @@ void TextLayerTest::updateCleanDataOrder() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{3, 6}};
+    } shared{TextLayer::Shared::Configuration{3, data.styleCount}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
     shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
     FontHandle threeGlyphFontHandle = shared.addFont(threeGlyphFont, 8.0f);
     FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
-    shared.setStyle(TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        /* Style 5 doesn't get used (gets transitioned to 2), use a weird
-           uniform index and padding to verify it doesn't get picked. The font
-           handle should however match style 2 as it can't be transitioned. */
-        {1, 2, 0, 1, 1, 666},
-        {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
-        {{}, {}, data.paddingFromStyle, {}, data.paddingFromStyle, Vector4{666}});
+
+    if(data.styleCount == 6) {
+        shared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+            /* Style 5 doesn't get used (gets transitioned to 2), use a weird
+               uniform index and padding to verify it doesn't get picked. The
+               font handle should however match style 2 as it can't be
+               transitioned. */
+            {1, 2, 0, 1, 1, 666},
+            {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
+            {{}, {}, data.paddingFromStyle, {}, data.paddingFromStyle, Vector4{666}});
+    } else if(data.styleCount == 4) {
+        shared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+            {1, 2, 0, 1},
+            {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
+            {{}, {}, data.paddingFromStyle, {}});
+    } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+
     shared.setStyleTransition(
         nullptr,
         nullptr,
@@ -2942,6 +3343,15 @@ void TextLayerTest::updateCleanDataOrder() {
         }
     } layer{layerHandle(0, 1), shared};
 
+    if(data.styleCount < 6 && data.dynamicStyleCount) {
+        /* Dynamic style 0 and 1 is style 4 and 5, which is used by data3 and
+           data5 (so the same case as with padding from non-dynamic style or
+           from data) */
+        CORRADE_COMPARE(data.styleCount + 0, 4);
+        layer.setDynamicStyle(0, TextLayerStyleUniform{}, threeGlyphFontHandle, data.paddingFromStyle);
+        layer.setDynamicStyle(1, TextLayerStyleUniform{}, threeGlyphFontHandle, data.paddingFromStyle);
+    }
+
     /* Two node handles to attach the data to */
     NodeHandle node6 = nodeHandle(6, 0);
     NodeHandle node15 = nodeHandle(15, 0);
@@ -2950,7 +3360,8 @@ void TextLayerTest::updateCleanDataOrder() {
     layer.create(0, "", {});                            /* 0, quad 0 */
     layer.create(0, "", {});                            /* 1, quad 1 */
     layer.create(0, "", {});                            /* 2, quad 2 */
-    /* Node 6 is disabled, so style 5 should get transitioned to 2 */
+    /* Node 6 is disabled, so style 5 should get transitioned to 2 if not
+       dynamic */
     DataHandle data3 = layer.create(5, "hello", {}, 0xff3366_rgbf, node6);
                                                         /* 3, quad 3 to 7 */
     layer.create(0, "", {});                            /* 4, quad 8 */
@@ -3044,15 +3455,27 @@ void TextLayerTest::updateCleanDataOrder() {
         for(std::size_t i = 0; i != 5*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
-            /* Created with style 2, transitioned from 5, which is mapped to
-               uniform 0 */
-            CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 0);
+            /* Created with style 5, which if not dynamic is transitioned to 2
+               as the node is disabled, which is mapped to uniform 0. If
+               dynamic, it's implicitly `uniformCount + (id - styleCount)`,
+               thus 4. */
+            if(data.styleCount == 6)
+                CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 0);
+            else if(data.styleCount == 4)
+                CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 4);
+            else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
             CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff_rgbf);
-            /* Created with style 4, which is mapped to uniform 1 */
-            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 1);
+            /* Created with style 4, which if not dynamic is mapped to uniform
+               1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
+               thus 3. */
+            if(data.styleCount == 6)
+                CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 1);
+            else if(data.styleCount == 4)
+                CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 3);
+            else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
@@ -3789,13 +4212,20 @@ void TextLayerTest::updatePaddingGlyph() {
 }
 
 void TextLayerTest::updateNoStyleSet() {
+    auto&& data = UpdateNoStyleSetData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
+    } shared{TextLayer::Shared::Configuration{1}
+        /* The check should work correctly even with dynamic styles, where
+           different state gets filled */
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -3808,11 +4238,16 @@ void TextLayerTest::updateNoStyleSet() {
 }
 
 void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
+    auto&& data = SharedNeedsUpdateStatePropagatedToLayersData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}};
+    } shared{TextLayer::Shared::Configuration{1}
+        .setDynamicStyleCount(data.dynamicStyleCount)
+    };
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -3830,42 +4265,44 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     layer1.setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
     layer3.setNeedsUpdate(LayerState::NeedsSharedDataUpdate);
 
-    /* Calling setStyle() sets LayerState::NeedsDataUpdate on all layers */
+    /* Calling setStyle() sets LayerState::Needs*DataUpdate on all layers */
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {FontHandle::Null},
         {});
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
 
     /* Updating one doesn't cause the flag to be reset on others */
-    layer2.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    layer2.update(LayerState::NeedsDataUpdate|data.extraState, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
     CORRADE_COMPARE(layer2.state(), LayerStates{});
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
 
     /* Updating another still doesn't */
     layer1.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsCommonDataUpdate);
     CORRADE_COMPARE(layer2.state(), LayerStates{});
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
 
-    /* Calling setStyle() again sets LayerState::NeedsDataUpdate again, even if
-       the data may be the same, as checking differences would be unnecessarily
-       expensive compared to just doing the update always */
+    /* Calling setStyle() again sets LayerState::Needs*DataUpdate again, even
+       if the data may be the same, as checking differences would be
+       unnecessarily expensive compared to just doing the update always */
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}},
         {FontHandle::Null},
         {});
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
 
     /* Creating a new layer with the shared state that had setStyle() called a
        few times doesn't mark it as needing an update because there's no data
        that would need it yet and the layer should do all other
-       shared-state-dependent setup during construction already */
+       shared-state-dependent setup during construction already. For dynamic
+       styles it'll perform the upload on the first update() regardless on the
+       LayerState. */
     Layer layer4{layerHandle(0, 1), shared};
     CORRADE_COMPARE(layer4.state(), LayerStates{});
 
@@ -3874,17 +4311,17 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
         {TextLayerStyleUniform{}},
         {FontHandle::Null},
         {});
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
-    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
-    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate|data.extraState);
 
     /* Updating again resets just one */
     layer3.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsSharedDataUpdate);
-    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate|data.extraState);
 
     /* Calling the AbstractVisualLayer setStyleTransition() should still cause
        LayerState to be updated as well, i.e. the class should correctly
@@ -3893,10 +4330,13 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
         nullptr,
         nullptr,
         [](UnsignedInt a) { return a + 1; });
-    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
-    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|data.extraState);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate|data.extraState);
+    /* This one has NeedsDataUpdate set again, not the extraState though as
+       that comes only from setStyle() depending on dynamic styles being
+       present */
     CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
-    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate|data.extraState);
 }
 
 }}}}

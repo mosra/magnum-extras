@@ -86,6 +86,8 @@ struct TextLayerGLTest: GL::OpenGLTester {
     void renderChangeText();
     void renderChangeStyle();
 
+    void renderDynamicStyles();
+
     void drawSetup();
     void drawTeardown();
     void drawOrder();
@@ -107,6 +109,14 @@ struct TextLayerGLTest: GL::OpenGLTester {
 };
 
 using namespace Math::Literals;
+
+const struct {
+    const char* name;
+    UnsignedInt dynamicStyleCount;
+} DrawNoStyleSetData[]{
+    {"", 0},
+    {"dynamic styles", 5}
+};
 
 const struct {
     const char* name;
@@ -210,6 +220,82 @@ const struct {
 
 const struct {
     const char* name;
+    const char* filename;
+    UnsignedInt styleIndex;
+    TextLayerStyleUniform styleUniform;
+    Float leftPadding;
+    Containers::Optional<TextLayerStyleUniform> dynamicStyleUniform;
+    Float dynamicLeftPadding;
+    bool createLayerAfterSetStyle;
+    bool secondaryStyleUpload;
+    bool secondaryDynamicStyleUpload;
+    bool explicitFont;
+} RenderDynamicStylesData[]{
+    {"default, static", "default.png", 1,
+        TextLayerStyleUniform{}, 0.0f,
+        {}, 0.0f,
+        false, false, false, false},
+    {"default, static, create layer after setStyle()", "default.png", 1,
+        TextLayerStyleUniform{}, 0.0f,
+        {}, 0.0f,
+        true, false, false, false},
+    {"default, dynamic with no upload", "default.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        {}, 0.0f,
+        false, false, false, true},
+    {"default, dynamic", "default.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}, 0.0f,
+        false, false, false, false},
+    {"styled, static", "colored.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, 0.0f,
+        false, false, false, false},
+    {"styled, static, create layer after setStyle()", "colored.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, 0.0f,
+        true, false, false, false},
+    {"styled, static with padding", "colored.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 128.0f,
+        {}, 0.0f,
+        false, false, false, false},
+    {"styled, dynamic", "colored.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        false, false, false, false},
+    {"styled, dynamic with padding", "colored.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 128.0f,
+        false, false, false, false},
+    {"styled, static, secondary upload", "colored.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, 0.0f,
+        false, true, false, true},
+    {"styled, static, secondary dynamic upload", "colored.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        TextLayerStyleUniform{}, 0.0f,
+        false, false, true, false},
+    {"styled, dynamic, secondary upload", "colored.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        false, false, true, true},
+    {"styled, dynamic, secondary static upload", "colored.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        false, true, false, false},
+};
+
+const struct {
+    const char* name;
     bool dataInNodeOrder;
 } DrawOrderData[]{
     {"data created in node order", true},
@@ -245,8 +331,10 @@ TextLayerGLTest::TextLayerGLTest() {
               &TextLayerGLTest::constructCopy,
               &TextLayerGLTest::constructMove,
 
-              &TextLayerGLTest::drawNoSizeSet,
-              &TextLayerGLTest::drawNoStyleSet});
+              &TextLayerGLTest::drawNoSizeSet});
+
+    addInstancedTests({&TextLayerGLTest::drawNoStyleSet},
+        Containers::arraySize(DrawNoStyleSetData));
 
     addInstancedTests({&TextLayerGLTest::render},
         Containers::arraySize(RenderData),
@@ -266,6 +354,11 @@ TextLayerGLTest::TextLayerGLTest() {
     addInstancedTests({&TextLayerGLTest::renderChangeStyle,
                        &TextLayerGLTest::renderChangeText},
         Containers::arraySize(RenderChangeStyleTextData),
+        &TextLayerGLTest::renderSetup,
+        &TextLayerGLTest::renderTeardown);
+
+    addInstancedTests({&TextLayerGLTest::renderDynamicStyles},
+        Containers::arraySize(RenderDynamicStylesData),
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
@@ -401,9 +494,13 @@ void TextLayerGLTest::drawNoSizeSet() {
 }
 
 void TextLayerGLTest::drawNoStyleSet() {
+    auto&& data = DrawNoStyleSetData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}};
+    TextLayerGL::Shared shared{TextLayer::Shared::Configuration{3}
+        .setDynamicStyleCount(data.dynamicStyleCount)};
     TextLayerGL layer{layerHandle(0, 1), shared};
 
     layer.setSize({10, 10}, {10, 10});
@@ -759,6 +856,136 @@ void TextLayerGLTest::renderChangeText() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/default.png"),
+        DebugTools::CompareImageToFile{_importerManager});
+}
+
+void TextLayerGLTest::renderDynamicStyles() {
+    auto&& data = RenderDynamicStylesData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("StbTrueTypeFont plugin not found.");
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    /* Opened in the constructor together with cache filling to circumvent
+       stb_truetype's extreme rasterization slowness */
+    CORRADE_VERIFY(_font && _font->isOpened());
+
+    TextLayerGL::Shared layerShared{
+        TextLayer::Shared::Configuration{3, 4}
+            .setDynamicStyleCount(2)
+    };
+    layerShared.setGlyphCache(_fontGlyphCache);
+    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
+
+    TextLayerGL* layer{};
+    if(!data.createLayerAfterSetStyle)
+        layer = &ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
+
+    /* If the style is being uploaded second time, upload just a default state
+       at first */
+    if(data.secondaryStyleUpload) {
+        layerShared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+            /* The mapping is deliberately different, the secondary upload
+               should cause it to be updated */
+            {2, 1, 1, 0},
+            {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
+            {});
+    } else {
+        layerShared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, data.styleUniform},
+            {1, 2, 0, 1},
+            {FontHandle::Null, fontHandle, FontHandle::Null, FontHandle::Null},
+            {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
+    }
+
+    /* If the layer is created after the setStyle() call, it should have no
+       LayerStates set implicitly, otherwise setStyle() causes the state to be
+       set on all existing layers */
+    if(data.createLayerAfterSetStyle) {
+        layer = &ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
+        CORRADE_COMPARE(layer->state(), LayerStates{});
+    } else {
+        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    }
+
+    if(data.dynamicStyleUniform) {
+        /* Again, if the dynamic style  is being uploaded second time, upload
+           just a default state at first */
+        if(data.secondaryDynamicStyleUpload) {
+            layer->setDynamicStyle(1,
+                TextLayerStyleUniform{},
+                FontHandle::Null,
+                {});
+        } else {
+            layer->setDynamicStyle(1,
+                *data.dynamicStyleUniform,
+                fontHandle,
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
+        }
+
+        /* The NeedsDataUpdate is from an earlier setStyle() */
+        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    }
+
+    /* Undo the padding coming from the style to have the result always the
+       same */
+    NodeHandle node = ui.createNode(
+        {8.0f - data.leftPadding - data.dynamicLeftPadding, 8.0f},
+        {112.0f + data.leftPadding + data.dynamicLeftPadding, 48.0f});
+    /* If a dynamic style with a null font handle is used, need to pass it
+       explicitly to create() instead */
+    TextProperties properties;
+    if(data.explicitFont)
+        properties.setFont(fontHandle);
+    /* There isn't any difference in handling of text ḿade with create() or
+       createGlyph() inside draw() so this tests just one */
+    layer->create(data.styleIndex, "Maggi", properties, node);
+
+    /* If there's a secondary upload, draw & clear to force the first upload */
+    if(data.secondaryStyleUpload || data.secondaryDynamicStyleUpload) {
+        ui.draw();
+        CORRADE_COMPARE(layer->state(), LayerStates{});
+        _framebuffer.clear(GL::FramebufferClear::Color);
+    }
+
+    /* Upload the actual style data only second time if desired */
+    if(data.secondaryStyleUpload) {
+        layerShared.setStyle(TextLayerCommonStyleUniform{},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, data.styleUniform},
+            {1, 2, 0, 1},
+            {FontHandle::Null, fontHandle, FontHandle::Null, FontHandle::Null},
+            {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
+        CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    }
+    if(data.secondaryDynamicStyleUpload) {
+        layer->setDynamicStyle(1,
+            *data.dynamicStyleUniform,
+            fontHandle,
+            {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
+        CORRADE_COMPARE(layer->state(), LayerState::NeedsCommonDataUpdate);
+    }
+
+    ui.draw();
+    CORRADE_COMPARE(layer->state(), LayerStates{});
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "TextLayerTestFiles", data.filename}),
         DebugTools::CompareImageToFile{_importerManager});
 }
 

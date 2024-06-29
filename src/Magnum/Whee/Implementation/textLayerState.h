@@ -31,6 +31,7 @@
    implementations */
 
 #include <Corrade/Containers/Array.h>
+#include <Corrade/Containers/ArrayTuple.h>
 #include <Corrade/Containers/Reference.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
@@ -66,7 +67,7 @@ struct TextLayerStyle {
 }
 
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), 0}, styleUniformCount{configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, styleUniformCount{configuration.styleUniformCount()} {}
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -86,9 +87,15 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
        FontHandle generation counters doesn't need to exist here. */
     Containers::Array<Implementation::TextLayerFont> fonts;
 
+    Containers::ArrayTuple styleStorage;
     /* Uniform mapping, fonts and padding values assigned to each style.
        Initially empty to be able to detect whether setStyle() was called. */
-    Containers::Array<Implementation::TextLayerStyle> styles;
+    Containers::ArrayView<Implementation::TextLayerStyle> styles;
+    /* Uniform values to be copied to layer-specific uniform buffers. Initially
+       empty to be able to detect whether setStyle() was called, stays empty
+       and unused if dynamicStyleCount is 0. */
+    Containers::ArrayView<TextLayerStyleUniform> styleUniforms;
+    TextLayerCommonStyleUniform commonStyleUniform{NoInit};
 };
 
 namespace Implementation {
@@ -142,10 +149,16 @@ struct TextLayerVertex {
     UnsignedInt styleUniform;
 };
 
+struct TextLayerDynamicStyle {
+    FontHandle font = FontHandle::Null;
+    /* 2 bytes free */
+    Vector4 padding;
+};
+
 }
 
 struct TextLayer::State: AbstractVisualLayer::State {
-    explicit State(Shared::State& shared): AbstractVisualLayer::State{shared}, styleUpdateStamp{shared.styleUpdateStamp} {}
+    explicit State(Shared::State& shared);
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -160,6 +173,12 @@ struct TextLayer::State: AbstractVisualLayer::State {
        See AbstractVisualLayer::State::styleTransitionToDisabledUpdateStamp for
        discussion about when an update may get skipped by accident. */
     UnsignedShort styleUpdateStamp;
+    /* Used to distinguish between needing an update of the shared part of the
+       style (which is triggered by differing styleUpdateStamp) and the dynamic
+       part */
+    bool dynamicStyleChanged = false;
+
+    /* 3 bytes free */
 
     /* Glyph data. Only the items referenced from `glyphRuns` are valid, the
        rest is unused space that gets recompacted during each doUpdate(). */
@@ -189,6 +208,11 @@ struct TextLayer::State: AbstractVisualLayer::State {
         change and not by draw order */
     Containers::Array<UnsignedInt> indices;
     Containers::Array<UnsignedInt> indexDrawOffsets;
+
+    /* Used only if shared.dynamicStyleCount is non-zero */
+    Containers::ArrayTuple dynamicStyleStorage;
+    Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms;
+    Containers::ArrayView<Implementation::TextLayerDynamicStyle> dynamicStyles;
 };
 
 }}
