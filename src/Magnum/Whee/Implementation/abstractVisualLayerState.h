@@ -68,10 +68,18 @@ struct AbstractVisualLayer::Shared::State {
     /* Unlike the others, this one can be nullptr, in which case the whole
        logic in doUpdate() gets skipped */
     UnsignedInt(*styleTransitionToDisabled)(UnsignedInt) = nullptr;
+
+    /* Incremented every time the styleTransitionToDisabled pointer is changed.
+       There's a corresponding styleTransitionToDisabledUpdateStamp variable in
+       AbstractVisualLayer::State that doState() compares to this one,
+       returning LayerState::NeedsDataUpdate if it differs. */
+    UnsignedShort styleTransitionToDisabledUpdateStamp = 0;
+
+    /* 2/6 bytes free to be used by the derived structs */
 };
 
 struct AbstractVisualLayer::State {
-    explicit State(Shared::State& shared): dynamicStylesUsed{ValueInit, shared.dynamicStyleCount}, shared(shared) {}
+    explicit State(Shared::State& shared): dynamicStylesUsed{ValueInit, shared.dynamicStyleCount}, shared(shared), styleTransitionToDisabledUpdateStamp{shared.styleTransitionToDisabledUpdateStamp} {}
     /* Assumes that the derived state structs have non-trivially-destructible
        members. Without a virtual destructor those wouldn't be destructed
        properly when deleting from the base pointer. This is also checked with
@@ -98,6 +106,23 @@ struct AbstractVisualLayer::State {
        BaseLayer::shared()), that one is referenced in State::self (and also
        correctly updated when the State instance gets moved). */
     Shared::State& shared;
+
+    /* Is compared to Shared::styleTransitionToDisabledUpdateStamp in order to
+       detect that doUpdate() needs to be called to update to potentially new
+       disabled styles. When the two are the same, it's assumed the
+       calculatedStyles were calculated with an up-to-date transition function.
+
+       Gets set to the shared value on construction to not implicitly mark a
+       fresh layer with no data as immediately needing an update.
+
+       The only case where an update may get skipped by accident is if the
+       shared state gets 65536 style transition updates, wrapping back to 0,
+       and a completely new layer gets created and updated right at that point.
+       Which I think is rather unlikely, but if it wouldn't the stamps could be
+       expanded to 32 bits. */
+    UnsignedShort styleTransitionToDisabledUpdateStamp;
+
+    /* 2/6 bytes free used by the derived structs */
 };
 
 }}

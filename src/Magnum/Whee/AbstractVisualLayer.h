@@ -269,6 +269,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
         LayerFeatures doFeatures() const override;
+        LayerStates doState() const override;
 
         /* Updates State::Shared::calculatedStyles based on which nodes are
            enabled. Should be called by subclasses. */
@@ -374,7 +375,8 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * disabled style index cannot transition into any other.
          *
          * If any of the functions is @cpp nullptr @ce, given transition is
-         * a no-op, keeping the same index.
+         * a no-op, keeping the same index. All transition functions are
+         * @cpp nullptr @ce initially.
          *
          * For correct behavior, the @p toPressedOut, @p toPressedOver,
          * @p toInactiveOut and @p toInactiveOver functions should be mutually
@@ -396,6 +398,12 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * transition functions are not allowed to use the dynamic style
          * indices. Data with a dynamic style index are not transitioned in any
          * way.
+         *
+         * Setting (and subsequently changing) the @p toDisabled function
+         * causes @ref LayerState::NeedsDataUpdate to be set on all layers that
+         * are constructed using this shared instance. The other transition
+         * functions don't cause any @ref LayerState to be set, as they're only
+         * used directly in event handlers.
          */
         Shared& setStyleTransition(UnsignedInt(*toPressedOut)(UnsignedInt), UnsignedInt(*toPressedOver)(UnsignedInt), UnsignedInt(*toInactiveOut)(UnsignedInt), UnsignedInt(*toInactiveOver)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt));
 

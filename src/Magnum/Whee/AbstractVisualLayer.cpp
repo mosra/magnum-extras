@@ -88,8 +88,13 @@ AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(Uns
     _state->styleTransitionToInactiveOver = toInactiveOver ? toInactiveOver :
         Implementation::styleTransitionPassthrough;
     /* Unlike the others, this one can be nullptr, in which case the whole
-       transitioning logic in doUpdate() gets replaced with a simple copy */
-    _state->styleTransitionToDisabled = toDisabled;
+       transitioning logic in doUpdate() gets replaced with a simple copy.
+       Setting it to a different function then causes doState() in all layers
+       sharing this state return NeedsDataUpdate. */
+    if(_state->styleTransitionToDisabled != toDisabled) {
+        _state->styleTransitionToDisabled = toDisabled;
+        ++_state->styleTransitionToDisabledUpdateStamp;
+    }
     return *this;
 }
 
@@ -212,6 +217,14 @@ LayerFeatures AbstractVisualLayer::doFeatures() const {
     return LayerFeature::Event;
 }
 
+LayerStates AbstractVisualLayer::doState() const {
+    const State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    if(state.styleTransitionToDisabledUpdateStamp != sharedState.styleTransitionToDisabledUpdateStamp)
+        return LayerState::NeedsDataUpdate;
+    return {};
+}
+
 void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     State& state = *_state;
     CORRADE_INTERNAL_ASSERT(
@@ -264,6 +277,10 @@ void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::S
            then assumed to handle that on its own, for example by applying
            desaturation and fade out globally to all data. */
         } else Utility::copy(state.styles, state.calculatedStyles);
+
+        /* Sync the style transition update stamp to not have doState() return
+           NeedsDataUpdate again next time it's asked */
+        state.styleTransitionToDisabledUpdateStamp = sharedState.styleTransitionToDisabledUpdateStamp;
     }
 }
 

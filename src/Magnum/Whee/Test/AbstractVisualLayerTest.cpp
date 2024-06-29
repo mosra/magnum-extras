@@ -72,6 +72,8 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void eventStyleTransitionNoCapture();
     void eventStyleTransitionOutOfRange();
     void eventStyleTransitionDynamicStyle();
+
+    void sharedNeedsUpdateStatePropagatedToLayers();
 };
 
 enum class Enum: UnsignedShort {};
@@ -218,7 +220,9 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionOutOfRange},
         Containers::arraySize(EventStyleTransitionOutOfRangeData));
 
-    addTests({&AbstractVisualLayerTest::eventStyleTransitionDynamicStyle});
+    addTests({&AbstractVisualLayerTest::eventStyleTransitionDynamicStyle,
+
+              &AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers});
 }
 
 void AbstractVisualLayerTest::sharedConstruct() {
@@ -1504,8 +1508,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
             return UnsignedInt(styleIndexTransitionToDisabled(StyleIndex(s)));
         });
     CORRADE_COMPARE(chaining, &shared);
-    /** @todo make this implicit from setStyleTransition() somehow? */
-    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
     CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
@@ -1548,8 +1552,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         nullptr,
         nullptr);
-    /** @todo make this implicit from setStyleTransition() somehow? */
-    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
     CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
@@ -1566,8 +1570,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         nullptr,
         styleIndexTransitionToDisabled>();
-    /** @todo make this implicit from setStyleTransition() somehow? */
-    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
     CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
@@ -1584,8 +1588,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         nullptr,
         nullptr>();
-    /** @todo make this implicit from setStyleTransition() somehow? */
-    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
     ui.update();
     CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
     CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
@@ -1895,6 +1899,121 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(data)]), StyleIndex::GreenDisabled);
         CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], 14);
     }
+}
+
+/* Cannot use styleIndexTransitionToDisabled etc. in the test below because on
+   debug builds the wrapper lambdas may have a different function pointer each
+   time they're created */
+UnsignedInt typeErasedTransition1(UnsignedInt style) {
+    return style*2;
+}
+UnsignedInt typeErasedTransition2(UnsignedInt style) {
+    return style*3;
+}
+
+void AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
+    struct LayerShared: AbstractVisualLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{1, 0};
+
+    struct Layer: AbstractVisualLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
+    };
+
+    /* Initially no state is set */
+    Layer layer1{layerHandle(0, 1), shared};
+    Layer layer2{layerHandle(0, 1), shared};
+    Layer layer3{layerHandle(0, 1), shared};
+    CORRADE_COMPARE(layer1.state(), LayerStates{});
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerStates{});
+
+    /* Setting a nullptr transition (i.e., the default) doesn't cause
+       NeedsDataUpdate to be set */
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr);
+    CORRADE_COMPARE(layer1.state(), LayerStates{});
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerStates{});
+
+    /* Setting any other transition except toDisabled doesn't cause
+       NeedsDataUpdate to be set either */
+    shared.setStyleTransition(
+        typeErasedTransition1,
+        typeErasedTransition2,
+        typeErasedTransition1,
+        typeErasedTransition2,
+        nullptr);
+    CORRADE_COMPARE(layer1.state(), LayerStates{});
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerStates{});
+
+    /* Explicitly set a non-trivial state on some of the layers */
+    layer1.setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+    layer3.setNeedsUpdate(LayerState::NeedsSharedDataUpdate);
+
+    /* Setting a toDisabled transition sets LayerState::NeedsDataUpdate on all
+       layers */
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        typeErasedTransition1);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Updating one doesn't cause the flag to be reset on others */
+    layer2.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Updating another still doesn't */
+    layer1.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Setting the same toDisabled transition doesn't cause NeedsDataUpdate to
+       be set again */
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        typeErasedTransition1);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerStates{});
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Setting a different one does. The third layer has the state still set
+       from before, there it doesn't get reset back. */
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        typeErasedTransition2);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+
+    /* Creating a new layer with the shared state that had setStyleTransition()
+       called a few times doesn't mark it as needing an update because there's
+       no data that would need it yet and the layer should do all other
+       shared-state-dependent setup during construction already */
+    Layer layer4{layerHandle(0, 1), shared};
+    CORRADE_COMPARE(layer4.state(), LayerStates{});
+
+    /* But calling setStyleTransition() next time will */
+    shared.setStyleTransition(
+        nullptr,
+        nullptr,
+        typeErasedTransition1);
+    CORRADE_COMPARE(layer1.state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer2.state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer3.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate);
+    CORRADE_COMPARE(layer4.state(), LayerState::NeedsDataUpdate);
 }
 
 }}}}
