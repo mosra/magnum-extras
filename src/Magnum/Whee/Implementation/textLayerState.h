@@ -136,9 +136,35 @@ struct TextLayerGlyphRun {
     UnsignedInt data;
 };
 
+struct TextLayerTextRun {
+    UnsignedInt textOffset;
+    UnsignedInt textSize;
+    /* Backreference to the `TextLayerData` so the `textRun` can be updated
+       there when recompacting */
+    UnsignedInt data;
+    /* Current editing position */
+    UnsignedInt cursor;
+
+    /* Subset of TextProperties to be used for reshaping the edited text,
+       mirroring all packing as well */
+    char language[16];
+    Text::Script script;
+    FontHandle font;
+    /* If 0xff, indicates that alignment is not set to avoid an Optional
+       wrapper that'd double the field size */
+    Text::Alignment alignment;
+    /* Packs both shape and layout direction. This is what gets passed to the
+       shaper, TextLayerData::shapedDirection is what the shaper returns, which
+       may be different after each edit */
+    UnsignedByte direction;
+};
+
 struct TextLayerData {
     Vector4 padding;
     UnsignedInt glyphRun;
+    /* Used only if flags contain TextDataFlag::Editable, otherwise set to
+       ~UnsignedInt{} */
+    UnsignedInt textRun;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     UnsignedInt style, calculatedStyle;
     /* Ratio of the style size and font size, for appropriately scaling the
@@ -151,7 +177,13 @@ struct TextLayerData {
        bounding box relative to the node. Again impossible to change without
        relayouting the text. */
     Text::Alignment alignment;
-    /* 3 bytes free */
+    /* Actual direction used by the shaper, for direction-aware cursor
+       movement in editable text. Unused otherwise, put here instead of inside
+       TextLayerTextRun because here was a free space and it's easier to have
+       it saved directly after shaping. */
+    Text::ShapeDirection usedDirection;
+    TextDataFlags flags;
+    /* 1 byte free */
     Color3 color;
 };
 
@@ -196,20 +228,23 @@ struct TextLayer::State: AbstractVisualLayer::State {
 
     /* 3 bytes free */
 
-    /* Glyph data. Only the items referenced from `glyphRuns` are valid, the
-       rest is unused space that gets recompacted during each doUpdate(). */
+    /* Glyph / text data. Only the items referenced from `glyphRuns` /
+       `textRuns` are valid, the rest is unused space that gets recompacted
+       during each doUpdate(). */
     Containers::Array<Implementation::TextLayerGlyphData> glyphData;
+    Containers::Array<char> textData;
 
-    /* Glyph runs. Each run is a complete text belogning to one text layer
-       data. Ordered by the offset. Removed items get marked as unused, new
-       items get put at the end, modifying an item means a removal and an
+    /* Glyph / text runs. Each run is a complete text belogning to one text
+       layer data. Ordered by the offset. Removed items get marked as unused,
+       new items get put at the end, modifying an item means a removal and an
        addition. Gets recompacted during each doUpdate(), this process results
        in the static texts being eventually pushed to the front of the
        buffer (which doesn't need to be updated as often). */
     Containers::Array<Implementation::TextLayerGlyphRun> glyphRuns;
+    Containers::Array<Implementation::TextLayerTextRun> textRuns;
 
-    /* Data for each text. Index to `glyphRus` above, a style index and other
-       properties. */
+    /* Data for each text. Index to `glyphRus` and optionally `textRuns` above,
+       a style index and other properties. */
     Containers::Array<Implementation::TextLayerData> data;
 
     /* Vertex data, ultimately built from `glyphData` combined with color and

@@ -26,7 +26,7 @@
 */
 
 /** @file
- * @brief Class @ref Magnum::Whee::TextLayer, struct @ref Magnum::Whee::TextLayerCommonStyleUniform, @ref Magnum::Whee::TextLayerStyleUniform, enum @ref Magnum::Whee::FontHandle, function @ref Magnum::Whee::fontHandle(), @ref Magnum::Whee::fontHandleId(), @ref Magnum::Whee::fontHandleGeneration()
+ * @brief Class @ref Magnum::Whee::TextLayer, struct @ref Magnum::Whee::TextLayerCommonStyleUniform, @ref Magnum::Whee::TextLayerStyleUniform, enum @ref Magnum::Whee::FontHandle, @ref Magnum::Whee::TextDataFlag, @ref Magnum::Whee::TextEdit, enum set @ref Magnum::Whee::TextDataFlags, function @ref Magnum::Whee::fontHandle(), @ref Magnum::Whee::fontHandleId(), @ref Magnum::Whee::fontHandleGeneration()
  * @m_since_latest
  */
 
@@ -196,6 +196,209 @@ constexpr UnsignedInt fontHandleGeneration(FontHandle handle) {
 }
 
 /**
+@brief Text layer data flag
+@m_since_latest
+
+@see @ref TextDataFlags, @ref TextLayer::create(), @ref TextLayer::flags()
+*/
+enum class TextDataFlag: UnsignedByte {
+    /**
+     * Editable text. If data that have it enabled are attached to a currently
+     * focused node, the layer reacts to text input and key events, allowing to
+     * edit the contents. Unlike non-editable text, the contents are also
+     * accessible through @ref TextLayer::text().
+     */
+    Editable = 1 << 0,
+};
+
+/**
+@debugoperatorenum{TextDataFlag}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, TextDataFlag value);
+
+/**
+@brief Text layer data flags
+@m_since_latest
+
+@see @ref TextLayer::create(), @ref TextLayer::flags()
+*/
+typedef Containers::EnumSet<TextDataFlag> TextDataFlags;
+
+CORRADE_ENUMSET_OPERATORS(TextDataFlags)
+
+/**
+@debugoperatorenum{TextDataFlags}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, TextDataFlags value);
+
+/**
+@brief Text edit operation
+
+@see @ref TextLayer::editText()
+*/
+enum class TextEdit: UnsignedByte {
+    /**
+     * Move cursor one character to the left, equivalent to the
+     * @m_class{m-label m-default} **Left** key. The @ref TextLayer::editText()
+     * @p text is expected to be empty.
+     *
+     * If the character on the left to the @ref TextLayer::cursor() is a valid
+     * UTF-8 byte sequence, it moves past the whole sequence, otherwise just by
+     * one byte. Note that, currently, if a character is combined out of
+     * multiple Unicode codepoints (such as combining diacritics), the cursor
+     * will not jump over the whole combined sequence but move inside.
+     *
+     * By default, the cursor moves backward in the byte stream, which is
+     * optically to the left for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, the cursor still moves
+     * *optically* to the left, although it's forward in the byte stream.
+     */
+    MoveCursorLeft,
+
+    /**
+     * Move cursor one character to the right, equivalent to the
+     * @m_class{m-label m-default} **Right** key. The
+     * @ref TextLayer::editText() @p text is expected to be empty.
+     *
+     * If the character on the right to the @ref TextLayer::cursor() is a valid
+     * UTF-8 byte sequence, it moves past the whole sequence, otherwise just by
+     * one byte. Note that, currently, if a character is combined out of
+     * multiple Unicode codepoints (such as combining diacritics), the cursor
+     * will not jump over the whole combined sequence but move inside.
+     *
+     * By default, the cursor moves backward in the byte stream, which is
+     * optically to the left for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, the cursor still moves
+     * *optically* to the right, although it's forward in the byte stream.
+     */
+    MoveCursorRight,
+
+    /**
+     * Move cursor at the beginning of the line, equivalent to the
+     * @m_class{m-label m-default} **Home** key. The @ref TextLayer::editText()
+     * @p text is expected to be empty.
+     *
+     * The cursor moves to the begin of the byte stream, which is optically on
+     * the left for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, it's still the begin of
+     * the byte stream, but *optically* after the rightmost character.
+     */
+    MoveCursorLineBegin,
+
+    /**
+     * Move cursor at the end of the line, equivalent to the
+     * @m_class{m-label m-default} **End** key. The @ref TextLayer::editText()
+     * @p text is expected to be empty.
+     *
+     * The cursor moves to the end of in the byte stream, which is optically on
+     * the right for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, it's still the end ofthe
+     * byte stream, but *optically* before the leftmost character.
+     */
+    MoveCursorLineEnd,
+
+    /**
+     * Remove character before cursor, equivalent to the
+     * @m_class{m-label m-default} **Backspace** key. The
+     * @ref TextLayer::editText() @p text is expected to be empty.
+     *
+     * If the character before @ref TextLayer::cursor() is a valid UTF-8 byte
+     * sequence, it deletes the whole sequence, otherwise just one byte. Note
+     * that, currently, if a character is combined out of multiple Unicode
+     * codepoints (such as combining diacritics), the cursor will not delete
+     * the whole combined sequence but only a part.
+     *
+     * The deletion goes backward in the byte stream, which is optically to the
+     * left for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, the deletion still goes
+     * backward in the byte stream, but *optically* it's to the right.
+     */
+    RemoveBeforeCursor,
+
+    /**
+     * Remove character after cursor, equivalent to the
+     * @m_class{m-label m-default} **Delete** key. The
+     * @ref TextLayer::editText() @p text is expected to be empty.
+     *
+     * If the character after @ref TextLayer::cursor() is a valid UTF-8 byte
+     * sequence, it deletes the whole sequence, otherwise just one byte. Note
+     * that, currently, if a character is combined out of multiple Unicode
+     * codepoints (such as combining diacritics), the cursor will not delete
+     * the whole combined sequence but only a part.
+     *
+     * The deletion goes forward in the byte stream, which is optically to the
+     * right for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, the deletion still goes
+     * forward in the byte stream, but *optically* it's to the left.
+     */
+    RemoveAfterCursor,
+
+    /**
+     * Insert text before the cursor. This will cause the cursor to advance
+     * *after* the inserted text, which is the usual text editing behavior.
+     *
+     * No UTF-8 byte sequence adjustment is performed in this case, i.e. it's
+     * assumed that the cursor is at a valid UTF-8 character boundary and the
+     * inserted text ends with a valid UTF-8 character as well.
+     *
+     * The insertion goes forward in the byte stream, which is optically to the
+     * right for left-to-right alphabets. If
+     * @ref TextProperties::shapeDirection() is
+     * @ref Text::ShapeDirection::RightToLeft or if it's
+     * @relativeref{Text::ShapeDirection,Unspecified} and was detected to be
+     * @relativeref{Text::ShapeDirection,RightToLeft} after calling
+     * @ref Text::AbstractShaper::shape() internally, the insertion still goes
+     * forward in the byte stream, but *optically* it's to the left.
+     */
+    InsertBeforeCursor,
+
+    /**
+     * Insert text after the cursor. Compared to
+     * @ref TextEdit::InsertBeforeCursor, the cursor stays at the original
+     * position, *before* the inserted text, other than that the behavior is
+     * the same. Useful for autocompletion hints, for example.
+     *
+     * Like with @ref TextEdit::InsertBeforeCursor, no UTF-8 byte sequence
+     * adjustment is performed in this case, i.e. it's assumed that the cursor
+     * is at a valid UTF-8 character boundary and the inserted text ends with a
+     * valid UTF-8 character as well.
+     */
+    InsertAfterCursor,
+};
+
+/**
+@debugoperatorenum{TextEdit}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, TextEdit value);
+
+/**
 @brief Text layer
 @m_since_latest
 
@@ -328,6 +531,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @param style         Style index
          * @param text          Text to render
          * @param properties    Text properties
+         * @param flags         Flags
          * @param node          Node to attach to
          * @return New data handle
          *
@@ -341,39 +545,63 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * coming from the @p style or from @p properties, is expected to have
          * a font instance. Instance-less fonts can be only used to create
          * single glyphs (such as various icons or images) with
-         * @ref createGlyph(). Use @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, NodeHandle)
+         * @ref createGlyph().
+         *
+         * If @p flags contain @ref TextDataFlag::Editable, the @p text and
+         * @p properties are remembered and subsequently accessible through
+         * @ref text() and @ref textProperties(), @ref cursor() is set to
+         * @p text size. Currently, for editable text, the @p properties are
+         * expected to have empty @ref TextProperties::features() --- only the
+         * features supplied by the style are used for editable text.
+         *
+         * Use @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, TextDataFlags, NodeHandle)
          * for creating a text with a custom color. This function is equivalent
          * to calling it with @cpp 0xffffff_srgbf @ce.
-         * @see @ref Shared::hasFontInstance(), @ref setText()
+         * @see @ref Shared::hasFontInstance(), @ref setText(),
+         *      @ref setCursor(), @ref updateText(), @ref editText()
          */
-        DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, NodeHandle node =
+        DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, TextDataFlags flags = {}, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return create(style, text, properties, Color3{1.0f}, node);
+            return create(style, text, properties, Color3{1.0f}, flags, node);
+        }
+
+        /** @overload */
+        DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, NodeHandle node) {
+            return create(style, text, properties, TextDataFlags{}, node);
         }
 
         /**
          * @brief Create a text with a style index in a concrete enum type
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, Containers::StringView, const TextProperties&, NodeHandle).
+         * @ref create(UnsignedInt, Containers::StringView, const TextProperties&, TextDataFlags, NodeHandle).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
             #endif
-        > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, NodeHandle node =
+        > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, TextDataFlags flags = {}, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return create(UnsignedInt(style), text, properties, node);
+            return create(UnsignedInt(style), text, properties, flags, node);
+        }
+
+        /** @overload */
+        template<class StyleIndex
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            #endif
+        > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, NodeHandle node) {
+            return create(style, text, properties, TextDataFlags{}, node);
         }
 
         /**
@@ -381,6 +609,7 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @param style         Style index
          * @param text          Text to render
          * @param properties    Text properties
+         * @param flags         Flags
          * @param color         Custom color
          * @param node          Node to attach to
          * @return New data handle
@@ -397,10 +626,19 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @p properties, is expected to have a font instance. Instance-less
          * fonts can be only used to create single glyphs (such as various
          * icons or images) with @ref createGlyph().
-         * @see @ref create(UnsignedInt, Containers::StringView, const TextProperties&, NodeHandle),
-         *      @ref Shared::hasFontInstance(), @ref setText()
+         *
+         * If @p flags contain @ref TextDataFlag::Editable, the @p text and
+         * @p properties are remembered and subsequently accessible through
+         * @ref text() and @ref textProperties(), @ref cursor() is set to
+         * @p text size. Currently, for editable text, the @p properties are
+         * expected to have empty @ref TextProperties::features() --- only the
+         * features supplied by the style are used for editable text.
+         *
+         * @see @ref create(UnsignedInt, Containers::StringView, const TextProperties&, TextDataFlags, NodeHandle),
+         *      @ref Shared::hasFontInstance(), @ref setText(),
+         *      @ref setCursor(), @ref updateText(), @ref editText()
          */
-        DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, const Color3& color, NodeHandle node =
+        DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, const Color3& color, TextDataFlags flags = {}, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
@@ -408,24 +646,38 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
             #endif
         );
 
+        /** @overload */
+        DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, const Color3& color, NodeHandle node) {
+            return create(style, text, properties, color, TextDataFlags{}, node);
+        }
+
         /**
          * @brief Create a text with a style index in a concrete enum type and a custom color
          *
          * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, NodeHandle).
+         * @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, TextDataFlags, NodeHandle).
          */
         template<class StyleIndex
             #ifndef DOXYGEN_GENERATING_OUTPUT
             , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
             #endif
-        > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, const Color3& color, NodeHandle node =
+        > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, const Color3& color, TextDataFlags flags = {}, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
             NodeHandle::Null
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
         ) {
-            return create(UnsignedInt(style), text, properties, color, node);
+            return create(UnsignedInt(style), text, properties, color, flags, node);
+        }
+
+        /** @overload */
+        template<class StyleIndex
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
+            #endif
+        > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, const Color3& color, NodeHandle node) {
+            return create(style, text, properties, color, TextDataFlags{}, node);
         }
 
         /**
@@ -648,6 +900,28 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         void remove(LayerDataHandle handle);
 
         /**
+         * @brief Text flags
+         *
+         * Expects that @p handle is valid. Note that, to avoid implementation
+         * complexity, the flags can be only specified in @ref create() or
+         * @ref setText(DataHandle, Containers::StringView, const TextProperties&, TextDataFlags)
+         * and cannot be modified independently. Data created with
+         * @ref createGlyph() or updated with @ref setGlyph() have the flags
+         * always empty.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        TextDataFlags flags(DataHandle handle) const;
+
+        /**
+         * @brief Text flags assuming it belongs to this layer
+         *
+         * Like @ref flags(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         */
+        TextDataFlags flags(LayerDataHandle handle) const;
+
+        /**
          * @brief Text glyph count
          *
          * Expects that @p handle is valid.
@@ -686,6 +960,103 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         Vector2 size(LayerDataHandle handle) const;
 
         /**
+         * @brief Cursor position in an editable text
+         *
+         * Expects that @p handle is valid and the text was created or set with
+         * @ref TextDataFlag::Editable present. The cursor position is
+         * guaranteed to be always within bounds of a corresponding
+         * @ref text(DataHandle) const.
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref flags(DataHandle) const
+         */
+        UnsignedInt cursor(DataHandle handle) const;
+
+        /**
+         * @brief Cursor position in an editable text assuming it belongs to this layer
+         *
+         * Like @ref cursor(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         */
+        UnsignedInt cursor(LayerDataHandle handle) const;
+
+        /**
+         * @brief Set cursor position in an editable text
+         *
+         * Low-level interface for cursor positioning. See @ref updateText()
+         * for a low-level interface to perform text modifications together
+         * with cursor positioning, use @ref editText() to perform higher-level
+         * operations with UTF-8 and text directionality awareness.
+         *
+         * Expects that @p handle is valid and the text was created or set with
+         * @ref TextDataFlag::Editable enabled. The @p position is expected to
+         * be less or equal to @ref text() size. No UTF-8 sequence boundary
+         * adjustment is done, i.e. it's possible to move the cursor inside a
+         * multi-byte UTF-8 sequence.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set, unless the operation performed is a no-op, which is when both
+         * @p removeSize and @p insertText size are both @cpp 0 @ce and
+         * @p cursor is equal to @ref cursor().
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref flags(DataHandle) const
+         */
+        void setCursor(DataHandle handle, UnsignedInt position);
+
+        /**
+         * @brief Set cursor position in an editable text assuming it belongs to this layer
+         *
+         * Like @ref setCursor(DataHandle, UnsignedInt) but without checking
+         * that @p handle indeed belongs to this layer. See its documentation
+         * for more information.
+         */
+        void setCursor(LayerDataHandle handle, UnsignedInt position);
+
+        /**
+         * @brief Properties used for shaping an editable text
+         *
+         * Expects that @p handle is valid and the text was created with
+         * @ref TextDataFlag::Editable set. Returns content of
+         * @ref TextProperties passed in previous @ref create() or
+         * @ref setText() call for @p handle, except for
+         * @ref TextProperties::font() that is picked from the style if it was
+         * passed as @ref FontHandle::Null.
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref flags(DataHandle) const, @ref style(DataHandle) const
+         */
+        TextProperties textProperties(DataHandle handle) const;
+
+        /**
+         * @brief Properties used for shaping an editable text assuming it belongs to this layer
+         *
+         * Like @ref textProperties(DataHandle) const but without checking that
+         * @p handle indeed belongs to this layer. See its documentation for
+         * more information.
+         */
+        TextProperties textProperties(LayerDataHandle handle) const;
+
+        /**
+         * @brief Contents of an editable text
+         *
+         * Expects that @p handle is valid and the text was created or set with
+         * @ref TextDataFlag::Editable present. The returned view is only valid
+         * until the next @ref create(), @ref setText() or @ref update() call
+         * and is never
+         * @relativeref{Corrade,Containers::StringViewFlag::NullTerminated}.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        Containers::StringView text(DataHandle handle) const;
+
+        /**
+         * @brief Contents of an editable text assuming it belongs to this layer
+         *
+         * Like @ref text(DataHandle) const but without checking that @p handle
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         */
+        Containers::StringView text(LayerDataHandle handle) const;
+
+        /**
          * @brief Set text
          *
          * Expects that @p handle is valid and @ref TextProperties::font() is
@@ -699,12 +1070,33 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * fonts can be only used to set single glyphs (such as various icons
          * or images) with @ref setGlyph().
          *
+         * This function preserves existing @ref flags() for given @p handle,
+         * use @ref setText(DataHandle, Containers::StringView, const TextProperties&, TextDataFlags)
+         * to supply different @ref TextDataFlags for the new text.
+         *
+         * If @ref flags() contain @ref TextDataFlag::Editable, the @p text and
+         * @p properties are remembered and subsequently accessible through
+         * @ref text() and @ref textProperties(), @ref cursor() is set to
+         * @p text size. Currently, for editable text, the @p properties are
+         * expected to have empty @ref TextProperties::features() --- only the
+         * features supplied by the style are used for editable text.
+         *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
          * @see @ref isHandleValid(DataHandle) const,
-         *      @ref Shared::isHandleValid(FontHandle) const
+         *      @ref Shared::isHandleValid(FontHandle) const, @ref setCursor(),
+         *      @ref updateText(), @ref editText()
          */
         void setText(DataHandle handle, Containers::StringView text, const TextProperties& properties);
+
+        /**
+         * @brief Set text with different flags
+         *
+         * Like @ref setText(DataHandle, Containers::StringView, const TextProperties&)
+         * but supplying different @ref TextDataFlags for the new text instead
+         * of preserving existing @ref flags().
+         */
+        void setText(DataHandle handle, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
 
         /**
          * @brief Set text assuming it belongs to this layer
@@ -714,6 +1106,88 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * See its documentation for more information.
          */
         void setText(LayerDataHandle handle, Containers::StringView text, const TextProperties& properties);
+
+        /**
+         * @brief Set text with different flags assuming it belongs to this layer
+         *
+         * Like @ref setText(DataHandle, Containers::StringView, const TextProperties&, TextDataFlags)
+         * but without checking that @p handle indeed belongs to this layer.
+         * See its documentation for more information.
+         */
+        void setText(LayerDataHandle handle, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
+
+        /**
+         * @brief Update text and cursor position in an editable text
+         * @param handle        Handle which to update
+         * @param removeOffset  Offset at which to remove
+         * @param removeSize    Count of bytes to remove
+         * @param insertOffset  Offset at which to insert after the removal
+         * @param insertText    Text to insert after the removal
+         * @param cursor        Cursor position to set after the removal and
+         *      subsequent insert
+         *
+         * Low-level interface for text removal and insertion together with
+         * cursor positioning. See @ref setCursor() for just cursor positioning
+         * alone, use @ref editText() to perform higher-level operations with
+         * UTF-8 and text directionality awareness.
+         *
+         * Expects that @p handle is valid and the text was created or set with
+         * @ref TextDataFlag::Editable enabled. The @p removeOffset together
+         * with @p removeSize is expected to be less or equal to @ref text()
+         * size; @p insertOffset then equal to the text size without
+         * @p removeSize; @p cursor then to text size without @p removeSize but
+         * with @p insertText size. No UTF-8 sequence boundary adjustment is
+         * done for any of these, i.e. it's possible to remove or insert
+         * partial multi-byte UTF-8 sequences and position the cursor inside
+         * them as well.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set, unless the operation performed is a no-op, which is when both
+         * @p removeSize and @p insertText size are both @cpp 0 @ce and
+         * @p cursor is equal to @ref cursor().
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref flags(DataHandle) const
+         */
+        void updateText(DataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor);
+
+        /**
+         * @brief Update text and cursor position in an editable text assuming it belongs to this layer
+         *
+         * Like @ref updateText(DataHandle, UnsignedInt, UnsignedInt, UnsignedInt, Containers::StringView, UnsignedInt)
+         * but without checking that @p handle indeed belongs to this layer.
+         * See its documentation for more information.
+         */
+        void updateText(LayerDataHandle handle, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView insertText, UnsignedInt cursor);
+
+        /**
+         * @brief Edit text at current cursor position
+         *
+         * High-level interface for text editing, mapping to usual user
+         * interface operations. Delegates to @ref setCursor() or
+         * @ref updateText() internally.
+         *
+         * Expects that @p handle is valid, the text was created or set with
+         * @ref TextDataFlag::Editable enabled and @p insert is non-empty only
+         * if appropriate @p edit operation is used. See documentation of the
+         * @ref TextEdit enum for detailed behavior of each operation.
+         *
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set, unless the operation performed is a no-op such as inserting
+         * empty text or moving a cursor / deleting a character to the left
+         * with the cursor already being on the leftmost side of the text.
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref flags(DataHandle) const, @ref setText()
+         */
+        void editText(DataHandle handle, TextEdit edit, Containers::StringView insert);
+
+        /**
+         * @brief Edit text at current cursor position assuming it belongs to this layer
+         *
+         * Like @ref editText(DataHandle, TextEdit, Containers::StringView) but
+         * without checking that @p handle indeed belongs to this layer. See
+         * its documentation for more information.
+         */
+        void editText(LayerDataHandle handle, TextEdit edit, Containers::StringView insert);
 
         /**
          * @brief Set a single glyph
@@ -735,9 +1209,10 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @relativeref{TextProperties,shapeDirection()},
          * @relativeref{TextProperties,layoutDirection()} and
          * @relativeref{TextProperties,features()} properties aren't used in
-         * any way. Note that it's also possible to change a handle that
-         * previously contained a text to a single glyph and vice versa --- the
-         * internal representation of both is the same.
+         * any way; @ref flags() get reset to empty. Note that it's also
+         * possible to change a handle that previously contained a text to a
+         * single glyph and vice versa --- the internal representation of both
+         * is the same.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -909,18 +1384,25 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
 
     private:
         MAGNUM_WHEE_LOCAL DataHandle createInternal(NodeHandle node);
-        MAGNUM_WHEE_LOCAL void shapeTextInternal(
+        MAGNUM_WHEE_LOCAL void shapeTextInternal(UnsignedInt id, UnsignedInt style, Containers::StringView text, const TextProperties& properties, FontHandle font);
+        MAGNUM_WHEE_LOCAL void shapeRememberTextInternal(
             #ifndef CORRADE_NO_ASSERT
             const char* messagePrefix,
             #endif
-            UnsignedInt id, UnsignedInt style, Containers::StringView text, const TextProperties& properties);
+            UnsignedInt id, UnsignedInt style, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
         MAGNUM_WHEE_LOCAL void shapeGlyphInternal(
             #ifndef CORRADE_NO_ASSERT
             const char* messagePrefix,
             #endif
             UnsignedInt id, UnsignedInt style, UnsignedInt glyphId, const TextProperties& properties);
         MAGNUM_WHEE_LOCAL void removeInternal(UnsignedInt id);
-        MAGNUM_WHEE_LOCAL void setTextInternal(UnsignedInt id, Containers::StringView text, const TextProperties& properties);
+        MAGNUM_WHEE_LOCAL UnsignedInt cursorInternal(UnsignedInt id) const;
+        MAGNUM_WHEE_LOCAL void setCursorInternal(UnsignedInt id, UnsignedInt position);
+        MAGNUM_WHEE_LOCAL TextProperties textPropertiesInternal(UnsignedInt id) const;
+        MAGNUM_WHEE_LOCAL Containers::StringView textInternal(UnsignedInt id) const;
+        MAGNUM_WHEE_LOCAL void setTextInternal(UnsignedInt id, Containers::StringView text, const TextProperties& properties, TextDataFlags flags);
+        MAGNUM_WHEE_LOCAL void updateTextInternal(UnsignedInt id, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView text, UnsignedInt cursor);
+        MAGNUM_WHEE_LOCAL void editTextInternal(UnsignedInt id, TextEdit edit, Containers::StringView text);
         MAGNUM_WHEE_LOCAL void setGlyphInternal(UnsignedInt id, UnsignedInt glyph, const TextProperties& properties);
         MAGNUM_WHEE_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);
         MAGNUM_WHEE_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);

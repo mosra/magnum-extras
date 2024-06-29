@@ -325,6 +325,13 @@ class MAGNUM_WHEE_EXPORT TextProperties {
 
     private:
         struct State;
+        /* Internals accessed by TextLayer directly to not have to pack and
+           unpack from StringView, Optional etc */
+        friend TextLayer;
+
+        /* Used by TextLayer. Only the _state pointer is initialized in this
+           case, everything else is left at random. */
+        MAGNUM_WHEE_LOCAL explicit TextProperties(NoInitT);
 
         /* The _state is only allocated when passing a feature list. Eventually
            it'll contain also font/language/script/direction properties for
@@ -337,7 +344,7 @@ class MAGNUM_WHEE_EXPORT TextProperties {
            examples at https://en.wikipedia.org/wiki/IETF_language_tag, worst
            case we can always switch to storing a String (which has 22 bytes
            for SSO on 64bit). */
-        char _language[16]{};
+        char _language[16];
         Text::Script _script;
         FontHandle _font;
         /* If 0xff, indicates that alignment is not set to avoid an Optional

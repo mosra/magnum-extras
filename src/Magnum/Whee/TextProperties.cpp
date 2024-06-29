@@ -48,7 +48,9 @@ struct TextProperties::State {
 
 /** @todo change LayoutDirection to Unspecified as well, once Text APIs don't
     enforce HorizontalTopToBottom anymore */
-TextProperties::TextProperties(): _script{Text::Script::Unspecified}, _font{FontHandle::Null}, _alignment{Text::Alignment(0xff)}, _direction{UnsignedByte(Text::ShapeDirection::Unspecified)|(UnsignedByte(Text::LayoutDirection::HorizontalTopToBottom) << 4)} {}
+TextProperties::TextProperties(): _language{}, _script{Text::Script::Unspecified}, _font{FontHandle::Null}, _alignment{Text::Alignment(0xff)}, _direction{UnsignedByte(Text::ShapeDirection::Unspecified)|(UnsignedByte(Text::LayoutDirection::HorizontalTopToBottom) << 4)} {}
+
+TextProperties::TextProperties(NoInitT) {}
 
 TextProperties::TextProperties(const Text::Alignment alignment): TextProperties{} {
     setAlignment(alignment);
