@@ -294,7 +294,8 @@ const struct {
     bool expectedNodesRemoveAnimator2[2], expectedNodesEnabledLayer[2];
     Containers::Array<Vector2> expectedClipRectOffsetsLayer;
     bool expectedNode1Valid, expectedNode2Valid;
-    bool expectedCleanAfterAnimation, expectedUpdateAfterAnimation;
+    bool expectedCleanAfterAnimation;
+    LayerStates expectedLayerUpdateState;
 } StateAnimationsData[]{
     {"",
         true, false, false, {}, {},
@@ -304,7 +305,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"with no-op calls",
         true, false, false, {}, {},
         {}, {}, false, false,
@@ -313,7 +314,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"with implicit clean",
         false, false, false, {}, {},
         {}, {}, false, false,
@@ -322,7 +323,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"with implicit clean and no-op calls",
         false, true, false, {}, {},
         {}, {}, false, false,
@@ -331,7 +332,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"running animation",
         true, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
         {}, {}, false, false,
@@ -340,7 +341,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"running animation, with no-op calls",
         true, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
         {}, {}, false, false,
@@ -349,7 +350,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"running animation, with implicit clean",
         false, false, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
         {}, {}, false, false,
@@ -358,7 +359,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"running animation, with implicit clean and no-op calls",
         false, true, true, UserInterfaceState::NeedsAnimationAdvance, UserInterfaceState::NeedsAnimationAdvance,
         {}, {}, false, false,
@@ -367,7 +368,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"two node animators doing nothing",
         true, false, false, {}, {},
         NodeAnimations{}, NodeAnimations{}, false, false,
@@ -376,7 +377,7 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, false},
+        true, true, false, {}},
     {"first node animator moving nodes",
         true, false, false, {}, UserInterfaceState::NeedsLayoutUpdate,
         NodeAnimations{NodeAnimation::OffsetSize}, NodeAnimations{}, false, false,
@@ -385,7 +386,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"second node animator moving nodes",
         true, false, false, {}, UserInterfaceState::NeedsLayoutUpdate,
         NodeAnimations{}, NodeAnimations{NodeAnimation::OffsetSize}, false, false,
@@ -394,7 +396,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{0.0f, 1.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"first node animator changing node enablement, second doing nothing",
         true, false, false, {}, UserInterfaceState::NeedsNodeEnabledUpdate,
         NodeAnimations{NodeAnimation::Enabled}, NodeAnimations{}, false, false,
@@ -403,7 +406,10 @@ const struct {
         {NodeFlag::Clip, {}},
         {false, false}, {true, true},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        /* The draw order needs an update as well due to the coarseness of
+           UserInterfaceState bits */
+        LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate},
     {"node animator changing node clip state",
         true, false, false, {}, UserInterfaceState::NeedsNodeClipUpdate,
         NodeAnimations{NodeAnimation::Clip}, {}, false, false,
@@ -412,7 +418,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {3.0f, 4.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate},
     {"node animator removing a node",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
         NodeAnimations{NodeAnimation::Removal}, {}, false, false,
@@ -421,7 +428,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}}},
-        true, false, true, true},
+        true, false, true,
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"node animator removing a node, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsNodeClean,
         NodeAnimations{NodeAnimation::Removal}, {}, false, false,
@@ -430,7 +438,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}}},
-        true, false, true, true},
+        true, false, true,
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"two node animators doing parts of everything",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
         NodeAnimation::OffsetSize|NodeAnimation::Enabled|NodeAnimation::Clip, NodeAnimations{NodeAnimation::Removal}, false, false,
@@ -439,7 +448,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Clip},
         {false, false}, {false, true},
         {InPlaceInit, {{2.0f, 3.0f}}},
-        false, true, true, true},
+        false, true, true,
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"two node animators doing parts of everything, the other way around",
         true, false, false, {}, UserInterfaceState::NeedsNodeClean,
         NodeAnimations{NodeAnimation::Removal},
@@ -449,7 +459,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, true}, {false, false},
         {InPlaceInit, {{0.0f, 0.0f}}},
-        true, false, true, true},
+        true, false, true,
+        LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate},
     {"data animator",
         true, false, false, {}, UserInterfaceState::NeedsDataUpdate,
         {}, {}, true, false,
@@ -458,7 +469,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsDataUpdate},
     {"data animator, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsDataUpdate,
         {}, {}, true, false,
@@ -467,7 +479,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsDataUpdate},
     {"data animator, with implicit clean and no-op calls",
         false, true, false, {}, UserInterfaceState::NeedsDataUpdate,
         {}, {}, true, false,
@@ -476,7 +489,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsDataUpdate},
     {"style animator",
         true, false, false, {}, UserInterfaceState::NeedsDataUpdate,
         {}, {}, false, true,
@@ -485,7 +499,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsCommonDataUpdate},
     {"style animator, with implicit clean",
         false, false, false, {}, UserInterfaceState::NeedsDataUpdate,
         {}, {}, false, true,
@@ -494,7 +509,8 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsCommonDataUpdate},
     {"style animator, with implicit clean and no-op calls",
         false, true, false, {}, UserInterfaceState::NeedsDataUpdate,
         {}, {}, false, true,
@@ -503,7 +519,18 @@ const struct {
         {NodeFlag::Clip, NodeFlag::Disabled},
         {false, false}, {true, false},
         {InPlaceInit, {{1.0f, 2.0f}, {0.0f, 0.0f}}},
-        true, true, false, true},
+        true, true, false,
+        LayerState::NeedsCommonDataUpdate},
+};
+
+const struct {
+    const char* name;
+    LayerStates state;
+} StatePropagateFromLayersData[]{
+    {"needs data update", LayerState::NeedsDataUpdate},
+    {"needs common data update", LayerState::NeedsCommonDataUpdate},
+    {"needs shared data update", LayerState::NeedsSharedDataUpdate},
+    {"all", LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate},
 };
 
 const struct {
@@ -913,8 +940,10 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addInstancedTests({&AbstractUserInterfaceTest::stateAnimations},
         Containers::arraySize(StateAnimationsData));
 
-    addTests({&AbstractUserInterfaceTest::statePropagateFromLayers,
-              &AbstractUserInterfaceTest::statePropagateFromLayouters,
+    addInstancedTests({&AbstractUserInterfaceTest::statePropagateFromLayers},
+        Containers::arraySize(StatePropagateFromLayersData));
+
+    addTests({&AbstractUserInterfaceTest::statePropagateFromLayouters,
               &AbstractUserInterfaceTest::statePropagateFromAnimators});
 
     addInstancedTests({&AbstractUserInterfaceTest::draw},
@@ -5301,7 +5330,7 @@ void AbstractUserInterfaceTest::updateOrder() {
         explicit Layer(LayerHandle handle, Containers::Array<LayerHandle>& order): AbstractLayer{handle}, _order(order) {}
 
         LayerFeatures doFeatures() const override { return {}; }
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             arrayAppend(_order, handle());
         }
 
@@ -5342,11 +5371,24 @@ void AbstractUserInterfaceTest::updateOrder() {
     ui.removeLayer(layer5Removed);
     ui.setLayerInstance(Containers::pointer<Layer>(layer6, order));
 
+    /* Initially the update goes through everything due to the layer being
+       removed */
     ui.update();
     CORRADE_COMPARE_AS(order, Containers::arrayView({
         layer1,
         layer2,
         layer4,
+        layer6,
+    }), TestSuite::Compare::Container);
+
+    /* Next time it should go only through layers that actually have any
+       state set, but still in order */
+    order = {};
+    ui.layer(layer6).setNeedsUpdate(LayerState::NeedsDataUpdate);
+    ui.layer(layer2).setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+    ui.update();
+    CORRADE_COMPARE_AS(order, Containers::arrayView({
+        layer2,
         layer6,
     }), TestSuite::Compare::Container);
 }
@@ -5701,7 +5743,11 @@ void AbstractUserInterfaceTest::state() {
             ++cleanCallCount;
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(const LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+            /* The doUpdate() should never get the NeedsAttachmentUpdate, only
+               the NeedsNodeOrderUpdate that's a subset of it */
+            CORRADE_VERIFY(!(state >= LayerState::NeedsAttachmentUpdate));
+            CORRADE_COMPARE(state, expectedState);
             CORRADE_COMPARE_AS(dataIds,
                 expectedDataIds,
                 TestSuite::Compare::Container);
@@ -5732,6 +5778,7 @@ void AbstractUserInterfaceTest::state() {
             ++updateCallCount;
         }
 
+        LayerStates expectedState;
         Containers::StridedArrayView1D<const bool> expectedDataIdsToRemove;
         Containers::StridedArrayView1D<const UnsignedInt> expectedDataIds;
         Containers::StridedArrayView1D<const Containers::Pair<UnsignedInt, UnsignedInt>> expectedClipRectIdsDataCounts;
@@ -5782,13 +5829,13 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
     }
 
-    /* Creating a data in a layer sets no state flags */
+    /* Creating a data in a layer sets state flags to populate their contents */
     DataHandle dataNested2 = ui.layer<Layer>(layer).create();
     DataHandle dataNode = ui.layer<Layer>(layer).create();
     DataHandle dataAnother1 = ui.layer<Layer>(layer).create();
     DataHandle dataNotAttached = ui.layer<Layer>(layer).create();
     DataHandle dataNested1 = ui.layer<Layer>(layer).create();
-    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
     CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
 
     /* Calling clean() should be a no-op */
@@ -5797,7 +5844,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
-        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -5806,23 +5853,49 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
     }
 
-    /* Calling update() should be a no-op too */
-    if(data.noOp) {
-        {
-            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-            ui.update();
-        }
-        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        if(data.layouters) {
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
-            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
-            CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-                layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
-            }), TestSuite::Compare::Container);
-        }
-        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
+    /* Calling update() rebuilds internal state, calls doUpdate() on the layer,
+       and resets the flag. Since nothing is attached, there are no IDs to
+       draw. It doesn't call the layouters either. */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another1 */
+            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
+            {},                           /* invisible */
+            {},                           /* notInOrder */
+        };
+        bool expectedNodesEnabled[]{
+            /* All enabled except invisible and notInOrder */
+            true, true, true, true, true, false, false
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{2.0f, 1.0f}, {3.0f, 5.0f}},
+            {{}, {}},
+            {{}, {}}
+        };
+        /* Nothing is attached to any nodes, so it's just the data alone being
+           updated */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsDataUpdate;
+        ui.layer<Layer>(layer).expectedDataIds = {};
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = {};
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        ui.update();
     }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    if(data.layouters) {
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+        }), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
 
     struct Animator: AbstractGenericAnimator {
         using AbstractGenericAnimator::AbstractGenericAnimator;
@@ -5912,7 +5985,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -5935,7 +6008,7 @@ void AbstractUserInterfaceTest::state() {
             }), TestSuite::Compare::Container);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -5962,7 +6035,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6002,6 +6075,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Data were updated in the previous call, so it's now just the
+           node-related state */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -6018,7 +6094,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6072,7 +6148,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 1);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6118,6 +6194,11 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Updating the clip state caused some nodes to be invisible now,
+           meaning an update of node order is triggered now. It's however also
+           node enabled update because some of the differently visible nodes
+           can now be differently enabled. */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -6136,7 +6217,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6162,7 +6243,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 2);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6210,6 +6291,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Updating the clip state caused some previously-invisible nodes to be
+           visible again, meaning an update of node order and enabled state is
+           triggered again */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -6228,14 +6313,15 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
-    /* Marking the layer with NeedsUpdate propagates to the UI-wide state */
-    ui.layer(layer).setNeedsUpdate();
+    /* Marking the layer with Needs*DataUpdate propagates to the UI-wide
+       state */
+    ui.layer(layer).setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
     /* Calling clean() should be a no-op */
@@ -6251,7 +6337,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 3);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6292,6 +6378,8 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Just a common data update was requested, which is done now */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsCommonDataUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -6309,7 +6397,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6345,7 +6433,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 4);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6451,6 +6539,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Updating node size means offsets/sizes have to be changed, and the
+           order + enabled state as well, as the set of visible nodes may be
+           different now */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -6470,7 +6562,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6506,7 +6598,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 5);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6612,6 +6704,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Updating node size agains means offsets/sizes + order + enabled
+           has to be updated now */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -6631,7 +6726,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6654,7 +6749,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 6);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6752,6 +6847,12 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Updating node hidden flags means order has to be changed due to
+           potentially different set of nodes being visible (and also enabled),
+           which is however smashed together with offset/size changes due to
+           the coarseness of the UserInterfaceState bits. */
+        /** @todo separate those */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -6771,7 +6872,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6799,7 +6900,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 7);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -6902,6 +7003,12 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Updating node hidden flags again means order has to be changed due
+           to potentially different set of nodes being visible (and enabled),
+           which is again smashed together with offset/size changes due to
+           the coarseness of the UserInterfaceState bits. */
+        /** @todo separate those */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -6921,7 +7028,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -6952,7 +7059,7 @@ void AbstractUserInterfaceTest::state() {
             }), TestSuite::Compare::Container);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 8);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
     }
 
     /* Calling update() rebuilds internal masks of enabled nodes. It doesn't
@@ -6987,6 +7094,11 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Toggling a node Disabled flag means enabled state has to be updated,
+           however due to the coarseness of UserInterfaceState bits it's
+           together with draw order as well */
+        /** @todo separate those */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -7006,7 +7118,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7041,7 +7153,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 9);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7080,6 +7192,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Toggling a node NoEvents flag causes the same as Disabled due to the
+           coarseness of UserInterfaceState bits */
+        /** @todo separate those from disabled, separate from node order */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -7099,7 +7215,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7123,7 +7239,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 10);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7163,6 +7279,10 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Toggling a node NoEvents flag back causes the same as Disabled due
+           to the coarseness of UserInterfaceState bits */
+        /** @todo separate those from disabled, separate from node order */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -7182,7 +7302,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7214,7 +7334,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 11);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7254,6 +7374,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Toggling a node Clip flag causes the set of visible nodes to be
+           changed, which also affects the set of enabled nodes */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -7271,7 +7394,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7299,7 +7422,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 12);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7338,6 +7461,9 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}},
             {{}, {}}
         };
+        /* Toggling a node Clip flag again causes the set of visible nodes to
+           be changed, which also affects the set of enabled nodes */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -7355,7 +7481,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7378,7 +7504,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 13);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7446,6 +7572,12 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{}, {}},
         };
+        /* Removing a node from the top-level order means just the set of drawn
+           nodes (and thus also enabled state) being updated, but offset/size
+           update is also triggered due to the coarseness of the
+           UserInterfaceState bits */
+        /** @todo separate those */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -7465,7 +7597,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7493,7 +7625,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 14);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7597,6 +7729,9 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{}, {}},
         };
+        /* Putting a node back to the top-level order triggers offset/size
+           update in addition to just the order + enabled */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -7616,7 +7751,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
     if(data.nodeAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
     if(data.dataAttachmentAnimators)
@@ -7709,6 +7844,9 @@ void AbstractUserInterfaceTest::state() {
                 {{3.0f, 1.0f}, {2.0f, 4.0f}},
                 {{}, {}},
             };
+            /* Layout change means offset/size update, which may affect the set
+               of visible nodes and thus also the enabled state */
+            ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
             ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
             ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
             ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
@@ -7730,7 +7868,7 @@ void AbstractUserInterfaceTest::state() {
             layouterHandleId(layouter2), layouterHandleId(layouter1),
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -7778,7 +7916,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
@@ -7807,7 +7945,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
     if(data.nodeAttachmentAnimators)
@@ -7844,7 +7982,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 15 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
@@ -7897,6 +8035,14 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         for(LayerHandle i: {layer, anotherLayer}) {
+            CORRADE_ITERATION(i);
+            /* Removing attached data means the draw order needs an update.
+               Currently, affecting any node attachments triggers a need to
+               update draw order on all layers, even those that didn't have the
+               attachments affected. */
+            /** @todo separate those? or with the addition of draw merging this
+                won't be possible anymore? */
+            ui.layer<Layer>(i).expectedState = LayerState::NeedsNodeOrderUpdate;
             ui.layer<Layer>(i).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
             ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
             ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
@@ -7921,7 +8067,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
     if(data.nodeAttachmentAnimators)
@@ -8003,7 +8149,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators) {
@@ -8105,6 +8251,11 @@ void AbstractUserInterfaceTest::state() {
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
         for(LayerHandle i: {layer, anotherLayer}) {
+            /* Removing a node causes just node order and enabled state to get
+               updated, however again with the coarseness of UserInterfaceState
+               bits it's together with offset/size as well */
+            /** @todo separate */
+            ui.layer<Layer>(i).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
             ui.layer<Layer>(i).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
             ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
             ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
@@ -8142,7 +8293,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
     if(data.nodeAttachmentAnimators) {
@@ -8175,7 +8326,7 @@ void AbstractUserInterfaceTest::state() {
                 layouterHandleId(layouter2),
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18);
+            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 19);
             CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
             CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
         }
@@ -8220,6 +8371,9 @@ void AbstractUserInterfaceTest::state() {
             ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
             ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
             for(LayerHandle i: {layer, anotherLayer}) {
+                /* Removing a layouter means node offsets/sizes can change but
+                   also the set of visible nodes and enabled state */
+                ui.layer<Layer>(i).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate;
                 ui.layer<Layer>(i).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
                 ui.layer<Layer>(i).expectedNodesEnabled = expectedNodesEnabled;
                 ui.layer<Layer>(i).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
@@ -8235,7 +8389,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 19);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 20);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 3);
         if(data.nodeAttachmentAnimators) {
@@ -8306,6 +8460,12 @@ void AbstractUserInterfaceTest::state() {
             {{}, {}}
         };
         ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};
+        /* Currently, affecting any node attachments triggers a need to update
+           draw order on all layers, even those that didn't have the
+           attachments affected */
+        /** @todo separate those? or with the addition of draw merging this
+            won't be possible anymore? */
+        ui.layer<Layer>(anotherLayer).expectedState = LayerState::NeedsNodeOrderUpdate;
         ui.layer<Layer>(anotherLayer).expectedDataIds = {};
         ui.layer<Layer>(anotherLayer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
         ui.layer<Layer>(anotherLayer).expectedNodesEnabled = expectedNodesEnabled;
@@ -8359,7 +8519,12 @@ void AbstractUserInterfaceTest::stateAnimations() {
         void doClean(Containers::BitArrayView) override {
             ++cleanCallCount;
         }
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>&) override {
+            /* The doUpdate() should never get the NeedsAttachmentUpdate, only
+               the NeedsNodeOrderUpdate that's a subset of it */
+            CORRADE_VERIFY(!(state >= LayerState::NeedsAttachmentUpdate));
+            CORRADE_COMPARE(state, expectedState);
+
             Vector2 expectedNodeSizes[]{
                 {0.5f, 0.25f},
                 {0.75f, 1.0f}
@@ -8385,9 +8550,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
                 if(animator.state() & AnimatorState::NeedsAdvance) {
                     CORRADE_COMPARE(time, 5_nsec);
                     ++advanceDataAnimationsCallCount;
-                    /* This triggers NeedsDataUpdate in order to make the
-                       animation actually do something */
-                    setNeedsUpdate();
+                    setNeedsUpdate(LayerState::NeedsDataUpdate);
                 }
         }
         void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
@@ -8395,12 +8558,11 @@ void AbstractUserInterfaceTest::stateAnimations() {
                 if(animator.state() & AnimatorState::NeedsAdvance) {
                     CORRADE_COMPARE(time, 5_nsec);
                     ++advanceStyleAnimationsCallCount;
-                    /* This triggers NeedsDataUpdate in order to make the
-                       animation actually do something */
-                    setNeedsUpdate();
+                    setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
                 }
         }
 
+        LayerStates expectedState;
         Containers::StridedArrayView1D<const Vector2> expectedNodeOffsets;
         Containers::StridedArrayView1D<const bool> expectedNodesEnabled;
         Containers::StridedArrayView1D<const Vector2> expectedClipRectOffsets;
@@ -8673,6 +8835,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         bool expectedNodesValid[]{
             true, true
         };
+        layer.expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate;
         layer.expectedNodeOffsets = expectedNodeOffsets;
         layer.expectedNodesEnabled = expectedNodesEnabled;
         layer.expectedClipRectOffsets = expectedClipRectOffsets;
@@ -8813,6 +8976,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
         bool expectedNodesValid[]{
             data.expectedNode1Valid, data.expectedNode2Valid
         };
+        layer.expectedState = data.expectedLayerUpdateState;
         layer.expectedNodeOffsets = data.expectedNodeOffsetsLayer;
         layer.expectedNodesEnabled = data.expectedNodesEnabledLayer;
         layer.expectedClipRectOffsets = data.expectedClipRectOffsetsLayer;
@@ -8823,7 +8987,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
     CORRADE_COMPARE(ui.state(), data.expectedInitialState|(data.nodeAnimations1 || data.nodeAnimations2 || data.dataAnimations || data.styleAnimations ?
         UserInterfaceState::NeedsAnimationAdvance : UserInterfaceStates{}));
     CORRADE_COMPARE(layer.cleanCallCount, 1 + data.expectedCleanAfterAnimation);
-    CORRADE_COMPARE(layer.updateCallCount, 1 + data.expectedUpdateAfterAnimation);
+    CORRADE_COMPARE(layer.updateCallCount, data.expectedLayerUpdateState ? 2 : 1);
     CORRADE_COMPARE(animator.cleanCallCount, 0);
     CORRADE_COMPARE(ui.isHandleValid(node1), data.expectedNode1Valid);
     CORRADE_COMPARE(ui.isHandleValid(node2), data.expectedNode2Valid);
@@ -8850,6 +9014,9 @@ void AbstractUserInterfaceTest::stateAnimations() {
 }
 
 void AbstractUserInterfaceTest::statePropagateFromLayers() {
+    auto&& data = StatePropagateFromLayersData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     /* Tests more complex behavior of state propagation that isn't checked in
        the state() case above */
 
@@ -8878,11 +9045,11 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     ui.update();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
-    /* LayerState::NeedsUpdate on a removed layer isn't considered (well,
+    /* LayerState::Needs*DataUpdate on a removed layer isn't considered (well,
        because the instance is gone), and the layer without an instance is
        skipped. The "works correctly" aspect can't really be observed, we can
        only check that it doesn't crash. */
-    ui.layer(layerRemoved).setNeedsUpdate();
+    ui.layer(layerRemoved).setNeedsUpdate(data.state);
     ui.removeLayer(layerRemoved);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
@@ -8890,8 +9057,8 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
     /* It also shouldn't stop at those, states after those get checked as well */
-    ui.layer(layer1).setNeedsUpdate();
-    CORRADE_COMPARE(ui.layer(layer1).state(), LayerState::NeedsUpdate);
+    ui.layer(layer1).setNeedsUpdate(data.state);
+    CORRADE_COMPARE(ui.layer(layer1).state(), data.state);
     CORRADE_COMPARE(ui.layer(layer2).state(), LayerStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
@@ -8901,15 +9068,16 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
     CORRADE_COMPARE(ui.layer(layer2).state(), LayerStates{});
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
 
-    /* Creating a data doesn't result in any NeedsUpdate on the layer */
+    /* Creating a data results in NeedsDataUpdate on the layer */
     DataHandle data1 = ui.layer<Layer>(layer1).create();
     DataHandle data2 = ui.layer<Layer>(layer2).create();
-    CORRADE_COMPARE(ui.layer(layer1).state(), LayerStates{});
-    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.layer(layer1).state(), LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 
-    /* Attaching results in NeedsAttachmentUpdate */
+    /* Attaching results in NeedsAttachmentUpdate in addition, plus extra
+       states on the layer itself */
     ui.layer(layer1).attach(data1, node);
-    CORRADE_COMPARE(ui.layer(layer1).state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(ui.layer(layer1).state(), LayerState::NeedsAttachmentUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
 
     /* Hiding a node will set a UI-wide NeedsNodeUpdate flag */
@@ -8920,7 +9088,7 @@ void AbstractUserInterfaceTest::statePropagateFromLayers() {
        NeedsDataClean from a later layer from being propagated to the UI-wide
        state */
     ui.layer<Layer>(layer2).remove(data2);
-    CORRADE_COMPARE(ui.layer(layer2).state(), LayerState::NeedsDataClean);
+    CORRADE_COMPARE(ui.layer(layer2).state(), LayerState::NeedsDataUpdate|LayerState::NeedsDataClean);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataClean);
 }
 
@@ -9073,8 +9241,9 @@ void AbstractUserInterfaceTest::draw() {
             CORRADE_FAIL("This shouldn't be called");
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             CORRADE_ITERATION(handle());
+            CORRADE_COMPARE(states, LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsDataUpdate);
             /* doSetSize() should have been called exactly once at this point
                if this layer draws, and not at all if it doesn't */
             CORRADE_COMPARE(setSizeCallCount, features & LayerFeature::Draw ? 1 : 0);
@@ -9548,7 +9717,7 @@ void AbstractUserInterfaceTest::drawComposite() {
             arrayAppend(*compositeDrawCalls, InPlaceInit, handle(), Composite, Containers::Pair<std::size_t, std::size_t>{});
         }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {}
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {}
 
         void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             CORRADE_ITERATION(handle());
@@ -9866,7 +10035,8 @@ void AbstractUserInterfaceTest::drawEmpty() {
 
         LayerFeatures doFeatures() const override { return LayerFeature::Draw; }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+            CORRADE_COMPARE(state, LayerState::NeedsDataUpdate|(_node ? LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate : LayerStates{}));
             CORRADE_COMPARE(dataIds.size(), 0);
             CORRADE_COMPARE(clipRectIds.size(), 0);
             CORRADE_COMPARE(clipRectDataCounts.size(), 0);
@@ -9902,7 +10072,7 @@ void AbstractUserInterfaceTest::drawEmpty() {
             /* Without an attachment no update is triggered by default, so
                force it */
             else {
-                layer1->setNeedsUpdate();
+                layer1->setNeedsUpdate(LayerState::NeedsDataUpdate);
             }
         }
         if(data.layer2) {
@@ -9911,7 +10081,7 @@ void AbstractUserInterfaceTest::drawEmpty() {
             /* Without an attachment no update is triggered by default, so
                force it */
             else {
-                layer2->setNeedsUpdate();
+                layer2->setNeedsUpdate(LayerState::NeedsDataUpdate);
             }
         }
         if(data.hide)
@@ -9921,9 +10091,9 @@ void AbstractUserInterfaceTest::drawEmpty() {
     } else {
         /* Without a node no update is triggered by default, so force it */
         if(data.layer1)
-            layer1->setNeedsUpdate();
+            layer1->setNeedsUpdate(LayerState::NeedsDataUpdate);
         if(data.layer2)
-            layer2->setNeedsUpdate();
+            layer2->setNeedsUpdate(LayerState::NeedsDataUpdate);
     }
 
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
