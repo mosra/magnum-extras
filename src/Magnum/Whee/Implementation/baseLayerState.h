@@ -50,6 +50,8 @@ struct BaseLayerStyle {
 struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
     explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), 0}, styleUniformCount{configuration.styleUniformCount()}, flags{configuration.flags()} {}
 
+    /* First 2/6 bytes overlap with padding of the base struct */
+
     UnsignedInt styleUniformCount;
     Flags flags;
 
@@ -89,6 +91,8 @@ struct BaseLayerTexturedVertex {
 
 struct BaseLayer::State: AbstractVisualLayer::State {
     explicit State(Shared::State& shared): AbstractVisualLayer::State{shared} {}
+
+    /* First 2/6 bytes overlap with padding of the base struct */
 
     Containers::Array<Implementation::BaseLayerData> data;
     /* Is either Implementation::BaseLayerVertex or BaseLayerTexturedVertex

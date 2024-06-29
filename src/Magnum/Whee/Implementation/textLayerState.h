@@ -68,6 +68,8 @@ struct TextLayerStyle {
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
     explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), 0}, styleUniformCount{configuration.styleUniformCount()} {}
 
+    /* First 2/6 bytes overlap with padding of the base struct */
+
     UnsignedInt styleUniformCount;
 
     /* Glyph cache used by all fonts. It's expected to know about each font
@@ -139,6 +141,8 @@ struct TextLayerVertex {
 
 struct TextLayer::State: AbstractVisualLayer::State {
     explicit State(Shared::State& shared): AbstractVisualLayer::State{shared} {}
+
+    /* First 2/6 bytes overlap with padding of the base struct */
 
     /* Glyph data. Only the items referenced from `glyphRuns` are valid, the
        rest is unused space that gets recompacted during each doUpdate(). */
