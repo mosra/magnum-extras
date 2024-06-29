@@ -152,7 +152,7 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
 }
 
 struct TextLayerGL::Shared::State: TextLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): TextLayer::Shared::State{self, configuration}, shader{configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration): TextLayer::Shared::State{self, configuration}, shader{configuration.styleUniformCount() + configuration.dynamicStyleCount()} {}
 
     /* Never used directly, only owns the instance passed to
        setGlyphCache(GlyphCache&&) if it got called instead of
@@ -161,7 +161,10 @@ struct TextLayerGL::Shared::State: TextLayer::Shared::State {
     Containers::Optional<Text::GlyphCache> glyphCacheStorage;
     TextShaderGL shader;
     /* The buffer is NoCreate'd at first to be able to detect whether
-       setStyle() was called at all */
+       setStyle() was called at all -- it's created in doSetStyle(). In case
+       dynamic styles are present, this buffer is unused and each layer has its
+       own copy instead. Detection of whether setStyle() was called is then
+       done by checking the styleUniforms array, which is empty at first. */
     GL::Buffer styleBuffer{NoCreate};
 };
 
@@ -197,7 +200,10 @@ TextLayerGL::Shared& TextLayerGL::Shared::setStyle(const TextLayerCommonStyleUni
 }
 
 void TextLayerGL::Shared::doSetStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms) {
+    /* This function should get called only if the dynamic style count is 0 */
     auto& state = static_cast<State&>(*_state);
+    CORRADE_INTERNAL_ASSERT(state.dynamicStyleCount == 0);
+
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     if(!state.styleBuffer.id())
@@ -216,6 +222,12 @@ struct TextLayerGL::State: TextLayer::State {
     GL::Mesh mesh;
     Vector2 clipScale;
     Vector2i framebufferSize;
+
+    /* Used only if shared.dynamicStyleCount is non-zero, in which case it's
+       created during the first doUpdate(). Even though the size is known in
+       advance, the NoCreate'd state is used to correctly perform the first
+       ever style upload without having to implicitly set any LayerStates. */
+    GL::Buffer styleBuffer{NoCreate};
 };
 
 TextLayerGL::TextLayerGL(const LayerHandle handle, Shared& sharedState): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState._state))} {
@@ -250,8 +262,17 @@ void TextLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize
 }
 
 void TextLayerGL::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
-    TextLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
     State& state = static_cast<State&>(*_state);
+    Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
+
+    /* Check whether the shared styles changed before calling into the base
+       doUpdate() that syncs the stamps. For dynamic styles, if the style
+       changed, it should be accompanied by NeedsCommonDataUpdate being set in
+       order to be correctly handled below. */
+    const bool sharedStyleChanged = sharedState.styleUpdateStamp != state.styleUpdateStamp;
+    CORRADE_INTERNAL_ASSERT(!sharedState.dynamicStyleCount || (!sharedStyleChanged && !state.dynamicStyleChanged) || states >= LayerState::NeedsCommonDataUpdate);
+
+    TextLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
 
     /* The branching here mirrors how TextLayer::doUpdate() restricts the
        updates */
@@ -267,6 +288,25 @@ void TextLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
     {
         state.vertexBuffer.setData(state.vertices);
     }
+
+    /* If we have dynamic styles and either NeedsCommonDataUpdate is set
+       (meaning either the static style or the dynamic style changed) or
+       they haven't been uploaded yet at all, upload them. */
+    if(sharedState.dynamicStyleCount && ((states >= LayerState::NeedsCommonDataUpdate) || !state.styleBuffer.id())) {
+        const bool needsFirstUpload = !state.styleBuffer.id();
+        if(needsFirstUpload) {
+            /** @todo check if DynamicDraw has any effect on perf */
+            state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(TextLayerCommonStyleUniform) + sizeof(TextLayerStyleUniform)*(sharedState.styleUniformCount + sharedState.dynamicStyleCount)}, GL::BufferUsage::DynamicDraw};
+        }
+        if(needsFirstUpload || sharedStyleChanged) {
+            state.styleBuffer.setSubData(0, {&sharedState.commonStyleUniform, 1});
+            state.styleBuffer.setSubData(sizeof(TextLayerCommonStyleUniform), sharedState.styleUniforms);
+        }
+        if(needsFirstUpload || state.dynamicStyleChanged) {
+            state.styleBuffer.setSubData(sizeof(TextLayerCommonStyleUniform) + sizeof(TextLayerStyleUniform)*sharedState.styleUniformCount, state.dynamicStyleUniforms);
+            state.dynamicStyleChanged = false;
+        }
+    }
 }
 
 void TextLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const std::size_t clipRectOffset, const std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
@@ -275,12 +315,19 @@ void TextLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
         "Whee::TextLayerGL::draw(): user interface size wasn't set", );
 
     auto& sharedState = static_cast<Shared::State&>(state.shared);
-    CORRADE_ASSERT(sharedState.styleBuffer.id(),
+    /* With dynamic styles, Shared::setStyle() fills styleUniforms instead of
+       creating the styleBuffer */
+    CORRADE_ASSERT(
+        (!sharedState.dynamicStyleCount && sharedState.styleBuffer.id()) ||
+        (sharedState.dynamicStyleCount && !sharedState.styleUniforms.isEmpty()),
         "Whee::TextLayerGL::draw(): no style data was set", );
 
-    sharedState.shader
-        .bindGlyphTexture(static_cast<Text::GlyphCache&>(*sharedState.glyphCache).texture())
-        .bindStyleBuffer(sharedState.styleBuffer);
+    sharedState.shader.bindGlyphTexture(static_cast<Text::GlyphCache&>(*sharedState.glyphCache).texture());
+
+    /* If there are dynamic styles, bind the layer-specific buffer that
+       contains them, otherwise bind the shared buffer */
+    sharedState.shader.bindStyleBuffer(sharedState.dynamicStyleCount ?
+        state.styleBuffer : sharedState.styleBuffer);
 
     std::size_t clipDataOffset = offset;
     for(std::size_t i = 0; i != clipRectCount; ++i) {
