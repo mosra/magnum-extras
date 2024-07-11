@@ -319,11 +319,8 @@ struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
     explicit State(Shared& self, const Configuration& configuration);
 
     BaseShaderGL shader;
-    /* The buffer is NoCreate'd at first to be able to detect whether
-       setStyle() was called at all -- it's created in doSetStyle(). In case
-       dynamic styles are present, this buffer is unused and each layer has its
-       own copy instead. Detection of whether setStyle() was called is then
-       done by checking the styleUniforms array, which is empty at first. */
+    /* In case dynamic styles are present, this buffer is unused and each layer
+       has its own copy instead */
     GL::Buffer styleBuffer{NoCreate};
 
     /* These are created only if Flag::BackgroundBlur is enabled */
@@ -344,6 +341,8 @@ BaseLayerGL::Shared::State::State(Shared& self, const Configuration& configurati
     #undef _c
     configuration.styleUniformCount() + configuration.dynamicStyleCount()}
 {
+    if(!dynamicStyleCount)
+        styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*styleUniformCount}};
     if(configuration.flags() & Flag::BackgroundBlur)
         backgroundBlurShader = BlurShaderGL{configuration.backgroundBlurRadius(), configuration.backgroundBlurCutoff()};
 }
@@ -372,11 +371,6 @@ void BaseLayerGL::Shared::doSetStyle(const BaseLayerCommonStyleUniform& commonUn
     /* This function should get called only if the dynamic style count is 0 */
     auto& state = static_cast<State&>(*_state);
     CORRADE_INTERNAL_ASSERT(state.dynamicStyleCount == 0);
-
-    /* The buffer is NoCreate'd at first to be able to detect whether
-       setStyle() was called at all */
-    if(!state.styleBuffer.id())
-        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*state.styleUniformCount}};
 
     state.styleBuffer.setSubData(0, {&commonUniform, 1});
     state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform), uniforms);
@@ -576,11 +570,7 @@ void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
         "Whee::BaseLayerGL::draw(): user interface size wasn't set", );
 
     auto& sharedState = static_cast<Shared::State&>(state.shared);
-    /* With dynamic styles, Shared::setStyle() fills styleUniforms instead of
-       creating the styleBuffer */
-    CORRADE_ASSERT(
-        (!sharedState.dynamicStyleCount && sharedState.styleBuffer.id()) ||
-        (sharedState.dynamicStyleCount && !sharedState.styleUniforms.isEmpty()),
+    CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::BaseLayerGL::draw(): no style data was set", );
     CORRADE_ASSERT(!(sharedState.flags & Shared::Flag::Textured) || state.texture.id(),
         "Whee::BaseLayerGL::draw(): no texture to draw with was set", );
