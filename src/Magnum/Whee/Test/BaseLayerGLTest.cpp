@@ -398,86 +398,98 @@ const struct {
     bool createLayerAfterSetStyle;
     bool secondaryStyleUpload;
     bool secondaryDynamicStyleUpload;
+    bool noBaseStyles;
 } RenderDynamicStylesData[]{
     {"default, static", "default.png", 1,
         BaseLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
-        false, false, false},
+        false, false, false, false},
     {"default, static, create layer after setStyle()", "default.png", 1,
         BaseLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
-        true, false, false},
+        true, false, false, false},
     {"default, dynamic with no upload", "default.png", 5,
         BaseLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
-        false, false, false},
+        false, false, false, false},
     {"default, dynamic", "default.png", 5,
         BaseLayerStyleUniform{}, 0.0f,
         BaseLayerStyleUniform{}, 0.0f,
-        false, false, false},
+        false, false, false, false},
+    {"default, only dynamic styles", "default.png", 1,
+        BaseLayerStyleUniform{}, 0.0f,
+        BaseLayerStyleUniform{}, 0.0f,
+        false, false, false, true},
     {"styled, static", "outline-gradient.png", 1,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 0.0f,
         {}, 0.0f,
-        false, false, false},
+        false, false, false, false},
     {"styled, static, create layer after setStyle()", "outline-gradient.png", 1,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 0.0f,
         {}, 0.0f,
-        true, false, false},
+        true, false, false, false},
     {"styled, static with padding", "outline-gradient.png", 1,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 128.0f,
         {}, 0.0f,
-        false, false, false},
+        false, false, false, false},
     {"styled, dynamic", "outline-gradient.png", 5,
         BaseLayerStyleUniform{}, 0.0f,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 0.0f,
-        false, false, false},
+        false, false, false, false},
     {"styled, dynamic with padding", "outline-gradient.png", 5,
         BaseLayerStyleUniform{}, 0.0f,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 128.0f,
-        false, false, false},
+        false, false, false, false},
     {"styled, static, secondary upload", "outline-gradient.png", 1,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 0.0f,
         {}, 0.0f,
-        false, true, false},
+        false, true, false, false},
     {"styled, static, secondary dynamic upload", "outline-gradient.png", 1,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 0.0f,
         BaseLayerStyleUniform{}, 0.0f,
-        false, false, true},
+        false, false, true, false},
     {"styled, dynamic, secondary upload", "outline-gradient.png", 5,
         BaseLayerStyleUniform{}, 0.0f,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 0.0f,
-        false, false, true},
+        false, false, true, false},
     {"styled, dynamic, secondary static upload", "outline-gradient.png", 5,
         BaseLayerStyleUniform{}, 0.0f,
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f), 0.0f,
-        false, true, false},
+        false, true, false, false},
+    {"styled, only dynamic styles", "outline-gradient.png", 1,
+        BaseLayerStyleUniform{}, 0.0f,
+        BaseLayerStyleUniform{}
+            .setColor(0xffffff_rgbf, 0x333333_rgbf)
+            .setOutlineColor(0x3333ff_rgbf)
+            .setOutlineWidth(8.0f), 0.0f,
+        false, false, false, true},
 };
 
 const struct {
@@ -1401,7 +1413,8 @@ void BaseLayerGLTest::renderDynamicStyles() {
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{
-        BaseLayer::Shared::Configuration{3, 4}
+        BaseLayer::Shared::Configuration{data.noBaseStyles ? 0u : 3u,
+                                         data.noBaseStyles ? 0u : 4u}
             .setDynamicStyleCount(2)
     };
 
@@ -1417,6 +1430,10 @@ void BaseLayerGLTest::renderDynamicStyles() {
             /* The mapping is deliberately different, the secondary upload
                should cause it to be updated */
             {2, 1, 1, 0},
+            {});
+    } else if(data.noBaseStyles) {
+        layerShared.setStyle(BaseLayerCommonStyleUniform{},
+            {},
             {});
     } else {
         layerShared.setStyle(BaseLayerCommonStyleUniform{},
