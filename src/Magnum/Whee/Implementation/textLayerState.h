@@ -73,7 +73,7 @@ struct TextLayerStyle {
 }
 
 struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, styleUniformCount{configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration);
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -82,7 +82,14 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
        this one, returning LayerState::NeedsDataUpdate if it differs. */
     UnsignedShort styleUpdateStamp = 0;
 
+    /* Can't be inferred from styleUniforms.size() as those are non-empty only
+       if dynamicStyleCount is non-zero */
     UnsignedInt styleUniformCount;
+
+    #ifndef CORRADE_NO_ASSERT
+    bool setStyleCalled = false;
+    /* 3/7 bytes free */
+    #endif
 
     /* Glyph cache used by all fonts. It's expected to know about each font
        that's added. */
@@ -101,11 +108,9 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
 
     Containers::ArrayTuple styleStorage;
     /* Uniform mapping, fonts, alignments, font features and padding values
-       assigned to each style. Initially empty to be able to detect whether
-       setStyle() was called. */
+       assigned to each style */
     Containers::ArrayView<Implementation::TextLayerStyle> styles;
-    /* Uniform values to be copied to layer-specific uniform buffers. Initially
-       empty to be able to detect whether setStyle() was called, stays empty
+    /* Uniform values to be copied to layer-specific uniform buffers. Empty
        and unused if dynamicStyleCount is 0. */
     Containers::ArrayView<TextLayerStyleUniform> styleUniforms;
     TextLayerCommonStyleUniform commonStyleUniform{NoInit};

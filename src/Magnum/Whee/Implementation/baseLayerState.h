@@ -49,11 +49,7 @@ struct BaseLayerStyle {
 }
 
 struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()},
-        /* The radius is always at most 31, so can be a byte */
-        backgroundBlurRadius{UnsignedByte(configuration.backgroundBlurRadius())},
-        flags{configuration.flags()},
-        styleUniformCount{configuration.styleUniformCount()} {}
+    explicit State(Shared& self, const Configuration& configuration);
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
@@ -68,16 +64,21 @@ struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
     UnsignedByte backgroundBlurRadius;
 
     Flags flags;
-    /* 2 bytes free */
+
+    #ifndef CORRADE_NO_ASSERT
+    bool setStyleCalled = false;
+    #endif
+    /* 1 byte free, 2 bytes free w/ CORRADE_NO_ASSERT */
+
+    /* Can't be inferred from styleUniforms.size() as those are non-empty only
+       if dynamicStyleCount is non-zero */
     UnsignedInt styleUniformCount;
     /* 0/4 bytes free */
 
     Containers::ArrayTuple styleStorage;
-    /* Uniform mapping and padding values assigned to each style. Initially
-       empty to be able to detect whether setStyle() was called. */
+    /* Uniform mapping and padding values assigned to each style */
     Containers::ArrayView<Implementation::BaseLayerStyle> styles;
-    /* Uniform values to be copied to layer-specific uniform buffers. Initially
-       empty to be able to detect whether setStyle() was called, stays empty
+    /* Uniform values to be copied to layer-specific uniform buffers. Empty
        and unused if dynamicStyleCount is 0. */
     Containers::ArrayView<BaseLayerStyleUniform> styleUniforms;
     BaseLayerCommonStyleUniform commonStyleUniform{NoInit};
