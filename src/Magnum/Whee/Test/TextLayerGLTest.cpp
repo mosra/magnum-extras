@@ -230,71 +230,83 @@ const struct {
     bool createLayerAfterSetStyle;
     bool secondaryStyleUpload;
     bool secondaryDynamicStyleUpload;
+    bool noBaseStyles;
     bool explicitFont, explicitAlignment;
 } RenderDynamicStylesData[]{
     {"default, static", "default.png", 1,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
-        false, false, false, false, false},
+        false, false, false, false, false, false},
     {"default, static, create layer after setStyle()", "default.png", 1,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
-        true, false, false, false, false},
+        true, false, false, false, false, false},
     {"default, dynamic with no upload", "default.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
         /* Default dynamic alignment is MiddleCenter as well, so it doesn't
            need to be passed explicitly */
-        false, false, false, true, false},
+        false, false, false, false, true, false},
     {"default, dynamic", "default.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}, 0.0f,
-        false, false, false, false, false},
+        false, false, false, false, false, false},
+    {"default, only dynamic styles", "default.png", 1,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}, 0.0f,
+        /* Passing an explicit font because there's otherwise none by
+           default */
+        false, false, false, true, true, false},
     {"styled, static", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
-        false, false, false, false, false},
+        false, false, false, false, false, false},
     {"styled, static, create layer after setStyle()", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
-        true, false, false, false, false},
+        true, false, false, false, false, false},
     {"styled, static with padding", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 128.0f,
         {}, 0.0f,
-        false, false, false, false, false},
+        false, false, false, false, false, false},
     {"styled, dynamic", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
-        false, false, false, false, false},
+        false, false, false, false, false, false},
     {"styled, dynamic with padding", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 128.0f,
-        false, false, false, false, false},
+        false, false, false, false, false, false},
     {"styled, static, secondary upload", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
-        false, true, false, true, true},
+        false, true, false, false, true, true},
     {"styled, static, secondary dynamic upload", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         TextLayerStyleUniform{}, 0.0f,
-        false, false, true, false, false},
+        false, false, true, false, false, false},
     {"styled, dynamic, secondary upload", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
-        false, false, true, true, true},
+        false, false, true, false, true, true},
     {"styled, dynamic, secondary static upload", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
-        false, true, false, false, false},
+        false, true, false, false, false, false},
+    {"styled, only dynamic styles", "colored.png", 1,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        false, false, false, true, false, false},
 };
 
 const struct {
@@ -902,7 +914,8 @@ void TextLayerGLTest::renderDynamicStyles() {
     CORRADE_VERIFY(_font && _font->isOpened());
 
     TextLayerGL::Shared layerShared{
-        TextLayer::Shared::Configuration{3, 4}
+        TextLayer::Shared::Configuration{data.noBaseStyles ? 0u : 3u,
+                                         data.noBaseStyles ? 0u : 4u}
             .setDynamicStyleCount(2)
     };
     layerShared.setGlyphCache(_fontGlyphCache);
@@ -923,6 +936,13 @@ void TextLayerGLTest::renderDynamicStyles() {
             {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
             {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
             {}, {}, {}, {});
+    } else if(data.noBaseStyles) {
+        layerShared.setStyle(TextLayerCommonStyleUniform{},
+            {},
+            {},
+            {},
+            {}, {}, {},
+            {});
     } else {
         layerShared.setStyle(TextLayerCommonStyleUniform{},
             {TextLayerStyleUniform{}, TextLayerStyleUniform{}, data.styleUniform},

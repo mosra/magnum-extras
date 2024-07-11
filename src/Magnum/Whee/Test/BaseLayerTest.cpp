@@ -275,10 +275,11 @@ const struct {
 
 const struct {
     const char* name;
-    UnsignedInt dynamicStyleCount;
+    UnsignedInt styleCount, dynamicStyleCount;
 } UpdateNoStyleSetData[]{
-    {"", 0},
-    {"dynamic styles", 5}
+    {"", 1, 0},
+    {"dynamic styles", 1, 5},
+    {"dynamic styles only", 0, 5}
 };
 
 const struct {
@@ -2259,9 +2260,9 @@ void BaseLayerTest::updateNoStyleSet() {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{1}
-        /* The check should work correctly even with dynamic styles, where
-           different state gets filled */
+    /* It should complain regardless of dynamic style count and even if the
+       style count is 0 as the common uniform is still used in that case */
+    } shared{BaseLayer::Shared::Configuration{data.styleCount}
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 

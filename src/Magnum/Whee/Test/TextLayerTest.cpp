@@ -336,10 +336,11 @@ const struct {
 
 const struct {
     const char* name;
-    UnsignedInt dynamicStyleCount;
+    UnsignedInt styleCount, dynamicStyleCount;
 } CreateUpdateNoStyleSetData[]{
-    {"", 0},
-    {"dynamic styles", 5}
+    {"", 1, 0},
+    {"dynamic styles", 1, 5},
+    {"dynamic styles only", 0, 5}
 };
 
 const struct {
@@ -4151,9 +4152,9 @@ void TextLayerTest::createNoStyleSet() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2, 3}
-        /* The check should work correctly even with dynamic styles, where
-           different state gets filled */
+    /* It should complain regardless of dynamic style count and even if the
+       style count is 0 as the common uniform is still used in that case */
+    } shared{TextLayer::Shared::Configuration{data.styleCount}
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
@@ -6975,9 +6976,9 @@ void TextLayerTest::updateNoStyleSet() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{1}
-        /* The check should work correctly even with dynamic styles, where
-           different state gets filled */
+    /* It should complain regardless of dynamic style count and even if the
+       style count is 0 as the common uniform is still used in that case */
+    } shared{TextLayer::Shared::Configuration{data.styleCount}
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
 
