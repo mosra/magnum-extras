@@ -150,7 +150,7 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @brief Style uniform count for the base layer
          *
          * Expects that @ref StyleFeature::BaseLayer is supported. The returned
-         * value is passed to the @ref BaseLayerGL::Shared::Shared(UnsignedInt, UnsignedInt)
+         * value is passed to the @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref baseLayerStyleCount(), @ref features()
          */
@@ -160,7 +160,7 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @brief Style count for the base layer
          *
          * Expects that @ref StyleFeature::BaseLayer is supported. The returned
-         * value is passed to the @ref BaseLayerGL::Shared::Shared(UnsignedInt, UnsignedInt)
+         * value is passed to the @ref BaseLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref baseLayerStyleUniformCount(), @ref features()
          */
@@ -170,7 +170,7 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @brief Style uniform count for the text layer
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to the @ref TextLayerGL::Shared::Shared(UnsignedInt, UnsignedInt)
+         * value is passed to the @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleCount(), @ref textLayerGlyphCacheFormat(),
          *      @ref textLayerGlyphCacheSize(),
@@ -182,7 +182,7 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @brief Style count for the text layer
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to the @ref TextLayerGL::Shared::Shared(UnsignedInt, UnsignedInt)
+         * value is passed to the @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleUniformCount(),
          *      @ref textLayerGlyphCacheFormat(),

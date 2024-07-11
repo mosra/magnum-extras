@@ -23,9 +23,7 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/TestSuite/Tester.h>
-#include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 
 #include "Magnum/Whee/TextLayerGL.h"
 
@@ -35,14 +33,12 @@ struct TextLayerGL_Test: TestSuite::Tester {
     explicit TextLayerGL_Test();
 
     void sharedConstructNoCreate();
-    void sharedConstructZeroStyleCount();
 };
 
 using namespace Math::Literals;
 
 TextLayerGL_Test::TextLayerGL_Test() {
-    addTests({&TextLayerGL_Test::sharedConstructNoCreate,
-              &TextLayerGL_Test::sharedConstructZeroStyleCount});
+    addTests({&TextLayerGL_Test::sharedConstructNoCreate});
 }
 
 void TextLayerGL_Test::sharedConstructNoCreate() {
@@ -53,18 +49,6 @@ void TextLayerGL_Test::sharedConstructNoCreate() {
 
     /* Implicit construction is not allowed */
     CORRADE_VERIFY(!std::is_convertible<NoCreateT, TextLayerGL::Shared>::value);
-}
-
-void TextLayerGL_Test::sharedConstructZeroStyleCount() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    TextLayerGL::Shared{0, 4};
-    TextLayerGL::Shared{4, 0};
-    CORRADE_COMPARE(out.str(),
-        "Whee::TextLayerGL::Shared: expected non-zero style uniform count\n"
-        "Whee::TextLayerGL::Shared: expected non-zero style count\n");
 }
 
 }}}}

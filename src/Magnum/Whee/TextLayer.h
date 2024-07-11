@@ -87,9 +87,10 @@ struct alignas(4) TextLayerCommonStyleUniform {
 Instances of this class together with @ref TextLayerCommonStyleUniform contain
 style properties that are used by the @ref TextLayer shaders to draw the layer
 data, packed in a form that allows direct usage in uniform buffers. Total count
-of styles is specified with the @ref TextLayerGL::Shared::Shared() constructor,
-uniforms are then uploaded using @ref TextLayer::Shared::setStyle(), style data
-that aren't used by the shader are passed to the function separately.
+of styles is specified with the
+@ref TextLayer::Shared::Configuration::Configuration() constructor, uniforms
+are then uploaded using @ref TextLayer::Shared::setStyle(), style data that
+aren't used by the shader are passed to the function separately.
 */
 struct TextLayerStyleUniform {
     /** @brief Construct with default values */
@@ -787,12 +788,14 @@ own, neither it does any on-demand cache filling.
 */
 class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
     public:
+        class Configuration;
+
         /**
          * @brief Style uniform count
          *
          * Size of the style uniform buffer. May or may not be the same as
          * @ref styleCount().
-         * @see @ref TextLayerGL::Shared::Shared(UnsignedInt, UnsignedInt),
+         * @see @ref Configuration::Configuration(UnsignedInt, UnsignedInt),
          *      @ref setStyle()
          */
         UnsignedInt styleUniformCount() const;
@@ -940,8 +943,9 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * implicitly zero.
          *
          * Can only be called if @ref styleUniformCount() and @ref styleCount()
-         * were set to the same value in the constructor, otherwise you have
-         * to additionally provide a mapping from styles to uniforms using
+         * were set to the same value in @ref Configuration passed to the
+         * constructor, otherwise you have to additionally provide a mapping
+         * from styles to uniforms using
          * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Vector4>&)
          * instead.
          * @see @ref isHandleValid(FontHandle) const
@@ -1006,7 +1010,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount);
+        explicit Shared(const Configuration& configuration);
         /* Can't be MAGNUM_WHEE_LOCAL, used by tests */
         explicit Shared(NoCreateT) noexcept;
 
@@ -1016,6 +1020,43 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         /* The items are guaranteed to have the same size as
            styleUniformCount() */
         virtual void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) = 0;
+};
+
+/**
+@brief Configuration of a base layer shared state
+
+@see @ref TextLayerGL::Shared::Shared(const Configuration&)
+*/
+class MAGNUM_WHEE_EXPORT TextLayer::Shared::Configuration {
+    public:
+        /**
+         * @brief Constructor
+         *
+         * The @p styleUniformCount parameter specifies the size of the uniform
+         * array, @p styleCount then the number of distinct styles to use for
+         * drawing. The sizes are independent in order to allow styles with
+         * different fonts or paddings share the same uniform data. Both
+         * @p styleUniformCount and @p styleCount is expected to be non-zero.
+         * Style data are then set with @ref setStyle().
+         */
+        explicit Configuration(UnsignedInt styleUniformCount, UnsignedInt styleCount);
+
+        /**
+         * @brief Construct with style uniform count being the same as style count
+         *
+         * Equivalent to calling @ref Configuration(UnsignedInt, UnsignedInt)
+         * with both parameters set to @p styleCount.
+         */
+        explicit Configuration(UnsignedInt styleCount): Configuration{styleCount, styleCount} {}
+
+        /** @brief Style uniform count */
+        UnsignedInt styleUniformCount() const { return _styleUniformCount; }
+
+        /** @brief Style count */
+        UnsignedInt styleCount() const { return _styleCount; }
+
+    private:
+        UnsignedInt _styleUniformCount, _styleCount;
 };
 
 inline TextLayer::Shared& TextLayer::shared() {

@@ -96,25 +96,8 @@ that @ref setStyle() was called.
 */
 class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
     public:
-        /**
-         * @brief Constructor
-         *
-         * The @p styleUniformCount parameter specifies the size of the uniform
-         * array, @p styleCount then the number of distinct styles to use for
-         * drawing. The sizes are independent in order to allow styles with
-         * different paddings share the same uniform data. Both
-         * @p styleUniformCount and @p styleCount is expected to be non-zero.
-         * Style data are then set with @ref setStyle().
-         */
-        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount);
-
-        /**
-         * @brief Construct with style uniform count being the same as style count
-         *
-         * Equivalent to calling @ref Shared(UnsignedInt, UnsignedInt) with
-         * both parameters set to @p styleCount.
-         */
-        explicit Shared(UnsignedInt styleCount): Shared{styleCount, styleCount} {}
+        /** @brief Constructor */
+        explicit Shared(const Configuration& configuration);
 
         /**
          * @brief Construct without creating the contents

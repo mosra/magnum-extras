@@ -56,7 +56,7 @@ Debug& operator<<(Debug& debug, const FontHandle value) {
 
 TextLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {}
 
-TextLayer::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): Shared{Containers::pointer<State>(*this, styleUniformCount, styleCount)} {}
+TextLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
 
 TextLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCreate} {}
 
@@ -225,6 +225,11 @@ TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform
 
 TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Vector4> paddings) {
     return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(fonts), Containers::stridedArrayView(paddings));
+}
+
+TextLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {
+    CORRADE_ASSERT(styleUniformCount, "Whee::TextLayer::Shared::Configuration: expected non-zero style uniform count", );
+    CORRADE_ASSERT(styleCount, "Whee::TextLayer::Shared::Configuration: expected non-zero style count", );
 }
 
 TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}

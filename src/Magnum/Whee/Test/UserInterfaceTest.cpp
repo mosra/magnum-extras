@@ -136,10 +136,10 @@ void UserInterfaceTest::constructMove() {
 
 void UserInterfaceTest::setBaseLayerInstance() {
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{1, 3};
+    } shared{BaseLayer::Shared::Configuration{1, 3}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -171,10 +171,10 @@ void UserInterfaceTest::setBaseLayerInstanceInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -210,10 +210,10 @@ void UserInterfaceTest::baseLayerInvalid() {
 
 void UserInterfaceTest::setTextLayerInstance() {
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{1, 3};
+    } shared{TextLayer::Shared::Configuration{1, 3}};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -245,10 +245,10 @@ void UserInterfaceTest::setTextLayerInstanceInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{TextLayer::Shared::Configuration{3, 5}};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}

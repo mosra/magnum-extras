@@ -42,7 +42,7 @@ namespace Magnum { namespace Whee {
 
 BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {}
 
-BaseLayer::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): Shared{Containers::pointer<State>(*this, styleUniformCount, styleCount)} {}
+BaseLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
 
 BaseLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCreate} {}
 
@@ -96,6 +96,11 @@ BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform
 
 BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform& commonUniform, const std::initializer_list<BaseLayerStyleUniform> uniforms, const std::initializer_list<Vector4> paddings) {
     return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::arrayView(paddings));
+}
+
+BaseLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {
+    CORRADE_ASSERT(styleUniformCount, "Whee::BaseLayer::Shared::Configuration: expected non-zero style uniform count", );
+    CORRADE_ASSERT(styleCount, "Whee::BaseLayer::Shared::Configuration: expected non-zero style count", );
 }
 
 BaseLayer::BaseLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractVisualLayer{handle, Utility::move(state)} {}

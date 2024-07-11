@@ -70,7 +70,6 @@ class TextShaderGL: public GL::AbstractShaderProgram {
         typedef GL::Attribute<2, Vector3> Color3;
         typedef GL::Attribute<3, UnsignedInt> Style;
 
-        explicit TextShaderGL(NoCreateT): GL::AbstractShaderProgram{NoCreate} {}
         explicit TextShaderGL(UnsignedInt styleCount);
 
         TextShaderGL& setTransformationProjectionMatrix(const Matrix3& matrix) {
@@ -153,26 +152,20 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
 }
 
 struct TextLayerGL::Shared::State: TextLayer::Shared::State {
-    explicit State(Shared& self, UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared::State{self, styleUniformCount, styleCount} {}
+    explicit State(Shared& self, const Configuration& configuration): TextLayer::Shared::State{self, configuration}, shader{configuration.styleUniformCount()} {}
 
     /* Never used directly, only owns the instance passed to
        setGlyphCache(GlyphCache&&) if it got called instead of
        setGlyphCache(GlyphCache&). The actual used glyph cache pointer is in
        the base state struct. */
     Containers::Optional<Text::GlyphCache> glyphCacheStorage;
-    TextShaderGL shader{NoCreate};
+    TextShaderGL shader;
     /* The buffer is NoCreate'd at first to be able to detect whether
        setStyle() was called at all */
     GL::Buffer styleBuffer{NoCreate};
 };
 
-TextLayerGL::Shared::Shared(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): TextLayer::Shared{Containers::pointer<State>(*this, styleUniformCount, styleCount)} {
-    CORRADE_ASSERT(styleUniformCount, "Whee::TextLayerGL::Shared: expected non-zero style uniform count", );
-    CORRADE_ASSERT(styleCount, "Whee::TextLayerGL::Shared: expected non-zero style count", );
-    /* Construct the shader only after the assertion as it otherwise may fail
-       to compile */
-    static_cast<State&>(*_state).shader = TextShaderGL{styleUniformCount};
-}
+TextLayerGL::Shared::Shared(const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, configuration)} {}
 
 TextLayerGL::Shared::Shared(NoCreateT) noexcept: TextLayer::Shared{NoCreate} {}
 

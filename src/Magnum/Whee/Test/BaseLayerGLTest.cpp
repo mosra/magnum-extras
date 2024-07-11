@@ -58,7 +58,6 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     explicit BaseLayerGLTest();
 
     void sharedConstruct();
-    void sharedConstructSameStyleUniformCount();
     /* NoCreate tested in BaseLayerGL_Test to verify it works without a GL
        context */
     void sharedConstructCopy();
@@ -244,7 +243,6 @@ const struct {
 
 BaseLayerGLTest::BaseLayerGLTest() {
     addTests({&BaseLayerGLTest::sharedConstruct,
-              &BaseLayerGLTest::sharedConstructSameStyleUniformCount,
               &BaseLayerGLTest::sharedConstructCopy,
               &BaseLayerGLTest::sharedConstructMove,
 
@@ -299,15 +297,9 @@ BaseLayerGLTest::BaseLayerGLTest() {
 }
 
 void BaseLayerGLTest::sharedConstruct() {
-    BaseLayerGL::Shared shared{3, 5};
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
-}
-
-void BaseLayerGLTest::sharedConstructSameStyleUniformCount() {
-    BaseLayerGL::Shared shared{3};
-    CORRADE_COMPARE(shared.styleUniformCount(), 3);
-    CORRADE_COMPARE(shared.styleCount(), 3);
 }
 
 void BaseLayerGLTest::sharedConstructCopy() {
@@ -316,12 +308,12 @@ void BaseLayerGLTest::sharedConstructCopy() {
 }
 
 void BaseLayerGLTest::sharedConstructMove() {
-    BaseLayerGL::Shared a{3};
+    BaseLayerGL::Shared a{BaseLayer::Shared::Configuration{3}};
 
     BaseLayerGL::Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleCount(), 3);
 
-    BaseLayerGL::Shared c{5};
+    BaseLayerGL::Shared c{BaseLayer::Shared::Configuration{5}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleCount(), 3);
 
@@ -330,7 +322,7 @@ void BaseLayerGLTest::sharedConstructMove() {
 }
 
 void BaseLayerGLTest::construct() {
-    BaseLayerGL::Shared shared{3};
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3}};
 
     BaseLayerGL layer{layerHandle(137, 0xfe), shared};
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
@@ -345,8 +337,8 @@ void BaseLayerGLTest::constructCopy() {
 }
 
 void BaseLayerGLTest::constructMove() {
-    BaseLayerGL::Shared shared{3};
-    BaseLayerGL::Shared shared2{5};
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3}};
+    BaseLayerGL::Shared shared2{BaseLayer::Shared::Configuration{5}};
 
     BaseLayerGL a{layerHandle(137, 0xfe), shared};
 
@@ -366,7 +358,7 @@ void BaseLayerGLTest::constructMove() {
 void BaseLayerGLTest::drawNoSizeSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    BaseLayerGL::Shared shared{3};
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3}};
     BaseLayerGL layer{layerHandle(0, 1), shared};
 
     std::ostringstream out;
@@ -378,7 +370,7 @@ void BaseLayerGLTest::drawNoSizeSet() {
 void BaseLayerGLTest::drawNoStyleSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    BaseLayerGL::Shared shared{3};
+    BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3}};
     BaseLayerGL layer{layerHandle(0, 1), shared};
 
     layer.setSize({10, 10}, {10, 10});
@@ -434,7 +426,9 @@ void BaseLayerGLTest::render() {
         /* To verify it's not using the style ID as uniform ID */
         1, 2, 0, 1, 0
     };
-    BaseLayerGL::Shared layerShared{UnsignedInt(Containers::arraySize(styleUniforms)), UnsignedInt(Containers::arraySize(styleToUniform))};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{
+        UnsignedInt(Containers::arraySize(styleUniforms)),
+        UnsignedInt(Containers::arraySize(styleToUniform))}};
     /* The (lack of any) effect of padding on rendered output is tested
        thoroughly in renderPadding() */
     layerShared.setStyle(data.styleUniformCommon,
@@ -477,7 +471,7 @@ void BaseLayerGLTest::renderCustomColor() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{1};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}};
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf/0x336699_rgbf, 0x774422_rgbf/0x336699_rgbf)
@@ -533,7 +527,7 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{1};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}};
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
@@ -593,7 +587,7 @@ void BaseLayerGLTest::renderPadding() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{1};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}};
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
@@ -653,7 +647,7 @@ void BaseLayerGLTest::renderChangeStyle() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{2};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}};
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{},
         BaseLayerStyleUniform{}
@@ -729,7 +723,7 @@ void BaseLayerGLTest::drawOrder() {
     AbstractUserInterface ui{DrawSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{3};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{3}};
     /* Testing the styleToUniform initializer list overload, others cases use
        implicit mapping initializer list overloads */
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
@@ -796,7 +790,7 @@ void BaseLayerGLTest::drawClipping() {
     AbstractUserInterface ui{{640.0f, 6400.0f}, {1.0f, 1.0f}, DrawSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{3};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{3}};
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}         /* 0, red */
             .setColor(0xff0000_rgbf),
@@ -878,7 +872,7 @@ void BaseLayerGLTest::eventStyleTransition() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{2};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}};
     layerShared
         .setStyle(BaseLayerCommonStyleUniform{}, {
             BaseLayerStyleUniform{},        /* default */
