@@ -94,16 +94,16 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         CORRADE_ASSERT(!state.baseLayer,
             "Whee::UserInterfaceGL::trySetStyle(): base layer already present", {});
         state.baseLayerShared = BaseLayerGL::Shared{
-            style.baseLayerStyleUniformCount(),
-            style.baseLayerStyleCount()};
+            BaseLayer::Shared::Configuration{style.baseLayerStyleUniformCount(),
+                                             style.baseLayerStyleCount()}};
         setBaseLayerInstance(Containers::pointer<BaseLayerGL>(createLayer(), state.baseLayerShared));
     }
     if(features >= StyleFeature::TextLayer) {
         CORRADE_ASSERT(!state.textLayer,
             "Whee::UserInterfaceGL::trySetStyle(): text layer already present", {});
         state.textLayerShared = TextLayerGL::Shared{
-            style.textLayerStyleUniformCount(),
-            style.textLayerStyleCount()};
+            TextLayer::Shared::Configuration{style.textLayerStyleUniformCount(),
+                                             style.textLayerStyleCount()}};
         setTextLayerInstance(Containers::pointer<TextLayerGL>(createLayer(), state.textLayerShared));
 
         /* Create a local font plugin manager if external wasn't passed. If the

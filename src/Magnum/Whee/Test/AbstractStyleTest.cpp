@@ -492,10 +492,10 @@ void AbstractStyleTest::apply() {
     setTestCaseDescription(data.name);
 
     struct LayerSharedBase: BaseLayer::Shared {
-        explicit LayerSharedBase(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerSharedBase(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } sharedBase{3, 5};
+    } sharedBase{BaseLayer::Shared::Configuration{3, 5}};
 
     struct LayerBase: BaseLayer {
         explicit LayerBase(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -509,12 +509,12 @@ void AbstractStyleTest::apply() {
     } cache{PixelFormat::R16F, {16, 24, 2}, {3, 1}};
 
     struct LayerSharedText: TextLayer::Shared {
-        explicit LayerSharedText(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerSharedText(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } sharedText{2, 4};
+    } sharedText{TextLayer::Shared::Configuration{2, 4}};
     sharedText.setGlyphCache(cache);
 
     struct LayerText: TextLayer {
@@ -616,10 +616,10 @@ void AbstractStyleTest::applyBaseLayerNotPresent() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{1, 3};
+    } shared{TextLayer::Shared::Configuration{1, 3}};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -652,10 +652,10 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -696,10 +696,10 @@ void AbstractStyleTest::applyTextLayerNotPresent() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{BaseLayer::Shared::Configuration{3, 5}};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, LayerShared& shared): BaseLayer{handle, shared} {}
@@ -732,10 +732,10 @@ void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{3, 5};
+    } shared{TextLayer::Shared::Configuration{3, 5}};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -776,10 +776,10 @@ void AbstractStyleTest::applyTextLayerNoGlyphCache() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{1, 1};
+    } shared{TextLayer::Shared::Configuration{1, 1}};
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -819,12 +819,12 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
     } cache{PixelFormat::RG16F, {3, 5, 2}, {4, 1}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{1, 1};
+    } shared{TextLayer::Shared::Configuration{1, 1}};
     shared.setGlyphCache(cache);
 
     struct Layer: TextLayer {
@@ -892,12 +892,12 @@ void AbstractStyleTest::applyTextLayerNoFontManager() {
     } cache{PixelFormat::R8Unorm, {16, 16}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{1, 1};
+    } shared{TextLayer::Shared::Configuration{1, 1}};
     shared.setGlyphCache(cache);
 
     struct Layer: TextLayer {
@@ -965,12 +965,12 @@ void AbstractStyleTest::applyTextLayerImagesNoImporterManager() {
     } cache{PixelFormat::R8Unorm, {16, 16}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{1, 1};
+    } shared{TextLayer::Shared::Configuration{1}};
     shared.setGlyphCache(cache);
 
     struct Layer: TextLayer {
@@ -1005,20 +1005,20 @@ void AbstractStyleTest::applyEventLayerNotPresent() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerSharedBase: BaseLayer::Shared {
-        explicit LayerSharedBase(UnsignedInt styleUniformCount, UnsignedInt styleCount): BaseLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerSharedBase(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } sharedBase{3, 5};
+    } sharedBase{BaseLayer::Shared::Configuration{3, 5}};
 
     struct LayerBase: BaseLayer {
         explicit LayerBase(LayerHandle handle, LayerSharedBase& shared): BaseLayer{handle, shared} {}
     };
 
     struct LayerSharedText: TextLayer::Shared {
-        explicit LayerSharedText(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+        explicit LayerSharedText(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } sharedText{1, 3};
+    } sharedText{TextLayer::Shared::Configuration{1, 3}};
 
     struct LayerText: TextLayer {
         explicit LayerText(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
