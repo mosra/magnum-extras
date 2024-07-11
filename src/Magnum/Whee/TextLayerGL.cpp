@@ -152,7 +152,7 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
 }
 
 struct TextLayerGL::Shared::State: TextLayer::Shared::State {
-    explicit State(Shared& self, const Configuration& configuration): TextLayer::Shared::State{self, configuration}, shader{configuration.styleUniformCount() + configuration.dynamicStyleCount()} {}
+    explicit State(Shared& self, const Configuration& configuration);
 
     /* Never used directly, only owns the instance passed to
        setGlyphCache(GlyphCache&&) if it got called instead of
@@ -160,13 +160,15 @@ struct TextLayerGL::Shared::State: TextLayer::Shared::State {
        the base state struct. */
     Containers::Optional<Text::GlyphCache> glyphCacheStorage;
     TextShaderGL shader;
-    /* The buffer is NoCreate'd at first to be able to detect whether
-       setStyle() was called at all -- it's created in doSetStyle(). In case
-       dynamic styles are present, this buffer is unused and each layer has its
-       own copy instead. Detection of whether setStyle() was called is then
-       done by checking the styleUniforms array, which is empty at first. */
+    /* In case dynamic styles are present, this buffer is unused and each layer
+       has its own copy instead */
     GL::Buffer styleBuffer{NoCreate};
 };
+
+TextLayerGL::Shared::State::State(Shared& self, const Configuration& configuration): TextLayer::Shared::State{self, configuration}, shader{configuration.styleUniformCount() + configuration.dynamicStyleCount()} {
+    if(!dynamicStyleCount)
+        styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(TextLayerCommonStyleUniform) + sizeof(TextLayerStyleUniform)*styleUniformCount}};
+}
 
 TextLayerGL::Shared::Shared(const Configuration& configuration): TextLayer::Shared{Containers::pointer<State>(*this, configuration)} {}
 
@@ -203,11 +205,6 @@ void TextLayerGL::Shared::doSetStyle(const TextLayerCommonStyleUniform& commonUn
     /* This function should get called only if the dynamic style count is 0 */
     auto& state = static_cast<State&>(*_state);
     CORRADE_INTERNAL_ASSERT(state.dynamicStyleCount == 0);
-
-    /* The buffer is NoCreate'd at first to be able to detect whether
-       setStyle() was called at all */
-    if(!state.styleBuffer.id())
-        state.styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(TextLayerCommonStyleUniform) + sizeof(TextLayerStyleUniform)*state.styleUniformCount}};
 
     /** @todo the common stuff wouldn't even need to be uploaded, skipping it
         causes no breakage in the shader */
@@ -315,11 +312,7 @@ void TextLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
         "Whee::TextLayerGL::draw(): user interface size wasn't set", );
 
     auto& sharedState = static_cast<Shared::State&>(state.shared);
-    /* With dynamic styles, Shared::setStyle() fills styleUniforms instead of
-       creating the styleBuffer */
-    CORRADE_ASSERT(
-        (!sharedState.dynamicStyleCount && sharedState.styleBuffer.id()) ||
-        (sharedState.dynamicStyleCount && !sharedState.styleUniforms.isEmpty()),
+    CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::TextLayerGL::draw(): no style data was set", );
 
     sharedState.shader.bindGlyphTexture(static_cast<Text::GlyphCache&>(*sharedState.glyphCache).texture());

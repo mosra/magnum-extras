@@ -73,6 +73,18 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flags value) {
     });
 }
 
+BaseLayer::Shared::State::State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()},
+    /* The radius is always at most 31, so can be a byte */
+    backgroundBlurRadius{UnsignedByte(configuration.backgroundBlurRadius())},
+    flags{configuration.flags()},
+    styleUniformCount{configuration.styleUniformCount()}
+{
+    styleStorage = Containers::ArrayTuple{
+        {NoInit, configuration.styleCount(), styles},
+        {NoInit, configuration.dynamicStyleCount() ? configuration.styleUniformCount() : 0, styleUniforms}
+    };
+}
+
 BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {
     #ifndef CORRADE_NO_ASSERT
     const State& s = static_cast<const State&>(*_state);
@@ -95,13 +107,6 @@ BaseLayer::Shared::Flags BaseLayer::Shared::flags() const {
 
 void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const BaseLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
-    /* Allocation done before the asserts so if they fail in a graceful assert
-       build, we don't hit another assert in Utility::copy(styleToUniform) in
-       the setStyle() below */
-    if(state.styles.isEmpty()) state.styleStorage = Containers::ArrayTuple{
-        {NoInit, state.styleCount, state.styles},
-        {NoInit, state.dynamicStyleCount ? state.styleUniformCount : 0, state.styleUniforms}
-    };
     CORRADE_ASSERT(uniforms.size() == state.styleUniformCount,
         "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleUniformCount << "uniforms, got" << uniforms.size(), );
     CORRADE_ASSERT(stylePaddings.isEmpty() || stylePaddings.size() == state.styleCount,
@@ -121,6 +126,11 @@ void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& comm
         state.commonStyleUniform = commonUniform;
         Utility::copy(uniforms, state.styleUniforms);
     } else doSetStyle(commonUniform, uniforms);
+
+    #ifndef CORRADE_NO_ASSERT
+    /* Now it's safe to call update() */
+    state.setStyleCalled = true;
+    #endif
 
     /* Make doState() of all layers sharing this state return NeedsDataUpdate
        in order to update style-to-uniform mappings, paddings and such, and in
@@ -492,7 +502,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         "Whee::BaseLayer::update(): user interface size wasn't set", );
     /* Technically needed only if there's any actual data to update, but
        require it always for consistency (and easier testing) */
-    CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+    CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::BaseLayer::update(): no style data was set", );
 
     /* Fill in indices in desired order if either the data themselves or the

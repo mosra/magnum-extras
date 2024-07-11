@@ -104,6 +104,13 @@ Debug& operator<<(Debug& debug, const TextEdit value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
+TextLayer::Shared::State::State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, styleUniformCount{configuration.styleUniformCount()} {
+    styleStorage = Containers::ArrayTuple{
+        {NoInit, configuration.styleCount(), styles},
+        {NoInit, configuration.dynamicStyleCount() ? configuration.styleUniformCount() : 0, styleUniforms}
+    };
+}
+
 TextLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLayer::Shared{Utility::move(state)} {
     #ifndef CORRADE_NO_ASSERT
     const State& s = static_cast<const State&>(*_state);
@@ -229,13 +236,6 @@ Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
 
 void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
-    /* Allocation done before the asserts so if they fail in a graceful assert
-       build, we don't hit another assert in Utility::copy(styleToUniform) in
-       the setStyle() below */
-    if(state.styles.isEmpty()) state.styleStorage = Containers::ArrayTuple{
-        {NoInit, state.styleCount, state.styles},
-        {NoInit, state.dynamicStyleCount ? state.styleUniformCount : 0, state.styleUniforms}
-    };
     CORRADE_ASSERT(uniforms.size() == state.styleUniformCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleUniformCount << "uniforms, got" << uniforms.size(), );
     CORRADE_ASSERT(styleFonts.size() == state.styleCount,
@@ -293,6 +293,11 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
         state.commonStyleUniform = commonUniform;
         Utility::copy(uniforms, state.styleUniforms);
     } else doSetStyle(commonUniform, uniforms);
+
+    #ifndef CORRADE_NO_ASSERT
+    /* Now it's safe to call create(), createGlyph() and update() */
+    state.setStyleCalled = true;
+    #endif
 
     /* Make doState() of all layers sharing this state return NeedsDataUpdate
        in order to update style-to-uniform mappings, paddings and such, and in
@@ -743,7 +748,7 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
     #ifndef CORRADE_NO_ASSERT
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     #endif
-    CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+    CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::TextLayer::create(): no style data was set", {});
     CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
         "Whee::TextLayer::create(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
@@ -777,7 +782,7 @@ DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt gly
     #ifndef CORRADE_NO_ASSERT
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     #endif
-    CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+    CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::TextLayer::createGlyph(): no style data was set", {});
     CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
         "Whee::TextLayer::createGlyph(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
@@ -1478,7 +1483,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
     /* Technically needed only if there's any actual data to update, but
        require it always for consistency (and easier testing) */
-    CORRADE_ASSERT(!sharedState.styles.isEmpty(),
+    CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::TextLayer::update(): no style data was set", );
 
     /* Recompact the glyph / text data by removing unused runs. Do this only if

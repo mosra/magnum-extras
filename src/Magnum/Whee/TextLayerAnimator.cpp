@@ -124,7 +124,7 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     /* Layer being set had to be checked in create() already */
     CORRADE_INTERNAL_ASSERT(state.layerSharedState);
     const TextLayer::Shared::State& layerSharedState = *state.layerSharedState;
-    CORRADE_ASSERT(!layerSharedState.styles.isEmpty(),
+    CORRADE_ASSERT(layerSharedState.setStyleCalled,
         "Whee::TextLayerStyleAnimator::create(): no style data was set on the layer", );
     CORRADE_ASSERT(
         sourceStyle < layerSharedState.styleCount &&
