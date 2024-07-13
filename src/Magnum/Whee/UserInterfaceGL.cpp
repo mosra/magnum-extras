@@ -106,6 +106,8 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         state.textLayerShared = TextLayerGL::Shared{
             TextLayer::Shared::Configuration{style.textLayerStyleUniformCount(),
                                              style.textLayerStyleCount()}
+                .setEditingStyleCount(style.textLayerEditingStyleUniformCount(),
+                                      style.textLayerEditingStyleCount())
                 .setDynamicStyleCount(style.textLayerDynamicStyleCount())};
         setTextLayerInstance(Containers::pointer<TextLayerGL>(createLayer(), state.textLayerShared));
 
