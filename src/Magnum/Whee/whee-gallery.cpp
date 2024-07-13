@@ -50,6 +50,7 @@
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/EventLayer.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/Input.h"
 #include "Magnum/Whee/Label.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
@@ -123,6 +124,9 @@ class WheeGallery: public Platform::Application {
         void mousePressEvent(MouseEvent& event) override;
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
+        void keyPressEvent(KeyEvent& event) override;
+        void keyReleaseEvent(KeyEvent& event) override;
+        void textInputEvent(TextInputEvent& event) override;
 
         void popup();
 
@@ -269,7 +273,7 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             Whee::LabelStyle::Dim, "Dim");
     }
 
-    _clickMe = Whee::Button{{_ui, root, {16, 256}, {212, 64}},
+    _clickMe = Whee::Button{{_ui, root, {16, 256 + 130} /*TODO*/, {212, 64}},
         Whee::ButtonStyle::Default, "Click me!"};
     _ui.eventLayer().onTapOrClick(*_clickMe, [this]{
         if(_clickMe->style() == Whee::ButtonStyle::Dim)
@@ -282,6 +286,10 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     });
 
     popup();
+
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    startTextInput(); // TODO AHHHHHHH
+    #endif
 
     GL::Renderer::setClearColor(0x22272e_rgbf);
     GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
@@ -343,6 +351,24 @@ void WheeGallery::mouseReleaseEvent(MouseEvent& event) {
 
 void WheeGallery::mouseMoveEvent(MouseMoveEvent& event) {
     _ui.pointerMoveEvent(event);
+
+    if(_ui.state()) redraw();
+}
+
+void WheeGallery::keyPressEvent(KeyEvent& event) {
+    _ui.keyPressEvent(event);
+
+    if(_ui.state()) redraw();
+}
+
+void WheeGallery::keyReleaseEvent(KeyEvent& event) {
+    _ui.keyReleaseEvent(event);
+
+    if(_ui.state()) redraw();
+}
+
+void WheeGallery::textInputEvent(TextInputEvent& event) {
+    _ui.textInputEvent(event);
 
     if(_ui.state()) redraw();
 }
