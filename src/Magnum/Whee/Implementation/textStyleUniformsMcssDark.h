@@ -55,4 +55,9 @@ _c(LabelInfo,                   0x2f83cc_rgbf)
 _c(LabelInfoDisabled,           0x2f83ccff_rgbaf*0.3f)
 _c(LabelDim,                    0x747474_rgbf)
 _c(LabelDimDisabled,            0x747474ff_rgbaf*0.3f)
+
+_c(InputDefault,                0xdcdcdc_rgbf)
+_c(InputDefaultDisabled,        0xdcdcdcff_rgbaf*0.3f)
+_c(InputSelection,              0x22272e_rgbf)
+// TODO InputSelectionDisabled??
 #endif
