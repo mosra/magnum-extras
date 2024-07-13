@@ -513,7 +513,7 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
     const Containers::StridedArrayView1D<Vector2> glyphOffsetsPositions = glyphData.slice(&Implementation::TextLayerGlyphData::position);
     const Containers::StridedArrayView1D<Vector2> glyphAdvances = Containers::arrayCast<Vector2>(glyphData.slice(&Implementation::TextLayerGlyphData::glyphId));
     shaper.glyphOffsetsAdvancesInto(glyphOffsetsPositions, glyphAdvances);
-    Vector2 size{NoInit};
+    Range2D rectangle{NoInit};
     {
         Vector2 cursor;
         const Range2D lineRectangle = Text::renderLineGlyphPositionsInto(
@@ -529,11 +529,11 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
             properties.layoutDirection(),
             resolvedAlignment,
             glyphOffsetsPositions);
-        size = Text::alignRenderedBlock(
+        rectangle = Text::alignRenderedBlock(
             blockRectangle,
             properties.layoutDirection(),
             resolvedAlignment,
-            glyphOffsetsPositions).size();
+            glyphOffsetsPositions);
     }
 
     /* Glyph cache. The create() (or createGlyph()) should have ensured that a
@@ -553,7 +553,7 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
        reference for use in doUpdate() later */
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
-    data.size = size;
+    data.rectangle = rectangle;
     data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
 
@@ -697,18 +697,18 @@ void TextLayer::shapeGlyphInternal(
        then convert those in-place to absolute glyph positions and align
        them */
     Vector2 glyphPosition[1]{};
-    Vector2 size{NoInit};
+    Range2D rectangle{NoInit};
     {
         const Range2D blockRectangle = Text::alignRenderedLine(
             glyphRectangle,
             properties.layoutDirection(),
             resolvedAlignment,
             glyphPosition);
-        size = Text::alignRenderedBlock(
+        rectangle = Text::alignRenderedBlock(
             blockRectangle,
             properties.layoutDirection(),
             resolvedAlignment,
-            glyphPosition).size();
+            glyphPosition);
     }
 
     /* Add a new run containing just that one glyph. Any previous run for this
@@ -723,7 +723,7 @@ void TextLayer::shapeGlyphInternal(
        reference for use in doUpdate() later */
     Implementation::TextLayerData& data = state.data[id];
     data.scale = fontState.scale;
-    data.size = size;
+    data.rectangle = rectangle;
     data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
     data.textRun = ~UnsignedInt{};
@@ -875,14 +875,14 @@ Vector2 TextLayer::size(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::size(): invalid handle" << handle, {});
     const State& state = static_cast<const State&>(*_state);
-    return state.data[dataHandleId(handle)].size;
+    return state.data[dataHandleId(handle)].rectangle.size();
 }
 
 Vector2 TextLayer::size(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayer::size(): invalid handle" << handle, {});
     const State& state = static_cast<const State&>(*_state);
-    return state.data[layerDataHandleId(handle)].size;
+    return state.data[layerDataHandleId(handle)].rectangle.size();
 }
 
 Containers::Pair<UnsignedInt, UnsignedInt> TextLayer::cursor(const DataHandle handle) const {

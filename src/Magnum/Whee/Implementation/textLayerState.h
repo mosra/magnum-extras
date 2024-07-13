@@ -33,6 +33,7 @@
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/ArrayTuple.h>
 #include <Corrade/Containers/Reference.h>
+#include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
 #include <Magnum/Text/Alignment.h>
@@ -178,9 +179,14 @@ struct TextLayerData {
     /* Ratio of the style size and font size, for appropriately scaling the
        rectangles coming out of the glyph cache */
     Float scale;
-    /* Size of the text. For use by client code to do various sizing and
-       alignment, not used by the layer itself for anything. */
-    Vector2 size;
+    /* Actual rectangle occupied by the text glyphs. Used for cursor /
+       selection positioning by the layer itself, in particular to know where
+       to position the cursor at the very end, as the glyph run contains only
+       offsets of the glyphs, not size of the last glyph. Note that the
+       rectangle is returned by Text APIs which have Y up, while the UI library
+       uses Y down. The rectangle size is also for use by client code to do
+       various sizing and alignment. */
+    Range2D rectangle;
     /* Alignment is both to align the glyphs while shaping and to position the
        bounding box relative to the node. Again impossible to change without
        relayouting the text. */
