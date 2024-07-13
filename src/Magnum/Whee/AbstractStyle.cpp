@@ -128,6 +128,26 @@ UnsignedInt AbstractStyle::doTextLayerStyleCount() const {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractStyle::textLayerStyleCount(): feature advertised but not implemented", {});
 }
 
+UnsignedInt AbstractStyle::textLayerEditingStyleUniformCount() const {
+    CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
+        "Whee::AbstractStyle::textLayerEditingStyleUniformCount(): feature not supported", {});
+    return doTextLayerEditingStyleUniformCount();
+}
+
+UnsignedInt AbstractStyle::doTextLayerEditingStyleUniformCount() const {
+    return doTextLayerEditingStyleCount();
+}
+
+UnsignedInt AbstractStyle::textLayerEditingStyleCount() const {
+    CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
+        "Whee::AbstractStyle::textLayerEditingStyleCount(): feature not supported", {});
+    return doTextLayerEditingStyleCount();
+}
+
+UnsignedInt AbstractStyle::doTextLayerEditingStyleCount() const {
+    return 0;
+}
+
 UnsignedInt AbstractStyle::textLayerDynamicStyleCount() const {
     CORRADE_ASSERT(features() >= StyleFeature::TextLayer,
         "Whee::AbstractStyle::textLayerDynamicStyleCount(): feature not supported", {});
@@ -206,8 +226,10 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
         CORRADE_ASSERT(
             shared.styleUniformCount() == textLayerStyleUniformCount() &&
             shared.styleCount() == textLayerStyleCount() &&
+            shared.editingStyleUniformCount() == textLayerEditingStyleUniformCount() &&
+            shared.editingStyleCount() == textLayerEditingStyleCount() &&
             shared.dynamicStyleCount() >= textLayerDynamicStyleCount(),
-            "Whee::AbstractStyle::apply(): style wants" << textLayerStyleUniformCount() << "uniforms," << textLayerStyleCount() << "styles and at least" << textLayerDynamicStyleCount() << "dynamic styles but the text layer has" << shared.styleUniformCount() << Debug::nospace << "," << shared.styleCount() << "and" << shared.dynamicStyleCount(), {});
+            "Whee::AbstractStyle::apply(): style wants" << textLayerStyleUniformCount() << "uniforms," << textLayerStyleCount() << "styles," << textLayerEditingStyleUniformCount() << "editing uniforms," << textLayerEditingStyleCount() << "editing styles and at least" << textLayerDynamicStyleCount() << "dynamic styles but the text layer has" << shared.styleUniformCount() << Debug::nospace << "," << shared.styleCount() << Debug::nospace << "," << shared.editingStyleUniformCount() << Debug::nospace << "," << shared.editingStyleCount() << "and" << shared.dynamicStyleCount(), {});
 
         CORRADE_ASSERT(shared.hasGlyphCache(),
             "Whee::AbstractStyle::apply(): glyph cache not present in the text layer", {});

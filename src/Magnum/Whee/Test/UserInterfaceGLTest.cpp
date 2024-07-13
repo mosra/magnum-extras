@@ -268,6 +268,8 @@ void UserInterfaceGLTest::setStyle() {
         UnsignedInt doBaseLayerDynamicStyleCount() const override { return 11; }
         UnsignedInt doTextLayerStyleUniformCount() const override { return 2; }
         UnsignedInt doTextLayerStyleCount() const override { return 4; }
+        UnsignedInt doTextLayerEditingStyleUniformCount() const override { return 6; }
+        UnsignedInt doTextLayerEditingStyleCount() const override { return 7; }
         UnsignedInt doTextLayerDynamicStyleCount() const override { return 13; }
         PixelFormat doTextLayerGlyphCacheFormat() const override { return PixelFormat::R16F; }
         /** @todo test the array size once supported */
@@ -328,6 +330,8 @@ void UserInterfaceGLTest::setStyle() {
         CORRADE_VERIFY(ui.hasTextLayer());
         CORRADE_COMPARE(ui.textLayer().shared().styleUniformCount(), 2);
         CORRADE_COMPARE(ui.textLayer().shared().styleCount(), 4);
+        CORRADE_COMPARE(ui.textLayer().shared().editingStyleUniformCount(), 6);
+        CORRADE_COMPARE(ui.textLayer().shared().editingStyleCount(), 7);
         CORRADE_COMPARE(ui.textLayer().shared().dynamicStyleCount(), 13);
 
         CORRADE_VERIFY(ui.textLayer().shared().hasGlyphCache());
