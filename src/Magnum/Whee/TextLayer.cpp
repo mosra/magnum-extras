@@ -104,10 +104,12 @@ Debug& operator<<(Debug& debug, const TextEdit value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-TextLayer::Shared::State::State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, styleUniformCount{configuration.styleUniformCount()} {
+TextLayer::Shared::State::State(Shared& self, const Configuration& configuration): AbstractVisualLayer::Shared::State{self, configuration.styleCount(), configuration.dynamicStyleCount()}, hasEditingStyles{configuration.hasEditingStyles()}, styleUniformCount{configuration.styleUniformCount()}, editingStyleUniformCount{configuration.editingStyleUniformCount()} {
     styleStorage = Containers::ArrayTuple{
         {NoInit, configuration.styleCount(), styles},
-        {NoInit, configuration.dynamicStyleCount() ? configuration.styleUniformCount() : 0, styleUniforms}
+        {NoInit, configuration.dynamicStyleCount() ? configuration.styleUniformCount() : 0, styleUniforms},
+        {NoInit, configuration.editingStyleCount(), editingStyles},
+        {NoInit, configuration.dynamicStyleCount() ? configuration.editingStyleUniformCount() : 0, editingStyleUniforms},
     };
 }
 
@@ -125,6 +127,18 @@ TextLayer::Shared::Shared(NoCreateT) noexcept: AbstractVisualLayer::Shared{NoCre
 
 UnsignedInt TextLayer::Shared::styleUniformCount() const {
     return static_cast<const State&>(*_state).styleUniformCount;
+}
+
+UnsignedInt TextLayer::Shared::editingStyleUniformCount() const {
+    return static_cast<const State&>(*_state).editingStyleUniformCount;
+}
+
+UnsignedInt TextLayer::Shared::editingStyleCount() const {
+    return static_cast<const State&>(*_state).editingStyles.size();
+}
+
+bool TextLayer::Shared::hasEditingStyles() const {
+    return static_cast<const State&>(*_state).hasEditingStyles;
 }
 
 TextLayer::Shared& TextLayer::Shared::setGlyphCache(Text::AbstractGlyphCache& cache) {
@@ -234,7 +248,7 @@ Text::AbstractFont& TextLayer::Shared::font(const FontHandle handle) {
     return const_cast<Text::AbstractFont&>(const_cast<const TextLayer::Shared&>(*this).font(handle));
 }
 
-void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Int>& styleCursorStyles, const Containers::StridedArrayView1D<const Int>& styleSelectionStyles, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(uniforms.size() == state.styleUniformCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleUniformCount << "uniforms, got" << uniforms.size(), );
@@ -242,6 +256,10 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "font handles, got" << styleFonts.size(), );
     CORRADE_ASSERT(styleAlignments.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "alignment values, got" << styleAlignments.size(), );
+    CORRADE_ASSERT(styleCursorStyles.isEmpty() || styleCursorStyles.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "cursor styles, got" << styleCursorStyles.size(), );
+    CORRADE_ASSERT(styleSelectionStyles.isEmpty() || styleSelectionStyles.size() == state.styleCount,
+        "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "selection styles, got" << styleSelectionStyles.size(), );
     CORRADE_ASSERT(stylePaddings.isEmpty() || stylePaddings.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected either no or" << state.styleCount << "paddings, got" << stylePaddings.size(), );
     #ifndef CORRADE_NO_ASSERT
@@ -278,6 +296,30 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
         Utility::copy(styleFeatureOffsets, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::featureOffset));
         Utility::copy(styleFeatureCounts, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::featureCount));
     }
+    if(styleCursorStyles.isEmpty()) {
+        /** @todo some Utility::fill() for this */
+        for(Implementation::TextLayerStyle& style: state.styles)
+            style.cursorStyle = -1;
+    } else {
+        #ifndef CORRADE_NO_ASSERT
+        for(std::size_t i = 0; i != styleCursorStyles.size(); ++i)
+            CORRADE_ASSERT(styleCursorStyles[i] == -1 || UnsignedInt(styleCursorStyles[i]) < state.editingStyles.size(),
+                "Whee::TextLayer::Shared::setStyle(): cursor style" << styleCursorStyles[i] << "out of range for" << state.editingStyles.size() << "editing styles" << "at index" << i, );
+        #endif
+        Utility::copy(styleCursorStyles, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::cursorStyle));
+    }
+    if(styleSelectionStyles.isEmpty()) {
+        /** @todo some Utility::fill() for this */
+        for(Implementation::TextLayerStyle& style: state.styles)
+            style.selectionStyle = -1;
+    } else {
+        #ifndef CORRADE_NO_ASSERT
+        for(std::size_t i = 0; i != styleSelectionStyles.size(); ++i)
+            CORRADE_ASSERT(styleSelectionStyles[i] == -1 || UnsignedInt(styleSelectionStyles[i]) < state.editingStyles.size(),
+                "Whee::TextLayer::Shared::setStyle(): selection style" << styleSelectionStyles[i] << "out of range for" << state.editingStyles.size() << "editing styles" << "at index" << i, );
+        #endif
+        Utility::copy(styleSelectionStyles, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::selectionStyle));
+    }
     if(stylePaddings.isEmpty()) {
         /** @todo some Utility::fill() for this */
         for(Implementation::TextLayerStyle& style: state.styles)
@@ -308,31 +350,97 @@ void TextLayer::Shared::setStyleInternal(const TextLayerCommonStyleUniform& comm
     ++state.styleUpdateStamp;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, const Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Int>& styleCursorStyles, const Containers::StridedArrayView1D<const Int>& styleSelectionStyles, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(styleToUniform.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "style uniform indices, got" << styleToUniform.size(), *this);
-    setStyleInternal(commonUniform, uniforms, styleFonts, styleAlignments, styleFeatures, styleFeatureOffsets, styleFeatureCounts, stylePaddings);
+    setStyleInternal(commonUniform, uniforms, styleFonts, styleAlignments, styleFeatures, styleFeatureOffsets, styleFeatureCounts, styleCursorStyles, styleSelectionStyles, stylePaddings);
     Utility::copy(styleToUniform, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::uniform));
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Text::Alignment> styleAlignments, const std::initializer_list<TextFeatureValue> styleFeatures, const std::initializer_list<UnsignedInt> styleFeatureOffsets, const std::initializer_list<UnsignedInt> styleFeatureCounts, const std::initializer_list<Vector4> stylePaddings) {
-    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(styleFonts), Containers::stridedArrayView(styleAlignments), Containers::arrayView(styleFeatures), Containers::stridedArrayView(styleFeatureOffsets), Containers::stridedArrayView(styleFeatureCounts), Containers::stridedArrayView(stylePaddings));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<UnsignedInt> styleToUniform, const std::initializer_list<FontHandle> styleFonts, const std::initializer_list<Text::Alignment> styleAlignments, const std::initializer_list<TextFeatureValue> styleFeatures, const std::initializer_list<UnsignedInt> styleFeatureOffsets, const std::initializer_list<UnsignedInt> styleFeatureCounts, const std::initializer_list<Int> styleCursorStyles, const std::initializer_list<Int> styleSelectionStyles, const std::initializer_list<Vector4> stylePaddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(styleFonts), Containers::stridedArrayView(styleAlignments), Containers::arrayView(styleFeatures), Containers::stridedArrayView(styleFeatureOffsets), Containers::stridedArrayView(styleFeatureCounts), Containers::stridedArrayView(styleCursorStyles), Containers::stridedArrayView(styleSelectionStyles), Containers::stridedArrayView(stylePaddings));
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, const Containers::ArrayView<const TextFeatureValue> features, const Containers::StridedArrayView1D<const UnsignedInt>& featureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& featureCounts, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, const Containers::ArrayView<const TextFeatureValue> features, const Containers::StridedArrayView1D<const UnsignedInt>& featureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& featureCounts, const Containers::StridedArrayView1D<const Int>& cursorStyles, const Containers::StridedArrayView1D<const Int>& selectionStyles, const Containers::StridedArrayView1D<const Vector4>& paddings) {
     State& state = static_cast<State&>(*_state);
     CORRADE_ASSERT(state.styleUniformCount == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): there's" << state.styleUniformCount << "uniforms for" << state.styleCount << "styles, provide an explicit mapping", *this);
-    setStyleInternal(commonUniform, uniforms, fonts, alignments, features, featureOffsets, featureCounts, paddings);
+    setStyleInternal(commonUniform, uniforms, fonts, alignments, features, featureOffsets, featureCounts, cursorStyles, selectionStyles, paddings);
     for(UnsignedInt i = 0; i != state.styleCount; ++i)
         state.styles[i].uniform = i;
     return *this;
 }
 
-TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Text::Alignment> alignments, const std::initializer_list<TextFeatureValue> features, const std::initializer_list<UnsignedInt> featureOffsets, const std::initializer_list<UnsignedInt> featureCounts, const std::initializer_list<Vector4> paddings) {
-    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(fonts), Containers::stridedArrayView(alignments), Containers::arrayView(features), Containers::stridedArrayView(featureOffsets), Containers::stridedArrayView(featureCounts), Containers::stridedArrayView(paddings));
+TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform& commonUniform, const std::initializer_list<TextLayerStyleUniform> uniforms, const std::initializer_list<FontHandle> fonts, const std::initializer_list<Text::Alignment> alignments, const std::initializer_list<TextFeatureValue> features, const std::initializer_list<UnsignedInt> featureOffsets, const std::initializer_list<UnsignedInt> featureCounts, const std::initializer_list<Int> cursorStyles, const std::initializer_list<Int> selectionStyles, const std::initializer_list<Vector4> paddings) {
+    return setStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(fonts), Containers::stridedArrayView(alignments), Containers::arrayView(features), Containers::stridedArrayView(featureOffsets), Containers::stridedArrayView(featureCounts), Containers::stridedArrayView(cursorStyles), Containers::stridedArrayView(selectionStyles), Containers::stridedArrayView(paddings));
+}
+
+void TextLayer::Shared::setEditingStyleInternal(const TextLayerCommonEditingStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const Int>& styleTextUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(uniforms.size() == state.editingStyleUniformCount,
+        "Whee::TextLayer::Shared::setEditingStyle(): expected" << state.editingStyleUniformCount << "uniforms, got" << uniforms.size(), );
+    CORRADE_ASSERT(styleTextUniforms.isEmpty() || styleTextUniforms.size() == state.editingStyles.size(),
+        "Whee::TextLayer::Shared::setEditingStyle(): expected either no or" << state.editingStyles.size() << "text uniform indices, got" << styleTextUniforms.size(), );
+    CORRADE_ASSERT(stylePaddings.size() == state.editingStyles.size(),
+        "Whee::TextLayer::Shared::setEditingStyle(): expected" << state.editingStyles.size() << "paddings, got" << stylePaddings.size(), );
+    if(styleTextUniforms.isEmpty()) {
+        /** @todo some Utility::fill() for this */
+        for(Implementation::TextLayerEditingStyle& style: state.editingStyles)
+            style.textUniform = -1;
+    } else {
+        Utility::copy(styleTextUniforms, stridedArrayView(state.editingStyles).slice(&Implementation::TextLayerEditingStyle::textUniform));
+    }
+    Utility::copy(stylePaddings, stridedArrayView(state.editingStyles).slice(&Implementation::TextLayerEditingStyle::padding));
+
+    /* If there are dynamic styles, the layers will combine them with the
+       static styles and upload to a single buffer, so just copy them to an
+       array for the layers to reuse */
+    if(state.dynamicStyleCount) {
+        state.commonEditingStyleUniform = commonUniform;
+        Utility::copy(uniforms, state.editingStyleUniforms);
+    } else doSetEditingStyle(commonUniform, uniforms);
+
+    #ifndef CORRADE_NO_ASSERT
+    /* Now it's safe to call update() */
+    state.setEditingStyleCalled = true;
+    #endif
+
+    /* Make doState() of all layers sharing this state return NeedsDataUpdate
+       in order to update style-to-uniform mappings, paddings and such, and in
+       case of dynamic styles also NeedsCommonDataUpdate to upload the changed
+       per-layer uniform buffers. Setting it only if those differ would trigger
+       update only if actually needed, but it may be prohibitively expensive
+       compared to updating always. */
+    ++state.editingStyleUpdateStamp;
+}
+
+TextLayer::Shared& TextLayer::Shared::setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Int>& styleTextUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(styleToUniform.size() == state.editingStyles.size(),
+        "Whee::TextLayer::Shared::setEditingStyle(): expected" << state.editingStyles.size() << "style uniform indices, got" << styleToUniform.size(), *this);
+    setEditingStyleInternal(commonUniform, uniforms, styleTextUniforms, stylePaddings);
+    Utility::copy(styleToUniform, stridedArrayView(state.editingStyles).slice(&Implementation::TextLayerEditingStyle::uniform));
+    return *this;
+}
+
+TextLayer::Shared& TextLayer::Shared::setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, std::initializer_list<TextLayerEditingStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<Int> styleTextUniforms, std::initializer_list<Vector4> stylePaddings) {
+    return setEditingStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(styleToUniform), Containers::stridedArrayView(styleTextUniforms), Containers::stridedArrayView(stylePaddings));
+}
+
+TextLayer::Shared& TextLayer::Shared::setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, const Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const Int>& textUniforms, const Containers::StridedArrayView1D<const Vector4>& paddings) {
+    State& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(state.editingStyleUniformCount == state.editingStyles.size(),
+        "Whee::TextLayer::Shared::setEditingStyle(): there's" << state.editingStyleUniformCount << "uniforms for" << state.editingStyles.size() << "styles, provide an explicit mapping", *this);
+    setEditingStyleInternal(commonUniform, uniforms, textUniforms, paddings);
+    for(UnsignedInt i = 0; i != state.editingStyles.size(); ++i)
+        state.editingStyles[i].uniform = i;
+    return *this;
+}
+
+TextLayer::Shared& TextLayer::Shared::setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, const std::initializer_list<TextLayerEditingStyleUniform> uniforms, const std::initializer_list<Int> textUniforms, const std::initializer_list<Vector4> paddings) {
+    return setEditingStyle(commonUniform, Containers::arrayView(uniforms), Containers::stridedArrayView(textUniforms), Containers::stridedArrayView(paddings));
 }
 
 TextLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCount, const UnsignedInt styleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount} {
@@ -340,10 +448,37 @@ TextLayer::Shared::Configuration::Configuration(const UnsignedInt styleUniformCo
         "Whee::TextLayer::Shared::Configuration: expected style uniform count and style count to be either both zero or both non-zero, got" << styleUniformCount << "and" << styleCount, );
 }
 
-TextLayer::State::State(Shared::State& shared): AbstractVisualLayer::State{shared}, styleUpdateStamp{shared.styleUpdateStamp} {
+TextLayer::Shared::Configuration& TextLayer::Shared::Configuration::setEditingStyleCount(const UnsignedInt uniformCount, const UnsignedInt count) {
+    CORRADE_ASSERT(!uniformCount == !count,
+        "Whee::TextLayer::Shared::Configuration::setEditingStyleCount(): expected uniform count and count to be either both zero or both non-zero, got" << uniformCount << "and" << count, *this);
+    CORRADE_ASSERT(_styleCount || !count,
+        "Whee::TextLayer::Shared::Configuration::setEditingStyleCount(): editing style count has to be zero if style count is zero, got" << count, *this);
+    _editingStyleUniformCount = uniformCount;
+    _editingStyleCount = count;
+    return *this;
+}
+
+TextLayer::Shared::Configuration& TextLayer::Shared::Configuration::setDynamicStyleCount(const UnsignedInt count, const bool withEditingStyles) {
+    _dynamicStyleCount = count;
+    /* If there are no dynamic styles, we don't have editing styles for them
+       either */
+    _dynamicEditingStyles = count && withEditingStyles;
+    return *this;
+}
+
+TextLayer::State::State(Shared::State& shared): AbstractVisualLayer::State{shared}, styleUpdateStamp{shared.styleUpdateStamp}, editingStyleUpdateStamp{shared.editingStyleUpdateStamp} {
     dynamicStyleStorage = Containers::ArrayTuple{
-        {ValueInit, shared.dynamicStyleCount, dynamicStyleUniforms},
+        /* If editing styles are present, the uniform array additionally stores
+           also uniforms for selected text (and reserved for cursors) */
+        {ValueInit, shared.dynamicStyleCount*(shared.hasEditingStyles ? 3 : 1), dynamicStyleUniforms},
         {ValueInit, shared.dynamicStyleCount, dynamicStyles},
+        {ValueInit, shared.dynamicStyleCount, dynamicStyleCursorStyles},
+        {ValueInit, shared.dynamicStyleCount, dynamicStyleSelectionStyles},
+        /* If editing styles are present, the arrays are twice as large as
+           every dynamic style can have both a cursor and a selection editing
+           style */
+        {ValueInit, shared.hasEditingStyles ? shared.dynamicStyleCount*2 : 0, dynamicEditingStyleUniforms},
+        {ValueInit, shared.hasEditingStyles ? shared.dynamicStyleCount*2 : 0, dynamicEditingStylePaddings},
     };
 }
 
@@ -381,23 +516,67 @@ Containers::ArrayView<const TextFeatureValue> TextLayer::dynamicStyleFeatures(co
         state.dynamicStyles[id].featureCount);
 }
 
+Containers::BitArrayView TextLayer::dynamicStyleCursorStyles() const {
+    return static_cast<const State&>(*_state).dynamicStyleCursorStyles;
+}
+
+Int TextLayer::dynamicStyleCursorStyle(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::dynamicStyleCursorStyle(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", {});
+    return state.dynamicStyleCursorStyles[id] ?
+        Implementation::cursorStyleForDynamicStyle(id) : -1;
+}
+
+Containers::BitArrayView TextLayer::dynamicStyleSelectionStyles() const {
+    return static_cast<const State&>(*_state).dynamicStyleSelectionStyles;
+}
+
+Int TextLayer::dynamicStyleSelectionStyle(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::dynamicStyleSelectionStyle(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", {});
+    return state.dynamicStyleSelectionStyles[id] ?
+        Implementation::selectionStyleForDynamicStyle(id) : -1;
+}
+
+Int TextLayer::dynamicStyleSelectionStyleTextUniform(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::dynamicStyleSelectionStyleTextUniform(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", {});
+    return state.dynamicStyleSelectionStyles[id] ?
+        Implementation::selectionStyleTextUniformForDynamicStyle(state.dynamicStyles.size(), id) : -1;
+}
+
 Containers::StridedArrayView1D<const Vector4> TextLayer::dynamicStylePaddings() const {
     return stridedArrayView(static_cast<const State&>(*_state).dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding);
 }
 
-void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding) {
+Containers::ArrayView<const TextLayerEditingStyleUniform> TextLayer::dynamicEditingStyleUniforms() const {
+    return static_cast<const State&>(*_state).dynamicEditingStyleUniforms;
+}
+
+Containers::StridedArrayView1D<const Vector4> TextLayer::dynamicEditingStylePaddings() const {
+    return static_cast<const State&>(*_state).dynamicEditingStylePaddings;
+}
+
+void TextLayer::setDynamicStyleInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding)
+{
     auto& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(id < state.dynamicStyles.size(),
-        "Whee::TextLayer::setDynamicStyle(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", );
     CORRADE_ASSERT(font == FontHandle::Null || Whee::isHandleValid(static_cast<const Shared::State&>(state.shared).fonts, font),
-        "Whee::TextLayer::setDynamicStyle(): invalid handle" << font, );
+        messagePrefix << "invalid handle" << font, );
     CORRADE_ASSERT(!(UnsignedByte(alignment) & Text::Implementation::AlignmentGlyphBounds),
-        "Whee::TextLayer::setDynamicStyle():" << alignment << "is not supported", );
+        messagePrefix << alignment << "is not supported", );
     state.dynamicStyleUniforms[id] = uniform;
 
     /* Mark the layer as needing the dynamic style data update. The additional
        boolean is set to distinguish between needing to update the shared part
-       of the style and the dynamic part. */
+       of the style and the dynamic part, and whether the base or the editing
+       style updated. */
     setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
     state.dynamicStyleChanged = true;
 
@@ -436,11 +615,216 @@ void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUnifor
     }
 }
 
+void TextLayer::setDynamicCursorStyleInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const UnsignedInt id, const TextLayerEditingStyleUniform& uniform, const Vector4& padding)
+{
+    auto& state = static_cast<State&>(*_state);
+    #ifndef CORRADE_NO_ASSERT
+    auto& sharedState = static_cast<Shared::State&>(state.shared);
+    #endif
+    CORRADE_ASSERT(sharedState.hasEditingStyles,
+        messagePrefix << "editing styles are not enabled", );
+
+    /* Cursor styles are second in the dynamic style list, after selection
+       styles */
+    const UnsignedInt editingId = 2*id + 1;
+    state.dynamicEditingStyleUniforms[editingId] = uniform;
+
+    /* Mark the layer as needing the dynamic style data update. The additional
+       boolean is set to distinguish between needing to update the shared part
+       of the style and the dynamic part, and whether the base or the editing
+       style updated. */
+    setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+    state.dynamicEditingStyleChanged = true;
+
+    /* Mark the layer as changed only if the padding actually changes or if the
+       style didn't have a cursor style associated before, otherwise it's not
+       needed to trigger an update() */
+    Vector4& editingStylePadding = state.dynamicEditingStylePaddings[editingId];
+    if(editingStylePadding != padding ||
+       !state.dynamicStyleCursorStyles[id])
+    {
+        editingStylePadding = padding;
+        state.dynamicStyleCursorStyles.set(id);
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
+}
+
+void TextLayer::setDynamicSelectionStyleInternal(
+    #ifndef CORRADE_NO_ASSERT
+    const char* const messagePrefix,
+    #endif
+    const UnsignedInt id, const TextLayerEditingStyleUniform& uniform, const Containers::Optional<TextLayerStyleUniform>& textUniform, const Vector4& padding)
+{
+    auto& state = static_cast<State&>(*_state);
+    auto& sharedState = static_cast<Shared::State&>(state.shared);
+    CORRADE_ASSERT(sharedState.hasEditingStyles,
+        messagePrefix << "editing styles are not enabled", );
+
+    /* Selection styles are first in the dynamic editing style list */
+    const UnsignedInt editingId = 2*id + 0;
+    state.dynamicEditingStyleUniforms[editingId] = uniform;
+
+    /* If an uniform for the selected text is supplied, update it, otherwise
+       copy over the original text uniform. The textUniformId is the same in
+       both cases to not have to change the data when the uniform override
+       presence changes. The ID is calculated the same way as with the
+       selection uniform. */
+    const UnsignedInt textUniformId = sharedState.dynamicStyleCount + 2*id + 0;
+    state.dynamicStyleUniforms[textUniformId] =
+        textUniform ? *textUniform : state.dynamicStyleUniforms[id];
+
+    /* Mark the layer as needing the dynamic style data update. The additional
+       boolean is set to distinguish between needing to update the shared part
+       of the style and the dynamic part, and whether the base or the editing
+       style updated. */
+    setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+    state.dynamicEditingStyleChanged = true;
+    /* As we updated the non-editing part of the style with the text uniform,
+       the regular style needs to update as well, which should be already done
+       by setDynamicStyleInternal() that's called together with this function
+       in all cases */
+    CORRADE_INTERNAL_ASSERT(state.dynamicStyleChanged);
+
+    /* Mark the layer as changed only if the color or padding actually changes,
+       otherwise it's not needed to trigger an update() */
+    Vector4& editingStylePadding = state.dynamicEditingStylePaddings[editingId];
+    if(editingStylePadding != padding ||
+       !state.dynamicStyleSelectionStyles[id])
+    {
+        editingStylePadding = padding;
+        state.dynamicStyleSelectionStyles.set(id);
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
+}
+
+void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding) {
+    auto& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::setDynamicStyle(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", );
+    setDynamicStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setDynamicStyle():",
+        #endif
+        id, uniform, font, alignment, features, padding);
+
+    /* Cursor and selection style is unset in this case, mark the layer as
+       changed if they weren't unset before */
+    if(state.dynamicStyleCursorStyles[id]) {
+        /* Reset also the style values to reduce entropy */
+        const UnsignedInt cursorStyle = Implementation::cursorStyleForDynamicStyle(id);
+        state.dynamicEditingStyleUniforms[cursorStyle] = TextLayerEditingStyleUniform{};
+        state.dynamicEditingStylePaddings[cursorStyle] = {};
+        state.dynamicStyleCursorStyles.reset(id);
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
+    if(state.dynamicStyleSelectionStyles[id]) {
+        /* Reset also the style values to reduce entropy */
+        const UnsignedInt selectionStyle = Implementation::selectionStyleForDynamicStyle(id);
+        state.dynamicEditingStyleUniforms[selectionStyle] = TextLayerEditingStyleUniform{};
+        state.dynamicEditingStylePaddings[selectionStyle] = {};
+        state.dynamicStyleSelectionStyles.reset(id);
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
+}
+
 void TextLayer::setDynamicStyle(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const std::initializer_list<TextFeatureValue> features, const Vector4& padding) {
     setDynamicStyle(id, uniform, font, alignment, Containers::arrayView(features), padding);
 }
 
-void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const FontHandle font) {
+void TextLayer::setDynamicStyleWithCursorSelection(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& cursorUniform, const Vector4& cursorPadding, const TextLayerEditingStyleUniform& selectionUniform, const Containers::Optional<TextLayerStyleUniform>& selectionTextUniform, const Vector4& selectionPadding) {
+    #ifndef CORRADE_NO_ASSERT
+    auto& state = static_cast<State&>(*_state);
+    #endif
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::setDynamicStyleWithCursorSelection(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", );
+    setDynamicStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setDynamicStyleWithCursorSelection():",
+        #endif
+        id, uniform, font, alignment, features, padding);
+    setDynamicCursorStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setDynamicStyleWithCursorSelection():",
+        #endif
+        id, cursorUniform, cursorPadding);
+    setDynamicSelectionStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setDynamicStyleWithCursorSelection():",
+        #endif
+        id, selectionUniform, selectionTextUniform, selectionPadding);
+}
+
+void TextLayer::setDynamicStyleWithCursorSelection(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const std::initializer_list<TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& cursorUniform, const Vector4& cursorPadding, const TextLayerEditingStyleUniform& selectionUniform, const Containers::Optional<TextLayerStyleUniform>& selectionTextUniform, const Vector4& selectionPadding) {
+    setDynamicStyleWithCursorSelection(id, uniform, font, alignment, Containers::arrayView(features), padding, cursorUniform, cursorPadding, selectionUniform, selectionTextUniform, selectionPadding);
+}
+
+void TextLayer::setDynamicStyleWithCursor(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& cursorUniform, const Vector4& cursorPadding) {
+    auto& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::setDynamicStyleWithCursor(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", );
+    setDynamicStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setDynamicStyleWithCursor():",
+        #endif
+        id, uniform, font, alignment, features, padding);
+    setDynamicCursorStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setDynamicStyleWithCursor():",
+        #endif
+        id, cursorUniform, cursorPadding);
+
+    /* Selection style is unset in this case, mark the layer as changed if it
+       wasn't before */
+    if(state.dynamicStyleSelectionStyles[id]) {
+        /* Reset also the style values to reduce entropy */
+        const UnsignedInt selectionStyle = Implementation::selectionStyleForDynamicStyle(id);
+        state.dynamicEditingStyleUniforms[selectionStyle] = TextLayerEditingStyleUniform{};
+        state.dynamicEditingStylePaddings[selectionStyle] = {};
+        state.dynamicStyleSelectionStyles.reset(id);
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
+}
+
+void TextLayer::setDynamicStyleWithCursor(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const std::initializer_list<TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& cursorUniform, const Vector4& cursorPadding) {
+    setDynamicStyleWithCursor(id, uniform, font, alignment, Containers::arrayView(features), padding, cursorUniform, cursorPadding);
+}
+
+void TextLayer::setDynamicStyleWithSelection(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& selectionUniform, const Containers::Optional<TextLayerStyleUniform>& selectionTextUniform, const Vector4& selectionPadding) {
+    auto& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(id < state.dynamicStyles.size(),
+        "Whee::TextLayer::setDynamicStyleWithSelection(): index" << id << "out of range for" << state.dynamicStyles.size() << "dynamic styles", );
+    setDynamicStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setDynamicStyleWithSelection():",
+        #endif
+        id, uniform, font, alignment, features, padding);
+    setDynamicSelectionStyleInternal(
+        #ifndef CORRADE_NO_ASSERT
+        "Whee::TextLayer::setDynamicStyleWithSelection():",
+        #endif
+        id, selectionUniform, selectionTextUniform, selectionPadding);
+
+    /* Cursor style is unset in this case, mark the layer as changed if it
+       wasn't unset before */
+    if(state.dynamicStyleCursorStyles[id]) {
+        /* Reset also the style values to reduce entropy */
+        const UnsignedInt cursorStyle = Implementation::cursorStyleForDynamicStyle(id);
+        state.dynamicEditingStyleUniforms[cursorStyle] = TextLayerEditingStyleUniform{};
+        state.dynamicEditingStylePaddings[cursorStyle] = {};
+        state.dynamicStyleCursorStyles.reset(id);
+        setNeedsUpdate(LayerState::NeedsDataUpdate);
+    }
+}
+
+void TextLayer::setDynamicStyleWithSelection(const UnsignedInt id, const TextLayerStyleUniform& uniform, const FontHandle font, const Text::Alignment alignment, const std::initializer_list<TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& selectionUniform, const Containers::Optional<TextLayerStyleUniform>& selectionTextUniform, const Vector4& selectionPadding) {
+    setDynamicStyleWithSelection(id, uniform, font, alignment, Containers::arrayView(features), padding, selectionUniform, selectionTextUniform, selectionPadding);
+}
+
+void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const FontHandle font, const TextDataFlags flags) {
     State& state = static_cast<State&>(*_state);
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
 
@@ -557,11 +941,18 @@ void TextLayer::shapeTextInternal(const UnsignedInt id, const UnsignedInt style,
     data.alignment = resolvedAlignment;
     data.glyphRun = glyphRun;
 
-    /* Save extra properties used by editable text. These are not currently
-       used by anything else for non-editable text, but it's easier to just
-       save them here instead of adding extra logic to both
-       shapeRememberTextInternal() and updateText(). */
-    data.usedDirection = shaper.direction();
+    /* Save extra properties used by editable text. They occupy otherwise
+       unused free space in TextLayerData and TextLayerGlyphData, see the
+       member documentation for details why they're stored here and not in
+       dedicated edit-only structures. */
+    if(flags >= TextDataFlag::Editable) {
+        data.usedDirection = shaper.direction();
+        shaper.glyphClustersInto(glyphData.slice(&Implementation::TextLayerGlyphData::glyphCluster));
+
+    /* If the text is not editable, reset the direction to prevent other code
+       accidentally relying on some random value. The clusters aren't reset
+       though, as that is extra overhead. */
+    } else data.usedDirection = Text::ShapeDirection::Unspecified;
 }
 
 void TextLayer::shapeRememberTextInternal(
@@ -592,7 +983,7 @@ void TextLayer::shapeRememberTextInternal(
     CORRADE_ASSERT(sharedState.fonts[fontHandleId(font)].font,
         messagePrefix << font << "is an instance-less font", );
 
-    shapeTextInternal(id, style, text, properties, font);
+    shapeTextInternal(id, style, text, properties, font, flags);
 
     Implementation::TextLayerData& data = state.data[id];
     data.flags = flags;
@@ -716,7 +1107,8 @@ void TextLayer::shapeGlyphInternal(
        before calling this function. */
     const UnsignedInt glyphRun = state.glyphRuns.size();
     const UnsignedInt glyphOffset = state.glyphData.size();
-    arrayAppend(state.glyphData, InPlaceInit, *glyphPosition, cacheGlobalGlyphId);
+    arrayAppend(state.glyphData, InPlaceInit,
+        *glyphPosition, cacheGlobalGlyphId, 0u /* (Unused) cluster ID */);
     arrayAppend(state.glyphRuns, InPlaceInit, glyphOffset, 1u, id);
 
     /* Save scale, size, direction-resolved alignment and the glyph run
@@ -750,6 +1142,8 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
     #endif
     CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::TextLayer::create(): no style data was set", {});
+    /* Unlike the base style, the editing style doesn't need to be set for
+       create() to work */
     CORRADE_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount,
         "Whee::TextLayer::create(): style" << style << "out of range for" << sharedState.styleCount + sharedState.dynamicStyleCount << "styles", {});
 
@@ -1166,7 +1560,7 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     /* Similarly, the direction is both the layout and shape directions
        together, verbatim copy them back */
     properties._direction = run.direction;
-    shapeTextInternal(id, data.style, text, properties, run.font);
+    shapeTextInternal(id, data.style, text, properties, run.font, data.flags);
 
     /* Update the cursor position and all related state */
     setCursorInternal(id, cursor, selection);
@@ -1425,7 +1819,9 @@ LayerStates TextLayer::doState() const {
 
     auto& state = static_cast<const State&>(*_state);
     auto& sharedState = static_cast<const Shared::State&>(state.shared);
-    if(state.styleUpdateStamp != sharedState.styleUpdateStamp) {
+    if(state.styleUpdateStamp != sharedState.styleUpdateStamp ||
+       state.editingStyleUpdateStamp != sharedState.editingStyleUpdateStamp)
+    {
         /* Needed because uniform mapping and paddings can change */
         states |= LayerState::NeedsDataUpdate;
         /* If there are dynamic styles, each layer also needs to upload the
@@ -1485,6 +1881,10 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
        require it always for consistency (and easier testing) */
     CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::TextLayer::update(): no style data was set", );
+    /* Also, technically needed only if there's any actual editable data with
+       editing styles to update, but require it always for consistency */
+    CORRADE_ASSERT(!sharedState.hasEditingStyles || sharedState.setEditingStyleCalled,
+        "Whee::TextLayer::update(): no editing style data was set", );
 
     /* Recompact the glyph / text data by removing unused runs. Do this only if
        data actually change, this isn't affected by anything node-related */
@@ -1580,27 +1980,108 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         /* Index offsets for each run, plus one more for the last run */
         arrayResize(state.indexDrawOffsets, NoInit, dataIds.size() + 1);
 
-        /* Calculate how many glyphs we'll draw */
+        /* Calculate how many glyphs we'll draw, and how many cursor and
+           selection rectangles */
         UnsignedInt drawGlyphCount = 0;
-        for(const UnsignedInt id: dataIds)
-            drawGlyphCount += state.glyphRuns[state.data[id].glyphRun].glyphCount;
+        UnsignedInt drawEditingRectCount = 0;
+        for(const UnsignedInt id: dataIds) {
+            const Implementation::TextLayerData& data = state.data[id];
+            const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
+            drawGlyphCount += glyphRun.glyphCount;
+            if(data.textRun != ~UnsignedInt{}) {
+                Int cursorStyle, selectionStyle;
+                /** @todo ugh, this is duplicated three times */
+                if(data.calculatedStyle < sharedState.styleCount) {
+                    const Implementation::TextLayerStyle& style = sharedState.styles[data.calculatedStyle];
+                    cursorStyle = style.cursorStyle;
+                    selectionStyle = style.selectionStyle;
+                } else {
+                    CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
+                    const UnsignedInt dynamicStyleId = data.calculatedStyle - sharedState.styleCount;
+                    cursorStyle = state.dynamicStyleCursorStyles[dynamicStyleId] ? Implementation::cursorStyleForDynamicStyle(dynamicStyleId) : -1;
+                    selectionStyle = state.dynamicStyleSelectionStyles[dynamicStyleId] ? Implementation::selectionStyleForDynamicStyle(dynamicStyleId) : -1;
+                }
+                const Implementation::TextLayerTextRun& textRun = state.textRuns[data.textRun];
+                if(selectionStyle != -1 && textRun.selection != textRun.cursor)
+                    ++drawEditingRectCount;
+                if(cursorStyle != -1)
+                    ++drawEditingRectCount;
+            }
+        }
 
         /* Generate index data */
         arrayResize(state.indices, NoInit, drawGlyphCount*6);
+        arrayResize(state.editingIndices, NoInit, drawEditingRectCount*6);
         UnsignedInt indexOffset = 0;
+        UnsignedInt editingRectOffset = 0;
         for(std::size_t i = 0; i != dataIds.size(); ++i) {
-            const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[state.data[dataIds[i]].glyphRun];
+            const Implementation::TextLayerData& data = state.data[dataIds[i]];
+            const Implementation::TextLayerGlyphRun& glyphRun = state.glyphRuns[data.glyphRun];
 
             /* Generate indices in draw order. Remeber the offset for each data
                to draw from later. */
-            state.indexDrawOffsets[i] = indexOffset;
+            state.indexDrawOffsets[i] = {indexOffset, editingRectOffset*6};
             const Containers::ArrayView<UnsignedInt> indexData = state.indices.sliceSize(indexOffset, glyphRun.glyphCount*6);
             Text::renderGlyphQuadIndicesInto(glyphRun.glyphOffset, indexData);
             indexOffset += indexData.size();
+
+            /* If the text is editable, generate indices for cursor and
+               selection as well. They're currently both drawn in the same
+               call, with selection first and cursor on top. This may
+               eventually get split for the cursor to be drawn as an inverse
+               rectangle like is usual in editors, on the other hand the style
+               can fine-tune the look for each text style so that doesn't seem
+               really important. */
+            if(data.textRun != ~UnsignedInt{}) {
+                Int cursorStyle, selectionStyle;
+                /** @todo ugh, this is duplicated three times */
+                if(data.calculatedStyle < sharedState.styleCount) {
+                    const Implementation::TextLayerStyle& style = sharedState.styles[data.calculatedStyle];
+                    cursorStyle = style.cursorStyle;
+                    selectionStyle = style.selectionStyle;
+                } else {
+                    CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
+                    const UnsignedInt dynamicStyleId = data.calculatedStyle - sharedState.styleCount;
+                    cursorStyle = state.dynamicStyleCursorStyles[dynamicStyleId] ? Implementation::cursorStyleForDynamicStyle(dynamicStyleId) : -1;
+                    selectionStyle = state.dynamicStyleSelectionStyles[dynamicStyleId] ? Implementation::selectionStyleForDynamicStyle(dynamicStyleId) : -1;
+                }
+                const Implementation::TextLayerTextRun& textRun = state.textRuns[data.textRun];
+                const auto createEditingQuadIndices = [&state, &editingRectOffset](const UnsignedInt vertexOffset) {
+                    UnsignedInt indexOffset = editingRectOffset*6;
+
+                    /* The index order matches BaseLayer, not
+                       Text::renderGlyphQuadIndices(), as there it involves
+                       also flipping from Y up to Y down
+
+                       0---1 0---2 5
+                       |   | |  / /|
+                       |   | | / / |
+                       |   | |/ /  |
+                       2---3 1 3---4 */
+                    state.editingIndices[indexOffset++] = vertexOffset + 0;
+                    state.editingIndices[indexOffset++] = vertexOffset + 2;
+                    state.editingIndices[indexOffset++] = vertexOffset + 1;
+                    state.editingIndices[indexOffset++] = vertexOffset + 2;
+                    state.editingIndices[indexOffset++] = vertexOffset + 3;
+                    state.editingIndices[indexOffset++] = vertexOffset + 1;
+
+                    ++editingRectOffset;
+                };
+
+                /* The selection is shown only if there's a style for it and
+                   something is actually selected, and is drawn first */
+                if(selectionStyle != -1 && textRun.selection != textRun.cursor)
+                    createEditingQuadIndices(data.textRun*8);
+                /* The cursor only if there's a style for it, and is drawn
+                   after the selection */
+                if(cursorStyle != -1)
+                    createEditingQuadIndices(data.textRun*8 + 4);
+            }
         }
 
         CORRADE_INTERNAL_ASSERT(indexOffset == drawGlyphCount*6);
-        state.indexDrawOffsets[dataIds.size()] = indexOffset;
+        CORRADE_INTERNAL_ASSERT(editingRectOffset == drawEditingRectCount);
+        state.indexDrawOffsets[dataIds.size()] = {indexOffset, editingRectOffset*6};
     }
 
     /* Fill in vertex data if the data themselves, the node offset/size or node
@@ -1620,6 +2101,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
         /* Generate vertex data */
         arrayResize(state.vertices, NoInit, totalGlyphCount*4);
+        if(sharedState.hasEditingStyles)
+            arrayResize(state.editingVertices, NoInit, state.textRuns.size()*2*4);
         for(const UnsignedInt dataId: dataIds) {
             const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
             const Implementation::TextLayerData& data = state.data[dataId];
@@ -1686,14 +2169,131 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     sharedState.styles[data.calculatedStyle].uniform :
                     sharedState.styleUniformCount + data.calculatedStyle - sharedState.styleCount;
             }
+
+            /* If the text is editable, generate also the cursor and selection
+               mesh, unless they don't have any style */
+            if(data.textRun != ~UnsignedInt{}) {
+                Int cursorStyle, selectionStyle;
+                /** @todo ugh, this is duplicated three times */
+                if(data.calculatedStyle < sharedState.styleCount) {
+                    const Implementation::TextLayerStyle& style = sharedState.styles[data.calculatedStyle];
+                    cursorStyle = style.cursorStyle;
+                    selectionStyle = style.selectionStyle;
+                } else {
+                    CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
+                    const UnsignedInt dynamicStyleId = data.calculatedStyle - sharedState.styleCount;
+                    cursorStyle = state.dynamicStyleCursorStyles[dynamicStyleId] ? Implementation::cursorStyleForDynamicStyle(dynamicStyleId) : -1;
+                    selectionStyle = state.dynamicStyleSelectionStyles[dynamicStyleId] ? Implementation::selectionStyleForDynamicStyle(dynamicStyleId) : -1;
+                }
+                const Implementation::TextLayerTextRun& textRun = state.textRuns[data.textRun];
+                const Containers::Pair<UnsignedInt, UnsignedInt> glyphRangeForCursorSelection = Text::glyphRangeForBytes(glyphData.slice(&Implementation::TextLayerGlyphData::glyphCluster), textRun.cursor, textRun.selection);
+
+                /* The rectangle is Y-up, which means the max() is the top and
+                   we need to subtract it from the offset, and min() is bottom,
+                   negative, and thus we need to subtract it also */
+                /** @todo use the other coordinate if the shape direction is
+                    vertical */
+                const Vector2 lineBottom = offset - Vector2::yAxis(data.rectangle.min().y());
+                const Vector2 lineTop = offset - Vector2::yAxis(data.rectangle.max().y());
+                const auto cursorPositionForGlyph = [&data, &glyphData](const UnsignedInt glyph) {
+                    /** @todo The glyph position includes also the additional
+                        shaper offset, which isn't desirable for cursor
+                        placement. Often it's just 0, but sometimes it could be
+                        different e.g. for diacritics placement, and then the
+                        cursor could be weirdly shifted. Ideally the offset
+                        would be stored separately and not included here, but
+                        that's one extra float per glyph :/ The Y offset is
+                        already ignored as only the X is taken. */
+                    return Vector2::xAxis(glyph == glyphData.size() ?
+                        data.rectangle.max().x() : glyphData[glyph].position.x());
+                };
+                const auto createEditingQuad = [&state, &sharedState, &lineTop, &lineBottom, &cursorPositionForGlyph, &vertexData](const bool dynamicEditingStyle, const UnsignedInt editingStyleId, const UnsignedInt glyphBegin, const UnsignedInt glyphEnd, const UnsignedInt vertexOffset) {
+                    Vector4 padding{NoInit};
+                    UnsignedInt uniform;
+                    Int textUniform;
+                    if(!dynamicEditingStyle) {
+                        CORRADE_INTERNAL_DEBUG_ASSERT(editingStyleId < sharedState.editingStyles.size());
+                        const Implementation::TextLayerEditingStyle& editingStyle = sharedState.editingStyles[editingStyleId];
+                        padding = editingStyle.padding;
+                        uniform = editingStyle.uniform;
+                        textUniform = editingStyle.textUniform;
+                    } else {
+                        CORRADE_INTERNAL_DEBUG_ASSERT(editingStyleId < sharedState.dynamicStyleCount*2);
+                        /* Contrary to data.calculatedStyle, dynamic
+                           editingStyleId doesn't have any extra offset because
+                           it's never controlled from outside where it could
+                           get mixed up with static styles */
+                        padding = state.dynamicEditingStylePaddings[editingStyleId];
+                        /* Thus it's ID is also directly the uniform index
+                           *after* static styles */
+                        uniform = sharedState.editingStyleUniformCount + editingStyleId;
+                        /* And the text uniform also points after static
+                           styles */
+                        textUniform = sharedState.styleUniformCount + Implementation::textUniformForEditingStyle(sharedState.dynamicStyleCount, editingStyleId);
+                    }
+
+                    /* 0---1
+                       |   |
+                       |   |
+                       |   |
+                       2---3 */
+                    const Vector2 min = lineTop + cursorPositionForGlyph(glyphBegin) - padding.xy();
+                    const Vector2 max = lineBottom + cursorPositionForGlyph(glyphEnd) + Math::gather<'z', 'w'>(padding);
+                    const Vector2 sizeHalf = (max - min)*0.5f;
+                    const Vector2 sizeHalfNegative = -sizeHalf;
+
+                    for(UnsignedByte j = 0; j != 4; ++j) {
+                        Implementation::TextLayerEditingVertex& vertex = state.editingVertices[vertexOffset + j];
+
+                        /* ✨ */
+                        vertex.position = Math::lerp(min, max, BitVector2{j});
+                        vertex.centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{j});
+                        vertex.styleUniform = uniform;
+                    }
+
+                    /* If the editing style has an override for the text
+                       uniform, apply it to the selected range */
+                    if(textUniform != -1) {
+                        for(Implementation::TextLayerVertex& vertex: vertexData.slice(glyphBegin*4, glyphEnd*4))
+                            vertex.styleUniform = textUniform;
+                    }
+                };
+
+                /* Create a selection quad, if it has a style and there's a
+                   non-empty selection. It's drawn below the cursor, so it's
+                   first in the vertex buffer for given run (and first in the
+                   index buffer also). */
+                if(selectionStyle != -1 && textRun.selection != textRun.cursor) {
+                    const Containers::Pair<UnsignedInt, UnsignedInt> selection = Math::minmax(glyphRangeForCursorSelection.first(), glyphRangeForCursorSelection.second());
+                    createEditingQuad(
+                        data.calculatedStyle >= sharedState.styleCount,
+                        selectionStyle,
+                        selection.first(),
+                        selection.second(),
+                        data.textRun*2*4);
+                }
+                /* Create a cursor quad, if it has a style. It's drawn on top
+                   of the selection, so it's later in the vertex buffer for
+                   given run (and later in index buffer also) */
+                if(cursorStyle != -1) {
+                    createEditingQuad(
+                        data.calculatedStyle >= sharedState.styleCount,
+                        cursorStyle,
+                        glyphRangeForCursorSelection.first(),
+                        glyphRangeForCursorSelection.first(),
+                        data.textRun*2*4 + 4);
+                }
+            }
         }
     }
 
     /* Sync the style update stamp to not have doState() return NeedsDataUpdate
        / NeedsCommonDataUpdate again next time it's asked */
     if(states >= LayerState::NeedsDataUpdate ||
-       states >= LayerState::NeedsCommonDataUpdate)
+       states >= LayerState::NeedsCommonDataUpdate) {
         state.styleUpdateStamp = sharedState.styleUpdateStamp;
+        state.editingStyleUpdateStamp = sharedState.editingStyleUpdateStamp;
+    }
 }
 
 void TextLayer::doKeyPressEvent(const UnsignedInt dataId, KeyEvent& event) {
