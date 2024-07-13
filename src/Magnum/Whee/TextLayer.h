@@ -132,6 +132,145 @@ struct TextLayerStyleUniform {
     Color4 color;
 };
 
+
+/**
+@brief Properties common to all @ref TextLayer editing style uniforms
+@m_since_latest
+
+Together with one or more @ref TextLayerEditingStyleUniform instances contains
+style properties that are used by the @ref TextLayer shaders to draw the layer
+editing data such as cursors and selection rectangles, packed in a form that
+allows direct usage in uniform buffers. Is uploaded using
+@ref TextLayer::Shared::setEditingStyle(), style data that aren't used by the
+shader are passed to the function separately.
+*/
+struct TextLayerCommonEditingStyleUniform {
+    /** @brief Construct with default values */
+    constexpr explicit TextLayerCommonEditingStyleUniform(DefaultInitT = DefaultInit) noexcept: smoothness{0.0f} {}
+
+    /** @brief Constructor */
+    constexpr /*implicit*/ TextLayerCommonEditingStyleUniform(Float smoothness): smoothness{smoothness} {}
+
+    /** @brief Construct without initializing the contents */
+    explicit TextLayerCommonEditingStyleUniform(NoInitT) noexcept {}
+
+    /** @{
+     * @name Convenience setters
+     *
+     * Provided to allow the use of method chaining for populating a structure
+     * in a single expression, otherwise equivalent to accessing the fields
+     * directly. Also guaranteed to provide backwards compatibility when
+     * packing of the actual fields changes.
+     */
+    /**
+     * @brief Set the @ref smoothness field
+     * @return Reference to self (for method chaining)
+     */
+    TextLayerCommonEditingStyleUniform& setSmoothness(Float smoothness) {
+        this->smoothness = smoothness;
+        return *this;
+    }
+
+    /**
+     * @}
+     */
+
+    /**
+     * @brief Edge smoothness radius
+     *
+     * In layout units, i.e. setting the value to @cpp 1.0f @ce will make the
+     * smoothing extend 1 layout unit on each side of the edge. Default value
+     * is @cpp 0.0f @ce.
+     */
+    Float smoothness;
+
+    /** @todo remove the alignas once actual attributes are here */
+    #ifndef DOXYGEN_GENERATING_OUTPUT
+    Int:32;
+    Int:32;
+    Int:32;
+    #endif
+};
+
+/**
+@brief @ref TextLayer editing style uniform
+@m_since_latest
+
+Instances of this class together with @ref TextLayerCommonEditingStyleUniform
+contain style properties that are used by the @ref TextLayer shaders to draw
+the layer editing data such as cursors and selection rectangles, packed in a
+form that allows direct usage in uniform buffers. Total count of styles is
+specified with @ref TextLayer::Shared::Configuration::setEditingStyleCount(),
+uniforms are then uploaded using @ref TextLayer::Shared::setEditingStyle(),
+style data that aren't used by the shader are passed to the function
+separately.
+*/
+struct TextLayerEditingStyleUniform {
+    /** @brief Construct with default values */
+    constexpr explicit TextLayerEditingStyleUniform(DefaultInitT = DefaultInit) noexcept: backgroundColor{1.0f}, cornerRadius{0.0f} {}
+
+    /** @brief Constructor */
+    constexpr /*implicit*/ TextLayerEditingStyleUniform(const Color4& backgroundColor, Float cornerRadius): backgroundColor{backgroundColor}, cornerRadius{cornerRadius} {}
+
+    /** @brief Construct without initializing the contents */
+    explicit TextLayerEditingStyleUniform(NoInitT) noexcept: backgroundColor{NoInit} {}
+
+    /** @{
+     * @name Convenience setters
+     *
+     * Provided to allow the use of method chaining for populating a structure
+     * in a single expression, otherwise equivalent to accessing the fields
+     * directly. Also guaranteed to provide backwards compatibility when
+     * packing of the actual fields changes.
+     */
+
+    /**
+     * @brief Set the @ref backgroundColor field
+     * @return Reference to self (for method chaining)
+     */
+    TextLayerEditingStyleUniform& setBackgroundColor(const Color4& color) {
+        this->backgroundColor = color;
+        return *this;
+    }
+
+    /**
+     * @brief Set the @ref cornerRadius field
+     * @return Reference to self (for method chaining)
+     */
+    TextLayerEditingStyleUniform& setCornerRadius(Float radius) {
+        this->cornerRadius = radius;
+        return *this;
+    }
+
+    /**
+     * @}
+     */
+
+    /**
+     * @brief Selection background color
+     *
+     * Default value is @cpp 0xffffffff_srgbf @ce. The selection text color is
+     * applied directly to individual glyphs and is thus supplied separately in
+     * @ref TextLayer::Shared::setEditingStyle().
+     */
+    Color4 backgroundColor;
+
+    /**
+     * @brief Corner radius
+     *
+     * Default value is @cpp 0.0f @ce. Note that unlike
+     * @ref BaseLayerStyleUniform::cornerRadius this is just a single value for
+     * all corners.
+     */
+    Float cornerRadius;
+
+    #ifndef DOXYGEN_GENERATING_OUTPUT
+    Int:32;
+    Int:32;
+    Int:32;
+    #endif
+};
+
 /* Unlike DataHandle, NodeHandle etc., which are global to the whole Whee
    library, FontHandle is specific to the TextLayer and thus isn't defined in
    Handle.h but here */
@@ -207,6 +346,11 @@ enum class TextDataFlag: UnsignedByte {
      * focused node, the layer reacts to text input and key events, allowing to
      * edit the contents. Unlike non-editable text, the contents are also
      * accessible through @ref TextLayer::text().
+     *
+     * If editing styles are present and used by given style, the cursor
+     * position and/or selection is drawn as well.
+     * @see @ref TextLayer::Shared::Configuration::setEditingStyleCount(),
+     *      @ref TextLayer::Shared::setEditingStyle()
      */
     Editable = 1 << 0,
 };
@@ -530,12 +674,24 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         /**
          * @brief Dynamic style uniforms
          *
-         * Size of the returned view is @ref Shared::dynamicStyleCount(). These
-         * uniforms are used by style indices greater than or equal to
-         * @ref Shared::styleCount().
+         * Size of the returned view is at least
+         * @ref Shared::dynamicStyleCount(). These uniforms are used by style
+         * indices greater than or equal to @ref Shared::styleCount(). If
+         * @ref Shared::hasEditingStyles() is @cpp true @ce, size of the
+         * returned view is *three times* @ref Shared::dynamicStyleCount() and
+         * the extra elements are referenced by
+         * @ref dynamicStyleSelectionStyleTextUniform(UnsignedInt) const.
          * @see @ref dynamicStyleFonts(), @ref dynamicStyleAlignments(),
-         *      @ref dynamicStyleFeatures(), @ref dynamicStylePaddings(),
-         *      @ref setDynamicStyle()
+         *      @ref dynamicStyleFeatures(), @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleCursorStyle(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(), @ref setDynamicStyle(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor(),
+         *      @ref setDynamicStyleWithSelection()
          */
         Containers::ArrayView<const TextLayerStyleUniform> dynamicStyleUniforms() const;
 
@@ -546,8 +702,17 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * fonts are used by style indices greater than or equal to
          * @ref Shared::styleCount().
          * @see @ref dynamicStyleUniforms(), @ref dynamicStyleAlignments(),
-         *      @ref dynamicStyleFeatures(), @ref dynamicStylePaddings(),
-         *      @ref setDynamicStyle()
+         *      @ref dynamicStyleFeatures(), @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleCursorStyle(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(), @ref setDynamicStyle(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor(),
+         *      @ref setDynamicStyleWithSelection()
          */
         Containers::StridedArrayView1D<const FontHandle> dynamicStyleFonts() const;
 
@@ -558,8 +723,17 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * alignments are used by style indices greater than or equal to
          * @ref Shared::styleCount().
          * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
-         *      @ref dynamicStyleFeatures(), @ref dynamicStylePaddings(),
-         *      @ref setDynamicStyle()
+         *      @ref dynamicStyleFeatures(), @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleCursorStyle(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(), @ref setDynamicStyle(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor(),
+         *      @ref setDynamicStyleWithSelection()
          */
         Containers::StridedArrayView1D<const Text::Alignment> dynamicStyleAlignments() const;
 
@@ -568,10 +742,129 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          *
          * Expects that the @p id is less than @ref Shared::dynamicStyleCount().
          * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
-         *      @ref dynamicStyleAlignments(), @ref dynamicStylePaddings(),
-         *      @ref setDynamicStyle()
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleCursorStyle(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(), @ref setDynamicStyle(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor(),
+         *      @ref setDynamicStyleWithSelection()
          */
         Containers::ArrayView<const TextFeatureValue> dynamicStyleFeatures(UnsignedInt id) const;
+
+        /**
+         * @brief Which dynamic style have associated cursor styles
+         *
+         * Size of the returned view is @ref Shared::dynamicStyleCount(). Use
+         * @ref dynamicStyleCursorStyle(UnsignedInt) const to retrieve ID of
+         * the corresponding editing style.
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor()
+         */
+        Containers::BitArrayView dynamicStyleCursorStyles() const;
+
+        /**
+         * @brief Dynamic style cursor style ID
+         *
+         * Expects that the @p id is less than @ref Shared::dynamicStyleCount().
+         * If given dynamic style has no associated cursor style, returns
+         * @cpp -1 @ce, otherwise the returned index is a constant calculated
+         * from @p id and points to the @ref dynamicEditingStyleUniforms() and
+         * @ref dynamicEditingStylePaddings() arrays.
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor()
+         */
+        Int dynamicStyleCursorStyle(UnsignedInt id) const;
+
+        /**
+         * @brief Which dynamic style have associated selection styles
+         *
+         * Size of the returned view is @ref Shared::dynamicStyleCount(). Use
+         * @ref dynamicStyleSelectionStyle(UnsignedInt) const to retrieve ID of
+         * the corresponding editing style.
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleCursorStyle(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithSelection()
+         */
+        Containers::BitArrayView dynamicStyleSelectionStyles() const;
+
+        /**
+         * @brief Dynamic style selection style ID
+         *
+         * Expects that the @p id is less than @ref Shared::dynamicStyleCount().
+         * If given dynamic style has no associated selection style, returns
+         * @cpp -1 @ce, otherwise the returned index is a constant calculated
+         * from @p id and points to the @ref dynamicEditingStyleUniforms() and
+         * @ref dynamicEditingStylePaddings() arrays. Use
+         * @ref dynamicStyleSelectionStyleTextUniform(UnsignedInt) const to
+         * retrieve ID of the uniform override applied to selected text.
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithSelection()
+         */
+        Int dynamicStyleSelectionStyle(UnsignedInt id) const;
+
+        /**
+         * @brief Dynamic style selection style text uniform IDs
+         *
+         * Expects that the @p id is less than @ref Shared::dynamicStyleCount().
+         * If given dynamic style has no associated selection style, returns
+         * @cpp -1 @ce, otherwise the returned index is a constant calculated
+         * based on @p id and points to the @ref dynamicStyleUniforms() array.
+         *
+         * In particular, contrary to the styles specified with
+         * @ref Shared::setEditingStyle(), even if a text uniform wasn't passed
+         * in @ref setDynamicStyleWithCursorSelection() or
+         * @ref setDynamicStyleWithSelection(), the ID still points to a valid
+         * uniform index -- the uniform data are instead copied over from the
+         * base style.
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleCursorStyle(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(), @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithSelection()
+         */
+        Int dynamicStyleSelectionStyleTextUniform(UnsignedInt) const;
 
         /**
          * @brief Dynamic style paddings
@@ -580,15 +873,65 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * paddings are used by style indices greater than or equal to
          * @ref Shared::styleCount().
          * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
-         *      @ref dynamicStyleAlignments(), @ref setDynamicStyle()
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleCursorStyle(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(), @ref setDynamicStyle(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor(),
+         *      @ref setDynamicStyleWithSelection()
          */
         Containers::StridedArrayView1D<const Vector4> dynamicStylePaddings() const;
 
         /**
-         * @brief Set a dynamic style
+         * @brief Dynamic editing style uniforms
+         *
+         * Size of the returned view is twice @ref Shared::dynamicStyleCount().
+         * Used by dynamic styles that have associated cursor or selection
+         * styles, pointing here with @ref dynamicStyleCursorStyle() and
+         * @ref dynamicStyleSelectionStyle().
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicEditingStylePaddings(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor(),
+         *      @ref setDynamicStyleWithSelection()
+         */
+        Containers::ArrayView<const TextLayerEditingStyleUniform> dynamicEditingStyleUniforms() const;
+
+        /**
+         * @brief Dynamic editing style paddings
+         *
+         * Size of the returned view is twice @ref Shared::dynamicStyleCount().
+         * Used by dynamic styles that have associated cursor or selection
+         * styles, pointing here with @ref dynamicStyleCursorStyle() and
+         * @ref dynamicStyleSelectionStyle().
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref setDynamicStyleWithCursorSelection(),
+         *      @ref setDynamicStyleWithCursor(),
+         *      @ref setDynamicStyleWithSelection()
+         */
+        Containers::StridedArrayView1D<const Vector4> dynamicEditingStylePaddings() const;
+
+        /**
+         * @brief Set a dynamic style for text only
          * @param id                Dynamic style ID
          * @param uniform           Style uniform
          * @param font              Font handle
+         * @param alignment         Alignment
+         * @param features          Font features to use
          * @param padding           Padding inside the node in order left, top,
          *      right, bottom
          *
@@ -602,7 +945,8 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * mapping between dynamic styles and uniforms is implicit. All dynamic
          * styles are initially default-constructed @ref TextLayerStyleUniform
          * instances, @ref FontHandle::Null, @ref Text::Alignment::MiddleCenter
-         * with empty feature lists and zero padding vectors.
+         * with empty feature lists, zero padding vectors and no associated
+         * cursor or selection styles.
          *
          * Calling this function causes @ref LayerState::NeedsCommonDataUpdate
          * to be set to trigger an upload of changed dynamic style uniform
@@ -612,6 +956,13 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * set --- the @p font, @p alignment and @p features get only used in
          * the following call to @ref create(), @ref createGlyph(),
          * @ref setText() or @ref setGlyph().
+         *
+         * This function doesn't set any cursor or selection style, meaning
+         * they won't be shown at all if using this style for a
+         * @ref TextDataFlag::Editable text. Use
+         * @ref setDynamicStyleWithCursorSelection(),
+         * @ref setDynamicStyleWithCursor() or
+         * @ref setDynamicStyleWithSelection() to specify those as well.
          * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
          *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
          *      @ref dynamicStylePaddings(), @ref allocateDynamicStyle(),
@@ -620,6 +971,128 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         void setDynamicStyle(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding);
         /** @overload */
         void setDynamicStyle(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, std::initializer_list<TextFeatureValue> features, const Vector4& padding);
+
+        /**
+         * @brief Set a dynamic style for text, cursor and selection
+         * @param id                Dynamic style ID
+         * @param uniform           Style uniform
+         * @param font              Font handle
+         * @param alignment         Alignment
+         * @param features          Font features to use
+         * @param padding           Padding inside the node in order left, top,
+         *      right, bottom
+         * @param cursorUniform     Style uniform for the editing cursor
+         * @param cursorPadding     Padding around the editing cursor in order
+         *      left, top, right, bottom
+         * @param selectionUniform  Style uniform for the editing selection
+         * @param selectionTextUniform  Style uniform applied to selected
+         *      portions of the text or @ref Containers::NullOpt if @p uniform
+         *      should be used for the selection as well
+         * @param selectionPadding  Padding around the editing selection in
+         *      order left, top, right, bottom
+         *
+         * Expects that the @p id is less than @ref Shared::dynamicStyleCount(),
+         * @ref Shared::hasEditingStyles() is @cpp true @ce, @p font is either
+         * @ref FontHandle::Null or valid and @p alignment is not
+         * `*GlyphBounds` as the implementation can only align based on font
+         * metrics and cursor position, not actual glyph bounds.
+         * @ref Shared::styleCount() plus @p id is then a style index that can
+         * be passed to @ref create(), @ref createGlyph() or @ref setStyle() in
+         * order to use this style. Compared to @ref Shared::setStyle() the
+         * mapping between dynamic styles and uniforms is implicit. All dynamic
+         * styles are initially default-constructed @ref TextLayerStyleUniform
+         * instances, @ref FontHandle::Null, @ref Text::Alignment::MiddleCenter
+         * with empty feature lists, zero padding vectors and no associated
+         * cursor or selection styles.
+         *
+         * Calling this function causes @ref LayerState::NeedsCommonDataUpdate
+         * to be set to trigger an upload of changed dynamic style uniform
+         * data. If @p padding, @p cursorPadding or @p selectionPadding
+         * changed, @ref LayerState::NeedsDataUpdate gets set as well. On the
+         * other hand, changing the @p font, @p alignment or @p features
+         * doesn't cause any state flag to be set --- the @p font, @p alignment
+         * and @p features get only used in the following call to
+         * @ref create(), @ref createGlyph(), @ref setText() or
+         * @ref setGlyph().
+         *
+         * Note that while @p selectionPadding is merely a way to visually
+         * fine-tune the appearance, @p cursorPadding has to be non-zero
+         * horizontally to actually be visible at all.
+         *
+         * Use @ref setDynamicStyleWithCursor() if showing selection is not
+         * desirable for given style, @ref setDynamicStyleWithSelection() if
+         * showing cursor is not desirable and @ref setDynamicStyle() for
+         * non-editable styles or editable styles where showing neither cursor
+         * nor selection is desirable, for example in widgets that aren't
+         * focused.
+         * @see @ref dynamicStyleUniforms(), @ref dynamicStyleFonts(),
+         *      @ref dynamicStyleAlignments(), @ref dynamicStyleFeatures(),
+         *      @ref dynamicStyleCursorStyles(),
+         *      @ref dynamicStyleCursorStyle(),
+         *      @ref dynamicStyleSelectionStyles(),
+         *      @ref dynamicStyleSelectionStyle(),
+         *      @ref dynamicStyleSelectionStyleTextUniform(),
+         *      @ref dynamicStylePaddings(),
+         *      @ref dynamicEditingStyleUniforms(),
+         *      @ref dynamicEditingStylePaddings(),
+         *      @ref allocateDynamicStyle(), @ref recycleDynamicStyle()
+         */
+        void setDynamicStyleWithCursorSelection(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& cursorUniform, const Vector4& cursorPadding, const TextLayerEditingStyleUniform& selectionUniform, const Containers::Optional<TextLayerStyleUniform>& selectionTextUniform, const Vector4& selectionPadding);
+        /** @overload */
+        void setDynamicStyleWithCursorSelection(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, std::initializer_list<TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& cursorUniform, const Vector4& cursorPadding, const TextLayerEditingStyleUniform& selectionUniform, const Containers::Optional<TextLayerStyleUniform>& selectionTextUniform, const Vector4& selectionPadding);
+
+        /**
+         * @brief Set a dynamic style for text and cursor only
+         * @param id                Dynamic style ID
+         * @param uniform           Style uniform
+         * @param font              Font handle
+         * @param alignment         Alignment
+         * @param features          Font features to use
+         * @param padding           Padding inside the node in order left, top,
+         *      right, bottom
+         * @param cursorUniform     Style uniform for the editing cursor
+         * @param cursorPadding     Padding around the editing cursor in order
+         *      left, top, right, bottom
+         *
+         * Compared to @ref setDynamicStyleWithCursorSelection(UnsignedInt, const TextLayerStyleUniform&, FontHandle, Text::Alignment, Containers::ArrayView<const TextFeatureValue>, const Vector4&, const TextLayerEditingStyleUniform&, const Vector4&, const TextLayerEditingStyleUniform&, const Containers::Optional<TextLayerStyleUniform>&, const Vector4&)
+         * this doesn't set any selection style, meaning a
+         * @ref TextDataFlag::Editable text will be rendered without the
+         * selection visible. Useful for example for dynamic styles of input
+         * widgets which show the cursor always but selection only when
+         * focused.
+         * @see @ref setDynamicStyleWithSelection(), @ref setDynamicStyle()
+         */
+        void setDynamicStyleWithCursor(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& cursorUniform, const Vector4& cursorPadding);
+        /** @overload */
+        void setDynamicStyleWithCursor(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, std::initializer_list<TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& cursorUniform, const Vector4& cursorPadding);
+
+        /**
+         * @brief Set a dynamic style for text and selection only
+         * @param id                Dynamic style ID
+         * @param uniform           Style uniform
+         * @param font              Font handle
+         * @param alignment         Alignment
+         * @param features          Font features to use
+         * @param padding           Padding inside the node in order left, top,
+         *      right, bottom
+         * @param selectionUniform  Style uniform for the editing selection
+         * @param selectionTextUniform  Style uniform applied to selected
+         *      portions of the text or @ref Containers::NullOpt if @p uniform
+         *      should be used for the selection as well
+         * @param selectionPadding  Padding around the editing selection in
+         *      order left, top, right, bottom
+         *
+         * Compared to @ref setDynamicStyleWithCursorSelection(UnsignedInt, const TextLayerStyleUniform&, FontHandle, Text::Alignment, Containers::ArrayView<const TextFeatureValue>, const Vector4&, const TextLayerEditingStyleUniform&, const Vector4&, const TextLayerEditingStyleUniform&, const Containers::Optional<TextLayerStyleUniform>&, const Vector4&)
+         * this doesn't set any cursor style, meaning a
+         * @ref TextDataFlag::Editable text will be rendered without the
+         * cursor visible. Useful for example for dynamic styles of input
+         * widgets which show the selection always but cursor only when
+         * focused.
+         * @see @ref setDynamicStyleWithCursor(), @ref setDynamicStyle()
+         */
+        void setDynamicStyleWithSelection(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& selectionUniform, const Containers::Optional<TextLayerStyleUniform>& selectionTextUniform, const Vector4& selectionPadding);
+        /** @overload */
+        void setDynamicStyleWithSelection(UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, std::initializer_list<TextFeatureValue> features, const Vector4& padding, const TextLayerEditingStyleUniform& selectionUniform, const Containers::Optional<TextLayerStyleUniform>& selectionTextUniform, const Vector4& selectionPadding);
 
         /**
          * @brief Create a text
@@ -1434,8 +1907,11 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * @brief Set text custom base color
          *
          * Expects that @p handle is valid. @ref TextLayerStyleUniform::color
-         * is multiplied with @p color. By default, unless specified in
-         * @ref create() / @ref createGlyph() already, the custom color is
+         * is multiplied with @p color. Applies to style override for selected
+         * text as well, but not to
+         * @ref TextLayerEditingStyleUniform::backgroundColor for cursor and
+         * selection rectangles. By default, unless specified in @ref create()
+         * / @ref createGlyph() already, the custom color is
          * @cpp 0xffffff_srgbf @ce, i.e. not affecting the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
@@ -1538,8 +2014,23 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
 
     private:
+        MAGNUM_WHEE_LOCAL void setDynamicStyleInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            UnsignedInt id, const TextLayerStyleUniform& uniform, FontHandle font, Text::Alignment alignment, Containers::ArrayView<const TextFeatureValue> features, const Vector4& padding);
+        MAGNUM_WHEE_LOCAL void setDynamicCursorStyleInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            UnsignedInt id, const TextLayerEditingStyleUniform& uniform, const Vector4& padding);
+        MAGNUM_WHEE_LOCAL void setDynamicSelectionStyleInternal(
+            #ifndef CORRADE_NO_ASSERT
+            const char* messagePrefix,
+            #endif
+            UnsignedInt id, const TextLayerEditingStyleUniform& uniform, const Containers::Optional<TextLayerStyleUniform>& textUniform, const Vector4& padding);
         MAGNUM_WHEE_LOCAL DataHandle createInternal(NodeHandle node);
-        MAGNUM_WHEE_LOCAL void shapeTextInternal(UnsignedInt id, UnsignedInt style, Containers::StringView text, const TextProperties& properties, FontHandle font);
+        MAGNUM_WHEE_LOCAL void shapeTextInternal(UnsignedInt id, UnsignedInt style, Containers::StringView text, const TextProperties& properties, FontHandle font, TextDataFlags flags);
         MAGNUM_WHEE_LOCAL void shapeRememberTextInternal(
             #ifndef CORRADE_NO_ASSERT
             const char* messagePrefix,
@@ -1593,9 +2084,46 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * may not be the same as @ref styleCount(). For dynamic styles, the
          * style uniform count is the same as @ref dynamicStyleCount().
          * @see @ref Configuration::Configuration(UnsignedInt, UnsignedInt),
-         *      @ref setStyle()
+         *      @ref setStyle(), @ref editingStyleUniformCount()
          */
         UnsignedInt styleUniformCount() const;
+
+        /**
+         * @brief Editing style count
+         *
+         * Count of editing styles used by all layers referencing this
+         * @ref Shared instance. If dynamic styles include editing styles, IDs
+         * greater than @ref editingStyleCount() are then dynamic editing
+         * styles, with their count being twice of @ref dynamicStyleCount().
+         * @see @ref editingStyleUniformCount(), @ref hasEditingStyles(),
+         *      @ref Configuration::setEditingStyleCount(),
+         *      @ref setEditingStyle()
+         */
+        UnsignedInt editingStyleCount() const;
+
+        /**
+         * @brief Editing style uniform count
+         *
+         * Size of the editing style uniform buffer excluding dynamic styles.
+         * May or may not be the same as @ref styleCount(). For dynamic styles,
+         * if they include editing styles, the style uniform count is twice
+         * @ref dynamicStyleCount(), as each dynamic style can have at most two
+         * associated editing styles --- one for the cursor and one for the
+         * selection.
+         * @see @ref editingStyleCount(), @ref hasEditingStyles()
+         *      @ref Configuration::setEditingStyleCount(),
+         *      @ref setEditingStyle()
+         */
+        UnsignedInt editingStyleUniformCount() const;
+
+        /**
+         * @brief Whether the layer has any editing styles
+         *
+         * Returns @cpp true @ce if either @ref editingStyleCount() is non-zero
+         * or @ref dynamicStyleCount() is non-zero and editing styles were
+         * explicitly enabled with @ref Configuration::setDynamicStyleCount(UnsignedInt, bool).
+         */
+        bool hasEditingStyles() const;
 
         /**
          * @brief Whether a glyph cache has been set
@@ -1734,6 +2262,10 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          *      style uniforms
          * @param featureCounts  Counts into @p features corresponding to style
          *      uniforms
+         * @param cursorStyles  Cursor style IDs corresponding to style
+         *      uniforms
+         * @param selectionStyles  Selection style IDs corresponding to style
+         *      uniforms
          * @param paddings      Padding inside the node in order left, top,
          *      right, bottom corresponding to style uniforms
          * @return Reference to self (for method chaining)
@@ -1758,6 +2290,13 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * specified for any styles. Features coming from @ref TextProperties
          * are *appended* after these, making it possible to override them.
          *
+         * The @p cursorStyles and @p selectionStyles views are expected to
+         * either have the same size as @ref styleCount() or be empty. If
+         * non-empty, they're expected to either contain non-negative indices
+         * less than @ref editingStyleCount() or @cpp -1 @ce denoting that
+         * given style doesn't have the cursor or selection visible. If empty,
+         * no styles have cursor or selection visible.
+         *
          * The @p paddings view is expected to either have the same size
          * as @ref styleCount() or be empty, in which case all paddings are
          * implicitly zero.
@@ -1766,7 +2305,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * were set to the same value in @ref Configuration passed to the
          * constructor, otherwise you have to additionally provide a mapping
          * from styles to uniforms using
-         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Text::Alignment>&, Containers::ArrayView<const TextFeatureValue>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Text::Alignment>&, Containers::ArrayView<const TextFeatureValue>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Int>&, const Containers::StridedArrayView1D<const Int>&, const Containers::StridedArrayView1D<const Vector4>&)
          * instead.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
@@ -1776,9 +2315,9 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * upload of changed dynamic style uniform data.
          * @see @ref isHandleValid(FontHandle) const
          */
-        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, Containers::ArrayView<const TextFeatureValue> features, const Containers::StridedArrayView1D<const UnsignedInt>& featureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& featureCounts, const Containers::StridedArrayView1D<const Vector4>& paddings);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& fonts, const Containers::StridedArrayView1D<const Text::Alignment>& alignments, Containers::ArrayView<const TextFeatureValue> features, const Containers::StridedArrayView1D<const UnsignedInt>& featureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& featureCounts, const Containers::StridedArrayView1D<const Int>& cursorStyles, const Containers::StridedArrayView1D<const Int>& selectionStyles, const Containers::StridedArrayView1D<const Vector4>& paddings);
         /** @overload */
-        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<FontHandle> fonts, std::initializer_list<Text::Alignment> alignments, std::initializer_list<TextFeatureValue> features, std::initializer_list<UnsignedInt> featureOffsets, std::initializer_list<UnsignedInt> featureCounts, std::initializer_list<Vector4> paddings);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<FontHandle> fonts, std::initializer_list<Text::Alignment> alignments, std::initializer_list<TextFeatureValue> features, std::initializer_list<UnsignedInt> featureOffsets, std::initializer_list<UnsignedInt> featureCounts, std::initializer_list<Int> cursorStyles, std::initializer_list<Int> selectionStyles, std::initializer_list<Vector4> paddings);
 
         /**
          * @brief Set style data
@@ -1790,6 +2329,8 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param styleFeatures     Font feature data for all styles
          * @param styleFeatureOffsets  Per-style offsets into @p styleFeatures
          * @param styleFeatureCounts  Per-style counts into @p styleFeatures
+         * @param styleCursorStyles  Per-style cursor style IDs
+         * @param styleSelectionStyles  Per-style selection style IDs
          * @param stylePaddings     Per-style padding inside the node in order
          *      left, top, right, bottom
          * @return Reference to self (for method chaining)
@@ -1816,6 +2357,13 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * from @ref TextProperties are *appended* after these, making it
          * possible to override them.
          *
+         * The @p styleCursorStyles and @p styleSelectionStyles views are
+         * expected to either have the same size as @ref styleCount() or be
+         * empty. If non-empty, they're expected to either contain non-negative
+         * indices less than @ref editingStyleCount() or @cpp -1 @ce denoting
+         * that given style doesn't have the cursor or selection visible. If
+         * empty, no styles have cursor or selection visible.
+         *
          * The @p stylePaddings view is expected to either have the same size
          * as @ref styleCount() or be empty, in which case all paddings are
          * implicitly zero.
@@ -1824,7 +2372,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * the @p uniforms array for style @cpp i @ce. If
          * @ref styleUniformCount() and @ref styleCount() is the same and the
          * mapping is implicit, you can use the
-         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Text::Alignment>&, Containers::ArrayView<const TextFeatureValue>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * @ref setStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>, const Containers::StridedArrayView1D<const FontHandle>&, const Containers::StridedArrayView1D<const Text::Alignment>&, Containers::ArrayView<const TextFeatureValue>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Int>&, const Containers::StridedArrayView1D<const Int>&, const Containers::StridedArrayView1D<const Vector4>&)
          * convenience overload instead.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
@@ -1834,9 +2382,89 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * upload of changed dynamic style uniform data.
          * @see @ref isHandleValid(FontHandle) const
          */
-        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Int>& styleCursorStyles, const Containers::StridedArrayView1D<const Int>& styleSelectionStyles, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
         /** @overload */
-        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<FontHandle> styleFonts, std::initializer_list<Text::Alignment> styleAlignments, std::initializer_list<TextFeatureValue> styleFeatures, std::initializer_list<UnsignedInt> styleFeatureOffsets, std::initializer_list<UnsignedInt> styleFeatureCounts, std::initializer_list<Vector4> stylePaddings);
+        Shared& setStyle(const TextLayerCommonStyleUniform& commonUniform, std::initializer_list<TextLayerStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<FontHandle> styleFonts, std::initializer_list<Text::Alignment> styleAlignments, std::initializer_list<TextFeatureValue> styleFeatures, std::initializer_list<UnsignedInt> styleFeatureOffsets, std::initializer_list<UnsignedInt> styleFeatureCounts, std::initializer_list<Int> styleCursorStyles, std::initializer_list<Int> styleSelectionStyles, std::initializer_list<Vector4> stylePaddings);
+
+        /**
+         * @brief Set editing style data with implicit mapping between styles and uniforms
+         * @param commonUniform     Common style uniform data
+         * @param uniforms          Style uniforms
+         * @param textUniforms      Base style uniform IDs to use for selected
+         *      portions of the text. Not used if given style is for a cursor.
+         * @param paddings          Paddings outside the cursor or selection
+         *      rectangle in order left, top, right, bottom corresponding to
+         *      style uniforms
+         * @return Reference to self (for method chaining)
+         *
+         * The @p uniforms view is expected to have the same size as
+         * @ref editingStyleUniformCount(), the @p paddings views the same size
+         * as @ref editingStyleCount().
+         *
+         * The @p textUniforms are expected to either have the same size as
+         * @ref editingStyleCount() or be empty. The indices point into the
+         * uniform array supplied by @ref setStyle(), in which case selected
+         * portions of the text are switched to be drawn with given uniform ID
+         * instead, or are @cpp -1 @ce, in which case the original style
+         * uniform ID is used unchanged. If the view is empty, it's the same as
+         * all values being @cpp -1 @ce.
+         *
+         * Can only be called if @ref editingStyleUniformCount() and
+         * @ref editingStyleCount() were set to the same value in
+         * @ref Configuration::setEditingStyleCount(), otherwise you have
+         * to additionally provide a mapping from styles to uniforms using
+         * @ref setEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Int>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * instead.
+         *
+         * Note that while for *selection* styles the paddings are merely a way
+         * to visually fine-tune the appearance, for *cursor* styles the
+         * padding has to be non-zero horizontally to actually be visible at
+         * all. This is also why, unlike @ref setStyle(), the @p paddings can't
+         * be left empty.
+         */
+        Shared& setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const Int>& textUniforms, const Containers::StridedArrayView1D<const Vector4>& paddings);
+        /** @overload */
+        Shared& setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, std::initializer_list<TextLayerEditingStyleUniform> uniforms, std::initializer_list<Int> textUniforms, std::initializer_list<Vector4> paddings);
+
+        /**
+         * @brief Set editing style data
+         * @param commonUniform     Common style uniform data
+         * @param uniforms          Style uniforms
+         * @param styleToUniform    Style to style uniform mapping
+         * @param styleTextUniforms  Base style uniform IDs to use for selected
+         *      portions of the text. Not used if given style is for a cursor.
+         * @param stylePaddings     Per-style margins outside the cursor or
+         *      selection rectangle in order left, top, right, bottom
+         * @return Reference to self (for method chaining)
+         *
+         * The @p uniforms view is expected to have the same size as
+         * @ref editingStyleUniformCount(), the @p styleToUniform and
+         * @p stylePaddings views the same size as @ref editingStyleCount().
+         *
+         * Value of @cpp styleToUniform[i] @ce should give back an index into
+         * the @p uniforms array for style @cpp i @ce. If
+         * @ref editingStyleUniformCount() and @ref editingStyleCount() is the
+         * same and the mapping is implicit, you can use the
+         * @ref setEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>, const Containers::StridedArrayView1D<const Int>&, const Containers::StridedArrayView1D<const Vector4>&)
+         * convenience overload instead.
+         *
+         * The @p styleTextUniforms are expected to either have the same size
+         * as @ref editingStyleCount() or be empty. The indices point into the
+         * uniform array supplied by @ref setStyle(), in which case selected
+         * portions of the text are switched to be drawn with given uniform ID
+         * instead, or are @cpp -1 @ce, in which case the original style
+         * uniform ID is used unchanged. If the view is empty, it's the same as
+         * all values being @cpp -1 @ce.
+         *
+         * Note that while for *selection* styles the paddings are merely a way
+         * to visually fine-tune the appearance, for *cursor* styles the
+         * paddings have to be non-zero horizontally to actually be visible at
+         * all. This is also why, unlike @ref setStyle(), the @p stylePaddings
+         * can't be left empty.
+         */
+        Shared& setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const UnsignedInt>& styleToUniform, const Containers::StridedArrayView1D<const Int>& styleTextUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        /** @overload */
+        Shared& setEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, std::initializer_list<TextLayerEditingStyleUniform> uniforms, std::initializer_list<UnsignedInt> styleToUniform, std::initializer_list<Int> styleTextUniforms, std::initializer_list<Vector4> stylePaddings);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
@@ -1871,13 +2499,20 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
         explicit Shared(NoCreateT) noexcept;
 
     private:
-        MAGNUM_WHEE_LOCAL void setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        MAGNUM_WHEE_LOCAL void setStyleInternal(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms, const Containers::StridedArrayView1D<const FontHandle>& styleFonts, const Containers::StridedArrayView1D<const Text::Alignment>& styleAlignments, Containers::ArrayView<const TextFeatureValue> styleFeatures, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureOffsets, const Containers::StridedArrayView1D<const UnsignedInt>& styleFeatureCounts, const Containers::StridedArrayView1D<const Int>& styleCursorStyles, const Containers::StridedArrayView1D<const Int>& styleSelectionStyles, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
+        MAGNUM_WHEE_LOCAL void setEditingStyleInternal(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms, const Containers::StridedArrayView1D<const Int>& styleTextUniforms, const Containers::StridedArrayView1D<const Vector4>& stylePaddings);
 
         /* The items are guaranteed to have the same size as
            styleUniformCount(). Called only if there are no dynamic styles,
            otherwise the data are copied to internal arrays to be subsequently
            combined with dynamic uniforms and uploaded together in doDraw(). */
         virtual void doSetStyle(const TextLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const TextLayerStyleUniform> uniforms) = 0;
+        /* The items are guaranteed to have the same size as
+           editingStyleUniformCount(). Called only if there are no dynamic
+           styles, otherwise the data are copied to internal arrays to be
+           subsequently combined with dynamic uniforms and uploaded together in
+           doDraw(). */
+        virtual void doSetEditingStyle(const TextLayerCommonEditingStyleUniform& commonUniform, Containers::ArrayView<const TextLayerEditingStyleUniform> uniforms) = 0;
 };
 
 /**
@@ -1899,6 +2534,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared::Configuration {
          * @ref setDynamicStyleCount(). Style data are then set with
          * @ref setStyle(), dynamic style data then with
          * @ref TextLayer::setDynamicStyle().
+         * @see @ref setEditingStyleCount(), @ref setEditingStyle()
          */
         explicit Configuration(UnsignedInt styleUniformCount, UnsignedInt styleCount);
 
@@ -1916,26 +2552,96 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared::Configuration {
         /** @brief Style count */
         UnsignedInt styleCount() const { return _styleCount; }
 
+        /** @brief Editing style uniform count */
+        UnsignedInt editingStyleUniformCount() const { return _editingStyleUniformCount; }
+
+        /** @brief Editing style count */
+        UnsignedInt editingStyleCount() const { return _editingStyleCount; }
+
+        /**
+         * @brief Set editing style count
+         * @return Reference to self (for method chaining)
+         *
+         * The @p uniformCount parameter specifies the size of the uniform
+         * array, @p count then the number of distinct styles to use for cursor
+         * and selection drawing. The sizes are independent in order to allow
+         * editing styles with different paddings share the same uniform data.
+         * Both @p uniformCount and @p count is expected to either be zero or
+         * both non-zero. Style data are then set with @ref setEditingStyle().
+         * Initial count is @cpp 0 @ce, which means neither cursor nor
+         * selection is drawn.
+         *
+         * If the style count passed to the constructor is @cpp 0 @ce, the
+         * editing style count is expected to be @cpp 0 @ce as well.
+         * @see @ref TextDataFlag::Editable
+         */
+        Configuration& setEditingStyleCount(UnsignedInt uniformCount, UnsignedInt count);
+
+        /**
+         * @brief Set editing style count with style uniform count being the same as style count
+         *
+         * Equivalent to calling @ref setEditingStyleCount(UnsignedInt, UnsignedInt)
+         * with both parameters set to @p count.
+         */
+        Configuration& setEditingStyleCount(UnsignedInt count) {
+            return setEditingStyleCount(count, count);
+        }
+
         /** @brief Dynamic style count */
         UnsignedInt dynamicStyleCount() const { return _dynamicStyleCount; }
+
+        /**
+         * @brief Whether any editing styles are enabled
+         *
+         * Returns @cpp true @ce if either @ref setEditingStyleCount() was
+         * called with a non-zero value or @ref setDynamicStyleCount(UnsignedInt, bool)
+         * was called with a non-zero value and @p withEditingStyles explicitly
+         * enabled, @cpp false @ce otherwise.
+         */
+        bool hasEditingStyles() const {
+            return _dynamicEditingStyles || _editingStyleCount;
+        }
 
         /**
          * @brief Set dynamic style count
          * @return Reference to self (for method chaining)
          *
-         * Initial count is @cpp 0 @ce.
+         * Initial count is @cpp 0 @ce. Dynamic editing styles are implicitly
+         * enabled only if editing style count is non-zero, use the
+         * @ref setDynamicStyleCount(UnsignedInt, bool) overload to control
+         * their presence in case editing style count is zero.
          * @see @ref Configuration(UnsignedInt, UnsignedInt),
          *      @ref AbstractVisualLayer::allocateDynamicStyle(),
          *      @ref AbstractVisualLayer::dynamicStyleUsedCount()
          */
         Configuration& setDynamicStyleCount(UnsignedInt count) {
-            _dynamicStyleCount = count;
-            return *this;
+            return setDynamicStyleCount(count, false);
         }
+
+        /**
+         * @brief Set dynamic style count and explicitly enable dynamic editing styles
+         * @return Reference to self (for method chaining)
+         *
+         * If editing style count is zero, setting @p withEditingStyles to
+         * @cpp true @ce will include them for dynamic styles. Otherwise, if
+         * editing style count is zero, they're not included, meaning it's not
+         * possible to call @ref TextLayer::setDynamicStyleWithCursor(),
+         * @ref TextLayer::setDynamicStyleWithSelection() or
+         * @ref TextLayer::setDynamicStyleWithCursorSelection(), only
+         * @ref TextLayer::setDynamicStyle(). If editing style count is
+         * non-zero, dynamic editing styles are included always and
+         * @p withEditingStyles is ignored.
+         * @see @ref Configuration(UnsignedInt, UnsignedInt),
+         *      @ref AbstractVisualLayer::allocateDynamicStyle(),
+         *      @ref AbstractVisualLayer::dynamicStyleUsedCount()
+         */
+        Configuration& setDynamicStyleCount(UnsignedInt count, bool withEditingStyles);
 
     private:
         UnsignedInt _styleUniformCount, _styleCount;
+        UnsignedInt _editingStyleUniformCount = 0, _editingStyleCount = 0;
         UnsignedInt _dynamicStyleCount = 0;
+        bool _dynamicEditingStyles = false;
 };
 
 inline TextLayer::Shared& TextLayer::shared() {
