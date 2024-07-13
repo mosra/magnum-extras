@@ -123,23 +123,172 @@ const struct {
     const char* name;
     const char* filename;
     bool singleGlyph;
+    UnsignedInt cursor, selection;
     TextLayerStyleUniform styleUniform;
+    Containers::Optional<TextLayerCommonEditingStyleUniform> styleUniformEditingCommon;
+    Containers::Optional<TextLayerEditingStyleUniform> styleUniformCursor;
+    Vector4 cursorPadding;
+    Containers::Optional<TextLayerEditingStyleUniform> styleUniformSelection;
+    Vector4 selectionPadding;
+    Containers::Optional<TextLayerStyleUniform> styleUniformSelectionText;
 } RenderData[]{
-    {"default", "default.png", false,
-        TextLayerStyleUniform{}},
+    {"default", "default.png", false, 0, 0,
+        TextLayerStyleUniform{},
+        {}, {}, {}, {}, {}, {}},
     /* Should be centered according to its bounding box, not according to the
        font metrics -- thus a lot higher than the g in Maggi in the above */
-    {"default single glyph", "default-glyph.png", true,
-        TextLayerStyleUniform{}},
-    {"colored", "colored.png", false,
+    {"default single glyph", "default-glyph.png", true, 0, 0,
+        TextLayerStyleUniform{},
+        {}, {}, {}, {}, {}, {}},
+    {"colored", "colored.png", false, 0, 0,
         TextLayerStyleUniform{}
-            .setColor(0x3bd267_rgbf)},
+            .setColor(0x3bd267_rgbf),
+        {}, {}, {}, {}, {}, {}},
     /* Again, should be centered according to its bounding box */
-    {"colored single glyph", "colored-glyph.png", true,
+    {"colored single glyph", "colored-glyph.png", true, 0, 0,
         TextLayerStyleUniform{}
-            .setColor(0x3bd267_rgbf)},
+            .setColor(0x3bd267_rgbf),
+        {}, {}, {}, {}, {}, {}},
     /** @todo test at least toggling kerning once StbTrueTypeFont supports
         that */
+    /* The cursor has zero width so it's basically invisible */
+    {"default, default cursor style", "default.png", false, 2, 2,
+        TextLayerStyleUniform{},
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}, {}, {}, {}, {}},
+    {"default, selection, no selection style", "default.png", false, 2, 5,
+        TextLayerStyleUniform{},
+        TextLayerCommonEditingStyleUniform{},
+        {}, {}, {}, {}, {}},
+    {"default, default selection style, empty", "default.png", false, 2, 2,
+        TextLayerStyleUniform{},
+        TextLayerCommonEditingStyleUniform{},
+        {}, {}, TextLayerEditingStyleUniform{}, {}, {}},
+    {"default, default selection style", "default-selection.png", false, 2, 5,
+        TextLayerStyleUniform{},
+        TextLayerCommonEditingStyleUniform{},
+        {}, {}, TextLayerEditingStyleUniform{}, {}, {}},
+    /* Cursor isn't visible with selection present either */
+    {"default, default cursor + selection style", "default-selection.png", false, 2, 5,
+        TextLayerStyleUniform{},
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}, {},
+        TextLayerEditingStyleUniform{}, {},
+        {}},
+    /* And thus reversing the direction also doesn't change the appearance in
+       any way */
+    {"default, default cursor + selection style, reverse direction", "default-selection.png", false, 5, 2,
+        TextLayerStyleUniform{},
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}, {},
+        TextLayerEditingStyleUniform{}, {},
+        {}},
+    /* Overriding the selection text uniform with one that has a default value
+       also doesn't change anything */
+    {"default, default cursor + selection style, default selection text uniform override", "default-selection.png", false, 2, 5,
+        TextLayerStyleUniform{},
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}, {},
+        TextLayerEditingStyleUniform{}, {},
+        TextLayerStyleUniform{}},
+    /* Making the cursor and selection transparent doesn't affect the rendering
+       in any way */
+    {"colored, transparent cursor + selection style", "colored.png", false, 2, 5,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}
+            /* Non-zero cursor width to make it (transparently) visible */
+            .setBackgroundColor(0x00000000_rgbaf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x00000000_rgbaf), {},
+            {}},
+    {"colored, cursor style", "colored-cursor.png", false, 2, 2,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}
+            /* Extra wide to make it visible that it's in the background,
+               symmetric to verify there's nothing off in the positioning.
+               Off-center padding to verify it's applied to correct sides,
+               tested below. */
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        {}, {},
+        {}},
+    {"colored, cursor style, non-empty selection with no style", "colored-cursor.png", false, 2, 5,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        {}, {},
+        {}},
+    {"colored, selection style", "colored-selection.png", false, 2, 5,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{},
+        {}, {},
+        TextLayerEditingStyleUniform{}
+            /* Without padding as it's visible that it's in the background
+               anyway */
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        {}},
+    /* Should look exactly the same as above */
+    {"colored, selection style, different direction", "colored-selection.png", false, 5, 2,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{},
+        {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        {}},
+    {"colored, cursor + selection style, selection empty", "colored-cursor.png", false, 2, 2,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        {}},
+    {"colored, cursor + selection style", "colored-cursor-selection.png", false, 2, 5,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}
+            /* The red should be on the top of the yellow compared to selection
+               alone */
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        {}},
+    {"colored, cursor + selection style, colored text", "colored-cursor-selection-text.png", false, 2, 5,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{},
+        TextLayerEditingStyleUniform{}
+            /* The red should be on the top of the yellow compared to selection
+               alone */
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf)},
+    {"colored, cursor + selection style, colored text, smooth rounded corners", "colored-cursor-selection-text-rounded.png", false, 2, 5,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{}
+            .setSmoothness(1.0f),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf)
+            /* Off-center to verify it's applied to right edges */
+            .setCornerRadius(5.5f), {10.0f, -5.0f, -1.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf)
+            /* Off-center to verify it's applied to right edges */
+            .setCornerRadius(10.0f), {5.0f, 0.0f, 7.5f, 5.0f},
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf)},
 };
 
 constexpr Vector2i RenderSize{128, 64};
@@ -152,49 +301,68 @@ constexpr Range2D RenderAlignmentBoundingBox{{0.0f, -9.26651f}, {84.6205f, 33.40
 const struct {
     const char* name;
     Text::Alignment alignment;
-    bool partialUpdate;
+    bool partialUpdate, editable;
     Vector2 nodeOffset, nodeSize;
     Vector4 paddingFromStyle, paddingFromData;
 } RenderAlignmentPaddingData[]{
     /* Same as the "default" in RenderData */
-    {"middle center, no padding", Text::Alignment::MiddleCenter, false,
+    {"middle center, no padding",
+        Text::Alignment::MiddleCenter, false, true,
         {8.0f, 8.0f}, {112.0f, 48.0f}, {}, {}},
     /* Deliberately having one excessively shifted to left/top and the other to
        bottom/right. It shouldn't cause any strange artifacts. */
-    {"middle center, padding from style", Text::Alignment::MiddleCenter, false,
+    {"middle center, padding from style",
+        Text::Alignment::MiddleCenter, false, true,
         {-64.0f, -128.0f}, {192.0f, 192.0f},
         {72.0f, 136.0f, 8.0f, 8.0f}, {}},
-    {"middle center, padding from data", Text::Alignment::MiddleCenter, false,
+    {"middle center, padding from data",
+        Text::Alignment::MiddleCenter, false, true,
         {0.0f, 0.0f}, {192.0f, 192.0f},
         {}, {8.0f, 8.0f, 72.0f, 136.0f}},
-    {"middle center, padding from both", Text::Alignment::MiddleCenter, false,
+    {"middle center, padding from both",
+        Text::Alignment::MiddleCenter, false, true,
         {0.0f, 0.0f}, {128.0f, 64.0f},
         {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
-    {"middle center, padding from both, partial update", Text::Alignment::MiddleCenter, true,
+    {"middle center, padding from both, partial update",
+        Text::Alignment::MiddleCenter, true, true,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
+    {"middle center, padding from both, not editable",
+        Text::Alignment::MiddleCenter, false, false,
+        {0.0f, 0.0f}, {128.0f, 64.0f},
+        {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
+    {"middle center, padding from both, not editable, oartial update",
+        Text::Alignment::MiddleCenter, true, false,
         {0.0f, 0.0f}, {128.0f, 64.0f},
         {4.0f, 8.0f, 0.0f, 4.0f}, {4.0f, 0.0f, 8.0f, 4.0f}},
     /* The size isn't used for anything in this case so can be excessive */
-    {"top left, no padding", Text::Alignment::TopLeft, false,
+    {"top left, no padding",
+        Text::Alignment::TopLeft, false, true,
         (Vector2{RenderSize} - RenderAlignmentBoundingBox.size())/2.0f, {256.0f, 128.0f},
         {}, {}},
-    {"top left, padding from data", Text::Alignment::TopLeft, false,
+    {"top left, padding from data",
+        Text::Alignment::TopLeft, false, true,
         {0.0f, 0.0f}, {256.0f, 128.0f},
         {}, {(RenderSize.x() - RenderAlignmentBoundingBox.size().x())/2.0f,
              (RenderSize.y() - RenderAlignmentBoundingBox.size().y())/2.0f,
              0.0f, 0.0f}},
     /* The min offset isn't used for anything in this case so can be
        excessive */
-    {"bottom right, no padding", Text::Alignment::BottomRight, false,
+    {"bottom right, no padding",
+        Text::Alignment::BottomRight, false, true,
         {-128.0f, -256.0f}, Vector2{128.0f, 256.0f} + (Vector2{RenderSize} + RenderAlignmentBoundingBox.size())/2.0f,
         {}, {}},
-    {"bottom right, padding from style", Text::Alignment::BottomRight, false,
+    {"bottom right, padding from style",
+        Text::Alignment::BottomRight, false, true,
         {-128.0f, -256.0f}, Vector2{256.0f, 512.0f} + (Vector2{RenderSize} + RenderAlignmentBoundingBox.size())/2.0f,
         {0.0f, 0.0f, 128.0f, 256.0f}, {}},
-    {"line right, no padding", Text::Alignment::LineRight, false,
+    {"line right, no padding",
+        Text::Alignment::LineRight, false, true,
         {0.0f, RenderSize.y()/2.0f + RenderAlignmentBoundingBox.max().y() - RenderAlignmentBoundingBox.sizeY()},
         {(RenderSize.x() + RenderAlignmentBoundingBox.sizeX())/2.0f, RenderAlignmentBoundingBox.sizeY()},
         {}, {}},
-    {"line right, padding from both", Text::Alignment::LineRight, false,
+    {"line right, padding from both",
+        Text::Alignment::LineRight, false, true,
         {0.0f, -RenderAlignmentBoundingBox.sizeY()},
         {(RenderSize.x() + RenderAlignmentBoundingBox.sizeX())/2.0f, RenderAlignmentBoundingBox.sizeY() + RenderSize.y()/2.0f + RenderAlignmentBoundingBox.max().y()},
         {0.0f, RenderSize.y()/2.0f, 0.0f, 0.0f},
@@ -203,20 +371,44 @@ const struct {
 
 const struct {
     const char* name;
+    bool editable;
     bool setLater;
     bool partialUpdate;
 } RenderCustomColorData[]{
-    {"", false, false},
-    {"set later", true, false},
-    {"set later, partial update", true, true},
+    {"", false, false, false},
+    {"set later", false, true, false},
+    {"set later, partial update", false, true, true},
+    {"editable, ", true, false, false},
+    {"editable, set later", true, true, false},
+    {"editable, set later, partial update", true, true, true},
 };
 
 const struct {
     const char* name;
-    bool partialUpdate;
-} RenderChangeStyleTextData[]{
-    {"", false},
-    {"partial update", true},
+    bool partialUpdate, editableBefore, editableAfter;
+} RenderChangeStyleData[]{
+    {"", false, false, false},
+    {"partial update", true, false, false},
+    {"editable", false, true, true},
+    {"editable, partial update", true, true, true},
+    {"editable, editing style only before", false, true, false},
+    {"editable, editing style only before, partial update", true, true, false},
+    {"editable, editing style only after", false, false, true},
+    {"editable, editing style only after, partial update", true, false, true}
+};
+
+const struct {
+    const char* name;
+    bool partialUpdate, editableBefore, editableAfter;
+} RenderChangeTextData[]{
+    {"", false, false, false},
+    {"partial update", true, false, false},
+    {"editable", false, true, true},
+    {"editable, partial update", true, true, true},
+    {"editable only before", false, true, false},
+    {"editable only before, partial update", true, true, false},
+    {"editable only after", false, false, true},
+    {"editable only after, partial update", true, false, true},
 };
 
 const struct {
@@ -227,6 +419,14 @@ const struct {
     Float leftPadding;
     Containers::Optional<TextLayerStyleUniform> dynamicStyleUniform;
     Float dynamicLeftPadding;
+    Containers::Optional<TextLayerEditingStyleUniform> styleUniformCursor;
+    Vector4 cursorPadding;
+    Containers::Optional<TextLayerEditingStyleUniform> styleUniformSelection;
+    Containers::Optional<TextLayerStyleUniform> styleUniformSelectionText;
+    Containers::Optional<TextLayerEditingStyleUniform> dynamicStyleUniformCursor;
+    Vector4 dynamicCursorPadding;
+    Containers::Optional<TextLayerEditingStyleUniform> dynamicStyleUniformSelection;
+    Containers::Optional<TextLayerStyleUniform> dynamicStyleUniformSelectionText;
     bool createLayerAfterSetStyle;
     bool secondaryStyleUpload;
     bool secondaryDynamicStyleUpload;
@@ -236,102 +436,367 @@ const struct {
     {"default, static", "default.png", 1,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, false, false, false, false, false},
+    {"default, static, editing", "default-selection.png", 1,
+        TextLayerStyleUniform{}, 0.0f,
+        {}, 0.0f,
+        TextLayerEditingStyleUniform{}, {},
+        TextLayerEditingStyleUniform{}, {}, {}, {}, {}, {},
         false, false, false, false, false, false},
     {"default, static, create layer after setStyle()", "default.png", 1,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
         true, false, false, false, false, false},
+    {"default, static, create layer after setStyle(), editing", "default-selection.png", 1,
+        TextLayerStyleUniform{}, 0.0f,
+        {}, 0.0f,
+        TextLayerEditingStyleUniform{}, {},
+        TextLayerEditingStyleUniform{}, {}, {}, {}, {}, {},
+        true, false, false, false, false, false},
+
     {"default, dynamic with no upload", "default.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         {}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
         /* Default dynamic alignment is MiddleCenter as well, so it doesn't
            need to be passed explicitly */
+        false, false, false, false, true, false},
+    /* If no dynamic style is uploaded, the editing style isn't present by
+       default */
+    {"default, dynamic with no upload, editing", "default.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        {}, 0.0f,
+        /* At least one editing Optional has to be set to trigger a call to
+           setEditingStyle() */
+        TextLayerEditingStyleUniform{}, {}, {}, {}, {}, {}, {}, {},
         false, false, false, false, true, false},
     {"default, dynamic", "default.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, false, false, false, false, false},
+    {"default, dynamic, editing", "default-selection.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}, 0.0f,
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}, {},
+        TextLayerEditingStyleUniform{}, {},
         false, false, false, false, false, false},
     {"default, only dynamic styles", "default.png", 1,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
         /* Passing an explicit font because there's otherwise none by
            default */
         false, false, false, true, true, false},
+    {"default, only dynamic styles, editing", "default-selection.png", 1,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}, 0.0f,
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}, {},
+        TextLayerEditingStyleUniform{}, {},
+        /* Passing an explicit font because there's otherwise none by
+           default */
+        false, false, false, true, true, false},
+
     {"styled, static", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, false, false, false, false, false},
+    {"styled, static, cursor", "colored-cursor.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, 0.0f,
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        {}, {}, {}, {}, {}, {},
+        false, false, false, false, false, false},
+    {"styled, static, selection", "colored-selection.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, 0.0f,
+        {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        {}, {}, {}, {},
+        false, false, false, false, false, false},
+    {"styled, static, cursor + selection, colored text", "colored-cursor-selection-text.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, 0.0f,
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf),
+        {}, {}, {}, {},
         false, false, false, false, false, false},
     {"styled, static, create layer after setStyle()", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        true, false, false, false, false, false},
+    {"styled, static, create layer after setStyle(), cursor + selection, colored text", "colored-cursor-selection-text.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, 0.0f,
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf),
+        {}, {}, {}, {},
         true, false, false, false, false, false},
     {"styled, static with padding", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 128.0f,
         {}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
         false, false, false, false, false, false},
+    {"styled, static with padding, cursor + selection", "colored-cursor-selection.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 128.0f,
+        {}, 0.0f,
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        {}, {}, {}, {},
+        false, false, false, false, false, false},
+
     {"styled, dynamic", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, false, false, false, false, false},
+    {"styled, dynamic, cursor", "colored-cursor.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        {}, {},
+        false, false, false, false, false, false},
+    {"styled, dynamic, selection", "colored-selection.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {},
+        {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        false, false, false, false, false, false},
+    {"styled, dynamic, cursor + selection, colored text", "colored-cursor-selection-text.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf),
         false, false, false, false, false, false},
     {"styled, dynamic with padding", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 128.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, false, false, false, false, false},
+    {"styled, dynamic with padding, cursor + selection", "colored-cursor-selection.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 128.0f,
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
         false, false, false, false, false, false},
     {"styled, static, secondary upload", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         {}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, true, false, false, true, true},
+    {"styled, static, secondary upload, cursor + selection, colored text", "colored-cursor-selection-text.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, 0.0f,
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf),
+        {}, {}, {}, {},
         false, true, false, false, true, true},
     {"styled, static, secondary dynamic upload", "colored.png", 1,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
         TextLayerStyleUniform{}, 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, false, true, false, false, false},
+    {"styled, static, secondary dynamic upload, cursor + selection, colored text", "colored-cursor-selection-text.png", 1,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf),
+        /* The dynamic style is unused, so its upload is non-editing */
+        {}, {}, {}, {},
         false, false, true, false, false, false},
     {"styled, dynamic, secondary upload", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, false, true, false, true, true},
+    {"styled, dynamic, secondary upload, cursor", "colored-cursor.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        {}, {},
+        false, false, true, false, true, true},
+    {"styled, dynamic, secondary upload, selection", "colored-selection.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {},
+        {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf), {},
+        false, false, true, false, true, true},
+    {"styled, dynamic, secondary upload, cursor + selection, colored text", "colored-cursor-selection-text.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf),
         false, false, true, false, true, true},
     {"styled, dynamic, secondary static upload", "colored.png", 5,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, true, false, false, false, false},
+    {"styled, dynamic, secondary static upload, cursor + selection, colored text", "colored-cursor-selection-text.png", 5,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        /* The static style is unused, so its upload is non-editing */
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf),
         false, true, false, false, false, false},
     {"styled, only dynamic styles", "colored.png", 1,
         TextLayerStyleUniform{}, 0.0f,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {}, {}, {}, {}, {},
+        false, false, false, true, false, false},
+    {"styled, only dynamic styles, cursor + selection, colored text", "colored-cursor-selection-text.png", 1,
+        TextLayerStyleUniform{}, 0.0f,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf), 0.0f,
+        {}, {}, {}, {},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf), {5.0f, 0.0f, 5.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf),
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf),
         false, false, false, true, false, false},
 };
 
 const struct {
     const char* name;
+    bool editable;
     bool dataInNodeOrder;
 } DrawOrderData[]{
-    {"data created in node order", true},
-    {"data created randomly", false}
+    {"data created in node order", false, true},
+    {"data created randomly", false, false},
+    {"editable, data created in node order", true, true},
+    {"editable, data created randomly", true, false},
 };
 
 const struct {
     const char* name;
     const char* filename;
+    bool editable;
     bool clip;
     bool singleTopLevel;
     bool flipOrder;
 } DrawClippingData[]{
     {"clipping disabled", "clipping-disabled.png",
-        false, false, false},
+        false, false, false, false},
     {"clipping top-level nodes", "clipping-enabled.png",
-        true, false, false},
+        false, true, false, false},
     {"clipping top-level nodes, different node order", "clipping-enabled.png",
-        true, false, true},
+        false, true, false, true},
     {"single top-level node with clipping subnodes", "clipping-enabled.png",
-        true, true, false},
+        false, true, true, false},
+    {"editable, clipping disabled", "clipping-disabled-editable.png",
+        true, false, false, false},
+    {"editable, clipping top-level nodes", "clipping-enabled-editable.png",
+        true, true, false, false},
+    {"editable, clipping top-level nodes, different node order", "clipping-enabled-editable.png",
+        true, true, false, true},
+    {"editable, single top-level node with clipping subnodes", "clipping-enabled-editable.png",
+        true, true, true, false},
+};
+
+const struct {
+    const char* name;
+    bool editableBefore, editableAfter;
+    UnsignedInt(*transition)(UnsignedInt);
+} EventStyleTransitionData[]{
+    {"", false, false,
+        [](UnsignedInt style) -> UnsignedInt {
+            if(style == 0) return 2;
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }},
+    {"editable", true, true,
+        [](UnsignedInt style) -> UnsignedInt {
+            if(style == 1) return 3;
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }},
+    {"editable, editing style only before", true, false,
+        [](UnsignedInt style) -> UnsignedInt {
+            if(style == 1) return 2;
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }},
+    {"editable, editing style only after", false, true,
+        [](UnsignedInt style) -> UnsignedInt {
+            if(style == 0) return 3;
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        }},
 };
 
 TextLayerGLTest::TextLayerGLTest() {
@@ -367,9 +832,13 @@ TextLayerGLTest::TextLayerGLTest() {
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
-    addInstancedTests({&TextLayerGLTest::renderChangeStyle,
-                       &TextLayerGLTest::renderChangeText},
-        Containers::arraySize(RenderChangeStyleTextData),
+    addInstancedTests({&TextLayerGLTest::renderChangeStyle},
+        Containers::arraySize(RenderChangeStyleData),
+        &TextLayerGLTest::renderSetup,
+        &TextLayerGLTest::renderTeardown);
+
+    addInstancedTests({&TextLayerGLTest::renderChangeText},
+        Containers::arraySize(RenderChangeTextData),
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
@@ -388,7 +857,8 @@ TextLayerGLTest::TextLayerGLTest() {
         &TextLayerGLTest::drawSetup,
         &TextLayerGLTest::drawTeardown);
 
-    addTests({&TextLayerGLTest::eventStyleTransition},
+    addInstancedTests({&TextLayerGLTest::eventStyleTransition},
+        Containers::arraySize(EventStyleTransitionData),
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
@@ -587,15 +1057,59 @@ void TextLayerGLTest::render() {
         /* To verify it's not always picking the first uniform */
         TextLayerStyleUniform{},
         TextLayerStyleUniform{},
-        data.styleUniform
+        data.styleUniform,
+        /* Optionally used to override selected text uniform */
+        data.styleUniformSelectionText ?
+            *data.styleUniformSelectionText : TextLayerStyleUniform{}
     };
     UnsignedInt styleToUniform[]{
         /* To verify it's not using the style ID as uniform ID */
         1, 2, 0, 1, 0
     };
+    Int styleCursorStyles[]{
+        -1,
+         data.styleUniformCursor ? 2 : -1,
+         -1,
+         -1,
+         -1
+    };
+    Int styleSelectionStyles[]{
+        -1,
+         data.styleUniformSelection ? 0 : -1,
+         -1,
+         -1,
+         -1
+    };
+    TextLayerEditingStyleUniform editingStyleUniforms[]{
+        /* Again to verify it's not always picking constant IDs */
+        TextLayerEditingStyleUniform{},
+        data.styleUniformCursor ?
+            *data.styleUniformCursor : TextLayerEditingStyleUniform{},
+        TextLayerEditingStyleUniform{},
+        data.styleUniformSelection ?
+            *data.styleUniformSelection : TextLayerEditingStyleUniform{},
+    };
+    UnsignedInt editingStyleToUniform[]{
+        /* Again to verify it's not using the style ID as uniform ID */
+        3, 0, 1
+    };
+    Int editingStyleTextUniforms[]{
+        data.styleUniformSelectionText ? 3 : -1,
+        -1,
+        -1
+    };
+    Vector4 editingStylePaddings[]{
+        data.selectionPadding,
+        {},
+        data.cursorPadding
+    };
     TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{
         UnsignedInt(Containers::arraySize(styleUniforms)),
-        UnsignedInt(Containers::arraySize(styleToUniform))}};
+        UnsignedInt(Containers::arraySize(styleToUniform))}
+            .setEditingStyleCount(
+                data.styleUniformEditingCommon ? Containers::arraySize(editingStyleUniforms) : 0,
+                data.styleUniformEditingCommon ? Containers::arraySize(editingStyleToUniform) : 0)
+    };
     layerShared.setGlyphCache(_fontGlyphCache);
     FontHandle fontHandle[]{
         layerShared.addFont(*_font, 32.0f)
@@ -612,7 +1126,17 @@ void TextLayerGLTest::render() {
         Containers::stridedArrayView(alignment).broadcasted<0>(5),
         /* There's nothing in features that would affect rendering in a way
            that isn't already tested in TextLayerTest */
-        {}, {}, {}, {});
+        {}, {}, {},
+        styleCursorStyles,
+        styleSelectionStyles,
+        {});
+    if(data.styleUniformEditingCommon) {
+        layerShared.setEditingStyle(*data.styleUniformEditingCommon,
+            editingStyleUniforms,
+            editingStyleToUniform,
+            editingStyleTextUniforms,
+            editingStylePaddings);
+    }
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -620,10 +1144,16 @@ void TextLayerGLTest::render() {
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     /* Using a text that has glyphs both above and below line and doesn't need
        too many glyphs */
-    if(data.singleGlyph)
+    if(data.singleGlyph) {
         ui.layer<TextLayerGL>(layer).createGlyph(1, _font->glyphId('g'), {}, node);
-    else
-        ui.layer<TextLayerGL>(layer).create(1, "Maggi", {}, node);
+        CORRADE_INTERNAL_ASSERT(!data.styleUniformEditingCommon);
+    } else {
+        DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(1, "Maggi", {},
+            data.styleUniformEditingCommon ? TextDataFlag::Editable : TextDataFlags{},
+            node);
+        if(data.styleUniformEditingCommon)
+            ui.layer<TextLayerGL>(layer).setCursor(nodeData, data.cursor, data.selection);
+    }
 
     ui.draw();
 
@@ -648,6 +1178,10 @@ void TextLayerGLTest::renderAlignmentPadding() {
     auto&& data = RenderAlignmentPaddingData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
+    /* Matches either the "colored" or the  "colored, cursor + selection style"
+       case in render(). Verifying also the non-editable variant to avoid an
+       accident where alignment would be done fully only for editing style. */
+
     if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
 
@@ -658,21 +1192,38 @@ void TextLayerGLTest::renderAlignmentPadding() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}
+        .setEditingStyleCount(data.editable ? 2 : 0)
+    };
     layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}},
+        {TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf)},
         {fontHandle},
         {data.alignment},
-        {}, {}, {}, {data.paddingFromStyle});
+        {}, {}, {},
+        {data.editable ? 0 : -1}, {data.editable ? 1 : -1},
+        {data.paddingFromStyle});
+    if(data.editable) layerShared.setEditingStyle(
+        TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf),
+         TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf)},
+        {},
+        {{5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode(data.nodeOffset, data.nodeSize);
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, node);
+    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {},
+        data.editable ? TextDataFlag::Editable : TextDataFlags{},
+        node);
+    if(data.editable)
+        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
 
     if(data.partialUpdate) {
         ui.update();
@@ -701,7 +1252,10 @@ void TextLayerGLTest::renderAlignmentPadding() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/default.png"),
+        Utility::Path::join(WHEE_TEST_DIR,
+            data.editable ?
+                "TextLayerTestFiles/colored-cursor-selection.png" :
+                "TextLayerTestFiles/colored.png"),
         DebugTools::CompareImageToFile{_importerManager});
 }
 
@@ -722,24 +1276,43 @@ void TextLayerGLTest::renderCustomColor() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{2, 1}
+        .setEditingStyleCount(data.editable ? 2 : 0)
+    };
     layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}
-            .setColor(0x3bd267_rgbf/0x336699_rgbf)},
+            .setColor(0x3bd267_rgbf/0x336699_rgbf),
+         TextLayerStyleUniform{}
+            /* This may become an issue with lowp, let's hope it won't */
+            .setColor(0x1f1f1f_rgbf/0x336699_rgbf)},
+        {0},
         {fontHandle},
         {Text::Alignment::MiddleCenter},
-        {}, {}, {}, {});
+        {}, {}, {},
+        {data.editable ? 0 : -1}, {data.editable ? 1 : -1},
+        {});
+    if(data.editable) layerShared.setEditingStyle(
+        TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{} /* not affected by the color */
+            .setBackgroundColor(0xcd3431_rgbf),
+         TextLayerEditingStyleUniform{} /* not affected by the color either */
+            .setBackgroundColor(0xc7cf2f_rgbf)},
+        {-1, 1},
+        {{5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    TextDataFlags flags = data.editable ? TextDataFlag::Editable : TextDataFlags{};
     DataHandle nodeData = data.setLater ?
-        ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, node) :
-        ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, 0x336699_rgbf, node);
+        ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, flags, node) :
+        ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, 0x336699_rgbf, flags, node);
+    if(data.editable)
+        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
 
     if(data.partialUpdate) {
         ui.update();
@@ -768,16 +1341,22 @@ void TextLayerGLTest::renderCustomColor() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/colored.png"),
+        Utility::Path::join(WHEE_TEST_DIR, data.editable ?
+            "TextLayerTestFiles/colored-cursor-selection-text.png" :
+            "TextLayerTestFiles/colored.png"),
         DebugTools::CompareImageToFile{_importerManager});
 }
 
 void TextLayerGLTest::renderChangeStyle() {
-    auto&& data = RenderChangeStyleTextData[testCaseInstanceId()];
+    auto&& data = RenderChangeStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    /* Basically the same as the "colored" case in render(), except that the
-       style ID is changed to it only later. */
+    /* Basically the same as the "colored" /
+       "colored, cursor + selection style, colored text" cases in render(),
+       except that the style ID is changed to it only later. Verifying also the
+       non-editable variant to avoid an accident where state update would be
+       done fully only for editing style, also testing getting or losing the
+       editing style. */
 
     if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
@@ -789,93 +1368,59 @@ void TextLayerGLTest::renderChangeStyle() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{2}};
-    layerShared
-        .setGlyphCache(_fontGlyphCache);
-
-    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
-    layerShared.setStyle(TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{},
-         TextLayerStyleUniform{}
-            .setColor(0x3bd267_rgbf)},
-        {fontHandle, fontHandle},
-        {Text::Alignment::MiddleCenter, Text::Alignment::MiddleCenter},
-        {}, {}, {}, {});
-
-    LayerHandle layer = ui.createLayer();
-    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
-
-    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, node);
-
-    if(data.partialUpdate) {
-        ui.update();
-        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    }
-
-    ui.layer<TextLayerGL>(layer).setStyle(nodeData, 1);
-    CORRADE_COMPARE_AS(ui.state(),
-        UserInterfaceState::NeedsDataUpdate,
-        TestSuite::Compare::GreaterOrEqual);
-
-    ui.draw();
-
-    MAGNUM_VERIFY_NO_GL_ERROR();
-
-    if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
-       !(_importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
-        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
-
-    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
-    /* Same problem is with all builtin shaders, so this doesn't seem to be a
-       bug in the text layer shader code */
-    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
-        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
-    #endif
-    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/colored.png"),
-        DebugTools::CompareImageToFile{_importerManager});
-}
-
-void TextLayerGLTest::renderChangeText() {
-    auto&& data = RenderChangeStyleTextData[testCaseInstanceId()];
-    setTestCaseDescription(data.name);
-
-    /* Basically the same as the "default" case in render(), except that the
-       text is changed only subsequently. */
-
-    if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
-        CORRADE_SKIP("StbTrueTypeFont plugin not found.");
-
-    AbstractUserInterface ui{RenderSize};
-    ui.setRendererInstance(Containers::pointer<RendererGL>());
-
-    /* Opened in the constructor together with cache filling to circumvent
-       stb_truetype's extreme rasterization slowness */
-    CORRADE_VERIFY(_font && _font->isOpened());
-
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{4, 3}
+        .setEditingStyleCount(data.editableBefore || data.editableAfter ? 3 : 0)
+    };
     layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}},
-        {fontHandle},
-        {Text::Alignment::MiddleCenter},
-        {}, {}, {}, {});
+        {TextLayerStyleUniform{},
+         TextLayerStyleUniform{}        /* colored */
+            .setColor(0x3bd267_rgbf),
+         TextLayerStyleUniform{}         /* colored, cursor + selection style */
+            .setColor(0x3bd267_rgbf),
+         TextLayerStyleUniform{}         /* Selected text override */
+            .setColor(0x1f1f1f_rgbf)},
+        {0, 1, 2},
+        {fontHandle, fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
+        {}, {}, {},
+        {data.editableBefore ? 0 : -1,
+         -1,
+         data.editableAfter ? 1 : -1},
+        {data.editableBefore ? 0 : -1,
+         -1,
+         data.editableAfter ? 2 : -1},
+        {});
+    if(data.editableBefore || data.editableAfter) layerShared.setEditingStyle(
+        TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{},
+         TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf),
+         TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf)},
+        {-1, -1, 3},
+        {{}, {5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "gM!", {}, node);
+    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {},
+        data.editableBefore || data.editableAfter ? TextDataFlag::Editable : TextDataFlags{},
+        node);
+    if(data.editableBefore || data.editableAfter)
+        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<TextLayerGL>(layer).setText(nodeData, "Maggi", {});
+    ui.layer<TextLayerGL>(layer).setStyle(nodeData, data.editableAfter ? 2 : 1);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
@@ -895,7 +1440,107 @@ void TextLayerGLTest::renderChangeText() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/default.png"),
+        Utility::Path::join(WHEE_TEST_DIR,
+            data.editableAfter ?
+                "TextLayerTestFiles/colored-cursor-selection-text.png" :
+                "TextLayerTestFiles/colored.png"),
+        DebugTools::CompareImageToFile{_importerManager});
+}
+
+void TextLayerGLTest::renderChangeText() {
+    auto&& data = RenderChangeTextData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Basically the same as the "colored" /
+       "colored, cursor + selection style, colored text" cases in render(),
+       except that the text is changed only subsequently. Verifying also the
+       non-editable variant to avoid an accident where state update would be
+       done fully only for editing style, and a case where a non-editable text
+       becomes editable and vice versa. */
+
+    if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("StbTrueTypeFont plugin not found.");
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    /* Opened in the constructor together with cache filling to circumvent
+       stb_truetype's extreme rasterization slowness */
+    CORRADE_VERIFY(_font && _font->isOpened());
+
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{2, 1}
+        .setEditingStyleCount(data.editableBefore || data.editableAfter ? 2 : 0)
+    };
+    layerShared.setGlyphCache(_fontGlyphCache);
+
+    FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
+    layerShared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+         TextLayerStyleUniform{}         /* Selected text override */
+            .setColor(0x1f1f1f_rgbf)},
+        {0},
+        {fontHandle},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {},
+        {data.editableBefore || data.editableAfter ? 0 : -1},
+        {data.editableBefore || data.editableAfter ? 1 : -1},
+        {});
+    if(data.editableBefore || data.editableAfter) layerShared.setEditingStyle(
+        TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf),
+         TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf)},
+        {-1, 1},
+        {{5.0f, 0.0f, 5.0f, 0.0f}, {}});
+
+    LayerHandle layer = ui.createLayer();
+    ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "gM!", {},
+        data.editableBefore ? TextDataFlag::Editable : TextDataFlags{},
+        node);
+    if(data.editableBefore)
+        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 1, 3);
+
+    if(data.partialUpdate) {
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    /* If no flags are specified, they're carried over */
+    if(data.editableAfter == data.editableBefore)
+        ui.layer<TextLayerGL>(layer).setText(nodeData, "Maggi", {});
+    else
+        ui.layer<TextLayerGL>(layer).setText(nodeData, "Maggi", {},
+            data.editableAfter ? TextDataFlag::Editable : TextDataFlags{});
+    if(data.editableAfter)
+        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
+    CORRADE_COMPARE_AS(ui.state(),
+        UserInterfaceState::NeedsDataUpdate,
+        TestSuite::Compare::GreaterOrEqual);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the text layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join(WHEE_TEST_DIR,
+            data.editableAfter ?
+                "TextLayerTestFiles/colored-cursor-selection-text.png" :
+                "TextLayerTestFiles/colored.png"),
         DebugTools::CompareImageToFile{_importerManager});
 }
 
@@ -916,7 +1561,13 @@ void TextLayerGLTest::renderDynamicStyles() {
     TextLayerGL::Shared layerShared{
         TextLayer::Shared::Configuration{data.noBaseStyles ? 0u : 3u,
                                          data.noBaseStyles ? 0u : 4u}
-            .setDynamicStyleCount(2)
+            /* Include editing styles only if there's any set and base styles
+               aren't turned off altogether */
+            .setEditingStyleCount(
+                data.noBaseStyles || (!data.styleUniformCursor && !data.styleUniformSelection && !data.dynamicStyleUniformCursor && !data.dynamicStyleUniformSelection) ? 0 : 3,
+                data.noBaseStyles || (!data.styleUniformCursor && !data.styleUniformSelection && !data.dynamicStyleUniformCursor && !data.dynamicStyleUniformSelection) ? 0 : 4)
+            /* Include dynamic editing styles if there's any */
+            .setDynamicStyleCount(2, data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection)
     };
     layerShared.setGlyphCache(_fontGlyphCache);
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
@@ -935,17 +1586,36 @@ void TextLayerGLTest::renderDynamicStyles() {
             {2, 1, 1, 0},
             {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
             {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
-            {}, {}, {}, {});
+            {}, {}, {},
+            {}, {},
+            {});
+        if(data.styleUniformCursor || data.styleUniformSelection || data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection)
+            layerShared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
+                {TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}},
+                /* The mapping is again deliberately different, the secondary
+                   upload should cause it to be updated */
+                {0, 1, 0, 2},
+                {},
+                {{}, {}, {}, {}});
     } else if(data.noBaseStyles) {
         layerShared.setStyle(TextLayerCommonStyleUniform{},
             {},
             {},
             {},
             {}, {}, {},
+            {}, {},
             {});
+        if(data.styleUniformCursor || data.styleUniformSelection || data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection)
+            layerShared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
+                {},
+                {},
+                {});
     } else {
         layerShared.setStyle(TextLayerCommonStyleUniform{},
-            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, data.styleUniform},
+            {TextLayerStyleUniform{},
+             data.styleUniformSelectionText ?
+                *data.styleUniformSelectionText : TextLayerStyleUniform{},
+             data.styleUniform},
             {1, 2, 0, 1},
             {FontHandle::Null, fontHandle, FontHandle::Null, FontHandle::Null},
             {Text::Alignment::BottomRight,
@@ -955,7 +1625,20 @@ void TextLayerGLTest::renderDynamicStyles() {
             /* There's nothing in features that would affect rendering in a way
                that isn't already tested in TextLayerTest */
             {}, {}, {},
+            {-1, data.styleUniformCursor ? 2 : -1, -1, -1},
+            {-1, data.styleUniformSelection ? 0 : -1, -1, -1},
             {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
+        if(data.styleUniformCursor || data.styleUniformSelection || data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection) {
+            layerShared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
+                {TextLayerEditingStyleUniform{},
+                 data.styleUniformCursor ?
+                    *data.styleUniformCursor : TextLayerEditingStyleUniform{},
+                 data.styleUniformSelection ?
+                    *data.styleUniformSelection : TextLayerEditingStyleUniform{}},
+                {2, 0, 1, 0},
+                {data.styleUniformSelectionText ? 1 : -1, -1, -1, -1},
+                {{}, {}, data.cursorPadding, {}});
+        }
     }
 
     /* If the layer is created after the setStyle() call, it should have no
@@ -970,13 +1653,67 @@ void TextLayerGLTest::renderDynamicStyles() {
 
     if(data.dynamicStyleUniform) {
         /* Again, if the dynamic style  is being uploaded second time, upload
-           just a default state at first */
+           just a default state at first. Preserve the presence of cursor /
+           editing style tho, to not trigger NeedsDataUpdate as well. */
         if(data.secondaryDynamicStyleUpload) {
-            layer->setDynamicStyle(1,
-                TextLayerStyleUniform{},
-                FontHandle::Null,
-                Text::Alignment{},
-                {}, {});
+            if(data.dynamicStyleUniformCursor && data.dynamicStyleUniformSelection) {
+                layer->setDynamicStyleWithCursorSelection(1,
+                    TextLayerStyleUniform{},
+                    FontHandle::Null,
+                    Text::Alignment{},
+                    {}, {},
+                    /* Changing padding triggers NeedsDataUpdate also, so set
+                       it initially already */
+                    TextLayerEditingStyleUniform{}, data.dynamicCursorPadding,
+                    TextLayerEditingStyleUniform{}, {}, {});
+            } else if(data.dynamicStyleUniformCursor) {
+                layer->setDynamicStyleWithCursor(1,
+                    TextLayerStyleUniform{},
+                    FontHandle::Null,
+                    Text::Alignment{},
+                    {}, {},
+                    /* Changing padding triggers NeedsDataUpdate also, so set
+                       it initially already */
+                    TextLayerEditingStyleUniform{}, data.dynamicCursorPadding);
+            } else if(data.dynamicStyleUniformSelection) {
+                layer->setDynamicStyleWithSelection(1,
+                    TextLayerStyleUniform{},
+                    FontHandle::Null,
+                    Text::Alignment{},
+                    {}, {},
+                    TextLayerEditingStyleUniform{}, {}, {});
+            } else {
+                layer->setDynamicStyle(1,
+                    TextLayerStyleUniform{},
+                    FontHandle::Null,
+                    Text::Alignment{},
+                    {}, {});
+            }
+        } else if(data.dynamicStyleUniformCursor && data.dynamicStyleUniformSelection) {
+            layer->setDynamicStyleWithCursorSelection(1,
+                *data.dynamicStyleUniform,
+                fontHandle,
+                Text::Alignment::MiddleCenter,
+                {},
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f},
+                *data.dynamicStyleUniformCursor, data.dynamicCursorPadding,
+                *data.dynamicStyleUniformSelection, data.dynamicStyleUniformSelectionText, {});
+        } else if(data.dynamicStyleUniformCursor) {
+            layer->setDynamicStyleWithCursor(1,
+                *data.dynamicStyleUniform,
+                fontHandle,
+                Text::Alignment::MiddleCenter,
+                {},
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f},
+                *data.dynamicStyleUniformCursor, data.dynamicCursorPadding);
+        } else if(data.dynamicStyleUniformSelection) {
+            layer->setDynamicStyleWithSelection(1,
+                *data.dynamicStyleUniform,
+                fontHandle,
+                Text::Alignment::MiddleCenter,
+                {},
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f},
+                *data.dynamicStyleUniformSelection, data.dynamicStyleUniformSelectionText, {});
         } else {
             layer->setDynamicStyle(1,
                 *data.dynamicStyleUniform,
@@ -1004,7 +1741,12 @@ void TextLayerGLTest::renderDynamicStyles() {
         properties.setAlignment(Text::Alignment::MiddleCenter);
     /* There isn't any difference in handling of text ḿade with create() or
        createGlyph() inside draw() so this tests just one */
-    layer->create(data.styleIndex, "Maggi", properties, node);
+    DataHandle nodeData = layer->create(data.styleIndex, "Maggi", properties,
+        data.styleUniformCursor || data.styleUniformSelection || data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection ?
+            TextDataFlag::Editable : TextDataFlags{},
+        node);
+    if(data.styleUniformCursor || data.styleUniformSelection || data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection)
+        layer->setCursor(nodeData, 2, 5);
 
     /* If there's a secondary upload, draw & clear to force the first upload */
     if(data.secondaryStyleUpload || data.secondaryDynamicStyleUpload) {
@@ -1016,7 +1758,10 @@ void TextLayerGLTest::renderDynamicStyles() {
     /* Upload the actual style data only second time if desired */
     if(data.secondaryStyleUpload) {
         layerShared.setStyle(TextLayerCommonStyleUniform{},
-            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, data.styleUniform},
+            {TextLayerStyleUniform{},
+             data.styleUniformSelectionText ?
+                *data.styleUniformSelectionText : TextLayerStyleUniform{},
+             data.styleUniform},
             {1, 2, 0, 1},
             {FontHandle::Null, fontHandle, FontHandle::Null, FontHandle::Null},
             {Text::Alignment::BottomRight,
@@ -1026,16 +1771,56 @@ void TextLayerGLTest::renderDynamicStyles() {
             /* There's nothing in features that would affect rendering in a way
                that isn't already tested in TextLayerTest */
             {}, {}, {},
+            {-1, data.styleUniformCursor ? 2 : -1, -1, -1},
+            {-1, data.styleUniformSelection ? 0 : -1, -1, -1},
             {{}, {data.leftPadding, 0.0f, 0.0f, 0.0f}, {}, {}});
+        if(data.styleUniformCursor || data.styleUniformSelection || data.dynamicStyleUniformCursor || data.dynamicStyleUniformSelection) {
+            layerShared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
+                {TextLayerEditingStyleUniform{},
+                 data.styleUniformCursor ?
+                    *data.styleUniformCursor : TextLayerEditingStyleUniform{},
+                 data.styleUniformSelection ?
+                    *data.styleUniformSelection : TextLayerEditingStyleUniform{}},
+                {2, 0, 1, 0},
+                {data.styleUniformSelectionText ? 1 : -1, -1, -1, -1},
+                {{}, {}, data.cursorPadding, {}});
+        }
         CORRADE_COMPARE(layer->state(), LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate);
     }
     if(data.secondaryDynamicStyleUpload) {
-        layer->setDynamicStyle(1,
-            *data.dynamicStyleUniform,
-            fontHandle,
-            Text::Alignment::MiddleCenter,
-            {},
-            {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
+        if(data.dynamicStyleUniformCursor && data.dynamicStyleUniformSelection) {
+            layer->setDynamicStyleWithCursorSelection(1,
+                *data.dynamicStyleUniform,
+                fontHandle,
+                Text::Alignment::MiddleCenter,
+                {},
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f},
+                *data.dynamicStyleUniformCursor, data.dynamicCursorPadding,
+                *data.dynamicStyleUniformSelection, data.dynamicStyleUniformSelectionText, {});
+        } else if(data.dynamicStyleUniformCursor) {
+            layer->setDynamicStyleWithCursor(1,
+                *data.dynamicStyleUniform,
+                fontHandle,
+                Text::Alignment::MiddleCenter,
+                {},
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f},
+                *data.dynamicStyleUniformCursor, data.dynamicCursorPadding);
+        } else if(data.dynamicStyleUniformSelection) {
+            layer->setDynamicStyleWithSelection(1,
+                *data.dynamicStyleUniform,
+                fontHandle,
+                Text::Alignment::MiddleCenter,
+                {},
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f},
+                *data.dynamicStyleUniformSelection, data.dynamicStyleUniformSelectionText, {});
+        } else {
+            layer->setDynamicStyle(1,
+                *data.dynamicStyleUniform,
+                fontHandle,
+                Text::Alignment::MiddleCenter,
+                {},
+                {data.dynamicLeftPadding, 0.0f, 0.0f, 0.0f});
+        }
         CORRADE_COMPARE(layer->state(), LayerState::NeedsCommonDataUpdate);
     }
 
@@ -1091,7 +1876,14 @@ void TextLayerGLTest::drawOrder() {
     setTestCaseDescription(data.name);
 
     /* Based on BaseLayerGLTest::drawOrder(), with additional variability due
-       to each text having a different size */
+       to each text having a different size, and editing styles included.
+
+       Right now, if clip rects are not present, all selections and cursors are
+       drawn before all the text for every top-level node, so they're
+       underneath the green+blue+red but above the large red.
+
+       This may or may not change in the future. With clip rects more
+       interleaving happens, tested in drawClipping(). */
 
     AbstractUserInterface ui{DrawSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -1126,10 +1918,10 @@ void TextLayerGLTest::drawOrder() {
                         advances[i] = {8.0f, 0.0f};
                     }
                 }
-                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {
-                    /** @todo implement when it actually does get called for
-                        cursor / selection */
-                    CORRADE_FAIL("This shouldn't be called.");
+                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>& clusters) const override {
+                    /* Just a trivial 1:1 mapping */
+                    for(std::size_t i = 0; i != clusters.size(); ++i)
+                        clusters[i] = i;
                 }
             };
             return Containers::pointer<Shaper>(*this);
@@ -1148,7 +1940,9 @@ void TextLayerGLTest::drawOrder() {
     cache.flushImage({{}, {8, 16}});
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 16}});
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{3, 4}};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{3, 4}
+        .setEditingStyleCount(6)
+    };
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandleLarge = layerShared.addFont(font, 16.0f);
@@ -1177,7 +1971,35 @@ void TextLayerGLTest::drawOrder() {
         Text::Alignment::MiddleCenter,
         Text::Alignment::MiddleCenter,
         Text::Alignment::MiddleCenter
-    }, {}, {}, {}, {});
+    }, {}, {}, {}, {
+        data.editable ? 0 : -1,
+        data.editable ? 0 : -1,
+        data.editable ? 1 : -1,
+        data.editable ? 2 : -1,
+    }, {
+        data.editable ? 3 : -1,
+        data.editable ? 3 : -1,
+        data.editable ? 4 : -1,
+        data.editable ? 5 : -1,
+    }, {});
+    layerShared.setEditingStyle(TextLayerCommonEditingStyleUniform{}, {
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x00cccc99_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcc00cc99_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcccc0099_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x00666699_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x66006699_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x66660099_rgbaf)
+    }, {}, {
+        /* Padding to not have the selection align exactly with the glyphs */
+        Vector4{1.0f}, Vector4{1.0f}, Vector4{1.0f},
+        Vector4{1.0f}, Vector4{1.0f}, Vector4{1.0f}
+    });
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -1192,19 +2014,25 @@ void TextLayerGLTest::drawOrder() {
     NodeHandle childBelowBlue = ui.createNode(topLevelOnTopGreen, {13.0f, 4.0f}, {16.0f, 16.0f});
     NodeHandle childAboveRed = ui.createNode(childBelowBlue, {-7.0f, 8.0f}, {16.0f, 16.0f});
 
+    TextDataFlags flags = data.editable ? TextDataFlag::Editable : TextDataFlags{};
+    DataHandle texts[5];
     if(data.dataInNodeOrder) {
-        ui.layer<TextLayerGL>(layer).create(0, "ab", {}, topLevelBelowRed);
-        ui.layer<TextLayerGL>(layer).create(2, "abc", {}, topLevelOnTopGreen);
-        ui.layer<TextLayerGL>(layer).create(3, "abcdef", {}, topLevelHiddenBlue);
-        ui.layer<TextLayerGL>(layer).create(3, "abcd", {}, childBelowBlue);
-        ui.layer<TextLayerGL>(layer).create(1, "abcde", {}, childAboveRed);
+        texts[0] = ui.layer<TextLayerGL>(layer).create(0, "ab", {}, flags, topLevelBelowRed);
+        texts[1] = ui.layer<TextLayerGL>(layer).create(2, "abc", {}, flags, topLevelOnTopGreen);
+        texts[2] = ui.layer<TextLayerGL>(layer).create(3, "abcdef", {}, flags, topLevelHiddenBlue);
+        texts[3] = ui.layer<TextLayerGL>(layer).create(3, "abcd", {}, flags, childBelowBlue);
+        texts[4] = ui.layer<TextLayerGL>(layer).create(1, "abcde", {}, flags, childAboveRed);
     } else {
-        ui.layer<TextLayerGL>(layer).create(2, "abc", {}, topLevelOnTopGreen);
-        ui.layer<TextLayerGL>(layer).create(3, "abcdef", {}, topLevelHiddenBlue);
-        ui.layer<TextLayerGL>(layer).create(0, "ab", {}, topLevelBelowRed);
-        ui.layer<TextLayerGL>(layer).create(1, "abcde", {}, childAboveRed);
-        ui.layer<TextLayerGL>(layer).create(3, "abcd", {}, childBelowBlue);
+        texts[0] = ui.layer<TextLayerGL>(layer).create(2, "abc", {}, flags, topLevelOnTopGreen);
+        texts[1] = ui.layer<TextLayerGL>(layer).create(3, "abcdef", {}, flags, topLevelHiddenBlue);
+        texts[2] = ui.layer<TextLayerGL>(layer).create(0, "ab", {}, flags, topLevelBelowRed);
+        texts[3] = ui.layer<TextLayerGL>(layer).create(1, "abcde", {}, flags, childAboveRed);
+        texts[4] = ui.layer<TextLayerGL>(layer).create(3, "abcd", {}, flags, childBelowBlue);
     }
+
+    /* Make all fully selected if editable */
+    if(data.editable) for(DataHandle text: texts)
+        ui.layer<TextLayerGL>(layer).setCursor(text, 0, ui.layer<TextLayerGL>(layer).text(text).size());
 
     ui.draw();
 
@@ -1221,7 +2049,10 @@ void TextLayerGLTest::drawOrder() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, DrawSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/draw-order.png"),
+        Utility::Path::join(WHEE_TEST_DIR,
+            data.editable ?
+                "TextLayerTestFiles/draw-order-editable.png" :
+                "TextLayerTestFiles/draw-order.png"),
         DebugTools::CompareImageToFile{_importerManager});
 }
 
@@ -1230,7 +2061,13 @@ void TextLayerGLTest::drawClipping() {
     setTestCaseDescription(data.name);
 
     /* Based on BaseLayerGLTest::drawClipping(), with additional variability
-       due to each text having a different size */
+       due to each text having a different size, and editing styles included.
+
+       Right now, for each clip rect, all selection and cursors are drawn
+       first, and then all text. This may eventually change to draw selection
+       and cursors first for all clip rects, and then all text for all clip
+       rects, as that's less shader switching if there's many editable texts
+       visible at once. */
 
     /* X is divided by 10, Y by 100 when rendering. Window size (for events)
        isn't used for anything here. */
@@ -1267,10 +2104,10 @@ void TextLayerGLTest::drawClipping() {
                         advances[i] = {8.0f, 0.0f};
                     }
                 }
-                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {
-                    /** @todo implement when it actually does get called for
-                        cursor / selection */
-                    CORRADE_FAIL("This shouldn't be called.");
+                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>& clusters) const override {
+                    /* Just a trivial 1:1 mapping */
+                    for(std::size_t i = 0; i != clusters.size(); ++i)
+                        clusters[i] = i;
                 }
             };
             return Containers::pointer<Shaper>(*this);
@@ -1289,7 +2126,9 @@ void TextLayerGLTest::drawClipping() {
     cache.flushImage({{}, {8, 160}});
     cache.addGlyph(cache.addFont(1, &font), 0, {}, {{}, {7, 160}});
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{3, 5}};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{3, 5}
+        .setEditingStyleCount(6)
+    };
     layerShared.setGlyphCache(cache);
 
     FontHandle fontHandleLarge = layerShared.addFont(font, 160.0f);
@@ -1321,7 +2160,42 @@ void TextLayerGLTest::drawClipping() {
         Text::Alignment::MiddleCenter,
         Text::Alignment::MiddleCenter,
         Text::Alignment::MiddleCenter
-    }, {}, {}, {}, {});
+    }, {}, {}, {}, {
+        data.editable ? 0 : -1,
+        data.editable ? 0 : -1,
+        data.editable ? 1 : -1,
+        data.editable ? 2 : -1,
+        data.editable ? 2 : -1,
+    }, {
+        data.editable ? 3 : -1,
+        data.editable ? 3 : -1,
+        data.editable ? 4 : -1,
+        data.editable ? 5 : -1,
+        data.editable ? 5 : -1,
+    }, {});
+    layerShared.setEditingStyle(TextLayerCommonEditingStyleUniform{}, {
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x00cccc99_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcc00cc99_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcccc0099_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x00666699_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x66006699_rgbaf),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0x66660099_rgbaf)
+    }, {}, {
+        /* Padding to not have the selection align exactly with the glyphs.
+           Has to be scaled 10x on X and 100x on Y to match the UI scaling. */
+        {10.0f, 100.0f, 10.0f, 100.0f},
+        {10.0f, 100.0f, 10.0f, 100.0f},
+        {10.0f, 100.0f, 10.0f, 100.0f},
+        {10.0f, 100.0f, 10.0f, 100.0f},
+        {10.0f, 100.0f, 10.0f, 100.0f},
+        {10.0f, 100.0f, 10.0f, 100.0f},
+    });
 
     TextLayerGL& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
@@ -1336,15 +2210,17 @@ void TextLayerGLTest::drawClipping() {
         parent = ui.createNode({}, {});
     }
 
+    TextDataFlags flags = data.editable ? TextDataFlag::Editable : TextDataFlags{};
+
     NodeHandle leftTop = ui.createNode(parent, {100.0f, 600.0f}, {320.0f, 3200.0f});
     NodeHandle leftTop1 = ui.createNode(leftTop, {0.0f, 0.0f}, {320.0f, 2400.0f});
     NodeHandle leftTop2 = ui.createNode(leftTop, {0.0f, 2400.0f}, {320.0f, 800.0f});
     /* Child of leftTop2, but should only be clipped against leftTop, not
        leftTop2 */
     NodeHandle leftTop21 = ui.createNode(leftTop2, {60.0f, -800.0f}, {80.0f, 2400.0f});
-    layer.create(0, "abc", {}, leftTop1);
-    layer.create(2, "abcdef", {}, leftTop2);
-    layer.create(3, "a", {}, leftTop21);
+    DataHandle leftTop1Data = layer.create(0, "abc", {}, flags, leftTop1);
+    DataHandle leftTop2Data = layer.create(2, "abcdef", {}, flags, leftTop2);
+    DataHandle leftTop21Data = layer.create(3, "a", {}, flags, leftTop21);
 
     NodeHandle rightBottom = ui.createNode(parent, {420.0f, 3600.0f}, {160.0f, 2000.0f});
     NodeHandle rightBottom1 = ui.createNode(rightBottom, {0.0f, 0.0f}, {80.0f, 2000.0f});
@@ -1352,10 +2228,21 @@ void TextLayerGLTest::drawClipping() {
        even passed to draw() */
     NodeHandle rightBottom11 = ui.createNode(rightBottom1, {-400.0f, 1400.0f}, {80.0f, 800.0f});
     /* Data added to the clip node should get clipped as well */
-    DataHandle rightBottomData = layer.create(4, "abc", {}, rightBottom);
+    DataHandle rightBottomData = layer.create(4, "abc", {}, flags, rightBottom);
     layer.setPadding(rightBottomData, {20.0f, 1600.0f, 0.0f, 0.0f});
-    layer.create(1, "abcd", {}, rightBottom1);
-    layer.create(2, "a", {}, rightBottom11);
+    DataHandle rightBottom1Data = layer.create(1, "abcd", {}, flags, rightBottom1);
+    DataHandle rightBottom11Data = layer.create(2, "a", {}, flags, rightBottom11);
+
+    /* Make all fully selected if editable */
+    if(data.editable) for(DataHandle text: {
+        leftTop1Data,
+        leftTop2Data,
+        leftTop21Data,
+        rightBottomData,
+        rightBottom1Data,
+        rightBottom11Data
+    })
+        layer.setCursor(text, 0, layer.text(text).size());
 
     if(data.flipOrder) {
         CORRADE_COMPARE(ui.nodeOrderNext(rightBottom), NodeHandle::Null);
@@ -1388,9 +2275,13 @@ void TextLayerGLTest::drawClipping() {
 }
 
 void TextLayerGLTest::eventStyleTransition() {
-    /* Switches between the "default" and "colored" cases from render() after a
-       press event. Everything else is tested in AbstractVisualLayerTest
-       already. */
+    auto&& data = EventStyleTransitionData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Switches between the "default" / "default, default selection style" and
+       "colored" / "colored, cursor + selection style, colored text" cases from
+       render() after a press event, also with getting or losing the editing
+       style. Everything else is tested in AbstractVisualLayerTest already. */
 
     if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
@@ -1402,19 +2293,37 @@ void TextLayerGLTest::eventStyleTransition() {
        stb_truetype's extreme rasterization slowness */
     CORRADE_VERIFY(_font && _font->isOpened());
 
-    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{2}};
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{5, 4}
+        .setEditingStyleCount(data.editableBefore || data.editableAfter ? 3 : 0)
+    };
     layerShared.setGlyphCache(_fontGlyphCache);
 
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared
         .setStyle(TextLayerCommonStyleUniform{}, {
             TextLayerStyleUniform{},        /* default */
+            TextLayerStyleUniform{},        /* default, default selection style */
             TextLayerStyleUniform{}         /* colored */
-                .setColor(0x3bd267_rgbf)
-        }, {fontHandle, fontHandle}, {
+                .setColor(0x3bd267_rgbf),
+            TextLayerStyleUniform{}         /* colored, cursor + selection style */
+                .setColor(0x3bd267_rgbf),
+            TextLayerStyleUniform{}         /* Selected text override */
+                .setColor(0x1f1f1f_rgbf),
+        }, {0, 1, 2, 3}, {fontHandle, fontHandle, fontHandle, fontHandle}, {
+            Text::Alignment::MiddleCenter,
+            Text::Alignment::MiddleCenter,
             Text::Alignment::MiddleCenter,
             Text::Alignment::MiddleCenter
-        }, {}, {}, {}, {})
+        }, {}, {}, {},
+        {-1,
+         data.editableBefore ? 0 : -1,
+         -1,
+         data.editableAfter ? 1 : -1},
+        {-1,
+         data.editableBefore ? 0 : -1,
+         -1,
+         data.editableAfter ? 2 : -1},
+        {})
         .setStyleTransition(
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
@@ -1422,13 +2331,19 @@ void TextLayerGLTest::eventStyleTransition() {
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
-            [](UnsignedInt style) -> UnsignedInt {
-                if(style == 0) return 1;
-                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-            },
+            data.transition,
             [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             });
+    if(data.editableBefore || data.editableAfter) layerShared.setEditingStyle(
+        TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{},
+         TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf),
+         TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf)},
+        {-1, -1, 4},
+        {{}, {5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
@@ -1436,7 +2351,13 @@ void TextLayerGLTest::eventStyleTransition() {
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     /* Using a text that has glyphs both above and below line and doesn't need
        too many glyphs */
-    ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, node);
+    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(
+        data.editableBefore ? 1 : 0,
+        "Maggi", {},
+        data.editableBefore || data.editableAfter ? TextDataFlag::Editable : TextDataFlags{},
+        node);
+    if(data.editableBefore || data.editableAfter)
+        ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
 
     ui.draw();
 
@@ -1467,10 +2388,16 @@ void TextLayerGLTest::eventStyleTransition() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
     CORRADE_COMPARE_WITH(before,
-        Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/default.png"),
+        Utility::Path::join(WHEE_TEST_DIR,
+            data.editableBefore ?
+                "TextLayerTestFiles/default-selection.png" :
+                "TextLayerTestFiles/default.png"),
         DebugTools::CompareImageToFile{_importerManager});
     CORRADE_COMPARE_WITH(after,
-        Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/colored.png"),
+        Utility::Path::join(WHEE_TEST_DIR,
+            data.editableAfter ?
+                "TextLayerTestFiles/colored-cursor-selection-text.png" :
+                "TextLayerTestFiles/colored.png"),
         DebugTools::CompareImageToFile{_importerManager});
 }
 

@@ -73,6 +73,8 @@ enum class FontHandle: UnsignedShort;
 class TextLayer;
 struct TextLayerCommonStyleUniform;
 struct TextLayerStyleUniform;
+struct TextLayerCommonEditingStyleUniform;
+struct TextLayerEditingStyleUniform;
 class TextLayerStyleAnimator;
 #ifdef MAGNUM_TARGET_GL
 class TextLayerGL;

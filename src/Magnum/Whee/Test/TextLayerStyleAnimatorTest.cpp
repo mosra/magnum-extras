@@ -174,6 +174,7 @@ void TextLayerStyleAnimatorTest::setAnimator() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{2}
         .setDynamicStyleCount(1)
     };
@@ -196,6 +197,7 @@ void TextLayerStyleAnimatorTest::setAnimatorInvalid() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{2}};
 
     struct Layer: TextLayer {
@@ -250,6 +252,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{5, 3}
         .setDynamicStyleCount(1)
     };
@@ -273,7 +276,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
         {Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
-        {}, {}, {},
+        {}, {}, {}, {}, {},
         {Vector4{1.0f},
          {2.0f, 3.0f, 4.0f, 5.0f},
          {}});
@@ -418,6 +421,7 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{2}
         .setDynamicStyleCount(1)
     };
@@ -433,7 +437,7 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
         {fontHandle, fontHandle},
         {Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
-        {}, {}, {},
+        {}, {}, {}, {}, {},
         {Vector4{1.0f},
          Vector4{2.0f}});
 
@@ -493,6 +497,7 @@ void TextLayerStyleAnimatorTest::createInvalid() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } sharedNoStyleSet{TextLayer::Shared::Configuration{5}
         .setDynamicStyleCount(1)},
       shared{TextLayer::Shared::Configuration{1, 5}
@@ -504,7 +509,7 @@ void TextLayerStyleAnimatorTest::createInvalid() {
         {0, 0, 0, 0, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
-        {}, {}, {}, {});
+        {}, {}, {}, {}, {}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -552,6 +557,7 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{2}
         .setDynamicStyleCount(1)
     };
@@ -560,7 +566,7 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}},
-        {}, {}, {}, {});
+        {}, {}, {}, {}, {}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -628,6 +634,7 @@ void TextLayerStyleAnimatorTest::clean() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{2}
         .setDynamicStyleCount(3)
     };
@@ -636,7 +643,7 @@ void TextLayerStyleAnimatorTest::clean() {
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
         {FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}},
-        {}, {}, {}, {});
+        {}, {}, {}, {}, {}, {});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -698,6 +705,7 @@ void TextLayerStyleAnimatorTest::advance() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{4, 7}
         .setDynamicStyleCount(3)
     };
@@ -726,7 +734,7 @@ void TextLayerStyleAnimatorTest::advance() {
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
-        {}, {}, {},
+        {}, {}, {}, {}, {},
         /* Paddings should not change between style 1 and 3 and should between
            style 3 and 6 */
         {{},                /* 0, not used for animation */
@@ -1051,6 +1059,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{3}
         .setDynamicStyleCount(1)
     };
@@ -1069,7 +1078,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
         {Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
-        {}, {}, {},
+        {}, {}, {}, {}, {},
         {});
 
     struct Layer: TextLayer {
@@ -1155,6 +1164,7 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{2}
         .setDynamicStyleCount(1)
     };
@@ -1204,6 +1214,7 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{3}
         .setDynamicStyleCount(1)
     };
@@ -1222,7 +1233,7 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
         {Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter,
          Text::Alignment::MiddleCenter},
-        {}, {}, {},
+        {}, {}, {}, {}, {},
         {{}, Vector4{data.padding}, {}});
 
     struct Layer: TextLayer {

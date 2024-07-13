@@ -594,6 +594,7 @@ void AbstractStyleTest::apply() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } sharedText{TextLayer::Shared::Configuration{2, 4}
         .setDynamicStyleCount(9)
     };
@@ -703,6 +704,7 @@ void AbstractStyleTest::applyBaseLayerNotPresent() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{1, 3}};
 
     struct Layer: TextLayer {
@@ -848,6 +850,7 @@ void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{3, 5}
         .setDynamicStyleCount(11)
     };
@@ -914,6 +917,7 @@ void AbstractStyleTest::applyTextLayerNoGlyphCache() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{1, 1}};
 
     struct Layer: TextLayer {
@@ -959,6 +963,7 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{1, 1}};
     shared.setGlyphCache(cache);
 
@@ -1049,6 +1054,7 @@ void AbstractStyleTest::applyTextLayerNoFontManager() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{1, 1}};
     shared.setGlyphCache(cache);
 
@@ -1122,6 +1128,7 @@ void AbstractStyleTest::applyTextLayerImagesNoImporterManager() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{1}};
     shared.setGlyphCache(cache);
 
@@ -1170,6 +1177,7 @@ void AbstractStyleTest::applyEventLayerNotPresent() {
         explicit LayerSharedText(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } sharedText{TextLayer::Shared::Configuration{1, 3}};
 
     struct LayerText: TextLayer {

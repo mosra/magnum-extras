@@ -213,6 +213,7 @@ void UserInterfaceTest::setTextLayerInstance() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{1, 3}};
 
     struct Layer: TextLayer {
@@ -248,6 +249,7 @@ void UserInterfaceTest::setTextLayerInstanceInvalid() {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
     } shared{TextLayer::Shared::Configuration{3, 5}};
 
     struct Layer: TextLayer {
