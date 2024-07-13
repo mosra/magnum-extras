@@ -293,12 +293,21 @@ if(MAGNUM_BUILD_GL_TESTS)
         FILES
             ../../Ui/SourceSansPro-Regular.ttf
             TextLayerTestFiles/clipping-disabled.png
+            TextLayerTestFiles/clipping-disabled-editable.png
             TextLayerTestFiles/clipping-enabled.png
+            TextLayerTestFiles/clipping-enabled-editable.png
             TextLayerTestFiles/colored.png
+            TextLayerTestFiles/colored-cursor.png
+            TextLayerTestFiles/colored-cursor-selection.png
+            TextLayerTestFiles/colored-cursor-selection-text.png
+            TextLayerTestFiles/colored-cursor-selection-text-rounded.png
+            TextLayerTestFiles/colored-selection.png
             TextLayerTestFiles/colored-glyph.png
             TextLayerTestFiles/default.png
             TextLayerTestFiles/default-glyph.png
-            TextLayerTestFiles/draw-order.png)
+            TextLayerTestFiles/default-selection.png
+            TextLayerTestFiles/draw-order.png
+            TextLayerTestFiles/draw-order-editable.png)
     target_include_directories(WheeTextLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     if(MAGNUM_BUILD_STATIC)
         if(Magnum_AnyImageImporter_FOUND)

@@ -32,6 +32,7 @@
 
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/ArrayTuple.h>
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Reference.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>
@@ -68,6 +69,16 @@ struct TextLayerStyle {
     /* 1 byte free */
     /* Points to styleFeatures */
     UnsignedInt featureOffset, featureCount;
+    /* Both point to editingStyles or are -1 */
+    Int cursorStyle, selectionStyle;
+    Vector4 padding;
+};
+
+struct TextLayerEditingStyle {
+    /* Uniform index corresponding to given style */
+    UnsignedInt uniform;
+    /* Uniform index to use for the selected text or -1 */
+    Int textUniform;
     Vector4 padding;
 };
 
@@ -78,19 +89,27 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
-    /* Incremented every time setStyle() is called. There's a corresponding
-       styleUpdateStamp variable in TextLayer::State that doState() compares to
-       this one, returning LayerState::NeedsDataUpdate if it differs. */
+    /* Incremented every time setStyle() / setEditingStyle() is called. There's
+       a corresponding styleUpdateStamp / editingStyleUpdateStamp variable in
+       TextLayer::State that doState() compares to this one, returning
+       LayerState::NeedsDataUpdate if it differs. */
     UnsignedShort styleUpdateStamp = 0;
-
-    /* Can't be inferred from styleUniforms.size() as those are non-empty only
-       if dynamicStyleCount is non-zero */
-    UnsignedInt styleUniformCount;
+    UnsignedShort editingStyleUpdateStamp = 0;
 
     #ifndef CORRADE_NO_ASSERT
     bool setStyleCalled = false;
-    /* 3/7 bytes free */
+    bool setEditingStyleCalled = false;
     #endif
+
+    /* Set to true if there are either static editing styles or, if not,
+       dynamic styles with editing styles included */
+    bool hasEditingStyles;
+
+    /* 3/7 bytes free, 1 byte free on a no-assert build */
+
+    /* Can't be inferred from {styleUniforms,editingStyleUniforms}.size() as
+       those are non-empty only if dynamicStyleCount is non-zero */
+    UnsignedInt styleUniformCount, editingStyleUniformCount;
 
     /* Glyph cache used by all fonts. It's expected to know about each font
        that's added. */
@@ -108,6 +127,7 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
     Containers::Array<TextFeatureValue> styleFeatures;
 
     Containers::ArrayTuple styleStorage;
+
     /* Uniform mapping, fonts, alignments, font features and padding values
        assigned to each style */
     Containers::ArrayView<Implementation::TextLayerStyle> styles;
@@ -115,6 +135,14 @@ struct TextLayer::Shared::State: AbstractVisualLayer::Shared::State {
        and unused if dynamicStyleCount is 0. */
     Containers::ArrayView<TextLayerStyleUniform> styleUniforms;
     TextLayerCommonStyleUniform commonStyleUniform{NoInit};
+
+    /* Uniform mapping, selection colors and margin values assigned to each
+       editing style */
+    Containers::ArrayView<Implementation::TextLayerEditingStyle> editingStyles;
+    /* Uniform values to be copied to layer-specific uniform buffers. Empty and
+       unused if dynamicStyleCount is 0. */
+    Containers::ArrayView<TextLayerEditingStyleUniform> editingStyleUniforms;
+    TextLayerCommonEditingStyleUniform commonEditingStyleUniform{NoInit};
 };
 
 namespace Implementation {
@@ -124,12 +152,11 @@ struct TextLayerGlyphData {
     Vector2 position;
     /* Cache-global glyph ID */
     UnsignedInt glyphId;
-    /* Padding. Currently here only to make it possible to query glyph offset
-       + advance data *somewhere* without having to abuse the vertex buffer in
-       a nasty way or, worse, temporary allocating. Eventually it could contain
-       cluster information for editing/cursor placement, safe-to-break /
-       safe-for-ellipsis flags etc. */
-    Int:32;
+    /* Cluster ID for cursor positioning in editable text. Initially abused for
+       saving glyph offset + advance (i.e., two Vector2) *somewehere* without
+       having to make a temp allocation. If the text is not editable, this
+       retains unspecified advance values. */
+    UnsignedInt glyphCluster;
 };
 
 struct TextLayerGlyphRun {
@@ -208,6 +235,12 @@ struct TextLayerVertex {
     UnsignedInt styleUniform;
 };
 
+struct TextLayerEditingVertex {
+    Vector2 position;
+    Vector2 centerDistance;
+    UnsignedInt styleUniform;
+};
+
 struct TextLayerDynamicStyle {
     FontHandle font = FontHandle::Null;
     Text::Alignment alignment = Text::Alignment::MiddleCenter;
@@ -217,6 +250,23 @@ struct TextLayerDynamicStyle {
     Vector4 padding;
 };
 
+/* Deliberately named differently from TextLayer::dynamicStyleCursorStyle() etc
+   to avoid those being called instead by accident */
+inline UnsignedInt cursorStyleForDynamicStyle(UnsignedInt id) {
+    return 2*id + 1;
+}
+inline UnsignedInt selectionStyleForDynamicStyle(UnsignedInt id) {
+    return 2*id + 0;
+}
+
+inline UnsignedInt textUniformForEditingStyle(UnsignedInt dynamicStyleCount, UnsignedInt id) {
+    return dynamicStyleCount + id;
+}
+inline UnsignedInt selectionStyleTextUniformForDynamicStyle(UnsignedInt dynamicStyleCount, UnsignedInt id) {
+    return textUniformForEditingStyle(dynamicStyleCount, 2*id + 0);
+}
+/* textStyleForDynamicCursorStyle would be 2*id + 1 */
+
 }
 
 struct TextLayer::State: AbstractVisualLayer::State {
@@ -224,10 +274,11 @@ struct TextLayer::State: AbstractVisualLayer::State {
 
     /* First 2/6 bytes overlap with padding of the base struct */
 
-    /* Is compared to Shared::styleUpdateStamp in order to detect that
-       doUpdate() needs to be called to update to potentially new mappings
-       between styles and uniform IDs, paddings etc. When the two are the same,
-       it's assumed all style-dependent data are up-to-date.
+    /* Is compared to Shared::styleUpdateStamp / editingStyleUpdateStamp in
+       order to detect that doUpdate() needs to be called to update to
+       potentially new mappings between styles and uniform IDs, paddings etc.
+       When the two are the same, it's assumed all style-dependent data are
+       up-to-date.
 
        Gets set to the shared value on construction to not implicitly mark a
        fresh layer with no data as immediately needing an update.
@@ -235,12 +286,12 @@ struct TextLayer::State: AbstractVisualLayer::State {
        See AbstractVisualLayer::State::styleTransitionToDisabledUpdateStamp for
        discussion about when an update may get skipped by accident. */
     UnsignedShort styleUpdateStamp;
+    UnsignedShort editingStyleUpdateStamp;
     /* Used to distinguish between needing an update of the shared part of the
        style (which is triggered by differing styleUpdateStamp) and the dynamic
-       part */
+       (editing) part */
     bool dynamicStyleChanged = false;
-
-    /* 3 bytes free */
+    bool dynamicEditingStyleChanged = false;
 
     /* Glyph / text data. Only the items referenced from `glyphRuns` /
        `textRuns` are valid, the rest is unused space that gets recompacted
@@ -262,17 +313,22 @@ struct TextLayer::State: AbstractVisualLayer::State {
     Containers::Array<Implementation::TextLayerData> data;
 
     /* Vertex data, ultimately built from `glyphData` combined with color and
-       style index from `data` */
+       style index from `data`; vertex data for cursor and selection
+       rectangles */
     Containers::Array<Implementation::TextLayerVertex> vertices;
+    Containers::Array<Implementation::TextLayerEditingVertex> editingVertices;
 
-    /* Index data, used to draw from `vertices`. In draw order, the
-       `indexDrawOffsets` then point into indices for each data in draw
-       order. */
+    /* Index data, used to draw from `vertices` and `editingVertices`. In draw
+       order, the `indexDrawOffsets` then point into `indices` /
+       `editingIndices` for each data in draw order. */
     /** @todo any way to make these 16-bit? not really possible in the general
         case given that vertex data get ultimately ordered by frequency of
-        change and not by draw order */
+        change and not by draw order; tho we could maybe assume that there will
+        never be more than 8k editable texts with cursor and selection visible
+        at the same time? */
     Containers::Array<UnsignedInt> indices;
-    Containers::Array<UnsignedInt> indexDrawOffsets;
+    Containers::Array<UnsignedInt> editingIndices;
+    Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> indexDrawOffsets;
 
     /* All these are used only if shared.dynamicStyleCount is non-zero */
 
@@ -283,8 +339,19 @@ struct TextLayer::State: AbstractVisualLayer::State {
     Containers::Array<TextFeatureValue> dynamicStyleFeatures;
 
     Containers::ArrayTuple dynamicStyleStorage;
+    /* If dynamic styles include editing styles, the size is
+       3*dynamicStyleCount to include uniform overrides for selected text,
+       otherwise it's 1*dynamicStyleCount. */
     Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms;
+    /* If dynamic styles include editing styles, the size is
+       2*dynamicStyleCount, otherwise it's empty */
+    Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms;
     Containers::ArrayView<Implementation::TextLayerDynamicStyle> dynamicStyles;
+    Containers::MutableBitArrayView dynamicStyleCursorStyles;
+    Containers::MutableBitArrayView dynamicStyleSelectionStyles;
+    /* If dynamic styles include editing styles, the size is
+       2*dynamicStyleCount, otherwise it's empty */
+    Containers::ArrayView<Vector4> dynamicEditingStylePaddings;
 };
 
 }}

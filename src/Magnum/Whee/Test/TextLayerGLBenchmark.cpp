@@ -62,9 +62,13 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     UnsignedInt dynamicStyleCount;
+    bool drawCursor;
+    const char* text;
 } FragmentData[]{
-    {"", 0},
-    {"dynamic styles", 1},
+    {"glyph quad", 0, false, "a"},
+    {"glyph quad, dynamic styles", 1, false, "a"},
+    {"cursor quad", 0, true, ""},
+    {"cursor quad, dynamic styles", 1, true, ""},
 };
 
 TextLayerGLBenchmark::TextLayerGLBenchmark() {
@@ -106,8 +110,8 @@ void TextLayerGLBenchmark::fragment() {
     auto&& data = FragmentData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    /* Renders a single data over the whole size to benchmark mainly the
-       fragment shader invocation */
+    /* Renders a single quad over the whole size to benchmark mainly the
+       fragment shader invocation. The quad is either a glyph or a cursor. */
 
     AbstractUserInterface ui{BenchmarkSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -115,8 +119,8 @@ void TextLayerGLBenchmark::fragment() {
     struct Shaper: Text::AbstractShaper {
         using Text::AbstractShaper::AbstractShaper;
 
-        UnsignedInt doShape(Containers::StringView, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
-            return 1;
+        UnsignedInt doShape(Containers::StringView string, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
+            return string.size();
         }
         void doGlyphIdsInto(const Containers::StridedArrayView1D<UnsignedInt>& ids) const override {
             ids[0] = 0;
@@ -148,16 +152,21 @@ void TextLayerGLBenchmark::fragment() {
     } font;
     font.openFile({}, 32.0f);
 
-    /* Single all-white glyph spanning the whole cache. Default padding is 1,
-       reset it back to 0 to make this work. */
+    /* If not drawing the cursor, add a single all-white glyph spanning the
+       whole cache. Default padding is 1, reset it back to 0 to make this
+       work. */
     Text::GlyphCache cache{{32, 32}, {}};
-    cache.addGlyph(cache.addFont(font.glyphCount(), &font), 0, {-16, -16}, {{}, {32, 32}});
-    Utility::copy(
-        Containers::StridedArrayView2D<const char>{"\xff", {32, 32}, {0, 0}},
-        cache.image().pixels<char>()[0]);
-    cache.flushImage({{}, {32, 32}});
+    UnsignedInt fontId = cache.addFont(font.glyphCount(), &font);
+    if(!data.drawCursor) {
+        cache.addGlyph(fontId, 0, {-16, -16}, {{}, {32, 32}});
+        Utility::copy(
+            Containers::StridedArrayView2D<const char>{"\xff", {32, 32}, {0, 0}},
+            cache.image().pixels<char>()[0]);
+        cache.flushImage({{}, {32, 32}});
+    }
 
     TextLayerGL::Shared shared{TextLayer::Shared::Configuration{1}
+        .setEditingStyleCount(1)
         .setDynamicStyleCount(data.dynamicStyleCount)
     };
     shared.setGlyphCache(cache);
@@ -169,12 +178,19 @@ void TextLayerGLBenchmark::fragment() {
             .setColor(0xff3366_rgbf)},
         {fontHandle},
         {Text::Alignment::MiddleCenter},
-        {}, {}, {}, {});
+        {}, {}, {},
+        {data.drawCursor ? 0 : -1}, {-1}, {});
+    shared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xff3366_rgbf)},
+        {},
+        {{BenchmarkSize.x()/2.0f, BenchmarkSize.y()/2.0f,
+          BenchmarkSize.x()/2.0f, BenchmarkSize.y()/2.0f}});
 
     TextLayerGL& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), shared));
 
     NodeHandle node = ui.createNode({}, Vector2{BenchmarkSize});
-    layer.create(0, "", {}, node);
+    layer.create(0, data.text, {}, data.drawCursor ? TextDataFlag::Editable : TextDataFlags{}, node);
 
     ui.update();
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
