@@ -61,9 +61,10 @@ namespace Implementation {
     /* Used by various tests, less wasteful to have here than in the
        potentially huge Style.hpp */
     enum: UnsignedInt {
-        BaseStyleCount = 40,
-        TextStyleCount = 60,
-        TextStyleUniformCount = 21,
+        BaseStyleCount = 47,
+        TextStyleCount = 65,
+        TextStyleUniformCount = 24,
+        TextEditingStyleCount = 4,
         IconCount = 2
     };
 }
@@ -79,6 +80,8 @@ class MAGNUM_WHEE_EXPORT McssDarkStyle: public AbstractStyle {
         MAGNUM_WHEE_LOCAL UnsignedInt doBaseLayerStyleCount() const override;
         MAGNUM_WHEE_LOCAL UnsignedInt doTextLayerStyleUniformCount() const override;
         MAGNUM_WHEE_LOCAL UnsignedInt doTextLayerStyleCount() const override;
+        MAGNUM_WHEE_LOCAL UnsignedInt doTextLayerEditingStyleUniformCount() const override;
+        MAGNUM_WHEE_LOCAL UnsignedInt doTextLayerEditingStyleCount() const override;
         MAGNUM_WHEE_LOCAL Vector3i doTextLayerGlyphCacheSize(StyleFeatures features) const override;
         MAGNUM_WHEE_LOCAL bool doApply(UserInterface& ui, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const override;
 };

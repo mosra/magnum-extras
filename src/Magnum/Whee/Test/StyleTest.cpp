@@ -56,6 +56,7 @@ struct StyleTest: TestSuite::Tester {
     void baseMcssDark();
     void textMcssDark();
     void textUniformsMcssDark();
+    void textEditingMcssDark();
 
     void apply();
     void applyTextLayerCannotOpenFont();
@@ -87,7 +88,8 @@ StyleTest::StyleTest() {
 
               &StyleTest::baseMcssDark,
               &StyleTest::textMcssDark,
-              &StyleTest::textUniformsMcssDark});
+              &StyleTest::textUniformsMcssDark,
+              &StyleTest::textEditingMcssDark});
 
     addInstancedTests({&StyleTest::apply},
         Containers::arraySize(ApplyData));
@@ -101,6 +103,7 @@ StyleTest::StyleTest() {
 using Implementation::BaseStyle;
 using Implementation::TextStyle;
 using Implementation::TextStyleUniform;
+using Implementation::TextEditingStyle;
 
 void StyleTest::debugIcon() {
     std::ostringstream out;
@@ -205,11 +208,55 @@ void StyleTest::textUniformsMcssDark() {
         #pragma GCC diagnostic error "-Wswitch"
         #endif
         switch(TextStyleUniform(i)) {
+            /* Unchanged is just a nice alias for -1, not used otherwise */
+            case TextStyleUniform::Unchanged:
+                CORRADE_FAIL("This shouldn't be reached");
+                break;
             #define _c(value, ...) \
                 case TextStyleUniform::value: \
                     CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextStyleUniform::value)); \
                     break;
             #include "Magnum/Whee/Implementation/textStyleUniformsMcssDark.h"
+            #undef _c
+        }
+        #ifdef CORRADE_TARGET_GCC
+        #pragma GCC diagnostic pop
+        #endif
+    }
+}
+
+void StyleTest::textEditingMcssDark() {
+    const TextEditingStyle styleUniforms[]{
+        #define _c(value, ...) TextEditingStyle::value,
+        #include "Magnum/Whee/Implementation/textEditingStyleMcssDark.h"
+        #undef _c
+    };
+
+    /* Verify that the harcoded BaseStyleCount matches the actual number of
+       entries in the mapping */
+    CORRADE_COMPARE(Implementation::TextEditingStyleCount, Containers::arraySize(styleUniforms));
+
+    /* This checks that:
+        - the mapping contains entries for all enum values (otherwise -Wswitch
+          would trigger)
+        - none of the values are duplicated (otherwise it'd be a syntax error)
+        - and the position of the value in the mapping corresponds to the
+          enum value (by checking against the styles[] above) */
+    for(UnsignedInt i = 0; i != Implementation::TextEditingStyleCount; ++i) {
+        #ifdef CORRADE_TARGET_GCC
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic error "-Wswitch"
+        #endif
+        switch(TextEditingStyle(i)) {
+            /* None is just a nice alias for -1, not used otherwise */
+            case TextEditingStyle::None:
+                CORRADE_FAIL("This shouldn't be reached");
+                break;
+            #define _c(value, ...) \
+                case TextEditingStyle::value: \
+                    CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextEditingStyle::value)); \
+                    break;
+            #include "Magnum/Whee/Implementation/textEditingStyleMcssDark.h"
             #undef _c
         }
         #ifdef CORRADE_TARGET_GCC
@@ -263,7 +310,9 @@ void StyleTest::apply() {
     } glyphCache{PixelFormat::R8Unorm, {256, 256}};
 
     struct TestTextLayerShared: TextLayer::Shared {
-        explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -326,7 +375,9 @@ void StyleTest::applyTextLayerCannotOpenFont() {
     } glyphCache{PixelFormat::R8Unorm, {256, 256}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -371,7 +422,9 @@ void StyleTest::applyTextLayerImagesCannotOpen() {
     } glyphCache{PixelFormat::R8Unorm, {256, 256}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -417,7 +470,9 @@ void StyleTest::applyTextLayerImagesCannotFit() {
     glyphCache.atlas().add({{200, 200}}, offset);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -463,7 +518,9 @@ void StyleTest::applyTextLayerImagesUnexpectedFormat() {
     } glyphCache{PixelFormat::R8Unorm, {256, 256}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 

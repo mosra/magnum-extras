@@ -77,4 +77,22 @@ _c(ButtonFlatInactiveOver,      {}, {}, 0xd0d9f7_rgbf, 1.5f, 4.0f, 2.5f)
 _c(ButtonFlatPressedOut,        {}, {}, 0xd0d9f7_rgbf, 1.5f, 4.0f, 2.5f)
 _c(ButtonFlatPressedOver,       {}, {}, 0xd0d9f7_rgbf, 1.5f, 4.0f, 2.5f)
 _c(ButtonFlatDisabled,          {}, {}, {}, 0.0f, 4.0f, 0.0f)
+
+/* Color, outline color, (left, top, right, bottom) outline width, corner
+   radius, inner corner radius (top left, bottom left, top right, bottom
+   right) */
+_c(InputDefaultInactiveOut,     0x34424dff_rgbaf*0.8f, 0xdcdcdcff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputDefaultInactiveOver,    0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputDefaultFocusedOut,      0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputDefaultFocusedOver,     0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputDefaultPressedOut,      0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputDefaultPressedOver,     0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputDefaultDisabled,        0x34424dff_rgbaf*0.3f, 0xdcdcdcff_rgbaf*0.3f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
 #endif

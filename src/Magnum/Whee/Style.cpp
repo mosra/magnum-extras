@@ -173,6 +173,19 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
                     BaseStyle::ButtonFlatPressedOut,
                     BaseStyle::ButtonFlatPressedOver,
                     BaseStyle::ButtonFlatDisabled};
+        case BaseStyle::InputDefaultInactiveOut:
+        case BaseStyle::InputDefaultInactiveOver:
+        case BaseStyle::InputDefaultFocusedOut:
+        case BaseStyle::InputDefaultFocusedOver:
+        case BaseStyle::InputDefaultPressedOut:
+        case BaseStyle::InputDefaultPressedOver:
+            return {BaseStyle::InputDefaultInactiveOut,
+                    BaseStyle::InputDefaultInactiveOver,
+                    BaseStyle::InputDefaultFocusedOut,
+                    BaseStyle::InputDefaultFocusedOver,
+                    BaseStyle::InputDefaultPressedOut,
+                    BaseStyle::InputDefaultPressedOver,
+                    BaseStyle::InputDefaultDisabled};
         /* LCOV_EXCL_START */
         case BaseStyle::ButtonDefaultDisabled:
         case BaseStyle::ButtonPrimaryDisabled:
@@ -182,6 +195,7 @@ Containers::StaticArray<7, BaseStyle> styleTransition(const BaseStyle index) {
         case BaseStyle::ButtonInfoDisabled:
         case BaseStyle::ButtonDimDisabled:
         case BaseStyle::ButtonFlatDisabled:
+        case BaseStyle::InputDefaultDisabled:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         /* LCOV_EXCL_STOP */
     }
@@ -338,6 +352,17 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::LabelDimText:
             return {index, index, index, index, index, index,
                     TextStyle::LabelDimDisabledText};
+        case TextStyle::InputDefaultInactiveOut:
+        case TextStyle::InputDefaultInactiveOver:
+        case TextStyle::InputDefaultFocused:
+        case TextStyle::InputDefaultPressed:
+            return {TextStyle::InputDefaultInactiveOut,
+                    TextStyle::InputDefaultInactiveOver,
+                    TextStyle::InputDefaultFocused,
+                    TextStyle::InputDefaultFocused,
+                    TextStyle::InputDefaultPressed,
+                    TextStyle::InputDefaultPressed,
+                    TextStyle::InputDefaultDisabled};
         /* LCOV_EXCL_START */
         case TextStyle::ButtonDisabledIconOnly:
         case TextStyle::ButtonDisabledTextOnly:
@@ -361,6 +386,7 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::LabelInfoDisabledText:
         case TextStyle::LabelDimDisabledIcon:
         case TextStyle::LabelDimDisabledText:
+        case TextStyle::InputDefaultDisabled:
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         /* LCOV_EXCL_STOP */
     }
@@ -415,10 +441,32 @@ const TextLayerStyleUniform TextLayerStyleUniformsMcssDark[]{
 constexpr struct {
     UnsignedInt uniform;
     Text::Alignment alignment;
+    Int cursorStyle, selectionStyle;
     Vector4 padding;
 } TextStyleData[]{
-    #define _c(style, suffix, font, alignment, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, __VA_ARGS__},
+    #define _c(style, suffix, font, alignment, cursorStyle, selectionStyle, ...) {UnsignedInt(TextStyleUniform::style), Text::Alignment::alignment, Int(Implementation::TextEditingStyle::cursorStyle), Int(Implementation::TextEditingStyle::selectionStyle), __VA_ARGS__},
     #include "Magnum/Whee/Implementation/textStyleMcssDark.h"
+    #undef _c
+};
+
+// TODO account for DPI scaling here also!
+constexpr TextLayerCommonEditingStyleUniform TextLayerCommonEditingStyleUniformMcssDark{0.5f};
+
+#ifndef CORRADE_MSVC2015_COMPATIBILITY
+constexpr /* Trust me, you don't want to be on this compiler */
+#endif
+const TextLayerEditingStyleUniform TextLayerEditingStyleUniformsMcssDark[]{
+    #define _c(style, color, padding0, padding1, padding2, padding3, ...) {__VA_ARGS__},
+    #include "Magnum/Whee/Implementation/textEditingStyleMcssDark.h"
+    #undef _c
+};
+
+constexpr struct {
+    Int textUniform;
+    Vector4 padding;
+} TextEditingStyleData[]{
+    #define _c(style, textUniform, padding0, padding1, padding2, padding3, ...) {Int(TextStyleUniform::textUniform), padding0, padding1, padding2, padding3},
+    #include "Magnum/Whee/Implementation/textEditingStyleMcssDark.h"
     #undef _c
 };
 
@@ -445,6 +493,14 @@ UnsignedInt McssDarkStyle::doTextLayerStyleUniformCount() const {
 
 UnsignedInt McssDarkStyle::doTextLayerStyleCount() const {
     return Containers::arraySize(TextStyleData);
+}
+
+UnsignedInt McssDarkStyle::doTextLayerEditingStyleUniformCount() const {
+    return Containers::arraySize(TextLayerEditingStyleUniformsMcssDark);
+}
+
+UnsignedInt McssDarkStyle::doTextLayerEditingStyleCount() const {
+    return Containers::arraySize(TextEditingStyleData);
 }
 
 Vector3i McssDarkStyle::doTextLayerGlyphCacheSize(StyleFeatures) const {
@@ -528,9 +584,14 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
                 Containers::stridedArrayView(TextStyleData).slice(&std::remove_all_extents<decltype(TextStyleData)>::type::alignment),
                 /* No features coming from style used yet */
                 {}, {}, {},
-                /* No cursor / selection styles used yet */
-                {}, {},
+                Containers::stridedArrayView(TextStyleData).slice(&std::remove_all_extents<decltype(TextStyleData)>::type::cursorStyle),
+                Containers::stridedArrayView(TextStyleData).slice(&std::remove_all_extents<decltype(TextStyleData)>::type::selectionStyle),
                 Containers::stridedArrayView(TextStyleData).slice(&std::remove_all_extents<decltype(TextStyleData)>::type::padding))
+            .setEditingStyle(
+                TextLayerCommonEditingStyleUniformMcssDark,
+                TextLayerEditingStyleUniformsMcssDark,
+                Containers::stridedArrayView(TextEditingStyleData).slice(&std::remove_all_extents<decltype(TextEditingStyleData)>::type::textUniform),
+                Containers::stridedArrayView(TextEditingStyleData).slice(&std::remove_all_extents<decltype(TextEditingStyleData)>::type::padding))
             .setStyleTransition<TextStyle,
                 styleTransitionToInactiveOut,
                 styleTransitionToInactiveOver,

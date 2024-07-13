@@ -87,10 +87,21 @@ enum class BaseStyle: UnsignedShort {
     ButtonFlatPressedOut,
     ButtonFlatPressedOver,
     ButtonFlatDisabled,
+
+    InputDefaultInactiveOut,
+    InputDefaultInactiveOver,
+    InputDefaultFocusedOut,
+    InputDefaultFocusedOver,
+    InputDefaultPressedOut,
+    InputDefaultPressedOver,
+    InputDefaultDisabled,
 };
 
-enum class TextStyleUniform: UnsignedInt {
-    Button,
+enum class TextStyleUniform: Int {
+    /* For use by editing styles that don't override text selection */
+    Unchanged = -1,
+
+    Button = 0,
     ButtonDisabled,
 
     ButtonFlatInactiveOut,
@@ -113,6 +124,10 @@ enum class TextStyleUniform: UnsignedInt {
     LabelInfoDisabled,
     LabelDim,
     LabelDimDisabled,
+
+    InputDefault,
+    InputDefaultDisabled,
+    InputSelection,
 };
 
 enum class TextStyle: UnsignedShort {
@@ -178,6 +193,21 @@ enum class TextStyle: UnsignedShort {
     LabelDimText,
     LabelDimDisabledIcon,
     LabelDimDisabledText,
+
+    InputDefaultInactiveOut,
+    InputDefaultInactiveOver,
+    InputDefaultFocused,
+    InputDefaultPressed,
+    InputDefaultDisabled,
+};
+
+enum class TextEditingStyle: Byte {
+    None = -1, /* For use by styles that don't contain an editing style */
+
+    InputCursor = 0,
+    InputCursorFocused,
+    InputSelection,
+    InputSelectionFocused,
 };
 
 }}}
