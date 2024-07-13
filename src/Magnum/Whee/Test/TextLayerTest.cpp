@@ -7992,6 +7992,10 @@ void TextLayerTest::updateCleanDataOrder() {
     layer.create(0, "", {});                            /* 8, quad 12 */
     DataHandle data9 = layer.create(3, "hi",            /* 9, quad 13 to 14 */
         Text::Alignment::LineLeft, 0x663399_rgbf, data.flags, node15);
+    /* Node 6 is disabled, but style 3 has no disabled transition so this stays
+       the same */
+    layer.create(3, "",                                 /* 10, no quad */
+        Text::Alignment::MiddleCenter, data.flags, node6);
 
     if(!data.paddingFromData.isZero()) {
         layer.setPadding(data3, data.paddingFromData);
@@ -8007,40 +8011,42 @@ void TextLayerTest::updateCleanDataOrder() {
         /* Data 9 has only a cursor, either due to the selection being empty or
            due to no selection style assigned */
         layer.setCursor(data9, data.data9Cursor.first(), data.data9Cursor.second());
+        /* Data 10 has a cursor, no selection because it's empty */
     }
 
-    /* There should be 10 glyph runs, assigned to the 10 data */
+    /* There should be 11 glyph runs, assigned to the 11 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u
+        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        0u, 1u, 2u, 3u, 8u, 9u, 10u, 11u, 12u, 13u
+        0u, 1u, 2u, 3u, 8u, 9u, 10u, 11u, 12u, 13u, 15u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
-        1u, 1u, 1u, 5u, 1u, 1u, 1u, 1u, 1u, 2u
+        1u, 1u, 1u, 5u, 1u, 1u, 1u, 1u, 1u, 2u, 0u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
-        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u
+        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u
     }), TestSuite::Compare::Container);
 
     if(data.flags >= TextDataFlag::Editable) {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu,
-            0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u
+            0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0u, 5u, 9u
+            0u, 5u, 9u, 11u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
-            5u, 4u, 2u
+            5u, 4u, 2u, 0u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
-            3u, 7u, 9u
+            3u, 7u, 9u, 10u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
             "hello"
             "ahoy"
-            "hi",
+            "hi"
+            "",
             TestSuite::Compare::String);
     }
 
@@ -8069,7 +8075,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Just the filled subset is getting updated, and just what was selected in
        states */
-    UnsignedInt dataIds[]{9, 5, 7, 3};
+    UnsignedInt dataIds[]{9, 5, 7, 3, 10};
     layer.update(data.states, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {}, {}, {});
 
     if(data.expectIndexDataUpdated) {
@@ -8088,6 +8094,7 @@ void TextLayerTest::updateCleanDataOrder() {
              5*4 + 0,  5*4 + 1,  5*4 + 2,  5*4 + 2,  5*4 + 1,  5*4 + 3,
              6*4 + 0,  6*4 + 1,  6*4 + 2,  6*4 + 2,  6*4 + 1,  6*4 + 3,
              7*4 + 0,  7*4 + 1,  7*4 + 2,  7*4 + 2,  7*4 + 1,  7*4 + 3,
+             /* No glyphs to render for (possibly editable) empty text 10 */
         }), TestSuite::Compare::Container);
         if(data.expectEditingDataPresent)
             /* Yes, the editing quad index order is different from above,
@@ -8102,23 +8109,27 @@ void TextLayerTest::updateCleanDataOrder() {
                    node */
                 0*4 + 0,  0*4 + 2,  0*4 + 1,  0*4 + 2,  0*4 + 3,  0*4 + 1,
                 1*4 + 0,  1*4 + 2,  1*4 + 1,  1*4 + 2,  1*4 + 3,  1*4 + 1,
+                /* Cursor for text 10, quad 7 */
+                7*4 + 0,  7*4 + 2,  7*4 + 1,  7*4 + 2,  7*4 + 3,  7*4 + 1,
             }), TestSuite::Compare::Container);
         else
             CORRADE_COMPARE_AS(layer.stateData().editingIndices, Containers::arrayView<UnsignedInt>({
             }), TestSuite::Compare::Container);
 
-        /* For drawing data 9, 5, 7, 3 it needs to draw the first 2 quads in
-           the index buffer, then next 1 quad, then next 1, then next 5. For
-           editing there's a cursor quad for data 9, nothing for data 5,
-           selection quad for data 7 and cursor + selection quads for data
-           3. */
+        /* For drawing data 9, 5, 7, 3, 10 it needs to draw the first 2 quads
+           in the index buffer, then next 1 quad, then next 1, then next 5,
+           then none for the empty text.
+
+           For editing there's a cursor quad for data 9, nothing for data 5,
+           selection quad for data 7, cursor + selection quads for data 3 and
+           cursor for data 10. */
         if(data.expectEditingDataPresent)
             CORRADE_COMPARE_AS(layer.stateData().indexDrawOffsets, (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
-                {0, 0}, {2*6, 6}, {3*6, 6}, {4*6, 12}, {9*6, 24}
+                {0, 0}, {2*6, 6}, {3*6, 6}, {4*6, 12}, {9*6, 24}, {9*6, 30},
             })), TestSuite::Compare::Container);
         else
             CORRADE_COMPARE_AS(layer.stateData().indexDrawOffsets, (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
-                {0, 0}, {2*6, 0}, {3*6, 0}, {4*6, 0}, {9*6, 0}
+                {0, 0}, {2*6, 0}, {3*6, 0}, {4*6, 0}, {9*6, 0}, {9*6, 0}
             })), TestSuite::Compare::Container);
     }
 
@@ -8186,6 +8197,7 @@ void TextLayerTest::updateCleanDataOrder() {
                always the same. */
             CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].styleUniform, 1);
         }
+        /* (Possibly editable) text 10 is empty */
 
         Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
         Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::textureCoordinates);
@@ -8261,6 +8273,8 @@ void TextLayerTest::updateCleanDataOrder() {
             {3.0f + 1.5f + 2.f + 8.0f, 6.5f - 1.0f + 4.0f - 8.0f},
         }), TestSuite::Compare::Container);
 
+        /* Text 10 is empty */
+
         /* Texture coordinates however stay the same, with Y up:
 
             +--+--+
@@ -8325,6 +8339,9 @@ void TextLayerTest::updateCleanDataOrder() {
 
             /* Text 9 cursor (quad 5) has style 2 which maps to uniform 3 */
             CORRADE_COMPARE(layer.stateData().editingVertices[5*4 + i].styleUniform, 3);
+
+            /* Text 10 cursor (quad 7) has style 2 which maps to uniform 3 */
+            CORRADE_COMPARE(layer.stateData().editingVertices[7*4 + i].styleUniform, 3);
         }
 
         Containers::StridedArrayView1D<const Vector2> editingPositions = stridedArrayView(layer.stateData().editingVertices).slice(&Implementation::TextLayerEditingVertex::position);
@@ -8416,6 +8433,22 @@ void TextLayerTest::updateCleanDataOrder() {
             { 0.0f              - 0.02f, +3.0f              + 0.03f},
             { 0.0f              + 0.02f, +3.0f              + 0.03f},
         }), TestSuite::Compare::Container);
+
+        /* Text 10 cursor (quad 7) is at the center of node 6, thus {6.0, 9.5}.
+           On Y it's the threeGlyphFont ascent 8*0.5 and descent -4*0.5, which aligned to MiddleCenter is shifted +1.0 on Y. Then paddings from
+           style 2. */
+        CORRADE_COMPARE_AS(editingPositions.sliceSize(7*4, 1*4), Containers::arrayView<Vector2>({
+            {6.0f               - 0.01f, 9.5f - 4.0f + 1.0f - 0.02f},
+            {6.0f               + 0.03f, 9.5f - 4.0f + 1.0f - 0.02f},
+            {6.0f               - 0.01f, 9.5f + 2.0f + 1.0f + 0.04f},
+            {6.0f               + 0.03f, 9.5f + 2.0f + 1.0f + 0.04f},
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(editingCenterDistances.sliceSize(7*4, 1*4), Containers::arrayView<Vector2>({
+            { 0.0f              - 0.02f, -3.0f              - 0.03f},
+            { 0.0f              + 0.02f, -3.0f              - 0.03f},
+            { 0.0f              - 0.02f, +3.0f              + 0.03f},
+            { 0.0f              + 0.02f, +3.0f              + 0.03f},
+        }), TestSuite::Compare::Container);
     }
 
     /* Removing a node with cleanNodes() marks the corresponding run as unused,
@@ -8432,36 +8465,37 @@ void TextLayerTest::updateCleanDataOrder() {
     /* The run corresponding to the removed data should be marked as unused,
        the rest stays the same */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u
+        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        0u, 1u, 2u, 0xffffffffu, 8u, 0xffffffffu, 10u, 11u, 12u, 13u
+        0u, 1u, 2u, 0xffffffffu, 8u, 0xffffffffu, 10u, 11u, 12u, 13u, 0xffffffffu
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
-        1u, 1u, 1u, 5u, 1u, 1u, 1u, 1u, 1u, 2u
+        1u, 1u, 1u, 5u, 1u, 1u, 1u, 1u, 1u, 2u, 0u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
-        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u
+        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u
     }), TestSuite::Compare::Container);
 
     if(data.flags >= TextDataFlag::Editable) {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu,
-            0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u
+            0xffffffffu, 0xffffffffu, 1u, 0xffffffffu, 2u, 3u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
-            0xffffffffu, 5u, 9u
+            0xffffffffu, 5u, 9u, 0xffffffffu
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textSize), Containers::arrayView({
-            5u, 4u, 2u
+            5u, 4u, 2u, 0u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::data), Containers::arrayView({
-            3u, 7u, 9u
+            3u, 7u, 9u, 10u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().textData,
             "hello" /* now unused */
             "ahoy"
-            "hi",
+            "hi"
+            "", /* now unused */
             TestSuite::Compare::String);
     }
 
@@ -8473,7 +8507,8 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* There should be just 9 glyph runs, assigned to the remaining 9 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 1u, 2u, 3u /* free data */, 3u, 5u /* free data */, 4u, 5u, 6u, 7u
+        0u, 1u, 2u, 3u /* free data */, 3u, 5u /* free data */, 4u, 5u, 6u, 7u,
+        10u /* free data */
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u
@@ -8493,7 +8528,8 @@ void TextLayerTest::updateCleanDataOrder() {
     if(data.flags >= TextDataFlag::Editable) {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
-            0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu, 1u
+            0xffffffffu, 0xffffffffu, 0xffffffffu, 0u, 0xffffffffu, 1u,
+            3u /* free data */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
             0u, 4u
@@ -8681,7 +8717,8 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* There should be just 7 glyph runs, assigned to the remaining 7 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 1u, 2u, 3u /* free data */, 3u, 5u /* free data */, 4u, 5u /* free data */, 5u, 6u
+        0u, 1u, 2u, 3u /* free data */, 3u, 5u /* free data */, 4u,
+        5u /* free data */, 5u, 6u, 10u /* free data */
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 5u, 6u
@@ -8701,7 +8738,7 @@ void TextLayerTest::updateCleanDataOrder() {
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::textRun), Containers::arrayView({
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
             0xffffffffu, 0xffffffffu, 0xffffffffu, 0u /* free data */,
-            0xffffffffu, 0u
+            0xffffffffu, 0u, 3u /* free data */
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().textRuns).slice(&Implementation::TextLayerTextRun::textOffset), Containers::arrayView({
             0u
