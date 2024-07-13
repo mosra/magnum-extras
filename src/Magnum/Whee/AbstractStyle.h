@@ -200,7 +200,10 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
          * value is passed to the @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
-         * @see @ref textLayerStyleCount(), @ref textLayerDynamicStyleCount(),
+         * @see @ref textLayerStyleCount(),
+         *      @ref textLayerEditingStyleUniformCount(),
+         *      @ref textLayerEditingStyleCount(),
+         *      @ref textLayerDynamicStyleCount(),
          *      @ref textLayerGlyphCacheFormat(),
          *      @ref textLayerGlyphCacheSize(),
          *      @ref textLayerGlyphCachePadding(), @ref features()
@@ -214,12 +217,44 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * value is passed to the @ref TextLayer::Shared::Configuration::Configuration(UnsignedInt, UnsignedInt)
          * constructor by @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleUniformCount(),
+         *      @ref textLayerEditingStyleUniformCount(),
+         *      @ref textLayerEditingStyleCount(),
          *      @ref textLayerDynamicStyleCount(),
          *      @ref textLayerGlyphCacheFormat(),
          *      @ref textLayerGlyphCacheSize(),
          *      @ref textLayerGlyphCachePadding(), @ref features()
          */
         UnsignedInt textLayerStyleCount() const;
+
+        /**
+         * @brief Editing style uniform count for the text layer
+         *
+         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * value is passed to @ref TextLayer::Shared::Configuration::setEditingStyleCount()
+         * by @ref UserInterfaceGL::setStyle().
+         * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
+         *      @ref textLayerEditingStyleCount(),
+         *      @ref textLayerDynamicStyleCount(),
+         *      @ref textLayerGlyphCacheFormat(),
+         *      @ref textLayerGlyphCacheSize(),
+         *      @ref textLayerGlyphCachePadding(), @ref features()
+         */
+        UnsignedInt textLayerEditingStyleUniformCount() const;
+
+        /**
+         * @brief Editing style count for the text layer
+         *
+         * Expects that @ref StyleFeature::TextLayer is supported. The returned
+         * value is passed to @ref TextLayer::Shared::Configuration::setEditingStyleCount()
+         * by @ref UserInterfaceGL::setStyle().
+         * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
+         *      @ref textLayerEditingStyleUniformCount(),
+         *      @ref textLayerDynamicStyleCount(),
+         *      @ref textLayerGlyphCacheFormat(),
+         *      @ref textLayerGlyphCacheSize(),
+         *      @ref textLayerGlyphCachePadding(), @ref features()
+         */
+        UnsignedInt textLayerEditingStyleCount() const;
 
         /**
          * @brief Dynamic style count for the text layer
@@ -230,6 +265,8 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @ref setTextLayerDynamicStyleCount() to increase the count if
          * needed.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
+         *      @ref textLayerEditingStyleUniformCount(),
+         *      @ref textLayerEditingStyleCount(),
          *      @ref textLayerGlyphCacheFormat(),
          *      @ref textLayerGlyphCacheSize(),
          *      @ref textLayerGlyphCachePadding(), @ref features()
@@ -256,6 +293,8 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * value is passed to the @ref Text::GlyphCache constructor by
          * @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
+         *      @ref textLayerEditingStyleUniformCount(),
+         *      @ref textLayerEditingStyleCount(),
          *      @ref textLayerDynamicStyleCount(),
          *      @ref textLayerGlyphCacheSize(),
          *      @ref textLayerGlyphCachePadding(), @ref features()
@@ -275,6 +314,8 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache if the
          * application needs to store more glyphs.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
+         *      @ref textLayerEditingStyleUniformCount(),
+         *      @ref textLayerEditingStyleCount(),
          *      @ref textLayerDynamicStyleCount(),
          *      @ref textLayerGlyphCacheFormat(),
          *      @ref textLayerGlyphCachePadding(), @ref features()
@@ -290,6 +331,8 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache size or
          * padding if needed.
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
+         *      @ref textLayerEditingStyleUniformCount(),
+         *      @ref textLayerEditingStyleCount(),
          *      @ref textLayerDynamicStyleCount(),
          *      @ref textLayerGlyphCacheFormat(),
          *      @ref textLayerGlyphCacheSize(), @ref features()
@@ -326,22 +369,24 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * corresponding to @p features, that their shared state style uniform
          * and style count matches the subset of
          * @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
-         * @ref textLayerStyleUniformCount(), @ref textLayerStyleCount()
-         * matching @p features and their shared state dynamic style count is
-         * at least the subset of @ref baseLayerDynamicStyleCount(),
-         * @ref textLayerDynamicStyleCount() matching @p features.
-         * Additionally, if @ref StyleFeature::TextLayer is present in
-         * @p features, expects that the @ref TextLayer::Shared instance has a
-         * glyph cache set that matches @ref textLayerGlyphCacheFormat(), has
-         * size at least @ref textLayerGlyphCacheSize() for @p features and
-         * padding at least @ref textLayerGlyphCachePadding() and that
-         * @p fontManager is not @cpp nullptr @ce; and if
-         * @ref StyleFeature::TextLayerImages is present in @p features,
-         * expects that either the @ref TextLayer is already present in the
-         * user interface or that @ref StyleFeature::TextLayer is included in
-         * @p features as well, and that @p importerManager is not
-         * @cpp nullptr @ce. Returns @cpp true @ce on success, prints a message
-         * to @relativeref{Magnum,Error} and returns @cpp false @ce if some
+         * @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
+         * @ref textLayerEditingStyleUniformCount(),
+         * @ref textLayerEditingStyleCount() matching @p features and their
+         * shared state dynamic style count is at least the subset of
+         * @ref baseLayerDynamicStyleCount(), @ref textLayerDynamicStyleCount()
+         * matching @p features. Additionally, if @ref StyleFeature::TextLayer
+         * is present in @p features, expects that the @ref TextLayer::Shared
+         * instance has a glyph cache set that matches
+         * @ref textLayerGlyphCacheFormat(), has size at least
+         * @ref textLayerGlyphCacheSize() for @p features and padding at least
+         * @ref textLayerGlyphCachePadding() and that @p fontManager is not
+         * @cpp nullptr @ce; and if @ref StyleFeature::TextLayerImages is
+         * present in @p features, expects that either the @ref TextLayer is
+         * already present in the user interface or that
+         * @ref StyleFeature::TextLayer is included in @p features as well, and
+         * that @p importerManager is not @cpp nullptr @ce. Returns
+         * @cpp true @ce on success, prints a message to
+         * @relativeref{Magnum,Error} and returns @cpp false @ce if some
          * run-time error happened during style preparation, such as a plugin
          * not being found or external data failing to load.
          */
@@ -399,6 +444,24 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * @ref doFeatures() contains @ref StyleFeature::TextLayer.
          */
         virtual UnsignedInt doTextLayerStyleCount() const;
+
+        /**
+         * @brief Implementation for @ref textLayerEditingStyleUniformCount()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::TextLayer. Default implementation delegates to
+         * @ref doTextLayerEditingStyleCount().
+         */
+        virtual UnsignedInt doTextLayerEditingStyleUniformCount() const;
+
+        /**
+         * @brief Implementation for @ref textLayerEditingStyleCount()
+         *
+         * Guaranteed to be called only if @ref doFeatures() contains
+         * @ref StyleFeature::TextLayer. Default implementation returns
+         * @cpp 0 @ce.
+         */
+        virtual UnsignedInt doTextLayerEditingStyleCount() const;
 
         /**
          * @brief Implementation for @ref textLayerDynamicStyleCount()
