@@ -525,7 +525,9 @@ void BaseLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
         }
         if(needsFirstUpload || sharedStyleChanged) {
             state.styleBuffer.setSubData(0, {&sharedState.commonStyleUniform, 1});
-            state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform), sharedState.styleUniforms);
+            /* Skip empty upload if there are just dynamic styles */
+            if(!sharedState.styleUniforms.isEmpty())
+                state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform), sharedState.styleUniforms);
         }
         if(needsFirstUpload || state.dynamicStyleChanged) {
             state.styleBuffer.setSubData(sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*sharedState.styleUniformCount, state.dynamicStyleUniforms);
