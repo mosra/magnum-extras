@@ -297,7 +297,9 @@ void TextLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
         }
         if(needsFirstUpload || sharedStyleChanged) {
             state.styleBuffer.setSubData(0, {&sharedState.commonStyleUniform, 1});
-            state.styleBuffer.setSubData(sizeof(TextLayerCommonStyleUniform), sharedState.styleUniforms);
+            /* Skip empty upload if there are just dynamic styles */
+            if(!sharedState.styleUniforms.isEmpty())
+                state.styleBuffer.setSubData(sizeof(TextLayerCommonStyleUniform), sharedState.styleUniforms);
         }
         if(needsFirstUpload || state.dynamicStyleChanged) {
             state.styleBuffer.setSubData(sizeof(TextLayerCommonStyleUniform) + sizeof(TextLayerStyleUniform)*sharedState.styleUniformCount, state.dynamicStyleUniforms);
