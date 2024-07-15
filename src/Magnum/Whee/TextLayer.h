@@ -2338,13 +2338,14 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * The @p uniforms view is expected to have the same size as
          * @ref styleUniformCount(), the @p styleToUniform, @p styleFonts and
          * @p styleAlignments views the same size as @ref styleCount(). All
-         * font handles are expected to be either @ref FontHandle::Null or
-         * valid, all @p styleAlignments values are expected to not be
-         * `*GlyphBounds` as the implementation can only align based on font
-         * metrics and cursor position, not actual glyph bounds. See
-         * @ref TextProperties::setAlignment() for a detailed explanation of
-         * alignment behavior respectively to the nodes the text is attached
-         * to.
+         * uniform indices are expected to be less than
+         * @ref styleUniformCount(), all font handles are expected to be either
+         * @ref FontHandle::Null or valid, all @p styleAlignments values are
+         * expected to not be `*GlyphBounds` as the implementation can only
+         * align based on font metrics and cursor position, not actual glyph
+         * bounds. See @ref TextProperties::setAlignment() for a detailed
+         * explanation of alignment behavior respectively to the nodes the text
+         * is attached to.
          *
          * The @p styleFeatureOffsets and @p styleFeatureCounts views are
          * expected to both either have a size of @ref styleCount(), or both be
@@ -2440,6 +2441,8 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * The @p uniforms view is expected to have the same size as
          * @ref editingStyleUniformCount(), the @p styleToUniform and
          * @p stylePaddings views the same size as @ref editingStyleCount().
+         * All @p styleToUniform indices are expected to be less than
+         * @ref editingStyleUniformCount().
          *
          * Value of @cpp styleToUniform[i] @ce should give back an index into
          * the @p uniforms array for style @cpp i @ce. If
@@ -2449,12 +2452,14 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * convenience overload instead.
          *
          * The @p styleTextUniforms are expected to either have the same size
-         * as @ref editingStyleCount() or be empty. The indices point into the
-         * uniform array supplied by @ref setStyle(), in which case selected
-         * portions of the text are switched to be drawn with given uniform ID
-         * instead, or are @cpp -1 @ce, in which case the original style
-         * uniform ID is used unchanged. If the view is empty, it's the same as
-         * all values being @cpp -1 @ce.
+         * as @ref editingStyleCount() or be empty. If non-empty, they're
+         * expected to either be non-negative indices less than
+         * @ref styleUniformCount(), pointing into the uniform array supplied
+         * by @ref setStyle() in which case selected portions of the text are
+         * switched to be drawn with given uniform ID instead, or be
+         * @cpp -1 @ce, in which case the original style uniform ID is used
+         * unchanged. If the view is empty, it's the same as all values being
+         * @cpp -1 @ce.
          *
          * Note that while for *selection* styles the paddings are merely a way
          * to visually fine-tune the appearance, for *cursor* styles the
