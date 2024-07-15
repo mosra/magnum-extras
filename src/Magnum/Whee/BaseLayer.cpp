@@ -146,6 +146,11 @@ BaseLayer::Shared& BaseLayer::Shared::setStyle(const BaseLayerCommonStyleUniform
     CORRADE_ASSERT(styleToUniform.size() == state.styleCount,
         "Whee::BaseLayer::Shared::setStyle(): expected" << state.styleCount << "style uniform indices, got" << styleToUniform.size(), *this);
     setStyleInternal(commonUniform, uniforms, stylePaddings);
+    #ifndef CORRADE_NO_ASSERT
+    for(std::size_t i = 0; i != styleToUniform.size(); ++i)
+        CORRADE_ASSERT(styleToUniform[i] < state.styleUniformCount,
+            "Whee::BaseLayer::Shared::setStyle(): uniform index" << styleToUniform[i] << "out of range for" << state.styleUniformCount << "uniforms" << "at index" << i, *this);
+    #endif
     Utility::copy(styleToUniform, stridedArrayView(state.styles).slice(&Implementation::BaseLayerStyle::uniform));
     return *this;
 }

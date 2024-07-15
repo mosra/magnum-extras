@@ -123,6 +123,7 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedSetStyleImplicitEditingStyles();
     void sharedSetStyleImplicitPadding();
     void sharedSetStyleInvalidSize();
+    void sharedSetStyleInvalidMapping();
     void sharedSetStyleImplicitMapping();
     void sharedSetStyleImplicitMappingImplicitFeatures();
     void sharedSetStyleImplicitMappingImplicitEditingStyles();
@@ -136,6 +137,7 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedSetEditingStyle();
     void sharedSetEditingStyleImplicitTextUniforms();
     void sharedSetEditingStyleInvalidSize();
+    void sharedSetEditingStyleInvalidMapping();
     void sharedSetEditingStyleImplicitMapping();
     void sharedSetEditingStyleImplicitMappingImplicitTextUniforms();
     void sharedSetEditingStyleImplicitMappingInvalidSize();
@@ -1236,8 +1238,12 @@ TextLayerTest::TextLayerTest() {
                        &TextLayerTest::sharedSetStyleImplicitFeatures,
                        &TextLayerTest::sharedSetStyleImplicitEditingStyles,
                        &TextLayerTest::sharedSetStyleImplicitPadding,
-                       &TextLayerTest::sharedSetStyleInvalidSize,
-                       &TextLayerTest::sharedSetStyleImplicitMapping,
+                       &TextLayerTest::sharedSetStyleInvalidSize},
+        Containers::arraySize(SharedSetStyleData));
+
+    addTests({&TextLayerTest::sharedSetStyleInvalidMapping});
+
+    addInstancedTests({&TextLayerTest::sharedSetStyleImplicitMapping,
                        &TextLayerTest::sharedSetStyleImplicitMappingImplicitFeatures,
                        &TextLayerTest::sharedSetStyleImplicitMappingImplicitEditingStyles,
                        &TextLayerTest::sharedSetStyleImplicitMappingImplicitPadding,
@@ -1252,6 +1258,7 @@ TextLayerTest::TextLayerTest() {
     addInstancedTests({&TextLayerTest::sharedSetEditingStyle,
                        &TextLayerTest::sharedSetEditingStyleImplicitTextUniforms,
                        &TextLayerTest::sharedSetEditingStyleInvalidSize,
+                       &TextLayerTest::sharedSetEditingStyleInvalidMapping,
                        &TextLayerTest::sharedSetEditingStyleImplicitMapping,
                        &TextLayerTest::sharedSetEditingStyleImplicitMappingImplicitTextUniforms,
                        &TextLayerTest::sharedSetEditingStyleImplicitMappingInvalidSize},
@@ -3137,7 +3144,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
     Error redirectError{&out};
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {},
@@ -3159,7 +3166,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {},
@@ -3170,7 +3177,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {},
@@ -3181,7 +3188,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {},
@@ -3192,7 +3199,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {},
@@ -3203,7 +3210,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {Text::Feature::SlashedZero},
@@ -3214,7 +3221,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {},
@@ -3225,7 +3232,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {},
@@ -3236,7 +3243,7 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null, FontHandle::Null},
         {Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
         {},
@@ -3258,6 +3265,31 @@ void TextLayerTest::sharedSetStyleInvalidSize() {
         "Whee::TextLayer::Shared::setStyle(): expected either no or 5 cursor styles, got 4\n"
         "Whee::TextLayer::Shared::setStyle(): expected either no or 5 selection styles, got 4\n"
         "Whee::TextLayer::Shared::setStyle(): expected either no or 5 paddings, got 3\n",
+        TestSuite::Compare::String);
+}
+
+void TextLayerTest::sharedSetStyleInvalidMapping() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{3, 6}};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {0, 1, 2, 1, 3, 2},
+        {FontHandle::Null, FontHandle::Null, FontHandle::Null,
+         FontHandle::Null, FontHandle::Null, FontHandle::Null},
+        {Text::Alignment{}, Text::Alignment{}, Text::Alignment{},
+         Text::Alignment{}, Text::Alignment{}, Text::Alignment{}},
+        {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::Shared::setStyle(): uniform index 3 out of range for 3 uniforms at index 4\n",
         TestSuite::Compare::String);
 }
 
@@ -4326,6 +4358,51 @@ void TextLayerTest::sharedSetEditingStyleInvalidSize() {
         "Whee::TextLayer::Shared::setEditingStyle(): expected either no or 5 text uniform indices, got 4\n"
         "Whee::TextLayer::Shared::setEditingStyle(): expected 5 paddings, got 4\n"
         "Whee::TextLayer::Shared::setEditingStyle(): expected 5 paddings, got 0\n",
+        TestSuite::Compare::String);
+}
+
+void TextLayerTest::sharedSetEditingStyleInvalidMapping() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{2, 1}
+        .setEditingStyleCount(3, 6)
+    }, sharedMatchingUniformCount{TextLayer::Shared::Configuration{2, 1}
+        .setEditingStyleCount(3)
+    };
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    shared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{},
+         TextLayerEditingStyleUniform{},
+         TextLayerEditingStyleUniform{}},
+        {0, 1, 2, 1, 3, 2},
+        {},
+        {{}, {}, {}, {}, {}, {}});
+    shared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{},
+         TextLayerEditingStyleUniform{},
+         TextLayerEditingStyleUniform{}},
+        {0, 1, 2, 1, 2, 0},
+        {-1, -1, 0, 1, 2, -1},
+        {{}, {}, {}, {}, {}, {}});
+    /* It should fire in this overload as well, i.e. be done in the common
+       code for both, not the leaf function */
+    sharedMatchingUniformCount.setEditingStyle(TextLayerCommonEditingStyleUniform{},
+        {TextLayerEditingStyleUniform{},
+         TextLayerEditingStyleUniform{},
+         TextLayerEditingStyleUniform{}},
+        {-1, 1, 2},
+        {{}, {}, {}});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::TextLayer::Shared::setEditingStyle(): uniform index 3 out of range for 3 uniforms at index 4\n"
+        "Whee::TextLayer::Shared::setEditingStyle(): text uniform index 2 out of range for 2 uniforms at index 4\n"
+        "Whee::TextLayer::Shared::setEditingStyle(): text uniform index 2 out of range for 2 uniforms at index 2\n",
         TestSuite::Compare::String);
 }
 
@@ -7882,7 +7959,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
         void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{5, data.styleCount}
+    } shared{TextLayer::Shared::Configuration{6, data.styleCount}
         .setEditingStyleCount(data.editingStyleCount ? 4 : 0, data.editingStyleCount)
         .setDynamicStyleCount(data.dynamicStyleCount, data.hasEditingStyles)
     };
@@ -7895,12 +7972,14 @@ void TextLayerTest::updateCleanDataOrder() {
     if(data.styleCount == 6) {
         shared.setStyle(TextLayerCommonStyleUniform{},
             /* Last two uniforms only get referenced by editing styles */
-            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-            /* Style 5 doesn't get used (gets transitioned to 2), use a weird
-               uniform index and padding to verify it doesn't get picked. The
-               font handle should however match style 2 as it can't be
-               transitioned. */
-            {1, 2, 0, 1, 1, 666},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{},
+             TextLayerStyleUniform{}, TextLayerStyleUniform{},
+             TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+            /* Style 5 doesn't get used (gets transitioned to 2), use an
+               otherwise unused uniform index and weird padding to verify it
+               doesn't get picked. The font handle should however match style 2
+               as it can't be transitioned. */
+            {1, 2, 0, 1, 1, 3},
             {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
             {Text::Alignment::MiddleCenter, Text::Alignment::BottomRight, Text::Alignment::MiddleCenter, Text::Alignment::LineLeft, Text::Alignment::TopCenter, Text::Alignment::MiddleCenter},
             /* Features affect only create() / createGlyph() / setText() /
@@ -7923,7 +8002,9 @@ void TextLayerTest::updateCleanDataOrder() {
     } else if(data.styleCount == 4) {
         shared.setStyle(TextLayerCommonStyleUniform{},
             /* Last two uniforms only get referenced by editing styles */
-            {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+            {TextLayerStyleUniform{}, TextLayerStyleUniform{},
+             TextLayerStyleUniform{}, TextLayerStyleUniform{},
+             TextLayerStyleUniform{}, TextLayerStyleUniform{}},
             {1, 2, 0, 1},
             {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
             {Text::Alignment::MiddleCenter, Text::Alignment::BottomRight, Text::Alignment::MiddleCenter, Text::Alignment::LineLeft},
@@ -7946,9 +8027,10 @@ void TextLayerTest::updateCleanDataOrder() {
         shared.setEditingStyle(TextLayerCommonEditingStyleUniform{},
             {TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}},
             {2, 0, 3},
-            {4,    /* Style 0 overrides the selection text uniform */
+            {5,    /* Style 0 overrides the selection text uniform */
              -1,   /* Style 1 is only used for cursor, so this is unused */
-             666}, /* Style 2 is used for selection but doesn't override */
+             3},   /* Style 2 is used for selection but doesn't override,
+                      redirect to an otherwise-unused slot as well */
             {{0.03f, 0.04f, 0.05f, 0.06f},
              {0.06f, 0.07f, 0.08f, 0.09f},
              {0.01f, 0.02f, 0.03f, 0.04f}});
@@ -7957,7 +8039,8 @@ void TextLayerTest::updateCleanDataOrder() {
             {TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}, TextLayerEditingStyleUniform{}},
             {0, 3},
             {-1,   /* Style 0 is only used for cursor, so this is unused */
-             666}, /* Style 1 is used for selection but doesn't override */
+             3},   /* Style 1 is used for selection but doesn't override,
+                      redirect to an otherwise-unused slot as well */
             {{0.06f, 0.07f, 0.08f, 0.09f},
              {0.01f, 0.02f, 0.03f, 0.04f}});
     else if(data.editingStyleCount == 0) {
@@ -8197,9 +8280,9 @@ void TextLayerTest::updateCleanDataOrder() {
         }
         /* Created with style 5, which if not dynamic is transitioned to 2 as
            the node is disabled, which is mapped to uniform 0. If dynamic, it's
-           implicitly `uniformCount + (id - styleCount)`, thus 6. If editable,
-           quad 2 to 5 is switched to uniform 4, or if dynamic,
-           `dynamicUniformCount + (id - styleCount)*2`, thus 9. */
+           implicitly `uniformCount + (id - styleCount)`, thus 7. If editable,
+           quad 2 to 5 is switched to uniform 5, or if dynamic,
+           `dynamicUniformCount + (id - styleCount)*2`, thus 10. */
         for(std::size_t j = 0; j != 4; ++j) {
             CORRADE_ITERATION(j);
             for(std::size_t i: {0, 1}) {
@@ -8207,15 +8290,15 @@ void TextLayerTest::updateCleanDataOrder() {
                 if(data.styleCount == 6)
                     CORRADE_COMPARE(layer.stateData().vertices[3*4 + i*4 + j].styleUniform, 0);
                 else if(data.styleCount == 4)
-                    CORRADE_COMPARE(layer.stateData().vertices[3*4 + i*4 + j].styleUniform, 6);
+                    CORRADE_COMPARE(layer.stateData().vertices[3*4 + i*4 + j].styleUniform, 7);
                 else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }
             for(std::size_t i: {2, 3, 4}) {
                 CORRADE_ITERATION(i);
                 if(data.styleCount == 6)
-                    CORRADE_COMPARE(layer.stateData().vertices[3*4 + i*4 + j].styleUniform, data.expectEditingDataPresent ? 4 : 0);
+                    CORRADE_COMPARE(layer.stateData().vertices[3*4 + i*4 + j].styleUniform, data.expectEditingDataPresent ? 5 : 0);
                 else if(data.styleCount == 4)
-                    CORRADE_COMPARE(layer.stateData().vertices[3*4 + i*4 + j].styleUniform, data.expectEditingDataPresent ? 9 : 6);
+                    CORRADE_COMPARE(layer.stateData().vertices[3*4 + i*4 + j].styleUniform, data.expectEditingDataPresent ? 10 : 7);
                 else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             }
         }
@@ -8225,11 +8308,11 @@ void TextLayerTest::updateCleanDataOrder() {
             CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff_rgbf);
             /* Created with style 4, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
-               thus 5. */
+               thus 6. */
             if(data.styleCount == 6)
                 CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 1);
             else if(data.styleCount == 4)
-                CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 5);
+                CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 6);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
         /* (Possibly editable) text 7, quad 11 */

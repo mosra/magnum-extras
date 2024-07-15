@@ -355,6 +355,11 @@ TextLayer::Shared& TextLayer::Shared::setStyle(const TextLayerCommonStyleUniform
     CORRADE_ASSERT(styleToUniform.size() == state.styleCount,
         "Whee::TextLayer::Shared::setStyle(): expected" << state.styleCount << "style uniform indices, got" << styleToUniform.size(), *this);
     setStyleInternal(commonUniform, uniforms, styleFonts, styleAlignments, styleFeatures, styleFeatureOffsets, styleFeatureCounts, styleCursorStyles, styleSelectionStyles, stylePaddings);
+    #ifndef CORRADE_NO_ASSERT
+    for(std::size_t i = 0; i != styleToUniform.size(); ++i)
+        CORRADE_ASSERT(styleToUniform[i] < state.styleUniformCount,
+            "Whee::TextLayer::Shared::setStyle(): uniform index" << styleToUniform[i] << "out of range for" << state.styleUniformCount << "uniforms" << "at index" << i, *this);
+    #endif
     Utility::copy(styleToUniform, stridedArrayView(state.styles).slice(&Implementation::TextLayerStyle::uniform));
     return *this;
 }
@@ -390,6 +395,11 @@ void TextLayer::Shared::setEditingStyleInternal(const TextLayerCommonEditingStyl
         for(Implementation::TextLayerEditingStyle& style: state.editingStyles)
             style.textUniform = -1;
     } else {
+        #ifndef CORRADE_NO_ASSERT
+        for(std::size_t i = 0; i != styleTextUniforms.size(); ++i)
+            CORRADE_ASSERT(styleTextUniforms[i] == -1 || UnsignedInt(styleTextUniforms[i]) < state.styleUniformCount,
+                "Whee::TextLayer::Shared::setEditingStyle(): text uniform index" << styleTextUniforms[i] << "out of range for" << state.styleUniformCount << "uniforms" << "at index" << i, );
+        #endif
         Utility::copy(styleTextUniforms, stridedArrayView(state.editingStyles).slice(&Implementation::TextLayerEditingStyle::textUniform));
     }
     Utility::copy(stylePaddings, stridedArrayView(state.editingStyles).slice(&Implementation::TextLayerEditingStyle::padding));
@@ -421,6 +431,11 @@ TextLayer::Shared& TextLayer::Shared::setEditingStyle(const TextLayerCommonEditi
     CORRADE_ASSERT(styleToUniform.size() == state.editingStyles.size(),
         "Whee::TextLayer::Shared::setEditingStyle(): expected" << state.editingStyles.size() << "style uniform indices, got" << styleToUniform.size(), *this);
     setEditingStyleInternal(commonUniform, uniforms, styleTextUniforms, stylePaddings);
+    #ifndef CORRADE_NO_ASSERT
+    for(std::size_t i = 0; i != styleToUniform.size(); ++i)
+        CORRADE_ASSERT(styleToUniform[i] < state.editingStyleUniformCount,
+            "Whee::TextLayer::Shared::setEditingStyle(): uniform index" << styleToUniform[i] << "out of range for" << state.editingStyleUniformCount << "uniforms" << "at index" << i, *this);
+    #endif
     Utility::copy(styleToUniform, stridedArrayView(state.editingStyles).slice(&Implementation::TextLayerEditingStyle::uniform));
     return *this;
 }
