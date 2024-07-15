@@ -72,6 +72,8 @@ struct Animation {
     BaseLayerStyleUniform sourceUniform{NoInit}, targetUniform{NoInit};
     Vector4 sourcePadding{NoInit}, targetPadding{NoInit};
     UnsignedInt targetStyle, dynamicStyle;
+    bool uniformDifferent;
+    /* 3/7 bytes free */
     Float(*easing)(Float);
 };
 
@@ -139,11 +141,20 @@ void BaseLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     Animation& animation = state.animations[id];
     animation.targetStyle = targetStyle;
     animation.dynamicStyle = ~UnsignedInt{};
-    animation.sourceUniform = layerSharedState.styleUniforms[layerSharedState.styles[sourceStyle].uniform];
-    animation.targetUniform = layerSharedState.styleUniforms[layerSharedState.styles[targetStyle].uniform];
-    animation.sourcePadding = layerSharedState.styles[sourceStyle].padding;
-    animation.targetPadding = layerSharedState.styles[targetStyle].padding;
     animation.easing = easing;
+
+    const Implementation::BaseLayerStyle& sourceStyleData = layerSharedState.styles[sourceStyle];
+    const Implementation::BaseLayerStyle& targetStyleData = layerSharedState.styles[targetStyle];
+    animation.sourcePadding = sourceStyleData.padding;
+    animation.targetPadding = targetStyleData.padding;
+
+    /* Remember also if the actual uniform ID is different, if not, we don't
+       need to interpolate (or upload) it. The uniform *data* may still be the
+       same even if the ID is different, but checking for that is too much work
+       and any reasonable style should deduplicate those anyway. */
+    animation.sourceUniform = layerSharedState.styleUniforms[sourceStyleData.uniform];
+    animation.targetUniform = layerSharedState.styleUniforms[targetStyleData.uniform];
+    animation.uniformDifferent = sourceStyleData.uniform != targetStyleData.uniform;
 }
 
 void BaseLayerStyleAnimator::remove(const AnimationHandle handle) {
@@ -313,28 +324,37 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Nanoseconds time,
                 if(data != LayerDataHandle::Null) {
                     dataStyles[layerDataHandleId(data)] = layerSharedState.styleCount + animation.dynamicStyle;
                     animations |= BaseLayerStyleAnimation::Style;
+                    /* If the uniform IDs are the same between the source and
+                       target style, the uniform interpolation below won't
+                       happen. We still need to upload it at least once though,
+                       so trigger it here unconditionally. */
+                    animations |= BaseLayerStyleAnimation::Uniform;
                 }
             }
 
             const Float factor = animation.easing(factors[i]);
 
-            /* Interpolate the uniform. The assumption is that animated
-               uniforms change almost every frame anyway so checking that they
-               actually changed is a bigger overhead than just doing the upload
-               every time. */
-            BaseLayerStyleUniform uniform{NoInit};
-            #define _c(member) uniform.member = Math::lerp(                 \
-                animation.sourceUniform.member,                             \
-                animation.targetUniform.member, factor);
-            _c(topColor)
-            _c(bottomColor)
-            _c(outlineColor)
-            _c(outlineWidth)
-            _c(cornerRadius)
-            _c(innerOutlineCornerRadius)
-            #undef _c
-            dynamicStyleUniforms[animation.dynamicStyle] = uniform;
-            animations |= BaseLayerStyleAnimation::Uniform;
+            /* Interpolate the uniform. If the source and target uniforms were
+               the same, just copy one of them and don't report that the
+               uniforms got changed. The only exception is the first ever
+               switch to the dynamic uniform in which case the data has to be
+               uploaded. That's handled in the animation.dynamicStyle
+               allocation above. */
+            if(animation.uniformDifferent) {
+                BaseLayerStyleUniform uniform{NoInit};
+                #define _c(member) uniform.member = Math::lerp(             \
+                    animation.sourceUniform.member,                         \
+                    animation.targetUniform.member, factor);
+                _c(topColor)
+                _c(bottomColor)
+                _c(outlineColor)
+                _c(outlineWidth)
+                _c(cornerRadius)
+                _c(innerOutlineCornerRadius)
+                #undef _c
+                dynamicStyleUniforms[animation.dynamicStyle] = uniform;
+                animations |= BaseLayerStyleAnimation::Uniform;
+            } else dynamicStyleUniforms[animation.dynamicStyle] = animation.targetUniform;
 
             /* Interpolate the padding. Compared to the uniforms, updated
                padding causes doUpdate() to be triggered on the layer, which is

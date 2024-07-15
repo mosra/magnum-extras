@@ -76,6 +76,7 @@ struct TextLayerStyleAnimatorTest: TestSuite::Tester {
        AbstractAnimator::clean() already */
 
     void advance();
+    void advanceProperties();
     void advanceNoFreeDynamicStyles();
     void advanceEmpty();
     void advanceInvalid();
@@ -90,6 +91,26 @@ enum class Enum: UnsignedShort {};
 Debug& operator<<(Debug& debug, Enum value) {
     return debug << UnsignedInt(value);
 }
+
+const struct {
+    const char* name;
+    UnsignedInt uniform;
+    Vector4 padding;
+    TextLayerStyleAnimations expected;
+} AdvancePropertiesData[]{
+    {"nothing changes", 1, Vector4{2.0f},
+        TextLayerStyleAnimation{}},
+    {"uniform ID changes", 0, Vector4{2.0f},
+        TextLayerStyleAnimation::Uniform},
+    /* Still reports uniform change because comparing all values is unnecessary
+       complexity */
+    {"uniform ID changes but data stay the same", 3, Vector4{2.0f},
+        TextLayerStyleAnimation::Uniform},
+    {"padding changes", 1, Vector4{4.0f},
+        TextLayerStyleAnimation::Padding},
+    {"uniform ID + padding changes", 0, Vector4{4.0f},
+        TextLayerStyleAnimation::Padding|TextLayerStyleAnimation::Uniform},
+};
 
 const struct {
     const char* name;
@@ -119,8 +140,12 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
               &TextLayerStyleAnimatorTest::clean,
               &TextLayerStyleAnimatorTest::cleanEmpty,
 
-              &TextLayerStyleAnimatorTest::advance,
-              &TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles,
+              &TextLayerStyleAnimatorTest::advance});
+
+    addInstancedTests({&TextLayerStyleAnimatorTest::advanceProperties},
+        Containers::arraySize(AdvancePropertiesData));
+
+    addTests({&TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles,
               &TextLayerStyleAnimatorTest::advanceEmpty,
               &TextLayerStyleAnimatorTest::advanceInvalid});
 
@@ -1031,6 +1056,121 @@ void TextLayerStyleAnimatorTest::advance() {
     CORRADE_COMPARE(layer.style(data2), 2);
     CORRADE_COMPARE(layer.style(data3), 4);
     CORRADE_COMPARE(layer.style(data4), 5);
+}
+
+void TextLayerStyleAnimatorTest::advanceProperties() {
+    auto&& data = AdvancePropertiesData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<EmptyShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{4, 3}
+        .setDynamicStyleCount(1)
+    };
+    shared.setGlyphCache(cache);
+
+    FontHandle fontHandle = shared.addFont(font, 1.0f);
+
+    Float uniformColors[]{
+        4.0f, 2.0f, 0.0f, 2.0f
+    };
+    shared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}
+            .setColor(Color4{uniformColors[0]}),
+         TextLayerStyleUniform{}
+            .setColor(Color4{uniformColors[1]}),
+         TextLayerStyleUniform{}
+            .setColor(Color4{uniformColors[2]}),
+         TextLayerStyleUniform{} /* same data as uniform 1, different index */
+            .setColor(Color4{uniformColors[3]})},
+        {data.uniform, 2, 1},
+        {fontHandle, fontHandle, fontHandle},
+        {Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter,
+         Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {},
+        {data.padding,
+         Vector4{4.0f},
+         Vector4{2.0f}});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Assign data to a style that isn't used for animation */
+    DataHandle layerData = layer.create(1, "", {});
+
+    TextLayerStyleAnimator animator{animatorHandle(0, 1)};
+    layer.setAnimator(animator);
+
+    AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, layerData);
+
+    /* The padding resulting from the animation gets checked against these.
+       Contrary to the advance() test case, set it to the initial padding value
+       so the initial advance doesn't report padding as changed. */
+    Vector4 paddings[]{
+        Vector4{2.0f}
+    };
+
+    /* Advancing to 5 allocates a dynamic style, switches to it and fills the
+       dynamic data. The Uniform is reported together with Style always in
+       order to ensure the dynamic uniform is uploaded even though it won't
+       subsequently change. */
+    {
+        TextLayerStyleUniform uniforms[1];
+        UnsignedInt dataStyles[]{666};
+        CORRADE_COMPARE(animator.advance(5_nsec, uniforms, paddings, dataStyles), TextLayerStyleAnimation::Uniform|TextLayerStyleAnimation::Style|data.expected);
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
+        CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
+        CORRADE_COMPARE(uniforms[0].color, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.25f));
+        CORRADE_COMPARE(paddings[0], Math::lerp(Vector4{2.0f}, data.padding, 0.25f));
+        CORRADE_COMPARE(dataStyles[0], 3);
+
+    /* Advancing to 15 changes only what's expected */
+    } {
+        TextLayerStyleUniform uniforms[1];
+        UnsignedInt dataStyles[]{666};
+        CORRADE_COMPARE(animator.advance(15_nsec, uniforms, paddings, dataStyles), data.expected);
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
+        CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
+        CORRADE_COMPARE(uniforms[0].color, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.75f));
+        CORRADE_COMPARE(paddings[0], Math::lerp(Vector4{2.0f}, data.padding, 0.75f));
+        CORRADE_COMPARE(dataStyles[0], 666);
+
+    /* Advancing to 25 changes only the Style, the dynamic style values are
+       unused now */
+    } {
+        TextLayerStyleUniform uniforms[1];
+        UnsignedInt dataStyles[]{666};
+        CORRADE_COMPARE(animator.advance(25_nsec, uniforms, paddings, dataStyles), TextLayerStyleAnimation::Style);
+        CORRADE_VERIFY(!animator.isHandleValid(animation));
+        CORRADE_COMPARE(dataStyles[0], 0);
+    }
 }
 
 void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
