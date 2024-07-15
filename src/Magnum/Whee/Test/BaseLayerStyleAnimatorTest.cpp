@@ -70,6 +70,7 @@ struct BaseLayerStyleAnimatorTest: TestSuite::Tester {
        AbstractAnimator::clean() already */
 
     void advance();
+    void advanceProperties();
     void advanceNoFreeDynamicStyles();
     void advanceEmpty();
     void advanceInvalid();
@@ -84,6 +85,26 @@ enum class Enum: UnsignedShort {};
 Debug& operator<<(Debug& debug, Enum value) {
     return debug << UnsignedInt(value);
 }
+
+const struct {
+    const char* name;
+    UnsignedInt uniform;
+    Vector4 padding;
+    BaseLayerStyleAnimations expected;
+} AdvancePropertiesData[]{
+    {"nothing changes", 1, Vector4{2.0f},
+        BaseLayerStyleAnimation{}},
+    {"uniform ID changes", 0, Vector4{2.0f},
+        BaseLayerStyleAnimation::Uniform},
+    /* Still reports uniform change because comparing all values is unnecessary
+       complexity */
+    {"uniform ID changes but data stay the same", 3, Vector4{2.0f},
+        BaseLayerStyleAnimation::Uniform},
+    {"padding changes", 1, Vector4{4.0f},
+        BaseLayerStyleAnimation::Padding},
+    {"uniform ID + padding changes", 0, Vector4{4.0f},
+        BaseLayerStyleAnimation::Padding|BaseLayerStyleAnimation::Uniform},
+};
 
 const struct {
     const char* name;
@@ -113,8 +134,12 @@ BaseLayerStyleAnimatorTest::BaseLayerStyleAnimatorTest() {
               &BaseLayerStyleAnimatorTest::clean,
               &BaseLayerStyleAnimatorTest::cleanEmpty,
 
-              &BaseLayerStyleAnimatorTest::advance,
-              &BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles,
+              &BaseLayerStyleAnimatorTest::advance});
+
+    addInstancedTests({&BaseLayerStyleAnimatorTest::advanceProperties},
+        Containers::arraySize(AdvancePropertiesData));
+
+    addTests({&BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles,
               &BaseLayerStyleAnimatorTest::advanceEmpty,
               &BaseLayerStyleAnimatorTest::advanceInvalid});
 
@@ -937,6 +962,91 @@ void BaseLayerStyleAnimatorTest::advance() {
     CORRADE_COMPARE(layer.style(data2), 2);
     CORRADE_COMPARE(layer.style(data3), 4);
     CORRADE_COMPARE(layer.style(data4), 5);
+}
+
+void BaseLayerStyleAnimatorTest::advanceProperties() {
+    auto&& data = AdvancePropertiesData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{4, 3}
+        .setDynamicStyleCount(3)
+    };
+
+    Float uniformColors[]{
+        4.0f, 2.0f, 0.0f, 2.0f
+    };
+    shared.setStyle(
+        BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}
+            .setColor(Color4{uniformColors[0]}),
+         BaseLayerStyleUniform{}
+            .setColor(Color4{uniformColors[1]}),
+         BaseLayerStyleUniform{}
+            .setColor(Color4{uniformColors[2]}),
+         BaseLayerStyleUniform{} /* same data as uniform 1, different index */
+            .setColor(Color4{uniformColors[3]})},
+        {data.uniform, 2, 1},
+        {data.padding,
+         Vector4{4.0f},
+         Vector4{2.0f}});
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Assign data to a style that isn't used for animation */
+    DataHandle layerData = layer.create(1);
+
+    BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
+    layer.setAnimator(animator);
+
+    AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, layerData);
+
+    /* The padding resulting from the animation gets checked against these.
+       Contrary to the advance() test case, set it to the initial padding value
+       so the initial advance doesn't report padding as changed. */
+    Vector4 paddings[]{
+        Vector4{2.0f}
+    };
+
+    /* Advancing to 5 allocates a dynamic style, switches to it and fills the
+       dynamic data. The Uniform is reported together with Style always in
+       order to ensure the dynamic uniform is uploaded even though it won't
+       subsequently change. */
+    {
+        BaseLayerStyleUniform uniforms[1];
+        UnsignedInt dataStyles[]{666};
+        CORRADE_COMPARE(animator.advance(5_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style|data.expected);
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
+        CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
+        CORRADE_COMPARE(uniforms[0].topColor, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.25f));
+        CORRADE_COMPARE(paddings[0], Math::lerp(Vector4{2.0f}, data.padding, 0.25f));
+        CORRADE_COMPARE(dataStyles[0], 3);
+
+    /* Advancing to 15 changes only what's expected */
+    } {
+        BaseLayerStyleUniform uniforms[1];
+        UnsignedInt dataStyles[]{666};
+        CORRADE_COMPARE(animator.advance(15_nsec, uniforms, paddings, dataStyles), data.expected);
+        CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
+        CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
+        CORRADE_COMPARE(uniforms[0].topColor, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.75f));
+        CORRADE_COMPARE(paddings[0], Math::lerp(Vector4{2.0f}, data.padding, 0.75f));
+        CORRADE_COMPARE(dataStyles[0], 666);
+
+    /* Advancing to 25 changes only the Style, the dynamic style values are
+       unused now */
+    } {
+        BaseLayerStyleUniform uniforms[1];
+        UnsignedInt dataStyles[]{666};
+        CORRADE_COMPARE(animator.advance(25_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style);
+        CORRADE_VERIFY(!animator.isHandleValid(animation));
+        CORRADE_COMPARE(dataStyles[0], 0);
+    }
 }
 
 void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
