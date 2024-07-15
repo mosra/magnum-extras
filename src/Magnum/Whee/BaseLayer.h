@@ -1113,9 +1113,12 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          *
          * The @p uniforms view is expected to have the same size as
          * @ref styleUniformCount(), the @p styleToUniform view the same size
-         * as @ref styleCount(). The @p stylePaddings view is expected to
-         * either have the same size as @ref styleCount() or be empty, in which
-         * case all paddings are implicitly zero.
+         * as @ref styleCount(). All uniform indices are expected to be less
+         * than @ref styleUniformCount().
+         *
+         * The @p stylePaddings view is expected to either have the same size
+         * as @ref styleCount() or be empty, in which case all paddings are
+         * implicitly zero.
          *
          * Value of @cpp styleToUniform[i] @ce should give back an index into
          * the @p uniforms array for style @cpp i @ce. If

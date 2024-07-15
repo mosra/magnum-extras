@@ -88,6 +88,7 @@ struct BaseLayerTest: TestSuite::Tester {
     void sharedSetStyle();
     void sharedSetStyleImplicitPadding();
     void sharedSetStyleInvalidSize();
+    void sharedSetStyleInvalidMapping();
     void sharedSetStyleImplicitMapping();
     void sharedSetStyleImplicitMappingImplicitPadding();
     void sharedSetStyleImplicitMappingInvalidSize();
@@ -334,8 +335,12 @@ BaseLayerTest::BaseLayerTest() {
 
     addInstancedTests({&BaseLayerTest::sharedSetStyle,
                        &BaseLayerTest::sharedSetStyleImplicitPadding,
-                       &BaseLayerTest::sharedSetStyleInvalidSize,
-                       &BaseLayerTest::sharedSetStyleImplicitMapping,
+                       &BaseLayerTest::sharedSetStyleInvalidSize},
+        Containers::arraySize(SharedSetStyleData));
+
+    addTests({&BaseLayerTest::sharedSetStyleInvalidMapping});
+
+    addInstancedTests({&BaseLayerTest::sharedSetStyleImplicitMapping,
                        &BaseLayerTest::sharedSetStyleImplicitMappingImplicitPadding,
                        &BaseLayerTest::sharedSetStyleImplicitMappingInvalidSize},
         Containers::arraySize(SharedSetStyleData));
@@ -1085,7 +1090,7 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
     Error redirectError{&out};
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {{}, {}, {}, {}, {}});
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
@@ -1093,12 +1098,32 @@ void BaseLayerTest::sharedSetStyleInvalidSize() {
         {{}, {}, {}, {}, {}});
     shared.setStyle(BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
-        {0, 1, 2, 3, 4},
+        {0, 1, 2, 1, 0},
         {{}, {}, {}});
     CORRADE_COMPARE(out.str(),
         "Whee::BaseLayer::Shared::setStyle(): expected 3 uniforms, got 2\n"
         "Whee::BaseLayer::Shared::setStyle(): expected 5 style uniform indices, got 3\n"
         "Whee::BaseLayer::Shared::setStyle(): expected either no or 5 paddings, got 3\n");
+}
+
+void BaseLayerTest::sharedSetStyleInvalidMapping() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Shared: BaseLayer::Shared {
+        explicit Shared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{3, 6}};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+        {0, 1, 2, 1, 3, 2},
+        {});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::BaseLayer::Shared::setStyle(): uniform index 3 out of range for 3 uniforms at index 4\n",
+        TestSuite::Compare::String);
 }
 
 void BaseLayerTest::sharedSetStyleImplicitMapping() {
@@ -1932,7 +1957,7 @@ void BaseLayerTest::updateDataOrder() {
        LayerStates passed in. The actual visual output is checked in
        BaseLayerGLTest. */
 
-    BaseLayer::Shared::Configuration configuration{3, data.styleCount};
+    BaseLayer::Shared::Configuration configuration{4, data.styleCount};
     if(data.textured)
         configuration.addFlags(BaseLayer::Shared::Flag::Textured);
     if(data.backgroundBlurPassCount)
@@ -1951,15 +1976,18 @@ void BaseLayerTest::updateDataOrder() {
     if(data.styleCount == 5) {
         shared.setStyle(
             BaseLayerCommonStyleUniform{},
-            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
-            /* Style 4 doesn't get used (gets transitioned to 2), use a weird
-               uniform index and padding to verify it doesn't get picked */
-            {1, 2, 0, 1, 666},
+            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{},
+             BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+            /* Style 4 doesn't get used (gets transitioned to 2), use an
+               otherwise unused uniform index and weird padding to verify it
+               doesn't get picked */
+            {1, 2, 0, 1, 3},
             {{}, {}, data.paddingFromStyle, {}, Vector4{666}});
     } else if(data.styleCount == 2) {
         shared.setStyle(
             BaseLayerCommonStyleUniform{},
-            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+            {BaseLayerStyleUniform{}, BaseLayerStyleUniform{},
+             BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
             {1, 2},
             {{}, {}});
     } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
@@ -2107,11 +2135,11 @@ void BaseLayerTest::updateDataOrder() {
             /* Created with style 4, which if not dynamic is transitioned to 2
                as the node is disabled, which is mapped to uniform 0. If
                dynamic, it's implicitly `uniformCount + (id - styleCount)`,
-               thus 5. */
+               thus 6. */
             if(data.styleCount == 5)
                 CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 0);
             else if(data.styleCount == 2)
-                CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 5);
+                CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 6);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
             CORRADE_COMPARE(vertices[7*4 + i].color, 0x112233_rgbf);
@@ -2123,11 +2151,11 @@ void BaseLayerTest::updateDataOrder() {
             CORRADE_COMPARE(vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
             /* Created with style 3, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
-               thus 4. */
+               thus 5. */
             if(data.styleCount == 5)
                 CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 1);
             else if(data.styleCount == 2)
-                CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 4);
+                CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 5);
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         }
 
