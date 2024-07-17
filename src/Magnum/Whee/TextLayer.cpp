@@ -1875,14 +1875,25 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::It
         if(!(animator.state() >= AnimatorState::NeedsAdvance))
             continue;
 
-        animations |= static_cast<TextLayerStyleAnimator&>(animator).advance(time, state.dynamicStyleUniforms, stridedArrayView(state.dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding), stridedArrayView(state.data).slice(&Implementation::TextLayerData::style));
+        animations |= static_cast<TextLayerStyleAnimator&>(animator).advance(time,
+            state.dynamicStyleUniforms,
+            state.dynamicStyleCursorStyles,
+            state.dynamicStyleSelectionStyles,
+            stridedArrayView(state.dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding),
+            state.dynamicEditingStyleUniforms,
+            state.dynamicEditingStylePaddings,
+            stridedArrayView(state.data).slice(&Implementation::TextLayerData::style));
     }
 
-    if(animations & (TextLayerStyleAnimation::Style|TextLayerStyleAnimation::Padding))
+    if(animations & (TextLayerStyleAnimation::Style|TextLayerStyleAnimation::Padding|TextLayerStyleAnimation::EditingPadding))
         setNeedsUpdate(LayerState::NeedsDataUpdate);
     if(animations >= TextLayerStyleAnimation::Uniform) {
         setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
         state.dynamicStyleChanged = true;
+    }
+    if(animations >= TextLayerStyleAnimation::EditingUniform) {
+        setNeedsUpdate(LayerState::NeedsCommonDataUpdate);
+        state.dynamicEditingStyleChanged = true;
     }
 }
 
