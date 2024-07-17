@@ -47,6 +47,8 @@ Debug& operator<<(Debug& debug, const TextLayerStyleAnimation value) {
         #define _c(value) case TextLayerStyleAnimation::value: return debug << "::" #value;
         _c(Uniform)
         _c(Padding)
+        _c(EditingUniform)
+        _c(EditingPadding)
         _c(Style)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -59,6 +61,8 @@ Debug& operator<<(Debug& debug, const TextLayerStyleAnimations value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::TextLayerStyleAnimations{}", {
         TextLayerStyleAnimation::Uniform,
         TextLayerStyleAnimation::Padding,
+        TextLayerStyleAnimation::EditingUniform,
+        TextLayerStyleAnimation::EditingPadding,
         TextLayerStyleAnimation::Style
     });
 }
@@ -69,11 +73,32 @@ struct Animation {
     /* As the Animation entries get recycled, all fields have to be overwritten
        always, thus there's no point in initializing them on the first ever
        construction either */
+
     TextLayerStyleUniform uniformSrc{NoInit}, uniformDst{NoInit};
     Vector4 paddingSrc{NoInit}, paddingDst{NoInit};
+
+    TextLayerEditingStyleUniform cursorUniformSrc{NoInit},
+        cursorUniformDst{NoInit};
+    Vector4 cursorPaddingSrc{NoInit},
+        cursorPaddingDst{NoInit};
+    TextLayerEditingStyleUniform selectionUniformSrc{NoInit},
+        selectionUniformDst{NoInit};
+    Vector4 selectionPaddingSrc{NoInit},
+        selectionPaddingDst{NoInit};
+    TextLayerStyleUniform selectionTextUniformSrc{NoInit},
+        selectionTextUniformDst{NoInit};
+
     UnsignedInt styleDst, styleDynamic;
-    bool uniformDifferent;
-    /* 3/7 bytes free */
+
+    bool hasCursorStyle,
+        hasSelectionStyle;
+    bool uniformDifferent,
+        cursorUniformDifferent,
+        selectionUniformDifferent,
+        selectionTextUniformDifferent;
+    /* 2 bytes free. Yes, could pack all those booleans, but it'd still occupy
+       at least one byte with the remaining 7 being padding. So. */
+
     Float(*easing)(Float);
 };
 
@@ -128,6 +153,10 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     const TextLayer::Shared::State& layerSharedState = *state.layerSharedState;
     CORRADE_ASSERT(layerSharedState.setStyleCalled,
         "Whee::TextLayerStyleAnimator::create(): no style data was set on the layer", );
+    /* Like in TextLayer::doUpdate(), technically needed only if there's any
+       actual editable style to animate, but require it always for consistency */
+    CORRADE_ASSERT(!layerSharedState.hasEditingStyles || layerSharedState.setEditingStyleCalled,
+        "Whee::TextLayerStyleAnimator::create(): no editing style data was set on the layer", );
     CORRADE_ASSERT(
         styleSrc < layerSharedState.styleCount &&
         styleDst < layerSharedState.styleCount,
@@ -155,6 +184,54 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     animation.uniformSrc = layerSharedState.styleUniforms[styleDataSrc.uniform];
     animation.uniformDst = layerSharedState.styleUniforms[styleDataDst.uniform];
     animation.uniformDifferent = styleDataSrc.uniform != styleDataDst.uniform;
+
+    /* Animate also cursor style, if present */
+    if(styleDataSrc.cursorStyle != -1 || styleDataDst.cursorStyle != -1) {
+        CORRADE_ASSERT(styleDataSrc.cursorStyle != -1 && styleDataDst.cursorStyle != -1,
+            "Whee::TextLayerStyleAnimator::create(): expected style" << styleDst << (styleDataDst.cursorStyle == -1 ? "to" : "to not") << "reference a cursor style like style" << styleSrc, );
+
+        const Implementation::TextLayerEditingStyle& editingStyleDataSrc = layerSharedState.editingStyles[styleDataSrc.cursorStyle];
+        const Implementation::TextLayerEditingStyle& editingStyleDataDst = layerSharedState.editingStyles[styleDataDst.cursorStyle];
+        animation.cursorPaddingSrc = editingStyleDataSrc.padding;
+        animation.cursorPaddingDst = editingStyleDataDst.padding;
+
+        /* Like with the base, remember if the actual uniform ID is different
+           to skip the interpolation */
+        animation.cursorUniformSrc = layerSharedState.editingStyleUniforms[editingStyleDataSrc.uniform];
+        animation.cursorUniformDst = layerSharedState.editingStyleUniforms[editingStyleDataDst.uniform];
+        animation.cursorUniformDifferent = editingStyleDataSrc.uniform != editingStyleDataDst.uniform;
+
+        animation.hasCursorStyle = true;
+    } else animation.hasCursorStyle = false;
+
+    /* Animate also selection style, if present */
+    if(styleDataSrc.selectionStyle != -1 || styleDataDst.selectionStyle != -1) {
+        CORRADE_ASSERT(styleDataSrc.selectionStyle != -1 && styleDataDst.selectionStyle != -1,
+            "Whee::TextLayerStyleAnimator::create(): expected style" << styleDst << (styleDataDst.selectionStyle == -1 ? "to" : "to not") << "reference a selection style like style" << styleSrc, );
+
+        const Implementation::TextLayerEditingStyle& editingStyleDataSrc = layerSharedState.editingStyles[styleDataSrc.selectionStyle];
+        const Implementation::TextLayerEditingStyle& editingStyleDataDst = layerSharedState.editingStyles[styleDataDst.selectionStyle];
+        animation.selectionPaddingSrc = editingStyleDataSrc.padding;
+        animation.selectionPaddingDst = editingStyleDataDst.padding;
+
+        /* Like with the base, remember if the actual uniform ID is different
+           to skip the interpolation. OR that with the difference from the
+           cursor, as both lead to upload of the same uniform buffer. */
+        animation.selectionUniformSrc = layerSharedState.editingStyleUniforms[editingStyleDataSrc.uniform];
+        animation.selectionUniformDst = layerSharedState.editingStyleUniforms[editingStyleDataDst.uniform];
+        animation.selectionUniformDifferent = editingStyleDataSrc.uniform != editingStyleDataDst.uniform;
+
+        /* Finally, if the selection style references an override for the text
+           uniform, save that too, and again remember if it's different, ORing
+           with the base style uniform difference. */
+        const UnsignedInt textUniformSrc = editingStyleDataSrc.textUniform != -1 ? editingStyleDataSrc.textUniform : styleDataSrc.uniform;
+        const UnsignedInt textUniformDst = editingStyleDataDst.textUniform != -1 ? editingStyleDataDst.textUniform : styleDataDst.uniform;
+        animation.selectionTextUniformSrc = layerSharedState.styleUniforms[textUniformSrc];
+        animation.selectionTextUniformDst = layerSharedState.styleUniforms[textUniformDst];
+        animation.selectionTextUniformDifferent = textUniformSrc != textUniformDst;
+
+        animation.hasSelectionStyle = true;
+    } else animation.hasSelectionStyle = false;
 }
 
 void TextLayerStyleAnimator::remove(const AnimationHandle handle) {
@@ -246,9 +323,144 @@ Containers::Pair<Vector4, Vector4> TextLayerStyleAnimator::paddings(const Animat
     return {animation.paddingSrc, animation.paddingDst};
 }
 
-TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Nanoseconds time, const Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
-    CORRADE_ASSERT(dynamicStylePaddings.size() == dynamicStyleUniforms.size(),
-        "Whee::TextLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have the same size but got" << dynamicStyleUniforms.size() << "and" << dynamicStylePaddings.size(), {});
+Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::cursorUniforms(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::cursorUniforms(): invalid handle" << handle, {});
+    return cursorUniformsInternal(animationHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::cursorUniforms(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::cursorUniforms(): invalid handle" << handle, {});
+    return cursorUniformsInternal(animatorDataHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::cursorUniformsInternal(const UnsignedInt id) const {
+    const Animation& animation = _state->animations[id];
+    if(!animation.hasCursorStyle)
+        return {};
+    return Containers::pair(animation.cursorUniformSrc, animation.cursorUniformDst);
+}
+
+Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::cursorPaddings(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::cursorPaddings(): invalid handle" << handle, {});
+    return cursorPaddingsInternal(animationHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::cursorPaddings(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::cursorPaddings(): invalid handle" << handle, {});
+    return cursorPaddingsInternal(animatorDataHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::cursorPaddingsInternal(const UnsignedInt id) const {
+    const Animation& animation = _state->animations[id];
+    if(!animation.hasCursorStyle)
+        return {};
+    return Containers::pair(animation.cursorPaddingSrc, animation.cursorPaddingDst);
+}
+
+Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::selectionUniforms(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::selectionUniforms(): invalid handle" << handle, {});
+    return selectionUniformsInternal(animationHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::selectionUniforms(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::selectionUniforms(): invalid handle" << handle, {});
+    return selectionUniformsInternal(animatorDataHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::selectionUniformsInternal(const UnsignedInt id) const {
+    const Animation& animation = _state->animations[id];
+    if(!animation.hasSelectionStyle)
+        return {};
+    return Containers::pair(animation.selectionUniformSrc, animation.selectionUniformDst);
+}
+
+Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::selectionPaddings(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::selectionPaddings(): invalid handle" << handle, {});
+    return selectionPaddingsInternal(animationHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::selectionPaddings(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::selectionPaddings(): invalid handle" << handle, {});
+    return selectionPaddingsInternal(animatorDataHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::selectionPaddingsInternal(const UnsignedInt id) const {
+    const Animation& animation = _state->animations[id];
+    if(!animation.hasSelectionStyle)
+        return {};
+    return Containers::pair(animation.selectionPaddingSrc, animation.selectionPaddingDst);
+}
+
+Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> TextLayerStyleAnimator::selectionTextUniforms(const AnimationHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle" << handle, {});
+    return selectionTextUniformsInternal(animationHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> TextLayerStyleAnimator::selectionTextUniforms(const AnimatorDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle" << handle, {});
+    return selectionTextUniformsInternal(animatorDataHandleId(handle));
+}
+
+Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> TextLayerStyleAnimator::selectionTextUniformsInternal(const UnsignedInt id) const {
+    const Animation& animation = _state->animations[id];
+    if(!animation.hasSelectionStyle)
+        return {};
+    return Containers::pair(animation.selectionTextUniformSrc, animation.selectionTextUniformDst);
+}
+
+namespace {
+
+/* Used for both base and editing text uniforms and for both cursor and
+   selection uniforms, extracted here. I feel like this is better than a lambda
+   because it doesn't need any capture. */
+TextLayerStyleUniform interpolateUniform(const TextLayerStyleUniform& src, const TextLayerStyleUniform& dst, Float factor) {
+    TextLayerStyleUniform uniform{NoInit};
+    #define _c(member) uniform.member = Math::lerp(src.member, dst.member, factor);
+    _c(color)
+    #undef _c
+    return uniform;
+}
+TextLayerEditingStyleUniform interpolateUniform(const TextLayerEditingStyleUniform& src, const TextLayerEditingStyleUniform& dst, Float factor) {
+    TextLayerEditingStyleUniform uniform{NoInit};
+    #define _c(member) uniform.member = Math::lerp(src.member, dst.member, factor);
+    _c(backgroundColor)
+    _c(cornerRadius)
+    #undef _c
+    return uniform;
+}
+
+}
+
+TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Nanoseconds time, const Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, const Containers::MutableBitArrayView dynamicStyleCursorStyles, const Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+    #ifndef CORRADE_NO_ASSERT
+    /* If there are no editing styles, the base style views are all required to
+       have the same size */
+    if(dynamicEditingStyleUniforms.isEmpty() && dynamicEditingStylePaddings.isEmpty()) {
+        CORRADE_ASSERT(
+            dynamicStyleCursorStyles.size() == dynamicStyleUniforms.size() &&
+            dynamicStyleSelectionStyles.size() == dynamicStyleUniforms.size() &&
+            dynamicStylePaddings.size() == dynamicStyleUniforms.size(),
+            "Whee::TextLayerStyleAnimator::advance(): expected dynamic style uniform, cursor style, selection style and padding views to have the same size but got" << dynamicStyleUniforms.size() << Debug::nospace << "," << dynamicStyleCursorStyles.size() << Debug::nospace << "," << dynamicStyleSelectionStyles.size() << "and" << dynamicStylePaddings.size(), {});
+    } else {
+        CORRADE_ASSERT(
+            dynamicStyleUniforms.size() == dynamicStyleCursorStyles.size()*3 &&
+            dynamicStyleSelectionStyles.size() == dynamicStyleCursorStyles.size() &&
+            dynamicStylePaddings.size() == dynamicStyleCursorStyles.size() &&
+            dynamicEditingStyleUniforms.size() == dynamicStyleCursorStyles.size()*2 &&
+            dynamicEditingStylePaddings.size() == dynamicStyleCursorStyles.size()*2,
+            "Whee::TextLayerStyleAnimator::advance(): expected dynamic style cursor style, selection style and padding views to have the same size, the dynamic style uniform view three times bigger, and the dynamic editing style uniform and padding views two times bigger, but got" << dynamicStyleCursorStyles.size() << Debug::nospace << "," << dynamicStyleSelectionStyles.size() << Debug::nospace << "," << dynamicStylePaddings.size() << Debug::nospace << ";" << dynamicStyleUniforms.size() << Debug::nospace << ";"  << dynamicEditingStyleUniforms.size() << "and" << dynamicEditingStylePaddings.size(), {});
+    }
+    #endif
 
     /** @todo have some bump allocator for this (doesn't make sense to have it
         as a persistent allocation as the memory could be shared among several
@@ -329,7 +541,19 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Nanoseconds time,
                        happen. We still need to upload it at least once though,
                        so trigger it here unconditionally. */
                     animations |= TextLayerStyleAnimation::Uniform;
+                    /* Same for the editing uniform buffer, if there's an
+                       editing style */
+                    if(animation.hasCursorStyle || animation.hasSelectionStyle)
+                        animations |= TextLayerStyleAnimation::EditingUniform;
                 }
+
+                /* If the animation is attached to some data, the above already
+                   triggers a Style update, which results in appropriate
+                   editing quads being made. If the animation isn't attached to
+                   any data, there's nothing to be done based on those so
+                   there's no reason to set any TextLayerStyleAnimation. */
+                dynamicStyleCursorStyles.set(animation.styleDynamic, animation.hasCursorStyle);
+                dynamicStyleSelectionStyles.set(animation.styleDynamic, animation.hasSelectionStyle);
             }
 
             const Float factor = animation.easing(factors[i]);
@@ -341,13 +565,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Nanoseconds time,
                uploaded. That's handled in the animation.styleDynamic
                allocation above. */
             if(animation.uniformDifferent) {
-                TextLayerStyleUniform uniform{NoInit};
-                #define _c(member) uniform.member = Math::lerp(             \
-                    animation.uniformSrc.member,                            \
-                    animation.uniformDst.member, factor);
-                _c(color)
-                #undef _c
-                dynamicStyleUniforms[animation.styleDynamic] = uniform;
+                dynamicStyleUniforms[animation.styleDynamic] = interpolateUniform(animation.uniformSrc, animation.uniformDst, factor);
                 animations |= TextLayerStyleAnimation::Uniform;
             } else dynamicStyleUniforms[animation.styleDynamic] = animation.uniformDst;
 
@@ -360,6 +578,48 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Nanoseconds time,
             if(dynamicStylePaddings[animation.styleDynamic] != padding) {
                dynamicStylePaddings[animation.styleDynamic] = padding;
                 animations |= TextLayerStyleAnimation::Padding;
+            }
+
+            /* If there's a cursor, interpolate it as well. Logic same as
+               above. */
+            if(animation.hasCursorStyle) {
+                const UnsignedInt editingStyleId = Implementation::cursorStyleForDynamicStyle(animation.styleDynamic);
+
+                if(animation.cursorUniformDifferent) {
+                    dynamicEditingStyleUniforms[editingStyleId] = interpolateUniform(animation.cursorUniformSrc, animation.cursorUniformDst, factor);
+                    animations |= TextLayerStyleAnimation::EditingUniform;
+                } else dynamicEditingStyleUniforms[editingStyleId] = animation.cursorUniformDst;
+
+                const Vector4 padding = Math::lerp(animation.cursorPaddingSrc,
+                                                   animation.cursorPaddingDst, factor);
+                if(dynamicEditingStylePaddings[editingStyleId] != padding) {
+                   dynamicEditingStylePaddings[editingStyleId] = padding;
+                    animations |= TextLayerStyleAnimation::EditingPadding;
+                }
+            }
+
+            /* If there's a selection, interpolate it as well. Logic same as
+               above. */
+            if(animation.hasSelectionStyle) {
+                const UnsignedInt editingStyleId = Implementation::selectionStyleForDynamicStyle(animation.styleDynamic);
+
+                if(animation.selectionUniformDifferent) {
+                    dynamicEditingStyleUniforms[editingStyleId] = interpolateUniform(animation.selectionUniformSrc, animation.selectionUniformDst, factor);
+                    animations |= TextLayerStyleAnimation::EditingUniform;
+                } else dynamicEditingStyleUniforms[editingStyleId] = animation.selectionUniformDst;
+
+                const Vector4 padding = Math::lerp(animation.selectionPaddingSrc,
+                                                   animation.selectionPaddingDst, factor);
+                if(dynamicEditingStylePaddings[editingStyleId] != padding) {
+                   dynamicEditingStylePaddings[editingStyleId] = padding;
+                    animations |= TextLayerStyleAnimation::EditingPadding;
+                }
+
+                const UnsignedInt textStyleId = Implementation::selectionStyleTextUniformForDynamicStyle(layerSharedState.dynamicStyleCount, animation.styleDynamic);
+                if(animation.selectionTextUniformDifferent) {
+                    dynamicStyleUniforms[textStyleId] = interpolateUniform(animation.selectionTextUniformSrc, animation.selectionTextUniformDst, factor);
+                    animations |= TextLayerStyleAnimation::Uniform;
+                } else dynamicStyleUniforms[textStyleId] = animation.selectionTextUniformDst;
             }
         }
     }
