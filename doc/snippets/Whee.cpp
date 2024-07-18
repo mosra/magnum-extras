@@ -23,7 +23,10 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/AbstractVisualLayer.h"
+#include "Magnum/Whee/Event.h"
+#include "Magnum/Whee/Handle.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
@@ -63,4 +66,20 @@ shared.setStyleTransition<StyleIndex,
     styleIndexTransitionToInactiveHover,
     styleIndexTransitionToDisabled>();
 /* [AbstractVisualLayer-Shared-setStyleTransition] */
+}
+
+/* Make sure the name doesn't conflict with any other snippets to avoid linker
+   warnings, unlike with `int main()` there now has to be a declaration to
+   avoid -Wmisssing-prototypes */
+void mainWhee();
+void mainWhee() {
+{
+Whee::AbstractUserInterface ui{{100, 100}};
+Whee::NodeHandle node{};
+Whee::FocusEvent event;
+/* [AbstractUserInterface-focusEvent-blur-if-not-focusable] */
+if(!ui.focusEvent(node, event))
+    ui.focusEvent(Whee::NodeHandle::Null, event);
+/* [AbstractUserInterface-focusEvent-blur-if-not-focusable] */
+}
 }

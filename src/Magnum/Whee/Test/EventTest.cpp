@@ -47,6 +47,8 @@ struct EventTest: TestSuite::Tester {
     void pointerMoveNoPointer();
     void pointerMoveNoPointerRelativePosition();
 
+    void focus();
+
     void key();
 
     void visibilityLost();
@@ -64,6 +66,8 @@ EventTest::EventTest() {
               &EventTest::pointerMoveRelativePosition,
               &EventTest::pointerMoveNoPointer,
               &EventTest::pointerMoveNoPointerRelativePosition,
+
+              &EventTest::focus,
 
               &EventTest::key,
 
@@ -169,6 +173,19 @@ void EventTest::pointerMoveNoPointerRelativePosition() {
     CORRADE_VERIFY(!event.isAccepted());
 }
 
+void EventTest::focus() {
+    FocusEvent event;
+    CORRADE_VERIFY(!event.isPressed());
+    CORRADE_VERIFY(!event.isHovering());
+    CORRADE_VERIFY(!event.isAccepted());
+
+    event.setAccepted();
+    CORRADE_VERIFY(event.isAccepted());
+
+    event.setAccepted(false);
+    CORRADE_VERIFY(!event.isAccepted());
+}
+
 void EventTest::key() {
     KeyEvent event{Key::Delete, Modifier::Ctrl|Modifier::Alt};
     CORRADE_COMPARE(event.key(), Key::Delete);
@@ -187,10 +204,10 @@ void EventTest::key() {
 
 void EventTest::visibilityLost() {
     VisibilityLostEvent event;
+    CORRADE_VERIFY(!event.isPressed());
+    CORRADE_VERIFY(!event.isHovering());
 
-    /* No properties in this one */
-    static_cast<void>(event);
-    CORRADE_VERIFY(true);
+    /* No accept status in this one */
 }
 
 }}}}
