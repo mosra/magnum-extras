@@ -96,9 +96,10 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{AbstractUserInterface,setNodeFlags()},
      * @relativeref{AbstractUserInterface,addNodeFlags()} and
      * @relativeref{AbstractUserInterface,clearNodeFlags()} that changes the
-     * presence of the @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled
-     * flag; is reset next time @ref AbstractUserInterface::update() is called.
-     * Implies @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
+     * presence of the @ref NodeFlag::NoEvents, @ref NodeFlag::Disabled or
+     * @ref NodeFlag::Focusable flag; is reset next time
+     * @ref AbstractUserInterface::update() is called. Implies
+     * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutUpdate},
      * @relativeref{UserInterfaceState,NeedsLayoutAssignmentUpdate},
@@ -1320,9 +1321,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * function, it causes @ref UserInterfaceState::NeedsNodeUpdate to be
          * set. If @ref NodeFlag::Clip was added or cleared by calling this
          * function, it causes @ref UserInterfaceState::NeedsNodeClipUpdate to
-         * be set. If @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled was
-         * added or cleared by calling this function, it causes
-         * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
+         * be set. If @ref NodeFlag::NoEvents, @ref NodeFlag::Disabled or
+         * @ref NodeFlag::Focusable was added or cleared by calling this
+         * function, it causes @ref UserInterfaceState::NeedsNodeEnabledUpdate
+         * to be set.
          * @see @ref isHandleValid(NodeHandle) const, @ref addNodeFlags(),
          *      @ref clearNodeFlags()
          */
@@ -1591,13 +1593,15 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * -    Propagates @ref NodeFlag::Disabled and @ref NodeFlag::NoEvents
          *      to child nodes
          * -    Orders data attachments in each layer by draw order
-         * -    Resets @ref currentPressedNode(), @ref currentCapturedNode() or
-         *      @ref currentHoveredNode() if they no longer exist
+         * -    Resets @ref currentPressedNode(), @ref currentCapturedNode(),
+         *      @ref currentHoveredNode() or @ref currentFocusedNode() if they
+         *      no longer exist
          * -    Calls @ref AbstractLayer::visibilityLostEvent() and resets
-         *      @ref currentPressedNode(), @ref currentCapturedNode() or
-         *      @ref currentHoveredNode() if they are not visible or have
-         *      @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled set on them
-         *      or their parents.
+         *      @ref currentPressedNode(), @ref currentCapturedNode(),
+         *      @ref currentHoveredNode() or @ref currentFocusedNode() if they
+         *      are not visible or have @ref NodeFlag::NoEvents or
+         *      @ref NodeFlag::Disabled set on them or their parents, or if the
+         *      currently focused node is no longer @ref NodeFlag::Focusable.
          * -    Goes in a back to front order through layers that have
          *      instances set and calls @ref AbstractLayer::update() with the
          *      ordered data
@@ -1652,11 +1656,32 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * position in a front-to-back order and then to parent nodes. For each
          * such node, the event is always called on all attached data,
          * regardless of the accept status. For each call the event position is
-         * made relative to the node to which given data is attached. Returns
-         * @cpp true @ce if the event was accepted by at least one data,
-         * @cpp false @ce if it wasn't or there wasn't any visible event
-         * handling node at given position and thus the event should be
-         * propagated further.
+         * made relative to the node to which given data is attached.
+         *
+         * If the press happened with @ref Pointer::MouseLeft,
+         * @ref Pointer::Finger or @ref Pointer::Pen, the currently focused
+         * node is affected as well. If the node the event was accepted on is
+         * different from currently focused node (if there's any),
+         * @ref AbstractLayer::blurEvent() is called on all data attached to
+         * that node. Then, if the node has @ref NodeFlag::Focusable set,
+         * @ref AbstractLayer::focusEvent() is called on all data attached to
+         * it. If any data accept the focus event, the node is treated as
+         * focused and receives all following key events until a
+         * @ref pointerPressEvent() outside of this node happens or until a
+         * different node is made focused using @ref focusEvent(). If the node
+         * is not @ref NodeFlag::Focusable or the focus event was not accepted
+         * by any data, the currently focused node is reset. If a press event
+         * happens on a @ref NodeFlag::Focusable node that's already focused,
+         * @ref AbstractLayer::focusEvent() gets called on it again, without
+         * any preceding @ref AbstractLayer::blurEvent(). If that focus event
+         * is not accepted however, the node subsequently receives an
+         * @ref AbstractLayer::blurEvent().
+         *
+         * Returns @cpp true @ce if the press event was accepted by at least
+         * one data, @cpp false @ce if it wasn't or there wasn't any visible
+         * event handling node at given position and thus the event should be
+         * propagated further. Accept status of the focus and blur events
+         * doesn't have any effect on the return value.
          *
          * The node that accepted the event is remembered and is subsequently
          * used by @ref pointerReleaseEvent() to emit a
@@ -1676,7 +1701,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
-         *      @ref currentCapturedNode(), @ref currentGlobalPointerPosition()
+         *      @ref currentCapturedNode(), @ref currentFocusedNode(),
+         *      @ref currentGlobalPointerPosition()
          */
         bool pointerPressEvent(const Vector2& globalPosition, PointerEvent& event);
 
@@ -1831,6 +1857,57 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         }
 
         /**
+         * @brief Handle a focus event
+         *
+         * Implicitly calls @ref update(), which in turn implicitly calls
+         * @ref clean() and @ref updateRenderer(). The @p node is expected to
+         * be either @ref NodeHandle::Null or valid with
+         * @ref NodeFlag::Focusable set.
+         *
+         * If @p node is non-null and is or any of its parents are not visible
+         * either due to @ref NodeFlag::Hidden set or due to the node hierarchy
+         * not being in the top-level node order, or have
+         * @ref NodeFlag::Disabled or @ref NodeFlag::NoEvents set, the function
+         * is a no-op and returns @cpp false @ce. Note that this *does not*
+         * apply to nodes that are clipped or otherwise out of view.
+         *
+         * If the @p node is visible and can be focused, calls
+         * @ref AbstractLayer::focusEvent() on all attached data, regardless of
+         * the accept status, and even if the current focused node is the same
+         * as @p node. Then, if any of them accept the event, the node is set
+         * as currently focused, and @ref AbstractLayer::blurEvent() is called
+         * on the previously focused node if different from @p node. If none of
+         * them accept the event and the previously focused node is different
+         * from @p node, the previously focused node stays. If none of them
+         * accept the event and the previously focused node is the same as
+         * @p node, @ref AbstractLayer::blurEvent() is called on @p node and
+         * the current focused node is set to @ref NodeHandle::Null.
+         *
+         * If @p node is @ref NodeHandle::Null and current focused node is
+         * non-null, calls @ref AbstractLayer::blurEvent() on it and sets the
+         * current focused node to @ref NodeHandle::Null.
+         *
+         * Returns @cpp true @ce if the @ref AbstractLayer::focusEvent() was
+         * called at all and accepted by at least one data, @cpp false @ce
+         * otherwise.
+         *
+         * Compared to @ref pointerPressEvent(), where pressing on a
+         * non-focusable node blurs the previously focused node, this function
+         * preserves the previously focused node if @p node is cannot be
+         * focused for any of the above reasons. Given this function is meant
+         * to be called by the application itself, this gives it more control
+         * --- for example to try to focus the next active control, if there's
+         * any, and stay on the previous one if not. To achieve the same
+         * behavior as @ref pointerPressEvent(), call the function with
+         * @ref NodeHandle::Null if a call with a non-null handle fails:
+         *
+         * @snippet Whee.cpp AbstractUserInterface-focusEvent-blur-if-not-focusable
+         *
+         * @see @ref currentFocusedNode()
+         */
+        bool focusEvent(NodeHandle node, FocusEvent& event);
+
+        /**
          * @brief Handle a key press event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
@@ -1928,6 +2005,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * The returned handle may be invalid if the node or any of its parents
          * were removed and @ref clean() wasn't called since.
+         * @see @ref currentCapturedNode(), @ref currentFocusedNode()
          */
         NodeHandle currentPressedNode() const;
 
@@ -1975,6 +2053,28 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         NodeHandle currentHoveredNode() const;
 
         /**
+         * @brief Node focused by last pointer or focus event
+         *
+         * Returns handle of a @ref NodeFlag::Focusable node that was under the
+         * pointer for the last @ref pointerPressEvent() or for which
+         * @ref focusEvent() was called and at least one data attached to such
+         * node accepted the @ref AbstractLayer::focusEvent(). Once the node
+         * becomes hidden (either not being part of a top-level node hierarchy
+         * anymore or having @ref NodeFlag::Hidden set),
+         * @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled is set on it or
+         * it loses @ref NodeFlag::Focusable, the data receive
+         * @ref AbstractLayer::blurEvent() and this becomes
+         * @ref NodeHandle::Null. It's also @ref NodeHandle::Null if no node
+         * was focused yet or if the node or any of its
+         * parents were removed or hidden and @ref update() was called since.
+         *
+         * The returned handle may be invalid if the node or any of its parents
+         * were removed and @ref clean() wasn't called since.
+         * @see @ref currentPressedNode()
+         */
+        NodeHandle currentFocusedNode() const;
+
+        /**
          * @brief Position of last pointer event
          *
          * Returns a position passed to the last @ref pointerPressEvent(),
@@ -2000,7 +2100,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /* Used by setNodeOrder() and clearNodeOrder() */
         MAGNUM_WHEE_LOCAL void clearNodeOrderInternal(NodeHandle handle);
         /* Used by *Event() functions */
-        MAGNUM_WHEE_LOCAL void callVisibilityLostEventOnNode(UnsignedInt nodeId, VisibilityLostEvent& event);
+        MAGNUM_WHEE_LOCAL void callVisibilityLostEventOnNode(UnsignedInt nodeId, VisibilityLostEvent& event, bool canBePressedOrHovering);
+        template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> MAGNUM_WHEE_LOCAL bool callFocusEventOnNode(UnsignedInt nodeId, FocusEvent& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, UnsignedInt nodeId, Event& event, bool rememberCaptureOnUnaccepted = false);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_WHEE_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);

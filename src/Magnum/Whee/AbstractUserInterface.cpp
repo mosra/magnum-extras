@@ -514,6 +514,8 @@ struct AbstractUserInterface::State {
     /** @todo maintain previous position per pointer type? i.e., mouse, pen and
         finger independently? */
     Containers::Optional<Vector2> currentGlobalPointerPosition;
+    /* Focused node */
+    NodeHandle currentFocusedNode = NodeHandle::Null;
 
     /* Data for updates, event handling and drawing, repopulated by clean() and
        update() */
@@ -1717,7 +1719,12 @@ void AbstractUserInterface::setNodeFlagsInternal(const UnsignedInt id, const Nod
         state.state |= UserInterfaceState::NeedsNodeUpdate;
     if((state.nodes[id].used.flags & NodeFlag::Clip) != (flags & NodeFlag::Clip))
         state.state |= UserInterfaceState::NeedsNodeClipUpdate;
-    if((state.nodes[id].used.flags & (NodeFlag::NoEvents|NodeFlag::Disabled)) != (flags & (NodeFlag::NoEvents|NodeFlag::Disabled)))
+    /* Right now Focusable wouldn't need the full NeedsNodeEnabledUpdate, just
+       something that triggers state.currentFocusedNode update. But eventually
+       there will be focusable node fallbacks / trees (where pressing on a node
+       that's not focusable itself but its parent is focuses the parent), which
+       then will need the full process as NoEvents and Disabled as well. */
+    if((state.nodes[id].used.flags & (NodeFlag::NoEvents|NodeFlag::Disabled|NodeFlag::Focusable)) != (flags & (NodeFlag::NoEvents|NodeFlag::Disabled|NodeFlag::Focusable)))
         state.state |= UserInterfaceState::NeedsNodeEnabledUpdate;
     state.nodes[id].used.flags = flags;
 }
@@ -2595,7 +2602,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
         }
         for(const NodeHandle node: {state.currentPressedNode,
                                     state.currentCapturedNode,
-                                    state.currentHoveredNode})
+                                    state.currentHoveredNode,
+                                    state.currentFocusedNode})
             if(isHandleValid(node))
                 visibleOrVisibilityLostEventNodeMask.set(nodeHandleId(node));
 
@@ -2860,15 +2868,40 @@ AbstractUserInterface& AbstractUserInterface::update() {
                has the bits set for all valid `state.current*Event` nodes but
                after each `visibilityLostEvent()` call we reset the
                corresponding bit to not have it called multiple times if the
-               same node was pressed, hovered and captured at the same time,
-               e.g.. */
+               same node was pressed, hovered, captured and focused at the same
+               time, e.g.. */
             if(valid && visibleOrVisibilityLostEventNodeMask[nodeId]) {
                 VisibilityLostEvent event;
-                callVisibilityLostEventOnNode(nodeId, event);
+                /* isPressed() / isHovering() can never be true in this case */
+                callVisibilityLostEventOnNode(nodeId, event, false);
                 visibleOrVisibilityLostEventNodeMask.reset(nodeId);
             }
 
             node = NodeHandle::Null;
+        }
+
+        /* If the focused node is no longer valid, is now invisible, doesn't
+           react to events or is no longer Focusable, call
+           visibilityLostEvent() on it and reset it. Compared to above, the
+           only difference is the extra check for the Focusable flag. */
+        {
+            const bool valid = isHandleValid(state.currentFocusedNode);
+            const UnsignedInt nodeId = nodeHandleId(state.currentFocusedNode);
+            if(!valid ||
+               !state.visibleEventNodeMask[nodeId] ||
+               !(state.nodes[nodeId].used.flags >= NodeFlag::Focusable))
+            {
+                /* Again, call visibilityLostEvent() only if it wasn't called
+                   for this node yet in any of the iterations above */
+                if(valid && visibleOrVisibilityLostEventNodeMask[nodeId]) {
+                    VisibilityLostEvent event;
+                    /* isPressed() / isHovering() can be true in this case */
+                    callVisibilityLostEventOnNode(nodeId, event, true);
+                    visibleOrVisibilityLostEventNodeMask.reset(nodeId);
+                }
+
+                state.currentFocusedNode = NodeHandle::Null;
+            }
         }
     }
 
@@ -3068,8 +3101,15 @@ AbstractUserInterface& AbstractUserInterface::draw() {
 
 /* Used only in update() but put here to have the loops and other event-related
    handling of all call*Event*() APIs together */
-void AbstractUserInterface::callVisibilityLostEventOnNode(const UnsignedInt nodeId, VisibilityLostEvent& event) {
+void AbstractUserInterface::callVisibilityLostEventOnNode(const UnsignedInt nodeId, VisibilityLostEvent& event, const bool canBePressedOrHovering) {
     State& state = *_state;
+    /* Set isPressed() / isHovering() if the event is called on node that is
+       pressed / hovered and it's allowed, which is only in case a focused
+       node is no longer focusable, in all other cases where it's not visible,
+       disabled or doesn't receive events it isn't allowed.  */
+    event._pressed = canBePressedOrHovering && state.currentPressedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentPressedNode);
+    event._hovering = canBePressedOrHovering && state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
+
     /* Note that unlike callEvent() below, here it *does not* check the
        `state.visibleEventNodeMask` for the `nodeId` because we may actually
        want to call visibilityLostEvent() on nodes that no longer accept
@@ -3078,6 +3118,27 @@ void AbstractUserInterface::callVisibilityLostEventOnNode(const UnsignedInt node
         const DataHandle data = state.visibleNodeEventData[j];
         state.layers[dataHandleLayerId(data)].used.instance->visibilityLostEvent(dataHandleId(data), event);
     }
+}
+
+template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> bool AbstractUserInterface::callFocusEventOnNode(const UnsignedInt nodeId, FocusEvent& event) {
+    /* Set isPressed() / isHovering() if the event is called on node that is
+       pressed / hovered. Unlike callEventOnNode() below, this is set
+       unconditionally as these events don't have any associated position. */
+    State& state = *_state;
+    event._pressed = state.currentPressedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentPressedNode);
+    event._hovering = state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
+
+    bool acceptedByAnyData = false;
+    for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
+        const DataHandle data = state.visibleNodeEventData[j];
+        event._accepted = false;
+        ((*state.layers[dataHandleLayerId(data)].used.instance).*function)(dataHandleId(data), event);
+
+        if(event._accepted)
+            acceptedByAnyData = true;
+    }
+
+    return acceptedByAnyData;
 }
 
 template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEventOnNode(const Vector2& globalPositionScaled, const UnsignedInt nodeId, Event& event, const bool rememberCaptureOnUnaccepted) {
@@ -3209,6 +3270,45 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
 
     /* Update the last relative position with this one */
     state.currentGlobalPointerPosition = globalPositionScaled;
+
+    /* If the press happened with a primary pointer, deal with focus. With
+       other pointer types nothing gets focused but also they don't blur
+       anything. */
+    if(event.type() == Pointer::MouseLeft ||
+       event.type() == Pointer::Finger ||
+       event.type() == Pointer::Pen)
+    {
+        /* Call a focus event if the press was accepted and on a node that's
+           focusable */
+        const NodeHandle nodeToFocus =
+            called != NodeHandle::Null &&
+            state.nodes[nodeHandleId(called)].used.flags >= NodeFlag::Focusable &&
+            state.visibleEventNodeMask[nodeHandleId(called)] ?
+                called : NodeHandle::Null;
+
+        /* If the node to be focused is different from the currently focused
+           one, call a blur event on the original, if there's any. */
+        if(nodeToFocus != state.currentFocusedNode && state.currentFocusedNode != NodeHandle::Null) {
+            FocusEvent blurEvent;
+            callFocusEventOnNode<&AbstractLayer::blurEvent>(nodeHandleId(state.currentFocusedNode), blurEvent);
+        }
+
+        /* Then emit a focus event if the node is actually focusable; do it
+           even if the node is already focused. If it gets accepted, update the
+           currently focused node, otherwise set it to null. */
+        if(nodeToFocus != NodeHandle::Null) {
+            FocusEvent focusEvent;
+            if(callFocusEventOnNode<&AbstractLayer::focusEvent>(nodeHandleId(nodeToFocus), focusEvent))
+                state.currentFocusedNode = nodeToFocus;
+            else {
+                /* If the unaccepted focus event happened on an already focused
+                   node, call a blur event for it. */
+                if(state.currentFocusedNode == nodeToFocus)
+                    callFocusEventOnNode<&AbstractLayer::blurEvent>(nodeHandleId(state.currentFocusedNode), focusEvent);
+                state.currentFocusedNode = NodeHandle::Null;
+            }
+        } else state.currentFocusedNode = NodeHandle::Null;
+    }
 
     return called != NodeHandle::Null;
 }
@@ -3472,6 +3572,61 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
     return moveAcceptedByAnyData;
 }
 
+bool AbstractUserInterface::focusEvent(const NodeHandle node, FocusEvent& event) {
+    CORRADE_ASSERT(!event._accepted,
+        "Whee::AbstractUserInterface::focusEvent(): event already accepted", {});
+    CORRADE_ASSERT(node == NodeHandle::Null || isHandleValid(node),
+        "Whee::AbstractUserInterface::focusEvent(): invalid handle" << node, {});
+    State& state = *_state;
+    CORRADE_ASSERT(node == NodeHandle::Null || state.nodes[nodeHandleId(node)].used.flags >= NodeFlag::Focusable,
+        "Whee::AbstractUserInterface::focusEvent(): node not focusable", {});
+
+    /* Do an update. That may cause the currently focused node to be cleared,
+       for example because it's now in a disabled/hidden hierarchy. */
+    update();
+
+    /* If a non-null node was meant to be focused but it's not focusable, the
+       function is a no-op, i.e. not even calling a blur event on the
+       previous */
+    if(node != NodeHandle::Null && !state.visibleEventNodeMask[nodeHandleId(node)])
+        return false;
+
+    /* If the node to focus isn't null, call focusEvent() on it. event._pressed
+       and event._hovering is set by callNonPositionedNonCapturingEventOnNode()
+       itself */
+    const bool focusAccepted = node != NodeHandle::Null && callFocusEventOnNode<&AbstractLayer::focusEvent>(nodeHandleId(node), event);
+
+    /* Call the blur event and update the current focused node if ... */
+    if(
+        /* either the node to focus is null, */
+        node == NodeHandle::Null ||
+        /* or the focus event was accepted and the node is different from the
+           previously focused one, */
+        (focusAccepted && state.currentFocusedNode != node) ||
+        /* or the focus event wasn't accepted and the node is the same as
+           previously focused node (i.e., it decided to not accept focus
+           anymore) */
+        (!focusAccepted && state.currentFocusedNode == node)
+    ) {
+        /* event._pressed and event._hovering is set by
+           callNonPositionedNonCapturingEventOnNode() itself */
+        if(state.currentFocusedNode != NodeHandle::Null)
+            callFocusEventOnNode<&AbstractLayer::blurEvent>(nodeHandleId(state.currentFocusedNode), event);
+
+        /* The current focused node is now the `node` (which can be null), or
+           as a special case null if a focus event wasn't accepted on a current
+           focused node. */
+        state.currentFocusedNode = !focusAccepted && state.currentFocusedNode == node ?
+            NodeHandle::Null : node;
+    }
+
+    /* In particular, if a focus event on a different node wasn't accepted, the
+       above branch is never entered, causing neither the blur event nor the
+       current focused node to be updated. */
+
+    return focusAccepted;
+}
+
 template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUserInterface::keyPressOrReleaseEvent(KeyEvent& event) {
     /* Common code for keyPressEvent() and keyReleaseEvent() */
 
@@ -3541,6 +3696,10 @@ NodeHandle AbstractUserInterface::currentCapturedNode() const {
 
 NodeHandle AbstractUserInterface::currentHoveredNode() const {
     return _state->currentHoveredNode;
+}
+
+NodeHandle AbstractUserInterface::currentFocusedNode() const {
+    return _state->currentFocusedNode;
 }
 
 Containers::Optional<Vector2> AbstractUserInterface::currentGlobalPointerPosition() const {

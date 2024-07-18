@@ -82,7 +82,8 @@ enum class NodeFlag: UnsignedByte {
      * The node, all nested nodes and all attached data don't get any events
      * even if a particular layer implements event handlers. Doesn't have any
      * visual effect, see @ref NodeFlag::Disabled or @ref NodeFlag::Hidden for
-     * alternatives.
+     * alternatives. Setting this flag causes @ref NodeFlag::Focusable to be
+     * ignored on the node and all its children.
      *
      * Changing this flag causes
      * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
@@ -92,13 +93,27 @@ enum class NodeFlag: UnsignedByte {
     /**
      * The node, all nested nodes and all attached data are disabled. Implies
      * @ref NodeFlag::NoEvents and additionally has a visual effect on layers
-     * that implement a disabled state.
+     * that implement a disabled state. Setting this flag causes
+     * @ref NodeFlag::Focusable to be ignored on the node and all its children.
      *
      * Changing this flag causes
      * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
      * @see @ref NodeFlag::Hidden
      */
     Disabled = NoEvents|(1 << 3),
+
+    /**
+     * The node can be focused, after which all key events are directed to it
+     * instead of to a node currently under pointer. Focusing is done either by
+     * a tap or a click or programmatically via
+     * @ref AbstractUserInterface::focusEvent(). If @ref NodeFlag::NoEvents or
+     * @ref NodeFlag::Disabled is set on the same node or any of its parents,
+     * this flag is ignored.
+     *
+     * Changing this flag causes
+     * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
+     */
+    Focusable = 1 << 4,
 };
 
 /**
