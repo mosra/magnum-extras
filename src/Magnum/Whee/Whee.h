@@ -93,6 +93,8 @@ typedef Containers::EnumSet<Pointer> Pointers;
 class PointerEvent;
 class PointerMoveEvent;
 
+class FocusEvent;
+
 enum class Key: UnsignedShort;
 enum class Modifier: UnsignedByte;
 typedef Containers::EnumSet<Modifier> Modifiers;

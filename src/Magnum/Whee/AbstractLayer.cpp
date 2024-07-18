@@ -718,6 +718,36 @@ void AbstractLayer::pointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent
 
 void AbstractLayer::doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) {}
 
+void AbstractLayer::focusEvent(const UnsignedInt dataId, FocusEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::focusEvent(): feature not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
+    #endif
+    CORRADE_ASSERT(dataId < state.data.size(),
+        "Whee::AbstractLayer::focusEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::focusEvent(): event already accepted", );
+    return doFocusEvent(dataId, event);
+}
+
+void AbstractLayer::doFocusEvent(UnsignedInt, FocusEvent&) {}
+
+void AbstractLayer::blurEvent(const UnsignedInt dataId, FocusEvent& event) {
+    CORRADE_ASSERT(features() & LayerFeature::Event,
+        "Whee::AbstractLayer::blurEvent(): feature not supported", );
+    #ifndef CORRADE_NO_ASSERT
+    const State& state = *_state;
+    #endif
+    CORRADE_ASSERT(dataId < state.data.size(),
+        "Whee::AbstractLayer::blurEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::blurEvent(): event already accepted", );
+    return doBlurEvent(dataId, event);
+}
+
+void AbstractLayer::doBlurEvent(UnsignedInt, FocusEvent&) {}
+
 void AbstractLayer::keyPressEvent(const UnsignedInt dataId, KeyEvent& event) {
     CORRADE_ASSERT(features() & LayerFeature::Event,
         "Whee::AbstractLayer::keyPressEvent(): feature not supported", );

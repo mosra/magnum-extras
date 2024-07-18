@@ -141,6 +141,12 @@ struct AbstractLayerTest: TestSuite::Tester {
     void pointerEventOutOfRange();
     void pointerEventAlreadyAccepted();
 
+    void focusBlurEvent();
+    void focusBlurEventNotSupported();
+    void focusBlurEventNotImplemented();
+    void focusBlurEventOutOfRange();
+    void focusBlurEventAlreadyAccepted();
+
     void keyEvent();
     void keyEventNotSupported();
     void keyEventNotImplemented();
@@ -271,6 +277,12 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::pointerEventNotImplemented,
               &AbstractLayerTest::pointerEventOutOfRange,
               &AbstractLayerTest::pointerEventAlreadyAccepted,
+
+              &AbstractLayerTest::focusBlurEvent,
+              &AbstractLayerTest::focusBlurEventNotSupported,
+              &AbstractLayerTest::focusBlurEventNotImplemented,
+              &AbstractLayerTest::focusBlurEventOutOfRange,
+              &AbstractLayerTest::focusBlurEventAlreadyAccepted,
 
               &AbstractLayerTest::keyEvent,
               &AbstractLayerTest::keyEventNotSupported,
@@ -3110,6 +3122,132 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
         "Whee::AbstractLayer::pointerMoveEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerEnterEvent(): event already accepted\n"
         "Whee::AbstractLayer::pointerLeaveEvent(): event already accepted\n");
+}
+
+void AbstractLayerTest::focusBlurEvent() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+
+        void doFocusEvent(UnsignedInt dataId, FocusEvent&) override {
+            CORRADE_COMPARE(dataId, 1);
+            called *= 2;
+        }
+        void doBlurEvent(UnsignedInt dataId, FocusEvent&) override {
+            CORRADE_COMPARE(dataId, 2);
+            called *= 3;
+        }
+
+        int called = 1;
+    } layer{layerHandle(0, 1)};
+
+    /* Capture correct test case name */
+    CORRADE_VERIFY(true);
+
+    layer.create();
+    layer.create();
+    layer.create();
+    {
+        FocusEvent event;
+        layer.focusEvent(1, event);
+    } {
+        FocusEvent event;
+        layer.blurEvent(2, event);
+    }
+    CORRADE_COMPARE(layer.called, 2*3);
+}
+
+void AbstractLayerTest::focusBlurEventNotSupported() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    FocusEvent event;
+    layer.focusEvent(0, event);
+    layer.blurEvent(0, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::focusEvent(): feature not supported\n"
+        "Whee::AbstractLayer::blurEvent(): feature not supported\n");
+}
+
+void AbstractLayerTest::focusBlurEventNotImplemented() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    FocusEvent event;
+    layer.focusEvent(0, event);
+    layer.blurEvent(0, event);
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::focusBlurEventOutOfRange() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+    layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    FocusEvent event;
+    layer.focusEvent(2, event);
+    layer.blurEvent(2, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::focusEvent(): index 2 out of range for 2 data\n"
+        "Whee::AbstractLayer::blurEvent(): index 2 out of range for 2 data\n");
+}
+
+void AbstractLayerTest::focusBlurEventAlreadyAccepted() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    FocusEvent event;
+    event.setAccepted();
+    layer.focusEvent(0, event);
+    layer.blurEvent(0, event);
+    CORRADE_COMPARE(out.str(),
+        "Whee::AbstractLayer::focusEvent(): event already accepted\n"
+        "Whee::AbstractLayer::blurEvent(): event already accepted\n");
 }
 
 void AbstractLayerTest::keyEvent() {
