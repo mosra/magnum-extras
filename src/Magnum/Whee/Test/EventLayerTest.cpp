@@ -35,6 +35,7 @@
 #include "Magnum/Whee/EventLayer.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/NodeFlags.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
 
@@ -81,6 +82,10 @@ struct EventLayerTest: TestSuite::Tester {
     void leave();
     void leaveMove();
     void enterLeaveFromUserInterface();
+
+    void focus();
+    void blur();
+    void focusBlurFromUserInterface();
 
     void drag();
     void dragPress();
@@ -176,6 +181,16 @@ const struct {
             PointerMoveEvent event{{}, {}};
             layer.pointerLeaveEvent(dataId, event);
         }},
+    {_c(onFocus, ),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            FocusEvent event;
+            layer.focusEvent(dataId, event);
+        }},
+    {_c(onBlur, ),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            FocusEvent event;
+            layer.blurEvent(dataId, event);
+        }},
     #undef _c
 };
 
@@ -225,6 +240,10 @@ EventLayerTest::EventLayerTest() {
               &EventLayerTest::leave,
               &EventLayerTest::leaveMove,
               &EventLayerTest::enterLeaveFromUserInterface,
+
+              &EventLayerTest::focus,
+              &EventLayerTest::blur,
+              &EventLayerTest::focusBlurFromUserInterface,
 
               &EventLayerTest::remove,
               &EventLayerTest::removeScoped,
@@ -625,6 +644,14 @@ void EventLayerTest::press() {
         PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
     }
 }
 
@@ -682,6 +709,14 @@ void EventLayerTest::release() {
     } {
         PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     }
 }
@@ -872,6 +907,14 @@ void EventLayerTest::tapOrClick() {
     } {
         PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
     }
 }
@@ -1077,6 +1120,14 @@ void EventLayerTest::middleClick() {
         PointerMoveEvent event{Pointer::MouseMiddle, Pointer::MouseMiddle};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
     }
 }
 
@@ -1280,6 +1331,14 @@ void EventLayerTest::rightClick() {
     } {
         PointerMoveEvent event{Pointer::MouseMiddle, Pointer::MouseMiddle};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     }
 }
@@ -1497,6 +1556,14 @@ void EventLayerTest::drag() {
         PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 3);
     }
 }
 
@@ -1692,6 +1759,14 @@ void EventLayerTest::enter() {
         PointerMoveEvent event{{}, {}};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 5);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 5);
     }
 }
 
@@ -1817,6 +1892,14 @@ void EventLayerTest::leave() {
         PointerMoveEvent event{{}, {}};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 5);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 5);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 5);
     }
 }
 
@@ -1941,6 +2024,169 @@ void EventLayerTest::enterLeaveFromUserInterface() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(enterCalled, 1);
         CORRADE_COMPARE(leaveCalled, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+    }
+}
+
+void EventLayerTest::focus() {
+    EventLayer layer{layerHandle(0, 1)};
+
+    Int called = 0;
+    DataHandle handle = layer.onFocus(nodeHandle(0, 1), [&called]{
+        ++called;
+    });
+
+    /* Should get fired for a focus event */
+    {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+
+    /* Shouldn't get fired for any other than focus events */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerTapOrClickEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, {}};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, {}};
+        layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, {}};
+        layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    }
+}
+
+void EventLayerTest::blur() {
+    EventLayer layer{layerHandle(0, 1)};
+
+    Int called = 0;
+    DataHandle handle = layer.onBlur(nodeHandle(0, 1), [&called]{
+        ++called;
+    });
+
+    /* Should get fired for a blur event */
+    {
+        FocusEvent event;
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+
+    /* Shouldn't get fired for any other than blur events */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        layer.pointerTapOrClickEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, {}};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, {}};
+        layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, {}};
+        layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        FocusEvent event;
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    }
+}
+
+void EventLayerTest::focusBlurFromUserInterface() {
+    /* "Integration" test to verify onFocus() and onBlur() behavior with the
+       whole event pipeline in AbstractUserInterface.
+
+       There's no mutual interaction between the two as with onTapOrClick()
+       such as onRelease() accepting presses as well, so they're both tested
+       together. */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    /* A node below the one that should react to the focus/blur event,
+       accepting the same. Shouldn't get considered at all. */
+    Int belowCalled = 0;
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100}, NodeFlag::Focusable);
+    layer.onFocus(nodeBelow, [&belowCalled]{
+        ++belowCalled;
+    });
+    layer.onBlur(nodeBelow, [&belowCalled]{
+        ++belowCalled;
+    });
+
+    Int focusCalled = 0, blurCalled = 0;
+    NodeHandle node = ui.createNode({25, 50}, {50, 25}, NodeFlag::Focusable);
+    layer.onFocus(node, [&focusCalled]{
+        ++focusCalled;
+    });
+    layer.onBlur(node, [&blurCalled]{
+        ++blurCalled;
+    });
+
+    /* Focusing and blurring the node directly should work */
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(ui.focusEvent(node, event));
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(focusCalled, 1);
+        CORRADE_COMPARE(blurCalled, 0);
+        CORRADE_COMPARE(belowCalled, 0);
+    } {
+        FocusEvent event;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(focusCalled, 1);
+        CORRADE_COMPARE(blurCalled, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A press on the node result in the focus handler being called as well,
+       i.e. it should accept the event here as well */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event));
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(focusCalled, 2);
+        CORRADE_COMPARE(blurCalled, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A press outside (and out of the below node as well) should result in the
+       blur handler being called */
+    } {
+        PointerEvent event{Pointer::MouseLeft};
+        /* There's no node underneath, so this didn't get accepted */
+        CORRADE_VERIFY(!ui.pointerPressEvent({150, 150}, event));
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(focusCalled, 2);
+        CORRADE_COMPARE(blurCalled, 2);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
