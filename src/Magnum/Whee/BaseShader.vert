@@ -61,7 +61,7 @@ flat out mediump uint interpolatedStyle;
 flat out mediump vec2 halfQuadSize;
 flat out mediump vec4 outlineQuadSize;
 out lowp vec4 interpolatedColor;
-out mediump vec2 normalizedQuadPosition;
+out mediump vec2 interpolatedCenterDistance;
 #ifdef TEXTURED
 out mediump vec3 interpolatedTextureCoordinates;
 #endif
@@ -83,7 +83,7 @@ void main() {
        fragment shader invocation */
     interpolatedColor = (centerDistance.y > 0.0 ? styles[style].bottomColor :
                                                   styles[style].topColor)*color;
-    normalizedQuadPosition = sign(centerDistance);
+    interpolatedCenterDistance = centerDistance;
     #ifdef TEXTURED
     interpolatedTextureCoordinates = textureCoordinates;
     #endif
