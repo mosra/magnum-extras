@@ -788,6 +788,68 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
             setPadding(handle, Vector4{padding});
         }
 
+        /**
+         * @brief Quad texture coordinate offset
+         *
+         * The third coordinate is array layer. Expects that @p handle is
+         * valid and that @ref Shared::Flag::Textured was enabled for the
+         * shared state the layer was created with.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        Vector3 textureCoordinateOffset(DataHandle handle) const;
+
+        /**
+         * @brief Quad texture coordinate offset assuming it belongs to this layer
+         *
+         * The third coordinate is array layer. Expects that @p handle is
+         * valid and that @ref Shared::Flag::Textured was enabled for the
+         * shared state the layer was created with.
+         * @see @ref isHandleValid(LayerDataHandle) const
+         */
+        Vector3 textureCoordinateOffset(LayerDataHandle handle) const;
+
+        /**
+         * @brief Quad texture coordinate size
+         *
+         * Expects that @p handle is valid and that @ref Shared::Flag::Textured
+         * was enabled for the shared state the layer was created with.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        Vector2 textureCoordinateSize(DataHandle handle) const;
+
+        /**
+         * @brief Quad texture coordinate size assuming it belongs to this layer
+         *
+         * Expects that @p handle is valid and that @ref Shared::Flag::Textured
+         * was enabled for the shared state the layer was created with.
+         * @see @ref isHandleValid(LayerDataHandle) const
+         */
+        Vector2 textureCoordinateSize(LayerDataHandle handle) const;
+
+        /**
+         * @brief Set quad texture coordinates
+         *
+         * The third coordinate of @p offset is array layer. Expects that
+         * @p handle is valid and that @ref Shared::Flag::Textured was enabled
+         * for the shared state the layer was created with. By default the
+         * offset is @cpp {0.0f, 0.0f, 0.0f} @ce and size is
+         * @cpp {1.0f, 1.0f} @ce, i.e. covering the whole first slice of the
+         * texture.
+         *
+         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * @see @ref BaseLayerGL::setTexture()
+         */
+        void setTextureCoordinates(DataHandle handle, const Vector3& offset, const Vector2& size);
+
+        /**
+         * @brief Set quad texture coordinates assuming it belongs to this layer
+         *
+         * Like @ref setTextureCoordinates(DataHandle, const Vector3&, const Vector2&)
+         * but without checking that @p handle indeed belongs to this layer.
+         * See its documentation for more information.
+         */
+        void setTextureCoordinates(LayerDataHandle handle, const Vector3& offset, const Vector2& size);
+
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
@@ -813,6 +875,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         MAGNUM_WHEE_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);
         MAGNUM_WHEE_LOCAL void setOutlineWidthInternal(UnsignedInt id, const Vector4& width);
         MAGNUM_WHEE_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
+        MAGNUM_WHEE_LOCAL Vector3 textureCoordinateOffsetInternal(UnsignedInt id) const;
+        MAGNUM_WHEE_LOCAL Vector2 textureCoordinateSizeInternal(UnsignedInt id) const;
+        MAGNUM_WHEE_LOCAL void setTextureCoordinatesInternal(UnsignedInt id, const Vector3& offset, const Vector2& size);
 };
 
 /**
@@ -833,6 +898,16 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
          */
         enum class Flag: UnsignedByte {
             /**
+             * Textured drawing. If enabled, the
+             * @ref BaseLayerStyleUniform::topColor and
+             * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied
+             * with a color coming from a texture set in
+             * @ref BaseLayerGL::setTexture() and texture coordinates specified
+             * with @ref setTextureCoordinates().
+             */
+            Textured = 1 << 0,
+
+            /**
              * Blur the background of semi-transparent quads. If enabled, the
              * alpha value of @ref BaseLayerStyleUniform::topColor,
              * @relativeref{BaseLayerStyleUniform,bottomColor} and
@@ -846,7 +921,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
              * @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha to achieve
              * additional effects.
              */
-            BackgroundBlur = 1 << 0
+            BackgroundBlur = 1 << 1
         };
 
         /**

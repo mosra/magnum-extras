@@ -33,6 +33,8 @@
 #include "Magnum/configure.h"
 
 #ifdef MAGNUM_TARGET_GL
+#include <Magnum/GL/GL.h>
+
 #include "Magnum/Whee/BaseLayer.h"
 
 namespace Magnum { namespace Whee {
@@ -63,7 +65,9 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
          *
          * The @p shared state is expected to be kept in scope for the whole
          * class lifetime. In order to draw the layer it's expected that
-         * @ref Shared::setStyle() was called.
+         * @ref Shared::setStyle() was called. In case
+         * @ref Shared::Flag::Textured was enabled, additionally it's expected
+         * that @ref setTexture() was called as well.
          */
         explicit BaseLayerGL(LayerHandle handle, Shared& shared);
 
@@ -75,6 +79,35 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
         inline Shared& shared();
         /** @overload */
         inline const Shared& shared() const;
+
+        /**
+         * @brief Set a texture to draw with
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the layer was constructed with a shared state that has
+         * @ref Shared::Flag::Textured. The @p texture is expected to stay
+         * alive for as long as the layer is drawn. Use
+         * @ref setTexture(GL::Texture2DArray&&) to make the layer take
+         * ownership of the texture instead.
+         * @see @ref setTextureCoordinates()
+         */
+        BaseLayerGL& setTexture(GL::Texture2DArray& texture);
+
+        /**
+         * @brief Set a texture to draw with, taking over its ownership
+         * @return Reference to self (for method chaining)
+         *
+         * Compared to @ref setTexture(GL::Texture2DArray&) takes over
+         * ownership of the texture instance.
+         */
+        BaseLayerGL& setTexture(GL::Texture2DArray&& texture);
+
+        /* Overloads to remove a WTF factor from method chaining order */
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        BaseLayerGL& setBackgroundBlurPassCount(UnsignedInt count) {
+            return static_cast<BaseLayerGL&>(BaseLayer::setBackgroundBlurPassCount(count));
+        }
+        #endif
 
     private:
         struct State;
@@ -94,7 +127,9 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
 @brief Shared state for the OpenGL implementation of the base layer
 
 Contains shader instances. In order to update or draw the layer it's expected
-that @ref setStyle() was called.
+that @ref setStyle() was called, in case @ref Flag::Textured is enabled
+additionally it's expected that @ref setTexture() was called on the layer as
+well.
 */
 class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
     public:

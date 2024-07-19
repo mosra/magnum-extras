@@ -45,6 +45,13 @@ layout(std140
 #define style_innerOutlineSmoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.y
 #define style_backgroundBlurAlpha smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.z
 
+#ifdef TEXTURED
+#ifdef EXPLICIT_BINDING
+layout(binding = 0)
+#endif
+uniform lowp sampler2DArray textureData;
+#endif
+
 #ifdef BACKGROUND_BLUR
 #ifdef EXPLICIT_BINDING
 layout(binding = 1)
@@ -57,6 +64,9 @@ flat in mediump vec2 halfQuadSize;
 flat in mediump vec4 interpolatedOutlineWidth;
 in mediump vec4 interpolatedColor;
 in mediump vec2 normalizedQuadPosition; /* -1 to +1 in both coordinates */
+#ifdef TEXTURED
+in mediump vec3 interpolatedTextureCoordinates;
+#endif
 #ifdef BACKGROUND_BLUR
 in highp vec2 backgroundBlurTextureCoordinates;
 #endif
@@ -123,11 +133,14 @@ void main() {
         }
     }
 
-    /* Gradient */
+    /* Gradient, optionally textured */
     lowp vec4 gradientColor = mix(
         styles[interpolatedStyle].topColor,
         styles[interpolatedStyle].bottomColor,
         (normalizedQuadPosition.y + 1.0)*0.5)*interpolatedColor;
+    #ifdef TEXTURED
+    gradientColor *= texture(textureData, interpolatedTextureCoordinates);
+    #endif
 
     /* Transition to outline color */
     lowp float innerOutlineSmoothness = style_innerOutlineSmoothness;
