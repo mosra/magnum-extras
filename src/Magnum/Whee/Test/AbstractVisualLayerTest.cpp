@@ -102,6 +102,7 @@ enum class StyleIndex: UnsignedByte {
     /* Common for red & blue, to test that there's no inverse mapping done */
     RedBlueDisabled = 13
 };
+constexpr UnsignedInt StyleCount = 14;
 
 Debug& operator<<(Debug& debug, StyleIndex value) {
     switch(value) {
@@ -436,8 +437,8 @@ template<class T> void AbstractVisualLayerTest::setStyle() {
        always */
     layer.create(2);
 
-    DataHandle layerData = layer.create(17);
-    CORRADE_COMPARE(layer.style(layerData), 17);
+    DataHandle layerData = layer.create(StyleCount + 0);
+    CORRADE_COMPARE(layer.style(layerData), StyleCount + 0);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -938,7 +939,7 @@ StyleIndex styleIndexTransitionToDisabled(StyleIndex index) {
 void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     /* Transition for dynamic styles tested in
        eventStyleTransitionDynamicStyle() instead */
-    StyleLayerShared shared{14, 0};
+    StyleLayerShared shared{StyleCount, 0};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -1099,7 +1100,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Transition for dynamic styles tested in
        eventStyleTransitionDynamicStyle() instead */
-    StyleLayerShared shared{14, 0};
+    StyleLayerShared shared{StyleCount, 0};
 
     /* StyleLayerShared uses the *_SHARED_SUBCLASS_IMPLEMENTATION() macro, this
        verifies that all the overrides do what's expected */
@@ -1487,7 +1488,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
 
     /* Transition for dynamic styles tested in
        eventStyleTransitionDynamicStyle() instead */
-    StyleLayerShared shared{14, 0};
+    StyleLayerShared shared{StyleCount, 0};
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     /* One extra data to verify it's mapping from nodes to data correctly */
     layer.create(StyleIndex::Green);
@@ -1708,7 +1709,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
 
     /* Transition for dynamic styles tested in
        eventStyleTransitionDynamicStyle() instead */
-    StyleLayerShared shared{14, 0};
+    StyleLayerShared shared{StyleCount, 0};
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionToPressedOut,
         styleIndexTransitionToPressedOver,
@@ -1861,7 +1862,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
 }
 
 StyleIndex styleIndexTransitionOutOfRange(StyleIndex) {
-    return StyleIndex(14);
+    return StyleIndex(StyleCount);
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
@@ -1872,7 +1873,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     /* Style transition isn't performed on dynamic styles so this shouldn't
        affect it */
-    StyleLayerShared shared{14, data.dynamicStyleCount};
+    StyleLayerShared shared{StyleCount, data.dynamicStyleCount};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -1904,7 +1905,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from 4 to 14 out of range for 14 styles\n");
+        CORRADE_COMPARE(out.str(), Utility::formatString( "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedByte(StyleIndex::Red), StyleCount));
     }
 
     /* OOB toPressedOver transition in the press event. Doing a
@@ -1924,7 +1925,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from 5 to 14 out of range for 14 styles\n");
+        CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::pointerPressEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedByte(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOver transition */
@@ -1940,7 +1941,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerReleaseEvent({1.5f, 2.5f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from 5 to 14 out of range for 14 styles\n");
+        CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOut transition in the leave event */
@@ -1956,7 +1957,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerMoveEvent({8.5f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from 5 to 14 out of range for 14 styles\n");
+        CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOver transition in the enter event */
@@ -1972,7 +1973,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         std::ostringstream out;
         Error redirectError{&out};
         ui.pointerMoveEvent({1.5f, 2.0f}, event);
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from 5 to 14 out of range for 14 styles\n");
+        CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toInactiveOut transition in the visibility lost event */
@@ -1988,7 +1989,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         std::ostringstream out;
         Error redirectError{&out};
         ui.update();
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::visibilityLostEvent(): style transition from 5 to 14 out of range for 14 styles\n");
+        CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::visibilityLostEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
     /* OOB toDisabled transition in doUpdate() */
@@ -2004,13 +2005,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         std::ostringstream out;
         Error redirectError{&out};
         ui.update();
-        CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::update(): style transition from 5 to 14 out of range for 14 styles\n");
+        CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::update(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
-    /* There's 14 styles, style ID 14 is a dynamic style */
-    StyleLayerShared shared{14, 1};
+    StyleLayerShared shared{StyleCount, 1};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -2018,7 +2018,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     DataHandle data = layer.create(StyleIndex::Green, node);
-    DataHandle dataDynamic = layer.create(14, node);
+    DataHandle dataDynamic = layer.create(StyleCount + 0, node);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -2040,7 +2040,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressed);
-        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
     /* toPressedOver transition in the press event. Doing a move before so the
        hovered node is properly registered. */
@@ -2053,7 +2053,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
-        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
     /* toInactiveOver transition */
     } {
@@ -2062,7 +2062,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
-        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
     /* toInactiveOut transition in the leave event */
     } {
@@ -2071,7 +2071,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
-        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
     /* toInactiveOver transition in the enter event */
     } {
@@ -2080,7 +2080,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
-        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
     /* toInactiveOut transition in doUpdate() */
     } {
@@ -2089,9 +2089,9 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
         ui.update();
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
-        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(data)]), StyleIndex::Green);
-        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], 14);
+        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], StyleCount + 0);
 
     /* toDisabled transition in doUpdate() */
     } {
@@ -2101,9 +2101,9 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         /* Only the calculated style changes, not the public one */
         ui.update();
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
-        CORRADE_COMPARE(layer.style(dataDynamic), 14);
+        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(data)]), StyleIndex::GreenDisabled);
-        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], 14);
+        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], StyleCount + 0);
     }
 }
 
