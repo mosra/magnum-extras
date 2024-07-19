@@ -256,6 +256,8 @@ struct ObjectInfo {
     UnsignedInt lightId{0xffffffffu};
     UnsignedInt childCount;
     Containers::ArrayView<const Matrix4> skinJointMatrices;
+    // @todo it would be nice to use the actual same data as Object3D, but copy constructors are deleted and we don't for sure know the type
+    Matrix4 originalTransformation;
 };
 
 class MeshVisualizerDrawable;
@@ -267,6 +269,7 @@ struct SceneAnimationData {
     Containers::String name;
     Containers::Array<char> dataStore;
     Player player;
+    Containers::Array<UnsignedInt> affectedObjects;
 };
 
 /*  @todo better name? */
@@ -365,9 +368,15 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         void play();
         void pause();
+
+        void resetAffectedTransformations(SceneAnimationData &sceneAnimationData);
+
         void stop();
-        void prev();
-        void next();
+
+        void switchAnimation(int delta);
+
+        void prev() { switchAnimation(-1); }
+        void next() { switchAnimation(+1); }
 
         void backward();
         void forward();
@@ -966,10 +975,21 @@ void ScenePlayer::pause() {
     _data->currentAnimationPlayer().pause(std::chrono::system_clock::now().time_since_epoch());
 }
 
+void ScenePlayer::resetAffectedTransformations(SceneAnimationData &sceneAnimationData) {
+    for (auto& affectedObjectIndex : sceneAnimationData.affectedObjects) {
+        auto& affectedObject = _data->objects[affectedObjectIndex];
+        Debug{} << "Resetting affected object"<<affectedObject.name;
+        affectedObject.object->setTransformation(affectedObject.originalTransformation);
+    }
+}
+
 void ScenePlayer::stop() {
     if(!_data) return;
 
-    _data->currentAnimationPlayer().stop();
+    auto& sceneAnimationData = _data->currentAnimation();
+    auto& currentAnimationPlayer = sceneAnimationData.player;
+    currentAnimationPlayer.stop();
+    resetAffectedTransformations(sceneAnimationData);
 
     _baseUiPlane->play.show();
     _baseUiPlane->pause.hide();
@@ -979,26 +999,22 @@ void ScenePlayer::stop() {
         _baseUiPlane->forward});
 }
 
-void ScenePlayer::prev() {
+void ScenePlayer::switchAnimation(int delta) {
     if (!_data->animations.size()) return;
-    bool wasPlaying = _data->currentAnimationPlayer().state() == Animation::State::Playing;
+    auto& previousAnimation = _data->currentAnimation();
+    auto& previousPlayer = previousAnimation.player;
+    bool wasPlaying = previousPlayer.state() == Animation::State::Playing;
     if (wasPlaying) {
-        _data->currentAnimationPlayer().stop();
+        previousPlayer.stop();
     }
-    _data->currentAnimationIndex = (_data->currentAnimationIndex + _data->animations.size() - 1) % _data->animations.size();
+    resetAffectedTransformations(previousAnimation);
+    _data->currentAnimationIndex = (_data->currentAnimationIndex + _data->animations.size() + delta) % _data->animations.size();
+    auto& newAnimation = _data->currentAnimation();
     if (wasPlaying) {
-        _data->currentAnimationPlayer().play(std::chrono::system_clock::now().time_since_epoch());
+        newAnimation.player.play(std::chrono::system_clock::now().time_since_epoch());
     }
-}
-void ScenePlayer::next() {
-    if (!_data->animations.size()) return;
-    bool wasPlaying = _data->currentAnimationPlayer().state() == Animation::State::Playing;
-    if (wasPlaying) {
-        _data->currentAnimationPlayer().stop();
-    }
-    _data->currentAnimationIndex = (_data->currentAnimationIndex + 1) % _data->animations.size();
-    if (wasPlaying) {
-        _data->currentAnimationPlayer().play(std::chrono::system_clock::now().time_since_epoch());
+    else {
+        updateAnimationTime(0);
     }
 }
 
@@ -1017,10 +1033,11 @@ void ScenePlayer::updateAnimationTime(Int deciseconds) {
     const Int duration = _data->currentAnimationPlayer().duration().size()*10;
     /** @todo drop the ArrayView cast once the Ui library is STL-free */
     _baseUiPlane->animationProgress.setText(Containers::ArrayView<const char>{Utility::format(
-        "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1} {} {}",
+        "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1} anim {}/{} {}",
         deciseconds/600, deciseconds/10%60, deciseconds%10,
         duration/600, duration/10%60, duration%10,
         _data->currentAnimationIndex,
+        _data->animations.size(),
         _data->currentAnimation().name)});
 }
 
@@ -1292,18 +1309,24 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
                scene->hasField(Trade::SceneField::Scaling)) {
                 for(const Containers::Pair<UnsignedInt, Containers::Triple<Vector3, Quaternion, Vector3>>& trs: scene->translationsRotationsScalings3DAsArray()) {
                     hasTrs.set(trs.first());
-                    if(Object3D* object = _data->objects[trs.first()].object)
+                    auto& objectInfo = _data->objects[trs.first()];
+                    if(Object3D* object = objectInfo.object) {
                         (*object)
-                            .setTranslation(trs.second().first())
-                            .setRotation(trs.second().second())
-                            .setScaling(trs.second().third());
+                          .setTranslation(trs.second().first())
+                          .setRotation(trs.second().second())
+                          .setScaling(trs.second().third());
+                        objectInfo.originalTransformation = object->transformationMatrix();
+                    }
                 }
             }
             for(const Containers::Pair<UnsignedInt, Matrix4>& transformation: scene->transformations3DAsArray()) {
                 if(hasTrs[transformation.first()])
                     continue;
-                if(Object3D* object = _data->objects[transformation.first()].object)
+                auto& objectInfo = _data->objects[transformation.first()];
+                if (Object3D *object = objectInfo.object) {
                     object->setTransformation(transformation.second());
+                    objectInfo.originalTransformation = transformation.second();
+                }
             }
         }
 
@@ -1587,11 +1610,21 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         }
         SceneAnimationData::Player player;
 
+        Containers::Array<UnsignedInt> affectedObjects{};
+        Containers::arrayReserve(affectedObjects, animation->trackCount());
         for(UnsignedInt j = 0; j != animation->trackCount(); ++j) {
             if(animation->trackTarget(j) >= _data->objects.size() || !_data->objects[animation->trackTarget(j)].object)
                 continue;
 
             Object3D& animatedObject = *_data->objects[animation->trackTarget(j)].object;
+
+            for (auto& alreadyAffected : affectedObjects) {
+                if (alreadyAffected == animation->trackTarget(j)) {
+                    goto affectedAdded;
+                }
+            }
+            arrayAppend(affectedObjects, animation->trackTarget(j));
+        affectedAdded: {}
 
             switch (animation->trackTargetName(j)) {
                 case Trade::AnimationTrackTarget::Translation3D: {
@@ -1643,7 +1676,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         if (filename) {
             player.setPlayCount(0);
         }
-        arrayAppend(_data->animations, InPlaceInit, std::move(animationName), animation->release(), std::move(player));
+        arrayAppend(_data->animations, InPlaceInit, std::move(animationName), animation->release(), std::move(player), std::move(affectedObjects));
     }
 
     /* Populate the model info */
