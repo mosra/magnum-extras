@@ -46,6 +46,8 @@ namespace Implementation {
         Leave,
         Press,
         Release,
+        Focus,
+        Blur,
         TapOrClick,
         MiddleClick,
         RightClick,
@@ -189,6 +191,14 @@ DataHandle EventLayer::onLeave(const NodeHandle node, Containers::Function<void(
     return create(node, Implementation::EventType::Leave, Utility::move(slot));
 }
 
+DataHandle EventLayer::onFocus(const NodeHandle node, Containers::Function<void()>&& slot) {
+    return create(node, Implementation::EventType::Focus, Utility::move(slot));
+}
+
+DataHandle EventLayer::onBlur(const NodeHandle node, Containers::Function<void()>&& slot) {
+    return create(node, Implementation::EventType::Blur, Utility::move(slot));
+}
+
 void EventLayer::remove(DataHandle handle) {
     AbstractLayer::remove(handle);
     removeInternal(dataHandleId(handle));
@@ -230,12 +240,13 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
     }
 
     /* Accept also a press of appropriate pointers that precede a tap/click,
-       drag, right click or middle click. Otherwise it could get propagated
-       further, causing the subsequent release or move to get called on some
-       entirely other node. */
+       drag, focus, right click or middle click. Otherwise it could get
+       propagated further, causing the subsequent release or move to get called
+       on some entirely other node. */
     if(
         ((data.eventType == Implementation::EventType::TapOrClick ||
-          data.eventType == Implementation::EventType::Drag) &&
+          data.eventType == Implementation::EventType::Drag ||
+          data.eventType == Implementation::EventType::Focus) &&
             (event.type() == Pointer::MouseLeft ||
              event.type() == Pointer::Finger ||
              event.type() == Pointer::Pen)) ||
@@ -324,6 +335,23 @@ void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent&
     if(data.eventType == Implementation::EventType::Leave) {
         static_cast<Containers::Function<void()>&>(data.slot)();
         /* Accept status is ignored on enter/leave events, no need to call
+           setAccepted() */
+    }
+}
+
+void EventLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
+    Data& data = _state->data[dataId];
+    if(data.eventType == Implementation::EventType::Focus) {
+        static_cast<Containers::Function<void()>&>(data.slot)();
+        event.setAccepted();
+    }
+}
+
+void EventLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent&) {
+    Data& data = _state->data[dataId];
+    if(data.eventType == Implementation::EventType::Blur) {
+        static_cast<Containers::Function<void()>&>(data.slot)();
+        /* Accept status is ignored on blur events, no need to call
            setAccepted() */
     }
 }

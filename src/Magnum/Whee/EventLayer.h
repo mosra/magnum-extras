@@ -387,6 +387,52 @@ class MAGNUM_WHEE_EXPORT EventLayer: public AbstractLayer {
         }
 
         /**
+         * @brief Connect to a focus
+         *
+         * The @p slot is called when a @p node is focused.
+         *
+         * Use @ref onBlur() to hadle the opposite case. The returned
+         * @ref DataHandle is automatically removed once @p node or any of its
+         * parents is removed, it's the caller responsibility to ensure it
+         * doesn't outlive the state captured in the @p slot. See
+         * @ref onFocusScoped() for a scoped alternative.
+         */
+        DataHandle onFocus(NodeHandle node, Containers::Function<void()>&& slot);
+
+        /**
+         * @brief Scoped connection to a focus
+         *
+         * Compared to @ref onFocus() the connection is removed automatically
+         * when the returned @ref EventConnection gets destroyed.
+         */
+        EventConnection onFocusScoped(NodeHandle node, Containers::Function<void()>&& slot) {
+            return EventConnection{*this, onFocus(node, Utility::move(slot))};
+        }
+
+        /**
+         * @brief Connect to a blur
+         *
+         * The @p slot is called when the @p node is blurred.
+         *
+         * Use @ref onFocus() to hadle the opposite case. The returned
+         * @ref DataHandle is automatically removed once @p node or any of its
+         * parents is removed, it's the caller responsibility to ensure it
+         * doesn't outlive the state captured in the @p slot. See
+         * @ref onBlurScoped() for a scoped alternative.
+         */
+        DataHandle onBlur(NodeHandle node, Containers::Function<void()>&& slot);
+
+        /**
+         * @brief Scoped connection to a pointer leave
+         *
+         * Compared to @ref onBlur() the connection is removed automatically
+         * when the returned @ref EventConnection gets destroyed.
+         */
+        EventConnection onBlurScoped(NodeHandle node, Containers::Function<void()>&& slot) {
+            return EventConnection{*this, onBlur(node, Utility::move(slot))};
+        }
+
+        /**
          * @brief Remove a connection
          *
          * Delegates to @ref AbstractLayer::remove(DataHandle) and additionally
@@ -427,6 +473,8 @@ class MAGNUM_WHEE_EXPORT EventLayer: public AbstractLayer {
         MAGNUM_WHEE_LOCAL void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         MAGNUM_WHEE_LOCAL void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         MAGNUM_WHEE_LOCAL void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
+        MAGNUM_WHEE_LOCAL void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override;
+        MAGNUM_WHEE_LOCAL void doBlurEvent(UnsignedInt dataId, FocusEvent& event) override;
 
         struct State;
         Containers::Pointer<State> _state;
