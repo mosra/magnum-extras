@@ -67,7 +67,7 @@ flat in mediump vec2 halfQuadSize;
 flat in mediump vec4 outlineQuadSize;
 #endif
 in mediump vec4 interpolatedColor;
-in mediump vec2 normalizedQuadPosition; /* -1 to +1 in both coordinates */
+in mediump vec2 interpolatedCenterDistance;
 #ifdef TEXTURED
 in mediump vec3 interpolatedTextureCoordinates;
 #endif
@@ -78,7 +78,7 @@ in highp vec2 backgroundBlurTextureCoordinates;
 out lowp vec4 fragmentColor;
 
 void main() {
-    mediump vec2 position = normalizedQuadPosition*halfQuadSize;
+    mediump vec2 position = interpolatedCenterDistance;
 
     lowp float dist;
     {
