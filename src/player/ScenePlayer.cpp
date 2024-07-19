@@ -1051,6 +1051,15 @@ void ScenePlayer::updateLightColorBrightness() {
         shader.second.setLightColors(lightColorsBrightness);
 }
 
+template<typename T> static void arrayAppendUnique(Containers::Array<T>& array, const T& value) {
+    for (auto& existingValue : array) {
+        if (existingValue == value) {
+            return;
+        }
+    }
+    Containers::arrayAppend(array, value);
+}
+
 void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) {
     if(id >= 0 && UnsignedInt(id) >= importer.sceneCount()) {
         Fatal{} << "Cannot load a scene with ID" << id << "as there's only" << importer.sceneCount() << "scenes";
@@ -1615,18 +1624,13 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         Containers::Array<UnsignedInt> affectedObjects{};
         Containers::arrayReserve(affectedObjects, animation->trackCount());
         for(UnsignedInt j = 0; j != animation->trackCount(); ++j) {
-            if(animation->trackTarget(j) >= _data->objects.size() || !_data->objects[animation->trackTarget(j)].object)
+            auto targetObjectId = animation->trackTarget(j);
+            if(targetObjectId >= _data->objects.size() || !_data->objects[targetObjectId].object)
                 continue;
 
-            Object3D& animatedObject = *_data->objects[animation->trackTarget(j)].object;
+            Object3D& animatedObject = *_data->objects[targetObjectId].object;
 
-            for (auto& alreadyAffected : affectedObjects) {
-                if (alreadyAffected == animation->trackTarget(j)) {
-                    goto affectedAdded;
-                }
-            }
-            arrayAppend(affectedObjects, animation->trackTarget(j));
-        affectedAdded: {}
+            arrayAppendUnique(affectedObjects, static_cast<UnsignedInt>(targetObjectId));
 
             switch (animation->trackTargetName(j)) {
                 case Trade::AnimationTrackTarget::Translation3D: {
