@@ -68,6 +68,7 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
     void eventStyleTransitionNoOp();
     void eventStyleTransition();
     void eventStyleTransitionNodeBecomesHiddenDisabledNoEvents();
+    void eventStyleTransitionNodeNoLongerFocusable();
     void eventStyleTransitionNoHover();
     void eventStyleTransitionDisabled();
     void eventStyleTransitionNoCapture();
@@ -82,33 +83,42 @@ enum class Enum: UnsignedShort {};
 /* The enum is deliberately not 32-bit to verify the APIs can work with smaller
    types too */
 enum class StyleIndex: UnsignedByte {
+    /* All states for Green, disabled is below */
     Green = 0,
     GreenHover = 1,
-    GreenPressed = 2,
-    GreenPressedHover = 3,
+    GreenFocused = 2,
+    GreenFocusedHover = 3,
+    GreenPressed = 4,
+    GreenPressedHover = 5,
 
-    Red = 4,
-    RedHover = 5,
-    RedPressed = 6,
-    RedPressedHover = 7,
+    /* No focus state for Red, disabled shared with Blue */
+    Red = 6,
+    RedHover = 7,
+    RedPressed = 8,
+    RedPressedHover = 9,
 
-    Blue = 8,
-    BluePressed = 9,
+    /* No hover state for Blue, disabled shared with Red */
+    Blue = 10,
+    BlueFocused = 11,
+    BluePressed = 12,
 
-    White = 10,
-    WhiteHover = 11,
+    /* No hover or focus state for White */
+    White = 13,
+    WhiteHover = 14,
 
-    GreenDisabled = 12,
+    GreenDisabled = 15,
     /* Common for red & blue, to test that there's no inverse mapping done */
-    RedBlueDisabled = 13
+    RedBlueDisabled = 16,
 };
-constexpr UnsignedInt StyleCount = 14;
+constexpr UnsignedInt StyleCount = 18;
 
 Debug& operator<<(Debug& debug, StyleIndex value) {
     switch(value) {
         #define _c(value) case StyleIndex::value: return debug << "StyleIndex::" #value;
         _c(Green)
         _c(GreenHover)
+        _c(GreenFocused)
+        _c(GreenFocusedHover)
         _c(GreenPressed)
         _c(GreenPressedHover)
         _c(Red)
@@ -116,6 +126,7 @@ Debug& operator<<(Debug& debug, StyleIndex value) {
         _c(RedPressed)
         _c(RedPressedHover)
         _c(Blue)
+        _c(BlueFocused)
         _c(BluePressed)
         _c(White)
         _c(WhiteHover)
@@ -166,28 +177,53 @@ const struct {
 
 const struct {
     const char* name;
-    bool disableCapture;
+    bool disableCapture, focusable;
     StyleIndex outStyle, overStyle;
 } EventStyleTransitionNoCaptureData[]{
-    {"", false, StyleIndex::GreenPressed, StyleIndex::GreenPressedHover},
-    {"capture disabled", true, StyleIndex::Green, StyleIndex::GreenHover},
+    {"", false, false,
+        StyleIndex::GreenPressed, StyleIndex::GreenPressedHover},
+    {"capture disabled", true, false,
+        StyleIndex::Green, StyleIndex::GreenHover},
+    {"focusable", false, true,
+        StyleIndex::GreenPressed, StyleIndex::GreenPressedHover},
+    {"focusable, capture disabled", false, true,
+        StyleIndex::GreenPressed, StyleIndex::GreenPressedHover},
 };
 
 const struct {
     const char* name;
     NodeFlags flags;
     bool clearOrder;
-    StyleIndex expectedGreenStyle, expectedRedStyle;
+    StyleIndex expectedGreenStyle, expectedRedStyle, expectedBlueStyle;
     bool becomesHidden;
 } EventStyleTransitionNodeBecomesHiddenDisabledNoEventsData[]{
     {"removed from top level order", {}, true,
-        StyleIndex::Green, StyleIndex::Red, true},
+        StyleIndex::Green, StyleIndex::Red, StyleIndex::Blue, true},
     {"hidden", NodeFlag::Hidden, false,
-        StyleIndex::Green, StyleIndex::Red, true},
+        StyleIndex::Green, StyleIndex::Red, StyleIndex::Blue, true},
     {"no events", NodeFlag::NoEvents, false,
-        StyleIndex::Green, StyleIndex::Red, false},
+        StyleIndex::Green, StyleIndex::Red, StyleIndex::Blue, false},
     {"disabled", NodeFlag::Disabled, false,
-        StyleIndex::GreenDisabled, StyleIndex::RedBlueDisabled, false}
+        StyleIndex::GreenDisabled, StyleIndex::RedBlueDisabled, StyleIndex::RedBlueDisabled, false}
+};
+
+const struct {
+    const char* name;
+    bool hovered, pressed;
+    StyleIndex style, expectedStyleBefore, expectedStyleAfter;
+} EventStyleTransitionNodeNoLongerFocusableData[]{
+    {"", false, false, StyleIndex::Green,
+        StyleIndex::GreenFocused, StyleIndex::Green},
+    {"hovered", true, false, StyleIndex::Green,
+        StyleIndex::GreenFocusedHover, StyleIndex::GreenHover},
+    {"pressed", false, true, StyleIndex::Blue,
+        /* Pressed has a priority over Focused, so there's no
+           BluePressedFocused */
+        StyleIndex::BluePressed, StyleIndex::BluePressed},
+    {"hovered + pressed", true, true, StyleIndex::Green,
+        /* Pressed has a priority over Focused, so there's no
+           GreenPressedFocusedHover */
+        StyleIndex::GreenPressedHover, StyleIndex::GreenPressedHover},
 };
 
 const struct {
@@ -238,6 +274,9 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEvents},
         Containers::arraySize(EventStyleTransitionNodeBecomesHiddenDisabledNoEventsData));
+
+    addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNodeNoLongerFocusable},
+        Containers::arraySize(EventStyleTransitionNodeNoLongerFocusableData));
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionOutOfRange},
         Containers::arraySize(EventStyleTransitionOutOfRangeData));
@@ -469,6 +508,10 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         InactiveOut1,
         InactiveOver2,
         InactiveOver1,
+        FocusedOut2,
+        FocusedOut1,
+        FocusedOver2,
+        FocusedOver1,
         PressedOut2,
         PressedOut1,
         PressedOver2,
@@ -477,47 +520,21 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
 
     /* Style transition isn't allowed to use dynamic styles so the dynamic
        count shouldn't affect it */
-    StyleLayerShared shared{8, 0};
+    StyleLayerShared shared{12, 0};
     shared.setStyleTransition(
         [](UnsignedInt style) -> UnsignedInt {
             switch(Style(style)) {
                 case InactiveOut1:
                 case InactiveOver1:
-                case PressedOut1:
-                case PressedOver1:
-                    return PressedOut1;
-                case InactiveOut2:
-                case InactiveOver2:
-                case PressedOut2:
-                case PressedOver2:
-                    return PressedOut2;
-            }
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        },
-        [](UnsignedInt style) -> UnsignedInt {
-            switch(Style(style)) {
-                case InactiveOut1:
-                case InactiveOver1:
-                case PressedOut1:
-                case PressedOver1:
-                    return PressedOver1;
-                case InactiveOut2:
-                case InactiveOver2:
-                case PressedOut2:
-                case PressedOver2:
-                    return PressedOver2;
-            }
-            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
-        },
-        [](UnsignedInt style) -> UnsignedInt {
-            switch(Style(style)) {
-                case InactiveOut1:
-                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
                 case PressedOut1:
                 case PressedOver1:
                     return InactiveOut1;
                 case InactiveOut2:
                 case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
                 case PressedOut2:
                 case PressedOver2:
                     return InactiveOut2;
@@ -528,14 +545,94 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
             switch(Style(style)) {
                 case InactiveOut1:
                 case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
                 case PressedOut1:
                 case PressedOver1:
                     return InactiveOver1;
                 case InactiveOut2:
                 case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
                 case PressedOut2:
                 case PressedOver2:
                     return InactiveOver2;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return FocusedOut1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return FocusedOut2;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return FocusedOver1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return FocusedOver2;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return PressedOut1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return PressedOut2;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut1:
+                case InactiveOver1:
+                case FocusedOut1:
+                case FocusedOver1:
+                case PressedOut1:
+                case PressedOver1:
+                    return PressedOver1;
+                case InactiveOut2:
+                case InactiveOver2:
+                case FocusedOut2:
+                case FocusedOver2:
+                case PressedOut2:
+                case PressedOver2:
+                    return PressedOver2;
             }
             CORRADE_INTERNAL_ASSERT_UNREACHABLE();
         },
@@ -545,15 +642,18 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         });
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
 
-    /* Node 2 is first, to avoid accidentally matching the order */
+    /* Node 2 is first, to avoid accidentally matching the order, Neither of
+       the two are Focusable initially, to test pointerPressEvent() without the
+       implicit focus. */
     NodeHandle node2 = ui.createNode({}, {100, 50});
     NodeHandle node1 = ui.createNode({0, 50}, {100, 50});
     DataHandle data1 = layer.create(InactiveOut1, node1);
     DataHandle data2 = layer.create(InactiveOut2, node2);
 
-    /* Nothing is hovered or pressed initially. */
+    /* Nothing is hovered, pressed or focused initially */
     CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
     CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
     /* Setting a transitioned style picks InactiveOut. Switching the IDs to be
        sure it actually changed. */
@@ -568,6 +668,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node2);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style(data2), InactiveOver1);
     }
 
@@ -585,6 +686,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentHoveredNode(), node2);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style(data2), PressedOver2);
     }
 
@@ -603,6 +705,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 75}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style(data2), PressedOut1);
     }
 
@@ -620,6 +723,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 75}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style(data2), InactiveOut2);
     }
 
@@ -629,6 +733,79 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     layer.setTransitionedStyle(ui, data2, InactiveOver1);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), InactiveOut1);
+
+    /* Make node2 focusable for the rest of the test case */
+    ui.addNodeFlags(node2, NodeFlag::Focusable);
+
+    /* Focusing causes the style to be changed to FocusedOut */
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(ui.focusEvent(node2, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node2);
+        CORRADE_COMPARE(layer.style(data2), FocusedOut1);
+    }
+
+    /* Setting a transitioned style (switching IDs again) picks FocusedOut
+       for the focused node, the other stays InactiveOut */
+    layer.setTransitionedStyle(ui, data1, FocusedOver1);
+    layer.setTransitionedStyle(ui, data2, InactiveOut2);
+    CORRADE_COMPARE(layer.style(data1), InactiveOut1);
+    CORRADE_COMPARE(layer.style(data2), FocusedOut2);
+
+    /* Pressing on node 2 causes the style to be changed to PressedOut, as it
+       has a priority over focus */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), node2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node2);
+        CORRADE_COMPARE(layer.style(data2), PressedOut2);
+    }
+
+    /* Setting a transitioned style (switching IDs again) should pick
+       PressedOut for the focused node as well, the other stays InactiveOut */
+    layer.setTransitionedStyle(ui, data1, FocusedOut2);
+    layer.setTransitionedStyle(ui, data2, InactiveOver1);
+    CORRADE_COMPARE(layer.style(data1), InactiveOut2);
+    CORRADE_COMPARE(layer.style(data2), PressedOut1);
+
+    /* Hovering on node 2 while being pressed & focused makes PressedOver win
+       again over FocusedOver */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), node2);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node2);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node2);
+        CORRADE_COMPARE(layer.style(data2), PressedOver1);
+    }
+
+    /* Setting a transitioned style (switching IDs again) should pick
+       PressedOver again, the other stays InactiveOut */
+    layer.setTransitionedStyle(ui, data1, FocusedOver1);
+    layer.setTransitionedStyle(ui, data2, InactiveOut2);
+    CORRADE_COMPARE(layer.style(data1), InactiveOut1);
+    CORRADE_COMPARE(layer.style(data2), PressedOver2);
+
+    /* Releasing causes the style to be changed to FocusedOver */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({50, 25}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node2);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node2);
+        CORRADE_COMPARE(layer.style(data2), FocusedOver2);
+    }
+
+    /* Setting a transitioned style (switching IDs again) picks FocusedOver for
+       the focused node, the other stays InactiveOut */
+    layer.setTransitionedStyle(ui, data1, FocusedOver2);
+    layer.setTransitionedStyle(ui, data2, PressedOut1);
+    CORRADE_COMPARE(layer.style(data1), InactiveOut2);
+    CORRADE_COMPARE(layer.style(data2), FocusedOver1);
 }
 
 void AbstractVisualLayerTest::invalidHandle() {
@@ -800,6 +977,8 @@ StyleIndex styleIndexTransitionToInactiveOut(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
+        case StyleIndex::GreenFocused:
+        case StyleIndex::GreenFocusedHover:
         case StyleIndex::GreenPressed:
         case StyleIndex::GreenPressedHover:
             return StyleIndex::Green;
@@ -809,6 +988,7 @@ StyleIndex styleIndexTransitionToInactiveOut(StyleIndex index) {
         case StyleIndex::RedPressedHover:
             return StyleIndex::Red;
         case StyleIndex::Blue:
+        case StyleIndex::BlueFocused:
         case StyleIndex::BluePressed:
             return StyleIndex::Blue;
         case StyleIndex::White:
@@ -826,6 +1006,8 @@ StyleIndex styleIndexTransitionToInactiveOver(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
+        case StyleIndex::GreenFocused:
+        case StyleIndex::GreenFocusedHover:
         case StyleIndex::GreenPressed:
         case StyleIndex::GreenPressedHover:
             return StyleIndex::GreenHover;
@@ -835,6 +1017,7 @@ StyleIndex styleIndexTransitionToInactiveOver(StyleIndex index) {
         case StyleIndex::RedPressedHover:
             return StyleIndex::RedHover;
         case StyleIndex::Blue:
+        case StyleIndex::BlueFocused:
         case StyleIndex::BluePressed:
             return StyleIndex::Blue;
         case StyleIndex::White:
@@ -848,10 +1031,70 @@ StyleIndex styleIndexTransitionToInactiveOver(StyleIndex index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 }
 
+StyleIndex styleIndexTransitionToFocusedOut(StyleIndex index) {
+    switch(index) {
+        case StyleIndex::Green:
+        case StyleIndex::GreenHover:
+        case StyleIndex::GreenFocused:
+        case StyleIndex::GreenFocusedHover:
+        case StyleIndex::GreenPressed:
+        case StyleIndex::GreenPressedHover:
+            return StyleIndex::GreenFocused;
+        case StyleIndex::Red:
+        case StyleIndex::RedHover:
+        case StyleIndex::RedPressed:
+        case StyleIndex::RedPressedHover:
+            return StyleIndex::Red; /* no focus state */
+        case StyleIndex::Blue:
+        case StyleIndex::BlueFocused:
+        case StyleIndex::BluePressed:
+            return StyleIndex::BlueFocused;
+        case StyleIndex::White:
+        case StyleIndex::WhiteHover:
+            return StyleIndex::White; /* no focus state */
+        case StyleIndex::GreenDisabled:
+        case StyleIndex::RedBlueDisabled:
+            CORRADE_FAIL("Called with" << index);
+    }
+    CORRADE_FAIL("Called with" << UnsignedInt(index));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
+StyleIndex styleIndexTransitionToFocusedOver(StyleIndex index) {
+    switch(index) {
+        case StyleIndex::Green:
+        case StyleIndex::GreenHover:
+        case StyleIndex::GreenFocused:
+        case StyleIndex::GreenFocusedHover:
+        case StyleIndex::GreenPressed:
+        case StyleIndex::GreenPressedHover:
+            return StyleIndex::GreenFocusedHover;
+        case StyleIndex::Red:
+        case StyleIndex::RedHover:
+        case StyleIndex::RedPressed:
+        case StyleIndex::RedPressedHover:
+            return StyleIndex::RedHover; /* no focus state */
+        case StyleIndex::Blue:
+        case StyleIndex::BlueFocused:
+        case StyleIndex::BluePressed:
+            return StyleIndex::Blue;
+        case StyleIndex::White:
+        case StyleIndex::WhiteHover:
+            return StyleIndex::WhiteHover; /* no focus state */
+        case StyleIndex::GreenDisabled:
+        case StyleIndex::RedBlueDisabled:
+            CORRADE_FAIL("Called with" << index);
+    }
+    CORRADE_FAIL("Called with" << UnsignedInt(index));
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
 StyleIndex styleIndexTransitionToPressedOut(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
+        case StyleIndex::GreenFocused:
+        case StyleIndex::GreenFocusedHover:
         case StyleIndex::GreenPressed:
         case StyleIndex::GreenPressedHover:
             return StyleIndex::GreenPressed;
@@ -861,6 +1104,7 @@ StyleIndex styleIndexTransitionToPressedOut(StyleIndex index) {
         case StyleIndex::RedPressedHover:
             return StyleIndex::RedPressed;
         case StyleIndex::Blue:
+        case StyleIndex::BlueFocused:
         case StyleIndex::BluePressed:
             return StyleIndex::BluePressed;
         case StyleIndex::White:
@@ -878,6 +1122,8 @@ StyleIndex styleIndexTransitionToPressedOver(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
+        case StyleIndex::GreenFocused:
+        case StyleIndex::GreenFocusedHover:
         case StyleIndex::GreenPressed:
         case StyleIndex::GreenPressedHover:
             return StyleIndex::GreenPressedHover;
@@ -887,6 +1133,7 @@ StyleIndex styleIndexTransitionToPressedOver(StyleIndex index) {
         case StyleIndex::RedPressedHover:
             return StyleIndex::RedPressedHover;
         case StyleIndex::Blue:
+        case StyleIndex::BlueFocused:
         case StyleIndex::BluePressed:
             return StyleIndex::BluePressed;
         case StyleIndex::White:
@@ -911,6 +1158,8 @@ StyleIndex styleIndexTransitionToDisabled(StyleIndex index) {
     switch(index) {
         case StyleIndex::Green:
         case StyleIndex::GreenHover:
+        case StyleIndex::GreenFocused:
+        case StyleIndex::GreenFocusedHover:
         case StyleIndex::GreenPressed:
         case StyleIndex::GreenPressedHover:
             return StyleIndex::GreenDisabled;
@@ -921,6 +1170,7 @@ StyleIndex styleIndexTransitionToDisabled(StyleIndex index) {
         case StyleIndex::RedPressed:
         case StyleIndex::RedPressedHover:
         case StyleIndex::Blue:
+        case StyleIndex::BlueFocused:
         case StyleIndex::BluePressed:
             return StyleIndex::RedBlueDisabled;
         /* This one has no disabled state */
@@ -959,6 +1209,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
@@ -966,6 +1217,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
@@ -973,6 +1225,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
@@ -980,6 +1233,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
@@ -987,6 +1241,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
@@ -994,104 +1249,205 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_VERIFY(!ui.pointerMoveEvent({5.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
+    /* Focus and blur with a temporarily focusable node should do nothing by
+       default */
+    {
+        ui.addNodeFlags(node, NodeFlag::Focusable);
+
+        FocusEvent focusEvent;
+        CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        FocusEvent blurEvent;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, blurEvent));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        ui.clearNodeFlags(node, NodeFlag::Focusable);
+    }
+
     /* Setting a null toPressedOut transition will do nothing for a press */
     shared.setStyleTransition<StyleIndex,
-        nullptr,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        nullptr,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
     /* Setting a null toInactiveOut transition will do nothing for a release */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         nullptr,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
     /* Setting a null toInactiveOver will do nothing for a hover */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         nullptr,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({1.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
     /* Setting a null toPressedOver will do nothing for a hovered press */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        nullptr,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        nullptr,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
     /* Setting a null combined toPressed will do nothing for a press */
     shared.setStyleTransition<StyleIndex,
-        nullptr,
         styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToFocusedOut,
+        nullptr,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
     /* Setting a null combined toInactive will do nothing for a release */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
         nullptr,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToPressedOut,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
     /* toDisabled no-op transition is tested in
        eventStyleTransitionDisabled() */
+
+    /* Marking the node as Focusable for the rest of the test case */
+    ui.addNodeFlags(node, NodeFlag::Focusable);
+
+    /* Setting a null toFocusedOver will do nothing for a hovered focus */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        nullptr,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(ui.focusEvent(node, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null toFocusedOut will do nothing for a focused leave */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
+        nullptr,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null toInactiveOut will do nothing for a blur */
+    shared.setStyleTransition<StyleIndex,
+        nullptr,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
 }
 
 void AbstractVisualLayerTest::eventStyleTransition() {
@@ -1106,25 +1462,33 @@ void AbstractVisualLayerTest::eventStyleTransition() {
        verifies that all the overrides do what's expected */
     StyleLayerShared* chaining;
     if(data.templated) chaining = &shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         /* toDisabled transition is tested in eventStyleTransitionDisabled()
            instead */
         styleIndexTransitionToDisabledDoNotCall>();
     else chaining = &shared.setStyleTransition(
         [](UnsignedInt s) {
-            return UnsignedInt(styleIndexTransitionToPressedOut(StyleIndex(s)));
-        },
-        [](UnsignedInt s) {
-            return UnsignedInt(styleIndexTransitionToPressedOver(StyleIndex(s)));
-        },
-        [](UnsignedInt s) {
             return UnsignedInt(styleIndexTransitionToInactiveOut(StyleIndex(s)));
         },
         [](UnsignedInt s) {
             return UnsignedInt(styleIndexTransitionToInactiveOver(StyleIndex(s)));
+        },
+        [](UnsignedInt s) {
+            return UnsignedInt(styleIndexTransitionToFocusedOut(StyleIndex(s)));
+        },
+        [](UnsignedInt s) {
+            return UnsignedInt(styleIndexTransitionToFocusedOver(StyleIndex(s)));
+        },
+        [](UnsignedInt s) {
+            return UnsignedInt(styleIndexTransitionToPressedOut(StyleIndex(s)));
+        },
+        [](UnsignedInt s) {
+            return UnsignedInt(styleIndexTransitionToPressedOver(StyleIndex(s)));
         },
         /* toDisabled transition is tested in eventStyleTransitionDisabled()
            instead */
@@ -1172,6 +1536,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
@@ -1195,6 +1561,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
@@ -1214,6 +1582,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_VERIFY(ui.pointerMoveEvent({5.0f, 3.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
@@ -1234,6 +1604,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
@@ -1255,6 +1626,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressed);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
@@ -1275,6 +1647,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
         CORRADE_COMPARE(ui.currentCapturedNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedPressedHover);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
@@ -1295,6 +1668,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
@@ -1314,7 +1688,271 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_VERIFY(!ui.pointerMoveEvent({7.0f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Make the Green, Red and Blue nodes focusable for the rest of the test
+       case */
+    ui.addNodeFlags(nodeGreen, NodeFlag::Focusable);
+    ui.addNodeFlags(nodeRed, NodeFlag::Focusable);
+    ui.addNodeFlags(nodeBlue, NodeFlag::Focusable);
+
+    /* Focusing the green node makes it focused */
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(ui.focusEvent(nodeGreen, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenFocused);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Moving onto the green node makes it focused & hovered */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.5f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenFocusedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Pressing on the green node makes it pressed & hovered, as that has a
+       priority over focus */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Moving away from the green node makes it only pressed, again with that
+       taking precedence over focus */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({100.0f, 100.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Moving back to the green node makes it again pressed & hovered, taking
+       precedence over focus */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.5f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Releasing on the green node makes it focused & hovered */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenFocusedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Blurring the green node makes it just focused */
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Focusing the green node makes it focused & hovered again */
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(ui.focusEvent(nodeGreen, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenFocusedHover);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Moving away from the green node makes it only focused */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenFocused);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Pressing on the green node makes it pressed, as that has again a
+       priority over focus */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), nodeGreen);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Releasing on the green node makes it again focused */
+    {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocused);
+        CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+    }
+
+    if(data.update) {
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenFocused);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataWhite)]), StyleIndex::White);
+    }
+
+    /* Blurring the green node makes it inactive again */
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -1334,6 +1972,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 6.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeBlue);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
@@ -1341,6 +1981,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_VERIFY(!ui.pointerMoveEvent({2.5f, 8.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1351,16 +1993,12 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         PointerEvent event{Pointer::Pen};
         CORRADE_VERIFY(ui.pointerPressEvent({5.0f, 5.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeWhite);
-        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), nodeWhite);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{Pointer::Pen};
         CORRADE_VERIFY(ui.pointerReleaseEvent({5.5f, 4.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1370,12 +2008,30 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     {
         PointerEvent event{Pointer::MouseRight};
         CORRADE_VERIFY(!ui.pointerPressEvent({2.0f, 3.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{Pointer::MouseRight};
         CORRADE_VERIFY(!ui.pointerReleaseEvent({1.5f, 2.5f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Focus and blur on the red node is accepted but makes no changes to it,
+       thus no update is needed */
+    {
+        FocusEvent event;
+        CORRADE_VERIFY(ui.focusEvent(nodeRed, event));
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeRed);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    } {
+        FocusEvent event;
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 }
@@ -1386,7 +2042,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Transition for dynamic styles tested in
        eventStyleTransitionDynamicStyle() instead */
-    StyleLayerShared shared{4, 0};
+    StyleLayerShared shared{6, 0};
 
     AbstractUserInterface ui{{100, 100}};
 
@@ -1404,17 +2060,21 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
        verifies that all the overrides do what's expected */
     StyleLayerShared* chaining;
     if(data.templated) chaining = &shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
         styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToPressedOut,
         /* "no hover" toDisabled transition is tested in
            eventStyleTransitionDisabled() instead */
         styleIndexTransitionToDisabledDoNotCall>();
     else chaining = &shared.setStyleTransition(
         [](UnsignedInt s) {
-            return UnsignedInt(styleIndexTransitionToPressedOut(StyleIndex(s)));
+            return UnsignedInt(styleIndexTransitionToInactiveOut(StyleIndex(s)));
         },
         [](UnsignedInt s) {
-            return UnsignedInt(styleIndexTransitionToInactiveOut(StyleIndex(s)));
+            return UnsignedInt(styleIndexTransitionToFocusedOut(StyleIndex(s)));
+        },
+        [](UnsignedInt s) {
+            return UnsignedInt(styleIndexTransitionToPressedOut(StyleIndex(s)));
         },
         /* "no hover" toDisabled transition is tested in
            eventStyleTransitionDisabled() instead */
@@ -1467,8 +2127,57 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
     /* Moving away should do nothing again */
     {
         PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Make the node focusable for the rest of the test case */
+    ui.addNodeFlags(node, NodeFlag::Focusable);
+
+    auto testFocusBlur = [&]{
+        {
+            FocusEvent event;
+            CORRADE_VERIFY(ui.focusEvent(node, event));
+            CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenFocused);
+            CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        }
+
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        {
+            FocusEvent event;
+            CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
+            CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
+            CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+        }
+
+        ui.update();
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    };
+
+    /* Test focus & blur without a hover */
+    testFocusBlur();
+
+    /* Moving onto the node should do nothing */
+    {
+        PointerMoveEvent event{{}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Focus & blur with a hover should behave the same as without */
+    testFocusBlur();
+
+    /* Moving away should do nothing again */
+    {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
@@ -1520,8 +2229,12 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         nullptr,
         nullptr,
+        nullptr,
+        nullptr,
         styleIndexTransitionToDisabled>();
     else chaining = &shared.setStyleTransition(
+        nullptr,
+        nullptr,
         nullptr,
         nullptr,
         nullptr,
@@ -1567,8 +2280,12 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
         nullptr,
         nullptr,
         nullptr,
+        nullptr,
+        nullptr,
         nullptr>();
     else shared.setStyleTransition(
+        nullptr,
+        nullptr,
         nullptr,
         nullptr,
         nullptr,
@@ -1591,6 +2308,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
     shared.setStyleTransition<StyleIndex,
         nullptr,
         nullptr,
+        nullptr,
         styleIndexTransitionToDisabled>();
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
@@ -1607,6 +2325,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDisabled() {
 
     /* Setting a no-op no-hover transition should revert back again */
     shared.setStyleTransition<StyleIndex,
+        nullptr,
         nullptr,
         nullptr,
         nullptr>();
@@ -1629,12 +2348,14 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
 
     /* Transition for dynamic styles tested in
        eventStyleTransitionDynamicStyle() instead */
-    StyleLayerShared shared{4, 0};
+    StyleLayerShared shared{6, 0};
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabled>();
 
     struct EventLayer: AbstractLayer {
@@ -1658,7 +2379,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f}, data.focusable ? NodeFlag::Focusable : NodeFlags{});
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     DataHandle layerData = layer.create(StyleIndex::Green, node);
@@ -1683,6 +2404,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), data.disableCapture ? NodeHandle::Null : node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), data.focusable ? node : NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenPressedHover);
 
     /* Move away will only preserve the press if capture is set */
@@ -1691,6 +2413,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
         CORRADE_COMPARE(ui.pointerMoveEvent({7.0f, 2.0f}, event), !data.disableCapture);
         CORRADE_COMPARE(ui.currentPressedNode(), data.disableCapture ? NodeHandle::Null : node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), data.focusable ? node : NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.outStyle);
 
     /* Move back will only preserve the press if capture is set */
@@ -1699,6 +2422,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), data.disableCapture ? NodeHandle::Null : node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), data.focusable ? node : NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), data.overStyle);
     }
 }
@@ -1711,10 +2435,12 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
        eventStyleTransitionDynamicStyle() instead */
     StyleLayerShared shared{StyleCount, 0};
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabled>();
 
     AbstractUserInterface ui{{100, 100}};
@@ -1725,33 +2451,42 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
          1  2  3  4  5  6
        2 +-----+  +-----+
        3 |green|  | red |
-       4 +-----+  +-----+ */
+       4 +-----+  +-----+
+       5 +-----+
+       6 |blue |
+       7 +-----+          */
     NodeHandle root = ui.createNode({}, {10.0f, 10.0f});
     NodeHandle nodeGreen = ui.createNode(root, {1.0f, 2.0f}, {2.0f, 2.0f});
     NodeHandle nodeRed = ui.createNode(root, {4.0f, 2.0f}, {2.0f, 2.0f});
+    NodeHandle nodeBlue = ui.createNode(root, {1.0f, 5.0f}, {2.0f, 2.0f}, NodeFlag::Focusable);
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     /* One extra data to verify it's mapping from nodes to data correctly */
     layer.create(StyleIndex::Green);
     DataHandle dataGreen = layer.create(StyleIndex::Green, nodeGreen);
     DataHandle dataRed = layer.create(StyleIndex::Red, nodeRed);
+    DataHandle dataBlue = layer.create(StyleIndex::Blue, nodeBlue);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
 
-    /* Press on the green node, hover on the red */
+    /* Press on the green node, hover on the red, focus on the blue */
     {
         PointerMoveEvent moveEvent{{}, {}};
         PointerEvent pressEvent{Pointer::MouseLeft};
+        FocusEvent focusEvent;
         CORRADE_VERIFY(ui.pointerMoveEvent({5.0f, 3.0f}, moveEvent));
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, pressEvent));
+        CORRADE_VERIFY(ui.focusEvent(nodeBlue, focusEvent));
 
         CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeBlue);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenPressed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::RedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::BlueFocused);
         CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     }
 
@@ -1759,6 +2494,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenPressed);
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::RedHover);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::BlueFocused);
 
     /* Changing the flags makes the node not react to events anymore, which
        means it should lose all pressed/hover visual state */
@@ -1778,9 +2514,10 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     if(!data.becomesHidden) {
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), data.expectedGreenStyle);
         CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), data.expectedRedStyle);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), data.expectedBlueStyle);
     }
 
-    /* Changing the flags back should not regain pressed/hover state */
+    /* Changing the flags back should not regain pressed/hover/focused state */
     if(data.flags)
         ui.clearNodeFlags(root, data.flags);
     else if(data.clearOrder)
@@ -1791,6 +2528,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataRed)]), StyleIndex::Red);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataBlue)]), StyleIndex::Blue);
 
     /* Both press & hover on the green node */
     {
@@ -1836,12 +2574,18 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::Green);
 
-    /* Hover on the green node but then marking it as disabled */
+    /* Make the green node focusable until the end of the test case */
+    ui.addNodeFlags(nodeGreen, NodeFlag::Focusable);
+
+    /* Focus & hover on the green node but then marking it as disabled */
     {
         PointerMoveEvent moveEvent{{}, {}};
+        FocusEvent focusEvent;
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 3.0f}, moveEvent));
+        CORRADE_VERIFY(ui.focusEvent(nodeGreen, focusEvent));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
-
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeGreen);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::GreenFocusedHover);
         ui.addNodeFlags(nodeGreen, NodeFlag::Disabled);
     }
 
@@ -1861,6 +2605,81 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
     CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(dataGreen)]), StyleIndex::GreenDisabled);
 }
 
+void AbstractVisualLayerTest::eventStyleTransitionNodeNoLongerFocusable() {
+    auto&& data = EventStyleTransitionNodeNoLongerFocusableData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* A variant of eventStyleTransitionNodeBecomesHiddenDisabledNoEvents()
+       that verifies behavior specific to the Focusable flag and focused
+       nodes */
+
+    /* Transition for dynamic styles tested in
+       eventStyleTransitionDynamicStyle() instead */
+    StyleLayerShared shared{StyleCount, 0};
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabled>();
+
+    AbstractUserInterface ui{{100, 100}};
+
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+    DataHandle nodeData = layer.create(data.style, node);
+
+    if(data.hovered) {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 1.0f}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+    }
+
+    /* Doing a press on a non-focusable node so it doesn't imply a focus */
+    if(data.pressed) {
+        PointerEvent event{Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({1.0f, 2.0f}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+    }
+
+    /* Make the node focusable and focus it */
+    {
+        ui.addNodeFlags(node, NodeFlag::Focusable);
+
+        FocusEvent focusEvent;
+        CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+    }
+
+    CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), data.expectedStyleBefore);
+
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.currentHoveredNode(), data.hovered ? node : NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentPressedNode(), data.pressed ? node : NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentFocusedNode(), node);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(nodeData)]), data.expectedStyleBefore);
+
+    /* The node is no longer focusable, but the hovered/pressed state should
+       stay */
+    ui.clearNodeFlags(node, NodeFlag::Focusable);
+
+    /* A single update() call should be enough, not the update itself
+       scheduling another update in the doVisibilityLostEvent() */
+    ui.update();
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.currentHoveredNode(), data.hovered ? node : NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentPressedNode(), data.pressed ? node : NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(StyleIndex(layer.style(nodeData)), data.expectedStyleAfter);
+    CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(nodeData)]), data.expectedStyleAfter);
+}
+
 StyleIndex styleIndexTransitionOutOfRange(StyleIndex) {
     return StyleIndex(StyleCount);
 }
@@ -1877,7 +2696,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     AbstractUserInterface ui{{100, 100}};
 
-    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+    NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f}, NodeFlag::Focusable);
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     layer.create(StyleIndex::Red, node);
@@ -1894,10 +2713,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     /* OOB toPressedOut transition */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionOutOfRange,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
@@ -1912,10 +2733,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
        (non-asserting) move before so the hovered node is properly
        registered. */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionOutOfRange,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionOutOfRange,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent moveEvent{{}, {}};
@@ -1930,10 +2753,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     /* OOB toInactiveOver transition */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionOutOfRange,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerEvent event{Pointer::MouseLeft};
@@ -1946,10 +2771,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     /* OOB toInactiveOut transition in the leave event */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent event{{}, {}};
@@ -1962,10 +2789,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     /* OOB toInactiveOver transition in the enter event */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionOutOfRange,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
         PointerMoveEvent event{{}, {}};
@@ -1976,12 +2805,54 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
     }
 
-    /* OOB toInactiveOut transition in the visibility lost event */
+    /* OOB toFocusedOver transition in the focus event */
     shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionOutOfRange,
         styleIndexTransitionToPressedOut,
         styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    {
+        FocusEvent event;
+
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.focusEvent(node, event);
+        CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::focusEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+    }
+
+    /* OOB toInactiveOver transition in the blur event. Doing a
+       (non-asserting) focus before so the focused node is properly
+       registered. */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionOutOfRange,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    {
+        FocusEvent event1;
+        ui.focusEvent(node, event1);
+        FocusEvent event2;
+
+        std::ostringstream out;
+        Error redirectError{&out};
+        ui.focusEvent(NodeHandle::Null, event2);
+        CORRADE_COMPARE(out.str(), Utility::formatString("Whee::AbstractVisualLayer::blurEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedInt(StyleIndex::RedHover), StyleCount));
+    }
+
+    /* OOB toInactiveOut transition in the visibility lost event */
+    shared.setStyleTransition<StyleIndex,
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     ui.addNodeFlags(node, NodeFlag::NoEvents);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
@@ -1994,10 +2865,12 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 
     /* OOB toDisabled transition in doUpdate() */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionOutOfRange>();
     ui.addNodeFlags(node, NodeFlag::Disabled);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
@@ -2015,10 +2888,13 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
     AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
+    NodeHandle nodeFocusable = ui.createNode({3.0f, 3.0f}, {2.0f, 2.0f}, NodeFlag::Focusable);
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
     DataHandle data = layer.create(StyleIndex::Green, node);
     DataHandle dataDynamic = layer.create(StyleCount + 0, node);
+    DataHandle dataFocusable = layer.create(StyleIndex::Green, nodeFocusable);
+    DataHandle dataFocusableDynamic = layer.create(StyleCount + 0, nodeFocusable);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -2027,10 +2903,12 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
        same as in eventStyleTransitionOutOfRange(), just not asserting in this
        case. Keep the two in sync. */
     shared.setStyleTransition<StyleIndex,
-        styleIndexTransitionToPressedOut,
-        styleIndexTransitionToPressedOver,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabled>();
 
     /* toPressedOut transition */
@@ -2039,6 +2917,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         ui.pointerPressEvent({2.0f, 2.0f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressed);
         CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
@@ -2052,6 +2931,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         ui.pointerPressEvent({2.0f, 2.0f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
@@ -2061,6 +2941,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         ui.pointerReleaseEvent({1.5f, 2.5f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
         CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
@@ -2070,6 +2951,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         ui.pointerMoveEvent({8.5f, 2.0f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
         CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
 
@@ -2079,8 +2961,52 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         ui.pointerMoveEvent({1.5f, 2.0f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
         CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
+
+    /* toFocused transition in the focus event */
+    } {
+        FocusEvent event;
+        ui.focusEvent(nodeFocusable, event);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFocusable), StyleIndex::GreenFocused);
+        CORRADE_COMPARE(layer.style(dataFocusableDynamic), StyleCount + 0);
+
+    /* toInactive transition in the blur event */
+    } {
+        FocusEvent event;
+        ui.focusEvent(NodeHandle::Null, event);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFocusable), StyleIndex::Green);
+        CORRADE_COMPARE(layer.style(dataFocusableDynamic), StyleCount + 0);
+
+    /* toInactiveOver transition in doUpdate(), from a focused hovered node */
+    } {
+        PointerMoveEvent moveEvent{{}, {}};
+        ui.pointerMoveEvent({3.5f, 4.0f}, moveEvent);
+
+        FocusEvent event;
+        ui.focusEvent(nodeFocusable, event);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable);
+        CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFocusable), StyleIndex::GreenFocusedHover);
+        CORRADE_COMPARE(layer.style(dataFocusableDynamic), StyleCount + 0);
+
+        ui.clearNodeFlags(nodeFocusable, NodeFlag::Focusable);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
+
+        ui.update();
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataFocusable), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style(dataFocusableDynamic), StyleCount + 0);
 
     /* toInactiveOut transition in doUpdate() */
     } {
@@ -2141,6 +3067,8 @@ void AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
         nullptr,
         nullptr,
         nullptr,
+        nullptr,
+        nullptr,
         nullptr);
     CORRADE_COMPARE(layer1.state(), LayerStates{});
     CORRADE_COMPARE(layer2.state(), LayerStates{});
@@ -2149,6 +3077,8 @@ void AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     /* Setting any other transition except toDisabled doesn't cause
        NeedsDataUpdate to be set either */
     shared.setStyleTransition(
+        typeErasedTransition1,
+        typeErasedTransition2,
         typeErasedTransition1,
         typeErasedTransition2,
         typeErasedTransition1,
@@ -2165,6 +3095,7 @@ void AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     /* Setting a toDisabled transition sets LayerState::NeedsDataUpdate on all
        layers */
     shared.setStyleTransition(
+        nullptr,
         nullptr,
         nullptr,
         typeErasedTransition1);
@@ -2189,6 +3120,7 @@ void AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     shared.setStyleTransition(
         nullptr,
         nullptr,
+        nullptr,
         typeErasedTransition1);
     CORRADE_COMPARE(layer1.state(), LayerState::NeedsCommonDataUpdate);
     CORRADE_COMPARE(layer2.state(), LayerStates{});
@@ -2197,6 +3129,7 @@ void AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     /* Setting a different one does. The third layer has the state still set
        from before, there it doesn't get reset back. */
     shared.setStyleTransition(
+        nullptr,
         nullptr,
         nullptr,
         typeErasedTransition2);
@@ -2213,6 +3146,7 @@ void AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
 
     /* But calling setStyleTransition() next time will */
     shared.setStyleTransition(
+        nullptr,
         nullptr,
         nullptr,
         typeErasedTransition1);

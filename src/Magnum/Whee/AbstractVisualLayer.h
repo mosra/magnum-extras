@@ -171,8 +171,9 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @brief Set data style index, potentially transitioning it based on user interface state
          *
          * Like @ref setStyle(), but if @p handle is assigned to a node that's
-         * referenced from @ref AbstractUserInterface::currentPressedNode() or
-         * @relativeref{AbstractUserInterface,currentHoveredNode()}, applies
+         * referenced from @ref AbstractUserInterface::currentPressedNode(),
+         * @relativeref{AbstractUserInterface,currentHoveredNode()} or
+         * @relativeref{AbstractUserInterface,currentFocusedNode()}, applies
          * style transition functions set in @ref Shared::setStyleTransition()
          * to it first. Expects that @p handle is valid and @p style is less
          * than @ref Shared::styleCount(). Not @ref Shared::totalStyleCount()
@@ -292,6 +293,8 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
+        void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override;
+        void doBlurEvent(UnsignedInt dataId, FocusEvent& event) override;
         void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent& event) override;
 };
 
@@ -365,18 +368,26 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * @brief Set type-erased style transition functions
          * @return Reference to self (for method chaining)
          *
+         * The @p toInactiveOut and @p toInactiveOver change a non-disabled
+         * style index to an inactive one with the pointer outside or over the
+         * node, for example when a mouse enters or leaves an area of otherwise
+         * inactive (neither focused nor pressed) button, but also when a
+         * button is released again or an input is no longer focused.
+         *
+         * The @p toFocusedOut and @p toFocusedOver change a non-disabled style
+         * index to a focused one with the pointer outside or over the node.
+         * Note that, to reduce the amount of combinations, a pressed state has
+         * a priority over focused, so these two transitions are picked only
+         * when hovering a focused node or when the pointer is released after a
+         * node was focused by a pointer press. These transitions only ever
+         * happen for data attached to @ref NodeFlag::Focusable nodes.
+         *
          * The @p toPressedOut and @p toPressedOver change a non-disabled style
          * index to a pressed one with the pointer outside or over the node,
          * for example after a pointer was pressed on a hovered button, after
          * an activated but non-hovered button was pressed via a keyboard, but
          * also after a pointer leaves a pressed button, making it no longer
          * hovered or re-enters it, making it hovered again.
-         *
-         * The @p toInactiveOut and @p toInactiveOver change a non-disabled
-         * style index to an inactive one with the pointer outside or over the
-         * node, for example when a mouse enters or leaves an area of otherwise
-         * inactive and not pressed button, but also when a button is released
-         * again or an input is no longer active.
          *
          * The @p toDisabled changes a style index to a disabled one, which
          * happens when a @ref NodeFlag::Disabled is set on a node. Such a node
@@ -387,9 +398,9 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * a no-op, keeping the same index. All transition functions are
          * @cpp nullptr @ce initially.
          *
-         * For correct behavior, the @p toPressedOut, @p toPressedOver,
-         * @p toInactiveOut and @p toInactiveOver functions should be mutually
-         * invertible, e.g.
+         * For correct behavior, the @p toInactiveOut, @p toInactiveOver,
+         * @p toFocusedOut, @p toFocusedOver, @p toPressedOut and
+         * @p toPressedOver functions should be mutually invertible, e.g.
          * @cpp toPressedOver(toInactiveOut(style)) == style @ce if the `style`
          * was a pressed over style to begin with (and both transition
          * functions were defined). The @p toDisabled function doesn't have to
@@ -397,7 +408,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * style is internally never transitioned back to a non-disabled one.
          * If the style doesn't handle hover in any way, for example for
          * touch-only interfaces, you can use
-         * @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
+         * @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
          * instead, which doesn't make any distinction between the over and
          * out states and uses the same transition function for both.
          *
@@ -414,13 +425,13 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          * functions don't cause any @ref LayerState to be set, as they're only
          * used directly in event handlers.
          */
-        Shared& setStyleTransition(UnsignedInt(*toPressedOut)(UnsignedInt), UnsignedInt(*toPressedOver)(UnsignedInt), UnsignedInt(*toInactiveOut)(UnsignedInt), UnsignedInt(*toInactiveOver)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt));
+        Shared& setStyleTransition(UnsignedInt(*toInactiveOut)(UnsignedInt), UnsignedInt(*toInactiveOver)(UnsignedInt), UnsignedInt(*toFocusedOut)(UnsignedInt), UnsignedInt(*toFocusedOver)(UnsignedInt), UnsignedInt(*toPressedOut)(UnsignedInt), UnsignedInt(*toPressedOver)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt));
 
         /**
          * @brief Set style transition functions
          * @return Reference to self (for method chaining)
          *
-         * Like @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))",
+         * Like @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))",
          * but allows to use a concrete enum type instead of a typeless index.
          * Same as with the type-erased variant, if any of the function
          * template parameters is @cpp nullptr @ce, given transition is a
@@ -428,34 +439,36 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
          *
          * @snippet Whee.cpp AbstractVisualLayer-Shared-setStyleTransition
          */
-        template<class StyleIndex, StyleIndex(*toPressedOut)(StyleIndex), StyleIndex(*toPressedOver)(StyleIndex), StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*toInactiveOver)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition();
+        template<class StyleIndex, StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*toInactiveOver)(StyleIndex), StyleIndex(*toFocusedOut)(StyleIndex), StyleIndex(*toFocusedOver)(StyleIndex), StyleIndex(*toPressedOut)(StyleIndex), StyleIndex(*toPressedOver)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition();
 
         /**
          * @brief Set style transition functions without hover state
          * @return Reference to self (for method chaining)
          *
-         * Same as calling @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
-         * with @p toPressed used for both @p toPressedOut and @p toPressedOver
-         * and @p toInactive used for both @p toInactiveOut and
-         * @p toInactiveOver. Useful in case the style doesn't handle hover in
+         * Same as calling @ref setStyleTransition() "setStyleTransition(UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt), UnsignedInt(*)(UnsignedInt))"
+         * with @p toInactive used for both @p toInactiveOut and
+         * @p toInactiveOver, @p toFocused used for both @p toFocusedOut and
+         * @p toFocusedOver and @p toPressed used for both @p toPressedOut and
+         * @p toPressedOver. Useful in case the style doesn't handle hover in
          * any way, for example for touch-only interfaces.
          */
-        Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) {
-            return setStyleTransition(toPressed, toPressed, toInactive, toInactive, toDisabled);
+        Shared& setStyleTransition(UnsignedInt(*toInactive)(UnsignedInt), UnsignedInt(*toFocused)(UnsignedInt), UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) {
+            return setStyleTransition(toInactive, toInactive, toFocused, toFocused, toPressed, toPressed, toDisabled);
         }
 
         /**
          * @brief Set style transition functions
          * @return Reference to self (for method chaining)
          *
-         * Same as calling @ref setStyleTransition() with @p toPressed used for
-         * both @p toPressedOut and @p toPressedOver and @p toInactive used
-         * for both @p toInactiveOut and @p toInactiveOver. Useful in case the
+         * Same as calling @ref setStyleTransition() with @p toInactive used
+         * for both @p toInactiveOut and @p toInactiveOver, @p toFocused used
+         * for both @p toFocusedOut and @p toFocusedOver and @p toPressed used
+         * for both @p toPressedOut and @p toPressedOver. Useful in case the
          * style doesn't handle hover in any way, for example for touch-only
          * interfaces.
          */
-        template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() {
-            return setStyleTransition<StyleIndex, toPressed, toPressed, toInactive, toInactive, toDisabled>();
+        template<class StyleIndex, StyleIndex(*toInactive)(StyleIndex), StyleIndex(*toFocused)(StyleIndex), StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() {
+            return setStyleTransition<StyleIndex, toInactive, toInactive, toFocused, toFocused, toPressed, toPressed, toDisabled>();
         }
 
     #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -477,23 +490,23 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
 #define MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION() \
-    Shared& setStyleTransition(UnsignedInt(*toPressedOut)(UnsignedInt), UnsignedInt(*toPressedOver)(UnsignedInt), UnsignedInt(*toInactiveOut)(UnsignedInt), UnsignedInt(*toInactiveOver)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) { \
-        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressedOut, toPressedOver, toInactiveOut, toInactiveOver, toDisabled)); \
+    Shared& setStyleTransition(UnsignedInt(*toInactiveOut)(UnsignedInt), UnsignedInt(*toInactiveOver)(UnsignedInt), UnsignedInt(*toFocusedOut)(UnsignedInt), UnsignedInt(*toFocusedOver)(UnsignedInt), UnsignedInt(*toPressedOut)(UnsignedInt), UnsignedInt(*toPressedOver)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toInactiveOut, toInactiveOver, toFocusedOut, toFocusedOver, toPressedOut, toPressedOver, toDisabled)); \
     }                                                                       \
-    template<class StyleIndex, StyleIndex(*toPressedOut)(StyleIndex), StyleIndex(*toPressedOver)(StyleIndex), StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*toInactiveOver)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() { \
-        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toPressedOut, toPressedOver, toInactiveOut, toInactiveOver, toDisabled>()); \
+    template<class StyleIndex, StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*toInactiveOver)(StyleIndex), StyleIndex(*toFocusedOut)(StyleIndex), StyleIndex(*toFocusedOver)(StyleIndex), StyleIndex(*toPressedOut)(StyleIndex), StyleIndex(*toPressedOver)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toInactiveOut, toInactiveOver, toFocusedOut, toFocusedOver, toPressedOut, toPressedOver, toDisabled>()); \
     }                                                                       \
-    Shared& setStyleTransition(UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toInactive)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) { \
-        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toPressed, toInactive, toDisabled)); \
+    Shared& setStyleTransition(UnsignedInt(*toInactive)(UnsignedInt), UnsignedInt(*toFocused)(UnsignedInt), UnsignedInt(*toPressed)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toInactive, toFocused, toPressed, toDisabled)); \
     }                                                                       \
-    template<class StyleIndex, StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toInactive)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() { \
-        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toPressed, toInactive, toDisabled>()); \
+    template<class StyleIndex, StyleIndex(*toInactive)(StyleIndex), StyleIndex(*toFocused)(StyleIndex), StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toInactive, toFocused, toPressed, toDisabled>()); \
     }
 #endif
 
 /* The damn thing fails to match these to the declarations above */
 #ifndef DOXYGEN_GENERATING_OUTPUT
-template<class StyleIndex, StyleIndex(*toPressedOut)(StyleIndex), StyleIndex(*toPressedOver)(StyleIndex), StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*toInactiveOver)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition() {
+template<class StyleIndex, StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*toInactiveOver)(StyleIndex), StyleIndex(*toFocusedOut)(StyleIndex), StyleIndex(*toFocusedOver)(StyleIndex), StyleIndex(*toPressedOut)(StyleIndex), StyleIndex(*toPressedOver)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition() {
     /* No matter what simplification I do, GCC warns about "implicit conversion
        to bool", so it's this obvious ugly == here. There could be + for the
        lambdas to turn them into function pointers to avoid ?: getting
@@ -502,17 +515,23 @@ template<class StyleIndex, StyleIndex(*toPressedOut)(StyleIndex), StyleIndex(*to
     /** @todo revert back to the + once CORRADE_MSVC2015_COMPATIBILITY is
         dropped */
     return setStyleTransition(
-        toPressedOut == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
-            return UnsignedInt(toPressedOut(StyleIndex(index)));
-        },
-        toPressedOver == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
-            return UnsignedInt(toPressedOver(StyleIndex(index)));
-        },
         toInactiveOut == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toInactiveOut(StyleIndex(index)));
         },
         toInactiveOver == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toInactiveOver(StyleIndex(index)));
+        },
+        toFocusedOut == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
+            return UnsignedInt(toFocusedOut(StyleIndex(index)));
+        },
+        toFocusedOver == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
+            return UnsignedInt(toFocusedOver(StyleIndex(index)));
+        },
+        toPressedOut == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
+            return UnsignedInt(toPressedOut(StyleIndex(index)));
+        },
+        toPressedOver == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
+            return UnsignedInt(toPressedOver(StyleIndex(index)));
         },
         toDisabled == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toDisabled(StyleIndex(index)));

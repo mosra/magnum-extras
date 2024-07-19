@@ -1970,6 +1970,7 @@ void BaseLayerTest::updateDataOrder() {
     shared.setStyleTransition(
         nullptr,
         nullptr,
+        nullptr,
         [](UnsignedInt style) {
             return style == 4 ? 2u : style;
         }
@@ -2361,6 +2362,7 @@ void BaseLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
        LayerState to be updated as well, i.e. the class should correctly
        propagate to the parent doState() as well */
     shared.setStyleTransition(
+        nullptr,
         nullptr,
         nullptr,
         [](UnsignedInt a) { return a + 1; });
