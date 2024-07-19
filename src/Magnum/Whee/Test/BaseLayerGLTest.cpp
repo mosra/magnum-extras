@@ -2020,11 +2020,14 @@ void BaseLayerGLTest::eventStyleTransition() {
                 .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
         }, {})
         .setStyleTransition(
-            [](UnsignedInt style) -> UnsignedInt {
-                if(style == 0) return 1;
+            [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             [](UnsignedInt) -> UnsignedInt {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            },
+            [](UnsignedInt style) -> UnsignedInt {
+                if(style == 0) return 1;
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             [](UnsignedInt) -> UnsignedInt {

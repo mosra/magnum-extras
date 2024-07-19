@@ -78,14 +78,18 @@ UnsignedInt AbstractVisualLayer::Shared::totalStyleCount() const {
     return state.styleCount + state.dynamicStyleCount;
 }
 
-AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(UnsignedInt(*const toPressedOut)(UnsignedInt), UnsignedInt(*const toPressedOver)(UnsignedInt), UnsignedInt(*const toInactiveOut)(UnsignedInt), UnsignedInt(*const toInactiveOver)(UnsignedInt), UnsignedInt(*const toDisabled)(UnsignedInt)) {
-    _state->styleTransitionToPressedOut = toPressedOut ? toPressedOut :
-        Implementation::styleTransitionPassthrough;
-    _state->styleTransitionToPressedOver = toPressedOver ? toPressedOver :
-        Implementation::styleTransitionPassthrough;
+AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(UnsignedInt(*const toInactiveOut)(UnsignedInt), UnsignedInt(*const toInactiveOver)(UnsignedInt), UnsignedInt(*const toFocusedOut)(UnsignedInt), UnsignedInt(*const toFocusedOver)(UnsignedInt), UnsignedInt(*const toPressedOut)(UnsignedInt), UnsignedInt(*const toPressedOver)(UnsignedInt), UnsignedInt(*const toDisabled)(UnsignedInt)) {
     _state->styleTransitionToInactiveOut = toInactiveOut ? toInactiveOut :
         Implementation::styleTransitionPassthrough;
     _state->styleTransitionToInactiveOver = toInactiveOver ? toInactiveOver :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToFocusedOut = toFocusedOut ? toFocusedOut :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToFocusedOver = toFocusedOver ? toFocusedOver :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToPressedOut = toPressedOut ? toPressedOut :
+        Implementation::styleTransitionPassthrough;
+    _state->styleTransitionToPressedOver = toPressedOver ? toPressedOver :
         Implementation::styleTransitionPassthrough;
     /* Unlike the others, this one can be nullptr, in which case the whole
        transitioning logic in doUpdate() gets replaced with a simple copy.
@@ -180,6 +184,9 @@ void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterfa
     if(ui.currentPressedNode() == node) transition = hovered ?
         sharedState.styleTransitionToPressedOver :
         sharedState.styleTransitionToPressedOut;
+    else if(ui.currentFocusedNode() == node) transition = hovered ?
+        sharedState.styleTransitionToFocusedOver :
+        sharedState.styleTransitionToFocusedOut;
     else transition = hovered ?
         sharedState.styleTransitionToInactiveOver :
         sharedState.styleTransitionToInactiveOut;
@@ -303,7 +310,8 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
         /* A press can be not hovering if it happened without a preceding move
            event (such as for pointer types that don't support hover like
            touches, or if move events aren't propagated from the
-           application) */
+           application). Pressed state has a priority over focused state, so
+           isFocused() is ignored in this case. */
         UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
             sharedState.styleTransitionToPressedOver :
             sharedState.styleTransitionToPressedOut;
@@ -339,9 +347,13 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
            move event (such as for pointer types that don't support hover like
            touches, or if move events aren't propagated from the
            application) */
-        UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
-            sharedState.styleTransitionToInactiveOver :
-            sharedState.styleTransitionToInactiveOut;
+        UnsignedInt(*const transition)(UnsignedInt) = event.isFocused() ?
+            event.isHovering() ?
+                sharedState.styleTransitionToFocusedOver :
+                sharedState.styleTransitionToFocusedOut :
+            event.isHovering() ?
+                sharedState.styleTransitionToInactiveOver :
+                sharedState.styleTransitionToInactiveOut;
         const UnsignedInt nextStyle = transition(style);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
@@ -370,8 +382,9 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
         CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
     } else {
         UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
-            sharedState.styleTransitionToPressedOver :
-            sharedState.styleTransitionToInactiveOver;
+            sharedState.styleTransitionToPressedOver : event.isFocused() ?
+                sharedState.styleTransitionToFocusedOver :
+                sharedState.styleTransitionToInactiveOver;
         const UnsignedInt nextStyle = transition(style);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
@@ -393,8 +406,9 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
         CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
     } else {
         UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
-            sharedState.styleTransitionToPressedOut :
-            sharedState.styleTransitionToInactiveOut;
+            sharedState.styleTransitionToPressedOut : event.isFocused() ?
+                sharedState.styleTransitionToFocusedOut :
+                sharedState.styleTransitionToInactiveOut;
         const UnsignedInt nextStyle = transition(style);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
@@ -405,17 +419,74 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
     }
 }
 
-void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, VisibilityLostEvent&) {
+void AbstractVisualLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
     const State& state = *_state;
     const Shared::State& sharedState = state.shared;
     CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
     UnsignedInt& style = state.styles[dataId];
 
-    /* Transition the style to inactive out if it's not dynamic */
+    /* Transition the style to focused if it's not dynamic and only if it's not
+       pressed as well, as pressed style gets a priority. */
     if(style >= sharedState.styleCount) {
         CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
-    } else {
-        const UnsignedInt nextStyle = sharedState.styleTransitionToInactiveOut(style);
+    } else if(!event.isPressed()) {
+        UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+            sharedState.styleTransitionToFocusedOver :
+            sharedState.styleTransitionToFocusedOut;
+        const UnsignedInt nextStyle = transition(style);
+        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+            "Whee::AbstractVisualLayer::focusEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+        if(nextStyle != style) {
+            style = nextStyle;
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
+        }
+    }
+
+    event.setAccepted();
+}
+
+void AbstractVisualLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& event) {
+    const State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
+    UnsignedInt& style = state.styles[dataId];
+
+    /* Transition the style to blurred if it's not dynamic and only if it's not
+       pressed as well, as pressed style gets a priority. */
+    if(style >= sharedState.styleCount) {
+        CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
+    } else if(!event.isPressed()) {
+        UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+            sharedState.styleTransitionToInactiveOver :
+            sharedState.styleTransitionToInactiveOut;
+        const UnsignedInt nextStyle = transition(style);
+        CORRADE_ASSERT(nextStyle < sharedState.styleCount,
+            "Whee::AbstractVisualLayer::blurEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+        if(nextStyle != style) {
+            style = nextStyle;
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
+        }
+    }
+
+    event.setAccepted();
+}
+
+void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, VisibilityLostEvent& event) {
+    const State& state = *_state;
+    const Shared::State& sharedState = state.shared;
+    CORRADE_INTERNAL_DEBUG_ASSERT(state.styles.size() == capacity());
+    UnsignedInt& style = state.styles[dataId];
+
+    /* Transition the style to inactive if it's not dynamic and only if it's
+       not a formerly focused node that's now pressed, in which case it stays
+       pressed. */
+    if(style >= sharedState.styleCount) {
+        CORRADE_INTERNAL_DEBUG_ASSERT(style < sharedState.styleCount + sharedState.dynamicStyleCount);
+    } else if(!event.isPressed()) {
+        UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+            sharedState.styleTransitionToInactiveOver :
+            sharedState.styleTransitionToInactiveOut;
+        const UnsignedInt nextStyle = transition(style);
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
             "Whee::AbstractVisualLayer::visibilityLostEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         if(nextStyle != style) {

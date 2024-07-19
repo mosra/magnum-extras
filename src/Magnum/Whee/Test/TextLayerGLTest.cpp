@@ -1350,11 +1350,14 @@ void TextLayerGLTest::eventStyleTransition() {
                 .setColor(0x3bd267_rgbf)
         }, {fontHandle, fontHandle}, {})
         .setStyleTransition(
-            [](UnsignedInt style) -> UnsignedInt {
-                if(style == 0) return 1;
+            [](UnsignedInt) -> UnsignedInt {
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             [](UnsignedInt) -> UnsignedInt {
+                CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            },
+            [](UnsignedInt style) -> UnsignedInt {
+                if(style == 0) return 1;
                 CORRADE_INTERNAL_ASSERT_UNREACHABLE();
             },
             [](UnsignedInt) -> UnsignedInt {

@@ -46,6 +46,12 @@ StyleIndex styleIndexTransitionToInactiveBlur(StyleIndex index) {
 StyleIndex styleIndexTransitionToInactiveHover(StyleIndex index) {
     DOXYGEN_ELLIPSIS(return index;)
 }
+StyleIndex styleIndexTransitionToFocusedBlur(StyleIndex index) {
+    DOXYGEN_ELLIPSIS(return index;)
+}
+StyleIndex styleIndexTransitionToFocusedHover(StyleIndex index) {
+    DOXYGEN_ELLIPSIS(return index;)
+}
 StyleIndex styleIndexTransitionToPressedBlur(StyleIndex index) {
     DOXYGEN_ELLIPSIS(return index;)
 }
@@ -60,10 +66,12 @@ DOXYGEN_ELLIPSIS(} int main() {)
 
 Whee::AbstractVisualLayer::Shared& shared = DOXYGEN_ELLIPSIS(abstractVisualLayerShared());
 shared.setStyleTransition<StyleIndex,
-    styleIndexTransitionToPressedBlur,
-    styleIndexTransitionToPressedHover,
     styleIndexTransitionToInactiveBlur,
     styleIndexTransitionToInactiveHover,
+    styleIndexTransitionToFocusedBlur,
+    styleIndexTransitionToFocusedHover,
+    styleIndexTransitionToPressedBlur,
+    styleIndexTransitionToPressedHover,
     styleIndexTransitionToDisabled>();
 /* [AbstractVisualLayer-Shared-setStyleTransition] */
 }
