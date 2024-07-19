@@ -47,6 +47,7 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
     switch(value) {
         /* LCOV_EXCL_START */
         #define _c(value) case BaseLayer::Shared::Flag::value: return debug << "::" #value;
+        _c(Textured)
         _c(BackgroundBlur)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -57,6 +58,7 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
 
 Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flags value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::BaseLayer::Shared::Flags{}", {
+        BaseLayer::Shared::Flag::Textured,
         BaseLayer::Shared::Flag::BackgroundBlur
     });
 }
@@ -195,6 +197,8 @@ DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const
     data.color = color;
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
+    data.textureCoordinateOffset = {};
+    data.textureCoordinateSize = Vector2{1.0f};
     return handle;
 }
 
@@ -285,6 +289,66 @@ void BaseLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding)
     setNeedsUpdate();
 }
 
+Vector3 BaseLayer::textureCoordinateOffset(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::textureCoordinateOffset(): invalid handle" << handle, {});
+    return textureCoordinateOffsetInternal(dataHandleId(handle));
+}
+
+Vector3 BaseLayer::textureCoordinateOffset(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::textureCoordinateOffset(): invalid handle" << handle, {});
+    return textureCoordinateOffsetInternal(layerDataHandleId(handle));
+}
+
+Vector3 BaseLayer::textureCoordinateOffsetInternal(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & Shared::Flag::Textured,
+        "Whee::BaseLayer::textureCoordinateOffset(): texturing not enabled", {});
+    return state.data[id].textureCoordinateOffset;
+}
+
+Vector2 BaseLayer::textureCoordinateSize(const DataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::textureCoordinateSize(): invalid handle" << handle, {});
+    return textureCoordinateSizeInternal(dataHandleId(handle));
+}
+
+Vector2 BaseLayer::textureCoordinateSize(const LayerDataHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::textureCoordinateSize(): invalid handle" << handle, {});
+    return textureCoordinateSizeInternal(layerDataHandleId(handle));
+}
+
+Vector2 BaseLayer::textureCoordinateSizeInternal(const UnsignedInt id) const {
+    auto& state = static_cast<const State&>(*_state);
+    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & Shared::Flag::Textured,
+        "Whee::BaseLayer::textureCoordinateSize(): texturing not enabled", {});
+    return state.data[id].textureCoordinateSize;
+}
+
+void BaseLayer::setTextureCoordinates(const DataHandle handle, const Vector3& offset, const Vector2& size) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::setTextureCoordinates(): invalid handle" << handle, );
+    setTextureCoordinatesInternal(dataHandleId(handle), offset, size);
+}
+
+void BaseLayer::setTextureCoordinates(const LayerDataHandle handle, const Vector3& offset, const Vector2& size) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::BaseLayer::setTextureCoordinates(): invalid handle" << handle, );
+    setTextureCoordinatesInternal(layerDataHandleId(handle), offset, size);
+}
+
+void BaseLayer::setTextureCoordinatesInternal(const UnsignedInt id, const Vector3& offset, const Vector2& size) {
+    auto& state = static_cast<State&>(*_state);
+    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & Shared::Flag::Textured,
+        "Whee::BaseLayer::setTextureCoordinates(): texturing not enabled", );
+    Implementation::BaseLayerData& data = state.data[id];
+    data.textureCoordinateOffset = offset;
+    data.textureCoordinateSize = size;
+    setNeedsUpdate();
+}
+
 LayerFeatures BaseLayer::doFeatures() const {
     return AbstractVisualLayer::doFeatures()|LayerFeature::Draw|(static_cast<const Shared::State&>(_state->shared).flags & Shared::Flag::BackgroundBlur ? LayerFeature::Composite : LayerFeatures{});
 }
@@ -321,8 +385,22 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
 
     const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
 
+    Containers::StridedArrayView1D<Implementation::BaseLayerVertex> vertices;
+    if(sharedState.flags & Shared::Flag::Textured) {
+        arrayResize(state.texturedVertices, NoInit, capacity()*4);
+        /** @todo arrayCast() doesn't work because the derived type is not
+            standard layout, so some slice<T>() to base or whatever? */
+        vertices = {
+            state.texturedVertices,
+            state.texturedVertices.begin(),
+            state.texturedVertices.size(), sizeof(Implementation::BaseLayerTexturedVertex)
+        };
+    } else {
+        arrayResize(state.vertices, NoInit, capacity()*4);
+        vertices = state.vertices;
+    }
+
     /* Fill in quad corner positions and colors */
-    arrayResize(state.vertices, NoInit, capacity()*4);
     for(const UnsignedInt dataId: dataIds) {
         const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
         const Implementation::BaseLayerData& data = state.data[dataId];
@@ -339,7 +417,7 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
         const Vector2 sizeHalf = (max - min)*0.5f;
         const Vector2 sizeHalfNegative = -sizeHalf;
         for(UnsignedByte i = 0; i != 4; ++i) {
-            Implementation::BaseLayerVertex& vertex = state.vertices[dataId*4 + i];
+            Implementation::BaseLayerVertex& vertex = vertices[dataId*4 + i];
 
             /* ✨ */
             vertex.position = Math::lerp(min, max, BitVector2{i});
@@ -347,6 +425,22 @@ void BaseLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>
             vertex.outlineWidth = data.outlineWidth;
             vertex.color = data.color;
             vertex.styleUniform = sharedState.styles[data.calculatedStyle].uniform;
+        }
+    }
+
+    /* Fill in also quad texture coordinates if enabled */
+    if(sharedState.flags & Shared::Flag::Textured) {
+        for(const UnsignedInt dataId: dataIds) {
+            const Implementation::BaseLayerData& data = state.data[dataId];
+
+            /* The texture coordinates are Y-flipped compared to the positions
+               to account for Y-down (positions) vs Y-up (GL textures) */
+            /** @todo which may get annoying with non-GL renderers that don't
+                Y-flip the projection, reconsider? */
+            const Vector2 min = data.textureCoordinateOffset.xy() + Vector2::yAxis(data.textureCoordinateSize.y());
+            const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x());
+            for(UnsignedByte i = 0; i != 4; ++i)
+                state.texturedVertices[dataId*4 + i].textureCoordinates = {Math::lerp(min, max, BitVector2{i}), data.textureCoordinateOffset.z()};
         }
     }
 }

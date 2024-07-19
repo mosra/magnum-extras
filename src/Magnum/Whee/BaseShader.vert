@@ -33,12 +33,18 @@ layout(location = 1) in mediump vec2 centerDistance;
 layout(location = 2) in mediump vec4 outlineWidth;
 layout(location = 3) in lowp vec4 color;
 layout(location = 4) in mediump uint style;
+#ifdef TEXTURED
+layout(location = 5) in mediump vec3 textureCoordinates;
+#endif
 
 flat out mediump uint interpolatedStyle;
 flat out mediump vec2 halfQuadSize;
 flat out mediump vec4 interpolatedOutlineWidth;
 out lowp vec4 interpolatedColor;
 out mediump vec2 normalizedQuadPosition;
+#ifdef TEXTURED
+out mediump vec3 interpolatedTextureCoordinates;
+#endif
 #ifdef BACKGROUND_BLUR
 out highp vec2 backgroundBlurTextureCoordinates;
 #endif
@@ -49,6 +55,9 @@ void main() {
     interpolatedOutlineWidth = outlineWidth;
     interpolatedColor = color;
     normalizedQuadPosition = sign(centerDistance);
+    #ifdef TEXTURED
+    interpolatedTextureCoordinates = textureCoordinates;
+    #endif
 
     gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
 
