@@ -3282,6 +3282,7 @@ void TextLayerTest::updateCleanDataOrder() {
     shared.setStyleTransition(
         nullptr,
         nullptr,
+        nullptr,
         [](UnsignedInt style) {
             return style == 5 ? 2u : style;
         }
@@ -4279,6 +4280,7 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
        LayerState to be updated as well, i.e. the class should correctly
        propagate to the parent doState() as well */
     shared.setStyleTransition(
+        nullptr,
         nullptr,
         nullptr,
         [](UnsignedInt a) { return a + 1; });
