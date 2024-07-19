@@ -66,6 +66,8 @@ struct BaseLayerData {
     Color3 color;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     UnsignedInt style, calculatedStyle;
+    Vector3 textureCoordinateOffset;
+    Vector2 textureCoordinateSize;
 };
 
 struct BaseLayerVertex {
@@ -76,13 +78,19 @@ struct BaseLayerVertex {
     UnsignedInt styleUniform;
 };
 
+struct BaseLayerTexturedVertex: BaseLayerVertex {
+    Vector3 textureCoordinates;
+};
+
 }
 
 struct BaseLayer::State: AbstractVisualLayer::State {
     explicit State(Shared::State& shared): AbstractVisualLayer::State{shared} {}
 
     Containers::Array<Implementation::BaseLayerData> data;
+    /* Only one of these is used at a time */
     Containers::Array<Implementation::BaseLayerVertex> vertices;
+    Containers::Array<Implementation::BaseLayerTexturedVertex> texturedVertices;
     Containers::Array<UnsignedInt> indices;
 
     /* Used only if Flag::BackgroundBlur is enabled */

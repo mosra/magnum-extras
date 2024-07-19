@@ -165,7 +165,10 @@ if(MAGNUM_BUILD_GL_TESTS)
             BaseLayerTestFiles/outline-same.png
             BaseLayerTestFiles/rounded-corners-different.png
             BaseLayerTestFiles/rounded-corners-same-hard.png
-            BaseLayerTestFiles/rounded-corners-same.png)
+            BaseLayerTestFiles/rounded-corners-same.png
+            BaseLayerTestFiles/textured-colored.png
+            BaseLayerTestFiles/textured-default.png
+            BaseLayerTestFiles/textured.png)
     target_include_directories(WheeBaseLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     if(MAGNUM_BUILD_STATIC)
         if(Magnum_AnyImageImporter_FOUND)

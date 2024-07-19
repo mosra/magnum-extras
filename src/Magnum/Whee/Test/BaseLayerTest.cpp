@@ -102,6 +102,8 @@ struct BaseLayerTest: TestSuite::Tester {
     void setColor();
     void setOutlineWidth();
     void setPadding();
+    void setTextureCoordinates();
+    void setTextureCoordinatesInvalid();
 
     void invalidHandle();
     void styleOutOfRange();
@@ -113,22 +115,26 @@ struct BaseLayerTest: TestSuite::Tester {
 
 const struct {
     const char* name;
-    bool emptyUpdate;
+    bool emptyUpdate, textured;
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
 } UpdateDataOrderData[]{
-    {"empty update", true,
+    {"empty update", true, false,
         {}, {}, {}, {}},
-    {"", false,
+    {"empty update, textured", true, true,
+        {}, {}, {}, {}},
+    {"", false, false,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
-    {"padding from style", false,
+    {"textured", false, true,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}},
+    {"padding from style", false, false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}},
-    {"padding from data", false,
+    {"padding from data", false, false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {}, {2.0f, 0.5f, 1.0f, 1.5f}},
-    {"padding from both style and data", false,
+    {"padding from both style and data", false, false,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}},
 };
@@ -215,6 +221,8 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::setColor,
               &BaseLayerTest::setOutlineWidth,
               &BaseLayerTest::setPadding,
+              &BaseLayerTest::setTextureCoordinates,
+              &BaseLayerTest::setTextureCoordinatesInvalid,
 
               &BaseLayerTest::invalidHandle,
               &BaseLayerTest::styleOutOfRange,
@@ -1295,7 +1303,37 @@ void BaseLayerTest::setPadding() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 }
 
-void BaseLayerTest::invalidHandle() {
+void BaseLayerTest::setTextureCoordinates() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{1}
+        .addFlags(BaseLayer::Shared::Flag::Textured)};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.create(0);
+    CORRADE_COMPARE(layer.textureCoordinateOffset(data), Vector3{0.0f});
+    CORRADE_COMPARE(layer.textureCoordinateSize(data), Vector2{1.0f});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Setting texture coordinates marks the layer as dirty */
+    layer.setTextureCoordinates(data, {0.5f, 0.75f, 35.0f}, {0.25f, 0.125f});
+    CORRADE_COMPARE(layer.textureCoordinateOffset(data), (Vector3{0.5f, 0.75f, 35.0f}));
+    CORRADE_COMPARE(layer.textureCoordinateSize(data), (Vector2{0.25f, 0.125f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+
+    /* Testing also the other overload */
+    layer.setTextureCoordinates(dataHandleData(data), {0.25f, 0.5f, 5.0f}, {0.75f, 0.5f});
+    CORRADE_COMPARE(layer.textureCoordinateOffset(data), (Vector3{0.25f, 0.5f, 5.0f}));
+    CORRADE_COMPARE(layer.textureCoordinateSize(data), (Vector2{0.75f, 0.5f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+}
+
+void BaseLayerTest::setTextureCoordinatesInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: BaseLayer::Shared {
@@ -1303,6 +1341,41 @@ void BaseLayerTest::invalidHandle() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{1}};
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.create(0);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.textureCoordinateOffset(data);
+    layer.textureCoordinateOffset(dataHandleData(data));
+    layer.textureCoordinateSize(data);
+    layer.textureCoordinateSize(dataHandleData(data));
+    layer.setTextureCoordinates(data, {}, {});
+    layer.setTextureCoordinates(dataHandleData(data), {}, {});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::BaseLayer::textureCoordinateOffset(): texturing not enabled\n"
+        "Whee::BaseLayer::textureCoordinateOffset(): texturing not enabled\n"
+        "Whee::BaseLayer::textureCoordinateSize(): texturing not enabled\n"
+        "Whee::BaseLayer::textureCoordinateSize(): texturing not enabled\n"
+        "Whee::BaseLayer::setTextureCoordinates(): texturing not enabled\n"
+        "Whee::BaseLayer::setTextureCoordinates(): texturing not enabled\n",
+        TestSuite::Compare::String);
+}
+
+void BaseLayerTest::invalidHandle() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{1}
+        .addFlags(BaseLayer::Shared::Flag::Textured)
+    };
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1322,7 +1395,13 @@ void BaseLayerTest::invalidHandle() {
     layer.padding(LayerDataHandle::Null);
     layer.setPadding(DataHandle::Null, {});
     layer.setPadding(LayerDataHandle::Null, {});
-    CORRADE_COMPARE(out.str(),
+    layer.textureCoordinateOffset(DataHandle::Null);
+    layer.textureCoordinateOffset(LayerDataHandle::Null);
+    layer.textureCoordinateSize(DataHandle::Null);
+    layer.textureCoordinateSize(LayerDataHandle::Null);
+    layer.setTextureCoordinates(DataHandle::Null, {}, {});
+    layer.setTextureCoordinates(LayerDataHandle::Null, {}, {});
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::BaseLayer::color(): invalid handle Whee::DataHandle::Null\n"
         "Whee::BaseLayer::color(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::BaseLayer::setColor(): invalid handle Whee::DataHandle::Null\n"
@@ -1334,7 +1413,14 @@ void BaseLayerTest::invalidHandle() {
         "Whee::BaseLayer::padding(): invalid handle Whee::DataHandle::Null\n"
         "Whee::BaseLayer::padding(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::BaseLayer::setPadding(): invalid handle Whee::DataHandle::Null\n"
-        "Whee::BaseLayer::setPadding(): invalid handle Whee::LayerDataHandle::Null\n");
+        "Whee::BaseLayer::setPadding(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::BaseLayer::textureCoordinateOffset(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::BaseLayer::textureCoordinateOffset(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::BaseLayer::textureCoordinateSize(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::BaseLayer::textureCoordinateSize(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::BaseLayer::setTextureCoordinates(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::BaseLayer::setTextureCoordinates(): invalid handle Whee::LayerDataHandle::Null\n",
+        TestSuite::Compare::String);
 }
 
 void BaseLayerTest::styleOutOfRange() {
@@ -1390,11 +1476,15 @@ void BaseLayerTest::updateDataOrder() {
        get filled with correct contents and in correct order. The actual visual
        output is checked in BaseLayerGLTest. */
 
+    BaseLayer::Shared::Configuration configuration{3, 5};
+    if(data.textured)
+        configuration.addFlags(BaseLayer::Shared::Flag::Textured);
+
     struct LayerShared: BaseLayer::Shared {
         explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{3, 5}};
+    } shared{configuration};
 
     shared.setStyle(
         BaseLayerCommonStyleUniform{},
@@ -1431,12 +1521,15 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(0);                                                    /* 4 */
     layer.create(0);                                                    /* 5 */
     layer.create(0);                                                    /* 6 */
-    layer.create(1, 0x112233_rgbf, Vector4{2.0f}, node15);              /* 7 */
+    DataHandle data7 = layer.create(1, 0x112233_rgbf, Vector4{2.0f}, node15);
     layer.create(0);                                                    /* 8 */
     layer.create(3, 0x663399_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, node15);   /* 9 */
 
     if(!data.paddingFromData.isZero())
         layer.setPadding(data3, data.paddingFromData);
+
+    if(data.textured)
+        layer.setTextureCoordinates(data7, {0.25f, 0.5f, 37.0f}, {0.5f, 0.125f});
 
     Vector2 nodeOffsets[16];
     Vector2 nodeSizes[16];
@@ -1468,29 +1561,47 @@ void BaseLayerTest::updateDataOrder() {
         3*4 + 0, 3*4 + 2, 3*4 + 1, 3*4 + 2, 3*4 + 3, 3*4 + 1, /* quad 3 */
     }), TestSuite::Compare::Container);
 
+    /* Depending on whether texturing is enabled, either the vertices or the
+       texturedVertices array should be filled, not both */
+    Containers::StridedArrayView1D<const Implementation::BaseLayerVertex> vertices;
+    /** @todo arrayCast() doesn't work because the derived type is not
+        standard layout, so some slice<T>() to base or whatever? */
+    if(data.textured) {
+        CORRADE_COMPARE(layer.stateData().vertices.size(), 0);
+        vertices = {
+            layer.stateData().texturedVertices,
+            layer.stateData().texturedVertices.begin(),
+            layer.stateData().texturedVertices.size(),
+            sizeof(Implementation::BaseLayerTexturedVertex)
+        };
+    } else {
+        CORRADE_COMPARE(layer.stateData().texturedVertices.size(), 0);
+        vertices = layer.stateData().vertices;
+    }
+    CORRADE_COMPARE(vertices.size(), 10*4);
+
     /* The vertices are there for all data, but only the actually used are
        filled */
-    CORRADE_COMPARE(layer.stateData().vertices.size(), 10*4);
     for(std::size_t i = 0; i != 4; ++i) {
         CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+        CORRADE_COMPARE(vertices[3*4 + i].color, 0xff3366_rgbf);
+        CORRADE_COMPARE(vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
         /* Created with style 2, which is mapped to uniform 0 */
-        CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].styleUniform, 0);
+        CORRADE_COMPARE(vertices[3*4 + i].styleUniform, 0);
 
-        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].color, 0x112233_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].outlineWidth, Vector4{2.0f});
+        CORRADE_COMPARE(vertices[7*4 + i].color, 0x112233_rgbf);
+        CORRADE_COMPARE(vertices[7*4 + i].outlineWidth, Vector4{2.0f});
         /* Created with style 1, which is mapped to uniform 2 */
-        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].styleUniform, 2);
+        CORRADE_COMPARE(vertices[7*4 + i].styleUniform, 2);
 
-        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0x663399_rgbf);
-        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
+        CORRADE_COMPARE(vertices[9*4 + i].color, 0x663399_rgbf);
+        CORRADE_COMPARE(vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
         /* Created with style 3, which is mapped to uniform 1 */
-        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 1);
+        CORRADE_COMPARE(vertices[9*4 + i].styleUniform, 1);
     }
 
-    Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::BaseLayerVertex::position);
-    Containers::StridedArrayView1D<const Vector2> centerDistances = stridedArrayView(layer.stateData().vertices).slice(&Implementation::BaseLayerVertex::centerDistance);
+    Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::BaseLayerVertex::position);
+    Containers::StridedArrayView1D<const Vector2> centerDistances = vertices.slice(&Implementation::BaseLayerVertex::centerDistance);
 
     /* Data 3 is attached to node 6 */
     CORRADE_COMPARE_AS(positions.sliceSize(3*4, 4), Containers::arrayView<Vector2>({
@@ -1520,6 +1631,32 @@ void BaseLayerTest::updateDataOrder() {
             {-10.0f,  2.5f},
             { 10.0f,  2.5f},
         }), TestSuite::Compare::Container);
+    }
+
+    /* If textured, data 7 has texture coordinates set, the other two have the
+       default. The coordinates are Y-flipped compared to positions --
+       positions are Y down, while textures are with the Y up convention
+       matching GL. */
+    /** @todo which may get annoying with non-GL renderers that don't Y-flip
+        the projection, reconsider? */
+    if(data.textured) {
+        Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().texturedVertices).slice(&Implementation::BaseLayerTexturedVertex::textureCoordinates);
+
+        CORRADE_COMPARE_AS(textureCoordinates.sliceSize(7*4, 4), Containers::arrayView<Vector3>({
+            {0.25f, 0.625f, 37.0f},
+            {0.75f, 0.625f, 37.0f},
+            {0.25f, 0.5f, 37.0f},
+            {0.75f, 0.5f, 37.0f},
+        }), TestSuite::Compare::Container);
+
+        for(std::size_t i: {3, 9}) {
+            CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
+                {0.0f, 1.0f, 0.0f},
+                {1.0f, 1.0f, 0.0f},
+                {0.0f, 0.0f, 0.0f},
+                {1.0f, 0.0f, 0.0f},
+            }), TestSuite::Compare::Container);
+        }
     }
 }
 
