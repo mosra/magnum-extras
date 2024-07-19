@@ -976,9 +976,11 @@ void ScenePlayer::pause() {
 }
 
 void ScenePlayer::resetAffectedTransformations(SceneAnimationData &sceneAnimationData) {
+    Debug debug{};
+    debug << "Resetting affected objects:";
     for (auto& affectedObjectIndex : sceneAnimationData.affectedObjects) {
         auto& affectedObject = _data->objects[affectedObjectIndex];
-        Debug{} << "Resetting affected object"<<affectedObject.name;
+        debug << affectedObject.name;
         affectedObject.object->setTransformation(affectedObject.originalTransformation);
     }
 }
@@ -1608,7 +1610,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
             Warning{} << "Cannot load animation" << i << animationName;
             continue;
         }
-        SceneAnimationData::Player player;
+        SceneAnimationData::Player player{};
 
         Containers::Array<UnsignedInt> affectedObjects{};
         Containers::arrayReserve(affectedObjects, animation->trackCount());
@@ -1669,6 +1671,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
                 default: CORRADE_INTERNAL_ASSERT_UNREACHABLE(); break;
             }
         }
+
         /* Animate the elapsed time -- trigger update every 1/10th a second */
         player.addWithCallbackOnChange(_elapsedTimeAnimation, [](Float, const Int& elapsed, ScenePlayer& player) {
             player.updateAnimationTime(elapsed);
@@ -1676,6 +1679,9 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         if (filename) {
             player.setPlayCount(0);
         }
+
+        player.setDuration(animation->duration());
+
         arrayAppend(_data->animations, InPlaceInit, std::move(animationName), animation->release(), std::move(player), std::move(affectedObjects));
     }
 
