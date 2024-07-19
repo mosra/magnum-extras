@@ -175,23 +175,27 @@ struct BaseUiPlane: Ui::Plane {
         objectVisualization{*this, {Ui::Snap::Bottom, shadeless, ButtonSize},
             "Object centers"},
         meshVisualization{*this, {Ui::Snap::Bottom, shadeless, ButtonSize}, "Wireframe", 16},
-        backward{*this, {Ui::Snap::Bottom|Ui::Snap::Left, HalfControlSize}, "«"},
+        prev{*this, {Ui::Snap::Bottom|Ui::Snap::Left, ControlSize}, "⏮ Prev"},
+        backward{*this, {Ui::Snap::Right, prev, HalfControlSize}, "«"},
         play{*this, {Ui::Snap::Right, backward, ControlSize}, "Play", Ui::Style::Success},
         pause{*this, {Ui::Snap::Right, backward, ControlSize}, "Pause", Ui::Style::Warning},
         stop{*this, {Ui::Snap::Right, play, ControlSize}, "Stop", Ui::Style::Danger},
         forward{*this, {Ui::Snap::Right, stop, HalfControlSize}, "»"},
+        next{*this, {Ui::Snap::Right, forward, ControlSize}, "Next ⏭"},
         modelInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim},
         objectInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim},
-        animationProgress{*this, {Ui::Snap::Right, forward, LabelSize}, "", Text::Alignment::LineLeft, 17}
+        animationProgress{*this, {Ui::Snap::Right, next, LabelSize}, "", Text::Alignment::LineLeft, 128}
     {
         /* Implicitly hide all animation controls, they get shown if there is
            an actual animation being played */
         Ui::Widget::hide({
+            prev,
             backward,
             play,
             pause,
             stop,
             forward,
+            next,
             animationProgress
         });
 
@@ -214,11 +218,13 @@ struct BaseUiPlane: Ui::Plane {
     Ui::Button shadeless;
     Ui::Button objectVisualization, meshVisualization;
     Ui::Button
+        prev,
         backward,
         play,
         pause,
         stop,
-        forward;
+        forward,
+        next;
     Ui::Label modelInfo,
         objectInfo,
         animationProgress;
@@ -254,6 +260,16 @@ struct ObjectInfo {
 
 class MeshVisualizerDrawable;
 
+
+struct SceneAnimationData {
+    typedef Animation::Player<std::chrono::nanoseconds, Float> Player;
+
+    Containers::String name;
+    Containers::Array<char> dataStore;
+    Player player;
+};
+
+/*  @todo better name? */
 struct Data {
     Containers::Array<MeshInfo> meshes;
     Containers::Array<LightInfo> lights;
@@ -275,8 +291,8 @@ struct Data {
     bool visualizeObjects = false;
     MeshVisualizerDrawable* selectedObject{};
 
-    Containers::Array<char> animationData;
-    Animation::Player<std::chrono::nanoseconds, Float> player;
+    size_t currentAnimationIndex;
+    Containers::Array<SceneAnimationData> animations;
 
     UnsignedInt lightCount{};
     UnsignedInt maxJointCount{};
@@ -290,7 +306,18 @@ struct Data {
     /* UI is recreated on window resize and we need to repopulate the info */
     /** @todo remove once the UI has relayouting */
     Containers::String modelInfo, objectInfo;
+
+    SceneAnimationData& currentAnimation() {
+        if (currentAnimationIndex < animations.size())
+            return animations[currentAnimationIndex];
+        static SceneAnimationData empty;
+        return empty;
+    }
+    SceneAnimationData::Player& currentAnimationPlayer() {
+        return currentAnimation().player;
+    }
 };
+
 
 enum class Visualization: UnsignedByte {
     Begin = 0,
@@ -339,6 +366,9 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         void play();
         void pause();
         void stop();
+        void prev();
+        void next();
+
         void backward();
         void forward();
         void updateAnimationTime(Int deciseconds);
@@ -768,18 +798,20 @@ void ScenePlayer::initializeUi() {
     Interconnect::connect(_baseUiPlane->shadeless, &Ui::Button::tapped, *this, &ScenePlayer::toggleShadeless);
     Interconnect::connect(_baseUiPlane->objectVisualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleObjectVisualization);
     Interconnect::connect(_baseUiPlane->meshVisualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleMeshVisualization);
+    Interconnect::connect(_baseUiPlane->prev, &Ui::Button::tapped, *this, &ScenePlayer::prev);
     Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &ScenePlayer::play);
     Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &ScenePlayer::pause);
     Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &ScenePlayer::stop);
     Interconnect::connect(_baseUiPlane->backward, &Ui::Button::tapped, *this, &ScenePlayer::backward);
     Interconnect::connect(_baseUiPlane->forward, &Ui::Button::tapped, *this, &ScenePlayer::forward);
+    Interconnect::connect(_baseUiPlane->next, &Ui::Button::tapped, *this, &ScenePlayer::next);
 }
 
 void ScenePlayer::setControlsVisible(bool visible) {
     if(visible) {
         if(_data) {
-            if(!_data->player.isEmpty()) {
-                if(_data->player.state() == Animation::State::Playing) {
+            if(!_data->currentAnimationPlayer().isEmpty()) {
+                if(_data->currentAnimationPlayer().state() == Animation::State::Playing) {
                     _baseUiPlane->play.hide();
                     _baseUiPlane->pause.show();
                 } else {
@@ -791,6 +823,8 @@ void ScenePlayer::setControlsVisible(bool visible) {
                     _baseUiPlane->stop,
                     _baseUiPlane->forward,
                     _baseUiPlane->animationProgress});
+                _baseUiPlane->prev.setVisible(_data->animations.size() > 1);
+                _baseUiPlane->next.setVisible(_data->animations.size() > 1);
             }
 
             _baseUiPlane->shadeless.show();
@@ -921,7 +955,7 @@ void ScenePlayer::play() {
         _baseUiPlane->backward,
         _baseUiPlane->stop,
         _baseUiPlane->forward});
-    _data->player.play(std::chrono::system_clock::now().time_since_epoch());
+    _data->currentAnimationPlayer().play(std::chrono::system_clock::now().time_since_epoch());
 }
 
 void ScenePlayer::pause() {
@@ -929,13 +963,13 @@ void ScenePlayer::pause() {
 
     _baseUiPlane->play.show();
     _baseUiPlane->pause.hide();
-    _data->player.pause(std::chrono::system_clock::now().time_since_epoch());
+    _data->currentAnimationPlayer().pause(std::chrono::system_clock::now().time_since_epoch());
 }
 
 void ScenePlayer::stop() {
     if(!_data) return;
 
-    _data->player.stop();
+    _data->currentAnimationPlayer().stop();
 
     _baseUiPlane->play.show();
     _baseUiPlane->pause.hide();
@@ -945,24 +979,49 @@ void ScenePlayer::stop() {
         _baseUiPlane->forward});
 }
 
+void ScenePlayer::prev() {
+    if (!_data->animations.size()) return;
+    bool wasPlaying = _data->currentAnimationPlayer().state() == Animation::State::Playing;
+    if (wasPlaying) {
+        _data->currentAnimationPlayer().stop();
+    }
+    _data->currentAnimationIndex = (_data->currentAnimationIndex + _data->animations.size() - 1) % _data->animations.size();
+    if (wasPlaying) {
+        _data->currentAnimationPlayer().play(std::chrono::system_clock::now().time_since_epoch());
+    }
+}
+void ScenePlayer::next() {
+    if (!_data->animations.size()) return;
+    bool wasPlaying = _data->currentAnimationPlayer().state() == Animation::State::Playing;
+    if (wasPlaying) {
+        _data->currentAnimationPlayer().stop();
+    }
+    _data->currentAnimationIndex = (_data->currentAnimationIndex + 1) % _data->animations.size();
+    if (wasPlaying) {
+        _data->currentAnimationPlayer().play(std::chrono::system_clock::now().time_since_epoch());
+    }
+}
+
 void ScenePlayer::backward() {
-    _data->player.seekBy(std::chrono::nanoseconds{-33333333});
+    _data->currentAnimationPlayer().seekBy(std::chrono::nanoseconds{-33333333});
 }
 
 void ScenePlayer::forward() {
-    _data->player.seekBy(std::chrono::nanoseconds{33333333});
+    _data->currentAnimationPlayer().seekBy(std::chrono::nanoseconds{33333333});
 }
 
 void ScenePlayer::updateAnimationTime(Int deciseconds) {
     if(_baseUiPlane->animationProgress.flags() & Ui::WidgetFlag::Hidden)
         return;
 
-    const Int duration = _data->player.duration().size()*10;
+    const Int duration = _data->currentAnimationPlayer().duration().size()*10;
     /** @todo drop the ArrayView cast once the Ui library is STL-free */
     _baseUiPlane->animationProgress.setText(Containers::ArrayView<const char>{Utility::format(
-        "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1}",
+        "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1} {} {}",
         deciseconds/600, deciseconds/10%60, deciseconds%10,
-        duration/600, duration/10%60, duration%10)});
+        duration/600, duration/10%60, duration%10,
+        _data->currentAnimationIndex,
+        _data->currentAnimation().name)});
 }
 
 void ScenePlayer::updateLightColorBrightness() {
@@ -1521,10 +1580,12 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         Debug{} << "Importing the first animation out of" << importer.animationCount();
     for(UnsignedInt i = 0; i != importer.animationCount(); ++i) {
         Containers::Optional<Trade::AnimationData> animation = importer.animation(i);
+        auto animationName = importer.animationName(i);
         if(!animation) {
-            Warning{} << "Cannot load animation" << i << importer.animationName(i);
+            Warning{} << "Cannot load animation" << i << animationName;
             continue;
         }
+        SceneAnimationData::Player player;
 
         for(UnsignedInt j = 0; j != animation->trackCount(); ++j) {
             if(animation->trackTarget(j) >= _data->objects.size() || !_data->objects[animation->trackTarget(j)].object)
@@ -1532,48 +1593,57 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
 
             Object3D& animatedObject = *_data->objects[animation->trackTarget(j)].object;
 
-            if(animation->trackTargetName(j) == Trade::AnimationTrackTarget::Translation3D) {
-                const auto callback = [](Float, const Vector3& translation, Object3D& object) {
-                    object.setTranslation(translation);
-                };
-                if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
-                    _data->player.addWithCallback(animation->track<CubicHermite3D>(j),
-                        callback, animatedObject);
-                } else {
-                    CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
-                    _data->player.addWithCallback(animation->track<Vector3>(j),
-                        callback, animatedObject);
-                }
-            } else if(animation->trackTargetName(j) == Trade::AnimationTrackTarget::Rotation3D) {
-                const auto callback = [](Float, const Quaternion& rotation, Object3D& object) {
-                    object.setRotation(rotation);
-                };
-                if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermiteQuaternion) {
-                    _data->player.addWithCallback(animation->track<CubicHermiteQuaternion>(j),
-                        callback, animatedObject);
-                } else {
-                    CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Quaternion);
-                    _data->player.addWithCallback(animation->track<Quaternion>(j),
-                        callback, animatedObject);
-                }
-            } else if(animation->trackTargetName(j) == Trade::AnimationTrackTarget::Scaling3D) {
-                const auto callback = [](Float, const Vector3& scaling, Object3D& object) {
-                    object.setScaling(scaling);
-                };
-                if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
-                    _data->player.addWithCallback(animation->track<CubicHermite3D>(j),
-                        callback, animatedObject);
-                } else {
-                    CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
-                    _data->player.addWithCallback(animation->track<Vector3>(j),
-                        callback, animatedObject);
-                }
-            } else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+            switch (animation->trackTargetName(j)) {
+                case Trade::AnimationTrackTarget::Translation3D: {
+                    const auto callback = [](Float, const Vector3& translation, Object3D& object) {
+                        object.setTranslation(translation);
+                    };
+                    if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
+                        player.addWithCallback(animation->track<CubicHermite3D>(j),
+                            callback, animatedObject);
+                    } else {
+                        CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
+                        player.addWithCallback(animation->track<Vector3>(j),
+                            callback, animatedObject);
+                    }
+                } break;
+                case Trade::AnimationTrackTarget::Rotation3D: {
+                    const auto callback = [](Float, const Quaternion& rotation, Object3D& object) {
+                        object.setRotation(rotation);
+                    };
+                    if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermiteQuaternion) {
+                        player.addWithCallback(animation->track<CubicHermiteQuaternion>(j),
+                            callback, animatedObject);
+                    } else {
+                        CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Quaternion);
+                        player.addWithCallback(animation->track<Quaternion>(j),
+                            callback, animatedObject);
+                    }
+                } break;
+                case Trade::AnimationTrackTarget::Scaling3D: {
+                    const auto callback = [](Float, const Vector3& scaling, Object3D& object) {
+                        object.setScaling(scaling);
+                    };
+                    if(animation->trackType(j) == Trade::AnimationTrackType::CubicHermite3D) {
+                        player.addWithCallback(animation->track<CubicHermite3D>(j),
+                            callback, animatedObject);
+                    } else {
+                        CORRADE_INTERNAL_ASSERT(animation->trackType(j) == Trade::AnimationTrackType::Vector3);
+                        player.addWithCallback(animation->track<Vector3>(j),
+                            callback, animatedObject);
+                    }
+                } break;
+                default: CORRADE_INTERNAL_ASSERT_UNREACHABLE(); break;
+            }
         }
-        _data->animationData = animation->release();
-
-        /* Load only the first animation at the moment */
-        break;
+        /* Animate the elapsed time -- trigger update every 1/10th a second */
+        player.addWithCallbackOnChange(_elapsedTimeAnimation, [](Float, const Int& elapsed, ScenePlayer& player) {
+            player.updateAnimationTime(elapsed);
+        }, _data->elapsedTimeAnimationDestination, *this);
+        if (filename) {
+            player.setPlayCount(0);
+        }
+        arrayAppend(_data->animations, InPlaceInit, std::move(animationName), animation->release(), std::move(player));
     }
 
     /* Populate the model info */
@@ -1590,20 +1660,15 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         importer.image2DCount(),
         importer.animationCount())});
 
-    if(!_data->player.isEmpty()) {
-        /* Animate the elapsed time -- trigger update every 1/10th a second */
-        _data->player.addWithCallbackOnChange(_elapsedTimeAnimation, [](Float, const Int& elapsed, ScenePlayer& player) {
-            player.updateAnimationTime(elapsed);
-        }, _data->elapsedTimeAnimationDestination, *this);
-
+    auto& player = _data->currentAnimationPlayer();
+    if(!player.isEmpty()) {
         /* Start the animation */
-        _data->player.play(std::chrono::system_clock::now().time_since_epoch());
+        player.play(std::chrono::system_clock::now().time_since_epoch());
     }
 
     /* If this is not the initial animation, make it repeat indefinitely and
        show the controls. Otherwise just play it once and without controls. */
     if(filename) {
-        _data->player.setPlayCount(0);
         setControlsVisible(true);
     }
 }
@@ -1768,7 +1833,7 @@ void ScenePlayer::drawEvent() {
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
 
     if(_data) {
-        _data->player.advance(std::chrono::system_clock::now().time_since_epoch());
+        _data->currentAnimationPlayer().advance(std::chrono::system_clock::now().time_since_epoch());
 
         /* Calculate light positions first, upload them to all shaders -- all
            of them are there only if they are actually used, so it's not doing
@@ -1848,7 +1913,7 @@ void ScenePlayer::drawEvent() {
 
     /* Schedule a redraw only if profiling is enabled or the player is playing
        to avoid hogging the CPU */
-    if(_profiler.isEnabled() || (_data && _data->player.state() == Animation::State::Playing))
+    if(_profiler.isEnabled() || (_data && _data->currentAnimationPlayer().state() == Animation::State::Playing))
         redraw();
 
     #ifdef MAGNUM_TARGET_WEBGL
@@ -1995,7 +2060,7 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
 
     /* Pause/seek the animation */
     } else if(event.key() == KeyEvent::Key::Space) {
-        _data->player.state() == Animation::State::Paused ? play() : pause();
+        _data->currentAnimationPlayer().state() == Animation::State::Paused ? play() : pause();
     } else if(event.key() == KeyEvent::Key::Left) {
         backward();
     } else if(event.key() == KeyEvent::Key::Right) {
