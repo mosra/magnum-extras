@@ -851,11 +851,13 @@ void ScenePlayer::setControlsVisible(bool visible) {
     } else {
         Ui::Widget::hide({
             _baseUiPlane->shadeless,
+            _baseUiPlane->prev,
             _baseUiPlane->backward,
             _baseUiPlane->play,
             _baseUiPlane->pause,
             _baseUiPlane->stop,
             _baseUiPlane->forward,
+            _baseUiPlane->next,
             _baseUiPlane->modelInfo,
             _baseUiPlane->objectVisualization,
             _baseUiPlane->meshVisualization,
