@@ -197,6 +197,8 @@ enum class TextStyle: UnsignedShort {
     InputDefaultInactiveOut,
     InputDefaultInactiveOver,
     InputDefaultFocused,
+    InputDefaultFocusedBlink,
+    InputDefaultFocusedFadeOut,
     InputDefaultPressed,
     InputDefaultDisabled,
 };
@@ -206,8 +208,11 @@ enum class TextEditingStyle: Byte {
 
     InputCursor = 0,
     InputCursorFocused,
+    InputCursorFocusedBlink,
+    InputCursorFocusedFadeOut,
     InputSelection,
     InputSelectionFocused,
+    InputSelectionFocusedFlash,
 };
 
 }}}

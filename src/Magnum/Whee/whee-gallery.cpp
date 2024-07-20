@@ -55,6 +55,9 @@
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
 #include "Magnum/Whee/Style.h"
+#include "Magnum/Whee/Style.hpp" // TODO ehhh
+#include "Magnum/Whee/TextLayer.h"
+#include "Magnum/Whee/TextLayerAnimator.h"
 #include "Magnum/Whee/TextProperties.h"
 #include "Magnum/Whee/UserInterfaceGL.h"
 
@@ -137,7 +140,10 @@ class WheeGallery: public Platform::Application {
 
         NodeAnimator* _nodeAnimator;
         Whee::BaseLayerStyleAnimator* _styleAnimator;
+        Whee::TextLayerStyleAnimator* _textStyleAnimator;
         Containers::Optional<Whee::Button> _clickMe;
+
+        Whee::AnimationHandle _inputCursorAnimation{};
 };
 
 WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Whee Gallery"_s).setSize({900, 600})}, _ui{NoCreate, {900, 600}, Vector2{windowSize()}, framebufferSize()} {
@@ -146,7 +152,10 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
 
     /* Set a style. Has to be done after creating the renderer as it otherwise
        adds its own. */
-    _ui.setStyle(Whee::McssDarkStyle{});
+    _ui.setStyle(
+        Whee::McssDarkStyle{}
+            .setTextLayerDynamicStyleCount(2)
+    );
 
     {
         Whee::BaseLayerCommonStyleUniform commonStyleUniform;
@@ -188,6 +197,10 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     Containers::Pointer<Whee::BaseLayerStyleAnimator> styleAnimator{InPlaceInit, _ui.createAnimator()};
     _backgroundBlurBaseLayer->setAnimator(*styleAnimator);
     _styleAnimator = &_ui.setStyleAnimatorInstance(Utility::move(styleAnimator));
+
+    Containers::Pointer<Whee::TextLayerStyleAnimator> textStyleAnimator{InPlaceInit, _ui.createAnimator()};
+    _ui.textLayer().setAnimator(*textStyleAnimator);
+    _textStyleAnimator = &_ui.setStyleAnimatorInstance(Utility::move(textStyleAnimator));
 
     Whee::NodeHandle root = _ui.createNode({}, _ui.size());
 
@@ -271,6 +284,39 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             Whee::LabelStyle::Info, "Info");
         Whee::label({_ui, labelsDisabled, {640, 0}, {96, 36}},
             Whee::LabelStyle::Dim, "Dim");
+    } {
+        Whee::label({_ui, root, {16, 256}, {96, 16}},
+            Whee::LabelStyle::Dim, "Inputs", Text::Alignment::MiddleLeft);
+
+        Whee::NodeHandle inputs = _ui.createNode(root, {0, 288}, _ui.size());
+
+        Whee::Input inputDefault{{_ui, inputs, {192, 36}}, Whee::InputStyle::Default, "Hello! Type in me."};
+        Whee::DataHandle inputDefaultTextHandle = inputDefault.textData();
+        _ui.eventLayer().onFocus(inputDefault, [this, inputDefaultTextHandle]{
+            if(_inputCursorAnimation != Whee::AnimationHandle::Null)
+                return;
+            _inputCursorAnimation = _textStyleAnimator->create(
+                Whee::Implementation::TextStyle::InputDefaultFocused,
+                Whee::Implementation::TextStyle::InputDefaultFocusedBlink,
+                Animation::Easing::bounceIn, now(), 0.5_sec, inputDefaultTextHandle, 0);
+        });
+        _ui.eventLayer().onBlur(inputDefault, [this, inputDefaultTextHandle]{
+            if(_inputCursorAnimation == Whee::AnimationHandle::Null)
+                return;
+            _textStyleAnimator->stop(_inputCursorAnimation, now());
+            _textStyleAnimator->create(
+                Whee::Implementation::TextStyle::InputDefaultFocusedBlink,
+                Whee::Implementation::TextStyle::InputDefaultFocused,
+                Animation::Easing::bounceOut, now(), 1.0_sec, inputDefaultTextHandle, 1);
+            _textStyleAnimator->create(
+                Whee::Implementation::TextStyle::InputDefaultFocused,
+                Whee::Implementation::TextStyle::InputDefaultFocusedFadeOut,
+                Animation::Easing::smoothstep, now() + 1.0_sec, 0.2_sec, inputDefaultTextHandle, 1);
+            _inputCursorAnimation = Whee::AnimationHandle::Null;
+        });
+        _ui.textLayer().setCursor(inputDefault.textData(), 11, 7);
+        _ui.setNodeOffset(inputDefault, {16, 0});
+        inputDefault.release();
     }
 
     _clickMe = Whee::Button{{_ui, root, {16, 256 + 130} /*TODO*/, {212, 64}},

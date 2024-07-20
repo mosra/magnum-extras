@@ -355,6 +355,8 @@ Containers::StaticArray<7, TextStyle> styleTransition(const TextStyle index) {
         case TextStyle::InputDefaultInactiveOut:
         case TextStyle::InputDefaultInactiveOver:
         case TextStyle::InputDefaultFocused:
+        case TextStyle::InputDefaultFocusedFadeOut: // TODO EHHH
+        case TextStyle::InputDefaultFocusedBlink: // TODO AHEM
         case TextStyle::InputDefaultPressed:
             return {TextStyle::InputDefaultInactiveOut,
                     TextStyle::InputDefaultInactiveOver,
