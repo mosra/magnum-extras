@@ -2111,6 +2111,10 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
         backward();
     } else if(event.key() == KeyEvent::Key::Right) {
         forward();
+    } else if(event.key() == KeyEvent::Key::Up) {
+        prev();
+    } else if(event.key() == KeyEvent::Key::Down) {
+        next();
 
     /* Adjust brightness */
     } else if(event.key() == KeyEvent::Key::NumAdd ||
