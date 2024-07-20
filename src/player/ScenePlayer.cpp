@@ -1614,8 +1614,6 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
     }
 
     /* Import animations */
-    if(importer.animationCount())
-        Debug{} << "Importing the first animation out of" << importer.animationCount();
     for(UnsignedInt i = 0; i != importer.animationCount(); ++i) {
         Containers::Optional<Trade::AnimationData> animation = importer.animation(i);
         auto animationName = importer.animationName(i);
