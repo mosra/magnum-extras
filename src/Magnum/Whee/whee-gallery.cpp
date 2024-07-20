@@ -23,9 +23,14 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <chrono>
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Function.h>
+#include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Color.h>
+#include <Magnum/Math/TimeStl.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/Renderer.h>
@@ -36,6 +41,7 @@
 #endif
 #include <Magnum/Text/Alignment.h>
 
+#include "Magnum/Whee/AbstractAnimator.h"
 #include "Magnum/Whee/Anchor.h"
 #include "Magnum/Whee/Application.h"
 #include "Magnum/Whee/BaseLayerGL.h"
@@ -55,6 +61,58 @@ namespace Magnum { namespace {
 using namespace Containers::Literals;
 using namespace Math::Literals;
 
+Nanoseconds now() {
+    return Nanoseconds{std::chrono::steady_clock::now()};
+}
+
+class NodeAnimator: public Whee::AbstractNodeAnimator {
+    public:
+        explicit NodeAnimator(Whee::AnimatorHandle handle, Whee::AbstractUserInterface& ui): Whee::AbstractNodeAnimator{handle}, _ui(ui) {}
+
+        Whee::AnimationHandle create(Whee::NodeHandle node, const Vector2& offset, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount = 1, Whee::AnimationFlags flags = {});
+
+    private:
+        struct Data {
+            Vector2 initialOffset, initialSize;
+            Vector2 offset;
+        };
+        Containers::Array<Data> _data;
+        Whee::AbstractUserInterface& _ui;
+
+        Whee::NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Whee::NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override;
+};
+
+Whee::AnimationHandle NodeAnimator::create(Whee::NodeHandle node, const Vector2& offset, Nanoseconds played, Nanoseconds duration, UnsignedInt repeatCount, Whee::AnimationFlags flags) {
+    // TODO figure out how to handle multiple animations on the same node -- find it, replace and continue from where it was before?
+    // TODO or should the user side handle that? such as a Button containing animation handles that it then replaces? but that'd mean it'd have to be stateful always :(
+
+    const Whee::AnimationHandle handle = Whee::AbstractNodeAnimator::create(played, duration, node, repeatCount, flags);
+    const UnsignedInt id = Whee::animationHandleId(handle);
+    if(id >= _data.size())
+        arrayResize(_data, NoInit, id + 1);
+    // TODO ugh, don't access the UI like this
+    _data[id].initialOffset = _ui.nodeOffset(node);
+    _data[id].initialSize = _ui.nodeSize(node);
+    _data[id].offset = offset;
+    return handle;
+}
+
+Whee::NodeAnimations NodeAnimator::doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<Whee::NodeFlags>&, Containers::MutableBitArrayView) {
+    Containers::StridedArrayView1D<const Whee::NodeHandle> nodes = this->nodes();
+
+    for(std::size_t i = 0; i != active.size(); ++i) {
+        if(!active[i]) continue;
+
+        const Data& data = _data[i];
+        const Vector2 offset = data.offset*Animation::Easing::bounceIn(1.0f - factors[i]);
+        const UnsignedInt nodeId = nodeHandleId(nodes[i]);
+        nodeOffsets[nodeId] = data.initialOffset - offset;
+        nodeSizes[nodeId] = data.initialSize + 2*offset;
+    }
+
+    return Whee::NodeAnimation::OffsetSize;
+}
+
 class WheeGallery: public Platform::Application {
     public:
         explicit WheeGallery(const Arguments& arguments);
@@ -68,8 +126,12 @@ class WheeGallery: public Platform::Application {
         void popup();
 
         Whee::UserInterfaceGL _ui;
+
         Whee::BaseLayerGL::Shared _backgroundBlurBaseLayerShared{NoCreate};
         Whee::BaseLayerGL* _backgroundBlurBaseLayer;
+
+        NodeAnimator* _nodeAnimator;
+        Containers::Optional<Whee::Button> _clickMe;
 };
 
 WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Whee Gallery"_s).setSize({900, 600})}, _ui{NoCreate, {900, 600}, Vector2{windowSize()}, framebufferSize()} {
@@ -106,6 +168,8 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
         _backgroundBlurBaseLayer = &_ui.setLayerInstance(Containers::pointer<Whee::BaseLayerGL>(_ui.createLayer(_ui.baseLayer().handle()), _backgroundBlurBaseLayerShared));
         _backgroundBlurBaseLayer->setBackgroundBlurPassCount(2);
     }
+
+    _nodeAnimator = &_ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(_ui.createAnimator(), _ui));
 
     Whee::NodeHandle root = _ui.createNode({}, _ui.size());
 
@@ -191,6 +255,18 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             Whee::LabelStyle::Dim, "Dim");
     }
 
+    _clickMe = Whee::Button{{_ui, root, {16, 256}, {212, 64}},
+        Whee::ButtonStyle::Default, "Click me!"};
+    _ui.eventLayer().onTapOrClick(*_clickMe, [this]{
+        if(_clickMe->style() == Whee::ButtonStyle::Dim)
+            _clickMe->setStyle(Whee::ButtonStyle::Default);
+        else
+            _clickMe->setStyle(Whee::ButtonStyle(UnsignedInt(_clickMe->style()) + 1));
+    });
+    _ui.eventLayer().onTapOrClick(*_clickMe, [this]{
+        _nodeAnimator->create(*_clickMe, {5.0f, 9.0f}, now(), 1.0_sec);
+    });
+
     popup();
 
     GL::Renderer::setClearColor(0x22272e_rgbf);
@@ -223,6 +299,8 @@ void WheeGallery::popup() {
 
 void WheeGallery::drawEvent() {
     _ui.renderer().compositingFramebuffer().clear(GL::FramebufferClear::Color);
+
+    _ui.advanceAnimations(now());
 
     _ui.draw();
 
