@@ -105,9 +105,12 @@ _c(LabelDimDisabled,Icon,           iconFont, MiddleCenter, None, None, { 0.0f, 
 _c(LabelDimDisabled,Text,           mainFont, MiddleCenter, None, None, { 0.0f, 8.0f,   0.0f, 8.0f})
 
 // TODO or this one with None?
+// TODO AHHH HTOOOO WIDE
 _c(InputDefault,InactiveOut,    mainFont, MiddleLeft, None, InputSelection, {10.0f, 8.0f,   6.0f, 8.0f})
 _c(InputDefault,InactiveOver,   mainFont, MiddleLeft, InputCursorFocused, InputSelection, {10.0f, 8.0f,   6.0f, 8.0f})
 _c(InputDefault,Focused,        mainFont, MiddleLeft, InputCursorFocused, InputSelectionFocused, {10.0f, 8.0f,   6.0f, 8.0f})
+_c(InputDefault,FocusedBlink,   mainFont, MiddleLeft, InputCursorFocusedBlink, InputSelectionFocusedFlash, {10.0f, 8.0f,   6.0f, 8.0f})
+_c(InputDefault,FocusedFadeOut, mainFont, MiddleLeft, InputCursorFocusedFadeOut, InputSelection, {10.0f, 8.0f,   6.0f, 8.0f})
 _c(InputDefault,Pressed,        mainFont, MiddleLeft, InputCursorFocused, InputSelectionFocused, {10.0f, 8.5f,   6.0f, 7.5f})
 // TODO or have these with None??
 _c(InputDefaultDisabled,,       mainFont, MiddleLeft, InputCursor, InputSelection, {10.0f, 8.0f,   6.0f, 8.0f})
