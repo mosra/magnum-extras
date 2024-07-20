@@ -25,11 +25,14 @@
 
 #include "Widget.h"
 
+#include "Magnum/Whee/Anchor.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/UserInterface.h"
 
 namespace Magnum { namespace Whee {
+
+Widget::Widget(const Anchor& anchor): _ui{anchor.ui()}, _node{anchor.node()} {}
 
 Widget::Widget(Widget&& other) noexcept: _ui{other._ui}, _node{other._node} {
     /* not using NodeHandle::Null to not need to include Handle.h */

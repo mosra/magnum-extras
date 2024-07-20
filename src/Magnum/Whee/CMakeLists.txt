@@ -53,6 +53,7 @@ set(MagnumWhee_GracefulAssert_SRCS
     AbstractStyle.cpp
     AbstractUserInterface.cpp
     AbstractVisualLayer.cpp
+    Anchor.cpp
     BaseLayer.cpp
     BaseLayerAnimator.cpp
     EventLayer.cpp
@@ -69,6 +70,7 @@ set(MagnumWhee_HEADERS
     AbstractStyle.h
     AbstractUserInterface.h
     AbstractVisualLayer.h
+    Anchor.h
     Application.h
     BaseLayer.h
     BaseLayerAnimator.h

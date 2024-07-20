@@ -27,6 +27,7 @@
 #include <Corrade/TestSuite/Tester.h>
 #include <Magnum/Math/Vector2.h>
 
+#include "Magnum/Whee/Anchor.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/UserInterface.h"
@@ -38,6 +39,7 @@ struct WidgetTest: TestSuite::Tester {
     explicit WidgetTest();
 
     void construct();
+    void constructFromAnchor();
     void constructCopy();
     void constructMove();
     void destructInvalidNode();
@@ -49,6 +51,7 @@ struct WidgetTest: TestSuite::Tester {
 
 WidgetTest::WidgetTest() {
     addTests({&WidgetTest::construct,
+              &WidgetTest::constructFromAnchor,
               &WidgetTest::constructCopy,
               &WidgetTest::constructMove,
               &WidgetTest::destructInvalidNode,
@@ -77,6 +80,26 @@ void WidgetTest::construct() {
 
     /* And removed on destruction */
     CORRADE_VERIFY(!ui.isHandleValid(node));
+}
+
+void WidgetTest::constructFromAnchor() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    Anchor a{ui, ui.createNode({}, {}), LayoutHandle::Null};
+
+    {
+        Widget widget{a};
+        CORRADE_COMPARE(&widget.ui(), &ui);
+        CORRADE_COMPARE(widget.node(), a.node());
+
+        /* The node becomes owned by the widget */
+        CORRADE_VERIFY(ui.isHandleValid(a.node()));
+    }
+
+    /* And is removed on destruction, making the anchor invalid */
+    CORRADE_VERIFY(!ui.isHandleValid(a.node()));
 }
 
 void WidgetTest::constructCopy() {
