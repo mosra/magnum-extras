@@ -68,6 +68,14 @@ class MAGNUM_WHEE_EXPORT Widget {
          */
         explicit Widget(UserInterface& ui, NodeHandle node): _ui{ui}, _node{node} {}
 
+        /**
+         * @brief Construct from a positioning anchor
+         *
+         * The @ref ui() and @ref node() is set to @ref Anchor::ui() and
+         * @ref Anchor::node().
+         */
+        explicit Widget(const Anchor& anchor);
+
         /** @brief Copying is not allowed */
         Widget(const Widget&) = delete;
 

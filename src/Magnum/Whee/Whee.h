@@ -86,6 +86,7 @@ class AbstractStyle;
 
 class UserInterface;
 class UserInterfaceGL;
+class Anchor;
 class Widget;
 
 enum class Pointer: UnsignedByte;
