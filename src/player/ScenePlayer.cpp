@@ -269,7 +269,9 @@ struct SceneAnimationData {
     Containers::String name;
     Containers::Array<char> dataStore;
     Player player;
-    Containers::Array<UnsignedInt> affectedObjects;
+    /* Set for each object index that this animation affects, so we can reset the animation.
+     * A BitArray because it's easier to write, and most animations probably affect most objects, most of the time */
+    Containers::BitArray affectedObjects;
 };
 
 /*  @todo better name? */
@@ -978,10 +980,12 @@ void ScenePlayer::pause() {
 void ScenePlayer::resetAffectedTransformations(SceneAnimationData &sceneAnimationData) {
     Debug debug{};
     debug << "Resetting affected objects:";
-    for (auto& affectedObjectIndex : sceneAnimationData.affectedObjects) {
-        auto& affectedObject = _data->objects[affectedObjectIndex];
-        debug << affectedObject.name;
-        affectedObject.object->setTransformation(affectedObject.originalTransformation);
+    for (size_t objectId = 0; objectId < _data->objects.size(); ++objectId) {
+        if (sceneAnimationData.affectedObjects[objectId]) {
+            auto& object = _data->objects[objectId];
+            debug << object.name;
+            object.object->setTransformation(object.originalTransformation);
+        }
     }
 }
 
@@ -1621,8 +1625,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
         }
         SceneAnimationData::Player player{};
 
-        Containers::Array<UnsignedInt> affectedObjects{};
-        Containers::arrayReserve(affectedObjects, animation->trackCount());
+        Containers::BitArray affectedObjects(ValueInit,importer.objectCount());
         for(UnsignedInt j = 0; j != animation->trackCount(); ++j) {
             auto targetObjectId = animation->trackTarget(j);
             if(targetObjectId >= _data->objects.size() || !_data->objects[targetObjectId].object)
@@ -1630,7 +1633,7 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
 
             Object3D& animatedObject = *_data->objects[targetObjectId].object;
 
-            arrayAppendUnique(affectedObjects, static_cast<UnsignedInt>(targetObjectId));
+            affectedObjects.set(targetObjectId);
 
             switch (animation->trackTargetName(j)) {
                 case Trade::AnimationTrackTarget::Translation3D: {
