@@ -729,6 +729,11 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     toggleControls();
 
     redraw();
+
+    GL::Renderer::Error err;
+    while ((err = GL::Renderer::error()) != GL::Renderer::Error::NoError) {
+        Error() << "Error: " << err;
+    }
 }
 #endif
 
