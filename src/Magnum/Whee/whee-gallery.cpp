@@ -54,6 +54,7 @@
 #include "Magnum/Whee/Label.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
+#include "Magnum/Whee/SnapLayouter.h"
 #include "Magnum/Whee/Style.h"
 #include "Magnum/Whee/Style.hpp" // TODO ehhh
 #include "Magnum/Whee/TextLayer.h"
@@ -65,6 +66,8 @@ namespace Magnum { namespace {
 
 using namespace Containers::Literals;
 using namespace Math::Literals;
+
+namespace Ui = Whee; // TODO yeah use this from the beginning already
 
 Nanoseconds now() {
     return Nanoseconds{std::chrono::steady_clock::now()};
@@ -134,6 +137,7 @@ class WheeGallery: public Platform::Application {
         void popup();
 
         Whee::UserInterfaceGL _ui;
+        Whee::SnapLayouter* _layouter;
 
         Whee::BaseLayerGL::Shared _backgroundBlurBaseLayerShared{NoCreate};
         Whee::BaseLayerGL* _backgroundBlurBaseLayer;
@@ -202,96 +206,84 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     _ui.textLayer().setAnimator(*textStyleAnimator);
     _textStyleAnimator = &_ui.setStyleAnimatorInstance(Utility::move(textStyleAnimator));
 
-    Whee::NodeHandle root = _ui.createNode({}, _ui.size());
+    _layouter = &_ui.setLayouterInstance(Containers::pointer<Whee::SnapLayouter>(_ui.createLayouter()));
+    _layouter->setMargin({8.0f, 10.0f});
+    _layouter->setPadding({16.0f, 16.0f});
+
+    Ui::NodeHandle root = _ui.createNode({}, _ui.size());
 
     {
-        Whee::label({_ui, root, {16, 16}, {96, 16}},
-            Whee::LabelStyle::Dim, "Buttons", Text::Alignment::MiddleLeft);
-        Whee::NodeHandle buttons = _ui.createNode(root, {0, 48}, _ui.size());
+        Ui::SnapLayout snap{_ui, *_layouter, root};
 
-        Whee::button({_ui, buttons, { 16, 0}, {96, 36}},
-            Whee::ButtonStyle::Default, Whee::Icon::Yes, "Default");
-        Whee::button({_ui, buttons, {120, 0}, {96, 36}},
-            Whee::ButtonStyle::Primary, Whee::Icon::Yes, "Primary");
-        Whee::button({_ui, buttons, {224, 0}, {96, 36}},
-            Whee::ButtonStyle::Danger, Whee::Icon::No, "Danger");
-        Whee::button({_ui, buttons, {328, 0}, {96, 36}},
-            Whee::ButtonStyle::Success, Whee::Icon::Yes, "Success");
-        Whee::button({_ui, buttons, {432, 0}, {96, 36}},
-            Whee::ButtonStyle::Warning, Whee::Icon::No, "Warning");
-        Whee::button({_ui, buttons, {536, 0}, {96, 36}},
-            Whee::ButtonStyle::Info, Whee::Icon::Yes, "Info");
-        Whee::button({_ui, buttons, {640, 0}, {96, 36}},
-            Whee::ButtonStyle::Dim, Whee::Icon::No, "Dim");
-        Whee::button({_ui, buttons, {744, 0}, {96, 36}},
-            Whee::ButtonStyle::Flat, Whee::Icon::Yes, "Flat");
-    } {
-        Whee::NodeHandle buttonsDisabled = _ui.createNode(root,
-            {0, 94}, _ui.size(), Whee::NodeFlag::Disabled);
+        /* Buttons */
+        Ui::label(
+            snap(Ui::Snap::Top|Ui::Snap::Left|Ui::Snap::Inside, root, {96, 16}),
+            Ui::LabelStyle::Dim, "Buttons", Text::Alignment::MiddleLeft);
+        snap.setNextSize({96, 36})
+            .setNextSnap(Ui::Snap::Right);
 
-        Whee::button({_ui, buttonsDisabled, { 16, 0}, {96, 36}},
-            Whee::ButtonStyle::Default, Whee::Icon::Yes, "Default");
-        Whee::button({_ui, buttonsDisabled, {120, 0}, {96, 36}},
-            Whee::ButtonStyle::Primary, Whee::Icon::Yes, "Primary");
-        Whee::button({_ui, buttonsDisabled, {224, 0}, {96, 36}},
-            Whee::ButtonStyle::Danger, Whee::Icon::No, "Danger");
-        Whee::button({_ui, buttonsDisabled, {328, 0}, {96, 36}},
-            Whee::ButtonStyle::Success, Whee::Icon::Yes, "Success");
-        Whee::button({_ui, buttonsDisabled, {432, 0}, {96, 36}},
-            Whee::ButtonStyle::Warning, Whee::Icon::No, "Warning");
-        Whee::button({_ui, buttonsDisabled, {536, 0}, {96, 36}},
-            Whee::ButtonStyle::Info, Whee::Icon::Yes, "Info");
-        Whee::button({_ui, buttonsDisabled, {640, 0}, {96, 36}},
-            Whee::ButtonStyle::Dim, Whee::Icon::No, "Dim");
-        Whee::button({_ui, buttonsDisabled, {744, 0}, {96, 36}},
-            Whee::ButtonStyle::Flat, Whee::Icon::Yes, "Flat");
-    }
+        Ui::NodeHandle buttonDefault = Ui::button(
+            snap(Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX),
+            Ui::ButtonStyle::Default, Ui::Icon::Yes, "Default");
+        Ui::button(snap, Ui::ButtonStyle::Primary, Ui::Icon::Yes, "Primary");
+        Ui::button(snap, Ui::ButtonStyle::Danger, Ui::Icon::No, "Danger");
+        Ui::button(snap, Ui::ButtonStyle::Success, Ui::Icon::Yes, "Success");
+        Ui::button(snap, Ui::ButtonStyle::Warning, Ui::Icon::No, "Warning");
+        Ui::button(snap, Ui::ButtonStyle::Info, Ui::Icon::Yes, "Info");
+        Ui::button(snap, Ui::ButtonStyle::Dim, Ui::Icon::No, "Dim");
+        Ui::button(snap, Ui::ButtonStyle::Flat, Ui::Icon::Yes, "Flat");
 
-    {
-        Whee::label({_ui, root, {16, 146}, {96, 16}},
-            Whee::LabelStyle::Dim, "Labels", Text::Alignment::MiddleLeft);
-        Whee::NodeHandle labels = _ui.createNode(root, {0, 170}, _ui.size());
+        Ui::NodeHandle buttonDefaultDisabled = Ui::button(
+            snap(Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX,
+                 buttonDefault, Ui::NodeFlag::Disabled),
+            Ui::ButtonStyle::Default, Ui::Icon::Yes, "Default");
+        Ui::button(snap(Ui::NodeFlag::Disabled), Ui::ButtonStyle::Primary, Ui::Icon::Yes, "Primary");
+        Ui::button(snap(Ui::NodeFlag::Disabled), Ui::ButtonStyle::Danger, Ui::Icon::No, "Danger");
+        Ui::button(snap(Ui::NodeFlag::Disabled), Ui::ButtonStyle::Success, Ui::Icon::Yes, "Success");
+        Ui::button(snap(Ui::NodeFlag::Disabled), Ui::ButtonStyle::Warning, Ui::Icon::No, "Warning");
+        Ui::button(snap(Ui::NodeFlag::Disabled), Ui::ButtonStyle::Info, Ui::Icon::Yes, "Info");
+        Ui::button(snap(Ui::NodeFlag::Disabled), Ui::ButtonStyle::Dim, Ui::Icon::No, "Dim");
+        Ui::button(snap(Ui::NodeFlag::Disabled), Ui::ButtonStyle::Flat, Ui::Icon::Yes, "Flat");
 
-        Whee::label({_ui, labels, { 16, 0}, {96, 36}},
-            Whee::LabelStyle::Default, "Default");
-        Whee::label({_ui, labels, {120, 0}, {96, 36}},
-            Whee::LabelStyle::Primary, "Primary");
-        Whee::label({_ui, labels, {224, 0}, {96, 36}},
-            Whee::LabelStyle::Danger, "Danger");
-        Whee::label({_ui, labels, {328, 0}, {96, 36}},
-            Whee::LabelStyle::Success, "Success");
-        Whee::label({_ui, labels, {432, 0}, {96, 36}},
-            Whee::LabelStyle::Warning, "Warning");
-        Whee::label({_ui, labels, {526, 0}, {96, 36}},
-            Whee::LabelStyle::Info, "Info");
-        Whee::label({_ui, labels, {640, 0}, {96, 36}},
-            Whee::LabelStyle::Dim, "Dim");
-    } {
-        Whee::NodeHandle labelsDisabled = _ui.createNode(root,
-            {0, 208}, _ui.size(), Whee::NodeFlag::Disabled);
+        /* Labels */
+        Ui::label(
+            snap(Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX,
+                 buttonDefaultDisabled, {0, 16}, {96, 16}),
+            Ui::LabelStyle::Dim, "Labels", Text::Alignment::MiddleLeft);
+        snap.setNextSize({96, 28});
 
-        Whee::label({_ui, labelsDisabled, { 16, 0}, {96, 36}},
-            Whee::LabelStyle::Default, "Default");
-        Whee::label({_ui, labelsDisabled, {120, 0}, {96, 36}},
-            Whee::LabelStyle::Primary, "Primary");
-        Whee::label({_ui, labelsDisabled, {224, 0}, {96, 36}},
-            Whee::LabelStyle::Danger, "Danger");
-        Whee::label({_ui, labelsDisabled, {328, 0}, {96, 36}},
-            Whee::LabelStyle::Success, "Success");
-        Whee::label({_ui, labelsDisabled, {432, 0}, {96, 36}},
-            Whee::LabelStyle::Warning, "Warning");
-        Whee::label({_ui, labelsDisabled, {526, 0}, {96, 36}},
-            Whee::LabelStyle::Info, "Info");
-        Whee::label({_ui, labelsDisabled, {640, 0}, {96, 36}},
-            Whee::LabelStyle::Dim, "Dim");
-    } {
-        Whee::label({_ui, root, {16, 256}, {96, 16}},
-            Whee::LabelStyle::Dim, "Inputs", Text::Alignment::MiddleLeft);
+        Ui::NodeHandle labelDefault = Ui::label(
+            snap(Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX),
+            Ui::LabelStyle::Default, "Default");
+        Ui::label(snap, Ui::LabelStyle::Primary, "Primary");
+        Ui::label(snap, Ui::LabelStyle::Danger, "Danger");
+        Ui::label(snap, Ui::LabelStyle::Success, "Success");
+        Ui::label(snap, Ui::LabelStyle::Warning, "Warning");
+        Ui::label(snap, Ui::LabelStyle::Info, "Info");
+        Ui::label(snap, Ui::LabelStyle::Dim, "Dim");
 
-        Whee::NodeHandle inputs = _ui.createNode(root, {0, 288}, _ui.size());
+        Ui::NodeHandle labelDefaultDisabled = Ui::label(
+            snap(Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX,
+                 labelDefault, Ui::NodeFlag::Disabled),
+            Ui::LabelStyle::Default, "Default");
+        Ui::label(snap(Ui::NodeFlag::Disabled), Ui::LabelStyle::Primary, "Primary");
+        Ui::label(snap(Ui::NodeFlag::Disabled), Ui::LabelStyle::Danger, "Danger");
+        Ui::label(snap(Ui::NodeFlag::Disabled), Ui::LabelStyle::Success, "Success");
+        Ui::label(snap(Ui::NodeFlag::Disabled), Ui::LabelStyle::Warning, "Warning");
+        Ui::label(snap(Ui::NodeFlag::Disabled), Ui::LabelStyle::Info, "Info");
+        Ui::label(snap(Ui::NodeFlag::Disabled), Ui::LabelStyle::Dim, "Dim");
 
-        Whee::Input inputDefault{{_ui, inputs, {192, 36}}, Whee::InputStyle::Default, "Hello! Type in me."};
-        Whee::DataHandle inputDefaultTextHandle = inputDefault.textData();
+        /* Inputs */
+        Ui::label(
+            snap(Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX,
+                 labelDefaultDisabled, {0, 16}, {96, 16}),
+            Ui::LabelStyle::Dim, "Inputs", Text::Alignment::MiddleLeft);
+        snap.setNextSize({208, 36});
+
+        Ui::Input inputDefault{
+            snap(Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX),
+            Ui::InputStyle::Default, "Hello! Type in me."};
+        Ui::DataHandle inputDefaultTextHandle = inputDefault.textData();
         _ui.eventLayer().onFocus(inputDefault, [this, inputDefaultTextHandle]{
             if(_inputCursorAnimation != Whee::AnimationHandle::Null)
                 return;
@@ -314,22 +306,23 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
                 Animation::Easing::smoothstep, now() + 1.0_sec, 0.2_sec, inputDefaultTextHandle, 1);
             _inputCursorAnimation = Whee::AnimationHandle::Null;
         });
+        // TODO cursor setter on the input ffs
         _ui.textLayer().setCursor(inputDefault.textData(), 11, 7);
-        _ui.setNodeOffset(inputDefault, {16, 0});
         inputDefault.release();
-    }
 
-    _clickMe = Whee::Button{{_ui, root, {16, 256 + 130} /*TODO*/, {212, 64}},
-        Whee::ButtonStyle::Default, "Click me!"};
-    _ui.eventLayer().onTapOrClick(*_clickMe, [this]{
-        if(_clickMe->style() == Whee::ButtonStyle::Dim)
-            _clickMe->setStyle(Whee::ButtonStyle::Default);
-        else
-            _clickMe->setStyle(Whee::ButtonStyle(UnsignedInt(_clickMe->style()) + 1));
-    });
-    _ui.eventLayer().onTapOrClick(*_clickMe, [this]{
-        _nodeAnimator->create(*_clickMe, {5.0f, 9.0f}, now(), 1.0_sec);
-    });
+        _clickMe = Whee::Button{
+            snap(Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, {0, 16}, {208, 64}),
+            Whee::ButtonStyle::Default, "Click me!"};
+        _ui.eventLayer().onTapOrClick(*_clickMe, [this]{
+            if(_clickMe->style() == Whee::ButtonStyle::Dim)
+                _clickMe->setStyle(Whee::ButtonStyle::Default);
+            else
+                _clickMe->setStyle(Whee::ButtonStyle(UnsignedInt(_clickMe->style()) + 1));
+        });
+        _ui.eventLayer().onTapOrClick(*_clickMe, [this]{
+            _nodeAnimator->create(*_clickMe, {5.0f, 9.0f}, now(), 1.0_sec);
+        });
+    }
 
     popup();
 
@@ -343,7 +336,12 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
 }
 
 void WheeGallery::popup() {
-    Whee::NodeHandle popup = _ui.createNode({180, 180}, {440, 240});
+    // TODO make null parent default?, and null parent implying null target node (and disallowed otherwise?)
+    Ui::SnapLayout snap{_ui, *_layouter, Ui::NodeHandle::Null};
+
+    // TODO drop this extra root node, the snap layouter should have a knowledge about the UI size on its own if passed a null target
+    Ui::NodeHandle root = _ui.createNode({}, _ui.size());
+    Whee::NodeHandle popup = snap(Ui::Snaps{}, root, {440, 240});
     Whee::DataHandle popupBackground = _backgroundBlurBaseLayer->create(0, popup);
     _ui.eventLayer().onDrag(popup, [this, popup](const Vector2& offset){
         _ui.setNodeOffset(popup, _ui.nodeOffset(popup) + offset);
@@ -357,14 +355,25 @@ void WheeGallery::popup() {
         _ui.setNodeOrder(popup, Whee::NodeHandle::Null);
     });
 
+    #if 1
     Whee::NodeHandle another = Whee::button({_ui, popup, {67, 170}, {128, 36}},
         Whee::ButtonStyle::Success, "Another!");
+    Whee::NodeHandle more = Whee::button({_ui, popup, {245, 170}, {128, 36}},
+        Whee::ButtonStyle::Primary, "More!");
+    #else
+    // TODO doesn't work because the layouter doesn't calculate parent-relative offsets because it doesn't know what's the parent
+    // TODO besides that, how does one align two things to the center?? it seems completely incapable of such a thing ffs
+    // TODO that implementation is just useless as a whole
+    Whee::NodeHandle another = Whee::button(
+        snap(Ui::Snap::Bottom|Ui::Snap::Inside, popup, {-72, 0}, {128, 36}),
+        Whee::ButtonStyle::Success, "Another!");
+    Whee::NodeHandle more = Whee::button(
+        snap(Ui::Snap::Bottom|Ui::Snap::Inside, popup, {+72, 0}, {128, 36}),
+        Whee::ButtonStyle::Primary, "More!");
+    #endif
     _ui.eventLayer().onTapOrClick(another, [this]{
         this->popup();
     });
-
-    Whee::NodeHandle more = Whee::button({_ui, popup, {245, 170}, {128, 36}},
-        Whee::ButtonStyle::Primary, "More!");
     _ui.eventLayer().onTapOrClick(more, [this]{
         _backgroundBlurBaseLayer->setBackgroundBlurPassCount(_backgroundBlurBaseLayer->backgroundBlurPassCount()*2);
     });
