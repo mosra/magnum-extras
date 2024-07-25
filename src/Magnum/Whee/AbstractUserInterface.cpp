@@ -326,14 +326,18 @@ union Node {
            handle is recycled, so it doesn't make sense to initialize them to
            anything. */
 
-        /* Parent node handle or top-level node order index.
+        /* Parent node handle or Null for root nodes */
+        NodeHandle parent;
 
-           For top-level nodes the generation is set to 0 and the ID points
-           inside the `nodeOrder` array, which then stores a doubly linked
-           list, see the `NodeOrder` struct for details. If the ID has all bits
-           set to 1, it's not included in the draw and event processing
-           order. */
-        NodeHandle parentOrOrder;
+        /* If not ~UnsignedInt{}, the node is part of the top-level node order
+           and the value is index into the nodeOrder array, which then stores a
+           doubly linked list, see the `NodeOrder` struct for details. If
+           ~UnsignedInt{}, the node is not included in the draw and event
+           processing order.
+
+           There can be only as many ordered nodes as total nodes, so the last
+           12 bits are unused. */
+        UnsignedInt order;
 
         /* Together with index of this item in `nodes` used for creating a
            NodeHandle. Increased every time a handle reaches removeNode(). Has
@@ -357,7 +361,9 @@ union Node {
            ID to all 1s, to avoid calling removeNode() again on free items in
            clean(). There's no other way to distinguish free and used nodes
            apart from walking the free list. */
-        NodeHandle parentOrOrder;
+        NodeHandle parent;
+
+        UnsignedInt:32;
 
         /* The generation value has to be preserved in order to increment it
            next time it gets used */
@@ -372,7 +378,7 @@ union Node {
 static_assert(std::is_trivially_copyable<Node>::value, "Node not trivially copyable");
 #endif
 static_assert(
-    offsetof(Node::Used, parentOrOrder) == offsetof(Node::Free, parentOrOrder) &&
+    offsetof(Node::Used, parent) == offsetof(Node::Free, parent) &&
     offsetof(Node::Used, generation) == offsetof(Node::Free, generation),
     "Node::Used and Free layout not compatible");
 
@@ -472,8 +478,8 @@ struct AbstractUserInterface::State {
 
     Containers::Array<NodeOrder> nodeOrder;
     /* Doesn't point into the `nodeOrder` array but instead is a handle, for
-       which then then the ID of `Node::parentOrOrder` points into the
-       `nodeOrder` array. If null, there's no nodes to process at all. */
+       which then then `Node::order` points into the `nodeOrder` array. If
+       null, there's no nodes to process at all. */
     NodeHandle firstNodeOrder = NodeHandle::Null;
     /* Index into the `nodeOrder` array. The `NodeOrder` then has a
        `nextFree` member containing the next free index. No handles are exposed
@@ -1583,9 +1589,11 @@ std::size_t AbstractUserInterface::nodeCapacity() const {
 
 std::size_t AbstractUserInterface::nodeUsedCount() const {
     /* The "pointer" chasing in here is a bit nasty, but there's no other way
-       to know which nodes are actually used and which not. The parentOrOrder
-       is a certain bit pattern for unused nodes, yes, but it's also the same
-       pattern for top-level nodes that aren't included in draw order. */
+       to know which nodes are actually used and which not. The parent is Null
+       for unused nodes, yes, but it's also Null for top-level nodes, and
+       changing it to some other bit pattern such as generation being 0 would
+       mean orphaned node removal in clean() has to do a more complex check
+       than just comparing against Null. */
     const State& state = *_state;
     std::size_t free = 0;
     UnsignedInt index = state.firstFreeNode;
@@ -1646,14 +1654,15 @@ NodeHandle AbstractUserInterface::createNode(const NodeHandle parent, const Vect
     node->used.flags = flags;
     node->used.offset = offset;
     node->used.size = size;
+    node->used.parent = parent;
     const NodeHandle handle = nodeHandle(node - state.nodes, node->used.generation);
 
     /* If a root node, implicitly mark it as last in the node order, so
-       it's drawn at the front. */
-    if(parent == NodeHandle::Null) {
-        node->used.parentOrOrder = nodeHandle((1 << Implementation::NodeHandleIdBits) - 1, 0);
+       it's drawn at the front. The setNodeOrder() internally reconnects, so
+       set ~UnsignedInt{} first to mark it as not in top-level order yet. */
+    node->used.order = ~UnsignedInt{};
+    if(parent == NodeHandle::Null)
         setNodeOrder(handle, NodeHandle::Null);
-    } else node->used.parentOrOrder = parent;
 
     /* Mark the UI as needing an update() call to refresh node state */
     state.state |= UserInterfaceState::NeedsNodeUpdate;
@@ -1668,11 +1677,7 @@ NodeHandle AbstractUserInterface::createNode(const Vector2& offset, const Vector
 NodeHandle AbstractUserInterface::nodeParent(const NodeHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::nodeParent(): invalid handle" << handle, {});
-    /* If the parent node generation is 0, it's a root node. Its ID
-       stores an index into `_state->nodeOrder`, so can't return it
-       directly in that case. */
-    const NodeHandle parent = _state->nodes[nodeHandleId(handle)].used.parentOrOrder;
-    return nodeHandleGeneration(parent) == 0 ? NodeHandle::Null : parent;
+    return _state->nodes[nodeHandleId(handle)].used.parent;
 }
 
 Vector2 AbstractUserInterface::nodeOffset(const NodeHandle handle) const {
@@ -1764,7 +1769,7 @@ inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
 
     /* If this was a root node, remove it from the visible list (in case it
        was there) */
-    if(nodeHandleGeneration(node.used.parentOrOrder) == 0)
+    if(node.used.parent == NodeHandle::Null)
         /** @todo call some internal API instead, this repeats all asserts */
         clearNodeOrder(nodeHandle(id, node.used.generation));
 
@@ -1782,11 +1787,10 @@ void AbstractUserInterface::removeNestedNodeInternal(const UnsignedInt id) {
        node are invalidated */
     ++node.used.generation;
 
-    /* Parent the node to the root (and not include it in the order, so all 1s)
-       to prevent it from being removed again in clean() when its parents get
-       removed as well. Removing more than once would lead to cycles in the
-       free list. */
-    node.used.parentOrOrder = nodeHandle((1 << Implementation::NodeHandleIdBits) - 1, 0);
+    /* Parent the node to the root to prevent it from being removed again in
+       clean() when its parents get removed as well. Removing more than once
+       would lead to cycles in the free list. */
+    node.used.parent = NodeHandle::Null;
 
     /* If the generation wrapped around, exit without putting it to the free
        list. That makes it disabled, i.e. impossible to be recycled later, to
@@ -1840,74 +1844,72 @@ NodeHandle AbstractUserInterface::nodeOrderLast() const {
     const State& state = *_state;
     if(state.firstNodeOrder == NodeHandle::Null)
         return NodeHandle::Null;
-    const NodeHandle order = state.nodes[nodeHandleId(state.firstNodeOrder)].used.parentOrOrder;
-    CORRADE_INTERNAL_ASSERT(nodeHandleGeneration(order) == 0);
-    return state.nodeOrder[nodeHandleId(order)].used.previous;
+    const UnsignedInt order = state.nodes[nodeHandleId(state.firstNodeOrder)].used.order;
+    CORRADE_INTERNAL_ASSERT(order != ~UnsignedInt{});
+    return state.nodeOrder[order].used.previous;
 }
 
 bool AbstractUserInterface::isNodeOrdered(const NodeHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::isNodeOrdered(): invalid handle" << handle, {});
-    const NodeHandle order = _state->nodes[nodeHandleId(handle)].used.parentOrOrder;
-    CORRADE_ASSERT(nodeHandleGeneration(order) == 0,
+    const Node& node = _state->nodes[nodeHandleId(handle)];
+    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
         "Whee::AbstractUserInterface::isNodeOrdered():" << handle << "is not a root node", {});
-    return nodeHandleId(order) != (1 << Implementation::NodeHandleIdBits) - 1;
+    return node.used.order != ~UnsignedInt{};
 }
 
 NodeHandle AbstractUserInterface::nodeOrderPrevious(const NodeHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::nodeOrderPrevious(): invalid handle" << handle, {});
     const State& state = *_state;
-    const NodeHandle order = state.nodes[nodeHandleId(handle)].used.parentOrOrder;
-    CORRADE_ASSERT(nodeHandleGeneration(order) == 0,
+    const Node& node = state.nodes[nodeHandleId(handle)];
+    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
         "Whee::AbstractUserInterface::nodeOrderPrevious():" << handle << "is not a root node", {});
     if(state.firstNodeOrder == handle)
         return NodeHandle::Null;
-    const UnsignedInt id = nodeHandleId(order);
-    if(id == (1 << Implementation::NodeHandleIdBits) - 1)
+    if(node.used.order == ~UnsignedInt{})
         return NodeHandle::Null;
-    return state.nodeOrder[id].used.previous;
+    return state.nodeOrder[node.used.order].used.previous;
 }
 
 NodeHandle AbstractUserInterface::nodeOrderNext(const NodeHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::nodeOrderNext(): invalid handle" << handle, {});
     const State& state = *_state;
-    const NodeHandle order = state.nodes[nodeHandleId(handle)].used.parentOrOrder;
-    CORRADE_ASSERT(nodeHandleGeneration(order) == 0,
+    const Node& node = state.nodes[nodeHandleId(handle)];
+    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
         "Whee::AbstractUserInterface::nodeOrderNext():" << handle << "is not a root node", {});
-    const UnsignedInt id = nodeHandleId(order);
-    if(id == (1 << Implementation::NodeHandleIdBits) - 1)
+    if(node.used.order == ~UnsignedInt{})
         return NodeHandle::Null;
-    const NodeHandle next = state.nodeOrder[id].used.next;
+    const NodeHandle next = state.nodeOrder[node.used.order].used.next;
     if(state.firstNodeOrder == next)
         return NodeHandle::Null;
     return next;
 }
 
 /* This only removes the node from the order list. Potential updating of the
-   node `parentOrOrder` field as well as adding the `orderId` to the free
-   list is responsibility of the caller -- only clearNodeOrder() needs to do
-   both, setNodeOrder() maybe neither */
+   node `order` field as well as adding the `order` ID to the free list is
+   responsibility of the caller -- only clearNodeOrder() needs to do both,
+   setNodeOrder() maybe neither */
 void AbstractUserInterface::clearNodeOrderInternal(const NodeHandle handle) {
     State& state = *_state;
-    const UnsignedInt orderId = nodeHandleId(state.nodes[nodeHandleId(handle)].used.parentOrOrder);
-    CORRADE_INTERNAL_ASSERT(orderId != (1 << Implementation::NodeHandleIdBits) - 1);
+    const UnsignedInt order = state.nodes[nodeHandleId(handle)].used.order;
+    CORRADE_INTERNAL_ASSERT(order != ~UnsignedInt{});
 
-    const NodeHandle originalPrevious = state.nodeOrder[orderId].used.previous;
-    const NodeHandle originalNext = state.nodeOrder[orderId].used.next;
+    const NodeHandle originalPrevious = state.nodeOrder[order].used.previous;
+    const NodeHandle originalNext = state.nodeOrder[order].used.next;
     CORRADE_INTERNAL_ASSERT(isHandleValid(originalPrevious) && isHandleValid(originalNext));
 
-    const NodeHandle originalPreviousOrder = state.nodes[nodeHandleId(originalPrevious)].used.parentOrOrder;
-    const NodeHandle originalNextOrder = state.nodes[nodeHandleId(originalNext)].used.parentOrOrder;
-    CORRADE_INTERNAL_ASSERT(nodeHandleGeneration(originalPreviousOrder) == 0);
-    CORRADE_INTERNAL_ASSERT(nodeHandleGeneration(originalNextOrder) == 0);
+    const UnsignedInt originalPreviousOrder = state.nodes[nodeHandleId(originalPrevious)].used.order;
+    const UnsignedInt originalNextOrder = state.nodes[nodeHandleId(originalNext)].used.order;
+    CORRADE_INTERNAL_ASSERT(originalPreviousOrder != ~UnsignedInt{});
+    CORRADE_INTERNAL_ASSERT(originalNextOrder != ~UnsignedInt{});
 
     /* This works correctly also in case of there being just a single item in
        the list (i.e., originalPreviousOrder == originalNextOrder == order), as
        the nodeOrder entry gets unused after */
-    state.nodeOrder[nodeHandleId(originalPreviousOrder)].used.next = originalNext;
-    state.nodeOrder[nodeHandleId(originalNextOrder)].used.previous = originalPrevious;
+    state.nodeOrder[originalPreviousOrder].used.next = originalNext;
+    state.nodeOrder[originalNextOrder].used.previous = originalPrevious;
     if(state.firstNodeOrder == handle) {
         if(handle == originalNext)
             state.firstNodeOrder = NodeHandle::Null;
@@ -1919,10 +1921,9 @@ void AbstractUserInterface::clearNodeOrderInternal(const NodeHandle handle) {
 void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHandle before) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::setNodeOrder(): invalid handle" << handle, );
-    const UnsignedInt id = nodeHandleId(handle);
     State& state = *_state;
-    NodeHandle& order = state.nodes[id].used.parentOrOrder;
-    CORRADE_ASSERT(nodeHandleGeneration(order) == 0,
+    Node& node = state.nodes[nodeHandleId(handle)];
+    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
         "Whee::AbstractUserInterface::setNodeOrder():" << handle << "is not a root node", );
     #ifndef CORRADE_NO_ASSERT
     if(before != NodeHandle::Null) {
@@ -1930,21 +1931,20 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
             "Whee::AbstractUserInterface::setNodeOrder(): invalid before handle" << before, );
         CORRADE_ASSERT(handle != before,
             "Whee::AbstractUserInterface::setNodeOrder(): can't order" << handle << "before itself", );
-        const NodeHandle nextOrder = state.nodes[nodeHandleId(before)].used.parentOrOrder;
-        CORRADE_ASSERT(nodeHandleGeneration(nextOrder) == 0,
+        const Node& next = state.nodes[nodeHandleId(before)];
+        CORRADE_ASSERT(next.used.parent == NodeHandle::Null,
             "Whee::AbstractUserInterface::setNodeOrder():" << before << "is not a root node", );
-        CORRADE_ASSERT(nodeHandleId(nextOrder) != (1 << Implementation::NodeHandleIdBits) - 1,
+        CORRADE_ASSERT(next.used.order != ~UnsignedInt{},
             "Whee::AbstractUserInterface::setNodeOrder():" << before << "is not ordered", );
     }
     #endif
 
     /* If the node isn't in the order yet, add it */
-    UnsignedInt orderId = nodeHandleId(order);
-    if(orderId == (1 << Implementation::NodeHandleIdBits) - 1) {
+    if(node.used.order == ~UnsignedInt{}) {
         /* Find the first free slot if there is, update the free index to point
            to the next one (or none) */
         if(state.firstFreeNodeOrder != ~UnsignedInt{}) {
-            orderId = state.firstFreeNodeOrder;
+            node.used.order = state.firstFreeNodeOrder;
             state.firstFreeNodeOrder = state.nodeOrder[state.firstFreeNodeOrder].free.next;
 
         /* If there isn't, allocate a new one */
@@ -1953,40 +1953,36 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
                check against max size -- because in that case there wouldn't be
                any free node handles left to call this function with
                anyway */
-            orderId = state.nodeOrder.size();
+            node.used.order = state.nodeOrder.size();
             arrayAppend(state.nodeOrder, NoInit, 1);
         }
 
-        /* Update the ID in the node itself, keeping the generation at 0 */
-        order = nodeHandle(orderId, 0);
-
     /* Otherwise remove it from the previous location in the linked list. The
-       `orderId` stays the same -- it's reused. */
+       `node.used.order` stays the same -- it's reused. */
     } else clearNodeOrderInternal(handle);
 
     /* This is the first ever node to be in the order, no need to connect
        with anything else */
     if(state.firstNodeOrder == NodeHandle::Null) {
         CORRADE_INTERNAL_ASSERT(before == NodeHandle::Null);
-        state.nodeOrder[orderId].used.previous = handle;
-        state.nodeOrder[orderId].used.next = handle;
+        state.nodeOrder[node.used.order].used.previous = handle;
+        state.nodeOrder[node.used.order].used.next = handle;
         state.firstNodeOrder = handle;
 
     /* Otherwise connect to both previous and next */
     } else {
         const NodeHandle next = before == NodeHandle::Null ?
             state.firstNodeOrder : before;
-        const NodeHandle nextOrder = state.nodes[nodeHandleId(next)].used.parentOrOrder;
-        CORRADE_INTERNAL_ASSERT(nodeHandleGeneration(nextOrder) == 0);
-        const UnsignedInt nextOrderId = nodeHandleId(nextOrder);
-        const NodeHandle previous = state.nodeOrder[nextOrderId].used.previous;
-        const NodeHandle previousOrder = state.nodes[nodeHandleId(previous)].used.parentOrOrder;
-        CORRADE_INTERNAL_ASSERT(nodeHandleGeneration(previousOrder) == 0);
+        const UnsignedInt nextOrder = state.nodes[nodeHandleId(next)].used.order;
+        CORRADE_INTERNAL_ASSERT(nextOrder != ~UnsignedInt{});
+        const NodeHandle previous = state.nodeOrder[nextOrder].used.previous;
+        const UnsignedInt previousOrder = state.nodes[nodeHandleId(previous)].used.order;
+        CORRADE_INTERNAL_ASSERT(previousOrder != ~UnsignedInt{});
 
-        state.nodeOrder[orderId].used.previous = previous;
-        state.nodeOrder[orderId].used.next = next;
-        state.nodeOrder[nodeHandleId(previousOrder)].used.next = handle;
-        state.nodeOrder[nextOrderId].used.previous = handle;
+        state.nodeOrder[node.used.order].used.previous = previous;
+        state.nodeOrder[node.used.order].used.next = next;
+        state.nodeOrder[previousOrder].used.next = handle;
+        state.nodeOrder[nextOrder].used.previous = handle;
 
         /* If the `before` node was first, the new node is now first */
         if(state.firstNodeOrder == before)
@@ -2001,22 +1997,20 @@ void AbstractUserInterface::clearNodeOrder(const NodeHandle handle) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::clearNodeOrder(): invalid handle" << handle, );
     State& state = *_state;
-    const UnsignedInt id = nodeHandleId(handle);
-    const NodeHandle order = state.nodes[id].used.parentOrOrder;
-    CORRADE_ASSERT(nodeHandleGeneration(order) == 0,
+    Node& node = state.nodes[nodeHandleId(handle)];
+    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
         "Whee::AbstractUserInterface::clearNodeOrder():" << handle << "is not a root node", );
 
     /* If the node isn't in the order, nothing to do */
-    const UnsignedInt orderId = nodeHandleId(order);
-    if(orderId == (1 << Implementation::NodeHandleIdBits) - 1)
+    if(node.used.order == ~UnsignedInt{})
         return;
 
     /* Otherwise remove it from the linked list, put the index to the free list
        and mark the node as not in the order */
     clearNodeOrderInternal(handle);
-    state.nodeOrder[orderId].free.next = state.firstFreeNodeOrder;
-    state.firstFreeNodeOrder = orderId;
-    state.nodes[id].used.parentOrOrder = nodeHandle((1 << Implementation::NodeHandleIdBits) - 1, 0);
+    state.nodeOrder[node.used.order].free.next = state.firstFreeNodeOrder;
+    state.firstFreeNodeOrder = node.used.order;
+    node.used.order = ~UnsignedInt{};
 
     /* Mark the UI as needing an update() call to refresh node state */
     state.state |= UserInterfaceState::NeedsNodeUpdate;
@@ -2055,7 +2049,7 @@ AbstractUserInterface& AbstractUserInterface::clean() {
             (skipped) cleanRemoveNestedNodesRecycledHandleOrphanedCycle()
             test */
         Implementation::orderNodesBreadthFirstInto(
-            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parentOrOrder),
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
             childrenOffsets, children, nodeIds);
 
         /* 2. Go through the ordered nodes (skipping the first element which is
@@ -2068,7 +2062,7 @@ AbstractUserInterface& AbstractUserInterface::clean() {
            list. */
         for(const UnsignedInt id: nodeIds.exceptPrefix(1)) {
             const Node& node = state.nodes[id];
-            if(nodeHandleGeneration(node.used.parentOrOrder) != 0 && !isHandleValid(node.used.parentOrOrder))
+            if(node.used.parent != NodeHandle::Null && !isHandleValid(node.used.parent))
                 removeNestedNodeInternal(id);
         }
 
@@ -2364,7 +2358,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
         /* 1. Order the visible node hierarchy. */
         {
             const std::size_t visibleCount = Implementation::orderVisibleNodesDepthFirstInto(
-                stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parentOrOrder),
+                stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
+                stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::order),
                 stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
                 stridedArrayView(state.nodeOrder).slice(&NodeOrder::used).slice(&NodeOrder::Used::next),
                 state.firstNodeOrder, childrenOffsets, children,
@@ -2420,7 +2415,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
         /* 4. Discover top-level layouts to be subsequently fed to layouter
            update() calls. */
         const Containers::Pair<UnsignedInt, std::size_t> maxLevelTopLevelLayoutOffsetCount = Implementation::discoverTopLevelLayoutNodesInto(
-            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parentOrOrder),
+            stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
             state.visibleNodeIds,
             state.layouters.size(),
             nodeLayouts,
@@ -2508,8 +2503,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
             const Node& node = state.nodes[id];
             const Vector2 nodeOffset = state.nodeOffsets[id];
             state.absoluteNodeOffsets[id] =
-                nodeHandleGeneration(node.used.parentOrOrder) == 0 ? nodeOffset :
-                    state.absoluteNodeOffsets[nodeHandleId(node.used.parentOrOrder)] + nodeOffset;
+                node.used.parent == NodeHandle::Null ? nodeOffset :
+                    state.absoluteNodeOffsets[nodeHandleId(node.used.parent)] + nodeOffset;
         }
     }
 

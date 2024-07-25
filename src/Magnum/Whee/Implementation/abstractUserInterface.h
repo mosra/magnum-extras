@@ -55,11 +55,11 @@ namespace Magnum { namespace Whee { namespace Implementation { namespace {
    The `childrenOffsets` and `children` arrays are temporary storage. The
    `childrenOffsets` array has to be zero-initialized. Others don't need to
    be. */
-void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParentOrOrder, const Containers::ArrayView<UnsignedInt> childrenOffsets, const Containers::ArrayView<UnsignedInt> children, const Containers::ArrayView<Int> nodeIds) {
+void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::ArrayView<UnsignedInt> childrenOffsets, const Containers::ArrayView<UnsignedInt> children, const Containers::ArrayView<Int> nodeIds) {
     CORRADE_INTERNAL_ASSERT(
-        childrenOffsets.size() == nodeParentOrOrder.size() + 2 &&
-        children.size() == nodeParentOrOrder.size() &&
-        nodeIds.size() == nodeParentOrOrder.size() + 1);
+        childrenOffsets.size() == nodeParents.size() + 2 &&
+        children.size() == nodeParents.size() &&
+        nodeIds.size() == nodeParents.size() + 1);
 
     /* Children offset for each node including root (unparented) nodes. Handle
        generation is ignored here, so free and invalid nodes are counted as
@@ -67,9 +67,9 @@ void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeH
 
        First calculate the count of children for each, skipping the first
        element (root is at index 1, first node at index 2) ... */
-    for(const NodeHandle parentOrOrder: nodeParentOrOrder) {
-        if(nodeHandleGeneration(parentOrOrder) != 0) {
-            const UnsignedInt parentIndex = nodeHandleId(parentOrOrder);
+    for(const NodeHandle parent: nodeParents) {
+        if(parent != NodeHandle::Null) {
+            const UnsignedInt parentIndex = nodeHandleId(parent);
             ++childrenOffsets[parentIndex + 2];
         } else ++childrenOffsets[1];
     }
@@ -85,7 +85,7 @@ void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeH
             i = offset;
             offset = nextOffset;
         }
-        CORRADE_INTERNAL_ASSERT(offset == nodeParentOrOrder.size());
+        CORRADE_INTERNAL_ASSERT(offset == nodeParents.size());
     }
 
     /* Go through the node list again, convert that to child ranges. The
@@ -93,10 +93,10 @@ void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeH
        now `[childrenOffsets[i + 1], childrenOffsets[i + 2])` is a range in
        which the `children` array below contains a list of children for node
        `i`. The last array element is now containing the end offset. */
-    for(std::size_t i = 0; i != nodeParentOrOrder.size(); ++i) {
-        const NodeHandle parentOrOrder = nodeParentOrOrder[i];
+    for(std::size_t i = 0; i != nodeParents.size(); ++i) {
+        const NodeHandle parent = nodeParents[i];
 
-        children[childrenOffsets[nodeHandleGeneration(parentOrOrder) == 0 ? 1 : nodeHandleId(parentOrOrder) + 2]++] = i;
+        children[childrenOffsets[parent == NodeHandle::Null ? 1 : nodeHandleId(parent) + 2]++] = i;
     }
 
     /* Go breadth-first (so we have items sharing the same parent next to each
@@ -112,7 +112,7 @@ void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeH
             ++outputOffset;
         }
     }
-    CORRADE_INTERNAL_ASSERT(outputOffset == nodeParentOrOrder.size());
+    CORRADE_INTERNAL_ASSERT(outputOffset == nodeParents.size());
 }
 
 /* The `visibleNodeIds` and `visibleNodeChildrenCounts` arrays get filled with
@@ -126,16 +126,17 @@ void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeH
    The `childrenOffsets`, `children` and `parentsToProcess` arrays are
    temporary storage. The `childrenOffsets` array has to be zero-initialized.
    Other outputs don't need to be. */
-std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParentOrOrder, const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::StridedArrayView1D<const NodeHandle>& nodeOrderNext, const NodeHandle firstNodeOrder, const Containers::ArrayView<UnsignedInt> childrenOffsets, const Containers::ArrayView<UnsignedInt> children, const Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess, const Containers::StridedArrayView1D<UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<UnsignedInt>& visibleNodeChildrenCounts) {
+std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const UnsignedInt>& nodeOrder, const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::StridedArrayView1D<const NodeHandle>& nodeOrderNext, const NodeHandle firstNodeOrder, const Containers::ArrayView<UnsignedInt> childrenOffsets, const Containers::ArrayView<UnsignedInt> children, const Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess, const Containers::StridedArrayView1D<UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<UnsignedInt>& visibleNodeChildrenCounts) {
     CORRADE_INTERNAL_ASSERT(
-        nodeFlags.size() == nodeParentOrOrder.size() &&
-        childrenOffsets.size() == nodeParentOrOrder.size() + 1 &&
-        children.size() == nodeParentOrOrder.size() &&
-        /* It only reaches nodeParentOrOrder.size() if the hierarchy is a
-           single branch, usually it's shorter. */
-        parentsToProcess.size() == nodeParentOrOrder.size() &&
-        visibleNodeIds.size() == nodeParentOrOrder.size() &&
-        visibleNodeChildrenCounts.size() == nodeParentOrOrder.size());
+        nodeOrder.size() == nodeParents.size() &&
+        nodeFlags.size() == nodeParents.size() &&
+        childrenOffsets.size() == nodeParents.size() + 1 &&
+        children.size() == nodeParents.size() &&
+        /* It only reaches nodeParents.size() if the hierarchy is a single
+           branch, usually it's shorter. */
+        parentsToProcess.size() == nodeParents.size() &&
+        visibleNodeIds.size() == nodeParents.size() &&
+        visibleNodeChildrenCounts.size() == nodeParents.size());
 
     /* If there are no top-level nodes, nothing is visible and thus nothing to
        do */
@@ -149,12 +150,12 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
 
        First calculate the count of children for each, skipping the first
        element ... */
-    for(const NodeHandle parentOrOrder: nodeParentOrOrder) {
-        if(nodeHandleGeneration(parentOrOrder) == 0)
+    for(std::size_t i = 0; i != nodeParents.size(); ++i) {
+        const NodeHandle parent = nodeParents[i];
+        if(parent == NodeHandle::Null)
             continue;
-
-        const UnsignedInt parentIndex = nodeHandleId(parentOrOrder);
-        ++childrenOffsets[parentIndex + 1];
+        CORRADE_INTERNAL_DEBUG_ASSERT(nodeOrder[i] == ~UnsignedInt{});
+        ++childrenOffsets[nodeHandleId(parent) + 1];
     }
 
     /* ... then convert the counts to a running offset. Now
@@ -176,11 +177,11 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
        range in which the `children` array below contains a list of children
        for node `i`. The last array element is now containing the end
        offset. */
-    for(std::size_t i = 0; i != nodeParentOrOrder.size(); ++i) {
-        const NodeHandle parentOrOrder = nodeParentOrOrder[i];
-        if(nodeHandleGeneration(parentOrOrder) == 0)
+    for(std::size_t i = 0; i != nodeParents.size(); ++i) {
+        const NodeHandle parent = nodeParents[i];
+        if(parent == NodeHandle::Null)
             continue;
-        children[childrenOffsets[nodeHandleId(parentOrOrder) + 1]++] = i;
+        children[childrenOffsets[nodeHandleId(parent) + 1]++] = i;
     }
 
     UnsignedInt outputOffset = 0;
@@ -231,10 +232,11 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
                 }
             }
 
-            topLevel = nodeOrderNext[nodeHandleId(nodeParentOrOrder[topLevelId])];
+            CORRADE_INTERNAL_DEBUG_ASSERT(nodeOrder[topLevelId] != ~UnsignedInt{});
+            topLevel = nodeOrderNext[nodeOrder[topLevelId]];
         } while(topLevel != firstNodeOrder);
     }
-    CORRADE_INTERNAL_ASSERT(outputOffset <= nodeParentOrOrder.size());
+    CORRADE_INTERNAL_ASSERT(outputOffset <= nodeParents.size());
 
     return outputOffset;
 }
@@ -299,9 +301,9 @@ template<NodeFlag flag> void propagateNodeFlagToChildrenInto(const Containers::S
    temporary storage, the `nodeLayoutLevels` and `layoutLevelOffsets` arrays
    are expected to be zero-initialized. The first return value is meant to be
    subsequently used for sizing inputs to `fillLayoutUpdateMasksInto()`. */
-Containers::Pair<UnsignedInt, std::size_t> discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParentOrOrder, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const UnsignedInt layouterCount, const Containers::StridedArrayView2D<const LayoutHandle>& nodeLayouts, const Containers::StridedArrayView2D<UnsignedInt>& nodeLayoutLevels, const Containers::ArrayView<UnsignedInt> layoutLevelOffsets, const Containers::StridedArrayView1D<LayoutHandle>& topLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutLevels, const Containers::StridedArrayView1D<LayoutHandle>& levelPartitionedTopLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutOffsets, const Containers::StridedArrayView1D<UnsignedByte>& topLevelLayoutLayouterIds, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutIds) {
+Containers::Pair<UnsignedInt, std::size_t> discoverTopLevelLayoutNodesInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const UnsignedInt layouterCount, const Containers::StridedArrayView2D<const LayoutHandle>& nodeLayouts, const Containers::StridedArrayView2D<UnsignedInt>& nodeLayoutLevels, const Containers::ArrayView<UnsignedInt> layoutLevelOffsets, const Containers::StridedArrayView1D<LayoutHandle>& topLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutLevels, const Containers::StridedArrayView1D<LayoutHandle>& levelPartitionedTopLevelLayouts, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutOffsets, const Containers::StridedArrayView1D<UnsignedByte>& topLevelLayoutLayouterIds, const Containers::StridedArrayView1D<UnsignedInt>& topLevelLayoutIds) {
     CORRADE_INTERNAL_ASSERT(
-        nodeLayouts.size()[0] == nodeParentOrOrder.size() &&
+        nodeLayouts.size()[0] == nodeParents.size() &&
         nodeLayouts.isContiguous<1>() &&
         nodeLayoutLevels.size() == nodeLayouts.size() &&
         nodeLayoutLevels.isContiguous<1>() &&
@@ -334,7 +336,7 @@ Containers::Pair<UnsignedInt, std::size_t> discoverTopLevelLayoutNodesInto(const
        layouts with a higher index get always calculated after layouts with a
        lower index. */
     for(const UnsignedInt nodeId: visibleNodeIds) {
-        CORRADE_INTERNAL_DEBUG_ASSERT(nodeId < nodeParentOrOrder.size());
+        CORRADE_INTERNAL_DEBUG_ASSERT(nodeId < nodeParents.size());
 
         const Containers::ArrayView<const LayoutHandle> layouts = nodeLayouts[nodeId].asContiguous();
         const Containers::ArrayView<UnsignedInt> layoutLevels = nodeLayoutLevels[nodeId].asContiguous();
@@ -345,7 +347,7 @@ Containers::Pair<UnsignedInt, std::size_t> discoverTopLevelLayoutNodesInto(const
            nodeLayouts array passed to this function) assigned to a root node
            gets level 0, each subsequent layout assigned to the same node gets
            a higher level. */
-        if(nodeHandleGeneration(nodeParentOrOrder[nodeId]) == 0) {
+        if(nodeParents[nodeId] == NodeHandle::Null) {
             for(std::size_t i = 0; i != layouts.size(); ++i) {
                 if(layouts[i] != LayoutHandle::Null) {
                     /* The layoutLevels get the level + 1, 0 indicating the
@@ -362,7 +364,7 @@ Containers::Pair<UnsignedInt, std::size_t> discoverTopLevelLayoutNodesInto(const
            level depending on whether the parent node is assigned a layout from
            the same layouter or not */
         } else {
-            const UnsignedInt parentNodeId = nodeHandleId(nodeParentOrOrder[nodeId]);
+            const UnsignedInt parentNodeId = nodeHandleId(nodeParents[nodeId]);
             const Containers::ArrayView<const LayoutHandle> parentLayouts = nodeLayouts[parentNodeId].asContiguous();
             const Containers::ArrayView<const UnsignedInt> parentLayoutLevels = nodeLayoutLevels[parentNodeId].asContiguous();
 
