@@ -535,10 +535,9 @@ void AbstractUserInterfaceImplementationTest::orderNodesBreadthFirst() {
     } nodes[]{
         /* Forward parent reference */
         {nodeHandle(9, 0x123)},           /* 0 */
-        /* Root elements. The IDs aren't used for anything so they can be
-           arbitrary. */
-        {nodeHandle(0xdead, 0)},          /* 1 */
-        {nodeHandle(0xfefe, 0)},          /* 2 */
+        /* Root elements */
+        {NodeHandle::Null},               /* 1 */
+        {NodeHandle::Null},               /* 2 */
         /* Backward parent reference */
         {nodeHandle(1, 0xabc)},           /* 3 */
         /* Deep hierarchy */
@@ -549,7 +548,7 @@ void AbstractUserInterfaceImplementationTest::orderNodesBreadthFirst() {
         {nodeHandle(8, 0x1)},             /* 7 */
         {nodeHandle(1, 0x1)},             /* 8 */
         /* More root elements */
-        {nodeHandle(0xcafe, 0)}           /* 9 */
+        {NodeHandle::Null}                /* 9 */
     };
 
     /* Important: the childrenOffsets array has to be zero-initialized. Others
@@ -586,31 +585,32 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirst() {
     /* Non-zero handle generations aren't used for anything here so can be
        arbitrary */
     const struct Node {
-        NodeHandle parentOrOrder;
+        NodeHandle parent;
+        UnsignedInt order;
         NodeFlags flags;
     } nodes[]{
         /* Forward parent reference */
-        {nodeHandle(13, 0x123), {}},                /* 0 */
+        {nodeHandle(13, 0x123), ~UnsignedInt{}, {}},            /* 0 */
         /* Root elements, the middle one isn't included in the order and its ID
            can again be whatever for purposes of this algorithm */
-        {nodeHandle(2, 0), {}},                     /* 1 */
-        {nodeHandle(0xfefe, 0), {}},                /* 2 */
-        {nodeHandle(7, 0), {}},                     /* 3 */
+        {NodeHandle::Null, 2, {}},                              /* 1 */
+        {NodeHandle::Null, 0xfefe, {}},                         /* 2 */
+        {NodeHandle::Null, 7, {}},                              /* 3 */
         /* Backward parent reference */
-        {nodeHandle(1, 0xabc), {}},                 /* 4 */
+        {nodeHandle(1, 0xabc), ~UnsignedInt{}, {}},             /* 4 */
         /* Deep hierarchy */
-        {nodeHandle(4, 0x1), {}},                   /* 5 */
-        {nodeHandle(5, 0xfff), {}},                 /* 6 */
+        {nodeHandle(4, 0x1), ~UnsignedInt{}, {}},               /* 5 */
+        {nodeHandle(5, 0xfff), ~UnsignedInt{}, {}},             /* 6 */
         /* Hidden nodes, the first is top-level */
-        {nodeHandle(3, 0), NodeFlag::Hidden},       /* 7 */
-        {nodeHandle(1, 0xebe), NodeFlag::Hidden},   /* 8 */
+        {NodeHandle::Null, 3, NodeFlag::Hidden},                /* 7 */
+        {nodeHandle(1, 0xebe), ~UnsignedInt{}, NodeFlag::Hidden}, /* 8 */
         /* Multiple children */
-        {nodeHandle(1, 0x1), {}},                   /* 9 */
-        {nodeHandle(11, 0x1), {}},                  /* 10 */
-        {nodeHandle(1, 0x1), {}},                   /* 11 */
+        {nodeHandle(1, 0x1), ~UnsignedInt{}, {}},               /* 9 */
+        {nodeHandle(11, 0x1), ~UnsignedInt{}, {}},              /* 10 */
+        {nodeHandle(1, 0x1), ~UnsignedInt{}, {}},               /* 11 */
         /* More root elements, the first isn't included in the order */
-        {nodeHandle(0xbaba, 0), {}},                /* 12 */
-        {nodeHandle(6, 0), {}}                      /* 13 */
+        {NodeHandle::Null, 0xbaba, {}},                         /* 12 */
+        {NodeHandle::Null, 6, {}}                               /* 13 */
     };
 
     /* The generation can be again arbitrary but it has to match with
@@ -641,7 +641,8 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirst() {
     Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt> parentsToProcess[Containers::arraySize(nodes)];
     Containers::Pair<UnsignedInt, UnsignedInt> out[Containers::arraySize(nodes)];
     std::size_t count = Implementation::orderVisibleNodesDepthFirstInto(
-        Containers::stridedArrayView(nodes).slice(&Node::parentOrOrder),
+        Containers::stridedArrayView(nodes).slice(&Node::parent),
+        Containers::stridedArrayView(nodes).slice(&Node::order),
         Containers::stridedArrayView(nodes).slice(&Node::flags),
         Containers::stridedArrayView(nodeOrder).slice(&NodeOrder::next),
         firstNodeOrder, childrenOffsets, children, parentsToProcess,
@@ -680,18 +681,19 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstSingleB
        lead to the longest stack in orderVisibleNodesDepthFirstInto(). */
 
     const struct Node {
-        NodeHandle parentOrOrder;
+        NodeHandle parent;
+        UnsignedInt order;
         NodeFlags flags;
     } nodes[]{
-        {nodeHandle(0, 0), {}},             /* 0 */
-        {nodeHandle(0, 0xabc), {}},         /* 1 */
-        {nodeHandle(3, 0xbca), {}},         /* 2 */
-        {nodeHandle(1, 0xcab), {}},         /* 3 */
+        {NodeHandle::Null, 0, {}},                  /* 0 */
+        {nodeHandle(0, 0xabc), ~UnsignedInt{}, {}}, /* 1 */
+        {nodeHandle(3, 0xbca), ~UnsignedInt{}, {}}, /* 2 */
+        {nodeHandle(1, 0xcab), ~UnsignedInt{}, {}}, /* 3 */
     };
     const struct NodeOrder {
         NodeHandle next;
     } nodeOrder[]{
-        {nodeHandle(0, 0xacb)},             /* 0 */
+        {nodeHandle(0, 0xacb)},                     /* 0 */
     };
     const NodeHandle firstNodeOrder = nodeHandle(0, 0xacb);
 
@@ -700,7 +702,8 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstSingleB
     Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt> parentsToProcess[Containers::arraySize(nodes)];
     Containers::Pair<UnsignedInt, UnsignedInt> out[Containers::arraySize(nodes)];
     std::size_t count = Implementation::orderVisibleNodesDepthFirstInto(
-        Containers::stridedArrayView(nodes).slice(&Node::parentOrOrder),
+        Containers::stridedArrayView(nodes).slice(&Node::parent),
+        Containers::stridedArrayView(nodes).slice(&Node::order),
         Containers::stridedArrayView(nodes).slice(&Node::flags),
         Containers::stridedArrayView(nodeOrder).slice(&NodeOrder::next),
         firstNodeOrder, childrenOffsets, children, parentsToProcess,
@@ -719,7 +722,8 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstSingleB
 
 void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstNoTopLevelNodes() {
     struct Node {
-        NodeHandle parentOrOrder;
+        NodeHandle parent;
+        UnsignedInt order;
         NodeFlags flags;
     } nodes[10]; /* {} makes GCC 4.8 crash */
     const struct NodeOrder {
@@ -732,7 +736,8 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstNoTopLe
     Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt> parentsToProcess[Containers::arraySize(nodes)];
     Containers::Pair<UnsignedInt, UnsignedInt> out[Containers::arraySize(nodes)];
     std::size_t count = Implementation::orderVisibleNodesDepthFirstInto(
-        Containers::stridedArrayView(nodes).slice(&Node::parentOrOrder),
+        Containers::stridedArrayView(nodes).slice(&Node::parent),
+        Containers::stridedArrayView(nodes).slice(&Node::order),
         Containers::stridedArrayView(nodes).slice(&Node::flags),
         Containers::stridedArrayView(nodeOrder).slice(&NodeOrder::next),
         NodeHandle::Null, childrenOffsets, children, parentsToProcess,
@@ -903,19 +908,19 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleL
     LayoutHandle b13 = layoutHandle(layouterB, 0xbbb13, 1);
     /* No layout for node 14, 15 */
 
-    NodeHandle nodeParentOrOrder[16]{};
-    nodeParentOrOrder[nodeHandleId(node0)] = node5;
-    nodeParentOrOrder[nodeHandleId(node1)] = node0;
-    nodeParentOrOrder[nodeHandleId(node2)] = node0;
-    nodeParentOrOrder[nodeHandleId(node3)] = node4;
-    nodeParentOrOrder[nodeHandleId(node4)] = node7;
-    nodeParentOrOrder[nodeHandleId(node5)] = node10;
-    nodeParentOrOrder[nodeHandleId(node6)] = node10;
-    nodeParentOrOrder[nodeHandleId(node7)] = node10;
-    nodeParentOrOrder[nodeHandleId(node8)] = node9;
-    nodeParentOrOrder[nodeHandleId(node11)] = node13;
-    nodeParentOrOrder[nodeHandleId(node13)] = node12;
-    nodeParentOrOrder[nodeHandleId(node14)] = node12;
+    NodeHandle nodeParents[16]{};
+    nodeParents[nodeHandleId(node0)] = node5;
+    nodeParents[nodeHandleId(node1)] = node0;
+    nodeParents[nodeHandleId(node2)] = node0;
+    nodeParents[nodeHandleId(node3)] = node4;
+    nodeParents[nodeHandleId(node4)] = node7;
+    nodeParents[nodeHandleId(node5)] = node10;
+    nodeParents[nodeHandleId(node6)] = node10;
+    nodeParents[nodeHandleId(node7)] = node10;
+    nodeParents[nodeHandleId(node8)] = node9;
+    nodeParents[nodeHandleId(node11)] = node13;
+    nodeParents[nodeHandleId(node13)] = node12;
+    nodeParents[nodeHandleId(node14)] = node12;
 
     /* Again shuffled to test for accidental ordering assumptions, though
        children *have to* be after parents in this case. */
@@ -967,7 +972,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleL
     UnsignedByte topLevelLayoutLayouterIds[16];
     UnsignedInt topLevelLayoutIds[16];
     std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
-        nodeParentOrOrder,
+        nodeParents,
         visibleNodeIds,
         0xef,
         Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts, {16, 2}},
@@ -1025,12 +1030,12 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesMultipl
     LayoutHandle d3 = layoutHandle(layouterD, 0xddd3, 1);
     LayoutHandle e2 = layoutHandle(layouterE, 0xeee2, 1);
 
-    NodeHandle nodeParentOrOrder[0x7]{};
-    nodeParentOrOrder[nodeHandleId(node2)] = node1;
-    nodeParentOrOrder[nodeHandleId(node3)] = node2;
-    nodeParentOrOrder[nodeHandleId(node4)] = node3;
-    nodeParentOrOrder[nodeHandleId(node5)] = node4;
-    nodeParentOrOrder[nodeHandleId(node6)] = node5;
+    NodeHandle nodeParents[0x7]{};
+    nodeParents[nodeHandleId(node2)] = node1;
+    nodeParents[nodeHandleId(node3)] = node2;
+    nodeParents[nodeHandleId(node4)] = node3;
+    nodeParents[nodeHandleId(node5)] = node4;
+    nodeParents[nodeHandleId(node6)] = node5;
 
     UnsignedInt visibleNodeIds[]{
         nodeHandleId(node1),
@@ -1105,7 +1110,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesMultipl
     UnsignedByte topLevelLayoutLayouterIds[11];
     UnsignedInt topLevelLayoutIds[11];
     std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
-        nodeParentOrOrder,
+        nodeParents,
         visibleNodeIds,
         0xef,
         Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts[testCaseInstanceId()], {7, 5}},
@@ -1138,8 +1143,8 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoLayou
     NodeHandle node1 = nodeHandle(0x1, 1);
     NodeHandle node2 = nodeHandle(0x2, 1);
 
-    NodeHandle nodeParentOrOrder[3]{};
-    nodeParentOrOrder[nodeHandleId(node2)] = node1;
+    NodeHandle nodeParents[3]{};
+    nodeParents[nodeHandleId(node2)] = node1;
 
     UnsignedInt visibleNodeIds[]{
         nodeHandleId(node1),
@@ -1150,7 +1155,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoLayou
     UnsignedInt layoutLevelOffsets[1]{};
     UnsignedInt topLevelLayoutOffsets[1];
     std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
-        nodeParentOrOrder,
+        nodeParents,
         visibleNodeIds,
         0xef,
         Containers::StridedArrayView2D<const LayoutHandle>{nullptr, {3, 0}},
@@ -1176,8 +1181,8 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoVisib
     LayoutHandle a1 = layoutHandle(layouterA, 0xaaa1, 1);
     LayoutHandle b2 = layoutHandle(layouterB, 0xbbb2, 1);
 
-    NodeHandle nodeParentOrOrder[3]{};
-    nodeParentOrOrder[nodeHandleId(node2)] = node1;
+    NodeHandle nodeParents[3]{};
+    nodeParents[nodeHandleId(node2)] = node1;
 
     LayoutHandle nodeLayouts[3*2]{
         LayoutHandle{}, LayoutHandle{},
@@ -1190,7 +1195,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesNoVisib
     UnsignedInt layoutLevelOffsets[1]{};
     UnsignedInt topLevelLayoutOffsets[1];
     std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
-        nodeParentOrOrder,
+        nodeParents,
         {},
         0xef,
         Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts, {3, 2}},
@@ -1213,7 +1218,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
     LayouterHandle layouter = layouterHandle(0xaa, 1);
     LayoutHandle a = layoutHandle(layouter, 0xaaa1, 1);
 
-    NodeHandle nodeParentOrOrder[1]{};
+    NodeHandle nodeParents[1]{};
 
     UnsignedInt visibleNodeIds[]{
         nodeHandleId(node),
@@ -1232,7 +1237,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
     UnsignedByte topLevelLayoutLayouterIds[1];
     UnsignedInt topLevelLayoutIds[1];
     std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
-        nodeParentOrOrder,
+        nodeParents,
         visibleNodeIds,
         0xef,
         Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts, {1, 1}},
@@ -1270,7 +1275,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
     LayoutHandle b = layoutHandle(layouterB, 0xbbb1, 1);
     LayoutHandle c = layoutHandle(layouterC, 0xccc1, 1);
 
-    NodeHandle nodeParentOrOrder[1]{};
+    NodeHandle nodeParents[1]{};
 
     UnsignedInt visibleNodeIds[]{
         nodeHandleId(node),
@@ -1289,7 +1294,7 @@ void AbstractUserInterfaceImplementationTest::discoverTopLevelLayoutNodesSingleN
     UnsignedByte topLevelLayoutLayouterIds[3];
     UnsignedInt topLevelLayoutIds[3];
     std::size_t count = Implementation::discoverTopLevelLayoutNodesInto(
-        nodeParentOrOrder,
+        nodeParents,
         visibleNodeIds,
         0xef,
         Containers::StridedArrayView2D<const LayoutHandle>{nodeLayouts, {1, 3}},
