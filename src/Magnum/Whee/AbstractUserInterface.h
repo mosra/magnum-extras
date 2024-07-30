@@ -1384,7 +1384,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * Always at most @ref nodeOrderCapacity(). The operation is done
          * with a @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
-         * @ref nodeOrderCapacity().
+         * @ref nodeOrderCapacity(). When a root node is created, a slot in the
+         * node order storage is used for it, and gets recycled only when the
+         * node is removed again.
          */
         std::size_t nodeOrderUsedCount() const;
 
@@ -2140,8 +2142,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         MAGNUM_WHEE_LOCAL void removeNestedNodeInternal(UnsignedInt id);
         /* Used by setNodeFlags(), addNodeFlags() and clearNodeFlags() */
         MAGNUM_WHEE_LOCAL void setNodeFlagsInternal(UnsignedInt id, NodeFlags flags);
-        /* Used by setNodeOrder() and clearNodeOrder() */
-        MAGNUM_WHEE_LOCAL void clearNodeOrderInternal(NodeHandle handle);
+        /* Used by removeNodeInternal(), setNodeOrder() and clearNodeOrder() */
+        MAGNUM_WHEE_LOCAL bool clearNodeOrderInternal(NodeHandle handle);
         /* Used by *Event() functions */
         MAGNUM_WHEE_LOCAL void callVisibilityLostEventOnNode(UnsignedInt nodeId, VisibilityLostEvent& event, bool canBePressedOrHovering);
         template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> MAGNUM_WHEE_LOCAL bool callFocusEventOnNode(UnsignedInt nodeId, FocusEvent& event);

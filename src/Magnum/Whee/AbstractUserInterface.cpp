@@ -1765,13 +1765,22 @@ void AbstractUserInterface::removeNode(const NodeHandle handle) {
 }
 
 inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
-    const Node& node = _state->nodes[id];
+    State& state = *_state;
+    const Node& node = state.nodes[id];
 
-    /* If this was a root node, remove it from the visible list (in case it
-       was there) */
-    if(node.used.parent == NodeHandle::Null)
-        /** @todo call some internal API instead, this repeats all asserts */
-        clearNodeOrder(nodeHandle(id, node.used.generation));
+    /* If this was a root node, remove it from the node order list. It
+       should always be there, as clearNodeOrder() only disconnects the entry
+       but doesn't recycle it. */
+    if(node.used.parent == NodeHandle::Null) {
+        clearNodeOrderInternal(nodeHandle(id, node.used.generation));
+        CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
+        state.nodeOrder[node.used.order].free.next = state.firstFreeNodeOrder;
+        state.firstFreeNodeOrder = node.used.order;
+
+        /* NeedsNodeUpdate gets set by either removeNode() (implied by
+           NeedsNodeClean) or is already set (again as a consequence of
+           NeedsNodeClean) in order to even enter clean(), which calls here */
+    }
 
     removeNestedNodeInternal(id);
 }
@@ -1852,10 +1861,14 @@ NodeHandle AbstractUserInterface::nodeOrderLast() const {
 bool AbstractUserInterface::isNodeOrdered(const NodeHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::isNodeOrdered(): invalid handle" << handle, {});
-    const Node& node = _state->nodes[nodeHandleId(handle)];
+    const State& state = *_state;
+    const Node& node = state.nodes[nodeHandleId(handle)];
     CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
         "Whee::AbstractUserInterface::isNodeOrdered():" << handle << "is not a root node", {});
-    return node.used.order != ~UnsignedInt{};
+    /* Root nodes have the order allocated implicitly and it's only recycled
+       when the node is removed again */
+    CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
+    return state.nodeOrder[node.used.order].used.previous != NodeHandle::Null;
 }
 
 NodeHandle AbstractUserInterface::nodeOrderPrevious(const NodeHandle handle) const {
@@ -1867,8 +1880,9 @@ NodeHandle AbstractUserInterface::nodeOrderPrevious(const NodeHandle handle) con
         "Whee::AbstractUserInterface::nodeOrderPrevious():" << handle << "is not a root node", {});
     if(state.firstNodeOrder == handle)
         return NodeHandle::Null;
-    if(node.used.order == ~UnsignedInt{})
-        return NodeHandle::Null;
+    /* Root nodes have the order allocated implicitly and it's only recycled
+       when the node is removed again */
+    CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
     return state.nodeOrder[node.used.order].used.previous;
 }
 
@@ -1879,8 +1893,9 @@ NodeHandle AbstractUserInterface::nodeOrderNext(const NodeHandle handle) const {
     const Node& node = state.nodes[nodeHandleId(handle)];
     CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
         "Whee::AbstractUserInterface::nodeOrderNext():" << handle << "is not a root node", {});
-    if(node.used.order == ~UnsignedInt{})
-        return NodeHandle::Null;
+    /* Root nodes have the order allocated implicitly and it's only recycled
+       when the node is removed again */
+    CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
     const NodeHandle next = state.nodeOrder[node.used.order].used.next;
     if(state.firstNodeOrder == next)
         return NodeHandle::Null;
@@ -1888,16 +1903,23 @@ NodeHandle AbstractUserInterface::nodeOrderNext(const NodeHandle handle) const {
 }
 
 /* This only removes the node from the order list. Potential updating of the
-   node `order` field as well as adding the `order` ID to the free list is
-   responsibility of the caller -- only clearNodeOrder() needs to do both,
-   setNodeOrder() maybe neither */
-void AbstractUserInterface::clearNodeOrderInternal(const NodeHandle handle) {
+   `NodeOrder` fields as well as adding the `order` ID to the free list is
+   responsibility of the caller -- only removeNodeInternal() needs to do both,
+   clearNodeOrder() just the update, setNodeOrder() maybe not even the
+   update */
+bool AbstractUserInterface::clearNodeOrderInternal(const NodeHandle handle) {
     State& state = *_state;
     const UnsignedInt order = state.nodes[nodeHandleId(handle)].used.order;
     CORRADE_INTERNAL_ASSERT(order != ~UnsignedInt{});
 
+    /* If the node isn't connected, nothing to do */
     const NodeHandle originalPrevious = state.nodeOrder[order].used.previous;
     const NodeHandle originalNext = state.nodeOrder[order].used.next;
+    if(originalPrevious == NodeHandle::Null) {
+        CORRADE_INTERNAL_ASSERT(originalNext == NodeHandle::Null);
+        return false;
+    }
+
     CORRADE_INTERNAL_ASSERT(isHandleValid(originalPrevious) && isHandleValid(originalNext));
 
     const UnsignedInt originalPreviousOrder = state.nodes[nodeHandleId(originalPrevious)].used.order;
@@ -1916,6 +1938,8 @@ void AbstractUserInterface::clearNodeOrderInternal(const NodeHandle handle) {
         else
             state.firstNodeOrder = originalNext;
     }
+
+    return true;
 }
 
 void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHandle before) {
@@ -1934,12 +1958,17 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
         const Node& next = state.nodes[nodeHandleId(before)];
         CORRADE_ASSERT(next.used.parent == NodeHandle::Null,
             "Whee::AbstractUserInterface::setNodeOrder():" << before << "is not a root node", );
-        CORRADE_ASSERT(next.used.order != ~UnsignedInt{},
+        /* Root nodes have the order allocated implicitly and it's only
+           recycled when the node is removed again */
+        CORRADE_INTERNAL_ASSERT(next.used.order != ~UnsignedInt{});
+        CORRADE_ASSERT(state.nodeOrder[next.used.order].used.previous != NodeHandle::Null && state.nodeOrder[next.used.order].used.next != NodeHandle::Null,
             "Whee::AbstractUserInterface::setNodeOrder():" << before << "is not ordered", );
     }
     #endif
 
-    /* If the node isn't in the order yet, add it */
+    /* If the node isn't in the order yet, add it. Right now that only happens
+       when calling setNodeOrder() from within createNode(), in all cases after
+       the nodeOrder entry is already allocated. */
     if(node.used.order == ~UnsignedInt{}) {
         /* Find the first free slot if there is, update the free index to point
            to the next one (or none) */
@@ -1957,8 +1986,8 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
             arrayAppend(state.nodeOrder, NoInit, 1);
         }
 
-    /* Otherwise remove it from the previous location in the linked list. The
-       `node.used.order` stays the same -- it's reused. */
+    /* Otherwise remove it from the previous location in the linked list, if
+       connected. The `node.used.order` stays the same -- it's reused. */
     } else clearNodeOrderInternal(handle);
 
     /* This is the first ever node to be in the order, no need to connect
@@ -2001,16 +2030,17 @@ void AbstractUserInterface::clearNodeOrder(const NodeHandle handle) {
     CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
         "Whee::AbstractUserInterface::clearNodeOrder():" << handle << "is not a root node", );
 
-    /* If the node isn't in the order, nothing to do */
-    if(node.used.order == ~UnsignedInt{})
+    /* Remove it from the linked list. If not connected, this function is a
+       no-op. */
+    if(!clearNodeOrderInternal(handle))
         return;
 
-    /* Otherwise remove it from the linked list, put the index to the free list
-       and mark the node as not in the order */
-    clearNodeOrderInternal(handle);
-    state.nodeOrder[node.used.order].free.next = state.firstFreeNodeOrder;
-    state.firstFreeNodeOrder = node.used.order;
-    node.used.order = ~UnsignedInt{};
+    /* Set the prev/next handles to null to mark it as not connected. The order
+       is only recycled when the node is removed, to avoid the need to allocate
+       it again once it's put back into the top-level order. */
+    CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
+    state.nodeOrder[node.used.order].used.previous = NodeHandle::Null;
+    state.nodeOrder[node.used.order].used.next = NodeHandle::Null;
 
     /* Mark the UI as needing an update() call to refresh node state */
     state.state |= UserInterfaceState::NeedsNodeUpdate;

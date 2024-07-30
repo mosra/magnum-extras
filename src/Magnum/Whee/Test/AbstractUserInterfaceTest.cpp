@@ -3165,13 +3165,13 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 
-    /* Clearing from a middle of the list */
+    /* Clearing from a middle of the list. The order slot is kept used. */
     ui.clearNodeOrder(second);
     CORRADE_VERIFY(!ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
-    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 3);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
     /* THe rest stays connected */
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
@@ -3185,13 +3185,13 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderFirst(), first);
     CORRADE_COMPARE(ui.nodeOrderLast(), fifth);
 
-    /* Clearing from the back of the list */
+    /* Clearing from the back of the list. The order slot is kept used. */
     ui.clearNodeOrder(first);
     CORRADE_VERIFY(!ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
-    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 2);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
     /* THe rest stays connected */
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
@@ -3202,13 +3202,13 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), fifth);
 
-    /* Clearing from the front of the list */
+    /* Clearing from the front of the list. The order slot is kept used. */
     ui.clearNodeOrder(fifth);
     CORRADE_VERIFY(!ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
-    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 1);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
     /* THe remaining node stays */
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
@@ -3216,7 +3216,7 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), fourth);
 
-    /* Clearing the last node */
+    /* Clearing the last node. The order slot is kept used. */
     ui.clearNodeOrder(fourth);
     CORRADE_VERIFY(!ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
@@ -3224,7 +3224,7 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderFirst(), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderLast(), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
-    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 0);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 
     /* Clearing a node that isn't connected is a no-op */
     ui.clearNodeOrder(second);
@@ -3232,10 +3232,10 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
-    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 0);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 
-    /* Setting node order into a pre-allocated capacity. There's no other node
-       in the order right now so it's both first and last */
+    /* Setting node order back. There's no other node in the order right now so
+       it's both first and last. */
     ui.setNodeOrder(fifth, NodeHandle::Null);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), NodeHandle::Null);
@@ -3243,7 +3243,7 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderFirst(), fifth);
     CORRADE_COMPARE(ui.nodeOrderLast(), fifth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
-    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 1);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 
     /* Setting node order as last again, this time it expands a single-item
        list */
@@ -3257,7 +3257,7 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderFirst(), fifth);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
-    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 2);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 
     /* Setting node order in the middle, just different order than before */
     ui.setNodeOrder(first, second);
@@ -3273,7 +3273,7 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderFirst(), fifth);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
-    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 3);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 
     /* Setting node order first. This is what was already tested several times
        with the initial node addition, this time it's just with pre-allocated
@@ -3376,7 +3376,8 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 5);
 
-    /* Removing a node implicitly calls clearNodeOrder() */
+    /* Removing a node implicitly calls clearNodeOrder(), and also frees the
+       order slot */
     ui.removeNode(first);
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
@@ -3392,6 +3393,43 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_COMPARE(ui.nodeOrderNext(sixth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), sixth);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
+
+    /* Verify also removing a node that had the order explicitly cleared
+       before */
+    ui.clearNodeOrder(fifth);
+    ui.removeNode(fifth);
+    CORRADE_VERIFY(ui.isNodeOrdered(fourth));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(fourth), second);
+    CORRADE_VERIFY(ui.isNodeOrdered(second));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(second), fourth);
+    CORRADE_COMPARE(ui.nodeOrderNext(second), sixth);
+    CORRADE_VERIFY(ui.isNodeOrdered(sixth));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(sixth), second);
+    CORRADE_COMPARE(ui.nodeOrderNext(sixth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
+    CORRADE_COMPARE(ui.nodeOrderLast(), sixth);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 3);
+
+    /* Adding a new node reuses the freed capacity */
+    NodeHandle seventh = ui.createNode({}, {});
+    CORRADE_VERIFY(ui.isNodeOrdered(fourth));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(fourth), second);
+    CORRADE_VERIFY(ui.isNodeOrdered(second));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(second), fourth);
+    CORRADE_COMPARE(ui.nodeOrderNext(second), sixth);
+    CORRADE_VERIFY(ui.isNodeOrdered(sixth));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(sixth), second);
+    CORRADE_COMPARE(ui.nodeOrderNext(sixth), seventh);
+    CORRADE_VERIFY(ui.isNodeOrdered(seventh));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(seventh), sixth);
+    CORRADE_COMPARE(ui.nodeOrderNext(seventh), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
+    CORRADE_COMPARE(ui.nodeOrderLast(), seventh);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 }
