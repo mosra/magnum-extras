@@ -392,6 +392,16 @@ union NodeOrder {
            node's `next` is the same as `_state->firstNodeOrder`. */
         NodeHandle previous;
         NodeHandle next;
+
+        /* If given top-level hierarchy contains child top-level hierarchies,
+           points to the last such top-level node (which then points back to
+           the `nodeOrder` array, and is reachable by iterating `next`).
+           Changing the order then drags along all children as well, their
+           mutual order doesn't change.
+
+           If given top-level hierarchy doesn't contain any child top-level
+           hierarchies, points to the top-level node itself. */
+        NodeHandle lastNested;
     } used;
 
     /* Used only if the NodeOrder is among the free ones */
@@ -1766,31 +1776,36 @@ void AbstractUserInterface::removeNode(const NodeHandle handle) {
 
 inline void AbstractUserInterface::removeNodeInternal(const UnsignedInt id) {
     State& state = *_state;
-    const Node& node = state.nodes[id];
+    Node& node = state.nodes[id];
 
-    /* If this was a root node, remove it from the node order list. It
-       should always be there, as clearNodeOrder() only disconnects the entry
-       but doesn't recycle it. */
-    if(node.used.parent == NodeHandle::Null) {
-        clearNodeOrderInternal(nodeHandle(id, node.used.generation));
-        CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
-        state.nodeOrder[node.used.order].free.next = state.firstFreeNodeOrder;
-        state.firstFreeNodeOrder = node.used.order;
+    /* If this was a top-level node, disconnect it from the node order list and
+       put (it including its potential nested top-level nodes) to the free
+       list.
+
+       It's done for all nested top-level nodes at once instead of deferring to
+       clean() because this way they can get all directly freed with no
+       reconnection needing to be done. */
+    if(node.used.order != ~UnsignedInt{}) {
+        NodeHandle handle = nodeHandle(id, node.used.generation);
+        clearNodeOrderInternal(handle);
+
+        /* Go through this node as well as all potential child top-level nodes
+           until we reach a null next handle, which clearNodeOrderInternal()
+           set for the lastNested */
+        while(handle != NodeHandle::Null) {
+            Node& childOrderNode = state.nodes[nodeHandleId(handle)];
+            UnsignedInt order = childOrderNode.used.order;
+            CORRADE_INTERNAL_ASSERT(order != ~UnsignedInt{});
+            handle = state.nodeOrder[order].used.next;
+            state.nodeOrder[order].free.next = state.firstFreeNodeOrder;
+            state.firstFreeNodeOrder = order;
+            childOrderNode.used.order = ~UnsignedInt{};
+        }
 
         /* NeedsNodeUpdate gets set by either removeNode() (implied by
            NeedsNodeClean) or is already set (again as a consequence of
            NeedsNodeClean) in order to even enter clean(), which calls here */
     }
-
-    removeNestedNodeInternal(id);
-}
-
-/* This doesn't handle removal of root nodes from the order list (in case it
-   was there), as it's just needed for removeNodeInternal() but not clean()
-   where only nested nodes with invalid parents are removed */
-void AbstractUserInterface::removeNestedNodeInternal(const UnsignedInt id) {
-    State& state = *_state;
-    Node& node = state.nodes[id];
 
     /* Increase the node generation so existing handles pointing to this
        node are invalidated */
@@ -1858,17 +1873,19 @@ NodeHandle AbstractUserInterface::nodeOrderLast() const {
     return state.nodeOrder[order].used.previous;
 }
 
+bool AbstractUserInterface::isNodeTopLevel(const NodeHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::isNodeTopLevel(): invalid handle" << handle, {});
+    return _state->nodes[nodeHandleId(handle)].used.order != ~UnsignedInt{};
+}
+
 bool AbstractUserInterface::isNodeOrdered(const NodeHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::isNodeOrdered(): invalid handle" << handle, {});
     const State& state = *_state;
     const Node& node = state.nodes[nodeHandleId(handle)];
-    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
-        "Whee::AbstractUserInterface::isNodeOrdered():" << handle << "is not a root node", {});
-    /* Root nodes have the order allocated implicitly and it's only recycled
-       when the node is removed again */
-    CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
-    return state.nodeOrder[node.used.order].used.previous != NodeHandle::Null;
+    return node.used.order != ~UnsignedInt{} &&
+        state.nodeOrder[node.used.order].used.previous != NodeHandle::Null;
 }
 
 NodeHandle AbstractUserInterface::nodeOrderPrevious(const NodeHandle handle) const {
@@ -1876,13 +1893,10 @@ NodeHandle AbstractUserInterface::nodeOrderPrevious(const NodeHandle handle) con
         "Whee::AbstractUserInterface::nodeOrderPrevious(): invalid handle" << handle, {});
     const State& state = *_state;
     const Node& node = state.nodes[nodeHandleId(handle)];
-    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
-        "Whee::AbstractUserInterface::nodeOrderPrevious():" << handle << "is not a root node", {});
+    if(node.used.order == ~UnsignedInt{})
+        return NodeHandle::Null;
     if(state.firstNodeOrder == handle)
         return NodeHandle::Null;
-    /* Root nodes have the order allocated implicitly and it's only recycled
-       when the node is removed again */
-    CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
     return state.nodeOrder[node.used.order].used.previous;
 }
 
@@ -1891,55 +1905,118 @@ NodeHandle AbstractUserInterface::nodeOrderNext(const NodeHandle handle) const {
         "Whee::AbstractUserInterface::nodeOrderNext(): invalid handle" << handle, {});
     const State& state = *_state;
     const Node& node = state.nodes[nodeHandleId(handle)];
-    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
-        "Whee::AbstractUserInterface::nodeOrderNext():" << handle << "is not a root node", {});
-    /* Root nodes have the order allocated implicitly and it's only recycled
-       when the node is removed again */
-    CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
+    if(node.used.order == ~UnsignedInt{})
+        return NodeHandle::Null;
     const NodeHandle next = state.nodeOrder[node.used.order].used.next;
     if(state.firstNodeOrder == next)
         return NodeHandle::Null;
     return next;
 }
 
-/* This only removes the node from the order list. Potential updating of the
-   `NodeOrder` fields as well as adding the `order` ID to the free list is
-   responsibility of the caller -- only removeNodeInternal() needs to do both,
-   clearNodeOrder() just the update, setNodeOrder() maybe not even the
-   update */
+NodeHandle AbstractUserInterface::nodeOrderLastNested(const NodeHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::nodeOrderNext(): invalid handle" << handle, {});
+    const State& state = *_state;
+    const Node& node = state.nodes[nodeHandleId(handle)];
+    if(node.used.order == ~UnsignedInt{})
+        return handle;
+    return state.nodeOrder[node.used.order].used.lastNested;
+}
+
+namespace {
+
+/* Used by clearNodeOrderInternal(), setNodeOrder() and flattenNodeOrder(). Not
+   all tests for each of the 3 exercise all corner cases (while vs if, break
+   with/without else), but in total they do. */
+void updateParentLastNestedOrderTo(const Containers::ArrayView<const Node> nodes, const Containers::ArrayView<NodeOrder> nodeOrder, NodeHandle parent, const NodeHandle lastNested, const NodeHandle replace) {
+    while(parent != NodeHandle::Null) {
+        const Node& parentNode = nodes[nodeHandleId(parent)];
+        if(parentNode.used.order != ~UnsignedInt{}) {
+            NodeOrder& parentOrder = nodeOrder[parentNode.used.order];
+            if(parentOrder.used.lastNested == lastNested)
+                parentOrder.used.lastNested = replace;
+            /* If the last nested isn't matching ours, it means it's after. As
+               any further parent top-level nested ranges have to include this
+               whole range as well, it means there will be no other parents
+               ending at lastNested, so we can stop here. */
+            else break;
+        }
+        parent = parentNode.used.parent;
+    }
+}
+
+}
+
+/* Compared to clearNodeOrder() this doesn't have handle validity assertions */
 bool AbstractUserInterface::clearNodeOrderInternal(const NodeHandle handle) {
     State& state = *_state;
-    const UnsignedInt order = state.nodes[nodeHandleId(handle)].used.order;
+    Node& node = state.nodes[nodeHandleId(handle)];
+    const UnsignedInt order = node.used.order;
     CORRADE_INTERNAL_ASSERT(order != ~UnsignedInt{});
 
-    /* If the node isn't connected, nothing to do */
-    const NodeHandle originalPrevious = state.nodeOrder[order].used.previous;
-    const NodeHandle originalNext = state.nodeOrder[order].used.next;
+    NodeHandle& originalPrevious = state.nodeOrder[order].used.previous;
+    const NodeHandle lastNested = state.nodeOrder[order].used.lastNested;
+    CORRADE_INTERNAL_ASSERT(isHandleValid(lastNested));
+    const UnsignedInt lastNestedOrder = state.nodes[nodeHandleId(lastNested)].used.order;
+    CORRADE_INTERNAL_ASSERT(lastNestedOrder != ~UnsignedInt{});
+    NodeHandle& originalNext = state.nodeOrder[lastNestedOrder].used.next;
+
+    /* If the node isn't connected from either side, nothing to do. Otherwise
+       the node is either connected from both sides, or is a child of a
+       disconnected parent, in which case it has only previous but not next. */
     if(originalPrevious == NodeHandle::Null) {
         CORRADE_INTERNAL_ASSERT(originalNext == NodeHandle::Null);
         return false;
     }
-
-    CORRADE_INTERNAL_ASSERT(isHandleValid(originalPrevious) && isHandleValid(originalNext));
-
-    const UnsignedInt originalPreviousOrder = state.nodes[nodeHandleId(originalPrevious)].used.order;
-    const UnsignedInt originalNextOrder = state.nodes[nodeHandleId(originalNext)].used.order;
-    CORRADE_INTERNAL_ASSERT(originalPreviousOrder != ~UnsignedInt{});
-    CORRADE_INTERNAL_ASSERT(originalNextOrder != ~UnsignedInt{});
+    CORRADE_INTERNAL_ASSERT(isHandleValid(originalPrevious) && (originalNext == NodeHandle::Null || isHandleValid(originalNext)));
 
     /* This works correctly also in case of there being just a single item in
        the list (i.e., originalPreviousOrder == originalNextOrder == order), as
        the nodeOrder entry gets unused after */
+    const UnsignedInt originalPreviousOrder = state.nodes[nodeHandleId(originalPrevious)].used.order;
     state.nodeOrder[originalPreviousOrder].used.next = originalNext;
-    state.nodeOrder[originalNextOrder].used.previous = originalPrevious;
+    if(originalNext != NodeHandle::Null) {
+        const UnsignedInt originalNextOrder = state.nodes[nodeHandleId(originalNext)].used.order;
+        state.nodeOrder[originalNextOrder].used.previous = originalPrevious;
+    }
     if(state.firstNodeOrder == handle) {
+        /* The node can be first in order only if it's a root node */
+        CORRADE_INTERNAL_ASSERT(node.used.parent == NodeHandle::Null);
         if(handle == originalNext)
             state.firstNodeOrder = NodeHandle::Null;
         else
             state.firstNodeOrder = originalNext;
     }
 
+    /* If lastNested was the last nested in any parent order, update it to
+       point to the previous. Same logic is in flattenNodeOrder(). */
+    updateParentLastNestedOrderTo(state.nodes, state.nodeOrder, node.used.parent, lastNested, originalPrevious);
+
+    /* Once we don't need the prev/next handles anymore, set them to null to
+       mark the top-level node as not connected. The order is only recycled
+       when the node is removed, to avoid the need to allocate it again once
+       it's put back into the top-level order. */
+    originalPrevious = NodeHandle::Null;
+    originalNext = NodeHandle::Null;
+
     return true;
+}
+
+namespace {
+
+NodeHandle closestTopLevelParent(Containers::ArrayView<const Node> nodes, NodeHandle node) {
+    /* Root nodes have `order` always allocated, so it should stop at those. */
+    NodeHandle parent = nodes[nodeHandleId(node)].used.parent;
+    for(;;) {
+        const Node& parentNode = nodes[nodeHandleId(parent)];
+        if(parentNode.used.order != ~UnsignedInt{})
+            return parent;
+        parent = parentNode.used.parent;
+    }
+
+    CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+}
+
 }
 
 void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHandle before) {
@@ -1947,8 +2024,6 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
         "Whee::AbstractUserInterface::setNodeOrder(): invalid handle" << handle, );
     State& state = *_state;
     Node& node = state.nodes[nodeHandleId(handle)];
-    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
-        "Whee::AbstractUserInterface::setNodeOrder():" << handle << "is not a root node", );
     #ifndef CORRADE_NO_ASSERT
     if(before != NodeHandle::Null) {
         CORRADE_ASSERT(isHandleValid(before),
@@ -1956,19 +2031,18 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
         CORRADE_ASSERT(handle != before,
             "Whee::AbstractUserInterface::setNodeOrder(): can't order" << handle << "before itself", );
         const Node& next = state.nodes[nodeHandleId(before)];
-        CORRADE_ASSERT(next.used.parent == NodeHandle::Null,
-            "Whee::AbstractUserInterface::setNodeOrder():" << before << "is not a root node", );
-        /* Root nodes have the order allocated implicitly and it's only
-           recycled when the node is removed again */
-        CORRADE_INTERNAL_ASSERT(next.used.order != ~UnsignedInt{});
-        CORRADE_ASSERT(state.nodeOrder[next.used.order].used.previous != NodeHandle::Null && state.nodeOrder[next.used.order].used.next != NodeHandle::Null,
+        /* Next of lastNested should also be non-null for consistency, but
+           that's too expensive to check for */
+        CORRADE_ASSERT(next.used.order != ~UnsignedInt{} && state.nodeOrder[next.used.order].used.previous != NodeHandle::Null,
             "Whee::AbstractUserInterface::setNodeOrder():" << before << "is not ordered", );
+        CORRADE_ASSERT((state.nodes[nodeHandleId(before)].used.parent == NodeHandle::Null) == (node.used.parent == NodeHandle::Null),
+            "Whee::AbstractUserInterface::setNodeOrder():" << handle << (node.used.parent == NodeHandle::Null ? "is a root node but" : "is not a root node but") << before << (node.used.parent == NodeHandle::Null ? "is not" : "is"), );
     }
     #endif
 
-    /* If the node isn't in the order yet, add it. Right now that only happens
-       when calling setNodeOrder() from within createNode(), in all cases after
-       the nodeOrder entry is already allocated. */
+    /* If the node isn't in the order yet, add it. That happens when calling
+       setNodeOrder() for a root node from within createNode(), or when setting
+       order on a non-root order for the first time. */
     if(node.used.order == ~UnsignedInt{}) {
         /* Find the first free slot if there is, update the free index to point
            to the next one (or none) */
@@ -1986,36 +2060,140 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
             arrayAppend(state.nodeOrder, NoInit, 1);
         }
 
+        /* If this is a root node, initially there are no nested top-level
+           nodes (well, no nested nodes at all), because setNodeOrder() is
+           called during creation of the root node itself.
+
+           Otherwise, if this is a non-root node, set the lastNested handle to
+           null to differentiate this from nodes that had their order cleared
+           below (in which case lastNested is at the very least the node handle
+           itself), as it needs to discover its nested nodes first. */
+        state.nodeOrder[node.used.order].used.lastNested =
+            node.used.parent == NodeHandle::Null ? handle : NodeHandle::Null;
+
     /* Otherwise remove it from the previous location in the linked list, if
        connected. The `node.used.order` stays the same -- it's reused. */
     } else clearNodeOrderInternal(handle);
 
-    /* This is the first ever node to be in the order, no need to connect
-       with anything else */
-    if(state.firstNodeOrder == NodeHandle::Null) {
-        CORRADE_INTERNAL_ASSERT(before == NodeHandle::Null);
-        state.nodeOrder[node.used.order].used.previous = handle;
-        state.nodeOrder[node.used.order].used.next = handle;
-        state.firstNodeOrder = handle;
+    /* At this point, with the node order not being connected (yet or not
+       anymore), we can figure out where to connect. The previous node gets
+       saved directly to `order.used.previous`, but the next is connected to
+       `lastNested` (which may not be known at this time yet), so it's put into
+       a variable instead. */
+    NodeOrder& order = state.nodeOrder[node.used.order];
+    NodeHandle next;
 
-    /* Otherwise connect to both previous and next */
+    /* At this point, with the node order not being connected (yet or not
+       anymore), we can figure out where to connect it. A root node can only
+       connect to other root nodes, so this case is simpler. */
+    if(node.used.parent == NodeHandle::Null) {
+        /* If last, it gets attached after the last node and before the first
+           node as the list is cyclic. If this is the first ordered node so
+           far, the previous and next one is the node itself. */
+        if(before == NodeHandle::Null) {
+            order.used.previous = state.firstNodeOrder == NodeHandle::Null ?
+                handle : state.nodeOrder[state.nodes[nodeHandleId(state.firstNodeOrder)].used.order].used.previous;
+            next = state.firstNodeOrder == NodeHandle::Null ?
+                handle : state.firstNodeOrder;
+
+        /* Otherwise it gets attached before the specified node, and after a
+           node originally before the specified node */
+        } else {
+            order.used.previous = state.nodeOrder[state.nodes[nodeHandleId(before)].used.order].used.previous;
+            next = before;
+        }
+
+    /* For a non-root node we have to find the closest top-level parent
+       first */
     } else {
-        const NodeHandle next = before == NodeHandle::Null ?
-            state.firstNodeOrder : before;
-        const UnsignedInt nextOrder = state.nodes[nodeHandleId(next)].used.order;
-        CORRADE_INTERNAL_ASSERT(nextOrder != ~UnsignedInt{});
-        const NodeHandle previous = state.nodeOrder[nextOrder].used.previous;
-        const UnsignedInt previousOrder = state.nodes[nodeHandleId(previous)].used.order;
-        CORRADE_INTERNAL_ASSERT(previousOrder != ~UnsignedInt{});
+        const NodeHandle topLevelParent = closestTopLevelParent(state.nodes, handle);
+        const NodeHandle topLevelParentLastNested = state.nodeOrder[state.nodes[nodeHandleId(topLevelParent)].used.order].used.lastNested;
+        const NodeHandle topLevelParentLastNestedNext = state.nodeOrder[state.nodes[nodeHandleId(topLevelParentLastNested)].used.order].used.next;
 
-        state.nodeOrder[node.used.order].used.previous = previous;
-        state.nodeOrder[node.used.order].used.next = next;
+        /* If it's going to be put last, it's the node that's next to the last
+           nested. */
+        if(before == NodeHandle::Null) {
+            order.used.previous = topLevelParentLastNested;
+            next = topLevelParentLastNestedNext;
+        /* Otherwise the node it's ordered before should be under the same
+           nearest top-level parent */
+        } else {
+            CORRADE_ASSERT(closestTopLevelParent(state.nodes, before) == topLevelParent,
+                "Whee::AbstractUserInterface::setNodeOrder():" << before << "doesn't share the nearest top-level parent with" << handle, );
+            order.used.previous = state.nodeOrder[state.nodes[nodeHandleId(before)].used.order].used.previous;
+            next = before;
+        }
+
+        /* If this is a fresh new top-level node (marked by null above), we
+           check that there aren't any top-level nodes already nested
+           underneath. Handling those would mean a lot of extra logic and
+           caveats (basically cutting them out of the flow and reordering them
+           to whatever place the new top-level node is, and they can be
+           arbitrarily mixed up with others, so the visibile order would change
+           as well), so that asserts now and the user has to clear the order
+           on those first. */
+        if(order.used.lastNested == NodeHandle::Null) {
+            /* Right now, lastNested can only be the handle itself, any other
+               case leads to an assertion below. Once this is implemented,
+               `lastNested` is moved past all (potentially reconnected) nested
+               top-level nodes. */
+            order.used.lastNested = handle;
+
+            #ifndef CORRADE_NO_ASSERT
+            NodeHandle topLevelParentNested = state.nodeOrder[state.nodes[nodeHandleId(topLevelParent)].used.order].used.next;
+            while(topLevelParentNested != topLevelParentLastNestedNext) {
+                const NodeHandle topLevelParentNestedLastNested = state.nodeOrder[state.nodes[nodeHandleId(topLevelParentNested)].used.order].used.lastNested;
+                const NodeHandle topLevelParentNestedLastNestedNext = state.nodeOrder[state.nodes[nodeHandleId(topLevelParentNestedLastNested)].used.order].used.next;
+                CORRADE_ASSERT(closestTopLevelParent(state.nodes, topLevelParentNested) != handle,
+                    "Whee::AbstractUserInterface::setNodeOrder(): creating a new top-level node with existing nested top-level nodes isn't implemented yet, sorry; clear the order or flatten it first", );
+                topLevelParentNested = topLevelParentNestedLastNestedNext;
+            }
+            #endif
+        }
+    }
+
+    /* Connect to the `previous` and `next` nodes picked above. There's no
+       difference in handling for root and nested top-level nodes, except for
+       `next` possibly being null if connecting a nested top-level node to an
+       otherwise disconnected parent. */
+    {
+        /* Point the previous node's next handle to this node */
+        const UnsignedInt previousOrder = state.nodes[nodeHandleId(order.used.previous)].used.order;
         state.nodeOrder[previousOrder].used.next = handle;
-        state.nodeOrder[nextOrder].used.previous = handle;
 
-        /* If the `before` node was first, the new node is now first */
-        if(state.firstNodeOrder == before)
+        /* Point the last nested node's next handle to next node (or null) */
+        const UnsignedInt lastNestedOrder = state.nodes[nodeHandleId(order.used.lastNested)].used.order;
+        state.nodeOrder[lastNestedOrder].used.next = next;
+
+        /* Point the next node's (if any) previous handle to this node */
+        if(next != NodeHandle::Null) {
+            const UnsignedInt nextOrder = state.nodes[nodeHandleId(next)].used.order;
+            state.nodeOrder[nextOrder].used.previous = order.used.lastNested;
+        }
+    }
+
+    /* If this is a root node, may need to adjust the pointer to the first
+       node as well. If this is not, firstNodeOrder can as well be null, for
+       example if only connecting nested top-level nodes but the UI as a whole
+       still hidden. */
+    if(node.used.parent == NodeHandle::Null) {
+        /* This is the first ever node to be in the order */
+        if(state.firstNodeOrder == NodeHandle::Null)
             state.firstNodeOrder = handle;
+        /* If the `before` node was first, the new node is now first. If
+           `before` was Null, either the above branch was picked already or
+           neither of the branches is taken. */
+        else if(state.firstNodeOrder == before) {
+            CORRADE_INTERNAL_ASSERT(before != NodeHandle::Null);
+            state.firstNodeOrder = handle;
+        }
+
+    /* If this is not a root node and it was inserted at the end, may need to
+       adjust lastNested of parents to point to lastNested of this node. If it
+       wasn't inserted at the end, the previous lastNested all stay like
+       before, so nothing needs to be adjusted. */
+    } else if(before == NodeHandle::Null) {
+        updateParentLastNestedOrderTo(state.nodes, state.nodeOrder, node.used.parent, order.used.previous, order.used.lastNested);
     }
 
     /* Mark the UI as needing an update() call to refresh node state */
@@ -2025,24 +2203,53 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
 void AbstractUserInterface::clearNodeOrder(const NodeHandle handle) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractUserInterface::clearNodeOrder(): invalid handle" << handle, );
+
+    /* If the node has no order allocated at all, this function is a no-op */
     State& state = *_state;
     Node& node = state.nodes[nodeHandleId(handle)];
-    CORRADE_ASSERT(node.used.parent == NodeHandle::Null,
-        "Whee::AbstractUserInterface::clearNodeOrder():" << handle << "is not a root node", );
+    if(node.used.order == ~UnsignedInt{})
+        return;
 
     /* Remove it from the linked list. If not connected, this function is a
-       no-op. */
+       no-op as well. */
     if(!clearNodeOrderInternal(handle))
         return;
 
-    /* Set the prev/next handles to null to mark it as not connected. The order
-       is only recycled when the node is removed, to avoid the need to allocate
-       it again once it's put back into the top-level order. */
-    CORRADE_INTERNAL_ASSERT(node.used.order != ~UnsignedInt{});
-    state.nodeOrder[node.used.order].used.previous = NodeHandle::Null;
-    state.nodeOrder[node.used.order].used.next = NodeHandle::Null;
+    /* Mark the UI as needing an update() call to refresh node state */
+    state.state |= UserInterfaceState::NeedsNodeUpdate;
+}
+
+void AbstractUserInterface::flattenNodeOrder(const NodeHandle handle) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Whee::AbstractUserInterface::flattenNodeOrder(): invalid handle" << handle, );
+    State& state = *_state;
+    Node& node = state.nodes[nodeHandleId(handle)];
+    CORRADE_ASSERT(node.used.parent != NodeHandle::Null,
+        "Whee::AbstractUserInterface::flattenNodeOrder():" << handle << "is a root node", );
+
+    if(node.used.order == ~UnsignedInt{})
+        return;
+
+    NodeOrder& order = state.nodeOrder[node.used.order];
+
+    if(order.used.previous != NodeHandle::Null)
+        state.nodeOrder[state.nodes[nodeHandleId(order.used.previous)].used.order].used.next = order.used.next;
+    if(order.used.next != NodeHandle::Null)
+        state.nodeOrder[state.nodes[nodeHandleId(order.used.next)].used.order].used.previous = order.used.previous;
+
+    /* If lastNested was the last nested in any parent order, update it to
+       point to the previous */
+    updateParentLastNestedOrderTo(state.nodes, state.nodeOrder, node.used.parent, order.used.lastNested, order.used.previous);
+
+    order.free.next = state.firstFreeNodeOrder;
+    state.firstFreeNodeOrder = node.used.order;
+
+    node.used.order = ~UnsignedInt{};
 
     /* Mark the UI as needing an update() call to refresh node state */
+    /** @todo in this case only the draw / event processing order changes, but
+        nothing that would affect layouters or cause node offsets/sizes to
+        change -- is there a better state flag that would cover this? */
     state.state |= UserInterfaceState::NeedsNodeUpdate;
 }
 
@@ -2093,7 +2300,7 @@ AbstractUserInterface& AbstractUserInterface::clean() {
         for(const UnsignedInt id: nodeIds.exceptPrefix(1)) {
             const Node& node = state.nodes[id];
             if(node.used.parent != NodeHandle::Null && !isHandleValid(node.used.parent))
-                removeNestedNodeInternal(id);
+                removeNodeInternal(id);
         }
 
         /* 3. Next perform a clean for layouter node assignments and data and
@@ -2320,6 +2527,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
     /* Single allocation for all temporary data */
     /** @todo well, not really, there's one more temp array for layout mask
         calculation */
+    Containers::MutableBitArrayView visibleNodes;
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess;
@@ -2340,6 +2548,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
        usable for anything else afterwards. */
     Containers::MutableBitArrayView visibleOrVisibilityLostEventNodeMask;
     Containers::ArrayTuple storage{
+        {ValueInit, state.nodes.size(), visibleNodes},
         /* Running children offset (+1) for each node */
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
         {NoInit, state.nodes.size(), children},
@@ -2392,7 +2601,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::order),
                 stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags),
                 stridedArrayView(state.nodeOrder).slice(&NodeOrder::used).slice(&NodeOrder::Used::next),
-                state.firstNodeOrder, childrenOffsets, children,
+                state.firstNodeOrder, visibleNodes, childrenOffsets, children,
                 parentsToProcess, state.visibleNodeIds, state.visibleNodeChildrenCounts);
             state.visibleNodeIds = state.visibleNodeIds.prefix(visibleCount);
             state.visibleNodeChildrenCounts = state.visibleNodeChildrenCounts.prefix(visibleCount);

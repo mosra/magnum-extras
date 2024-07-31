@@ -1248,13 +1248,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Node parent
          *
          * Expects that @p handle is valid. Returns @ref NodeHandle::Null if
-         * it's a root node, in which case @ref nodeOrderPrevious(),
-         * @ref nodeOrderNext(), @ref nodeOrderFirst() and @ref nodeOrderLast()
-         * can be used to inspect the draw and envent processing order.
-         *
-         * Note that the returned handle may be invalid if @ref removeNode()
-         * was called on one of the parent nodes and @ref update() hasn't
-         * been called since.
+         * it's a root node. Note that the returned handle may be invalid if
+         * @ref removeNode() was called on one of the parent nodes and
+         * @ref update() hasn't been called since.
          *
          * Unlike other node properties, the parent cannot be changed after
          * creation.
@@ -1358,9 +1354,13 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref update(). After this call, @ref isHandleValid(NodeHandle) const
          * returns @cpp false @ce for @p handle.
          *
+         * If @p handle is a top-level node, the operation is done with an
+         * @f$ \mathcal{O}(n) @f$ complexity, where @f$ n @f$ is the count of
+         * nested top-level hierarchies.
+         *
          * Calling this function causes @ref UserInterfaceState::NeedsNodeClean
          * to be set.
-         * @see @ref clean()
+         * @see @ref clean(), @ref nodeOrderLastNested()
          */
         void removeNode(NodeHandle handle);
 
@@ -1373,56 +1373,85 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          */
 
         /**
-         * @brief Capacity of the node order storage
+         * @brief Capacity of the top-level node order storage
          *
          * @ref nodeOrderUsedCount()
          */
         std::size_t nodeOrderCapacity() const;
 
         /**
-         * @brief Count of used items in the node order storage
+         * @brief Count of used items in the top-level node order storage
          *
          * Always at most @ref nodeOrderCapacity(). The operation is done
          * with a @f$ \mathcal{O}(n) @f$ complexity where @f$ n @f$ is
-         * @ref nodeOrderCapacity(). When a root node is created, a slot in the
-         * node order storage is used for it, and gets recycled only when the
-         * node is removed again.
+         * @ref nodeOrderCapacity(). When a root node is created or
+         * @ref setNodeOrder() is called for the first time on a non-root node,
+         * a slot in the node order storage is used for it, and gets recycled
+         * only when the node is removed again or when @ref flattenNodeOrder()
+         * is called on a non-root node.
+         * @see @ref isNodeTopLevel()
          */
         std::size_t nodeOrderUsedCount() const;
 
         /**
-         * @brief First node in draw and event processing order
+         * @brief First top-level node in draw and event processing order
          *
          * The first node gets drawn first (thus is at the back) and reacts
          * to events after all others. Returns @ref NodeHandle::Null if
          * there's no nodes included in the draw and event processing order.
          * The returned handle is always either valid or null.
          * @see @ref nodeOrderNext(), @ref nodeOrderLast(),
-         *      @ref nodeOrderPrevious(), @ref isNodeOrdered()
+         *      @ref nodeOrderPrevious(), @ref nodeOrderLastNested(),
+         *      @ref isNodeTopLevel(), @ref isNodeOrdered()
          */
         NodeHandle nodeOrderFirst() const;
 
         /**
-         * @brief Last node in draw and event processing order
+         * @brief Last top-level node in draw and event processing order
          *
          * The last node gets drawn last (thus is at the front) and reacts to
          * events before all others. Returns @ref NodeHandle::Null if there's
          * no nodes included in the draw and event processing order. The
          * returned handle is always either valid or null.
          * @see @ref nodeOrderPrevious(), @ref nodeOrderFirst(),
-         *      @ref nodeOrderNext(), @ref isNodeOrdered()
+         *      @ref nodeOrderNext(), @ref nodeOrderLastNested(),
+         *      @ref isNodeOrdered()
          */
         NodeHandle nodeOrderLast() const;
 
         /**
-         * @brief Whether a node is included in a draw and event processing order
+         * @brief Whether a node is top-level for draw and event processing
+         *
+         * If not top-level, it's in the usual order defined by the node
+         * hierarchy. If top-level, it's ordered respective to other top-level
+         * nodes. Expects that @p handle is valid.
+         *
+         * Always returns @cpp true @ce for root nodes. If @ref isNodeOrdered()
+         * returns @cpp true @ce, it implies the node is top-level. If this
+         * function returns @cpp true @ce, it doesn't necessarily mean the node
+         * is visible --- the node or any of its parents could be excluded from
+         * the order or it could be hidden.
+         * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
+         *      @ref setNodeOrder(), @ref clearNodeOrder(),
+         *      @ref flattenNodeOrder()
+         */
+        bool isNodeTopLevel(NodeHandle handle) const;
+
+        /**
+         * @brief Whether a node is top-level and is included in a draw and event processing order
          *
          * If not included, the node and all its children are not drawn and
-         * don't react to events. Expects that @p handle is valid and is a
-         * root node.
-         * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent(),
-         *      @ref nodeOrderNext(), @ref setNodeOrder(),
-         *      @ref clearNodeOrder()
+         * don't react to events. Expects that @p handle is valid.
+         *
+         * If this function returns @cpp true @ce, @ref isNodeTopLevel() is
+         * @cpp true @ce as well. For non-root nodes the function returning
+         * @cpp true @ce means the node is included in the order respective to
+         * its parent top-level node. It doesn't necessarily mean the node is
+         * visible --- the parents can themselves be excluded from the order or
+         * they could be hidden.
+         * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
+         *      @ref setNodeOrder(), @ref clearNodeOrder(),
+         *      @ref flattenNodeOrder()
          */
         bool isNodeOrdered(NodeHandle handle) const;
 
@@ -1430,13 +1459,15 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Previous node in draw and event processing order
          *
          * The previous node gets drawn earlier (thus is behind) and reacts
-         * to events later. Expects that @p handle is valid and is a root node.
-         * Returns @ref NodeHandle::Null if the node is either first or not
-         * included in the draw and event processing order. The returned handle
-         * is always either valid or null.
-         * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent(),
-         *      @ref nodeOrderNext(), @ref nodeOrderFirst(),
-         *      @ref nodeOrderLast(), @ref isNodeOrdered()
+         * to events later. Expects that @p handle is valid. Returns
+         * @ref NodeHandle::Null if the node is first in the draw and
+         * processing order, is a root node that's not included in the draw and
+         * event processing order, or is a non-root node that's drawn in a
+         * regular hierarchy-defined order. The returned handle is always
+         * either valid or null.
+         * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderNext(),
+         *      @ref nodeOrderFirst(), @ref nodeOrderLast(),
+         *      @ref isNodeOrdered()
          */
         NodeHandle nodeOrderPrevious(NodeHandle handle) const;
 
@@ -1444,48 +1475,131 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Next node in draw and event processing order
          *
          * The next node gets drawn later (thus is in front) and reacts to
-         * events earlier. Expects that @p handle is valid and is a root node.
-         * Returns @ref NodeHandle::Null if the node is either last or not
-         * included in the draw and event processing order. The returned handle
-         * is always either valid or null.
-         * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent(),
-         *      @ref nodeOrderPrevious(), @ref nodeOrderLast(),
+         * events earlier. Expects that @p handle is valid. Returns
+         * @ref NodeHandle::Null if the node is last in the draw and processing
+         * order, is a root node that's not included in the draw and event
+         * processing order, or is a non-root node that's drawn in a regular
+         * hierarchy-defined order. The returned handle is always either valid
+         * or null.
+         * @see @ref isHandleValid(NodeHandle) const, @ref nodeOrderPrevious(),
+         *      @ref nodeOrderLast(), @ref nodeOrderLastNested(),
          *      @ref nodeOrderFirst(), @ref isNodeOrdered()
          */
         NodeHandle nodeOrderNext(NodeHandle handle) const;
 
         /**
-         * @brief Order a node for draw and event processing
+         * @brief Last node in draw and event processing order nested under this node
+         *
+         * Expects that @p handle is valid. If any children are top-level nodes
+         * as well, points to the last of them, including any nested
+         * top-level hierarchies. If there are no child top-level hierarchies,
+         * returns @p handle itself.
+         *
+         * The order of child top-level hierarchies relative to the
+         * @p handle gets preserved when modifying the top-level order of
+         * @p handle using @ref setNodeOrder() or @ref clearNodeOrder().
+         * @see @ref isHandleValid(NodeHandle) const
+         */
+        NodeHandle nodeOrderLastNested(NodeHandle handle) const;
+
+        /**
+         * @brief Order a top-level node for draw and event processing
          *
          * The @p handle gets ordered to be drawn earlier (thus behind) and
-         * react to event later than @p before. Expects that @p handle is valid
-         * and is a root node, and that @p before is either
-         * @ref NodeHandle::Null or valid root node that's included in the draw
-         * and event processing order. If the node was previously in a
-         * different position in the draw and event processing order, it's
-         * moved, if it wasn't previously in the draw and event processing
-         * order, it's inserted.
+         * react to event later than @p before. Expects that @p handle is
+         * valid and @p before is either @ref NodeHandle::Null or a valid node
+         * that's included in the draw and event processing order.
+         *
+         * If @p handle is a root node, expects that @p before is also a root
+         * node, if not null. If null, the @p handle is ordered as drawn last.
+         * The operation is done with an @f$ \mathcal{O}(1) @f$ complexity in
+         * this case.
+         *
+         * If @p handle is not a root node, expects that both
+         * @p handle and @p before have a common parent that's the closest
+         * top-level or root node for both, if @p before is not null. If null,
+         * the @p handle is ordered after all other top-level nodes under its
+         * closest top-level or root parent. @ref NodeFlag::Hidden set on any
+         * parent node affects the top-level node, @ref NodeFlag::Clip,
+         * @relativeref{NodeFlag,NoEvents} or @relativeref{NodeFlag,Disabled}
+         * doesn't. The operation is done with an @f$ \mathcal{O}(n) @f$
+         * complexity in this case, where @f$ n @f$ is the depth at which
+         * @p handle is in the node hierarchy.
+         *
+         * If the node was previously in a different position in the draw and
+         * event processing order, it's moved, if it wasn't previously a
+         * top-level node or if it wasn't included in the draw and event
+         * processing order, it's inserted. Use @ref clearNodeOrder() to
+         * exclude the node from the order afterwards and
+         * @ref flattenNodeOrder() to integrate a non-root node back into the
+         * usual order defined by the node hierarchy.
+         *
+         * @m_class{m-note m-warning}
+         *
+         * @par
+         *      At the moment, if a non-root node isn't top-level yet, it can
+         *      be made only if it doesn't already contain a nested top-level
+         *      order. If it does, call @ref clearNodeOrder() on the nested
+         *      top-level nodes first (or @ref flattenNodeOrder() them), after
+         *      that you can order them back.
          *
          * Calling this function causes @ref UserInterfaceState::NeedsNodeUpdate
          * to be set.
-         * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent(),
-         *      @ref clearNodeOrder(), @ref update()
+         * @see @ref isHandleValid(NodeHandle) const, @ref isNodeTopLevel(),
+         *      @ref nodeOrderNext(), @ref nodeOrderLastNested(), @ref update()
          */
         void setNodeOrder(NodeHandle handle, NodeHandle before);
 
         /**
          * @brief Clear a node from the draw and event processing order
          *
-         * Expects that @p handle is valid and is a root node. If the node
+         * Expects that @p handle is valid. If the node isn't top-level or
          * wasn't previously in the draw and processing order, the function is
-         * a no-op.
+         * a no-op. After calling this function, @ref isNodeOrdered() returns
+         * @cpp false @ce for @p handle.
+         *
+         * If @p handle is a root node, the operation is done with an
+         * @f$ \mathcal{O}(1) @f$ complexity. If @p handle is not a root node,
+         * the operation is done with an @f$ \mathcal{O}(n) @f$ complexity,
+         * where @f$ n @f$ is the depth at which @p handle is in the node
+         * hierarchy.
+         *
+         * If the node contains any child top-level hierarchies, their order
+         * relative to the @p handle gets preserved, i.e. they get inserted
+         * back alongside it next time @ref setNodeOrder() is called. Use
+         * @ref flattenNodeOrder() to integrate a non-root node back into the
+         * usual order defined by the node hierarchy.
          *
          * If not a no-op, calling this function causes
          * @ref UserInterfaceState::NeedsNodeUpdate to be set.
-         * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent(),
-         *      @ref setNodeOrder(), @ref update()
+         * @see @ref isHandleValid(NodeHandle) const,
+         *      @ref nodeOrderLastNested(), @ref update()
          */
         void clearNodeOrder(NodeHandle handle);
+
+        /**
+         * @brief Flatten a non-root top-level node back to the usual order defined by the node hierarchy
+         *
+         * Expects that @p handle is valid and isn't a root node. Undoes the
+         * operation done by calling @ref setNodeOrder() on a non-root node,
+         * i.e. the node is again drawn alongside its neighbors. If the node
+         * isn't top-level, the function is a no-op. After calling this
+         * function, @ref isNodeTopLevel() returns @cpp false @ce for
+         * @p handle.
+         *
+         * The operation is done with an @f$ \mathcal{O}(n) @f$ complexity,
+         * where @f$ n @f$ is the depth at which @p handle is in the node
+         * hierarchy.
+         *
+         * If the node contains nested top-level nodes, they stay top-level.
+         * Use @ref clearNodeOrder() if you want to exclude a top-level node
+         * including all its children from the draw and event processing order.
+         *
+         * If not a no-op, calling this function causes
+         * @ref UserInterfaceState::NeedsNodeUpdate to be set.
+         * @see @ref isHandleValid(NodeHandle) const, @ref update()
+         */
+        void flattenNodeOrder(NodeHandle handle);
 
         /**
          * @}
@@ -2104,8 +2218,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * pointer for the last @ref pointerPressEvent() or for which
          * @ref focusEvent() was called and at least one data attached to such
          * node accepted the @ref AbstractLayer::focusEvent(). Once the node
-         * becomes hidden (either not being part of a top-level node hierarchy
-         * anymore or having @ref NodeFlag::Hidden set),
+         * becomes hidden (either due to @ref NodeFlag::Hidden set or due to
+         * the node hierarchy not being in the top-level node order),
          * @ref NodeFlag::NoEvents or @ref NodeFlag::Disabled is set on it or
          * it loses @ref NodeFlag::Focusable, the data receive
          * @ref AbstractLayer::blurEvent() and this becomes
@@ -2136,10 +2250,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
             const char* messagePrefix,
             #endif
             Containers::Pointer<AbstractAnimator>&& instance, Int type);
-        /* Used by removeNode() and advanceAnimations() */
+        /* Used by removeNode(), advanceAnimations() and clean() */
         MAGNUM_WHEE_LOCAL void removeNodeInternal(UnsignedInt id);
-        /* Used by removeNodeInternal() and clean() */
-        MAGNUM_WHEE_LOCAL void removeNestedNodeInternal(UnsignedInt id);
         /* Used by setNodeFlags(), addNodeFlags() and clearNodeFlags() */
         MAGNUM_WHEE_LOCAL void setNodeFlagsInternal(UnsignedInt id, NodeFlags flags);
         /* Used by removeNodeInternal(), setNodeOrder() and clearNodeOrder() */

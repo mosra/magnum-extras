@@ -123,13 +123,14 @@ void orderNodesBreadthFirstInto(const Containers::StridedArrayView1D<const NodeH
         `visibleNodeIds` array in a depth-first order, with the count stored in
         the corresponding item of the `visibleNodeChildrenCounts` array
 
-   The `childrenOffsets`, `children` and `parentsToProcess` arrays are
-   temporary storage. The `childrenOffsets` array has to be zero-initialized.
-   Other outputs don't need to be. */
-std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const UnsignedInt>& nodeOrder, const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::StridedArrayView1D<const NodeHandle>& nodeOrderNext, const NodeHandle firstNodeOrder, const Containers::ArrayView<UnsignedInt> childrenOffsets, const Containers::ArrayView<UnsignedInt> children, const Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess, const Containers::StridedArrayView1D<UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<UnsignedInt>& visibleNodeChildrenCounts) {
+   The `visibleNodes`, `childrenOffsets`, `children` and `parentsToProcess`
+   arrays are temporary storage. The `visibleNodes` and `childrenOffsets`
+   arrays have to be zero-initialized. Other outputs don't need to be. */
+std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D<const NodeHandle>& nodeParents, const Containers::StridedArrayView1D<const UnsignedInt>& nodeOrder, const Containers::StridedArrayView1D<const NodeFlags>& nodeFlags, const Containers::StridedArrayView1D<const NodeHandle>& nodeOrderNext, const NodeHandle firstNodeOrder, const Containers::MutableBitArrayView visibleNodes, const Containers::ArrayView<UnsignedInt> childrenOffsets, const Containers::ArrayView<UnsignedInt> children, const Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess, const Containers::StridedArrayView1D<UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<UnsignedInt>& visibleNodeChildrenCounts) {
     CORRADE_INTERNAL_ASSERT(
         nodeOrder.size() == nodeParents.size() &&
         nodeFlags.size() == nodeParents.size() &&
+        visibleNodes.size() == nodeParents.size() &&
         childrenOffsets.size() == nodeParents.size() + 1 &&
         children.size() == nodeParents.size() &&
         /* It only reaches nodeParents.size() if the hierarchy is a single
@@ -143,7 +144,7 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
     if(firstNodeOrder == NodeHandle::Null)
         return 0;
 
-    /* Children offset for each node excluding top-level nodes. Handle
+    /* Children offset for each node excluding root and top-level nodes. Handle
        generation is ignored here, so invalid (free) nodes are counted as well.
        In order to avoid orphaned subtrees and cycles, the nodes are expected
        to be made root when freed.
@@ -152,9 +153,8 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
        element ... */
     for(std::size_t i = 0; i != nodeParents.size(); ++i) {
         const NodeHandle parent = nodeParents[i];
-        if(parent == NodeHandle::Null)
+        if(parent == NodeHandle::Null || nodeOrder[i] != ~UnsignedInt{})
             continue;
-        CORRADE_INTERNAL_DEBUG_ASSERT(nodeOrder[i] == ~UnsignedInt{});
         ++childrenOffsets[nodeHandleId(parent) + 1];
     }
 
@@ -171,15 +171,15 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
         }
     }
 
-    /* Go through the node list excluding top-level nodes again, convert that
-       to child ranges. The `childrenOffsets` array gets shifted by one element
-       by this, so now `[childrenOffsets[i], childrenOffsets[i + 1])` is a
-       range in which the `children` array below contains a list of children
-       for node `i`. The last array element is now containing the end
+    /* Go through the node list excluding root and top-level nodes again,
+       convert that to child ranges. The `childrenOffsets` array gets shifted
+       by one element by this, so now `[childrenOffsets[i], childrenOffsets[i + 1])`
+       is a range in which the `children` array below contains a list of
+       children for node `i`. The last array element is now containing the end
        offset. */
     for(std::size_t i = 0; i != nodeParents.size(); ++i) {
         const NodeHandle parent = nodeParents[i];
-        if(parent == NodeHandle::Null)
+        if(parent == NodeHandle::Null || nodeOrder[i] != ~UnsignedInt{})
             continue;
         children[childrenOffsets[nodeHandleId(parent) + 1]++] = i;
     }
@@ -191,13 +191,17 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
     {
         NodeHandle topLevel = firstNodeOrder;
         do {
-            /* Skip hidden top-level nodes */
+            /* Skip hidden top-level nodes and also nested top-level nodes that
+               have any parent hidden. This relies on the nested top-level
+               nodes being always ordered after their parents, otherwise the
+               visibleNodes mask won't be updated for those yet. */
             const UnsignedInt topLevelId = nodeHandleId(topLevel);
-            if(!(nodeFlags[topLevelId] & NodeFlag::Hidden)) {
-                /* Add the top-level node to the output, and to the list of
-                   parents to process next */
+            if(!(nodeFlags[topLevelId] & NodeFlag::Hidden) && (nodeParents[topLevelId] == NodeHandle::Null || visibleNodes[nodeHandleId(nodeParents[topLevelId])])) {
+                /* Add the top-level node to the output, mark it as visible,
+                   and to the list of parents to process next */
                 std::size_t parentsToProcessOffset = 0;
                 visibleNodeIds[outputOffset] = topLevelId;
+                visibleNodes.set(topLevelId);
                 parentsToProcess[parentsToProcessOffset++] = {topLevelId, outputOffset++, childrenOffsets[topLevelId]};
 
                 while(parentsToProcessOffset) {
@@ -219,12 +223,14 @@ std::size_t orderVisibleNodesDepthFirstInto(const Containers::StridedArrayView1D
 
                     CORRADE_INTERNAL_DEBUG_ASSERT(childrenOffset < childrenOffsets[id + 1]);
 
-                    /* Unless the current child is hidden, add it to the output
-                       and to the list of parents to process next. Increment
-                       all offsets for the next round. */
+                    /* Unless the current child is hidden, add it to the
+                       output, mark it as visible, and to the list of parents
+                       to process next. Increment all offsets for the next
+                       round. */
                     const UnsignedInt childId = children[childrenOffset];
                     if(!(nodeFlags[childId] & NodeFlag::Hidden)) {
                         visibleNodeIds[outputOffset] = childId;
+                        visibleNodes.set(childId);
                         parentsToProcess[parentsToProcessOffset++] = {childId, outputOffset++, childrenOffsets[childId]};
                     }
 
