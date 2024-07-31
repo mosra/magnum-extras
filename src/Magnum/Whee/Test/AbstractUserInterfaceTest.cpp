@@ -112,7 +112,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void nodeRemoveInvalid();
     void nodeNoHandlesLeft();
 
-    void nodeOrder();
+    void nodeOrderRoot();
+    void nodeOrderNested();
     void nodeOrderGetSetInvalid();
 
     void data();
@@ -999,7 +1000,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::animatorRemoveInvalid,
               &AbstractUserInterfaceTest::animatorNoHandlesLeft,
 
-              &AbstractUserInterfaceTest::nodeOrder,
+              &AbstractUserInterfaceTest::nodeOrderRoot,
+              &AbstractUserInterfaceTest::nodeOrderNested,
               &AbstractUserInterfaceTest::nodeOrderGetSetInvalid,
 
               &AbstractUserInterfaceTest::data,
@@ -3083,7 +3085,10 @@ void AbstractUserInterfaceTest::nodeNoHandlesLeft() {
         "Whee::AbstractUserInterface::createNode(): can only have at most 1048576 nodes\n");
 }
 
-void AbstractUserInterfaceTest::nodeOrder() {
+void AbstractUserInterfaceTest::nodeOrderRoot() {
+    /* Tests just ordering of root nodes. See nodeOrderNested() for ordering of
+       child nodes as well. */
+
     AbstractUserInterface ui{{100, 100}};
     CORRADE_COMPARE(ui.nodeOrderFirst(), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderLast(), NodeHandle::Null);
@@ -3092,9 +3097,11 @@ void AbstractUserInterfaceTest::nodeOrder() {
 
     NodeHandle first = ui.createNode({}, {});
     CORRADE_COMPARE(ui.nodeParent(first), NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodeTopLevel(first));
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(first), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_COMPARE(ui.nodeOrderFirst(), first);
     CORRADE_COMPARE(ui.nodeOrderLast(), first);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 1);
@@ -3107,9 +3114,12 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(first), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
+    CORRADE_VERIFY(ui.isNodeTopLevel(second));
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), first);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderFirst(), first);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 2);
@@ -3117,14 +3127,21 @@ void AbstractUserInterfaceTest::nodeOrder() {
 
     NodeHandle third = ui.createNode(first, {}, {});
     CORRADE_COMPARE(ui.nodeParent(third), first);
-    /* Not a root node, so not added to the order. The original order
-       stays. */
+    /* Not a root node, so not made top-level nor added to the order by
+       default. The original order stays. */
+    CORRADE_VERIFY(!ui.isNodeTopLevel(third));
+    CORRADE_VERIFY(!ui.isNodeOrdered(third));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(third), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(third), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(third), third);
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(first), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), first);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderFirst(), first);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 2);
@@ -3135,12 +3152,16 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(first), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), first);
     CORRADE_COMPARE(ui.nodeOrderNext(second), fourth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
+    CORRADE_VERIFY(ui.isNodeTopLevel(fourth));
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), second);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), first);
     CORRADE_COMPARE(ui.nodeOrderLast(), fourth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 3);
@@ -3151,76 +3172,95 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(first), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), first);
     CORRADE_COMPARE(ui.nodeOrderNext(second), fourth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), second);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), fifth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(fifth));
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), first);
     CORRADE_COMPARE(ui.nodeOrderLast(), fifth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 
-    /* Clearing from a middle of the list. The order slot is kept used. */
+    /* Clearing from a middle of the list. The node stays top-level. */
     ui.clearNodeOrder(second);
+    CORRADE_VERIFY(ui.isNodeTopLevel(second));
     CORRADE_VERIFY(!ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
     /* THe rest stays connected */
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(first), fourth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), first);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), fifth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), first);
     CORRADE_COMPARE(ui.nodeOrderLast(), fifth);
 
-    /* Clearing from the back of the list. The order slot is kept used. */
+    /* Clearing from the back of the list. The node stays top-level. */
     ui.clearNodeOrder(first);
+    CORRADE_VERIFY(ui.isNodeTopLevel(first));
     CORRADE_VERIFY(!ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(first), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
     /* THe rest stays connected */
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), fifth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), fifth);
 
-    /* Clearing from the front of the list. The order slot is kept used. */
+    /* Clearing from the front of the list. The node stays top-level. */
     ui.clearNodeOrder(fifth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(fifth));
     CORRADE_VERIFY(!ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
     /* THe remaining node stays */
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), fourth);
 
-    /* Clearing the last node. The order slot is kept used. */
+    /* Clearing the last node. The node stays top-level. */
     ui.clearNodeOrder(fourth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(fourth));
     CORRADE_VERIFY(!ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderLast(), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
@@ -3228,18 +3268,22 @@ void AbstractUserInterfaceTest::nodeOrder() {
 
     /* Clearing a node that isn't connected is a no-op */
     ui.clearNodeOrder(second);
+    CORRADE_VERIFY(ui.isNodeTopLevel(second));
     CORRADE_VERIFY(!ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
 
     /* Setting node order back. There's no other node in the order right now so
        it's both first and last. */
     ui.setNodeOrder(fifth, NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodeTopLevel(fifth));
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fifth);
     CORRADE_COMPARE(ui.nodeOrderLast(), fifth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
@@ -3251,9 +3295,12 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(second));
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), fifth);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fifth);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
@@ -3261,15 +3308,19 @@ void AbstractUserInterfaceTest::nodeOrder() {
 
     /* Setting node order in the middle, just different order than before */
     ui.setNodeOrder(first, second);
+    CORRADE_VERIFY(ui.isNodeTopLevel(fifth));
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), first);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), fifth);
     CORRADE_COMPARE(ui.nodeOrderNext(first), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), first);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fifth);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
@@ -3279,18 +3330,22 @@ void AbstractUserInterfaceTest::nodeOrder() {
        with the initial node addition, this time it's just with pre-allocated
        capacity, so the next setting would have to grow the capacity again. */
     ui.setNodeOrder(fourth, fifth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(fourth));
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), fifth);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), first);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), fifth);
     CORRADE_COMPARE(ui.nodeOrderNext(first), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), first);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
@@ -3302,15 +3357,20 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), first);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(first));
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(first), fifth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), first);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), fifth);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
@@ -3318,18 +3378,23 @@ void AbstractUserInterfaceTest::nodeOrder() {
 
     /* Resetting a node from the back to the front ... */
     ui.setNodeOrder(second, fourth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(second));
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(second), fourth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), second);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), first);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(first), fifth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), first);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), second);
     CORRADE_COMPARE(ui.nodeOrderLast(), fifth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
@@ -3340,15 +3405,20 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), first);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(first), fifth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), first);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(second));
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), fifth);
     CORRADE_COMPARE(ui.nodeOrderNext(second), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), second);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
@@ -3359,18 +3429,24 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), first);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_VERIFY(ui.isNodeOrdered(first));
     CORRADE_COMPARE(ui.nodeOrderPrevious(first), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(first), fifth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(first), first);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), first);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), fifth);
     CORRADE_COMPARE(ui.nodeOrderNext(second), sixth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
+    CORRADE_VERIFY(ui.isNodeTopLevel(sixth));
     CORRADE_VERIFY(ui.isNodeOrdered(sixth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(sixth), second);
     CORRADE_COMPARE(ui.nodeOrderNext(sixth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(sixth), sixth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), sixth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
@@ -3382,15 +3458,19 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), fifth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_VERIFY(ui.isNodeOrdered(fifth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fifth), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(fifth), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fifth), fifth);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), fifth);
     CORRADE_COMPARE(ui.nodeOrderNext(second), sixth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_VERIFY(ui.isNodeOrdered(sixth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(sixth), second);
     CORRADE_COMPARE(ui.nodeOrderNext(sixth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(sixth), sixth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), sixth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
@@ -3403,12 +3483,15 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(second), sixth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_VERIFY(ui.isNodeOrdered(sixth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(sixth), second);
     CORRADE_COMPARE(ui.nodeOrderNext(sixth), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(sixth), sixth);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), sixth);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
@@ -3419,19 +3502,637 @@ void AbstractUserInterfaceTest::nodeOrder() {
     CORRADE_VERIFY(ui.isNodeOrdered(fourth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(fourth), NodeHandle::Null);
     CORRADE_COMPARE(ui.nodeOrderNext(fourth), second);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(fourth), fourth);
     CORRADE_VERIFY(ui.isNodeOrdered(second));
     CORRADE_COMPARE(ui.nodeOrderPrevious(second), fourth);
     CORRADE_COMPARE(ui.nodeOrderNext(second), sixth);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(second), second);
     CORRADE_VERIFY(ui.isNodeOrdered(sixth));
     CORRADE_COMPARE(ui.nodeOrderPrevious(sixth), second);
     CORRADE_COMPARE(ui.nodeOrderNext(sixth), seventh);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(sixth), sixth);
+    CORRADE_VERIFY(ui.isNodeTopLevel(seventh));
     CORRADE_VERIFY(ui.isNodeOrdered(seventh));
     CORRADE_COMPARE(ui.nodeOrderPrevious(seventh), sixth);
     CORRADE_COMPARE(ui.nodeOrderNext(seventh), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(seventh), seventh);
     CORRADE_COMPARE(ui.nodeOrderFirst(), fourth);
     CORRADE_COMPARE(ui.nodeOrderLast(), seventh);
     CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
     CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
+}
+
+void AbstractUserInterfaceTest::nodeOrderNested() {
+    /* Compared to nodeOrderRoot() tests especially handling of non-root
+       top-level nodes */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    /* Three root nodes, two being in order */
+    NodeHandle rootA = ui.createNode({}, {});
+    NodeHandle rootB = ui.createNode({}, {});
+    NodeHandle rootCNotInOrder = ui.createNode({}, {});
+    ui.clearNodeOrder(rootCNotInOrder);
+    CORRADE_VERIFY(ui.isNodeTopLevel(rootA));
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), rootA);
+    CORRADE_VERIFY(ui.isNodeTopLevel(rootB));
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_VERIFY(ui.isNodeTopLevel(rootCNotInOrder));
+    CORRADE_VERIFY(!ui.isNodeOrdered(rootCNotInOrder));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootCNotInOrder), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootCNotInOrder), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootCNotInOrder), rootCNotInOrder);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 3);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 3);
+
+    /* A nested tree with a grandchild being a top-level node */
+    NodeHandle childA = ui.createNode(rootA, {}, {});
+    NodeHandle child2A1 = ui.createNode(childA, {}, {});
+    NodeHandle child3A1 = ui.createNode(child2A1, {}, {});
+    NodeHandle child4A1TopLevel = ui.createNode(child3A1, {}, {});
+    ui.setNodeOrder(child4A1TopLevel, NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child4A1TopLevel);
+    /* This now includes the child */
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child4A1TopLevel);
+    CORRADE_VERIFY(!ui.isNodeTopLevel(childA));
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child2A1));
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child3A1));
+    CORRADE_VERIFY(ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child4A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 4);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 4);
+
+    /* A nested tree with a child in a root node that isn't top-level doesn't
+       affect the actual visible order but is still reported as ordered within
+       its parent */
+    NodeHandle childC = ui.createNode(rootCNotInOrder, {}, {});
+    NodeHandle child2CTopLevel = ui.createNode(childC, {}, {});
+    ui.setNodeOrder(child2CTopLevel, NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child4A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child4A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_VERIFY(!ui.isNodeOrdered(rootCNotInOrder));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootCNotInOrder), NodeHandle::Null);
+    /* This now includes the child */
+    CORRADE_COMPARE(ui.nodeOrderNext(rootCNotInOrder), child2CTopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootCNotInOrder), child2CTopLevel);
+    CORRADE_VERIFY(!ui.isNodeTopLevel(childC));
+    CORRADE_VERIFY(ui.isNodeTopLevel(child2CTopLevel));
+    /* Reported as ordered because it is, relative to the parent, but is not
+       actually visible */
+    CORRADE_VERIFY(ui.isNodeOrdered(child2CTopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child2CTopLevel), rootCNotInOrder);
+    CORRADE_COMPARE(ui.nodeOrderNext(child2CTopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child2CTopLevel), child2CTopLevel);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 5);
+
+    /* Clearing the order of a node that is only connected to its parent but no
+       (lastNested's) next node should work. The other case (connected only to
+       (lastNested's) next but not previous) cannot happen. */
+    ui.clearNodeOrder(child2CTopLevel);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_VERIFY(!ui.isNodeOrdered(rootCNotInOrder));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootCNotInOrder), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootCNotInOrder), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootCNotInOrder), rootCNotInOrder);
+    /* Stays top-level even though not root */
+    CORRADE_VERIFY(ui.isNodeTopLevel(child2CTopLevel));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child2CTopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child2CTopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child2CTopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child2CTopLevel), child2CTopLevel);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 5);
+
+    /* Putting it back results in the same state as above, again the total
+       order isn't affected because the root code isn't connected */
+    ui.setNodeOrder(child2CTopLevel, NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_VERIFY(!ui.isNodeOrdered(rootCNotInOrder));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootCNotInOrder), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootCNotInOrder), child2CTopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootCNotInOrder), child2CTopLevel);
+    CORRADE_VERIFY(ui.isNodeTopLevel(child2CTopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(child2CTopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child2CTopLevel), rootCNotInOrder);
+    CORRADE_COMPARE(ui.nodeOrderNext(child2CTopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child2CTopLevel), child2CTopLevel);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 5);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 5);
+
+    /* Another grandchild being a top-level node, inserted before the other. It
+       has a child which isn't a top-level node. */
+    NodeHandle child2A2 = ui.createNode(childA, {}, {});
+    NodeHandle child3A2TopLevel = ui.createNode(child2A2, {}, {});
+    NodeHandle child4A2 = ui.createNode(child3A2TopLevel, {}, {});
+    ui.setNodeOrder(child3A2TopLevel, child4A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    /* This now includes both children, the new subChildA2TopLevel is first */
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child4A1TopLevel);
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child2A2));
+    CORRADE_VERIFY(ui.isNodeTopLevel(child3A2TopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child4A2));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child4A2));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A2), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A2), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A2), child4A2);
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child4A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 6);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 6);
+
+    /* A further-nested top-level node, this time immediately under the other
+       top-level node */
+    NodeHandle child5A1TopLevel = ui.createNode(child4A1TopLevel, {}, {});
+    ui.setNodeOrder(child5A1TopLevel, NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    /* This now (also) includes the nested top-level node */
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    /* This now includes the nested top-level node */
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeTopLevel(child5A1TopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 7);
+
+    /* Clearing the order disconnects the children as well but keeps them
+       alongside the node */
+    ui.clearNodeOrder(child4A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    /* subChildA1TopLevel and subSubChildA1TopLevel are no longer under this
+       node */
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    /* Neither after subChildA2TopLevel */
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    /* The children are remembered, but the hierarchy as a whole is
+       disconnected */
+    CORRADE_VERIFY(ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 7);
+
+    /* Clearing the order again is a no-op, resulting in the same state, same
+       with a node that's not top-level. Flattening an order of a non-top-level
+       node is also no-op. */
+    ui.clearNodeOrder(child4A1TopLevel);
+    ui.clearNodeOrder(child2A1);
+    ui.flattenNodeOrder(child2A1);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child3A2TopLevel);
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child2A1));
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 7);
+
+    /* Setting the order back to the same place should result in the same state
+       as before */
+    ui.setNodeOrder(child4A1TopLevel, NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 7);
+
+    /* Clearing a top-level order includes all children as well */
+    ui.clearNodeOrder(rootA);
+    CORRADE_VERIFY(ui.isNodeTopLevel(rootA));
+    CORRADE_VERIFY(!ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    /* The children are remembered, but the hierarchy as a whole is
+       disconnected */
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child5A1TopLevel);
+    /* The children themselves *are* still ordered underneath */
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 7);
+
+    /* Setting the order back to the same place should result in the same state
+       as before */
+    ui.setNodeOrder(rootA, rootB);
+    CORRADE_VERIFY(ui.isNodeTopLevel(rootA));
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 7);
+
+    /* Changing a top-level order moves all its child top-level nodes as
+       well */
+    ui.setNodeOrder(child4A1TopLevel, child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 7);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 7);
+
+    /* It's possible to create a new top-level node with nested top-level nodes
+       if their order is cleared */
+    ui.clearNodeOrder(child4A1TopLevel);
+    ui.setNodeOrder(child3A1, child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A1);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A1));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A1), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A1), child3A2TopLevel);
+    /* This doesn't include the now-cleared nested orders */
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A1), child3A1);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), child3A1);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 8);
+
+    /* Setting the nested order back will make it appear under the new node */
+    ui.setNodeOrder(child4A1TopLevel, NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A1);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A1));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A1), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A1), child4A1TopLevel);
+    /* This now includes the two nested */
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A1), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), child3A1);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 8);
+
+    /* Flattening it returns to the previous state, child top-level nodes kept */
+    ui.flattenNodeOrder(child3A1);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child3A2TopLevel);
+    /* Not in top-level order anymore */
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child3A1));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child3A1));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A1), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A1), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A1), child3A1);
+    CORRADE_VERIFY(ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), child4A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), child5A1TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 7);
+
+    /* Flattening a child of a disconnected non-root top-level node */
+    ui.clearNodeOrder(child4A1TopLevel);
+    ui.flattenNodeOrder(child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child4A1TopLevel);
+    /* The child is now disconnected and not top-level */
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child5A1TopLevel));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child5A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child5A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child5A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child5A1TopLevel), child5A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 6);
+
+    /* Flattening a disconnected non-root top-level node */
+    ui.flattenNodeOrder(child4A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootA));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootA), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootA), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootA), child3A2TopLevel);
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child4A1TopLevel));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child4A1TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child4A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child4A1TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child4A1TopLevel), child4A1TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), rootA);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), child3A2TopLevel);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootA);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 5);
+
+    /* Removing a top-level node directly frees all orders used by its range
+       (doesn't defer that to clean()) */
+    ui.removeNode(rootA);
+    CORRADE_VERIFY(ui.isHandleValid(child3A2TopLevel));
+    CORRADE_VERIFY(!ui.isNodeTopLevel(child3A2TopLevel));
+    CORRADE_VERIFY(!ui.isNodeOrdered(child3A2TopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child3A2TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(child3A2TopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child3A2TopLevel), child3A2TopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 3); /* 2 less */
+    CORRADE_COMPARE(ui.nodeUsedCount(), 12);
+
+    /* Update doesn't affect the order in any way, just removes child nodes */
+    ui.update();
+    CORRADE_VERIFY(!ui.isHandleValid(child3A2TopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 3);
+    CORRADE_COMPARE(ui.nodeUsedCount(), 4);
+
+    /* Removing a non-top-level node doesn't free anything even if there are
+       child nodes below, that's deferred to clean() */
+    ui.removeNode(childC);
+    CORRADE_VERIFY(ui.isHandleValid(child2CTopLevel));
+    CORRADE_VERIFY(ui.isNodeTopLevel(child2CTopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(child2CTopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(child2CTopLevel), rootCNotInOrder);
+    CORRADE_COMPARE(ui.nodeOrderNext(child2CTopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(child2CTopLevel), child2CTopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 3); /* no change */
+    CORRADE_COMPARE(ui.nodeUsedCount(), 3);
+
+    ui.update();
+    CORRADE_VERIFY(!ui.isHandleValid(child2CTopLevel));
+    CORRADE_VERIFY(ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), rootB);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderLast(), rootB);
+    CORRADE_COMPARE(ui.nodeOrderCapacity(), 8);
+    CORRADE_COMPARE(ui.nodeOrderUsedCount(), 2); /* just rootB and rootC now */
+    CORRADE_COMPARE(ui.nodeUsedCount(), 2);
+
+    /* Setting a nested top-level node order with no nodes in top-level order
+       should not put it there */
+    ui.clearNodeOrder(rootB);
+    NodeHandle childBTopLevel = ui.createNode(rootB, {}, {});
+    ui.setNodeOrder(childBTopLevel, NodeHandle::Null);
+    CORRADE_VERIFY(ui.isNodeTopLevel(rootB));
+    CORRADE_VERIFY(!ui.isNodeOrdered(rootB));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(rootB), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderNext(rootB), childBTopLevel);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(rootB), childBTopLevel);
+    CORRADE_VERIFY(ui.isNodeOrdered(childBTopLevel));
+    CORRADE_COMPARE(ui.nodeOrderPrevious(childBTopLevel), rootB);
+    CORRADE_COMPARE(ui.nodeOrderNext(childBTopLevel), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLastNested(childBTopLevel), childBTopLevel);
+    CORRADE_COMPARE(ui.nodeOrderFirst(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOrderLast(), NodeHandle::Null);
 }
 
 void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
@@ -3441,8 +4142,29 @@ void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
     NodeHandle inOrder = ui.createNode({}, {});
     CORRADE_VERIFY(ui.isNodeOrdered(inOrder));
 
-    NodeHandle child = ui.createNode(inOrder, {}, {});
-    CORRADE_COMPARE(ui.nodeParent(child), inOrder);
+    NodeHandle childA = ui.createNode(inOrder, {}, {});
+    NodeHandle childB = ui.createNode(inOrder, {}, {});
+    ui.setNodeOrder(childA, NodeHandle::Null);
+    ui.setNodeOrder(childB, NodeHandle::Null);
+
+    NodeHandle child2A = ui.createNode(childA, {}, {});
+    ui.setNodeOrder(child2A, NodeHandle::Null);
+
+    NodeHandle child2ANotInOrder = ui.createNode(childA, {}, {});
+    CORRADE_VERIFY(!ui.isNodeOrdered(child2ANotInOrder));
+
+    /* Duplicated because childC1NotInOrder gets into a broken state in the
+       process */
+    NodeHandle childC1NotInOrder = ui.createNode(inOrder, {}, {});
+    NodeHandle childC2NotInOrder = ui.createNode(inOrder, {}, {});
+    NodeHandle child2C1 = ui.createNode(childC1NotInOrder, {}, {});
+    NodeHandle child2C2 = ui.createNode(childC2NotInOrder, {}, {});
+    ui.setNodeOrder(child2C1, NodeHandle::Null);
+    ui.setNodeOrder(child2C2, NodeHandle::Null);
+    NodeHandle childC21 = ui.createNode(inOrder, {}, {});
+    NodeHandle childC22 = ui.createNode(inOrder, {}, {});
+    ui.setNodeOrder(childC21, child2C1);
+    ui.setNodeOrder(childC22, child2C2);
 
     NodeHandle notInOrder = ui.createNode({}, {});
     ui.clearNodeOrder(notInOrder);
@@ -3450,43 +4172,84 @@ void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
 
     std::ostringstream out;
     Error redirectError{&out};
+    ui.isNodeTopLevel(NodeHandle::Null);
+    ui.isNodeTopLevel(NodeHandle(0x123abcde));
     ui.isNodeOrdered(NodeHandle::Null);
     ui.isNodeOrdered(NodeHandle(0x123abcde));
-    ui.isNodeOrdered(child);
     ui.nodeOrderPrevious(NodeHandle::Null);
     ui.nodeOrderPrevious(NodeHandle(0x123abcde));
-    ui.nodeOrderPrevious(child);
     ui.nodeOrderNext(NodeHandle::Null);
     ui.nodeOrderNext(NodeHandle(0x123abcde));
-    ui.nodeOrderNext(child);
     ui.setNodeOrder(NodeHandle::Null, NodeHandle::Null);
     ui.setNodeOrder(NodeHandle(0x123abcde), NodeHandle::Null);
-    ui.setNodeOrder(inOrder, NodeHandle(0x123abcde));
-    ui.setNodeOrder(child, NodeHandle::Null);
-    ui.setNodeOrder(inOrder, notInOrder);
-    ui.setNodeOrder(inOrder, inOrder);
-    ui.clearNodeOrder(NodeHandle(0x123abcde));
     ui.clearNodeOrder(NodeHandle::Null);
-    ui.clearNodeOrder(child);
+    ui.clearNodeOrder(NodeHandle(0x123abcde));
+    ui.flattenNodeOrder(NodeHandle::Null);
+    ui.flattenNodeOrder(NodeHandle(0x123abcde));
+    ui.setNodeOrder(inOrder, NodeHandle(0x123abcde));
+
+    /* Ordering before a node that isn't ordered */
+    ui.setNodeOrder(inOrder, notInOrder);
+    ui.setNodeOrder(childC21, childC1NotInOrder);
+
+    /* Node ordered before itself */
+    ui.setNodeOrder(inOrder, inOrder);
+    /* Ordering a root node before non-root and vice versa */
+    ui.setNodeOrder(inOrder, childA);
+    ui.setNodeOrder(childA, inOrder);
+
+    /* These three fire later in the algorithm, with the order on the node
+       already cleared, so they have to be in this particular order to not use
+       an already-broken state */
+    /* Node ordered before its own child, not in order yet */
+    ui.setNodeOrder(child2ANotInOrder, childA);
+    /* Node ordered before its own child */
+    ui.setNodeOrder(childA, child2A);
+    /* Node ordered before a node with unrelated parent */
+    ui.setNodeOrder(child2A, childB);
+
+    /* Node already containing nested top-level nodes, not implemented yet */
+    ui.setNodeOrder(childC1NotInOrder, NodeHandle::Null);
+    /* Same, but childC2 is what contains childC1NotInOrder so if the check
+       stops before `before`, it won't see it */
+    ui.setNodeOrder(childC2NotInOrder, childC22);
+
+    /* Flattening root nodes is not allowed, whether they're in order or not */
+    ui.flattenNodeOrder(inOrder);
+    ui.flattenNodeOrder(notInOrder);
     CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractUserInterface::isNodeTopLevel(): invalid handle Whee::NodeHandle::Null\n"
+        "Whee::AbstractUserInterface::isNodeTopLevel(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
         "Whee::AbstractUserInterface::isNodeOrdered(): invalid handle Whee::NodeHandle::Null\n"
         "Whee::AbstractUserInterface::isNodeOrdered(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
-        "Whee::AbstractUserInterface::isNodeOrdered(): Whee::NodeHandle(0x1, 0x1) is not a root node\n"
         "Whee::AbstractUserInterface::nodeOrderPrevious(): invalid handle Whee::NodeHandle::Null\n"
         "Whee::AbstractUserInterface::nodeOrderPrevious(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
-        "Whee::AbstractUserInterface::nodeOrderPrevious(): Whee::NodeHandle(0x1, 0x1) is not a root node\n"
         "Whee::AbstractUserInterface::nodeOrderNext(): invalid handle Whee::NodeHandle::Null\n"
         "Whee::AbstractUserInterface::nodeOrderNext(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
-        "Whee::AbstractUserInterface::nodeOrderNext(): Whee::NodeHandle(0x1, 0x1) is not a root node\n"
         "Whee::AbstractUserInterface::setNodeOrder(): invalid handle Whee::NodeHandle::Null\n"
         "Whee::AbstractUserInterface::setNodeOrder(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
-        "Whee::AbstractUserInterface::setNodeOrder(): invalid before handle Whee::NodeHandle(0xabcde, 0x123)\n"
-        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0x1, 0x1) is not a root node\n"
-        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0x2, 0x1) is not ordered\n"
-        "Whee::AbstractUserInterface::setNodeOrder(): can't order Whee::NodeHandle(0x0, 0x1) before itself\n"
-        "Whee::AbstractUserInterface::clearNodeOrder(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
         "Whee::AbstractUserInterface::clearNodeOrder(): invalid handle Whee::NodeHandle::Null\n"
-        "Whee::AbstractUserInterface::clearNodeOrder(): Whee::NodeHandle(0x1, 0x1) is not a root node\n",
+        "Whee::AbstractUserInterface::clearNodeOrder(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
+        "Whee::AbstractUserInterface::flattenNodeOrder(): invalid handle Whee::NodeHandle::Null\n"
+        "Whee::AbstractUserInterface::flattenNodeOrder(): invalid handle Whee::NodeHandle(0xabcde, 0x123)\n"
+        "Whee::AbstractUserInterface::setNodeOrder(): invalid before handle Whee::NodeHandle(0xabcde, 0x123)\n"
+
+        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0xb, 0x1) is not ordered\n"
+        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0x5, 0x1) is not ordered\n"
+
+        "Whee::AbstractUserInterface::setNodeOrder(): can't order Whee::NodeHandle(0x0, 0x1) before itself\n"
+        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0x0, 0x1) is a root node but Whee::NodeHandle(0x1, 0x1) is not\n"
+        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0x1, 0x1) is not a root node but Whee::NodeHandle(0x0, 0x1) is\n"
+
+        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0x1, 0x1) doesn't share the nearest top-level parent with Whee::NodeHandle(0x4, 0x1)\n"
+        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0x3, 0x1) doesn't share the nearest top-level parent with Whee::NodeHandle(0x1, 0x1)\n"
+        "Whee::AbstractUserInterface::setNodeOrder(): Whee::NodeHandle(0x2, 0x1) doesn't share the nearest top-level parent with Whee::NodeHandle(0x3, 0x1)\n"
+
+        "Whee::AbstractUserInterface::setNodeOrder(): creating a new top-level node with existing nested top-level nodes isn't implemented yet, sorry; clear the order or flatten it first\n"
+        "Whee::AbstractUserInterface::setNodeOrder(): creating a new top-level node with existing nested top-level nodes isn't implemented yet, sorry; clear the order or flatten it first\n"
+
+        "Whee::AbstractUserInterface::flattenNodeOrder(): Whee::NodeHandle(0x0, 0x1) is a root node\n"
+        "Whee::AbstractUserInterface::flattenNodeOrder(): Whee::NodeHandle(0xb, 0x1) is a root node\n",
         TestSuite::Compare::String);
 }
 
@@ -5646,11 +6409,13 @@ void AbstractUserInterfaceTest::state() {
     if(!data.layouters) {
         node = ui.createNode({2.0f, 1.0f}, {3.0f, 5.0f}, NodeFlag::Clip);
         another1 = ui.createNode({5.0f, 0.0f}, {1.0f, 2.0f});
-        another2 = ui.createNode({5.0f, 2.0f}, {1.0f, 2.0f});
+        another2 = ui.createNode(another1, {0.0f, 2.0f}, {1.0f, 2.0f});
+        ui.setNodeOrder(another2, NodeHandle::Null);
     } else {
         node = ui.createNode({2.0f, 3.0f}, {3.0f, 2.5f}, NodeFlag::Clip);
         another1 = ui.createNode({3.0f, 2.0f}, {0.5f, 1.0f});
-        another2 = ui.createNode({5.0f, 4.0f}, {1.0f, 1.0f});
+        another2 = ui.createNode(another1, {0.0f, 4.0f}, {1.0f, 1.0f});
+        ui.setNodeOrder(another2, NodeHandle::Null);
     }
     /* This node isn't assigned any layout */
     NodeHandle nested1 = ui.createNode(node, {1.0f, 3.0f}, {1.0f, 2.0f});
@@ -5662,6 +6427,10 @@ void AbstractUserInterfaceTest::state() {
     /* This node is assigned a layout but isn't visible so it won't appear
        anywhere. It also shouldn't be modified by the layouter in any way. */
     NodeHandle invisible = ui.createNode({9.0f, 9.0f}, {9.0f, 9.0f}, NodeFlag::Hidden);
+    /* This node is a child of the invisible top-level node, so it shouldn't
+       appear anywhere even though it's top-level */
+    NodeHandle topLevelChildOfInvisible = ui.createNode(invisible, {0.0f, 0.0f}, {9.0f, 9.0f});
+    ui.setNodeOrder(topLevelChildOfInvisible, NodeHandle::Null);
     /* This node is not part of the top-level order so it won't appear anywhere
        either. It also shouldn't be modified by the layouter in any way. */
     NodeHandle notInOrder = ui.createNode({8.0f, 8.0f}, {8.0f, 8.0f});
@@ -5787,7 +6556,6 @@ void AbstractUserInterfaceTest::state() {
        used */
     LayoutHandle layout2Node = LayoutHandle(~UnsignedLong{});
     LayoutHandle layout2Another1 = LayoutHandle(~UnsignedLong{});
-    LayoutHandle layout2Another2 = LayoutHandle(~UnsignedLong{});
     LayoutHandle layout1Another1 = LayoutHandle(~UnsignedLong{});
     if(data.layouters) {
         /* Layouter 2 is ordered first even though it has a higher ID */
@@ -5835,7 +6603,9 @@ void AbstractUserInterfaceTest::state() {
         layout2Another1 = ui.layouter<Layouter2>(layouter2).add(another1);
         /* This one is unused because the node is invisible */
         /*layout1Invisible =*/ ui.layouter<Layouter1>(layouter1).add(invisible);
-        layout2Another2 = ui.layouter<Layouter2>(layouter2).add(another2);
+        /* This one is not referenced by the test as another2 is a non-root
+           top-level node so it never appears among top-level layout nodes */
+        /*layout2Another2 =*/ ui.layouter<Layouter2>(layouter2).add(another2);
         layout1Another1 = ui.layouter<Layouter1>(layouter1).add(another1);
         /* This one is again unused because the node is not in the top-level
            order */
@@ -5861,26 +6631,27 @@ void AbstractUserInterfaceTest::state() {
         {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             bool expectedLayoutIdsToUpdate1[]{
-                /* layout2Node, layout2Nested2 and layout2Another2 */
-                false, true, true, false, true
+                /* layout2Node and layout2Nested2 */
+                false, true, true, false, false
             };
             bool expectedLayoutIdsToUpdate2[]{
                 /* layout1Another1 */
                 false, true, false
             };
             bool expectedLayoutIdsToUpdate3[]{
-                /* layout2Another1 */
-                false, false, false, true, false
+                /* layout2Another1 and layout2Another2 */
+                false, false, false, true, true
             };
             UnsignedInt expectedTopLevelLayoutIds1[]{
                 layoutHandleId(layout2Node),
-                layoutHandleId(layout2Another2),
             };
             UnsignedInt expectedTopLevelLayoutIds2[]{
                 layoutHandleId(layout1Another1),
             };
             UnsignedInt expectedTopLevelLayoutIds3[]{
                 layoutHandleId(layout2Another1),
+                /* layout2Another2 is top-level but not root, so not included
+                   here */
             };
             Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
                 /* This gets the original sizes and *relative* offsets,
@@ -5888,28 +6659,31 @@ void AbstractUserInterfaceTest::state() {
                    then what the layouter produces and absolute */
                 {{2.0f, 3.0f}, {3.0f, 2.5f}}, /* node */
                 {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-                {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+                {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
                 {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
                 {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
                 {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+                {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
             };
             Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
                 {{2.0f, 1.0f}, {3.0f, 5.0f}}, /* changed by layouter 2 */
                 {{3.0f, 2.0f}, {0.5f, 1.0f}},
-                {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
+                {{0.0f, 4.0f}, {1.0f, 1.0f}},
                 {{1.0f, 3.0f}, {1.0f, 2.0f}},
                 {{2.0f, 2.0f}, {1.0f, 2.0f}},
                 {{9.0f, 9.0f}, {9.0f, 9.0f}},
+                {{0.0f, 0.0f}, {9.0f, 9.0f}},
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}
             };
             Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
                 {{2.0f, 1.0f}, {3.0f, 5.0f}},
                 {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-                {{5.0f, 2.0f}, {1.0f, 2.0f}},
+                {{0.0f, 4.0f}, {1.0f, 1.0f}},
                 {{1.0f, 3.0f}, {1.0f, 2.0f}},
                 {{2.0f, 2.0f}, {1.0f, 2.0f}},
                 {{9.0f, 9.0f}, {9.0f, 9.0f}},
+                {{0.0f, 0.0f}, {9.0f, 9.0f}},
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}
             };
             ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
@@ -6083,11 +6857,13 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible and notInOrder */
-            true, true, true, true, true, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible and
+               notInOrder */
+            true, true, true, true, true, false, false, false
         };
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
             {{2.0f, 1.0f}, {3.0f, 5.0f}},
@@ -6279,11 +7055,13 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible and notInOrder */
-            true, true, true, true, true, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible and
+               notInOrder */
+            true, true, true, true, true, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
@@ -6412,11 +7190,12 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},                           /* nested2 */
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
             /* Only node and nested1 is visible (and enabled) now */
-            true, false, false, true, false, false, false
+            true, false, false, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and nested1 */
@@ -6514,11 +7293,13 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible and notInOrder */
-            true, true, true, true, true, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible and
+               notInOrder */
+            true, true, true, true, true, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
@@ -6609,11 +7390,13 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{4.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible and notInOrder */
-            true, true, true, true, true, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible and
+               notInOrder */
+            true, true, true, true, true, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
@@ -6702,54 +7485,58 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
         bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node, layout2Nested2 and layout2Another2. Before calling
-               layouters it's not yet clear that layout2Nested2 is going to be
-               culled, so this includes it. */
-            false, true, true, false, true
+            /* layout2Node and layout2Nested2. Before calling layouters it's
+               not yet clear that layout2Nested2 is going to be culled, so this
+               includes it. */
+            false, true, true, false, false
         };
         bool expectedLayoutIdsToUpdate2[]{
             /* layout1Another1 */
             false, true, false
         };
         bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 */
-            false, false, false, true, false
+            /* layout2Another1 and layout2Another2 */
+            false, false, false, true, true
         };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
-            layoutHandleId(layout2Another2),
         };
         UnsignedInt expectedTopLevelLayoutIds2[]{
             layoutHandleId(layout1Another1),
         };
         UnsignedInt expectedTopLevelLayoutIds3[]{
             layoutHandleId(layout2Another1),
+            /* layout2Another2 is top-level but not root, so not included
+               here */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
             {{2.0f, 3.0f}, {2.0f, 2.0f}}, /* node, size changed */
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+            {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
             {{2.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
             {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
             {{1.0f, 3.0f}, {1.0f, 2.0f}},
             {{2.0f, 2.0f}, {1.0f, 2.0f}},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
             {{8.0f, 8.0f}, {8.0f, 8.0f}}
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
             {{2.0f, 1.0f}, {2.0f, 4.0f}},
             {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{5.0f, 2.0f}, {1.0f, 2.0f}},
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
             {{1.0f, 3.0f}, {1.0f, 2.0f}},
             {{2.0f, 2.0f}, {1.0f, 2.0f}},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
             {{8.0f, 8.0f}, {8.0f, 8.0f}}
         };
         if(data.layouters) {
@@ -6778,11 +7565,13 @@ void AbstractUserInterfaceTest::state() {
             {{3.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible, notInOrder and now nested2 */
-            true, true, true, true, false, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible,
+               notInOrder and now nested2 */
+            true, true, true, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -6873,55 +7662,58 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
         bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node, layout2Nested2 and layout2Another2. Again, before
-               calling layouters it's not yet clear that layout2Nested2 is
-               going to be culled even though it was culled before, so this
-               includes it. */
-            false, true, true, false, true
+            /* layout2Node and layout2Nested2. Again, before calling layouters
+               it's not yet clear that layout2Nested2 is going to be culled
+               even though it was culled before, so this includes it. */
+            false, true, true, false, false
         };
         bool expectedLayoutIdsToUpdate2[]{
             /* layout1Another1 */
             false, true, false
         };
         bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 */
-            false, false, false, true, false
+            /* layout2Another1 and layout2Another2 */
+            false, false, false, true, true
         };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
-            layoutHandleId(layout2Another2),
         };
         UnsignedInt expectedTopLevelLayoutIds2[]{
             layoutHandleId(layout1Another1),
         };
         UnsignedInt expectedTopLevelLayoutIds3[]{
-            layoutHandleId(layout2Another1),
+            layoutHandleId(layout2Another1)
+            /* layout2Another2 is top-level but not root, so not included
+               here */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
             {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, offset changed */
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+            {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
             {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* changed by layouter 2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}},
             {{2.0f, 2.0f}, {1.0f, 2.0f}},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
             {{8.0f, 8.0f}, {8.0f, 8.0f}}
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{5.0f, 2.0f}, {1.0f, 2.0f}},
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
             {{1.0f, 3.0f}, {1.0f, 2.0f}},
             {{2.0f, 2.0f}, {1.0f, 2.0f}},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
             {{8.0f, 8.0f}, {8.0f, 8.0f}}
         };
         if(data.layouters) {
@@ -6950,11 +7742,13 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible, notInOrder and again nested2 */
-            true, true, true, true, false, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible,
+               notInOrder and again nested2 */
+            true, true, true, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -7031,64 +7825,52 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
         bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Another2 */
-            false, false, false, false, true
-        };
-        bool expectedLayoutIdsToUpdate2[]{
             /* layout1Another1 */
             false, true, false
         };
-        bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 */
-            false, false, false, true, false
+        bool expectedLayoutIdsToUpdate2[]{
+            /* layout2Another1 and layout2Another2 */
+            false, false, false, true, true
         };
         UnsignedInt expectedTopLevelLayoutIds1[]{
-            layoutHandleId(layout2Another2),
-        };
-        UnsignedInt expectedTopLevelLayoutIds2[]{
             layoutHandleId(layout1Another1),
         };
-        UnsignedInt expectedTopLevelLayoutIds3[]{
+        UnsignedInt expectedTopLevelLayoutIds2[]{
             layoutHandleId(layout2Another1),
+            /* layout2Another2 is top-level but not root, so not included
+               here */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
             {},
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {},
             {},
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
+            {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
+            {{8.0f, 8.0f}, {8.0f, 8.0f}}  /* notInOrder */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
             {},
-            {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
-            {},
-            {},
-            {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
-        };
-        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
-            {},
             {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{5.0f, 2.0f}, {1.0f, 2.0f}},
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
             {},
             {},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
-            {{8.0f, 8.0f}, {8.0f, 8.0f}}
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
+            {{8.0f, 8.0f}, {8.0f, 8.0f}},
         };
         if(data.layouters) {
             layouterUpdateCalls = {};
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
-            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
-            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
-            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
-            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
-            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
-            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = {};
+            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds1;
+            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds2;
+            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = {};
+            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes1;
+            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes2;
+            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = {};
             ui.layouter<Layouter2>(layouter2).updateCallId = 0;
         }
 
@@ -7102,11 +7884,12 @@ void AbstractUserInterfaceTest::state() {
             {},
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
             /* Only another1 and another2 are left visible (and enabled) now */
-            false, true, true, false, false, false, false
+            false, true, true, false, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}  /* another1, unclipped */
@@ -7141,8 +7924,9 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
-            /* update() again gets called twice on layouter 2 */
-            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2)
+            /* layouter 2 gets called just once this time, i.e. the usual first
+               call to layouter2 is omitted now */
+            layouterHandleId(layouter1), layouterHandleId(layouter2)
         }), TestSuite::Compare::Container);
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
@@ -7187,52 +7971,56 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
         bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node, layout2Nested2 and layout2Another2 */
-            false, true, true, false, true
+            /* layout2Node and layout2Nested2 */
+            false, true, true, false, false
         };
         bool expectedLayoutIdsToUpdate2[]{
             /* layout1Another1 */
             false, true, false
         };
         bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 */
-            false, false, false, true, false
+            /* layout2Another1 and layout2Another2 */
+            false, false, false, true, true
         };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
-            layoutHandleId(layout2Another2),
         };
         UnsignedInt expectedTopLevelLayoutIds2[]{
             layoutHandleId(layout1Another1),
         };
         UnsignedInt expectedTopLevelLayoutIds3[]{
             layoutHandleId(layout2Another1),
+            /* layout2Another2 is top-level but not root, so not included
+               here */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
             {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+            {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
             {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
             {{1.0f, 3.0f}, {1.0f, 2.0f}},
             {{2.0f, 2.0f}, {1.0f, 2.0f}},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
             {{8.0f, 8.0f}, {8.0f, 8.0f}}
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{5.0f, 2.0f}, {1.0f, 2.0f}},
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
             {{1.0f, 3.0f}, {1.0f, 2.0f}},
             {{2.0f, 2.0f}, {1.0f, 2.0f}},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
             {{8.0f, 8.0f}, {8.0f, 8.0f}}
         };
         if(data.layouters) {
@@ -7261,11 +8049,13 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible, notInOrder and nested2 again */
-            true, true, true, true, false, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible,
+               notInOrder and nested2 again */
+            true, true, true, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -7359,11 +8149,12 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
             /* Only another1 and another2 are left enabled now */
-            false, true, true, false, false, false, false
+            false, true, true, false, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -7464,11 +8255,13 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* Again all enabled except invisible, notInOrder and nested2 */
-            true, true, true, true, false, false, false
+            /* Again all enabled except invisible, topLevelChildOfInvisible,
+               notInOrder and nested2 */
+            true, true, true, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -7558,11 +8351,13 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* Again all enabled except invisible, notInOrder and nested2 */
-            true, true, true, true, false, false, false
+            /* Again all enabled except invisible, topLevelChildOfInvisible,
+               notInOrder and nested2 */
+            true, true, true, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -7667,11 +8462,13 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{5.0f, 3.0f}, {1.0f, 2.0f}}, /* nested2 */
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible and notInOrder */
-            true, true, true, true, true, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible and
+               notInOrder */
+            true, true, true, true, true, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 3}, /* node and all children */
@@ -7762,11 +8559,13 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* All enabled except invisible, notInOrder & nested2 now again */
-            true, true, true, true, false, false, false
+            /* All enabled except invisible, topLevelChildOfInvisible,
+               notInOrder & nested2 now again */
+            true, true, true, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
@@ -7841,20 +8640,20 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
         bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node, layout2Nested2 and layout2Another2 */
-            false, true, true, false, true
+            /* layout2Node and layout2Nested2 */
+            false, true, true, false, false
         };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
-            layoutHandleId(layout2Another2),
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
             {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
             {},
-            {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {},
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+            {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         if(data.layouters) {
@@ -7878,23 +8677,22 @@ void AbstractUserInterfaceTest::state() {
         Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
             {},
-            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            {},
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* Only node, another2 and nested1 left visible & enabled */
-            true, false, true, true, false, false, false
+            /* Only node and nested1 left visible & enabled */
+            true, false, false, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 2}, /* node and remaining child */
-            /* another2 has no data */
         };
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
-            {{}, {}},
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
@@ -7969,52 +8767,56 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
 
         bool expectedLayoutIdsToUpdate1[]{
-            /* layout2Node, layout2Nested2 and layout2Another2 */
-            false, true, true, false, true
+            /* layout2Node and layout2Nested2 */
+            false, true, true, false, false
         };
         bool expectedLayoutIdsToUpdate2[]{
             /* layout1Another1 */
             false, true, false
         };
         bool expectedLayoutIdsToUpdate3[]{
-            /* layout2Another1 */
-            false, false, false, true, false
+            /* layout2Another1 and layout2Another2 */
+            false, false, false, true, true
         };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Node),
-            layoutHandleId(layout2Another2),
         };
         UnsignedInt expectedTopLevelLayoutIds2[]{
             layoutHandleId(layout1Another1),
         };
         UnsignedInt expectedTopLevelLayoutIds3[]{
             layoutHandleId(layout2Another1),
+            /* layout2Another2 is top-level but not root, so not included
+               here */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
             {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
             {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+            {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
             {{3.0f, 2.0f}, {0.5f, 1.0f}},
-            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
             {{1.0f, 3.0f}, {1.0f, 2.0f}},
             {{2.0f, 2.0f}, {1.0f, 2.0f}},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
             {{8.0f, 8.0f}, {8.0f, 8.0f}}
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
-            {{5.0f, 2.0f}, {1.0f, 2.0f}},
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
             {{1.0f, 3.0f}, {1.0f, 2.0f}},
             {{2.0f, 2.0f}, {1.0f, 2.0f}},
             {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
             {{8.0f, 8.0f}, {8.0f, 8.0f}}
         };
         if(data.layouters) {
@@ -8043,21 +8845,23 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
-            /* Again all enabled except invisible, notInOrder and nested2 */
-            true, true, true, true, false, false, false
+            /* Again all enabled except invisible, topLevelChildOfInvisible,
+               notInOrder and nested2 */
+            true, true, true, true, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}, /* another1, unclipped */
-            {1, 2}  /* node and remaining child */
             /* another2 has no data */
+            {2, 2}  /* node and remaining child */
         };
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
             {{}, {}},
-            {{3.0f, 1.0f}, {2.0f, 4.0f}},
             {{}, {}},
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
             {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
@@ -8094,6 +8898,174 @@ void AbstractUserInterfaceTest::state() {
     if(data.dataAttachmentAnimators)
         CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
 
+    /* Calling flattenNodeOrder() sets a state flag */
+    ui.flattenNodeOrder(another2);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+
+    /* Calling clean() should be a no-op */
+    if(data.clean && data.noOp) {
+        {
+            CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+            ui.clean();
+        }
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
+        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
+        if(data.layouters) {
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+            CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        }
+        CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16);
+        if(data.nodeAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+        if(data.dataAttachmentAnimators)
+            CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+    }
+
+    /* Calling update() calls the layouters the same way (flattening the order
+       has only an effect on the draw order, not on the layouters or on actual
+       node offsets and sizes) */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+
+        bool expectedLayoutIdsToUpdate1[]{
+            /* layout2Node and layout2Nested2 */
+            false, true, true, false, false
+        };
+        bool expectedLayoutIdsToUpdate2[]{
+            /* layout1Another1 */
+            false, true, false
+        };
+        bool expectedLayoutIdsToUpdate3[]{
+            /* layout2Another1 and layout2Another2 */
+            false, false, false, true, true
+        };
+        UnsignedInt expectedTopLevelLayoutIds1[]{
+            layoutHandleId(layout2Node),
+        };
+        UnsignedInt expectedTopLevelLayoutIds2[]{
+            layoutHandleId(layout1Another1),
+        };
+        UnsignedInt expectedTopLevelLayoutIds3[]{
+            layoutHandleId(layout2Another1),
+            /* layout2Another2 is top-level but not root, so not included
+               here */
+        };
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
+            {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
+            {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
+            {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+            {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
+            {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
+        };
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
+            {{3.0f, 2.0f}, {0.5f, 1.0f}},
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
+            {{1.0f, 3.0f}, {1.0f, 2.0f}},
+            {{2.0f, 2.0f}, {1.0f, 2.0f}},
+            {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
+            {{8.0f, 8.0f}, {8.0f, 8.0f}}
+        };
+        Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes3[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+            {{5.0f, 2.0f}, {1.0f, 1.0f}}, /* changed by layouter 1 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}},
+            {{1.0f, 3.0f}, {1.0f, 2.0f}},
+            {{2.0f, 2.0f}, {1.0f, 2.0f}},
+            {{9.0f, 9.0f}, {9.0f, 9.0f}},
+            {{0.0f, 0.0f}, {9.0f, 9.0f}},
+            {{8.0f, 8.0f}, {8.0f, 8.0f}}
+        };
+        if(data.layouters) {
+            layouterUpdateCalls = {};
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[0] = expectedLayoutIdsToUpdate1;
+            ui.layouter<Layouter1>(layouter1).expectedLayoutIdsToUpdate = expectedLayoutIdsToUpdate2;
+            ui.layouter<Layouter2>(layouter2).expectedLayoutIdsToUpdate[1] = expectedLayoutIdsToUpdate3;
+            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[0] = expectedTopLevelLayoutIds1;
+            ui.layouter<Layouter1>(layouter1).expectedTopLevelLayoutIds = expectedTopLevelLayoutIds2;
+            ui.layouter<Layouter2>(layouter2).expectedTopLevelLayoutIds[1] = expectedTopLevelLayoutIds3;
+            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[0] = expectedLayoutNodeOffsetsSizes1;
+            ui.layouter<Layouter1>(layouter1).expectedNodeOffsetsSizes = expectedLayoutNodeOffsetsSizes2;
+            ui.layouter<Layouter2>(layouter2).expectedNodeOffsetsSizes[1] = expectedLayoutNodeOffsetsSizes3;
+            ui.layouter<Layouter2>(layouter2).updateCallId = 0;
+        }
+
+        UnsignedInt expectedDataIds[]{
+            dataHandleId(dataAnother1),
+            dataHandleId(dataNode),
+            dataHandleId(dataNested1),
+        };
+        Containers::Pair<Vector2, Vector2> expectedNodeOffsetsSizes[]{
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* node */
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* another1 */
+            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
+            {},
+            {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
+            {},                           /* notInOrder */
+        };
+        bool expectedNodesEnabled[]{
+            /* Again all enabled except invisible, topLevelChildOfInvisible,
+               notInOrder and nested2 */
+            true, true, true, true, false, false, false, false
+        };
+        Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
+            {0, 1}, /* another1, unclipped */
+            {1, 2}, /* node and remaining child */
+        };
+        Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
+            {{}, {}},
+            {{3.0f, 1.0f}, {2.0f, 4.0f}},
+        };
+        Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
+            {{5.0f, 0.0f}, {1.0f, 2.0f}}, /* matching another1 */
+            {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* matching node */
+            {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
+        };
+        /* Removing a node from the top-level order means just the set of drawn
+           nodes (and thus also enabled state) being updated, but offset/size
+           update is also triggered due to the coarseness of the
+           UserInterfaceState bits */
+        /** @todo separate those */
+        ui.layer<Layer>(layer).expectedState = LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOffsetSizeUpdate|(data.compositingLayer ? LayerState::NeedsCompositeOffsetSizeUpdate : LayerStates{});
+        ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
+        ui.layer<Layer>(layer).expectedNodeOffsetsSizes = expectedNodeOffsetsSizes;
+        ui.layer<Layer>(layer).expectedNodesEnabled = expectedNodesEnabled;
+        ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
+        ui.layer<Layer>(layer).expectedClipRectOffsetsSizes = expectedClipRectOffsetsSizes;
+        if(data.compositingLayer)
+            ui.layer<Layer>(layer).expectedCompositeRectOffsetsSizes = expectedCompositeRectOffsetsSizes;
+
+        ui.update();
+    }
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
+    if(data.layouters) {
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
+        CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
+        CORRADE_COMPARE_AS(layouterUpdateCalls, Containers::arrayView({
+            /* layouter2 getting called twice again */
+            layouterHandleId(layouter2), layouterHandleId(layouter1), layouterHandleId(layouter2),
+        }), TestSuite::Compare::Container);
+    }
+    CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17);
+    if(data.nodeAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
+    if(data.dataAttachmentAnimators)
+        CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
+
+    /* Calling flattenNodeOrder() on a node that isn't in top-level (anymore)
+       is a no-op */
+    ui.flattenNodeOrder(another2);
+    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
     if(data.layouters) {
         /* Removing a layout marks the layouter with NeedsAssignmentUpdate,
            which is then propagated to the UI-wide state */
@@ -8119,24 +9091,27 @@ void AbstractUserInterfaceTest::state() {
             UnsignedInt expectedTopLevelLayoutIds1[]{
                 layoutHandleId(layout2Another1),
                 layoutHandleId(layout2Node),
-                layoutHandleId(layout2Another2),
+                /* layout2Another2 is top-level but not root, so not included
+                   here */
             };
             Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
                 {{3.0f, 3.0f}, {2.0f, 2.0f}}, /* node, visible again */
                 {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-                {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+                {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
                 {{1.0f, 3.0f}, {1.0f, 2.0f}}, /* nested1 */
                 {{2.0f, 4.0f}, {1.0f, 1.0f}}, /* nested2 */
                 {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+                {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
             };
             Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes2[]{
                 {{3.0f, 1.0f}, {2.0f, 4.0f}}, /* changed by layouter 2 */
                 {{3.0f, 0.0f}, {0.5f, 2.0f}}, /* changed by layouter 2 */
-                {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
+                {{0.0f, 2.0f}, {1.0f, 2.0f}}, /* changed by layouter 2 */
                 {{1.0f, 3.0f}, {1.0f, 2.0f}},
                 {{2.0f, 2.0f}, {1.0f, 2.0f}},
                 {{9.0f, 9.0f}, {9.0f, 9.0f}},
+                {{0.0f, 0.0f}, {9.0f, 9.0f}},
                 {{8.0f, 8.0f}, {8.0f, 8.0f}}
             };
             layouterUpdateCalls = {};
@@ -8161,25 +9136,26 @@ void AbstractUserInterfaceTest::state() {
                 /* With the layouter for another1 gone, the size is not updated
                    anymore */
                 {{3.0f, 0.0f}, {0.5f, 2.0f}},
-                {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+                /* Which also affects another2 that's a child */
+                {{3.0f, 2.0f}, {1.0f, 2.0f}},
                 {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
                 {},
                 {},                           /* invisible */
+                {},                           /* topLevelChildOfInvisible */
                 {}                            /* notInOrder */
             };
             bool expectedNodesEnabled[]{
-                /* All enabled except invisible, notInOrder and nested2 */
-                true, true, true, true, false, false, false
+                /* All enabled except invisible, topLevelChildOfInvisible,
+                   notInOrder and nested2 */
+                true, true, true, true, false, false, false, false
             };
             Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
                 {0, 1}, /* another1, unclipped */
                 {1, 2}  /* node and remaining child */
-                /* another2 has no data */
             };
             Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
                 {{}, {}},
                 {{3.0f, 1.0f}, {2.0f, 4.0f}},
-                {{}, {}},
             };
             Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
                 {{3.0f, 0.0f}, {0.5f, 2.0f}}, /* matching another1 */
@@ -8212,7 +9188,7 @@ void AbstractUserInterfaceTest::state() {
             layouterHandleId(layouter2), layouterHandleId(layouter1),
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18);
         if(data.nodeAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
@@ -8263,7 +9239,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
         }
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
@@ -8292,7 +9268,7 @@ void AbstractUserInterfaceTest::state() {
         ui.update();
     }
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
     if(data.nodeAttachmentAnimators)
@@ -8329,7 +9305,7 @@ void AbstractUserInterfaceTest::state() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 16 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 0);
         if(data.nodeAttachmentAnimators)
@@ -8359,21 +9335,23 @@ void AbstractUserInterfaceTest::state() {
             data.layouters ?
                 Containers::Pair<Vector2, Vector2>{{3.0f, 0.0f}, {0.5f, 2.0f}} :
                 Containers::Pair<Vector2, Vector2>{{5.0f, 0.0f}, {1.0f, 2.0f}},
-            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            /* Which also affects another2 that's a child */
+            data.layouters ?
+                Containers::Pair<Vector2, Vector2>{{3.0f, 2.0f}, {1.0f, 2.0f}} :
+                Containers::Pair<Vector2, Vector2>{{5.0f, 2.0f}, {1.0f, 2.0f}},
             {{4.0f, 4.0f}, {1.0f, 2.0f}}, /* nested1 */
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}, /* another1, unclipped */
             {1, 1}  /* remaining node child */
-            /* another2 has no data */
         };
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
             {{}, {}},
             {{3.0f, 1.0f}, {2.0f, 4.0f}},
-            {{}, {}},
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
             data.layouters ?              /* matching another1 */
@@ -8382,8 +9360,9 @@ void AbstractUserInterfaceTest::state() {
             {{4.0f, 4.0f}, {1.0f, 1.0f}}, /* matching nested1, clipped */
         };
         bool expectedNodesEnabled[]{
-            /* Again all enabled except invisible, notInOrder and nested2 */
-            true, true, true, true, false, false, false
+            /* Again all enabled except invisible, topLevelChildOfInvisible,
+               notInOrder and nested2 */
+            true, true, true, true, false, false, false, false
         };
         ui.layer<Layer>(layer).expectedDataIds = expectedDataIds;
         ui.layer<Layer>(layer).expectedClipRectIdsDataCounts = expectedClipRectIdsDataCounts;
@@ -8422,7 +9401,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 3);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 0);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 0);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
     if(data.nodeAttachmentAnimators)
@@ -8438,7 +9417,7 @@ void AbstractUserInterfaceTest::state() {
     /* Removing a node sets a state flag */
     ui.removeNode(node);
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
-    CORRADE_COMPARE(ui.nodeUsedCount(), 6);
+    CORRADE_COMPARE(ui.nodeUsedCount(), 7);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
         CORRADE_COMPARE(ui.layouter(layouter2).usedCount(), 5);
@@ -8495,7 +9474,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsDataAttachmentUpdate);
         CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
-        CORRADE_COMPARE(ui.nodeUsedCount(), 4);
+        CORRADE_COMPARE(ui.nodeUsedCount(), 5);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
             CORRADE_COMPARE(ui.layouter(layouter2).usedCount(), 2);
@@ -8504,7 +9483,7 @@ void AbstractUserInterfaceTest::state() {
         }
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 17 + (data.layouters ? 1 : 0));
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18 + (data.layouters ? 1 : 0));
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 1);
         if(data.nodeAttachmentAnimators) {
@@ -8542,15 +9521,17 @@ void AbstractUserInterfaceTest::state() {
         };
         UnsignedInt expectedTopLevelLayoutIds1[]{
             layoutHandleId(layout2Another1),
-            layoutHandleId(layout2Another2),
+            /* layout2Another2 is top-level but not root, so not included
+               here */
         };
         Containers::Pair<Vector2, Vector2> expectedLayoutNodeOffsetsSizes1[]{
             {},
             {{3.0f, 2.0f}, {0.5f, 1.0f}}, /* another1 */
-            {{5.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
+            {{0.0f, 4.0f}, {1.0f, 1.0f}}, /* another2 */
             {},
             {},
             {{9.0f, 9.0f}, {9.0f, 9.0f}}, /* invisible */
+            {{0.0f, 0.0f}, {9.0f, 9.0f}}, /* topLevelChildOfInvisible */
             {{8.0f, 8.0f}, {8.0f, 8.0f}}, /* notInOrder */
         };
         if(data.layouters) {
@@ -8584,22 +9565,24 @@ void AbstractUserInterfaceTest::state() {
             data.layouters ?
                 Containers::Pair<Vector2, Vector2>{{3.0f, 0.0f}, {0.5f, 2.0f}} :
                 Containers::Pair<Vector2, Vector2>{{5.0f, 0.0f}, {1.0f, 2.0f}},
-            {{5.0f, 2.0f}, {1.0f, 2.0f}}, /* another2 */
+            /* Which also affects another2 that's a child */
+            data.layouters ?
+                Containers::Pair<Vector2, Vector2>{{3.0f, 2.0f}, {1.0f, 2.0f}} :
+                Containers::Pair<Vector2, Vector2>{{5.0f, 2.0f}, {1.0f, 2.0f}},
             {},
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
             /* Only another1 and another2 left now */
-            false, true, true, false, false, false, false
+            false, true, true, false, false, false, false, false
         };
         Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
             {0, 1}, /* another1, unclipped */
-            /* another2 has no data */
         };
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
-            {{}, {}},
             {{}, {}}
         };
         Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
@@ -8645,7 +9628,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
-    CORRADE_COMPARE(ui.nodeUsedCount(), 4);
+    CORRADE_COMPARE(ui.nodeUsedCount(), 5);
     if(data.layouters) {
         CORRADE_COMPARE(ui.layouter(layouter1).usedCount(), 2);
         CORRADE_COMPARE(ui.layouter(layouter2).usedCount(), 2);
@@ -8658,7 +9641,7 @@ void AbstractUserInterfaceTest::state() {
     }
     CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
     CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 18 + (data.layouters ? 1 : 0));
+    CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 19 + (data.layouters ? 1 : 0));
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
     CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
     if(data.nodeAttachmentAnimators) {
@@ -8691,7 +9674,7 @@ void AbstractUserInterfaceTest::state() {
                 layouterHandleId(layouter2),
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 19);
+            CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 20);
             CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
             CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 2);
         }
@@ -8715,22 +9698,21 @@ void AbstractUserInterfaceTest::state() {
                 /* With all layouters for another1 and another2 gone, the sizes
                    are not updated anymore */
                 {{3.0f, 2.0f}, {0.5f, 1.0f}},
-                {{5.0f, 4.0f}, {1.0f, 1.0f}},
+                {{3.0f, 6.0f}, {1.0f, 1.0f}},
                 {},
                 {},
                 {},                           /* invisible */
+                {},                           /* topLevelChildOfInvisible */
                 {}                            /* notInOrder */
             };
             bool expectedNodesEnabled[]{
                 /* Only another1 and another2 left */
-                false, true, true, false, false, false, false
+                false, true, true, false, false, false, false, false
             };
             Containers::Pair<UnsignedInt, UnsignedInt> expectedClipRectIdsDataCounts[]{
                 {0, 1}, /* another1, unclipped */
-                /* another2 has no data */
             };
             Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
-                {{}, {}},
                 {{}, {}}
             };
             Containers::Pair<Vector2, Vector2> expectedCompositeRectOffsetsSizes[]{
@@ -8762,7 +9744,7 @@ void AbstractUserInterfaceTest::state() {
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE(ui.layer(layer).usedCount(), 1);
         CORRADE_COMPARE(ui.layer<Layer>(layer).cleanCallCount, 1);
-        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 20);
+        CORRADE_COMPARE(ui.layer<Layer>(layer).updateCallCount, 21);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).cleanCallCount, 1);
         CORRADE_COMPARE(ui.layer<Layer>(anotherLayer).updateCallCount, 3);
         if(data.nodeAttachmentAnimators) {
@@ -8817,19 +9799,19 @@ void AbstractUserInterfaceTest::state() {
                 Containers::Pair<Vector2, Vector2>{{3.0f, 2.0f}, {0.5f, 1.0f}} :
                 Containers::Pair<Vector2, Vector2>{{5.0f, 0.0f}, {1.0f, 2.0f}},
             data.layouters ?
-                Containers::Pair<Vector2, Vector2>{{5.0f, 4.0f}, {1.0f, 1.0f}} :
+                Containers::Pair<Vector2, Vector2>{{3.0f, 6.0f}, {1.0f, 1.0f}} :
                 Containers::Pair<Vector2, Vector2>{{5.0f, 2.0f}, {1.0f, 2.0f}},
             {},
             {},
             {},                           /* invisible */
+            {},                           /* topLevelChildOfInvisible */
             {},                           /* notInOrder */
         };
         bool expectedNodesEnabled[]{
             /* Only another1 and another2 left */
-            false, true, true, false, false, false, false
+            false, true, true, false, false, false, false, false
         };
         Containers::Pair<Vector2, Vector2> expectedClipRectOffsetsSizes[]{
-            {{}, {}},
             {{}, {}}
         };
         ui.layer<Layer>(anotherLayer).expectedDataIdsToRemove = {};

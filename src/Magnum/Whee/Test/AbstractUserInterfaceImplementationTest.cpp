@@ -608,9 +608,27 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirst() {
         {nodeHandle(1, 0x1), ~UnsignedInt{}, {}},               /* 9 */
         {nodeHandle(11, 0x1), ~UnsignedInt{}, {}},              /* 10 */
         {nodeHandle(1, 0x1), ~UnsignedInt{}, {}},               /* 11 */
-        /* More root elements, the first isn't included in the order */
-        {NodeHandle::Null, 0xbaba, {}},                         /* 12 */
-        {NodeHandle::Null, 6, {}}                               /* 13 */
+        /* Top-level nodes that aren't root nodes, the first isn't included in
+           the order. For the purpose of this algorithm they behave the same as
+           if the parent was null. */
+        {nodeHandle(4, 0x1), 0xbaba, {}},                       /* 12 */
+        {nodeHandle(5, 0xfff), 6, {}},                          /* 13 */
+        /* A top-level node that's nested right under the hidden node shouldn't
+           be considered */
+        {nodeHandle(8, 0x1), 11, {}},                           /* 14 */
+        /* A top-level node that's nested right under a visible node should
+           be */
+        {nodeHandle(13, 0x1), 4, {}},                           /* 15 */
+        /* A subtree that's nested under the hidden node shouldn't be
+           considered at all. The second node is top-level nested below another
+           non-top level node, should be excluded as well, and its
+           (non-top-level) child also. */
+        {nodeHandle(8, 0x1), ~UnsignedInt{}, {}},               /* 16 */
+        {nodeHandle(16, 0x1), 9, {}},                           /* 17 */
+        {nodeHandle(17, 0x1), ~UnsignedInt{}, {}},              /* 18 */
+        /* A hidden top-level node nested under node 3 (which isn't hidden)
+           should be skipped too */
+        {nodeHandle(3, 0x1), 1, NodeFlag::Hidden},              /* 19 */
     };
 
     /* The generation can be again arbitrary but it has to match with
@@ -620,22 +638,31 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirst() {
         NodeHandle next;
     } nodeOrder[]{
         {},                                 /* 0 */
-        {},                                 /* 1 */
-        /* Next after node 1 (which references order 2) is node 3 */
-        {nodeHandle(3, 0xfef)},             /* 2 */
-        /* Next after node 7 is node 1 */
-        {nodeHandle(1, 0xbab)},             /* 3 */
-        {},                                 /* 4 */
+        /* Next after node 18 is node 1, cycling back */
+        {nodeHandle(1, 0x080)},             /* 1 */
+        /* Next after node 1 (which references order 2) is node 13 */
+        {nodeHandle(13, 0xfef)},            /* 2 */
+        /* Next after node 7 (which is directly hidden) is node 3 */
+        {nodeHandle(3, 0xbab)},             /* 3 */
+        /* Next after node 15 (which is non-root top-level) is node 17 */
+        {nodeHandle(17, 0xb0b)},            /* 4 */
         {},                                 /* 5 */
-        /* Next after node 13 is node 7 */
-        {nodeHandle(7, 0xebe)},             /* 6 */
-        /* Next after node 3 is node 13 */
-        {nodeHandle(13, 0x080)}             /* 7 */
+        /* Next after node 13 (which is non-root top-level) is node 14 */
+        {nodeHandle(14, 0xebe)},            /* 6 */
+        /* Next after node 3 is node 19 */
+        {nodeHandle(19, 0xded)},            /* 7 */
+        {},                                 /* 8 */
+        /* Next after node 17 (which is also transitively hidden) is node 7 */
+        {nodeHandle(7, 0xefe)},             /* 9 */
+        {},
+        /* Next after node 14 (which is transitively hidden) is node 15 */
+        {nodeHandle(15, 0xaaa)},            /* 11 */
     };
-    const NodeHandle firstNodeOrder = nodeHandle(3, 0xfef);
+    const NodeHandle firstNodeOrder = nodeHandle(1, 0x080);
 
     /* Important: the childrenOffsets array has to be zero-initialized. Others
        don't need to be. */
+    char visibleNodes[3]{};
     UnsignedInt childrenOffsets[Containers::arraySize(nodes) + 1]{};
     UnsignedInt children[Containers::arraySize(nodes)];
     Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt> parentsToProcess[Containers::arraySize(nodes)];
@@ -645,31 +672,47 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirst() {
         Containers::stridedArrayView(nodes).slice(&Node::order),
         Containers::stridedArrayView(nodes).slice(&Node::flags),
         Containers::stridedArrayView(nodeOrder).slice(&NodeOrder::next),
-        firstNodeOrder, childrenOffsets, children, parentsToProcess,
+        firstNodeOrder,
+        Containers::MutableBitArrayView{visibleNodes, 0, Containers::arraySize(nodes)},
+        childrenOffsets, children, parentsToProcess,
         Containers::stridedArrayView(out).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
         Containers::stridedArrayView(out).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second));
     CORRADE_COMPARE_AS(count,
         Containers::arraySize(nodes),
         TestSuite::Compare::LessOrEqual);
     CORRADE_COMPARE_AS(Containers::arrayView(out).prefix(count), (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
-        /* First is node 3, it has no children */
-        {3, 0},
-
-        /* Next is node 13, then its children */
-        {13, 1},
-            {0, 0},
-
-        /* Top-level node 7 is hidden, not listed here */
-
-        /* Next is node 1 and its children */
+        /* First is node 1 and its children */
         {1, 6},
             {4, 2},
                 {5, 1},
                     {6, 0},
-            /* Node 8 is hidden, not listed here */
+            /* Node 8 is hidden, not listed here, neither is node 16 which is
+               its child */
             {9, 0},
             {11, 1},
                 {10, 0},
+
+        /* Next is top-level node 13 (which itself is a child of node 5), then
+           its children. It has to be ordered after it in order to be treated
+           as visible. */
+        {13, 1},
+            {0, 0},
+
+        /* Top-level node 14 is a child of node 8, which is hidden, so not
+           listed here */
+
+        /* Top-level node 15 is a direct child of node 13 */
+        {15, 0},
+
+        /* Top-level node 17 is a child of node 16, which is a child of node 8,
+           which is hidden, so not listed here, neither is its child 18 */
+
+        /* Top-level node 7 is itself hidden, so not listed here either */
+
+        /* Next is top-level node 3, it has no children */
+        {3, 0},
+
+        /* Top-level node 19 is a child of node 3, but is hidden */
 
         /* Node 2 and 12 not present as these aren't included in the order */
     })), TestSuite::Compare::Container);
@@ -697,6 +740,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstSingleB
     };
     const NodeHandle firstNodeOrder = nodeHandle(0, 0xacb);
 
+    char visibleNodes[1]{};
     UnsignedInt childrenOffsets[Containers::arraySize(nodes) + 1]{};
     UnsignedInt children[Containers::arraySize(nodes)];
     Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt> parentsToProcess[Containers::arraySize(nodes)];
@@ -706,7 +750,9 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstSingleB
         Containers::stridedArrayView(nodes).slice(&Node::order),
         Containers::stridedArrayView(nodes).slice(&Node::flags),
         Containers::stridedArrayView(nodeOrder).slice(&NodeOrder::next),
-        firstNodeOrder, childrenOffsets, children, parentsToProcess,
+        firstNodeOrder,
+        Containers::MutableBitArrayView{visibleNodes, 0, Containers::arraySize(nodes)},
+        childrenOffsets, children, parentsToProcess,
         Containers::stridedArrayView(out).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
         Containers::stridedArrayView(out).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second));
     CORRADE_COMPARE_AS(count,
@@ -731,6 +777,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstNoTopLe
     } nodeOrder[10]{};
 
     /* There's no first node order, so nothing is visible */
+    char visibleNodes[2]{};
     UnsignedInt childrenOffsets[Containers::arraySize(nodes) + 1]{};
     UnsignedInt children[Containers::arraySize(nodes)];
     Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt> parentsToProcess[Containers::arraySize(nodes)];
@@ -740,7 +787,9 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodesDepthFirstNoTopLe
         Containers::stridedArrayView(nodes).slice(&Node::order),
         Containers::stridedArrayView(nodes).slice(&Node::flags),
         Containers::stridedArrayView(nodeOrder).slice(&NodeOrder::next),
-        NodeHandle::Null, childrenOffsets, children, parentsToProcess,
+        NodeHandle::Null,
+        Containers::MutableBitArrayView{visibleNodes, 0, Containers::arraySize(nodes)},
+        childrenOffsets, children, parentsToProcess,
         Containers::stridedArrayView(out).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
         Containers::stridedArrayView(out).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second));
     CORRADE_COMPARE(count, 0);
