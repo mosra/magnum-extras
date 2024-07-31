@@ -49,8 +49,9 @@ namespace Magnum { namespace Whee {
 */
 enum class NodeFlag: UnsignedByte {
     /**
-     * The node, all nested nodes and all attached data are hidden, i.e. not
-     * drawn and excluded from event processing.
+     * The node, all nested nodes including nested top-level nodes, and all
+     * attached data are hidden, i.e. not drawn and excluded from event
+     * processing.
      *
      * For top-level nodes (i.e., nodes for which
      * @ref AbstractUserInterface::nodeParent() is @ref NodeHandle::Null) a
@@ -71,7 +72,8 @@ enum class NodeFlag: UnsignedByte {
     /**
      * The node clips its contents. When enabled, child nodes that are
      * completely outside of the node rectangle are culled and not even drawn,
-     * nodes that are partially outside are clipped.
+     * nodes that are partially outside are clipped. Nested top-level nodes are
+     * not affected by this flag.
      *
      * Changing this flag causes @ref UserInterfaceState::NeedsNodeClipUpdate
      * to be set.
@@ -80,8 +82,9 @@ enum class NodeFlag: UnsignedByte {
 
     /**
      * The node, all nested nodes and all attached data don't get any events
-     * even if a particular layer implements event handlers. Doesn't have any
-     * visual effect, see @ref NodeFlag::Disabled or @ref NodeFlag::Hidden for
+     * even if a particular layer implements event handlers. Nested top-level
+     * nodes are not affected by this flag. Doesn't have any visual effect, see
+     * @ref NodeFlag::Disabled or @ref NodeFlag::Hidden for
      * alternatives. Setting this flag causes @ref NodeFlag::Focusable to be
      * ignored on the node and all its children.
      *
@@ -93,8 +96,9 @@ enum class NodeFlag: UnsignedByte {
     /**
      * The node, all nested nodes and all attached data are disabled. Implies
      * @ref NodeFlag::NoEvents and additionally has a visual effect on layers
-     * that implement a disabled state. Setting this flag causes
-     * @ref NodeFlag::Focusable to be ignored on the node and all its children.
+     * that implement a disabled state. Nested top-level nodes are not affected
+     * by this flag. Setting this flag causes @ref NodeFlag::Focusable to be
+     * ignored on the node and all its children.
      *
      * Changing this flag causes
      * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
