@@ -562,7 +562,6 @@ void fillLayoutUpdateMasksInto(const Containers::StridedArrayView2D<const Layout
             if(!level)
                 continue;
             const LayoutHandle layout = nodeLayouts[{node, layouter}];
-            CORRADE_INTERNAL_DEBUG_ASSERT(layout != LayoutHandle::Null);
             const UnsignedInt layouterId = layoutHandleLayouterId(layout);
             masks.set(layouterLevelMaskOffsets[{level - 1, layouterId}] + layoutHandleId(layout));
         }
@@ -961,8 +960,9 @@ void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers
         const UnsignedInt id = nodeHandleId(node);
         if(visibleEventNodeMask[id])
             /* The DataHandle generation isn't used for anything, only data and
-               layer ID is extracted out of the handle, so can be arbitrary. */
-            visibleNodeEventData[visibleNodeEventDataOffsets[id + 1]++] = dataHandle(layer, i - 1, 0);
+               layer ID is extracted out of the handle, so can be arbitrary
+               (but not 0, as that'd make dataHandleId() assert). */
+            visibleNodeEventData[visibleNodeEventDataOffsets[id + 1]++] = dataHandle(layer, i - 1, 0xfff);
     }
 }
 
@@ -1058,8 +1058,6 @@ void compositeRectsInto(const Vector2& uiOffset, const Vector2& uiSize, const Co
         for(std::size_t j = 0; j != clipRectDataCount; ++j) {
             const NodeHandle node = dataNodes[dataIds[dataOffset + j]];
             const UnsignedInt nodeId = nodeHandleId(node);
-            CORRADE_INTERNAL_DEBUG_ASSERT(node != NodeHandle::Null);
-
             const Vector2 nodeMin = nodeOffsets[nodeId];
             const Vector2 nodeMax = nodeMin + nodeSizes[nodeId];
             const Vector2 compositingRectMin = Math::max(nodeMin, clipRectMin);
@@ -1099,7 +1097,7 @@ Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitioned
 }
 Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsAnyDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& dataAttachmentAnimatorOffsets, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
-    CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size());
+    CORRADE_INTERNAL_ASSERT(layerId < dataAttachmentAnimatorOffsets.size());
     if(layerId == dataAttachmentAnimatorOffsets.size() - 1)
         return instances.exceptPrefix(dataAttachmentAnimatorOffsets.back());
 
@@ -1107,18 +1105,18 @@ Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitioned
 }
 Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsGenericDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& /*styleAnimatorOffsets*/, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
-    CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size() && dataAttachmentAnimatorOffsets[layerId] <= dataAnimatorOffsets[layerId]);
+    CORRADE_INTERNAL_ASSERT(layerId < dataAttachmentAnimatorOffsets.size() && dataAttachmentAnimatorOffsets[layerId] <= dataAnimatorOffsets[layerId]);
     return instances.slice(dataAttachmentAnimatorOffsets[layerId], dataAnimatorOffsets[layerId]);
 }
 Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsDataDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& /*dataAttachmentAnimatorOffsets*/, const Containers::StridedArrayView1D<const UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& styleAnimatorOffsets, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
-    CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAnimatorOffsets.size());
+    CORRADE_INTERNAL_ASSERT(layerId < dataAnimatorOffsets.size());
     CORRADE_INTERNAL_ASSERT(dataAnimatorOffsets[layerId] <= styleAnimatorOffsets[layerId]);
     return instances.slice(dataAnimatorOffsets[layerId], styleAnimatorOffsets[layerId]);
 }
 Containers::ArrayView<const Containers::Reference<AbstractAnimator>> partitionedAnimatorsStyleDataAttachment(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<const UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<const UnsignedShort>& /*dataAnimatorOffsets*/, const Containers::StridedArrayView1D<const UnsignedShort>& styleAnimatorOffsets, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
-    CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size());
+    CORRADE_INTERNAL_ASSERT(layerId < dataAttachmentAnimatorOffsets.size());
     const std::size_t end = layerId == dataAttachmentAnimatorOffsets.size() - 1 ?
         instances.size() : dataAttachmentAnimatorOffsets[layerId + 1];
     CORRADE_INTERNAL_ASSERT(styleAnimatorOffsets[layerId] <= end);
@@ -1258,7 +1256,7 @@ void partitionedAnimatorsRemove(Containers::Array<Containers::Reference<Abstract
 
 void partitionedAnimatorsCreateLayer(const Containers::ArrayView<const Containers::Reference<AbstractAnimator>> instances, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& styleAnimatorOffsets, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
-    CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size());
+    CORRADE_INTERNAL_ASSERT(layerId < dataAttachmentAnimatorOffsets.size());
 
     /* If this is a new layer at the end, set its offset to after all previous
        instances */
@@ -1277,7 +1275,7 @@ void partitionedAnimatorsCreateLayer(const Containers::ArrayView<const Container
 
 void partitionedAnimatorsRemoveLayer(Containers::Array<Containers::Reference<AbstractAnimator>>& instances, const Containers::StridedArrayView1D<UnsignedShort>& dataAttachmentAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& dataAnimatorOffsets, const Containers::StridedArrayView1D<UnsignedShort>& styleAnimatorOffsets, const LayerHandle layer) {
     const UnsignedInt layerId = layerHandleId(layer);
-    CORRADE_INTERNAL_ASSERT(layer != LayerHandle::Null && layerId < dataAttachmentAnimatorOffsets.size());
+    CORRADE_INTERNAL_ASSERT(layerId < dataAttachmentAnimatorOffsets.size());
 
     /* There are no animators in this layer anymore, do the data / style
        animator offset is the same as the data attachment animator offset */

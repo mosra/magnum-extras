@@ -2395,9 +2395,10 @@ AbstractUserInterface& AbstractUserInterface::update() {
                         if(node == NodeHandle::Null)
                             continue;
                         /* The LayoutHandle generation isn't used for anything,
-                           so can be arbitrary. This here also overwrites
+                           so can be arbitrary (but not 0, as that'd make
+                           layoutHandleId() assert). This here also overwrites
                            multiple layouts set for the same node. */
-                        nodeLayouts[{nodeHandleId(node), layouterIndex}] = layoutHandle(layouter, i, 0);
+                        nodeLayouts[{nodeHandleId(node), layouterIndex}] = layoutHandle(layouter, i, 0xfff);
                     }
                 }
                 layouter = layouterItem.used.next;
@@ -2854,7 +2855,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                                Containers::reference(state.currentCapturedNode),
                                Containers::reference(state.currentHoveredNode)}) {
             const bool valid = isHandleValid(node);
-            const UnsignedInt nodeId = nodeHandleId(node);
+            /* nodeHandleId() on NodeHandle::Null would assert, don't */
+            const UnsignedInt nodeId = valid ? nodeHandleId(node) : ~UnsignedInt{};
             if(valid && state.visibleEventNodeMask[nodeId])
                 continue;
 
@@ -2881,7 +2883,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
            only difference is the extra check for the Focusable flag. */
         {
             const bool valid = isHandleValid(state.currentFocusedNode);
-            const UnsignedInt nodeId = nodeHandleId(state.currentFocusedNode);
+            /* nodeHandleId() on NodeHandle::Null would assert, don't */
+            const UnsignedInt nodeId = valid ? nodeHandleId(state.currentFocusedNode) : ~UnsignedInt{};
             if(!valid ||
                !state.visibleEventNodeMask[nodeId] ||
                !(state.nodes[nodeId].used.flags >= NodeFlag::Focusable))

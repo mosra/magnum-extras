@@ -5744,7 +5744,13 @@ void AbstractUserInterfaceTest::state() {
 
     /* Creating layouters sets no state flags */
     LayouterHandle layouter1{}, layouter2{};
-    LayoutHandle layout2Node{}, layout2Another1{}, layout2Another2{}, layout1Another1{};
+    /* These are set to all 1s to not trigger a null assertion when
+       unconditionally querying layoutHandleId() on them when layouters are not
+       used */
+    LayoutHandle layout2Node = LayoutHandle(~UnsignedLong{});
+    LayoutHandle layout2Another1 = LayoutHandle(~UnsignedLong{});
+    LayoutHandle layout2Another2 = LayoutHandle(~UnsignedLong{});
+    LayoutHandle layout1Another1 = LayoutHandle(~UnsignedLong{});
     if(data.layouters) {
         /* Layouter 2 is ordered first even though it has a higher ID */
         layouter2 = ui.createLayouter();

@@ -1583,7 +1583,6 @@ void TextLayerTest::fontHandle() {
     CORRADE_COMPARE(Whee::fontHandle(0, 0), FontHandle::Null);
     CORRADE_COMPARE(Whee::fontHandle(0x2bcd, 0x1), FontHandle(0xabcd));
     CORRADE_COMPARE(Whee::fontHandle(0x7fff, 0x1), FontHandle(0xffff));
-    CORRADE_COMPARE(fontHandleId(FontHandle::Null), 0);
     CORRADE_COMPARE(fontHandleId(FontHandle(0xabcd)), 0x2bcd);
     CORRADE_COMPARE(fontHandleGeneration(FontHandle::Null), 0);
     CORRADE_COMPARE(fontHandleGeneration(FontHandle(0xabcd)), 0x1);
@@ -1603,9 +1602,12 @@ void TextLayerTest::fontHandleInvalid() {
     Error redirectError{&out};
     Whee::fontHandle(0x8000, 0x1);
     Whee::fontHandle(0x1, 0x2);
-    CORRADE_COMPARE(out.str(),
+    Whee::fontHandleId(FontHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::fontHandle(): expected index to fit into 15 bits and generation into 1, got 0x8000 and 0x1\n"
-        "Whee::fontHandle(): expected index to fit into 15 bits and generation into 1, got 0x1 and 0x2\n");
+        "Whee::fontHandle(): expected index to fit into 15 bits and generation into 1, got 0x1 and 0x2\n"
+        "Whee::fontHandleId(): the handle is null\n",
+        TestSuite::Compare::String);
 }
 
 void TextLayerTest::debugFontHandle() {

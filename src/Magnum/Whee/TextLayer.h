@@ -316,19 +316,23 @@ constexpr FontHandle fontHandle(UnsignedInt id, UnsignedInt generation) {
 @brief Extract ID from a font handle
 @m_since_latest
 
-For @ref FontHandle::Null returns @cpp 0 @ce. Use @ref fontHandleGeneration()
-for extracting the generation and @ref fontHandle() for an inverse operation.
+Expects that @p handle is not @ref FontHandle::Null. Use
+@ref fontHandleGeneration() for extracting the generation and @ref fontHandle()
+for an inverse operation.
 */
 constexpr UnsignedInt fontHandleId(FontHandle handle) {
-    return UnsignedInt(handle) & ((1 << Implementation::FontHandleIdBits) - 1);
+    return (CORRADE_CONSTEXPR_DEBUG_ASSERT(handle != FontHandle::Null,
+        "Whee::fontHandleId(): the handle is null"),
+        UnsignedInt(handle) & ((1 << Implementation::FontHandleIdBits) - 1));
 }
 
 /**
 @brief Extract generation from a font handle
 @m_since_latest
 
-For @ref FontHandle::Null returns @cpp 0 @ce. Use @ref fontHandleId() for
-extracting the ID and @ref fontHandle() for an inverse operation.
+For @ref FontHandle::Null returns @cpp 0 @ce. A valid handle has always a
+non-zero generation. Use @ref fontHandleId() for extracting the ID and
+@ref fontHandle() for an inverse operation.
 */
 constexpr UnsignedInt fontHandleGeneration(FontHandle handle) {
     return UnsignedInt(handle) >> Implementation::FontHandleIdBits;
