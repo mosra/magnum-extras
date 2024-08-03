@@ -24,7 +24,9 @@
 */
 
 #include <sstream>
+#include <Corrade/Containers/StringStl.h> /** @todo remove once Debug is stream-free */
 #include <Corrade/TestSuite/Tester.h>
+#include <Corrade/TestSuite/Compare/String.h>
 #include <Corrade/Utility/DebugStl.h>
 
 #include "Magnum/Whee/Handle.h"
@@ -122,7 +124,6 @@ void HandleTest::layer() {
     CORRADE_COMPARE(layerHandle(0, 0), LayerHandle{});
     CORRADE_COMPARE(layerHandle(0xab, 0x12), LayerHandle(0x12ab));
     CORRADE_COMPARE(layerHandle(0xff, 0xff), LayerHandle(0xffff));
-    CORRADE_COMPARE(layerHandleId(LayerHandle::Null), 0);
     CORRADE_COMPARE(layerHandleId(LayerHandle(0x12ab)), 0xab);
     CORRADE_COMPARE(layerHandleGeneration(LayerHandle::Null), 0);
     CORRADE_COMPARE(layerHandleGeneration(LayerHandle(0x12ab)), 0x12);
@@ -142,9 +143,12 @@ void HandleTest::layerInvalid() {
     Error redirectError{&out};
     layerHandle(0x100, 0x1);
     layerHandle(0x1, 0x100);
-    CORRADE_COMPARE(out.str(),
+    layerHandleId(LayerHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::layerHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
-        "Whee::layerHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n");
+        "Whee::layerHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
+        "Whee::layerHandleId(): the handle is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugLayer() {
@@ -158,7 +162,6 @@ void HandleTest::layerData() {
     CORRADE_COMPARE(layerDataHandle(0, 0), LayerDataHandle::Null);
     CORRADE_COMPARE(layerDataHandle(0xabcde, 0x123), LayerDataHandle(0x123abcde));
     CORRADE_COMPARE(layerDataHandle(0xfffff, 0xfff), LayerDataHandle(0xffffffff));
-    CORRADE_COMPARE(layerDataHandleId(LayerDataHandle::Null), 0);
     CORRADE_COMPARE(layerDataHandleId(LayerDataHandle(0x123abcde)), 0xabcde);
     CORRADE_COMPARE(layerDataHandleGeneration(LayerDataHandle::Null), 0);
     CORRADE_COMPARE(layerDataHandleGeneration(LayerDataHandle(0x123abcde)), 0x123);
@@ -178,9 +181,12 @@ void HandleTest::layerDataInvalid() {
     Error redirectError{&out};
     layerDataHandle(0x100000, 0x1);
     layerDataHandle(0x1, 0x1000);
-    CORRADE_COMPARE(out.str(),
+    layerDataHandleId(LayerDataHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::layerDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
-        "Whee::layerDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+        "Whee::layerDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
+        "Whee::layerDataHandleId(): the handle is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugLayerData() {
@@ -200,11 +206,9 @@ void HandleTest::data() {
     CORRADE_COMPARE(dataHandleLayer(DataHandle(0x12abcde34567)), LayerHandle(0x12ab));
     CORRADE_COMPARE(dataHandleData(DataHandle::Null), LayerDataHandle::Null);
     CORRADE_COMPARE(dataHandleData(DataHandle(0x12abcde34567)), LayerDataHandle(0xcde34567));
-    CORRADE_COMPARE(dataHandleLayerId(DataHandle::Null), 0);
     CORRADE_COMPARE(dataHandleLayerId(DataHandle(0x12abcde34567)), 0xab);
     CORRADE_COMPARE(dataHandleLayerGeneration(DataHandle::Null), 0);
     CORRADE_COMPARE(dataHandleLayerGeneration(DataHandle(0x12abcde34567)), 0x12);
-    CORRADE_COMPARE(dataHandleId(DataHandle::Null), 0);
     CORRADE_COMPARE(dataHandleId(DataHandle(0x12abcde34567)), 0x34567);
     CORRADE_COMPARE(dataHandleGeneration(DataHandle::Null), 0);
     CORRADE_COMPARE(dataHandleGeneration(DataHandle(0x12abcde34567)), 0xcde);
@@ -234,9 +238,18 @@ void HandleTest::dataInvalid() {
     Error redirectError{&out};
     dataHandle(LayerHandle::Null, 0x100000, 0x1);
     dataHandle(LayerHandle::Null, 0x1, 0x1000);
-    CORRADE_COMPARE(out.str(),
+    dataHandleLayerId(dataHandle(LayerHandle::Null, 0x1, 0x1));
+    dataHandleLayerId(DataHandle::Null);
+    dataHandleId(dataHandle(layerHandle(0x1, 0x1), LayerDataHandle::Null));
+    dataHandleId(DataHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::dataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
-        "Whee::dataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+        "Whee::dataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
+        "Whee::dataHandleLayerId(): the layer portion of Whee::DataHandle(Null, {0x1, 0x1}) is null\n"
+        "Whee::dataHandleLayerId(): the layer portion of Whee::DataHandle::Null is null\n"
+        "Whee::dataHandleId(): the data portion of Whee::DataHandle({0x1, 0x1}, Null) is null\n"
+        "Whee::dataHandleId(): the data portion of Whee::DataHandle::Null is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugData() {
@@ -250,7 +263,6 @@ void HandleTest::node() {
     CORRADE_COMPARE(nodeHandle(0, 0), NodeHandle::Null);
     CORRADE_COMPARE(nodeHandle(0xabcde, 0x123), NodeHandle(0x123abcde));
     CORRADE_COMPARE(nodeHandle(0xfffff, 0xfff), NodeHandle(0xffffffff));
-    CORRADE_COMPARE(nodeHandleId(NodeHandle::Null), 0);
     CORRADE_COMPARE(nodeHandleId(NodeHandle(0x123abcde)), 0xabcde);
     CORRADE_COMPARE(nodeHandleGeneration(NodeHandle::Null), 0);
     CORRADE_COMPARE(nodeHandleGeneration(NodeHandle(0x123abcde)), 0x123);
@@ -270,9 +282,12 @@ void HandleTest::nodeInvalid() {
     Error redirectError{&out};
     nodeHandle(0x100000, 0x1);
     nodeHandle(0x1, 0x1000);
-    CORRADE_COMPARE(out.str(),
+    nodeHandleId(NodeHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::nodeHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
-        "Whee::nodeHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+        "Whee::nodeHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
+        "Whee::nodeHandleId(): the handle is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugNode() {
@@ -286,7 +301,6 @@ void HandleTest::layouter() {
     CORRADE_COMPARE(layouterHandle(0, 0), LayouterHandle{});
     CORRADE_COMPARE(layouterHandle(0xab, 0x12), LayouterHandle(0x12ab));
     CORRADE_COMPARE(layouterHandle(0xff, 0xff), LayouterHandle(0xffff));
-    CORRADE_COMPARE(layouterHandleId(LayouterHandle::Null), 0);
     CORRADE_COMPARE(layouterHandleId(LayouterHandle(0x12ab)), 0xab);
     CORRADE_COMPARE(layouterHandleGeneration(LayouterHandle::Null), 0);
     CORRADE_COMPARE(layouterHandleGeneration(LayouterHandle(0x12ab)), 0x12);
@@ -306,9 +320,12 @@ void HandleTest::layouterInvalid() {
     Error redirectError{&out};
     layouterHandle(0x100, 0x1);
     layouterHandle(0x1, 0x100);
-    CORRADE_COMPARE(out.str(),
+    layouterHandleId(LayouterHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::layouterHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
-        "Whee::layouterHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n");
+        "Whee::layouterHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
+        "Whee::layouterHandleId(): the handle is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugLayouter() {
@@ -322,7 +339,6 @@ void HandleTest::layouterData() {
     CORRADE_COMPARE(layouterDataHandle(0, 0), LayouterDataHandle::Null);
     CORRADE_COMPARE(layouterDataHandle(0xabcde, 0x123), LayouterDataHandle(0x123abcde));
     CORRADE_COMPARE(layouterDataHandle(0xfffff, 0xfff), LayouterDataHandle(0xffffffff));
-    CORRADE_COMPARE(layouterDataHandleId(LayouterDataHandle::Null), 0);
     CORRADE_COMPARE(layouterDataHandleId(LayouterDataHandle(0x123abcde)), 0xabcde);
     CORRADE_COMPARE(layouterDataHandleGeneration(LayouterDataHandle::Null), 0);
     CORRADE_COMPARE(layouterDataHandleGeneration(LayouterDataHandle(0x123abcde)), 0x123);
@@ -342,9 +358,12 @@ void HandleTest::layouterDataInvalid() {
     Error redirectError{&out};
     layouterDataHandle(0x100000, 0x1);
     layouterDataHandle(0x1, 0x1000);
-    CORRADE_COMPARE(out.str(),
+    layouterDataHandleId(LayouterDataHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::layouterDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
-        "Whee::layouterDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+        "Whee::layouterDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
+        "Whee::layouterDataHandleId(): the handle is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugLayouterData() {
@@ -364,11 +383,9 @@ void HandleTest::layout() {
     CORRADE_COMPARE(layoutHandleLayouter(LayoutHandle(0x12abcde34567)), LayouterHandle(0x12ab));
     CORRADE_COMPARE(layoutHandleData(LayoutHandle::Null), LayouterDataHandle::Null);
     CORRADE_COMPARE(layoutHandleData(LayoutHandle(0x12abcde34567)), LayouterDataHandle(0xcde34567));
-    CORRADE_COMPARE(layoutHandleLayouterId(LayoutHandle::Null), 0);
     CORRADE_COMPARE(layoutHandleLayouterId(LayoutHandle(0x12abcde34567)), 0xab);
     CORRADE_COMPARE(layoutHandleLayouterGeneration(LayoutHandle::Null), 0);
     CORRADE_COMPARE(layoutHandleLayouterGeneration(LayoutHandle(0x12abcde34567)), 0x12);
-    CORRADE_COMPARE(layoutHandleId(LayoutHandle::Null), 0);
     CORRADE_COMPARE(layoutHandleId(LayoutHandle(0x12abcde34567)), 0x34567);
     CORRADE_COMPARE(layoutHandleGeneration(LayoutHandle::Null), 0);
     CORRADE_COMPARE(layoutHandleGeneration(LayoutHandle(0x12abcde34567)), 0xcde);
@@ -398,9 +415,18 @@ void HandleTest::layoutInvalid() {
     Error redirectError{&out};
     layoutHandle(LayouterHandle::Null, 0x100000, 0x1);
     layoutHandle(LayouterHandle::Null, 0x1, 0x1000);
-    CORRADE_COMPARE(out.str(),
+    layoutHandleLayouterId(layoutHandle(LayouterHandle::Null, 0x1, 0x1));
+    layoutHandleLayouterId(LayoutHandle::Null);
+    layoutHandleId(layoutHandle(layouterHandle(0x1, 0x1), LayouterDataHandle::Null));
+    layoutHandleId(LayoutHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::layoutHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
-        "Whee::layoutHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+        "Whee::layoutHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
+        "Whee::layoutHandleLayouterId(): the layouter portion of Whee::LayoutHandle(Null, {0x1, 0x1}) is null\n"
+        "Whee::layoutHandleLayouterId(): the layouter portion of Whee::LayoutHandle::Null is null\n"
+        "Whee::layoutHandleId(): the data portion of Whee::LayoutHandle({0x1, 0x1}, Null) is null\n"
+        "Whee::layoutHandleId(): the data portion of Whee::LayoutHandle::Null is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugLayout() {
@@ -414,7 +440,6 @@ void HandleTest::animator() {
     CORRADE_COMPARE(animatorHandle(0, 0), AnimatorHandle{});
     CORRADE_COMPARE(animatorHandle(0xab, 0x12), AnimatorHandle(0x12ab));
     CORRADE_COMPARE(animatorHandle(0xff, 0xff), AnimatorHandle(0xffff));
-    CORRADE_COMPARE(animatorHandleId(AnimatorHandle::Null), 0);
     CORRADE_COMPARE(animatorHandleId(AnimatorHandle(0x12ab)), 0xab);
     CORRADE_COMPARE(animatorHandleGeneration(AnimatorHandle::Null), 0);
     CORRADE_COMPARE(animatorHandleGeneration(AnimatorHandle(0x12ab)), 0x12);
@@ -434,9 +459,12 @@ void HandleTest::animatorInvalid() {
     Error redirectError{&out};
     animatorHandle(0x100, 0x1);
     animatorHandle(0x1, 0x100);
-    CORRADE_COMPARE(out.str(),
+    animatorHandleId(AnimatorHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x100 and 0x1\n"
-        "Whee::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n");
+        "Whee::animatorHandle(): expected index to fit into 8 bits and generation into 8, got 0x1 and 0x100\n"
+        "Whee::animatorHandleId(): the handle is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugAnimator() {
@@ -450,7 +478,6 @@ void HandleTest::animatorData() {
     CORRADE_COMPARE(animatorDataHandle(0, 0), AnimatorDataHandle::Null);
     CORRADE_COMPARE(animatorDataHandle(0xabcde, 0x123), AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE(animatorDataHandle(0xfffff, 0xfff), AnimatorDataHandle(0xffffffff));
-    CORRADE_COMPARE(animatorDataHandleId(AnimatorDataHandle::Null), 0);
     CORRADE_COMPARE(animatorDataHandleId(AnimatorDataHandle(0x123abcde)), 0xabcde);
     CORRADE_COMPARE(animatorDataHandleGeneration(AnimatorDataHandle::Null), 0);
     CORRADE_COMPARE(animatorDataHandleGeneration(AnimatorDataHandle(0x123abcde)), 0x123);
@@ -470,9 +497,12 @@ void HandleTest::animatorDataInvalid() {
     Error redirectError{&out};
     animatorDataHandle(0x100000, 0x1);
     animatorDataHandle(0x1, 0x1000);
-    CORRADE_COMPARE(out.str(),
+    animatorDataHandleId(AnimatorDataHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
-        "Whee::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+        "Whee::animatorDataHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
+        "Whee::animatorDataHandleId(): the handle is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugAnimatorData() {
@@ -492,11 +522,9 @@ void HandleTest::animation() {
     CORRADE_COMPARE(animationHandleAnimator(AnimationHandle(0x12abcde34567)), AnimatorHandle(0x12ab));
     CORRADE_COMPARE(animationHandleData(AnimationHandle::Null), AnimatorDataHandle::Null);
     CORRADE_COMPARE(animationHandleData(AnimationHandle(0x12abcde34567)), AnimatorDataHandle(0xcde34567));
-    CORRADE_COMPARE(animationHandleAnimatorId(AnimationHandle::Null), 0);
     CORRADE_COMPARE(animationHandleAnimatorId(AnimationHandle(0x12abcde34567)), 0xab);
     CORRADE_COMPARE(animationHandleAnimatorGeneration(AnimationHandle::Null), 0);
     CORRADE_COMPARE(animationHandleAnimatorGeneration(AnimationHandle(0x12abcde34567)), 0x12);
-    CORRADE_COMPARE(animationHandleId(AnimationHandle::Null), 0);
     CORRADE_COMPARE(animationHandleId(AnimationHandle(0x12abcde34567)), 0x34567);
     CORRADE_COMPARE(animationHandleGeneration(AnimationHandle::Null), 0);
     CORRADE_COMPARE(animationHandleGeneration(AnimationHandle(0x12abcde34567)), 0xcde);
@@ -526,9 +554,18 @@ void HandleTest::animationInvalid() {
     Error redirectError{&out};
     animationHandle(AnimatorHandle::Null, 0x100000, 0x1);
     animationHandle(AnimatorHandle::Null, 0x1, 0x1000);
-    CORRADE_COMPARE(out.str(),
+    animationHandleAnimatorId(animationHandle(AnimatorHandle::Null, 0x1, 0x1));
+    animationHandleAnimatorId(AnimationHandle::Null);
+    animationHandleId(animationHandle(animatorHandle(0x1, 0x1), AnimatorDataHandle::Null));
+    animationHandleId(AnimationHandle::Null);
+    CORRADE_COMPARE_AS(out.str(),
         "Whee::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x100000 and 0x1\n"
-        "Whee::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n");
+        "Whee::animationHandle(): expected index to fit into 20 bits and generation into 12, got 0x1 and 0x1000\n"
+        "Whee::animationHandleAnimatorId(): the animator portion of Whee::AnimationHandle(Null, {0x1, 0x1}) is null\n"
+        "Whee::animationHandleAnimatorId(): the animator portion of Whee::AnimationHandle::Null is null\n"
+        "Whee::animationHandleId(): the data portion of Whee::AnimationHandle({0x1, 0x1}, Null) is null\n"
+        "Whee::animationHandleId(): the data portion of Whee::AnimationHandle::Null is null\n",
+        TestSuite::Compare::String);
 }
 
 void HandleTest::debugAnimation() {

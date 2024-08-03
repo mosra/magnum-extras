@@ -2183,20 +2183,20 @@ void AbstractUserInterfaceImplementationTest::countOrderNodeDataForEventHandling
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventData).prefix(Containers::arrayView(visibleNodeEventDataOffsets).back()), Containers::arrayView({
         /* Node 2 */
-        dataHandle(layer3, 0, 0),
-        dataHandle(layer2, 6, 0),
+        dataHandle(layer3, 0, 0xfff),
+        dataHandle(layer2, 6, 0xfff),
         /* Node 3. Order of items from the same layer matches inverse data ID
            order, not the order in which they were created or attached. */
-        dataHandle(layer5, 2, 0),
-        dataHandle(layer5, 1, 0),
-        dataHandle(layer2, 3, 0),
+        dataHandle(layer5, 2, 0xfff),
+        dataHandle(layer5, 1, 0xfff),
+        dataHandle(layer2, 3, 0xfff),
         /* Node 4 */
-        dataHandle(layer2, 2, 0),
+        dataHandle(layer2, 2, 0xfff),
         /* Node 7 */
-        dataHandle(layer3, 2, 0),
+        dataHandle(layer3, 2, 0xfff),
         /* Node 8 isn't visible */
         /* Node 12 */
-        dataHandle(layer2, 4, 0)
+        dataHandle(layer2, 4, 0xfff)
     }), TestSuite::Compare::Container);
 }
 
