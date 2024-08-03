@@ -305,11 +305,9 @@ void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent
 void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Drag &&
-        (event.types() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)))
+        (event.types() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
+        event.isCaptured())
     {
-        /** @todo restrict this to a drag that actually started on the node?
-            actually with capture this is implicit, so maybe just ignore the
-            case when capture is not there? */
         static_cast<Containers::Function<void(const Vector2&)>&>(data.slot)(event.relativePosition());
         event.setAccepted();
     }
