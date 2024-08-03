@@ -177,7 +177,7 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
         commonStyleUniform
             .setSmoothness(0.75f)
             .setBackgroundBlurAlpha(0.95f);
-        Whee::BaseLayerStyleUniform styleUniforms[2];
+        Whee::BaseLayerStyleUniform styleUniforms[3];
         styleUniforms[0]
             .setCornerRadius({16.0f, 4.0f, 16.0f, 4.0f})
             .setInnerOutlineCornerRadius({2.0f, 2.0f, 2.0f, 2.0f})
@@ -191,8 +191,11 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             .setColor(0xdcdcdcdc_rgbaf*0.2f)
             .setOutlineColor(0x3bd267_rgbf)
             .setOutlineWidth({2.0f, 34.0f, 2.0f, 4.0f});
+        styleUniforms[2]
+            .setCornerRadius(4.0f)
+            .setColor(0x1f1f1fff_rgbaf*0.5f);
         _backgroundBlurBaseLayerShared = Whee::BaseLayerGL::Shared{
-            Whee::BaseLayerGL::Shared::Configuration{2}
+            Whee::BaseLayerGL::Shared::Configuration{3}
                 .setDynamicStyleCount(10)
                 .setFlags(Whee::BaseLayerSharedFlag::BackgroundBlur|
                     (args.isSet("subdivided-quads") ? Whee::BaseLayerSharedFlag::SubdividedQuads : Whee::BaseLayerSharedFlags{}))
@@ -416,6 +419,30 @@ void WheeGallery::popup() {
     _ui.eventLayer().onTapOrClick(another, [this]{
         this->popup();
     });
+
+    auto makeTooltipFor = [&](Ui::NodeHandle button, Containers::StringView text) {
+        Ui::NodeHandle tooltip = _ui.createNode(button, {16, 32}, {});
+        _ui.setNodeOrder(tooltip, Ui::NodeHandle::Null);
+        _ui.clearNodeOrder(tooltip); // TODO hmm, couldn't this do it implicitly without having to setNodeOrder first? or maybe just rename the function to something reasonable
+        _backgroundBlurBaseLayer->create(2, tooltip);
+        Ui::DataHandle textData = _ui.textLayer().create(Ui::Implementation::TextStyle::InputDefaultInactiveOut, text, Text::Alignment::MiddleCenter, tooltip);
+        _ui.setNodeSize(tooltip, _ui.textLayer().size(textData) + Vector2{16.0f, 10.0f});
+        _ui.eventLayer().onEnter(button, [this, tooltip]{
+            _ui.setNodeOrder(tooltip, Ui::NodeHandle::Null);
+        });
+        _ui.eventLayer().onLeave(button, [this, tooltip]{
+            if(_ui.currentHoveredNode() != tooltip)
+                _ui.clearNodeOrder(tooltip);
+        });
+        // TODO ehhhh
+        _ui.eventLayer().onLeave(tooltip, [this, tooltip, button]{
+            if(_ui.currentHoveredNode() != button)
+                _ui.clearNodeOrder(tooltip);
+        });
+    };
+    makeTooltipFor(another, "Open another popup.");
+    makeTooltipFor(more, "Blur even more. Until you fry the GPU.");
+
     _ui.eventLayer().onTapOrClick(more, [this]{
         _backgroundBlurBaseLayer->setBackgroundBlurPassCount(_backgroundBlurBaseLayer->backgroundBlurPassCount()*2);
     });
