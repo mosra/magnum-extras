@@ -127,7 +127,7 @@ template<class ...Args> struct ConnectFunctor {
 };
 
 const struct {
-    const char* name;
+    TestSuite::TestCaseDescriptionSourceLocation name;
     DataHandle(*functor)(EventLayer&, NodeHandle, Int& output);
     EventConnection(*functorScoped)(EventLayer&, NodeHandle, Int& output);
     void(*call)(EventLayer& layer, UnsignedInt dataId);
@@ -169,6 +169,7 @@ const struct {
     {_c(onDrag, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerMoveEvent event{{}, Pointer::MouseLeft};
+            event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
         }},
     {_c(onEnter, ),
@@ -1500,40 +1501,53 @@ void EventLayerTest::drag() {
     });
 
     /* Should only get fired for a move with mouse left, finger or pen present
-       among types(). The type() isn't considered in any way, as it could
-       signalize a newly pressed pointer but also a no longer pressed one;
-       extra pressed pointers are ignored as well. */
+       among types() and only if the event is captured (i.e., the drag not
+       coming from outside of the UI). The type() isn't considered in any way,
+       as it could signalize a newly pressed pointer but also a no longer
+       pressed one; extra pressed pointers are ignored as well. */
     {
         PointerMoveEvent event{{}, {}};
+        event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
-        CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(called, 0); /* no button pressed */
+    } {
+        PointerMoveEvent event{{}, Pointer::MouseLeft};
+        event.setCaptured(false);
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 0); /* not captured */
     } {
         PointerMoveEvent event{{}, Pointer::MouseLeft|Pointer::MouseRight, {-1.0f, 2.4f}};
+        event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(calledOffset, (Vector2{-1.0f, 2.4f}));
     } {
         PointerMoveEvent event{{}, Pointer::MouseMiddle};
+        event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
-        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(called, 1); /* not a valid pointer pressed */
     } {
         PointerMoveEvent event{{}, Pointer::MouseRight};
+        event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
-        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(called, 1); /* not a valid pointer pressed */
     } {
         PointerMoveEvent event{{}, Pointer::Finger|Pointer::Eraser, {0.5f, -1.0f}};
+        event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 2);
         CORRADE_COMPARE(calledOffset, (Vector2{-0.5f, 1.4f}));
     } {
         PointerMoveEvent event{{}, Pointer::Pen|Pointer::Eraser, {1.0f, -0.5f}};
+        event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 3);
         CORRADE_COMPARE(calledOffset, (Vector2{0.5f, 0.9f}));
     } {
         PointerMoveEvent event{{}, Pointer::Eraser};
+        event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
-        CORRADE_COMPARE(called, 3);
+        CORRADE_COMPARE(called, 3); /* not a valid pointer pressed */
 
     /* Shouldn't get fired for any other than move events */
     } {
@@ -1635,6 +1649,7 @@ void EventLayerTest::dragPress() {
        result in false positives */
     } {
         PointerMoveEvent event{Pointer::MouseLeft, Pointer::MouseLeft};
+        event.setCaptured(true);
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(event.isAccepted());
         CORRADE_COMPARE(called, 1);
@@ -1664,25 +1679,16 @@ void EventLayerTest::dragFromUserInterface() {
         ++called;
     });
 
-    /* A move alone with a button pressed should be accepted even though it
-       doesn't cause any node to get registered as pressed or captured */
+    /* A move alone with a button pressed but no captured node shouldn't be
+       accepted because it means it originates outside of the UI, and such
+       events shouldn't lead to things being dragged. */
     {
         PointerMoveEvent event{{}, Pointer::Finger};
-        CORRADE_VERIFY(ui.pointerMoveEvent({50, 70}, event));
-        CORRADE_COMPARE(ui.currentHoveredNode(), node);
-        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(called, 1);
-        CORRADE_COMPARE(belowCalled, 0);
-
-    /* Another move without a button pressed should be ignored */
-    } {
-        PointerMoveEvent event{{}, {}};
-        CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, event));
+        CORRADE_VERIFY(!ui.pointerMoveEvent({50, 70}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A press should be accepted but not resulting in the handler being
@@ -1693,17 +1699,30 @@ void EventLayerTest::dragFromUserInterface() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
-        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(called, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
-    /* A move after a press should then be treated as a drag */
+    /* A move with a node captured but without a button pressed should be
+       ignored. This isn't likely to happen unless the application drops the
+       release events somehow. */
+    } {
+        PointerMoveEvent event{{}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A move with a button pressed with a node captured should be treated as a
+       drag */
     } {
         PointerMoveEvent event{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerMoveEvent({45, 60}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
-        CORRADE_COMPARE(called, 2);
+        CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
