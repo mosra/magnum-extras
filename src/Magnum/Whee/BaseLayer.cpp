@@ -127,17 +127,22 @@ void BaseLayer::Shared::setStyleInternal(const BaseLayerCommonStyleUniform& comm
         Utility::copy(uniforms, state.styleUniforms);
     } else doSetStyle(commonUniform, uniforms);
 
+    /* Save the smoothness value that we'll use for expanding quad area. See
+       the variable comment for why the uniform isn't used instead. */
+    state.smoothness = commonUniform.smoothness;
+
     #ifndef CORRADE_NO_ASSERT
     /* Now it's safe to call update() */
     state.setStyleCalled = true;
     #endif
 
     /* Make doState() of all layers sharing this state return NeedsDataUpdate
-       in order to update style-to-uniform mappings, paddings and such, and in
-       case of dynamic styles also NeedsCommonDataUpdate to upload the changed
-       per-layer uniform buffers. Setting it only if those differ would trigger
-       update only if actually needed, but it may be prohibitively expensive
-       compared to updating always. */
+       in order to update style-to-uniform mappings, paddings and also
+       smoothness-dependent quad expansion. In case of dynamic styles also
+       NeedsCommonDataUpdate to upload the changed per-layer uniform buffers.
+       Setting it only if those differ would trigger update only if actually
+       needed, but it may be prohibitively expensive compared to updating
+       always. */
     ++state.styleUpdateStamp;
 }
 
@@ -485,12 +490,17 @@ LayerStates BaseLayer::doState() const {
     auto& state = static_cast<const State&>(*_state);
     auto& sharedState = static_cast<const Shared::State&>(state.shared);
     if(state.styleUpdateStamp != sharedState.styleUpdateStamp) {
-        /* Needed because uniform mapping and paddings can change */
+        /* Needed because uniform mapping and paddings can change, and
+           additionally also smoothness-dependent quad expansion */
         states |= LayerState::NeedsDataUpdate;
         /* If there are dynamic styles, each layer also needs to upload the
            style uniform buffer */
         if(sharedState.dynamicStyleCount)
             states |= LayerState::NeedsCommonDataUpdate;
+        /* If background blur is enabled, the quads are also expanded based on
+           smoothness */
+        if(sharedState.flags >= Shared::Flag::BackgroundBlur)
+            states |= LayerState::NeedsCompositeOffsetSizeUpdate;
     }
     return states;
 }
@@ -560,18 +570,29 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
             const Implementation::BaseLayerData& data = state.data[dataId];
 
-            /* 0---1
-               |   |
-               |   |
-               |   |
-               2---3 */
-            Vector4 padding = data.padding;
+            /* Padding together with an adjustment for quad smoothness in order
+               to prevent the edges from looking cut off. Cannot do such an
+               expansion in the shader because a similar operation needs to be
+               done for texture coordinates, which may have a different scale
+               altogether and the shader would need to get such a scale as
+               an additional input. Doing this here would also work for
+               potential future rotation, where, again, the shader would need
+               to get a 2D "smoothness expansion vector" value, different for
+               every data (and then another for textures), instead of just a
+               single smoothness uniform for all. */
+            Vector4 padding = data.padding - Vector4{sharedState.smoothness};
             if(data.calculatedStyle < sharedState.styleCount)
                 padding += sharedState.styles[data.calculatedStyle].padding;
             else {
                 CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
                 padding += state.dynamicStylePaddings[data.calculatedStyle - sharedState.styleCount];
             }
+
+            /* 0---1
+               |   |
+               |   |
+               |   |
+               2---3 */
             const Vector2 offset = nodeOffsets[nodeId];
             const Vector2 min = offset + padding.xy();
             const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
@@ -600,13 +621,27 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             for(const UnsignedInt dataId: dataIds) {
                 const Implementation::BaseLayerData& data = state.data[dataId];
 
+                /* Expand the texture coordinates to match the position
+                   expansion. It's calculated as the texture size multiplied by
+                   the ratio of the smoothness expansion to the (pre-expanded)
+                   quad size. If the texture size is 0 in any direction, the
+                   expansion is 0 as well.
+
+                   Taking the actual vertex positions instead of nodeSizes
+                   because I'd have to do all the dance with padding
+                   calculation again, now I just undo the smoothness. And using
+                   those is also nice to the cache because they're literally
+                   next to where I'm writing. */
+                const Vector2 paddedQuadSizeWithoutSmoothness = vertices[dataId*4 + 3].position - vertices[dataId*4 + 0].position - Vector2{2.0f*sharedState.smoothness};
+                const Vector2 smoothnessExpansion = data.textureCoordinateSize*sharedState.smoothness/paddedQuadSizeWithoutSmoothness*Vector2::yScale(-1.0f);
+
                 /* The texture coordinates are Y-flipped compared to the
                    positions to account for Y-down (positions) vs Y-up (GL
                    textures) */
                 /** @todo which may get annoying with non-GL renderers that
                     don't Y-flip the projection, reconsider? */
-                const Vector2 min = data.textureCoordinateOffset.xy() + Vector2::yAxis(data.textureCoordinateSize.y());
-                const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x());
+                const Vector2 min = data.textureCoordinateOffset.xy() + Vector2::yAxis(data.textureCoordinateSize.y()) - smoothnessExpansion;
+                const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x()) + smoothnessExpansion;
                 for(UnsignedByte i = 0; i != 4; ++i)
                     texturedVertices[dataId*4 + i].textureCoordinates = {Math::lerp(min, max, BitVector2{i}), data.textureCoordinateOffset.z()};
             }
@@ -621,12 +656,13 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         arrayResize(state.backgroundBlurIndices, NoInit, compositeRectOffsets.size()*6);
 
         /* Expand the quads to include the total blur radius among all passes,
-           which is calculated as sqrt(passCount*radius*radius). The radius is
-           in pixels, convert it to match the [-1, +1] coordinates, i.e.
-           multiply by 2. */
+           which is calculated as sqrt(passCount*radius*radius), plus extra
+           padding to match smoothness expansion of the rendered quads. The
+           radius is in pixels, convert it to match the [-1, +1] coordinates,
+           i.e. multiply by 2. */
         /** @todo exclude the cutoff from this? how does the sqrt count into
             that? take a max of count*radiusWithCutoff and this? */
-        const Vector2 blurRadiusPadding = Math::sqrt(Float(state.backgroundBlurPassCount))*sharedState.backgroundBlurRadius*2.0f/Vector2{state.framebufferSize};
+        const Vector2 blurRadiusPadding = Math::sqrt(Float(state.backgroundBlurPassCount))*(sharedState.backgroundBlurRadius + sharedState.smoothness)*2.0f/Vector2{state.framebufferSize};
 
         for(std::size_t i = 0; i != compositeRectOffsets.size(); ++i) {
             /* The compositing vertices are converted from the [0, uiSize]

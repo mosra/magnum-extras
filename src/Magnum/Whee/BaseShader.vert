@@ -41,6 +41,8 @@ layout(std140
     StyleEntry styles[STYLE_COUNT];
 };
 
+#define style_smoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.x
+
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
@@ -71,7 +73,11 @@ NOPERSPECTIVE out highp vec2 backgroundBlurTextureCoordinates;
 
 void main() {
     interpolatedStyle = style;
-    halfQuadSize = abs(centerDistance);
+    /* The center distance already contains the smoothness expansion, together
+       with position and texture coordinates. The halfQuadSize passed to the
+       fragment shader however needs to be without the expansion to correctly
+       know where the edges are. */
+    halfQuadSize = abs(centerDistance) - vec2(style_smoothness);
     #ifndef NO_OUTLINE
     /* Calculate the outline quad size here already to save a vec4 load in each
        fragment shader invocation */
@@ -80,9 +86,10 @@ void main() {
                            +halfQuadSize - combinedOutlineWidth.zw);
     #endif
     /* Calculate the gradient here already to save two vec4 loads in each
-       fragment shader invocation */
-    interpolatedColor = (centerDistance.y > 0.0 ? styles[style].bottomColor :
-                                                  styles[style].topColor)*color;
+       fragment shader invocation. Have to extrapolate to undo the quad
+       expansion, i.e. at a top/bottom edge it should still be exactly the
+       (alpha-faded) top/bottom color no matter what the smoothness is. */
+    interpolatedColor = mix(styles[style].topColor, styles[style].bottomColor, 0.5*centerDistance.y/halfQuadSize.y + 0.5)*color;
     interpolatedCenterDistance = centerDistance;
     #ifdef TEXTURED
     interpolatedTextureCoordinates = textureCoordinates;
