@@ -86,6 +86,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void renderCustomOutlineWidth();
     void renderPadding();
     void renderChangeStyle();
+    void renderEdgeOutlineSmoothness();
     void renderTextured();
 
     void renderDynamicStyles();
@@ -125,60 +126,90 @@ const struct {
     const char* name;
     const char* filename;
     BaseLayerGL::Shared::Flags flags;
+    Float padding;
     BaseLayerCommonStyleUniform styleUniformCommon;
     BaseLayerStyleUniform styleUniform;
 } RenderData[]{
-    {"default", "default.png", {},
+    {"default", "default.png", {}, 0.0f,
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}},
-    {"default, smooth", "default-smooth.png", {},
+    {"default, smooth", "default-smooth.png", {}, 0.0f,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}},
-    {"gradient", "gradient.png", {},
+    {"gradient", "gradient.png", {}, 0.0f,
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
-    {"rounded corners, all same, default smoothness", "rounded-corners-same-hard.png", {},
+    /* The gradient should extend also under the outline. Testing by expanding
+       the quad outside with negative padding, cancelling that with a
+       transparent outline, and extrapolating the gradient accordingly for the
+       outline. The result should be the same. */
+    {"gradient, invisible outline", "gradient.png", {}, -8.0f,
+        BaseLayerCommonStyleUniform{},
+        BaseLayerStyleUniform{}
+            .setOutlineWidth(8.0f)
+            .setOutlineColor(0x00000000_rgbaf)
+            .setColor(Math::lerp(0x774422_rgbf, 0xeeddaa_rgbf, 56.0f/48.0f),
+                      Math::lerp(0xeeddaa_rgbf, 0x774422_rgbf, 56.0f/48.0f))},
+    /* Like above, but with the outer smoothness matching the outline width.
+       The quad area gets expanded for it, but the gradient shouldn't. */
+    {"gradient, large outer smoothness", "gradient.png", {}, -8.0f,
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(8.0f, 0.0f),
+        BaseLayerStyleUniform{}
+            .setOutlineWidth(8.0f)
+            .setOutlineColor(0x00000000_rgbaf)
+            .setColor(Math::lerp(0x774422_rgbf, 0xeeddaa_rgbf, 56.0f/48.0f),
+                      Math::lerp(0xeeddaa_rgbf, 0x774422_rgbf, 56.0f/48.0f))},
+    {"rounded corners, all same, default smoothness", "rounded-corners-same-hard.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setCornerRadius(24.0f)},
-    {"rounded corners, all same", "rounded-corners-same.png", {},
+    {"rounded corners, all same", "rounded-corners-same.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
             .setCornerRadius(24.0f)},
-    {"rounded corners, different", "rounded-corners-different.png", {},
+    {"rounded corners, different", "rounded-corners-different.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
             /* Top left, bottom left, top right, bottom right; one radius is
                more than half of the height, one is zero */
             .setCornerRadius({4.0f, 44.0f, 24.0f, 0.0f})},
-    {"outline, default color", "default.png", {},
+    {"outline, default color", "default.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setOutlineWidth(8.0f)},
-    {"outline, all sides same", "outline-same.png", {},
+    {"outline, all sides same", "outline-same.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setOutlineWidth(8.0f)},
-    {"outline, different", "outline-different.png", {},
+    {"outline, different", "outline-different.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             /* Left, top, right, bottom; one side is going over the center,
                one is zero */
             .setOutlineWidth({8.0f, 4.0f, 0.0f, 32.0f})},
-    {"outline, rounded corners inside", "outline-rounded-corners-inside.png", {},
+    {"outline, rounded corners inside", "outline-rounded-corners-inside.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
             .setOutlineColor(0x7f7f7f_rgbf)
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
-    {"outline, rounded corners, different", "outline-rounded-corners-both-different.png", {},
+    {"outline, rounded corners, different", "outline-rounded-corners-both-different.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -191,7 +222,8 @@ const struct {
             .setInnerOutlineCornerRadius({18.0f, 6.0f, 0.0f, 18.0f})
             /* Left, top, right, bottom  */
             .setOutlineWidth({18.0f, 8.0f, 0.0f, 4.0f})},
-    {"outline, rounded corners, different inner and outer smoothness", "outline-rounded-corners-different-smoothness.png", {},
+    {"outline, rounded corners, different inner and outer smoothness", "outline-rounded-corners-different-smoothness.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f, 8.0f),
         BaseLayerStyleUniform{}
@@ -199,14 +231,15 @@ const struct {
             .setCornerRadius(16.0f)
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
-    {"outline with gradient", "outline-gradient.png", {},
+    {"outline with gradient", "outline-gradient.png",
+        {}, 0.0f,
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setColor(0xffffff_rgbf, 0x333333_rgbf)
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f)},
     {"outline, rounded corners inside, no rounded corners", "outline-same.png",
-        BaseLayerGL::Shared::Flag::NoRoundedCorners,
+        BaseLayerGL::Shared::Flag::NoRoundedCorners, 0.0f,
         BaseLayerCommonStyleUniform{},
             /* Smoothness omitted to match the other image */
         BaseLayerStyleUniform{}
@@ -214,7 +247,7 @@ const struct {
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
     {"outline, rounded corners, different inner and outer smoothness, no outline", "rounded-corners-same.png",
-        BaseLayerGL::Shared::Flag::NoOutline,
+        BaseLayerGL::Shared::Flag::NoOutline, 0.0f,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f, 8.0f),
         BaseLayerStyleUniform{}
@@ -224,7 +257,7 @@ const struct {
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
     {"outline, rounded corners, different inner and outer smoothness, no rounded corners, no outline", "default-smooth.png",
-        BaseLayerGL::Shared::Flag::NoRoundedCorners|BaseLayerGL::Shared::Flag::NoOutline,
+        BaseLayerGL::Shared::Flag::NoRoundedCorners|BaseLayerGL::Shared::Flag::NoOutline, 0.0f,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f, 8.0f),
         BaseLayerStyleUniform{}
@@ -285,31 +318,63 @@ const struct {
 
 const struct {
     const char* name;
+    const char* filename;
+    Float smoothness, innerOutlineSmoothness;
+} RenderEdgeOutlineSmoothnessData[]{
+    {"", "edge-smoothness-same.png", 8.0f, 8.0f},
+    {"inner smoothness larger", "edge-smoothness-inner-larger.png", 1.0f, 8.0f},
+    {"inner smoothness smaller", "edge-smoothness-inner-smaller.png", 8.0f, 1.0f},
+};
+
+const struct {
+    const char* name;
     const char* textureFilename;
     const char* expectedFilename;
     bool rvalue;
     Color4 clearColor;
+    Float smoothness;
+    Float padding;
     Containers::Optional<Vector3> offset;
     Containers::Optional<Vector2> size;
     BaseLayerGL::Shared::Flags extraFlags;
     BaseLayerStyleUniform styleUniform;
 } RenderTexturedData[]{
     {"default offset and size", "blur-input.png", "textured-default.png",
-        false, 0x1f1f1f_rgbf, {}, {}, {},
+        false, 0x1f1f1f_rgbf, 1.0f, 0.0f,
+        {}, {}, {},
         BaseLayerStyleUniform{}},
     {"", "blur-input.png", "textured.png",
-        false, 0x1f1f1f_rgbf,
+        false, 0x1f1f1f_rgbf, 1.0f, 0.0f,
         /* The image is 160x106, want to render the bottom right 112x48 portion
            of it to avoid nasty scaling, and to verify the offset is taken from
            the right (bottom left) origin */
         {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
         BaseLayerStyleUniform{}},
     {"r-value instance", "blur-input.png", "textured.png",
-        true, 0x1f1f1f_rgbf,
+        true, 0x1f1f1f_rgbf, 1.0f, 0.0f,
         {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
         BaseLayerStyleUniform{}},
+    /* The outline width is included in the texture coordinates, and together
+       with the negative padding it should result in the same output as above,
+       verifying that the outline is included in the coordinates as well. */
+    {"invisible outline", "blur-input.png", "textured.png",
+        false, 0x1f1f1f_rgbf, 1.0f, -8.0f,
+        {{40.0f/160.0f, -8.0f/106.0f, 7}}, {{128.0f/160.0f, 64.0f/106.0f}}, {},
+        BaseLayerStyleUniform{}
+            .setOutlineWidth(8.0f)
+            .setOutlineColor(0x00000000_rgbaf)},
+    /* The quad gets expanded for the outer smoothness to not cut off, the
+       texture coordinates should get adjusted as well to not change the
+       texture scale. There's however a transparent outline so it should look
+       exactly as above. */
+    {"large outer smoothness", "blur-input.png", "textured.png",
+        true, 0x1f1f1f_rgbf, 7.0f, -8.0f,
+        {{40.0f/160.0f, -8.0f/106.0f, 7}}, {{128.0f/160.0f, 64.0f/106.0f}}, {},
+        BaseLayerStyleUniform{}
+            .setOutlineWidth(8.0f)
+            .setOutlineColor(0x00000000_rgbaf)},
     {"colored", "blur-input.png", "textured-colored.png",
-        false, 0x1f1f1f_rgbf,
+        false, 0x1f1f1f_rgbf, 1.0f, 0.0f,
         /* Top left part of the image instead */
         {{0.0f/160.0f, 58.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
         BaseLayerStyleUniform{}
@@ -324,7 +389,7 @@ const struct {
     {"alpha mask", "mask-premultiplied.png", "textured-mask.png",
         /* Brighter than default clear color to verify the masked out parts
            aren't just black */
-        false, 0x999999_rgbf,
+        false, 0x999999_rgbf, 1.0f, 0.0f,
         /* The image is 128x64, rendering the actually visible 112x48 part of
            it to avoid nasty scaling */
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
@@ -336,7 +401,7 @@ const struct {
             .setOutlineColor(0x00000000_rgbaf)},
     /* Should cause no difference compared to above */
     {"alpha mask, TextureMask", "mask-premultiplied.png", "textured-mask.png",
-        false, 0x999999_rgbf,
+        false, 0x999999_rgbf, 1.0f, 0.0f,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
         BaseLayer::Shared::Flag::TextureMask,
         BaseLayerStyleUniform{}
@@ -346,7 +411,7 @@ const struct {
                 properly in the shader */
             .setOutlineColor(0x00000000_rgbaf)},
     {"alpha mask, colored", "mask-colored-premultiplied.png", "textured-mask-colored.png",
-        false, 0x999999_rgbf,
+        false, 0x999999_rgbf, 1.0f, 0.0f,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
@@ -356,7 +421,7 @@ const struct {
             .setOutlineColor(0x00000000_rgbaf)},
     /* Should cause no difference compared to above */
     {"alpha mask, colored, TextureMask", "mask-colored-premultiplied.png", "textured-mask-colored.png",
-        false, 0x999999_rgbf,
+        false, 0x999999_rgbf, 1.0f, 0.0f,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
         BaseLayer::Shared::Flag::TextureMask,
         BaseLayerStyleUniform{}
@@ -367,7 +432,7 @@ const struct {
             .setOutlineColor(0x00000000_rgbaf)},
     /* The outline is by default not affected by the mask */
     {"alpha mask, outline", "mask-premultiplied.png", "textured-mask-outline-default.png",
-        false, 0x999999_rgbf,
+        false, 0x999999_rgbf, 1.0f, 0.0f,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
@@ -376,7 +441,7 @@ const struct {
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
             .setOutlineColor(0xf1e77f_rgbf)},
     {"alpha mask, outline, TextureMask", "mask-premultiplied.png", "textured-mask-outline-mask.png",
-        false, 0x999999_rgbf,
+        false, 0x999999_rgbf, 1.0f, 0.0f,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
         BaseLayer::Shared::Flag::TextureMask,
         BaseLayerStyleUniform{}
@@ -493,7 +558,7 @@ const struct {
 };
 
 const struct {
-    const char* name;
+    TestSuite::TestCaseDescriptionSourceLocation name;
     const char* filename;
     BaseLayerGL::Shared::Flags flags;
     Containers::Optional<UnsignedInt> backgroundBlurRadius;
@@ -529,6 +594,20 @@ const struct {
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
         0.0f, 0.0f},
+    /* The background blur should be calculated on quads including the extra
+       smoothness (thus in this case the whole UI size), otherwise the smooth
+       edges get random values. Picking a radius that's not too large as
+       otherwise the random noise would smoothen out, making the comparison
+       more likely to pass. */
+    {"background blur, 50% opacity, excessive smoothness", "composite-background-blur-50-smooth.png",
+        BaseLayerGL::Shared::Flag::BackgroundBlur, 2, {}, {},
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(8.0f),
+        BaseLayerStyleUniform{}
+            .setCornerRadius(24.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f),
+        0.0f, 0.0f},
     {"background blur, 75% opacity, colored", "composite-background-blur-75-colored.png",
         BaseLayerGL::Shared::Flag::BackgroundBlur, {}, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -553,7 +632,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.75f, 0.236f},
+        0.75f, 0.247f},
     /* Should be the same as the default */
     {"background blur, 50% opacity, radius 4", "composite-background-blur-50.png",
         BaseLayerGL::Shared::Flag::BackgroundBlur, 4, {}, {},
@@ -574,7 +653,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        5.75f, 0.723f},
+        5.75f, 0.728f},
     /* sqrt(16*(1^2)) == 4, so should ~same as above (plus even more rounding
        errors) */
     {"background blur, 50% opacity, radius 1, 16 passes", "composite-background-blur-50.png",
@@ -585,7 +664,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        12.25f, 1.542f},
+        12.25f, 1.556f},
     {"background blur, 50% opacity, radius 31", "composite-background-blur-50-r31.png",
         BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -618,7 +697,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.75f, 0.236f},
+        0.75f, 0.247f},
     {"background blur, 50% opacity, radius 31, 80% blur opacity", "composite-background-blur-50-r31-80.png",
         BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -813,6 +892,11 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addInstancedTests({&BaseLayerGLTest::renderChangeStyle},
         Containers::arraySize(RenderChangeStyleData),
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::renderEdgeOutlineSmoothness},
+        Containers::arraySize(RenderEdgeOutlineSmoothnessData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
@@ -1085,7 +1169,9 @@ void BaseLayerGLTest::render() {
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    ui.layer<BaseLayerGL>(layer).create(1, node);
+    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(1, node);
+    if(data.padding)
+        ui.layer<BaseLayerGL>(layer).setPadding(nodeData, data.padding);
 
     ui.draw();
 
@@ -1337,6 +1423,67 @@ void BaseLayerGLTest::renderChangeStyle() {
         DebugTools::CompareImageToFile{_manager});
 }
 
+void BaseLayerGLTest::renderEdgeOutlineSmoothness() {
+    auto&& data = RenderEdgeOutlineSmoothnessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}};
+    layerShared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(data.smoothness, data.innerOutlineSmoothness),
+        {BaseLayerStyleUniform{}
+            .setColor(0x2f83ccff_rgbaf)
+            .setOutlineColor(0xc7cf2fff_rgbaf)
+            .setCornerRadius(4.0f)
+            .setInnerOutlineCornerRadius(12.0f)
+            .setOutlineWidth({0.0f, 0.0f, 0.0f, 8.0f}),
+         BaseLayerStyleUniform{}
+            .setColor(0x2f83ccff_rgbaf)
+            .setOutlineColor(0xc7cf2fff_rgbaf)
+            .setCornerRadius(4.0f)
+            .setInnerOutlineCornerRadius(12.0f)
+            .setOutlineWidth({0.0f, 0.0f, 8.0f, 0.0f})},
+        {});
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+
+    /* Two nodes right next to each other, with some but not all edges /
+       corners having an outline. The smoothness is set excessively high.
+
+        - The data expanding outside of the node area, instead of being cut off
+        - The quads thus overlapping, although the transition still being
+          visible due to the way (One, OneMinusSourceAlpha) blending works,
+          where it doesn't take 100% of the background. It'd only stay a
+          constant color if (One, One) would be used.
+        - The outline color not leaking into the base color on the edges that
+          don't have it, unless the inner smoothness is even larger */
+
+    NodeHandle node1 = ui.createNode({12.0f, 12.0f}, {52.0f, 40.0f});
+    NodeHandle node2 = ui.createNode({64.0f, 12.0f}, {52.0f, 40.0f});
+    layer.create(0, node1);
+    layer.create(1, node2);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+        DebugTools::CompareImageToFile{_manager});
+}
+
 void BaseLayerGLTest::renderTextured() {
     auto&& data = RenderTexturedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -1355,6 +1502,7 @@ void BaseLayerGLTest::renderTextured() {
     texture
         .setMinificationFilter(GL::SamplerFilter::Linear)
         .setMagnificationFilter(GL::SamplerFilter::Linear)
+        .setWrapping(GL::SamplerWrapping::ClampToEdge)
         .setStorage(1, GL::textureFormat(image->format()), Vector3i{image->size(), 8})
         .setSubImage(0, {0, 0, data.offset ? Int(data.offset->z()) : 0}, ImageView2D{*image});
 
@@ -1366,7 +1514,7 @@ void BaseLayerGLTest::renderTextured() {
             .addFlags(BaseLayer::Shared::Flag::Textured|data.extraFlags)};
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}
-            .setSmoothness(1.0f),
+            .setSmoothness(data.smoothness, 1.0f),
         /* To verify it's not always picking the first uniform */
         {BaseLayerStyleUniform{}, data.styleUniform},
         {});
@@ -1383,6 +1531,8 @@ void BaseLayerGLTest::renderTextured() {
     DataHandle nodeData = layer.create(1, node);
     if(data.offset)
         layer.setTextureCoordinates(nodeData, *data.offset, *data.size);
+    if(data.padding)
+        layer.setPadding(nodeData, data.padding);
 
     _framebuffer.clearColor(0, data.clearColor);
 
