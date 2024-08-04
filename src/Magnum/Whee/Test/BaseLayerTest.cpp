@@ -151,6 +151,7 @@ const struct {
     bool emptyUpdate, textured;
     UnsignedInt styleCount, dynamicStyleCount;
     UnsignedInt backgroundBlurRadius, backgroundBlurPassCount;
+    Float smoothness;
     Vector2 node6Offset, node6Size;
     Vector4 paddingFromStyle;
     Vector4 paddingFromData;
@@ -158,84 +159,94 @@ const struct {
     LayerStates states;
     bool expectIndexDataUpdated, expectVertexDataUpdated, expectCompositingDataUpdated;
 } UpdateDataOrderData[]{
-    {"empty update", true, false, 5, 0, 0, 0,
+    {"empty update", true, false, 5, 0, 0, 0, 0.0f,
         {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"empty update, textured", true, true, 5, 0, 0, 0,
+    {"empty update, textured", true, true, 5, 0, 0, 0, 0.0f,
         {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"empty update, background blur", true, true, 5, 0, 16, 1,
+    {"empty update, background blur", true, true, 5, 0, 16, 1, 0.0f,
         {}, {}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"", false, false, 5, 0, 0, 0,
+    {"", false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"textured", false, true, 5, 0, 0, 0,
+    {"smoothness expansion", false, false, 5, 0, 0, 0, 10.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"node offset/size update only", false, false, 5, 0, 0, 0,
+    {"textured", false, true, 5, 0, 0, 0, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"textured, smoothness expansion", false, true, 5, 0, 0, 0, 10.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        LayerState::NeedsDataUpdate, true, true, false},
+    {"node offset/size update only", false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOffsetSizeUpdate, false, true, false},
-    {"node order update only", false, false, 5, 0, 0, 0,
+    {"node order update only", false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeOrderUpdate, true, false, false},
-    {"node enabled update only", false, false, 5, 0, 0, 0,
+    {"node enabled update only", false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsNodeEnabledUpdate, false, true, false},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
-    {"shared data update only", false, false, 5, 0, 0, 0,
+    {"shared data update only", false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsSharedDataUpdate, false, false, false},
-    {"common data update only", false, false, 5, 0, 0, 0,
+    {"common data update only", false, false, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsCommonDataUpdate, false, false, false},
     /* This would cause an update of the dynamic style data in derived classes
        if appropriate internal flags would be set internally, but in the base
        class it's nothing */
-    {"common data update only, dynamic styles", false, false, 2, 3, 0, 0,
+    {"common data update only, dynamic styles", false, false, 2, 3, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsCommonDataUpdate, false, false, false},
-    {"padding from style", false, false, 5, 0, 0, 0,
+    {"padding from style", false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"padding from data", false, false, 5, 0, 0, 0,
+    {"padding from data", false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {}, {2.0f, 0.5f, 1.0f, 1.5f}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"padding from both style and data", false, false, 5, 0, 0, 0,
+    {"padding from both style and data", false, false, 5, 0, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"unused dynamic styles", false, false, 5, 17, 0, 0,
+    {"unused dynamic styles", false, false, 5, 17, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles", false, false, 2, 3, 0, 0,
+    {"dynamic styles", false, false, 2, 3, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles, padding from dynamic style", false, false, 2, 3, 0, 0,
+    {"dynamic styles, padding from dynamic style", false, false, 2, 3, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {2.0f, 0.5f, 1.0f, 1.5f}, {}, {},
         LayerState::NeedsDataUpdate, true, true, false},
-    {"dynamic styles, padding from both dynamic style and data", false, false, 2, 3, 0, 0,
+    {"dynamic styles, padding from both dynamic style and data", false, false, 2, 3, 0, 0, 0.0f,
         {-1.0f, 1.5f}, {13.0f, 17.0f},
         {0.5f, 0.0f, 1.0f, 0.75f}, {1.5f, 0.5f, 0.0f, 0.75f}, {},
         LayerState::NeedsDataUpdate, true, true, false},
     /* This one should result in no extra padding in composite rects */
-    {"background blur with zero radius", false, false, 5, 0, 0, 1,
+    {"background blur with zero radius", false, false, 5, 0, 0, 1, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     /* These two should result in the same padding; total radius is 36 and UI
        size is {250, 5000}. The compositing rects are in the normalized [-1,
        +1] range, so additionally times 2. */
-    {"background blur with radius 9 and 16 passes", false, false, 5, 0, 9, 16,
+    {"background blur with radius 9 and 16 passes", false, false, 5, 0, 9, 16, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {72.0f/250.0f, 72.0f/5000.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
-    {"background blur with radius 18 and 4 passes", false, false, 5, 0, 18, 4,
+    {"background blur with radius 9 and 16 passes, smoothness expansion", false, false, 5, 0, 9, 16, 10.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
+        {2*(36.0f + 10)/250.0f, 2*(36.0f + 10)/5000.0f},
+        LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
+    {"background blur with radius 18 and 4 passes", false, false, 5, 0, 18, 4, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {72.0f/250.0f, 72.0f/5000.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
-    {"background blur with radius 18 and 4 passes, composite offset/size update only", false, false, 5, 0, 18, 4,
+    {"background blur with radius 18 and 4 passes, composite offset/size update only", false, false, 5, 0, 18, 4, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {72.0f/250.0f, 72.0f/5000.0f},
         LayerState::NeedsCompositeOffsetSizeUpdate, false, false, true},
 };
@@ -1943,7 +1954,10 @@ void BaseLayerTest::updateDataOrder() {
 
     if(data.styleCount == 5) {
         shared.setStyle(
-            BaseLayerCommonStyleUniform{},
+            BaseLayerCommonStyleUniform{}
+                /* Inner outline smoothness isn't used for quad expansion so
+                   can be arbitrary */
+                .setSmoothness(data.smoothness, 10000.0f),
             {BaseLayerStyleUniform{}, BaseLayerStyleUniform{},
              BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
             /* Style 4 doesn't get used (gets transitioned to 2), use an
@@ -1953,7 +1967,8 @@ void BaseLayerTest::updateDataOrder() {
             {{}, {}, data.paddingFromStyle, {}, Vector4{666}});
     } else if(data.styleCount == 2) {
         shared.setStyle(
-            BaseLayerCommonStyleUniform{},
+            BaseLayerCommonStyleUniform{}
+                .setSmoothness(data.smoothness, 10000.0f),
             {BaseLayerStyleUniform{}, BaseLayerStyleUniform{},
              BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
             {1, 2},
@@ -2132,31 +2147,31 @@ void BaseLayerTest::updateDataOrder() {
 
         /* Data 3 is attached to node 6 */
         CORRADE_COMPARE_AS(positions.sliceSize(3*4, 4), Containers::arrayView<Vector2>({
-            { 1.0f,  2.0f},
-            {11.0f,  2.0f},
-            { 1.0f, 17.0f},
-            {11.0f, 17.0f},
+            { 1.0f - data.smoothness,  2.0f - data.smoothness},
+            {11.0f + data.smoothness,  2.0f - data.smoothness},
+            { 1.0f - data.smoothness, 17.0f + data.smoothness},
+            {11.0f + data.smoothness, 17.0f + data.smoothness},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(centerDistances.sliceSize(3*4, 4), Containers::arrayView<Vector2>({
-            {-5.0f, -7.5f},
-            { 5.0f, -7.5f},
-            {-5.0f,  7.5f},
-            { 5.0f,  7.5f},
+            {-5.0f - data.smoothness, -7.5f - data.smoothness},
+            { 5.0f + data.smoothness, -7.5f - data.smoothness},
+            {-5.0f - data.smoothness,  7.5f + data.smoothness},
+            { 5.0f + data.smoothness,  7.5f + data.smoothness},
         }), TestSuite::Compare::Container);
 
         /* Data 7 and 9 are both attached to node 15 */
         for(std::size_t i: {7, 9}) {
             CORRADE_COMPARE_AS(positions.sliceSize(i*4, 4), Containers::arrayView<Vector2>({
-                { 3.0f, 4.0f},
-                {23.0f, 4.0f},
-                { 3.0f, 9.0f},
-                {23.0f, 9.0f},
+                { 3.0f - data.smoothness, 4.0f - data.smoothness},
+                {23.0f + data.smoothness, 4.0f - data.smoothness},
+                { 3.0f - data.smoothness, 9.0f + data.smoothness},
+                {23.0f + data.smoothness, 9.0f + data.smoothness},
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(centerDistances.sliceSize(i*4, 4), Containers::arrayView<Vector2>({
-                {-10.0f, -2.5f},
-                { 10.0f, -2.5f},
-                {-10.0f,  2.5f},
-                { 10.0f,  2.5f},
+                {-10.0f - data.smoothness, -2.5f - data.smoothness},
+                { 10.0f + data.smoothness, -2.5f - data.smoothness},
+                {-10.0f - data.smoothness,  2.5f + data.smoothness},
+                { 10.0f + data.smoothness,  2.5f + data.smoothness},
             }), TestSuite::Compare::Container);
         }
 
@@ -2170,20 +2185,38 @@ void BaseLayerTest::updateDataOrder() {
             Containers::StridedArrayView1D<const Vector3> textureCoordinates = Containers::arrayCast<const Implementation::BaseLayerTexturedVertex>(vertices).slice(&Implementation::BaseLayerTexturedVertex::textureCoordinates);
 
             CORRADE_COMPARE_AS(textureCoordinates.sliceSize(7*4, 4), Containers::arrayView<Vector3>({
-                {0.25f, 0.625f, 37.0f},
-                {0.75f, 0.625f, 37.0f},
-                {0.25f, 0.5f, 37.0f},
-                {0.75f, 0.5f, 37.0f},
+                /* Texture size is {0.5, 0.125}, node size {20, 5} */
+                {0.25f - data.smoothness*0.5f/20.0f,
+                    0.625f + data.smoothness*0.125f/5.0f, 37.0f},
+                {0.75f + data.smoothness*0.5f/20.0f,
+                    0.625f + data.smoothness*0.125f/5.0f, 37.0f},
+                {0.25f - data.smoothness*0.5f/20.0f,
+                    0.5f - data.smoothness*0.125f/5.0f, 37.0f},
+                {0.75f + data.smoothness*0.5f/20.0f,
+                    0.5f - data.smoothness*0.125f/5.0f, 37.0f},
             }), TestSuite::Compare::Container);
-
-            for(std::size_t i: {3, 9}) {
-                CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
-                    {0.0f, 1.0f, 0.0f},
-                    {1.0f, 1.0f, 0.0f},
-                    {0.0f, 0.0f, 0.0f},
-                    {1.0f, 0.0f, 0.0f},
-                }), TestSuite::Compare::Container);
-            }
+            CORRADE_COMPARE_AS(textureCoordinates.sliceSize(3*4, 4), Containers::arrayView<Vector3>({
+                /* Texture size is {1.0, 1.0}, node size {10, 15} */
+                {0.0f - data.smoothness/10.0f,
+                    1.0f + data.smoothness/15.0f, 0.0f},
+                {1.0f + data.smoothness/10.0f,
+                    1.0f + data.smoothness/15.0f, 0.0f},
+                {0.0f - data.smoothness/10.0f,
+                    0.0f - data.smoothness/15.0f, 0.0f},
+                {1.0f + data.smoothness/10.0f,
+                    0.0f - data.smoothness/15.0f, 0.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(textureCoordinates.sliceSize(9*4, 4), Containers::arrayView<Vector3>({
+                /* Texture size is {1.0, 1.0}, node size {20, 5} */
+                {0.0f - data.smoothness/20.0f,
+                    1.0f + data.smoothness/5.0f, 0.0f},
+                {1.0f + data.smoothness/20.0f,
+                    1.0f + data.smoothness/5.0f, 0.0f},
+                {0.0f - data.smoothness/20.0f,
+                    0.0f - data.smoothness/5.0f, 0.0f},
+                {1.0f + data.smoothness/20.0f,
+                    0.0f - data.smoothness/5.0f, 0.0f},
+            }), TestSuite::Compare::Container);
         }
     }
 
