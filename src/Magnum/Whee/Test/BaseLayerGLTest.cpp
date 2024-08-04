@@ -87,6 +87,9 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void renderPadding();
     void renderChangeStyle();
     void renderTextured();
+    void renderOutlineEdgeSmoothness();
+    void renderGradientOutlineEdgeSmoothness();
+    void renderTexturedOutlineEdgeSmoothness();
 
     void renderDynamicStyles();
 
@@ -94,6 +97,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
     void renderOrDrawCompositeTeardown();
 
     void renderComposite();
+    void renderCompositeEdgeSmoothness();
     void renderCompositeTextured();
     void renderCompositeNodeRects();
 
@@ -139,6 +143,8 @@ const struct {
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
+    /* Interaction of the gradient with outline width and smoothness radius
+       tested in renderGradientOutlineEdgeSmoothness() */
     {"rounded corners, all same, default smoothness", "rounded-corners-same-hard.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
@@ -304,6 +310,8 @@ const struct {
            the right (bottom left) origin */
         {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
         BaseLayerStyleUniform{}},
+    /* Interaction of the texture with outline width and smoothness radius
+       tested in renderTexturedOutlineEdgeSmoothness() */
     {"r-value instance", "blur-input.png", "textured.png",
         true, 0x1f1f1f_rgbf,
         {{48.0f/160.0f, 0.0f/106.0f, 7}}, {{112.0f/160.0f, 48.0f/106.0f}}, {},
@@ -385,6 +393,38 @@ const struct {
             .setOutlineWidth(8.0f)
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
             .setOutlineColor(0xf1e77f_rgbf)},
+};
+
+const struct {
+    const char* name;
+    const char* filename;
+    Float smoothness, innerOutlineSmoothness;
+} RenderOutlineEdgeSmoothnessData[]{
+    {"", "edge-smoothness-same.png", 8.0f, 8.0f},
+    {"inner smoothness larger", "edge-smoothness-inner-larger.png", 1.0f, 8.0f},
+    {"inner smoothness smaller", "edge-smoothness-inner-smaller.png", 8.0f, 1.0f},
+};
+
+const struct {
+    const char* name;
+    Float smoothness;
+} RenderGradientOutlineEdgeSmoothnessData[]{
+    {"", 0.0f},
+    /* Like above, but with the outer smoothness matching the outline width.
+       The quad area gets expanded for it, but the gradient shouldn't. */
+    {"large outer smoothness", 8.0f},
+};
+
+const struct {
+    const char* name;
+    Float smoothness;
+} RenderTexturedOutlineEdgeSmoothnessData[]{
+    {"", 1.0f},
+    /* The quad gets expanded for the outer smoothness to not cut off, the
+       texture coordinates should get adjusted as well to not change the
+       texture scale. There's however a transparent outline so it should look
+       exactly as above. */
+    {"large outer smoothness", 7.0f}
 };
 
 const struct {
@@ -529,6 +569,8 @@ const struct {
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
         0.0f, 0.0f},
+    /* Interaction of the compositing quads with smoothness radius tested in
+       renderCompositeEdgeSmoothness() */
     {"background blur, 75% opacity, colored", "composite-background-blur-75-colored.png",
         BaseLayerGL::Shared::Flag::BackgroundBlur, {}, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -553,7 +595,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.75f, 0.236f},
+        0.75f, 0.247f},
     /* Should be the same as the default */
     {"background blur, 50% opacity, radius 4", "composite-background-blur-50.png",
         BaseLayerGL::Shared::Flag::BackgroundBlur, 4, {}, {},
@@ -574,7 +616,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        5.75f, 0.723f},
+        5.75f, 0.728f},
     /* sqrt(16*(1^2)) == 4, so should ~same as above (plus even more rounding
        errors) */
     {"background blur, 50% opacity, radius 1, 16 passes", "composite-background-blur-50.png",
@@ -585,7 +627,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        12.25f, 1.542f},
+        12.25f, 1.555f},
     {"background blur, 50% opacity, radius 31", "composite-background-blur-50-r31.png",
         BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -618,7 +660,7 @@ const struct {
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f),
-        0.75f, 0.236f},
+        0.75f, 0.247f},
     {"background blur, 50% opacity, radius 31, 80% blur opacity", "composite-background-blur-50-r31-80.png",
         BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
         BaseLayerCommonStyleUniform{}
@@ -821,6 +863,21 @@ BaseLayerGLTest::BaseLayerGLTest() {
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
+    addInstancedTests({&BaseLayerGLTest::renderOutlineEdgeSmoothness},
+        Containers::arraySize(RenderOutlineEdgeSmoothnessData),
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::renderGradientOutlineEdgeSmoothness},
+        Containers::arraySize(RenderGradientOutlineEdgeSmoothnessData),
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
+
+    addInstancedTests({&BaseLayerGLTest::renderTexturedOutlineEdgeSmoothness},
+        Containers::arraySize(RenderTexturedOutlineEdgeSmoothnessData),
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
+
     addInstancedTests({&BaseLayerGLTest::renderDynamicStyles},
         Containers::arraySize(RenderDynamicStylesData),
         &BaseLayerGLTest::renderSetup,
@@ -828,6 +885,10 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addInstancedTests({&BaseLayerGLTest::renderComposite},
         Containers::arraySize(RenderCompositeData),
+        &BaseLayerGLTest::renderOrDrawCompositeSetup,
+        &BaseLayerGLTest::renderOrDrawCompositeTeardown);
+
+    addTests({&BaseLayerGLTest::renderCompositeEdgeSmoothness},
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
@@ -1355,6 +1416,7 @@ void BaseLayerGLTest::renderTextured() {
     texture
         .setMinificationFilter(GL::SamplerFilter::Linear)
         .setMagnificationFilter(GL::SamplerFilter::Linear)
+        .setWrapping(GL::SamplerWrapping::ClampToEdge)
         .setStorage(1, GL::textureFormat(image->format()), Vector3i{image->size(), 8})
         .setSubImage(0, {0, 0, data.offset ? Int(data.offset->z()) : 0}, ImageView2D{*image});
 
@@ -1402,6 +1464,178 @@ void BaseLayerGLTest::renderTextured() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
+        DebugTools::CompareImageToFile{_manager});
+}
+
+void BaseLayerGLTest::renderOutlineEdgeSmoothness() {
+    auto&& data = RenderOutlineEdgeSmoothnessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}};
+    layerShared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(data.smoothness, data.innerOutlineSmoothness),
+        {BaseLayerStyleUniform{}
+            .setColor(0x2f83ccff_rgbaf)
+            .setOutlineColor(0xc7cf2fff_rgbaf)
+            .setCornerRadius(4.0f)
+            .setInnerOutlineCornerRadius(12.0f)
+            .setOutlineWidth({0.0f, 0.0f, 0.0f, 8.0f}),
+         BaseLayerStyleUniform{}
+            .setColor(0x2f83ccff_rgbaf)
+            .setOutlineColor(0xc7cf2fff_rgbaf)
+            .setCornerRadius(4.0f)
+            .setInnerOutlineCornerRadius(12.0f)
+            .setOutlineWidth({0.0f, 0.0f, 8.0f, 0.0f})},
+        {});
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+
+    /* Two nodes right next to each other, with some but not all edges /
+       corners having an outline. The smoothness is set excessively high.
+
+        - The data expanding outside of the node area, instead of being cut off
+        - The quads thus overlapping, although the transition still being
+          visible due to the way (One, OneMinusSourceAlpha) blending works,
+          where it doesn't take 100% of the background. It'd only stay a
+          constant color if (One, One) would be used.
+        - The outline color not leaking into the base color on the edges that
+          don't have it, unless the inner smoothness is even larger */
+
+    NodeHandle node1 = ui.createNode({12.0f, 12.0f}, {52.0f, 40.0f});
+    NodeHandle node2 = ui.createNode({64.0f, 12.0f}, {52.0f, 40.0f});
+    layer.create(0, node1);
+    layer.create(1, node2);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+        DebugTools::CompareImageToFile{_manager});
+}
+
+void BaseLayerGLTest::renderGradientOutlineEdgeSmoothness() {
+    auto&& data = RenderGradientOutlineEdgeSmoothnessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The gradient should extend also under the outline. Testing by expanding
+       the quad outside with negative padding, cancelling that with a
+       transparent outline, and extrapolating the gradient accordingly for the
+       outline. The result should be the same as render(gradient) above. */
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}};
+    layerShared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(data.smoothness, 0.0f),
+        {BaseLayerStyleUniform{}
+            .setOutlineWidth(8.0f)
+            .setOutlineColor(0x00000000_rgbaf)
+            .setColor(Math::lerp(0x774422_rgbf, 0xeeddaa_rgbf, 56.0f/48.0f),
+                      Math::lerp(0xeeddaa_rgbf, 0x774422_rgbf, 56.0f/48.0f))},
+        {Vector4{-8.0f}});
+
+    BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    layer.create(0, node);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/gradient.png"),
+        DebugTools::CompareImageToFile{_manager});
+}
+
+void BaseLayerGLTest::renderTexturedOutlineEdgeSmoothness() {
+    auto&& data = RenderTexturedOutlineEdgeSmoothnessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The texture should extend also under the outline. Testing by expanding
+       the quad outside with negative padding, cancelling that with a
+       transparent outline, and extrapolating the texture coordinates
+       accordingly for the outline. The result should be the same as
+       renderTextured() above. */
+
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    Containers::Pointer<Trade::AbstractImporter> importer = _manager.loadAndInstantiate("AnyImageImporter");
+    CORRADE_VERIFY(importer->openFile(Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/blur-input.png")));
+
+    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+    CORRADE_VERIFY(image);
+
+    GL::Texture2DArray texture;
+    texture
+        .setMinificationFilter(GL::SamplerFilter::Linear)
+        .setMagnificationFilter(GL::SamplerFilter::Linear)
+        .setWrapping(GL::SamplerWrapping::ClampToEdge)
+        .setStorage(1, GL::textureFormat(image->format()), Vector3i{image->size(), 1})
+        .setSubImage(0, {}, ImageView2D{*image});
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}
+        .setFlags(BaseLayer::Shared::Flag::Textured)
+    };
+    layerShared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(data.smoothness, 1.0f),
+        {BaseLayerStyleUniform{}
+            .setOutlineWidth(8.0f)
+            .setOutlineColor(0x00000000_rgbaf)},
+        {Vector4{-8.0f}});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+    layer.setTexture(texture);
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    DataHandle nodeData = layer.create(0, node);
+    layer.setTextureCoordinates(nodeData, {40.0f/160.0f, -8.0f/106.0f, 0}, {128.0f/160.0f, 64.0f/106.0f});
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/textured.png"),
         DebugTools::CompareImageToFile{_manager});
 }
 
@@ -1602,6 +1836,71 @@ void BaseLayerGLTest::renderComposite() {
     CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
         (DebugTools::CompareImageToFile{_manager, data.maxThreshold, data.meanThreshold}));
+}
+
+void BaseLayerGLTest::renderCompositeEdgeSmoothness() {
+    if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    /* The background blur should be calculated on quads including the extra
+       smoothness (thus in this case the whole UI size), otherwise the smooth
+       edges get random values. Picking a radius that's not too large as
+       otherwise the random noise would smoothen out, making the comparison
+       more likely to pass. */
+
+    AbstractUserInterface ui{RenderSize};
+    RendererGL& renderer = ui.setRendererInstance(Containers::pointer<RendererGL>(RendererGL::Flag::CompositingFramebuffer));
+
+    /* Upload (a crop of) the blur source image as a framebuffer background */
+    Containers::Pointer<Trade::AbstractImporter> importer = _manager.loadAndInstantiate("AnyImageImporter");
+    CORRADE_VERIFY(importer->openFile(Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/blur-input.png")));
+
+    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+    CORRADE_VERIFY(image);
+    CORRADE_COMPARE(image->format(), PixelFormat::RGBA8Unorm);
+    CORRADE_COMPARE_AS(image->size(), RenderSize,
+        TestSuite::Compare::GreaterOrEqual);
+
+    Image2D imageCropped{PixelFormat::RGBA8Unorm, RenderSize, Containers::Array<char>{NoInit, std::size_t(RenderSize.product()*4)}};
+    Utility::copy(image->pixels<Color4ub>().prefix({
+        std::size_t(RenderSize.y()),
+        std::size_t(RenderSize.x()),
+    }), imageCropped.pixels<Color4ub>());
+
+    renderer.compositingTexture().setSubImage(0, {}, imageCropped);
+
+    BaseLayerGL::Shared layerShared{BaseLayerGL::Shared::Configuration{1}
+        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+        .setBackgroundBlurRadius(2)
+    };
+    layerShared.setStyle(
+        BaseLayerCommonStyleUniform{}
+            .setSmoothness(8.0f),
+        {BaseLayerStyleUniform{}
+            .setCornerRadius(24.0f)
+            /* Premultiplied alpha */
+            .setColor(0xffffffff_rgbaf*0.5f)},
+        {});
+
+    BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    layer.create(0, node);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the base layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(renderer.compositingFramebuffer().read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/composite-background-blur-50-smooth.png"),
+        DebugTools::CompareImageToFile{_manager});
 }
 
 void BaseLayerGLTest::renderCompositeTextured() {

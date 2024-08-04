@@ -73,7 +73,11 @@ struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
     /* Can't be inferred from styleUniforms.size() as those are non-empty only
        if dynamicStyleCount is non-zero */
     UnsignedInt styleUniformCount;
-    /* 0/4 bytes free */
+
+    /* Used to expand quad area for smoothed-out edges. The same value is
+       commonStyleUniform if dynamicStyleCount is non-zero, but saving it to a
+       dedicated place to avoid unnecessarily tangled data dependencies. */
+    Float smoothness;
 
     Containers::ArrayTuple styleStorage;
     /* Uniform mapping and padding values assigned to each style */

@@ -207,6 +207,7 @@ if(MAGNUM_BUILD_GL_TESTS)
             BaseLayerTestFiles/clipping-enabled.png
             BaseLayerTestFiles/composite-background-blur-0.png
             BaseLayerTestFiles/composite-background-blur-50.png
+            BaseLayerTestFiles/composite-background-blur-50-smooth.png
             BaseLayerTestFiles/composite-background-blur-50-r31.png
             BaseLayerTestFiles/composite-background-blur-50-r31-mask-default.png
             BaseLayerTestFiles/composite-background-blur-50-r31-mask-mask.png
@@ -224,6 +225,9 @@ if(MAGNUM_BUILD_GL_TESTS)
             BaseLayerTestFiles/draw-order.png
             BaseLayerTestFiles/draw-order-composite-background-blur.png
             BaseLayerTestFiles/draw-order-composite-default.png
+            BaseLayerTestFiles/edge-smoothness-same.png
+            BaseLayerTestFiles/edge-smoothness-inner-larger.png
+            BaseLayerTestFiles/edge-smoothness-inner-smaller.png
             BaseLayerTestFiles/gradient.png
             BaseLayerTestFiles/outline-different.png
             BaseLayerTestFiles/outline-gradient.png
