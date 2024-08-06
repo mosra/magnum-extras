@@ -23,6 +23,22 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+struct StyleEntry {
+    lowp vec4 backgroundColor;
+    mediump vec4 cornerRadiusReserved;
+};
+
+layout(std140
+    #ifdef EXPLICIT_BINDING
+    , binding = 1
+    #endif
+) uniform Style {
+    lowp vec4 smoothnessReserved;
+    StyleEntry styles[STYLE_COUNT];
+};
+
+#define style_smoothness smoothnessReserved.x
+
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
@@ -37,9 +53,14 @@ NOPERSPECTIVE out mediump vec2 interpolatedCenterDistance;
 flat out mediump uint interpolatedStyle;
 
 void main() {
+    /* Expand the quad by the smoothness radius to avoid the edges looking cut
+       off with non-zero smoothness. Similar thing is done in BaseLayer,
+       although there it has to be CPU-side in order to correctly adjust
+       texture coordinates as well. */
+    lowp vec2 smoothnessExpansion = vec2(style_smoothness)*sign(centerDistance);
     halfQuadSize = abs(centerDistance);
-    interpolatedCenterDistance = centerDistance;
+    interpolatedCenterDistance = centerDistance + smoothnessExpansion;
     interpolatedStyle = style;
 
-    gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
+    gl_Position = vec4(transformationProjectionMatrix*vec3(position + smoothnessExpansion, 1.0), 0.0).xywz;
 }

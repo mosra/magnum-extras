@@ -82,6 +82,7 @@ struct TextLayerGLTest: GL::OpenGLTester {
     void renderSetup();
     void renderTeardown();
     void render();
+    void renderEdgeSmoothness();
     void renderAlignmentPadding();
     void renderCustomColor();
     void renderChangeText();
@@ -822,6 +823,10 @@ TextLayerGLTest::TextLayerGLTest() {
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
+    addTests({&TextLayerGLTest::renderEdgeSmoothness},
+        &TextLayerGLTest::renderSetup,
+        &TextLayerGLTest::renderTeardown);
+
     addInstancedTests({&TextLayerGLTest::renderAlignmentPadding},
         Containers::arraySize(RenderAlignmentPaddingData),
         &TextLayerGLTest::renderSetup,
@@ -1171,6 +1176,71 @@ void TextLayerGLTest::render() {
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join({WHEE_TEST_DIR, "TextLayerTestFiles", data.filename}),
+        DebugTools::CompareImageToFile{_importerManager});
+}
+
+void TextLayerGLTest::renderEdgeSmoothness() {
+    if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("StbTrueTypeFont plugin not found.");
+
+    /* A stripped-down variant of render(colored, cursor + selection style)
+       that has excessive smoothness to test doesn't get cut off */
+
+    AbstractUserInterface ui{RenderSize};
+    ui.setRendererInstance(Containers::pointer<RendererGL>());
+
+    /* Opened in the constructor together with cache filling to circumvent
+       stb_truetype's extreme rasterization slowness */
+    CORRADE_VERIFY(_font && _font->isOpened());
+
+    TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}
+        .setEditingStyleCount(2)};
+    layerShared.setGlyphCache(_fontGlyphCache);
+    layerShared.setStyle(
+        TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf)},
+        {layerShared.addFont(*_font, 32.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {},
+        {0},
+        {1},
+        {});
+    layerShared.setEditingStyle(
+        TextLayerCommonEditingStyleUniform{}
+            .setSmoothness(5.0f),
+        {TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf)
+            .setCornerRadius(5.5f),
+            TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf)
+            .setCornerRadius(10.0f)},
+        {},
+        {{10.0f, -5.0f, -1.0f, 0.0f},
+         {5.0f, 0.0f, 7.5f, 5.0f}});
+
+    TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
+
+    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    DataHandle nodeData = layer.create(0, "Maggi", {}, TextDataFlag::Editable, node);
+    layer.setCursor(nodeData, 2, 5);
+
+    ui.draw();
+
+    MAGNUM_VERIFY_NO_GL_ERROR();
+
+    if(!(_importerManager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
+       !(_importerManager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
+        CORRADE_SKIP("AnyImageImporter / StbImageImporter plugins not found.");
+
+    #if defined(MAGNUM_TARGET_GLES) && !defined(MAGNUM_TARGET_WEBGL)
+    /* Same problem is with all builtin shaders, so this doesn't seem to be a
+       bug in the text layer shader code */
+    if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
+        CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
+    #endif
+    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+        Utility::Path::join(WHEE_TEST_DIR, "TextLayerTestFiles/colored-cursor-selection-rounded-smooth.png"),
         DebugTools::CompareImageToFile{_importerManager});
 }
 
