@@ -289,6 +289,22 @@ const struct {
             .setCornerRadius(10.0f), {5.0f, 0.0f, 7.5f, 5.0f},
         TextLayerStyleUniform{}
             .setColor(0x1f1f1f_rgbf)},
+    /* The smoothness shouldn't look cut off in this case */
+    {"colored, cursor + selection style, colored text, rounded corners, excessive smoothness", "colored-cursor-selection-text-rounded-smooth.png", false, 2, 5,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+        TextLayerCommonEditingStyleUniform{}
+            .setSmoothness(5.0f),
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431_rgbf)
+            /* Off-center to verify it's applied to right edges */
+            .setCornerRadius(5.5f), {10.0f, -5.0f, -1.0f, 0.0f},
+        TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2f_rgbf)
+            /* Off-center to verify it's applied to right edges */
+            .setCornerRadius(10.0f), {5.0f, 0.0f, 7.5f, 5.0f},
+        TextLayerStyleUniform{}
+            .setColor(0x1f1f1f_rgbf)},
 };
 
 constexpr Vector2i RenderSize{128, 64};
