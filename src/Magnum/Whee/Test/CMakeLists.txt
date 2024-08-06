@@ -303,6 +303,7 @@ if(MAGNUM_BUILD_GL_TESTS)
             TextLayerTestFiles/colored.png
             TextLayerTestFiles/colored-cursor.png
             TextLayerTestFiles/colored-cursor-selection.png
+            TextLayerTestFiles/colored-cursor-selection-rounded-smooth.png
             TextLayerTestFiles/colored-cursor-selection-text.png
             TextLayerTestFiles/colored-cursor-selection-text-rounded.png
             TextLayerTestFiles/colored-selection.png
