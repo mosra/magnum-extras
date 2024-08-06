@@ -338,10 +338,7 @@ const struct {
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
-            /** @todo this is just to avoid a slight white outline, fix
-                properly in the shader */
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
     /* Should cause no difference compared to above */
     {"alpha mask, TextureMask", "mask-premultiplied.png", "textured-mask.png",
         false, 0x999999_rgbf,
@@ -349,19 +346,13 @@ const struct {
         BaseLayer::Shared::Flag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
-            /** @todo this is just to avoid a slight white outline, fix
-                properly in the shader */
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
     {"alpha mask, colored", "mask-colored-premultiplied.png", "textured-mask-colored.png",
         false, 0x999999_rgbf,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}}, {},
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xffffff_rgbf)
-            /** @todo this is just to avoid a slight white outline, fix
-                properly in the shader */
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xffffff_rgbf)},
     /* Should cause no difference compared to above */
     {"alpha mask, colored, TextureMask", "mask-colored-premultiplied.png", "textured-mask-colored.png",
         false, 0x999999_rgbf,
@@ -369,10 +360,7 @@ const struct {
         BaseLayer::Shared::Flag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
-            .setColor(0xffffff_rgbf)
-            /** @todo this is just to avoid a slight white outline, fix
-                properly in the shader */
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xffffff_rgbf)},
     /* The outline is by default not affected by the mask */
     {"alpha mask, outline", "mask-premultiplied.png", "textured-mask-outline-default.png",
         false, 0x999999_rgbf,
@@ -703,10 +691,7 @@ const struct {
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
-            .setColor(0xffffffff_rgbaf*0.5f)
-            /** @todo this is just to avoid a slight white outline, fix
-                properly in the shader */
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xffffffff_rgbaf*0.5f)},
     {"background blur, 50% opacity, radius 31, alpha mask, TextureMask",
         "mask-premultiplied.png", "composite-background-blur-50-r31-mask-mask.png",
         {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f},
@@ -714,20 +699,14 @@ const struct {
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
-            .setColor(0xffffffff_rgbaf*0.5f)
-            /** @todo this is just to avoid a slight white outline, fix
-                properly in the shader */
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xffffffff_rgbaf*0.5f)},
     {"background blur, 50% opacity, radius 31, alpha mask, colored",
         "mask-colored-premultiplied.png", "composite-background-blur-50-r31-mask-colored-default.png",
         {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f}, {},
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
-            .setColor(0xffffffff_rgbaf*0.5f)
-            /** @todo this is just to avoid a slight white outline, fix
-                properly in the shader */
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xffffffff_rgbaf*0.5f)},
     {"background blur, 50% opacity, radius 31, alpha mask, colored, TextureMask",
         "mask-colored-premultiplied.png", "composite-background-blur-50-r31-mask-colored-mask.png",
         {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f},
@@ -735,10 +714,7 @@ const struct {
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
-            .setColor(0xffffffff_rgbaf*0.5f)
-            /** @todo this is just to avoid a slight white outline, fix
-                properly in the shader */
-            .setOutlineColor(0x00000000_rgbaf)},
+            .setColor(0xffffffff_rgbaf*0.5f)},
     /* Just to verify the outline is masked in this case as well, there should
        be no interaction between these two features in the shader code tho */
     {"background blur, 50% opacity, radius 31, alpha mask, outline, TextureMask",
