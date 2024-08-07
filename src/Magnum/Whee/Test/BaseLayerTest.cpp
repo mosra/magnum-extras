@@ -83,7 +83,7 @@ struct BaseLayerTest: TestSuite::Tester {
     void sharedConstructNoCreate();
     void sharedConstructCopy();
     void sharedConstructMove();
-    void sharedConstructZeroStyleCount();
+    void sharedConstructInvalid();
 
     void sharedSetStyle();
     void sharedSetStyleImplicitPadding();
@@ -402,7 +402,7 @@ BaseLayerTest::BaseLayerTest() {
               &BaseLayerTest::sharedConstructNoCreate,
               &BaseLayerTest::sharedConstructCopy,
               &BaseLayerTest::sharedConstructMove,
-              &BaseLayerTest::sharedConstructZeroStyleCount});
+              &BaseLayerTest::sharedConstructInvalid});
 
     addInstancedTests({&BaseLayerTest::sharedSetStyle,
                        &BaseLayerTest::sharedSetStyleImplicitPadding,
@@ -971,7 +971,7 @@ void BaseLayerTest::sharedConstructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
 }
 
-void BaseLayerTest::sharedConstructZeroStyleCount() {
+void BaseLayerTest::sharedConstructInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct Shared: BaseLayer::Shared {
@@ -986,8 +986,19 @@ void BaseLayerTest::sharedConstructZeroStyleCount() {
 
     std::ostringstream out;
     Error redirectError{&out};
+    /* These all could be checked in Configuration directly, but doing so would
+       require the application to fill the configuration in a certain order
+       (remove one flag before adding the other, ...) which isn't nice */
     Shared{Shared::Configuration{0}.setDynamicStyleCount(0)};
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared: expected non-zero total style count\n");
+    Shared{Shared::Configuration{1}.addFlags(Shared::Flag::SubdividedQuads|Shared::Flag::NoRoundedCorners)};
+    Shared{Shared::Configuration{1}.addFlags(Shared::Flag::SubdividedQuads|Shared::Flag::NoOutline)};
+    Shared{Shared::Configuration{1}.addFlags(Shared::Flag::SubdividedQuads|Shared::Flag::NoOutline|Shared::Flag::NoRoundedCorners)};
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::BaseLayer::Shared: expected non-zero total style count\n"
+        "Whee::BaseLayer::Shared: Whee::BaseLayer::Shared::Flag::SubdividedQuads and Whee::BaseLayer::Shared::Flag::NoRoundedCorners are mutually exclusive\n"
+        "Whee::BaseLayer::Shared: Whee::BaseLayer::Shared::Flag::SubdividedQuads and Whee::BaseLayer::Shared::Flag::NoOutline are mutually exclusive\n"
+        "Whee::BaseLayer::Shared: Whee::BaseLayer::Shared::Flag::SubdividedQuads and Whee::BaseLayer::Shared::Flag::NoRoundedCorners|Whee::BaseLayer::Shared::Flag::NoOutline are mutually exclusive\n",
+        TestSuite::Compare::String);
 }
 
 void BaseLayerTest::sharedSetStyle() {
@@ -2401,7 +2412,7 @@ void BaseLayerTest::updateDataOrder() {
         }
 
         Containers::StridedArrayView1D<const Vector2> positions = vertices.slice(&Implementation::BaseLayerSubdividedVertex::position);
-        Containers::StridedArrayView1D<const Vector2> centerDistances = vertices.slice(&Implementation::BaseLayerSubdividedVertex::centerDistance);
+        Containers::StridedArrayView1D<const Float> centerDistancesY = vertices.slice(&Implementation::BaseLayerSubdividedVertex::centerDistanceY);
 
         /* Data 3 is attached to node 6. Each group of four vertices has the
            same values, expansion is done in the vertex shader. */
@@ -2411,11 +2422,11 @@ void BaseLayerTest::updateDataOrder() {
             { 1.0f, 17.0f}, { 1.0f, 17.0f}, { 1.0f, 17.0f}, { 1.0f, 17.0f},
             {11.0f, 17.0f}, {11.0f, 17.0f}, {11.0f, 17.0f}, {11.0f, 17.0f},
         }), TestSuite::Compare::Container);
-        CORRADE_COMPARE_AS(centerDistances.sliceSize(3*16, 16), Containers::arrayView<Vector2>({
-            {-5.0f, -7.5f}, {-5.0f, -7.5f}, {-5.0f, -7.5f}, {-5.0f, -7.5f},
-            { 5.0f, -7.5f}, { 5.0f, -7.5f}, { 5.0f, -7.5f}, { 5.0f, -7.5f},
-            {-5.0f,  7.5f}, {-5.0f,  7.5f}, {-5.0f,  7.5f}, {-5.0f,  7.5f},
-            { 5.0f,  7.5f}, { 5.0f,  7.5f}, { 5.0f,  7.5f}, { 5.0f,  7.5f},
+        CORRADE_COMPARE_AS(centerDistancesY.sliceSize(3*16, 16), Containers::arrayView({
+            -7.5f, -7.5f, -7.5f, -7.5f,
+            -7.5f, -7.5f, -7.5f, -7.5f,
+             7.5f,  7.5f,  7.5f,  7.5f,
+             7.5f,  7.5f,  7.5f,  7.5f,
         }), TestSuite::Compare::Container);
 
         /* Data 7 and 9 are both attached to node 15. Again each group of four
@@ -2427,11 +2438,11 @@ void BaseLayerTest::updateDataOrder() {
                 { 3.0f, 9.0f}, { 3.0f, 9.0f}, { 3.0f, 9.0f}, { 3.0f, 9.0f},
                 {23.0f, 9.0f}, {23.0f, 9.0f}, {23.0f, 9.0f}, {23.0f, 9.0f},
             }), TestSuite::Compare::Container);
-            CORRADE_COMPARE_AS(centerDistances.sliceSize(i*16, 16), Containers::arrayView<Vector2>({
-                {-10.0f, -2.5f}, {-10.0f, -2.5f}, {-10.0f, -2.5f}, {-10.0f, -2.5f},
-                { 10.0f, -2.5f}, { 10.0f, -2.5f}, { 10.0f, -2.5f}, { 10.0f, -2.5f},
-                {-10.0f,  2.5f}, {-10.0f,  2.5f}, {-10.0f,  2.5f}, {-10.0f,  2.5f},
-                { 10.0f,  2.5f}, { 10.0f,  2.5f}, { 10.0f,  2.5f}, { 10.0f,  2.5f},
+            CORRADE_COMPARE_AS(centerDistancesY.sliceSize(i*16, 16), Containers::arrayView({
+                -2.5f, -2.5f, -2.5f, -2.5f,
+                -2.5f, -2.5f, -2.5f, -2.5f,
+                 2.5f,  2.5f,  2.5f,  2.5f,
+                 2.5f,  2.5f,  2.5f,  2.5f,
             }), TestSuite::Compare::Container);
         }
 
@@ -2440,6 +2451,7 @@ void BaseLayerTest::updateDataOrder() {
            expansion is done in the vertex shader. */
         if(data.textured) {
             Containers::StridedArrayView1D<const Vector3> textureCoordinates = Containers::arrayCast<const Implementation::BaseLayerSubdividedTexturedVertex>(vertices).slice(&Implementation::BaseLayerSubdividedTexturedVertex::textureCoordinates);
+            Containers::StridedArrayView1D<const Vector2> textureScale = Containers::arrayCast<const Implementation::BaseLayerSubdividedTexturedVertex>(vertices).slice(&Implementation::BaseLayerSubdividedTexturedVertex::textureScale);
 
             CORRADE_COMPARE_AS(textureCoordinates.sliceSize(7*16, 16), Containers::arrayView<Vector3>({
                 {0.25f, 0.625f, 37.0f}, {0.25f, 0.625f, 37.0f},
@@ -2450,6 +2462,21 @@ void BaseLayerTest::updateDataOrder() {
                     {0.25f, 0.5f, 37.0f}, {0.25f, 0.5f, 37.0f},
                 {0.75f, 0.5f, 37.0f}, {0.75f, 0.5f, 37.0f},
                     {0.75f, 0.5f, 37.0f}, {0.75f, 0.5f, 37.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(textureScale.sliceSize(7*16, 16), Containers::arrayView<Vector2>({
+                /* The texture slice size is {0.5, 0.125}, quad size is
+                   {20, 5}, thus it's "0.025 textures" for every quad unit in
+                   both directions, with Y flipped. Coincidentally. The cases
+                   below have X and Y different, to ensure the X value isn't
+                   used for both. */
+                {0.025f, -0.025f}, {0.025f, -0.025f},
+                    {0.025f, -0.025f}, {0.025f, -0.025f},
+                {0.025f, -0.025f}, {0.025f, -0.025f},
+                    {0.025f, -0.025f}, {0.025f, -0.025f},
+                {0.025f, -0.025f}, {0.025f, -0.025f},
+                    {0.025f, -0.025f}, {0.025f, -0.025f},
+                {0.025f, -0.025f}, {0.025f, -0.025f},
+                    {0.025f, -0.025f}, {0.025f, -0.025f},
             }), TestSuite::Compare::Container);
 
             for(std::size_t i: {3, 9}) {
@@ -2464,6 +2491,25 @@ void BaseLayerTest::updateDataOrder() {
                         {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f},
                 }), TestSuite::Compare::Container);
             }
+            /* Quad size is {10, 15} or it's padded to that size, so it's 1/10
+               and 1/15 */
+            CORRADE_COMPARE_AS(textureScale.sliceSize(3*16, 16), Containers::arrayView<Vector2>({
+                {0.1f, -1.0f/15.0f}, {0.1f, -1.0f/15.0f},
+                    {0.1f, -1.0f/15.0f}, {0.1f, -1.0f/15.0f},
+                {0.1f, -1.0f/15.0f}, {0.1f, -1.0f/15.0f},
+                    {0.1f, -1.0f/15.0f}, {0.1f, -1.0f/15.0f},
+                {0.1f, -1.0f/15.0f}, {0.1f, -1.0f/15.0f},
+                    {0.1f, -1.0f/15.0f}, {0.1f, -1.0f/15.0f},
+                {0.1f, -1.0f/15.0f}, {0.1f, -1.0f/15.0f},
+                    {0.1f, -1.0f/15.0f}, {0.1f, -1.0f/15.0f},
+            }), TestSuite::Compare::Container);
+            /* Quad size is {20, 5}, so it's 1/20 and 1/5 */
+            CORRADE_COMPARE_AS(textureScale.sliceSize(9*16, 16), Containers::arrayView<Vector2>({
+                {0.05f, -0.2f}, {0.05f, -0.2f}, {0.05f, -0.2f}, {0.05f, -0.2f},
+                {0.05f, -0.2f}, {0.05f, -0.2f}, {0.05f, -0.2f}, {0.05f, -0.2f},
+                {0.05f, -0.2f}, {0.05f, -0.2f}, {0.05f, -0.2f}, {0.05f, -0.2f},
+                {0.05f, -0.2f}, {0.05f, -0.2f}, {0.05f, -0.2f}, {0.05f, -0.2f},
+            }), TestSuite::Compare::Container);
         }
     }
 

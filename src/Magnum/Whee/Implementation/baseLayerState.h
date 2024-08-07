@@ -117,16 +117,27 @@ struct BaseLayerTexturedVertex {
 
 struct BaseLayerSubdividedVertex {
     Vector2 position;
-    Vector2 centerDistance;
     Vector2 outlineWidth;
     Color3 color;
     UnsignedInt styleUniform;
+    /* Used for interpolating/extrapolating the vertical gradient when
+       expanding the quads */
+    Float centerDistanceY;
 };
 
 struct BaseLayerSubdividedTexturedVertex {
     BaseLayerSubdividedVertex vertex;
+    /* Used for interpolating/extrapolating the texture coordinates when
+       expanding the quads. Put into a single vertex attribute with
+       centerDistanceY in BaseLayerGL, thus expected to be right after. */
+    Vector2 textureScale;
     Vector3 textureCoordinates;
 };
+
+static_assert(
+    offsetof(BaseLayerSubdividedTexturedVertex, vertex) == 0 &&
+    offsetof(BaseLayerSubdividedTexturedVertex, textureScale) == offsetof(BaseLayerSubdividedVertex, centerDistanceY) + sizeof(BaseLayerSubdividedVertex::centerDistanceY),
+    "expected textureScale to immediately follow centerDistanceY");
 
 }
 

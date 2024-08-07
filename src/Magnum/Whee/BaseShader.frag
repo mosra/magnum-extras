@@ -70,15 +70,13 @@ flat in mediump vec4 outlineQuadSize;
 #endif
 NOPERSPECTIVE in mediump vec2 interpolatedCenterDistance;
 #else
-/* horizontal, vertical, outline horizontal, outline vertical */
+/* Horizontal, vertical, outline horizontal, outline vertical */
 NOPERSPECTIVE in mediump vec4 edgeDistance;
-// TODO the outline distance part could be also flat and just a difference maybe? er actually not, as it's differing on the edges if radii are different
-// TODO might not need all this, just a subset
-NOPERSPECTIVE in mediump vec2 radiusCenterDistance;
-NOPERSPECTIVE in mediump vec2 outlineRadiusCenterDistance;
-flat in mediump float cornerRadius; // TODO wait what does it do if the corners are different?
-// TODO it CAN NOT be flat .. wait uh it can, it's used only in primitives when the radius is the same so ALL FINE
-flat in mediump float outlineCornerRadius;
+/* These are constant in corner quads and interpolated in the edge and center
+   quads. They only get used in the corner quads, because otherwise the
+   edgeDistance is always at least as large, cancelling them. */
+NOPERSPECTIVE in mediump float cornerRadius;
+NOPERSPECTIVE in mediump float outlineCornerRadius;
 #endif
 #ifdef TEXTURED
 NOPERSPECTIVE in mediump vec3 interpolatedTextureCoordinates;
@@ -160,29 +158,34 @@ void main() {
                 min(edgeDistance.x, edgeDistance.y),
                 min(edgeDistance.z, edgeDistance.w));
         }
-
-        /* Distance to the inner outline edge should be never larger than
-           distance to the outer edge (such as in case the inner radius is
-           smaller than outer) */
-        outlineDist = min(dist, outlineDist);
     }
     #endif
     #else
-    lowp float dist = min(edgeDistance.x, edgeDistance.y);
-    // TODO or else?
-    if(all(greaterThan(radiusCenterDistance, vec2(0.0)))) {
-//         radiusCenterDistance = edgeDistance.xy - vec2(cornerRadius);
-        dist = cornerRadius - length(radiusCenterDistance);
-    }
+    /* Is (0, 0) in centers of outer corner radii, positive in corners,
+       negative at the edges */
+    lowp vec2 cornerCenterDistance = vec2(cornerRadius) - edgeDistance.xy;
+    /* Distance from the actual (rounded) edge, positive inside, negative
+       outside */
+    lowp float dist =
+        /* (Negative) distance from the corner edge, or +radius if not inside
+           any corner */
+        cornerRadius - length(max(cornerCenterDistance, vec2(0.0)))
+        /* (Positive) distance from closest center of corner radii, or 0 if
+           at the edges */
+        - min(max(cornerCenterDistance.x, cornerCenterDistance.y), 0.0);
 
-    lowp float outlineDist = min(edgeDistance.z, edgeDistance.w);
-    // TODO or else?
-    if(all(greaterThan(outlineRadiusCenterDistance, vec2(0.0)))) {
-        // TODO errr no this is impossible to calculate, needs also a distance from the inner edge of the outline
-        // TODO f all this, do these only once everything works, which it doesn't yet
-//         radiusCenterDistance = edgeDistance.xy - vec2(cornerRadius);
-        outlineDist = outlineCornerRadius - length(outlineRadiusCenterDistance);
-    }
+    /* And similarly for the inner outline edge */
+    lowp vec2 outlineCornerCenterDistance = vec2(outlineCornerRadius) - edgeDistance.zw;
+    lowp float outlineDist =
+        outlineCornerRadius - length(max(outlineCornerCenterDistance, vec2(0.0)))
+        - min(max(outlineCornerCenterDistance.x, outlineCornerCenterDistance.y), 0.0);
+    #endif
+
+    #if !defined(NO_OUTLINE) || defined(SUBDIVIDED_QUADS)
+    /* Distance to the inner outline edge should be never larger than distance
+       to the outer edge (such as in case the inner radius is smaller than
+       outer) */
+    outlineDist = min(dist, outlineDist);
     #endif
 
     /* Gradient, optionally textured */

@@ -93,6 +93,8 @@ BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLay
     #endif
     CORRADE_ASSERT(s.styleCount + s.dynamicStyleCount,
         "Whee::BaseLayer::Shared: expected non-zero total style count", );
+    CORRADE_ASSERT(!(s.flags & Flag::SubdividedQuads) || !(s.flags & (Flag::NoOutline|Flag::NoRoundedCorners)),
+        "Whee::BaseLayer::Shared:" << Flag::SubdividedQuads << "and" << (s.flags & (Flag::NoOutline|Flag::NoRoundedCorners)) << "are mutually exclusive", );
 }
 
 BaseLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
@@ -781,8 +783,11 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     sharedState.styleUniformCount + data.calculatedStyle - sharedState.styleCount;
             }
 
-            /* All four vertices in each corner get set to the same position
-               and center distance */
+            /* Note that here, compared to the non-SubdividedQuads case above,
+               the padding *does not* include the smoothness expansion. This is
+               because the shader has to do expansion for outline width and
+               corner radii on its own anyway, and doing the outer smoothness
+               expansion there as well makes the code more understandable. */
             Vector4 padding = data.padding;
             if(data.calculatedStyle < sharedState.styleCount)
                 padding += sharedState.styles[data.calculatedStyle].padding;
@@ -790,19 +795,22 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                 CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
                 padding += state.dynamicStylePaddings[data.calculatedStyle - sharedState.styleCount];
             }
+
+            /* All four vertices in each corner get set to the same position
+               and center distance */
             const Vector2 offset = nodeOffsets[nodeId];
             const Vector2 min = offset + padding.xy();
             const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
-            const Vector2 sizeHalf = (max - min)*0.5f;
-            const Vector2 sizeHalfNegative = -sizeHalf;
+            const Float sizeHalfY = (max.y() - min.y())*0.5f;
+            const Float sizeHalfYNegative = -sizeHalfY;
             for(UnsignedByte i = 0; i != 4; ++i) {
                 /* ✨ */
                 const Vector2 position = Math::lerp(min, max, BitVector2{i});
-                const Vector2 centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{i});
+                const Float centerDistanceY = Math::lerp(sizeHalfYNegative, sizeHalfY, i >> 1);
                 for(std::size_t j = 0; j != 4; ++j) {
                     Implementation::BaseLayerSubdividedVertex& vertex = vertices[dataId*16 + i *4 + j];
                     vertex.position = position;
-                    vertex.centerDistance = centerDistance;
+                    vertex.centerDistanceY = centerDistanceY;
                 }
             }
 
@@ -835,11 +843,29 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     don't Y-flip the projection, reconsider? */
                 const Vector2 min = data.textureCoordinateOffset.xy() + Vector2::yAxis(data.textureCoordinateSize.y());
                 const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x());
+
+                /* Calculate texture scale relative to one projection unit in
+                   order to correctly inter/extrapolate texture coordinates for
+                   expanded quads. Similarly to the non-SubdividedQuads case,
+                   taking the actual vertex positions to not have to deal with
+                   the padding logic again, this time the size is without the
+                   smoothness expansion so don't need to undo anything. The
+                   scale is also passed through an extra vertex attribute
+                   instead of being applied to the vertex data as the shader
+                   needs to combine it with the actual expansion size based on
+                   corner radius, outline size etc.
+
+                   Here the scale is again Y flipping. */
+                const Vector2 paddedQuadSize = vertices[dataId*16 + 12].position - vertices[dataId*16 + 0].position;
+                const Vector2 textureScale = data.textureCoordinateSize/paddedQuadSize*Vector2::yScale(-1.0f);
+
                 for(UnsignedByte i = 0; i != 4; ++i) {
                     const std::size_t index = dataId*16 + i *4;
                     const Vector3 coordinate{Math::lerp(min, max, BitVector2{i}), data.textureCoordinateOffset.z()};
-                    for(std::size_t j = 0; j != 4; ++j)
+                    for(std::size_t j = 0; j != 4; ++j) {
+                        texturedVertices[index + j].textureScale = textureScale;
                         texturedVertices[index + j].textureCoordinates = coordinate;
+                    }
                 }
             }
         }

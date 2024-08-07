@@ -81,21 +81,26 @@ struct BaseLayerGLTest: GL::OpenGLTester {
 
     void renderSetup();
     void renderTeardown();
-    void render();
-    void renderCustomColor();
-    void renderCustomOutlineWidth();
-    void renderPadding();
-    void renderChangeStyle();
-    void renderEdgeOutlineSmoothness();
-    void renderTextured();
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void render();
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderCustomColor();
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderCustomOutlineWidth();
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderPadding();
+    /* The SubdividedQuads flag shouldn't cover any codepaths for style change
+       that weren't already tested above, done "just in case" */
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderChangeStyle();
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderEdgeOutlineSmoothness();
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderTextured();
 
-    void renderDynamicStyles();
+    /* The SubdividedQuads flag shouldn't cover any codepaths for dynamic
+       styles that weren't already tested above, done "just in case" */
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderDynamicStyles();
 
     void renderOrDrawCompositeSetup();
     void renderOrDrawCompositeTeardown();
 
-    void renderComposite();
-    void renderCompositeTextured();
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderComposite();
+    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderCompositeTextured();
+    /* Composite node rectangles aren't affected by the SubdividedQuads flag */
     void renderCompositeNodeRects();
 
     void drawSetup();
@@ -112,6 +117,7 @@ struct BaseLayerGLTest: GL::OpenGLTester {
         GL::Framebuffer _framebuffer{NoCreate};
 };
 
+using namespace Containers::Literals;
 using namespace Math::Literals;
 
 const struct {
@@ -851,48 +857,58 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addTests({&BaseLayerGLTest::drawNoTextureSet});
 
-    addInstancedTests({&BaseLayerGLTest::render},
+    addInstancedTests({&BaseLayerGLTest::render,
+                       &BaseLayerGLTest::render<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests({&BaseLayerGLTest::renderCustomColor,
-                       &BaseLayerGLTest::renderCustomOutlineWidth},
+                       &BaseLayerGLTest::renderCustomColor<BaseLayer::Shared::Flag::SubdividedQuads>,
+                       &BaseLayerGLTest::renderCustomOutlineWidth,
+                       &BaseLayerGLTest::renderCustomOutlineWidth<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderCustomColorOutlineWidthData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
-    addInstancedTests({&BaseLayerGLTest::renderPadding},
+    addInstancedTests({&BaseLayerGLTest::renderPadding,
+                       &BaseLayerGLTest::renderPadding<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderPaddingData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
-    addInstancedTests({&BaseLayerGLTest::renderChangeStyle},
+    addInstancedTests({&BaseLayerGLTest::renderChangeStyle,
+                       &BaseLayerGLTest::renderChangeStyle<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderChangeStyleData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
-    addInstancedTests({&BaseLayerGLTest::renderEdgeOutlineSmoothness},
+    addInstancedTests({&BaseLayerGLTest::renderEdgeOutlineSmoothness,
+                       &BaseLayerGLTest::renderEdgeOutlineSmoothness<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderEdgeOutlineSmoothnessData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
-    addInstancedTests({&BaseLayerGLTest::renderTextured},
+    addInstancedTests({&BaseLayerGLTest::renderTextured,
+                       &BaseLayerGLTest::renderTextured<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderTexturedData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
-    addInstancedTests({&BaseLayerGLTest::renderDynamicStyles},
+    addInstancedTests({&BaseLayerGLTest::renderDynamicStyles,
+                       &BaseLayerGLTest::renderDynamicStyles<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderDynamicStylesData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
-    addInstancedTests({&BaseLayerGLTest::renderComposite},
+    addInstancedTests({&BaseLayerGLTest::renderComposite,
+                       &BaseLayerGLTest::renderComposite<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderCompositeData),
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
-    addInstancedTests({&BaseLayerGLTest::renderCompositeTextured},
+    addInstancedTests({&BaseLayerGLTest::renderCompositeTextured,
+                       &BaseLayerGLTest::renderCompositeTextured<BaseLayer::Shared::Flag::SubdividedQuads>},
         Containers::arraySize(RenderCompositeTexturedData),
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
@@ -1112,9 +1128,13 @@ void BaseLayerGLTest::renderTeardown() {
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
-void BaseLayerGLTest::render() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::render() {
     auto&& data = RenderData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+
+    if(flag == BaseLayer::Shared::Flag::SubdividedQuads && (data.flags & (BaseLayer::Shared::Flag::NoOutline|BaseLayer::Shared::Flag::NoRoundedCorners)))
+        CORRADE_SKIP(flag << "and" << data.flags << "are mutually exclusive");
 
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -1133,7 +1153,7 @@ void BaseLayerGLTest::render() {
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{
         UnsignedInt(Containers::arraySize(styleUniforms)),
         UnsignedInt(Containers::arraySize(styleToUniform))}
-            .setFlags(data.flags)
+            .setFlags(data.flags|flag)
     };
     /* The (lack of any) effect of padding on rendered output is tested
        thoroughly in renderPadding() */
@@ -1169,9 +1189,10 @@ void BaseLayerGLTest::render() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-void BaseLayerGLTest::renderCustomColor() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCustomColor() {
     auto&& data = RenderCustomColorOutlineWidthData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* Basically the same as the "gradient" case in render(), except that the
        color is additionally taken from the per-vertex data as well */
@@ -1179,7 +1200,9 @@ void BaseLayerGLTest::renderCustomColor() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}
+        .addFlags(flag)
+    };
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf/0x336699_rgbf, 0x774422_rgbf/0x336699_rgbf)
@@ -1224,9 +1247,13 @@ void BaseLayerGLTest::renderCustomColor() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-void BaseLayerGLTest::renderCustomOutlineWidth() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCustomOutlineWidth() {
     auto&& data = RenderCustomColorOutlineWidthData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+
+    if(flag == BaseLayer::Shared::Flag::SubdividedQuads && (data.flags & (BaseLayer::Shared::Flag::NoOutline|BaseLayer::Shared::Flag::NoRoundedCorners)))
+        CORRADE_SKIP(flag << "and" << data.flags << "are mutually exclusive");
 
     /* Like the "outline, all sides same" case in render(), except that the
        width is additionally taken from the per-vertex data as well. And tests
@@ -1237,7 +1264,7 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}
-        .setFlags(data.flags)
+        .setFlags(data.flags|flag)
     };
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
@@ -1286,9 +1313,10 @@ void BaseLayerGLTest::renderCustomOutlineWidth() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-void BaseLayerGLTest::renderPadding() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderPadding() {
     auto&& data = RenderPaddingData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* Basically the same as the "outline, rounded corners, different" case in
        render(), except that the node offset, size and style or data padding
@@ -1298,7 +1326,9 @@ void BaseLayerGLTest::renderPadding() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}
+        .addFlags(flag)
+    };
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
@@ -1348,9 +1378,10 @@ void BaseLayerGLTest::renderPadding() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-void BaseLayerGLTest::renderChangeStyle() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderChangeStyle() {
     auto&& data = RenderChangeStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* Basically the same as the "gradient" case in render(), except that the
        style ID is changed to it only later. */
@@ -1358,7 +1389,9 @@ void BaseLayerGLTest::renderChangeStyle() {
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}
+        .addFlags(flag)
+    };
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{},
         BaseLayerStyleUniform{}
@@ -1400,14 +1433,17 @@ void BaseLayerGLTest::renderChangeStyle() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-void BaseLayerGLTest::renderEdgeOutlineSmoothness() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderEdgeOutlineSmoothness() {
     auto&& data = RenderEdgeOutlineSmoothnessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
-    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}};
+    BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}
+        .addFlags(flag)
+    };
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}
             .setSmoothness(data.smoothness, data.innerOutlineSmoothness),
@@ -1461,9 +1497,10 @@ void BaseLayerGLTest::renderEdgeOutlineSmoothness() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-void BaseLayerGLTest::renderTextured() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderTextured() {
     auto&& data = RenderTexturedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -1488,7 +1525,7 @@ void BaseLayerGLTest::renderTextured() {
 
     BaseLayerGL::Shared layerShared{
         BaseLayer::Shared::Configuration{2}
-            .addFlags(BaseLayer::Shared::Flag::Textured|data.extraFlags)};
+            .addFlags(BaseLayer::Shared::Flag::Textured|data.extraFlags|flag)};
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}
             .setSmoothness(data.smoothness, 1.0f),
@@ -1532,9 +1569,10 @@ void BaseLayerGLTest::renderTextured() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-void BaseLayerGLTest::renderDynamicStyles() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderDynamicStyles() {
     auto&& data = RenderDynamicStylesData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -1542,6 +1580,7 @@ void BaseLayerGLTest::renderDynamicStyles() {
     BaseLayerGL::Shared layerShared{
         BaseLayer::Shared::Configuration{data.noBaseStyles ? 0u : 3u,
                                          data.noBaseStyles ? 0u : 4u}
+            .addFlags(flag)
             .setDynamicStyleCount(2)
     };
 
@@ -1665,9 +1704,10 @@ void BaseLayerGLTest::renderOrDrawCompositeTeardown() {
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
-void BaseLayerGLTest::renderComposite() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderComposite() {
     auto&& data = RenderCompositeData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -1695,7 +1735,7 @@ void BaseLayerGLTest::renderComposite() {
     renderer.compositingTexture().setSubImage(0, {}, imageCropped);
 
     BaseLayerGL::Shared::Configuration configuration{2};
-    configuration.addFlags(data.flags);
+    configuration.addFlags(data.flags|flag);
     if(data.backgroundBlurRadius) {
         if(data.backgroundBlurCutoff)
             configuration.setBackgroundBlurRadius(*data.backgroundBlurRadius, *data.backgroundBlurCutoff);
@@ -1731,9 +1771,10 @@ void BaseLayerGLTest::renderComposite() {
         (DebugTools::CompareImageToFile{_manager, data.maxThreshold, data.meanThreshold}));
 }
 
-void BaseLayerGLTest::renderCompositeTextured() {
+template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCompositeTextured() {
     auto&& data = RenderCompositeTexturedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
+    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -1759,7 +1800,7 @@ void BaseLayerGLTest::renderCompositeTextured() {
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}
         .addFlags(BaseLayer::Shared::Flag::BackgroundBlur|
                   BaseLayer::Shared::Flag::Textured|
-                  data.extraFlags)
+                  data.extraFlags|flag)
         .setBackgroundBlurRadius(31)};
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}

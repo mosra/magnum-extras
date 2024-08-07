@@ -83,9 +83,13 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
         typedef Containers::EnumSet<Flag> Flags;
 
         typedef GL::Attribute<0, Vector2> Position;
+        /* These two only if SubdividedQuads are not set */
         typedef GL::Attribute<1, Vector2> CenterDistance;
-        /* Only if SubdividedQuads are not set */
         typedef GL::Attribute<2, Vector4> OutlineWidth;
+        /* Only if SubdividedQuads are set and Textured isn't */
+        typedef GL::Attribute<1, Float> SubdividedQuadCenterDistanceY;
+        /* Only if SubdividedQuads are set and Textured is */
+        typedef GL::Attribute<1, Vector3> SubdividedQuadCenterDistanceYTextureScale;
         /* Only if SubdividedQuads are set */
         typedef GL::Attribute<2, Vector2> SubdividedQuadOutlineWidth;
         typedef GL::Attribute<3, Vector3> Color3;
@@ -431,18 +435,18 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLa
         if(sharedState.flags & Shared::Flag::Textured) {
             state.mesh.addVertexBuffer(state.vertexBuffer, 0,
                 BaseShaderGL::Position{},
-                BaseShaderGL::CenterDistance{},
                 BaseShaderGL::SubdividedQuadOutlineWidth{},
                 BaseShaderGL::Color3{},
                 BaseShaderGL::Style{},
+                BaseShaderGL::SubdividedQuadCenterDistanceYTextureScale{},
                 BaseShaderGL::TextureCoordinates{});
         } else {
             state.mesh.addVertexBuffer(state.vertexBuffer, 0,
                 BaseShaderGL::Position{},
-                BaseShaderGL::CenterDistance{},
                 BaseShaderGL::SubdividedQuadOutlineWidth{},
                 BaseShaderGL::Color3{},
-                BaseShaderGL::Style{});
+                BaseShaderGL::Style{},
+                BaseShaderGL::SubdividedQuadCenterDistanceY{});
         }
     }
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
