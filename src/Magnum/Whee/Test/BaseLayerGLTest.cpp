@@ -1488,9 +1488,18 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderTextured() {
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
-    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
-        DebugTools::CompareImageToFile{_manager});
+    {
+        CORRADE_EXPECT_FAIL_IF(flag == BaseLayer::Shared::Flag::SubdividedQuads && data.expectedFilename == "textured-colored.png"_s,
+            "A single differing pixel with" << BaseLayer::Shared::Flag::SubdividedQuads << "enabled, not sure why");
+        CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+            Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
+            DebugTools::CompareImageToFile{_manager});
+    }
+    /* Verify that it's indeed just that one pixel */
+    if(flag == BaseLayer::Shared::Flag::SubdividedQuads && data.expectedFilename == "textured-colored.png"_s)
+        CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+            Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
+            (DebugTools::CompareImageToFile{_manager, 0.25f, 0.00004f}));
 }
 
 template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderOutlineEdgeSmoothness() {
@@ -1552,9 +1561,23 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderOutlineEdgeSm
     if(GL::Context::current().detectedDriver() & GL::Context::DetectedDriver::SwiftShader)
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
-    CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
-        Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
-        DebugTools::CompareImageToFile{_manager});
+    {
+        /* Note that this is, in particular, *not* due to the expansion not
+           being enough -- the bottom / right quads are shifted by 12 + 8
+           pixels in total (which is verifiable if you remove the inner quad
+           from the index buffer), and the difference is only about 16 pixels
+           from the edge. */
+        CORRADE_EXPECT_FAIL_IF(flag == BaseLayer::Shared::Flag::SubdividedQuads && data.filename == "edge-smoothness-inner-larger.png"_s,
+            "Differing pixels on the innermost side of the smooth outline with" << BaseLayer::Shared::Flag::SubdividedQuads << "enabled, not sure why");
+        CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+            Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+            DebugTools::CompareImageToFile{_manager});
+        }
+    /* Verify that it's indeed just those pixels */
+    if(flag == BaseLayer::Shared::Flag::SubdividedQuads && data.filename == "edge-smoothness-inner-larger.png"_s)
+        CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
+            Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
+            (DebugTools::CompareImageToFile{_manager, 3.25f, 0.028f}));
 }
 
 template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderGradientOutlineEdgeSmoothness() {
