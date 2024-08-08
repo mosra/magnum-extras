@@ -31,6 +31,7 @@
 
 #include <string> /** @todo clean this up */
 #include <Corrade/Containers/ArrayView.h>
+#include <Corrade/Containers/StringStl.h>
 #include <Corrade/Containers/StringView.h>
 #include <Corrade/Interconnect/Emitter.h>
 #include <Corrade/Utility/Unicode.h>
