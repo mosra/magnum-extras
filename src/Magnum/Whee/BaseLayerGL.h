@@ -66,8 +66,8 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
          * The @p shared state is expected to be kept in scope for the whole
          * class lifetime. In order to draw the layer it's expected that
          * @ref Shared::setStyle() was called. In case
-         * @ref Shared::Flag::Textured was enabled, additionally it's expected
-         * that @ref setTexture() was called as well.
+         * @ref BaseLayerSharedFlag::Textured was enabled, additionally it's
+         * expected that @ref setTexture() was called as well.
          */
         explicit BaseLayerGL(LayerHandle handle, Shared& shared);
 
@@ -85,8 +85,8 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
          * @return Reference to self (for method chaining)
          *
          * Expects that the layer was constructed with a shared state that has
-         * @ref Shared::Flag::Textured. The @p texture is expected to stay
-         * alive for as long as the layer is drawn. Use
+         * @ref BaseLayerSharedFlag::Textured. The @p texture is expected to
+         * stay alive for as long as the layer is drawn. Use
          * @ref setTexture(GL::Texture2DArray&&) to make the layer take
          * ownership of the texture instead.
          * @see @ref setTextureCoordinates()
@@ -156,9 +156,9 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
 @brief Shared state for the OpenGL implementation of the base layer
 
 Contains shader instances. In order to update or draw the layer it's expected
-that @ref setStyle() was called, in case @ref Flag::Textured is enabled
-additionally it's expected that @ref setTexture() was called on the layer as
-well.
+that @ref setStyle() was called, in case @ref BaseLayerSharedFlag::Textured is
+enabled additionally it's expected that @ref setTexture() was called on the
+layer as well.
 */
 class MAGNUM_WHEE_EXPORT BaseLayerGL::Shared: public BaseLayer::Shared {
     public:

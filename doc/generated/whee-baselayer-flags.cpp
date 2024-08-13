@@ -125,7 +125,7 @@ int WheeBaseLayerFlags::exec() {
     Whee::BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<Whee::BaseLayerGL>(ui.createLayer(), layerShared));
 
     Whee::BaseLayerGL::Shared layerSharedBackgroundBlur{Whee::BaseLayerGL::Shared::Configuration{1}
-        .addFlags(Whee::BaseLayerGL::Shared::Flag::BackgroundBlur)
+        .addFlags(Whee::BaseLayerSharedFlag::BackgroundBlur)
         .setBackgroundBlurRadius(31)};
     layerSharedBackgroundBlur.setStyle(
         Whee::BaseLayerCommonStyleUniform{}
@@ -140,7 +140,7 @@ int WheeBaseLayerFlags::exec() {
         .setBackgroundBlurPassCount(8);
 
     Whee::BaseLayerGL::Shared layerSharedBackgroundBlurAlpha{Whee::BaseLayerGL::Shared::Configuration{1}
-        .addFlags(Whee::BaseLayerGL::Shared::Flag::BackgroundBlur)
+        .addFlags(Whee::BaseLayerSharedFlag::BackgroundBlur)
         .setBackgroundBlurRadius(31)};
     layerSharedBackgroundBlurAlpha.setStyle(
         Whee::BaseLayerCommonStyleUniform{}
@@ -156,8 +156,8 @@ int WheeBaseLayerFlags::exec() {
         .setBackgroundBlurPassCount(8);
 
     Whee::BaseLayerGL::Shared layerSharedBackgroundBlurTextured{Whee::BaseLayerGL::Shared::Configuration{1}
-        .addFlags(Whee::BaseLayerGL::Shared::Flag::BackgroundBlur|
-                  Whee::BaseLayerGL::Shared::Flag::Textured)
+        .addFlags(Whee::BaseLayerSharedFlag::BackgroundBlur|
+                  Whee::BaseLayerSharedFlag::Textured)
         .setBackgroundBlurRadius(31)};
     layerSharedBackgroundBlurTextured.setStyle(
         Whee::BaseLayerCommonStyleUniform{}
@@ -175,8 +175,8 @@ int WheeBaseLayerFlags::exec() {
         .setTexture(texture);
 
     Whee::BaseLayerGL::Shared layerSharedBackgroundBlurTextureMask{Whee::BaseLayerGL::Shared::Configuration{1}
-        .addFlags(Whee::BaseLayerGL::Shared::Flag::BackgroundBlur|
-                  Whee::BaseLayerGL::Shared::Flag::TextureMask)
+        .addFlags(Whee::BaseLayerSharedFlag::BackgroundBlur|
+                  Whee::BaseLayerSharedFlag::TextureMask)
         .setBackgroundBlurRadius(31)};
     layerSharedBackgroundBlurTextureMask.setStyle(
         Whee::BaseLayerCommonStyleUniform{}

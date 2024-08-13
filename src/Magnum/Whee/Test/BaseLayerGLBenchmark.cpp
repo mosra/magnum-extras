@@ -62,26 +62,26 @@ constexpr Vector2i FragmentBenchmarkSize{2048, 2048};
 const struct {
     const char* name;
     UnsignedInt dynamicStyleCount;
-    BaseLayerGL::Shared::Flags flags;
+    BaseLayerSharedFlags flags;
 } VertexData[]{
     {"default", 0, {}},
     {"default, dynamic styles", 1, {}},
     {"no rounded corners", 0,
-        BaseLayerGL::Shared::Flag::NoRoundedCorners},
+        BaseLayerSharedFlag::NoRoundedCorners},
     {"no outline", 0,
-        BaseLayerGL::Shared::Flag::NoOutline},
+        BaseLayerSharedFlag::NoOutline},
     {"no rounded corners or outline", 0,
-        BaseLayerGL::Shared::Flag::NoRoundedCorners|
-        BaseLayerGL::Shared::Flag::NoOutline},
+        BaseLayerSharedFlag::NoRoundedCorners|
+        BaseLayerSharedFlag::NoOutline},
     {"subdivided quads", 0,
-        BaseLayerGL::Shared::Flag::SubdividedQuads},
+        BaseLayerSharedFlag::SubdividedQuads},
 };
 
 const struct {
     const char* name;
     UnsignedInt dynamicStyleCount;
     Float cornerRadius, outlineWidth;
-    BaseLayerGL::Shared::Flags flags;
+    BaseLayerSharedFlags flags;
 } FragmentData[]{
     {"default",
         0, 0.0f, 0.0f, {}},
@@ -89,17 +89,17 @@ const struct {
         1, 0.0f, 0.0f, {}},
     {"no rounded corners",
         0, 0.0f, 0.0f,
-        BaseLayerGL::Shared::Flag::NoRoundedCorners},
+        BaseLayerSharedFlag::NoRoundedCorners},
     {"no outline",
         0, 0.0f, 0.0f,
-        BaseLayerGL::Shared::Flag::NoOutline},
+        BaseLayerSharedFlag::NoOutline},
     {"no rounded corners or outline",
         0, 0.0f, 0.0f,
-        BaseLayerGL::Shared::Flag::NoRoundedCorners|
-        BaseLayerGL::Shared::Flag::NoOutline},
+        BaseLayerSharedFlag::NoRoundedCorners|
+        BaseLayerSharedFlag::NoOutline},
     {"subdivided quads",
         0, 0.0f, 0.0f,
-        BaseLayerGL::Shared::Flag::SubdividedQuads},
+        BaseLayerSharedFlag::SubdividedQuads},
     {"just rounded corners",
         0, FragmentBenchmarkSize.x()*0.5f, 0.0f, {}},
     {"just outline",

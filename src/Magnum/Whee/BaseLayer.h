@@ -121,7 +121,7 @@ struct BaseLayerCommonStyleUniform {
      *
      * In layout units, i.e. setting the value to @cpp 1.0f @ce will make the
      * smoothing extend 1 layout unit on each side of the edge. Default value
-     * is @cpp 0.0f @ce. Not used if @ref BaseLayer::Shared::Flag::NoOutline is
+     * is @cpp 0.0f @ce. Not used if @ref BaseLayerSharedFlag::NoOutline is
      * enabled.
      */
     Float innerOutlineSmoothness;
@@ -129,15 +129,15 @@ struct BaseLayerCommonStyleUniform {
     /**
      * @brief Blurred background alpha
      *
-     * If @ref BaseLayer::Shared::Flag::BackgroundBlur is enabled, the alpha
-     * value of @ref BaseLayerStyleUniform::topColor,
+     * If @ref BaseLayerSharedFlag::BackgroundBlur is enabled, the alpha value
+     * of @ref BaseLayerStyleUniform::topColor,
      * @relativeref{BaseLayerStyleUniform,bottomColor} and
      * @relativeref{BaseLayerStyleUniform,outlineColor} is used to interpolate
      * between the color value and the blurred background. Making this value
      * less than @cpp 1.0f @ce makes the original unblurred framebuffer
      * contents show through as well, which can be used to achieve a glow-like
      * effect. Default value is @cpp 1.0f @ce. A similar effect can also be
-     * achieved using @ref BaseLayer::Shared::Flag::TextureMask and pixel alpha
+     * achieved using @ref BaseLayerSharedFlag::TextureMask and pixel alpha
      * values between @cpp 0.0f @ce and @cpp 1.0f @ce.
      *
      * @m_class{m-row}
@@ -360,7 +360,7 @@ struct BaseLayerStyleUniform {
      * Default value is @cpp 0xffffffff_srgbf @ce. Visible only if
      * @ref outlineWidth is non-zero on at least one side or if the difference
      * between @ref cornerRadius and @ref innerOutlineCornerRadius makes it
-     * show. Not used if @ref BaseLayer::Shared::Flag::NoOutline is enabled.
+     * show. Not used if @ref BaseLayerSharedFlag::NoOutline is enabled.
      */
     Color4 outlineColor;
 
@@ -368,8 +368,7 @@ struct BaseLayerStyleUniform {
      * @brief Outline width
      *
      * In order left, top, right, bottom. Default value is @cpp 0.0f @ce for
-     * all sides. Not used if @ref BaseLayer::Shared::Flag::NoOutline is
-     * enabled.
+     * all sides. Not used if @ref BaseLayerSharedFlag::NoOutline is enabled.
      */
     Vector4 outlineWidth;
 
@@ -378,7 +377,7 @@ struct BaseLayerStyleUniform {
      *
      * In order top left, bottom left, top right, bottom right. Default value
      * is @cpp 0.0f @ce for all sides. Not used if
-     * @ref BaseLayer::Shared::Flag::NoRoundedCorners is enabled.
+     * @ref BaseLayerSharedFlag::NoRoundedCorners is enabled.
      */
     Vector4 cornerRadius;
 
@@ -387,8 +386,8 @@ struct BaseLayerStyleUniform {
      *
      * In order top left, bottom left, top right, bottom right. Default value
      * is @cpp 0.0f @ce for all sides. Not used if
-     * @ref BaseLayer::Shared::Flag::NoOutline or
-     * @relativeref{BaseLayer::Shared,Flag::NoRoundedCorners} is enabled.
+     * @ref BaseLayerSharedFlag::NoOutline or
+     * @relativeref{BaseLayerSharedFlag,NoRoundedCorners} is enabled.
      */
     Vector4 innerOutlineCornerRadius;
 };
@@ -419,8 +418,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Background blur pass count
          *
-         * Expects that @ref Shared::Flag::BackgroundBlur was enabled for the
-         * shared state the layer was created with.
+         * Expects that @ref BaseLayerSharedFlag::BackgroundBlur was enabled
+         * for the shared state the layer was created with.
          */
         UnsignedInt backgroundBlurPassCount() const;
 
@@ -428,9 +427,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @brief Set background blur pass count
          * @return Reference to self (for method chaining)
          *
-         * Expects that @ref Shared::Flag::BackgroundBlur was enabled for the
-         * shared state the layer was created with and that @p count is at
-         * least @cpp 1 @ce. Higher values will perform the blurring process
+         * Expects that @ref BaseLayerSharedFlag::BackgroundBlur was enabled
+         * for the shared state the layer was created with and that @p count is
+         * at least @cpp 1 @ce. Higher values will perform the blurring process
          * several times, which has the same effect as applying a single,
          * larger, Gaussian blur. With @f$ r @f$ being the radius configured by
          * @ref Shared::Configuration::setBackgroundBlurRadius() and @f$ n @f$
@@ -766,7 +765,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
          * specified in @ref create() already, the custom outline width is a
          * zero vector, i.e. not affecting the style in any way. Has no visual
-         * effect if @ref BaseLayer::Shared::Flag::NoOutline is enabled.
+         * effect if @ref BaseLayerSharedFlag::NoOutline is enabled.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -781,7 +780,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
          * specified in @ref create() already, the custom outline width is
          * zero, i.e. not affecting the style in any way. Has no visual effect
-         * if @ref BaseLayer::Shared::Flag::NoOutline is enabled.
+         * if @ref BaseLayerSharedFlag::NoOutline is enabled.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -881,8 +880,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @brief Quad texture coordinate offset
          *
          * The third coordinate is array layer. Expects that @p handle is
-         * valid and that @ref Shared::Flag::Textured was enabled for the
-         * shared state the layer was created with.
+         * valid and that @ref BaseLayerSharedFlag::Textured was enabled for
+         * the shared state the layer was created with.
          * @see @ref isHandleValid(DataHandle) const
          */
         Vector3 textureCoordinateOffset(DataHandle handle) const;
@@ -891,8 +890,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @brief Quad texture coordinate offset assuming it belongs to this layer
          *
          * The third coordinate is array layer. Expects that @p handle is
-         * valid and that @ref Shared::Flag::Textured was enabled for the
-         * shared state the layer was created with.
+         * valid and that @ref BaseLayerSharedFlag::Textured was enabled for
+         * the shared state the layer was created with.
          * @see @ref isHandleValid(LayerDataHandle) const
          */
         Vector3 textureCoordinateOffset(LayerDataHandle handle) const;
@@ -900,8 +899,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Quad texture coordinate size
          *
-         * Expects that @p handle is valid and that @ref Shared::Flag::Textured
-         * was enabled for the shared state the layer was created with.
+         * Expects that @p handle is valid and that
+         * @ref BaseLayerSharedFlag::Textured was enabled for the shared state
+         * the layer was created with.
          * @see @ref isHandleValid(DataHandle) const
          */
         Vector2 textureCoordinateSize(DataHandle handle) const;
@@ -909,8 +909,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Quad texture coordinate size assuming it belongs to this layer
          *
-         * Expects that @p handle is valid and that @ref Shared::Flag::Textured
-         * was enabled for the shared state the layer was created with.
+         * Expects that @p handle is valid and that
+         * @ref BaseLayerSharedFlag::Textured was enabled for the shared state
+         * the layer was created with.
          * @see @ref isHandleValid(LayerDataHandle) const
          */
         Vector2 textureCoordinateSize(LayerDataHandle handle) const;
@@ -919,9 +920,9 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @brief Set quad texture coordinates
          *
          * The third coordinate of @p offset is array layer. Expects that
-         * @p handle is valid and that @ref Shared::Flag::Textured was enabled
-         * for the shared state the layer was created with. By default the
-         * offset is @cpp {0.0f, 0.0f, 0.0f} @ce and size is
+         * @p handle is valid and that @ref BaseLayerSharedFlag::Textured was
+         * enabled for the shared state the layer was created with. By default
+         * the offset is @cpp {0.0f, 0.0f, 0.0f} @ce and size is
          * @cpp {1.0f, 1.0f} @ce, i.e. covering the whole first slice of the
          * texture.
          *
@@ -977,6 +978,160 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
 };
 
 /**
+@brief Base layer shared state flag
+@m_since_latest
+
+@see @ref BaseLayerSharedFlags,
+    @ref BaseLayer::Shared::Configuration::setFlags(),
+    @ref BaseLayer::Shared::flags()
+*/
+enum class BaseLayerSharedFlag: UnsignedByte {
+    /**
+     * Textured drawing. If enabled, the @ref BaseLayerStyleUniform::topColor
+     * and @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with a
+     * color coming from a texture set in @ref BaseLayerGL::setTexture() and
+     * texture coordinates specified with @ref BaseLayer::setTextureCoordinates().
+     * @see @ref BaseLayerSharedFlag::TextureMask
+     */
+    Textured = 1 << 0,
+
+    /**
+     * Blur the background of semi-transparent quads. If enabled, the
+     * alpha value of @ref BaseLayerStyleUniform::topColor,
+     * @relativeref{BaseLayerStyleUniform,bottomColor} and
+     * @relativeref{BaseLayerStyleUniform,outlineColor} is used to interpolate
+     * between the color and the blurred background, instead of performing a
+     * classical blending of the color and the framebuffer contents underneath.
+     *
+     * @m_class{m-row}
+     *
+     * @parblock
+     *
+     * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
+     * @image html whee-baselayer-default.png width=256px
+     * Without @ref BaseLayerSharedFlag::BackgroundBlur
+     * @m_enddiv
+     *
+     * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
+     * @image html whee-baselayer-blur.png width=256px
+     * With @ref BaseLayerSharedFlag::BackgroundBlur
+     * @m_enddiv
+     *
+     * @endparblock
+     *
+     * Use @ref BaseLayer::Shared::Configuration::setBackgroundBlurRadius() and
+     * @ref BaseLayer::setBackgroundBlurPassCount() to control the blur radius
+     * and @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha to achieve
+     * additional effects.
+     *
+     * @see @ref BaseLayerSharedFlag::TextureMask
+     */
+    BackgroundBlur = 1 << 1,
+
+    /**
+     * Disable support for rounded corners. If set, the
+     * @ref BaseLayerStyleUniform::cornerRadius and
+     * @relativeref{BaseLayerStyleUniform,innerOutlineCornerRadius} fields are
+     * not used and the behavior is the same as if they were both set to
+     * @cpp 0.0f @ce. Can result in rendering performance improvement, useful
+     * for example when @ref BaseLayerSharedFlag::Textured is enabled and the
+     * layer is used just to draw (alpha blended) images, or if a particular
+     * widget style doesn't use rounded corners at all.
+     *
+     * Mutually exclusive with the @ref BaseLayerSharedFlag::SubdividedQuads
+     * optimization.
+     * @see @ref BaseLayerSharedFlag::NoOutline
+     */
+    NoRoundedCorners = 1 << 2,
+
+    /**
+     * Disable support for rounded corners. If set, the
+     * @ref BaseLayerCommonStyleUniform::innerOutlineSmoothness,
+     * @ref BaseLayerStyleUniform::outlineColor,
+     * @relativeref{BaseLayerStyleUniform,outlineWidth} and
+     * @relativeref{BaseLayerStyleUniform,innerOutlineCornerRadius} fields are
+     * not used and @ref BaseLayer::setOutlineWidth() has no effect. The
+     * behavior is then the same as if the outline width was set to
+     * @cpp 0.0f @ce on all sides both in the style and for all data. Can
+     * result in rendering performance improvement, useful for example when
+     * @ref BaseLayerSharedFlag::Textured is enabled and the layer is used just
+     * to draw (alpha blended) images, or if a particular widget style doesn't
+     * use outlines at all.
+     *
+     * Mutually exclusive with the @ref BaseLayerSharedFlag::SubdividedQuads
+     * optimization.
+     * @see @ref BaseLayerSharedFlag::NoRoundedCorners
+     */
+    NoOutline = 1 << 3,
+
+    /**
+     * Use alpha channel of the texture to mask out the outline and background
+     * blur. By default the outline is drawn over the texture without taking
+     * the texture color or alpha into account; and the background is blurred
+     * for the whole area of the quad, with transparent areas of the texture
+     * causing just the blurred background to be shown. Enabling this flag
+     * causes the transparent areas to make holes in both the outline and the
+     * blurred background. Implies @ref BaseLayerSharedFlag::Textured.
+     *
+     * @m_class{m-row}
+     *
+     * @parblock
+     *
+     * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
+     * @image html whee-baselayer-blur-textured.png width=256px
+     * Default @ref BaseLayerSharedFlag::Textured behavior
+     * @m_enddiv
+     *
+     * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
+     * @image html whee-baselayer-blur-textured-mask.png width=256px
+     * With @ref BaseLayerSharedFlag::TextureMask
+     * @m_enddiv
+     *
+     * @endparblock
+     *
+     * @see @ref BaseLayerSharedFlag::BackgroundBlur,
+     *      @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha
+     */
+    TextureMask = Textured|(1 << 4),
+
+    /**
+     * Render the quads subdivided into 9 quads, where each contains either a
+     * corner, an edge with an outline or the inside. This significantly
+     * simplifies the fragment shader at the cost of uploading much more data
+     * to the GPU. May improve rendering speed on low performance GPUs but the
+     * extra bandwidth may have a negative effect on GPUs where the rendering
+     * wasn't bottlenecked by fragment shading.
+     *
+     * Mutually exclusive with the @ref BaseLayerSharedFlag::NoRoundedCorners
+     * and @relativeref{BaseLayerSharedFlag,NoOutline} optimizations.
+     */
+    SubdividedQuads = 1 << 5,
+};
+
+/**
+@brief Base layer shared state flag
+@m_since_latest
+
+@see @ref BaseLayer::Shared::Configuration::setFlags(),
+    @ref BaseLayer::Shared::flags()
+*/
+typedef Containers::EnumSet<BaseLayerSharedFlag> BaseLayerSharedFlags;
+
+CORRADE_ENUMSET_OPERATORS(BaseLayerSharedFlags)
+
+/**
+@debugoperatorenum{BaseLayerSharedFlag}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, BaseLayerSharedFlag value);
+
+/**
+@debugoperatorenum{BaseLayerSharedFlags}
+@m_since_latest
+*/
+MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, BaseLayerSharedFlags value);
+
+/**
 @brief Shared state for the base layer
 
 Contains style data. You'll most likely instantiate the class through
@@ -986,147 +1141,6 @@ that @ref setStyle() was called.
 class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
     public:
         class Configuration;
-
-        /**
-         * @brief Flag
-         *
-         * @see @ref Flags, @ref Configuration::setFlags(), @ref flags()
-         */
-        enum class Flag: UnsignedByte {
-            /**
-             * Textured drawing. If enabled, the
-             * @ref BaseLayerStyleUniform::topColor and
-             * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied
-             * with a color coming from a texture set in
-             * @ref BaseLayerGL::setTexture() and texture coordinates specified
-             * with @ref setTextureCoordinates().
-             * @see @ref Flag::TextureMask
-             */
-            Textured = 1 << 0,
-
-            /**
-             * Blur the background of semi-transparent quads. If enabled, the
-             * alpha value of @ref BaseLayerStyleUniform::topColor,
-             * @relativeref{BaseLayerStyleUniform,bottomColor} and
-             * @relativeref{BaseLayerStyleUniform,outlineColor} is used to
-             * interpolate between the color and the blurred background,
-             * instead of performing a classical blending of the color and the
-             * framebuffer contents underneath.
-             *
-             * @m_class{m-row}
-             *
-             * @parblock
-             *
-             * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
-             * @image html whee-baselayer-default.png width=256px
-             * Without @ref Flag::BackgroundBlur
-             * @m_enddiv
-             *
-             * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
-             * @image html whee-baselayer-blur.png width=256px
-             * With @ref Flag::BackgroundBlur
-             * @m_enddiv
-             *
-             * @endparblock
-             *
-             * Use @ref Configuration::setBackgroundBlurRadius() and
-             * @ref setBackgroundBlurPassCount() to control the blur radius and
-             * @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha to achieve
-             * additional effects.
-             *
-             * @see @ref Flag::TextureMask
-             */
-            BackgroundBlur = 1 << 1,
-
-            /**
-             * Disable support for rounded corners. If set, the
-             * @ref BaseLayerStyleUniform::cornerRadius and
-             * @relativeref{BaseLayerStyleUniform,innerOutlineCornerRadius}
-             * fields are not used and the behavior is the same as if they were
-             * both set to @cpp 0.0f @ce. Can result in rendering performance
-             * improvement, useful for example when @ref Flag::Textured is
-             * enabled and the layer is used just to draw (alpha blended)
-             * images, or if a particular widget style doesn't use rounded
-             * corners at all.
-             *
-             * Mutually exclusive with the @ref Flag::SubdividedQuads
-             * optimization.
-             * @see @ref Flag::NoOutline
-             */
-            NoRoundedCorners = 1 << 2,
-
-            /**
-             * Disable support for rounded corners. If set, the
-             * @ref BaseLayerCommonStyleUniform::innerOutlineSmoothness,
-             * @ref BaseLayerStyleUniform::outlineColor,
-             * @relativeref{BaseLayerStyleUniform,outlineWidth} and
-             * @relativeref{BaseLayerStyleUniform,innerOutlineCornerRadius}
-             * fields are not used and @ref BaseLayer::setOutlineWidth() has no
-             * effect. The behavior is then the same as if the outline width
-             * was set to @cpp 0.0f @ce on all sides both in the style and for
-             * all data. Can result in rendering performance improvement,
-             * useful for example when @ref Flag::Textured is enabled and the
-             * layer is used just to draw (alpha blended) images, or if a
-             * particular widget style doesn't use outlines at all.
-             *
-             * Mutually exclusive with the @ref Flag::SubdividedQuads
-             * optimization.
-             * @see @ref Flag::NoRoundedCorners
-             */
-            NoOutline = 1 << 3,
-
-            /**
-             * Use alpha channel of the texture to mask out the outline and
-             * background blur. By default the outline is drawn over the
-             * texture without taking the texture color or alpha into account;
-             * and the background is blurred for the whole area of the quad,
-             * with transparent areas of the texture causing just the blurred
-             * background to be shown. Enabling this flag causes the
-             * transparent areas to make holes in both the outline and the
-             * blurred background. Implies @ref Flag::Textured.
-             *
-             * @m_class{m-row}
-             *
-             * @parblock
-             *
-             * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
-             * @image html whee-baselayer-blur-textured.png width=256px
-             * Default @ref Flag::Textured behavior
-             * @m_enddiv
-             *
-             * @m_div{m-col-m-6 m-text-center m-nopadt m-nopadx}
-             * @image html whee-baselayer-blur-textured-mask.png width=256px
-             * With @ref Flag::TextureMask
-             * @m_enddiv
-             *
-             * @endparblock
-             *
-             * @see @ref Flag::BackgroundBlur,
-             *      @ref BaseLayerCommonStyleUniform::backgroundBlurAlpha
-             */
-            TextureMask = Textured|(1 << 4),
-
-            /**
-             * Render the quads subdivided into 9 quads, where each contains
-             * either a corner, an edge with an outline or the inside. This
-             * significantly simplifies the fragment shader at the cost of
-             * uploading much more data to the GPU. May improve rendering speed
-             * on low performance GPUs but the extra bandwidth may have a
-             * negative effect on GPUs where the rendering wasn't bottlenecked
-             * by fragment shading.
-             *
-             * Mutually exclusive with the @ref Flag::NoRoundedCorners and
-             * @relativeref{Flag,NoOutline} optimizations.
-             */
-            SubdividedQuads = 1 << 5,
-        };
-
-        /**
-         * @brief Flags
-         *
-         * @see @ref Configuration::setFlags(), @ref flags()
-         */
-        typedef Containers::EnumSet<Flag> Flags;
 
         /**
          * @brief Style uniform count
@@ -1140,7 +1154,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         UnsignedInt styleUniformCount() const;
 
         /** @brief Flags */
-        Flags flags() const;
+        BaseLayerSharedFlags flags() const;
 
         /**
          * @brief Set style data with implicit mapping between styles and uniforms
@@ -1237,20 +1251,6 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared: public AbstractVisualLayer::Shared {
         virtual void doSetStyle(const BaseLayerCommonStyleUniform& commonUniform, Containers::ArrayView<const BaseLayerStyleUniform> uniforms) = 0;
 };
 
-CORRADE_ENUMSET_OPERATORS(BaseLayer::Shared::Flags)
-
-/**
-@debugoperatorclassenum{BaseLayer::Shared,Flag}
-@m_since_latest
-*/
-MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, BaseLayer::Shared::Flag value);
-
-/**
-@debugoperatorclassenum{BaseLayer::Shared,Flags}
-@m_since_latest
-*/
-MAGNUM_WHEE_EXPORT Debug& operator<<(Debug& debug, BaseLayer::Shared::Flags value);
-
 /**
 @brief Configuration of a base layer shared state
 
@@ -1306,7 +1306,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
         }
 
         /** @brief Flags */
-        Flags flags() const { return _flags; }
+        BaseLayerSharedFlags flags() const { return _flags; }
 
         /**
          * @brief Set flags
@@ -1315,7 +1315,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
          * By default no flags are set.
          * @see @ref addFlags(), @ref clearFlags()
          */
-        Configuration& setFlags(Flags flags) {
+        Configuration& setFlags(BaseLayerSharedFlags flags) {
             _flags = flags;
             return *this;
         }
@@ -1328,7 +1328,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
          * Useful for preserving previously set flags.
          * @see @ref clearFlags()
          */
-        Configuration& addFlags(Flags flags) {
+        Configuration& addFlags(BaseLayerSharedFlags flags) {
             return setFlags(_flags|flags);
         }
 
@@ -1340,7 +1340,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
          * of @p flags. Useful for removing a subset of previously set flags.
          * @see @ref addFlags()
          */
-        Configuration& clearFlags(Flags flags) {
+        Configuration& clearFlags(BaseLayerSharedFlags flags) {
             return setFlags(_flags & ~flags);
         }
 
@@ -1382,7 +1382,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer::Shared::Configuration {
     private:
         UnsignedInt _styleUniformCount, _styleCount;
         UnsignedInt _dynamicStyleCount = 0;
-        Flags _flags;
+        BaseLayerSharedFlags _flags;
         UnsignedInt _backgroundBlurRadius = 4;
         Float _backgroundBlurCutoff = 0.5f/255.0f;
 };

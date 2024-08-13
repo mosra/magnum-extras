@@ -358,13 +358,13 @@ const struct {
 
 const struct {
     const char* name;
-    BaseLayer::Shared::Flags flags;
+    BaseLayerSharedFlags flags;
     UnsignedInt dynamicStyleCount;
     LayerStates extraState;
 } SharedNeedsUpdateStatePropagatedToLayersData[]{
     {"", {}, 0, {}},
     {"dynamic styles", {}, 5, LayerState::NeedsCommonDataUpdate},
-    {"background blur", BaseLayer::Shared::Flag::BackgroundBlur, 0, LayerState::NeedsCompositeOffsetSizeUpdate}
+    {"background blur", BaseLayerSharedFlag::BackgroundBlur, 0, LayerState::NeedsCompositeOffsetSizeUpdate}
 };
 
 BaseLayerTest::BaseLayerTest() {
@@ -807,22 +807,22 @@ void BaseLayerTest::styleUniformSetters() {
 
 void BaseLayerTest::sharedDebugFlag() {
     std::ostringstream out;
-    Debug{&out} << BaseLayer::Shared::Flag::BackgroundBlur << BaseLayer::Shared::Flag(0xbe);
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::Flag::BackgroundBlur Whee::BaseLayer::Shared::Flag(0xbe)\n");
+    Debug{&out} << BaseLayerSharedFlag::BackgroundBlur << BaseLayerSharedFlag(0xbe);
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayerSharedFlag::BackgroundBlur Whee::BaseLayerSharedFlag(0xbe)\n");
 }
 
 void BaseLayerTest::sharedDebugFlags() {
     std::ostringstream out;
-    Debug{&out} << (BaseLayer::Shared::Flag::BackgroundBlur|BaseLayer::Shared::Flag(0x80)) << BaseLayer::Shared::Flags{};
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::Flag::BackgroundBlur|Whee::BaseLayer::Shared::Flag(0x80) Whee::BaseLayer::Shared::Flags{}\n");
+    Debug{&out} << (BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag(0x80)) << BaseLayerSharedFlags{};
+    CORRADE_COMPARE(out.str(), "Whee::BaseLayerSharedFlag::BackgroundBlur|Whee::BaseLayerSharedFlag(0x80) Whee::BaseLayerSharedFlags{}\n");
 }
 
 void BaseLayerTest::sharedDebugFlagSupersets() {
     /* TextureMask is a superset of Textured, so only one should get printed */
     {
         std::ostringstream out;
-        Debug{&out} << (BaseLayer::Shared::Flag::Textured|BaseLayer::Shared::Flag::TextureMask);
-        CORRADE_COMPARE(out.str(), "Whee::BaseLayer::Shared::Flag::TextureMask\n");
+        Debug{&out} << (BaseLayerSharedFlag::Textured|BaseLayerSharedFlag::TextureMask);
+        CORRADE_COMPARE(out.str(), "Whee::BaseLayerSharedFlag::TextureMask\n");
     }
 }
 
@@ -876,18 +876,18 @@ void BaseLayerTest::sharedConfigurationConstructCopy() {
 void BaseLayerTest::sharedConfigurationSetters() {
     BaseLayer::Shared::Configuration configuration{3, 5};
     CORRADE_COMPARE(configuration.dynamicStyleCount(), 0);
-    CORRADE_COMPARE(configuration.flags(), BaseLayer::Shared::Flags{});
+    CORRADE_COMPARE(configuration.flags(), BaseLayerSharedFlags{});
     CORRADE_COMPARE(configuration.backgroundBlurRadius(), 4);
     CORRADE_COMPARE(configuration.backgroundBlurCutoff(), 0.5f/255.0f);
 
     configuration
         .setDynamicStyleCount(9)
-        .setFlags(BaseLayer::Shared::Flag::BackgroundBlur)
-        .addFlags(BaseLayer::Shared::Flag(0xe0))
-        .clearFlags(BaseLayer::Shared::Flag(0x70))
+        .setFlags(BaseLayerSharedFlag::BackgroundBlur)
+        .addFlags(BaseLayerSharedFlag(0xe0))
+        .clearFlags(BaseLayerSharedFlag(0x70))
         .setBackgroundBlurRadius(16, 0.1f);
     CORRADE_COMPARE(configuration.dynamicStyleCount(), 9);
-    CORRADE_COMPARE(configuration.flags(), BaseLayer::Shared::Flag::BackgroundBlur|BaseLayer::Shared::Flag(0x80));
+    CORRADE_COMPARE(configuration.flags(), BaseLayerSharedFlag::BackgroundBlur|BaseLayerSharedFlag(0x80));
     CORRADE_COMPARE(configuration.backgroundBlurRadius(), 16);
     CORRADE_COMPARE(configuration.backgroundBlurCutoff(), 0.1f);
 }
@@ -915,12 +915,12 @@ void BaseLayerTest::sharedConstruct() {
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{3, 5}
         .setDynamicStyleCount(4)
-        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+        .addFlags(BaseLayerSharedFlag::BackgroundBlur)
     };
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
     CORRADE_COMPARE(shared.dynamicStyleCount(), 4);
-    CORRADE_COMPARE(shared.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
+    CORRADE_COMPARE(shared.flags(), BaseLayerSharedFlag::BackgroundBlur);
 }
 
 void BaseLayerTest::sharedConstructNoCreate() {
@@ -961,20 +961,20 @@ void BaseLayerTest::sharedConstructMove() {
 
     Shared a{BaseLayer::Shared::Configuration{3, 5}
         .setDynamicStyleCount(4)
-        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)};
+        .addFlags(BaseLayerSharedFlag::BackgroundBlur)};
 
     Shared b{Utility::move(a)};
     CORRADE_COMPARE(b.styleUniformCount(), 3);
     CORRADE_COMPARE(b.styleCount(), 5);
     CORRADE_COMPARE(b.dynamicStyleCount(), 4);
-    CORRADE_COMPARE(b.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
+    CORRADE_COMPARE(b.flags(), BaseLayerSharedFlag::BackgroundBlur);
 
     Shared c{BaseLayer::Shared::Configuration{5, 7}};
     c = Utility::move(b);
     CORRADE_COMPARE(c.styleUniformCount(), 3);
     CORRADE_COMPARE(c.styleCount(), 5);
     CORRADE_COMPARE(c.dynamicStyleCount(), 4);
-    CORRADE_COMPARE(c.flags(), BaseLayer::Shared::Flag::BackgroundBlur);
+    CORRADE_COMPARE(c.flags(), BaseLayerSharedFlag::BackgroundBlur);
 
     CORRADE_VERIFY(std::is_nothrow_move_constructible<Shared>::value);
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Shared>::value);
@@ -999,14 +999,14 @@ void BaseLayerTest::sharedConstructInvalid() {
        require the application to fill the configuration in a certain order
        (remove one flag before adding the other, ...) which isn't nice */
     Shared{Shared::Configuration{0}.setDynamicStyleCount(0)};
-    Shared{Shared::Configuration{1}.addFlags(Shared::Flag::SubdividedQuads|Shared::Flag::NoRoundedCorners)};
-    Shared{Shared::Configuration{1}.addFlags(Shared::Flag::SubdividedQuads|Shared::Flag::NoOutline)};
-    Shared{Shared::Configuration{1}.addFlags(Shared::Flag::SubdividedQuads|Shared::Flag::NoOutline|Shared::Flag::NoRoundedCorners)};
+    Shared{Shared::Configuration{1}.addFlags(BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::NoRoundedCorners)};
+    Shared{Shared::Configuration{1}.addFlags(BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::NoOutline)};
+    Shared{Shared::Configuration{1}.addFlags(BaseLayerSharedFlag::SubdividedQuads|BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)};
     CORRADE_COMPARE_AS(out.str(),
         "Whee::BaseLayer::Shared: expected non-zero total style count\n"
-        "Whee::BaseLayer::Shared: Whee::BaseLayer::Shared::Flag::SubdividedQuads and Whee::BaseLayer::Shared::Flag::NoRoundedCorners are mutually exclusive\n"
-        "Whee::BaseLayer::Shared: Whee::BaseLayer::Shared::Flag::SubdividedQuads and Whee::BaseLayer::Shared::Flag::NoOutline are mutually exclusive\n"
-        "Whee::BaseLayer::Shared: Whee::BaseLayer::Shared::Flag::SubdividedQuads and Whee::BaseLayer::Shared::Flag::NoRoundedCorners|Whee::BaseLayer::Shared::Flag::NoOutline are mutually exclusive\n",
+        "Whee::BaseLayer::Shared: Whee::BaseLayerSharedFlag::SubdividedQuads and Whee::BaseLayerSharedFlag::NoRoundedCorners are mutually exclusive\n"
+        "Whee::BaseLayer::Shared: Whee::BaseLayerSharedFlag::SubdividedQuads and Whee::BaseLayerSharedFlag::NoOutline are mutually exclusive\n"
+        "Whee::BaseLayer::Shared: Whee::BaseLayerSharedFlag::SubdividedQuads and Whee::BaseLayerSharedFlag::NoRoundedCorners|Whee::BaseLayerSharedFlag::NoOutline are mutually exclusive\n",
         TestSuite::Compare::String);
 }
 
@@ -1426,7 +1426,7 @@ void BaseLayerTest::backgroundBlurPassCount() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{3, 3}
-        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+        .addFlags(BaseLayerSharedFlag::BackgroundBlur)
     };
 
     struct Layer: BaseLayer {
@@ -1450,7 +1450,7 @@ void BaseLayerTest::backgroundBlurPassCountInvalid() {
     };
     LayerShared sharedNoBlur{BaseLayer::Shared::Configuration{3}};
     LayerShared sharedBlur{BaseLayer::Shared::Configuration{3}
-        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)};
+        .addFlags(BaseLayerSharedFlag::BackgroundBlur)};
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1857,7 +1857,7 @@ void BaseLayerTest::setTextureCoordinates() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{1}
-        .addFlags(BaseLayer::Shared::Flag::Textured)};
+        .addFlags(BaseLayerSharedFlag::Textured)};
 
     /* Needed in order to be able to call update() */
     shared.setStyle(BaseLayerCommonStyleUniform{},
@@ -1935,7 +1935,7 @@ void BaseLayerTest::invalidHandle() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{1}
-        .addFlags(BaseLayer::Shared::Flag::Textured)
+        .addFlags(BaseLayerSharedFlag::Textured)
     };
 
     struct Layer: BaseLayer {
@@ -2045,12 +2045,12 @@ void BaseLayerTest::updateDataOrder() {
 
     BaseLayer::Shared::Configuration configuration{4, data.styleCount};
     if(data.textured)
-        configuration.addFlags(BaseLayer::Shared::Flag::Textured);
+        configuration.addFlags(BaseLayerSharedFlag::Textured);
     if(data.subdivided)
-        configuration.addFlags(BaseLayer::Shared::Flag::SubdividedQuads);
+        configuration.addFlags(BaseLayerSharedFlag::SubdividedQuads);
     if(data.backgroundBlurPassCount)
         configuration
-            .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+            .addFlags(BaseLayerSharedFlag::BackgroundBlur)
             .setBackgroundBlurRadius(data.backgroundBlurRadius);
     if(data.dynamicStyleCount)
         configuration.setDynamicStyleCount(data.dynamicStyleCount);
@@ -2592,7 +2592,7 @@ void BaseLayerTest::updateNoSizeSet() {
         /* User interface size is only needed for compositing right now.
            Without this flag it's not required, which is tested in
            updateDataOrder() above. */
-        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur)
+        .addFlags(BaseLayerSharedFlag::BackgroundBlur)
     };
 
     struct Layer: BaseLayer {
@@ -2658,7 +2658,7 @@ void BaseLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
 
     /* If the layer has background blur enabled, setSize() is required to be
        called. The actual sizes aren't used for testing anything here tho. */
-    if(data.flags >= BaseLayer::Shared::Flag::BackgroundBlur) {
+    if(data.flags >= BaseLayerSharedFlag::BackgroundBlur) {
         layer1.setSize({1, 1}, {1, 1});
         layer2.setSize({1, 1}, {1, 1});
         layer3.setSize({1, 1}, {1, 1});

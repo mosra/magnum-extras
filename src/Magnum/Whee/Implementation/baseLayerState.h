@@ -63,7 +63,7 @@ struct BaseLayer::Shared::State: AbstractVisualLayer::Shared::State {
        always at most 31, so can be a byte. */
     UnsignedByte backgroundBlurRadius;
 
-    Flags flags;
+    BaseLayerSharedFlags flags;
 
     #ifndef CORRADE_NO_ASSERT
     bool setStyleCalled = false;
