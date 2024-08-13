@@ -342,7 +342,7 @@ struct BaseLayerGL::Shared::State: BaseLayer::Shared::State {
 };
 
 BaseLayerGL::Shared::State::State(Shared& self, const Configuration& configuration): BaseLayer::Shared::State{self, configuration}, shader{
-    #define _c(flag) (flags >= Flag::flag ? BaseShaderGL::Flag::flag : BaseShaderGL::Flags{})
+    #define _c(flag) (flags >= BaseLayerSharedFlag::flag ? BaseShaderGL::Flag::flag : BaseShaderGL::Flags{})
     _c(BackgroundBlur)|
     _c(Textured)|
     _c(NoRoundedCorners)|
@@ -354,7 +354,7 @@ BaseLayerGL::Shared::State::State(Shared& self, const Configuration& configurati
 {
     if(!dynamicStyleCount)
         styleBuffer = GL::Buffer{GL::Buffer::TargetHint::Uniform, {nullptr, sizeof(BaseLayerCommonStyleUniform) + sizeof(BaseLayerStyleUniform)*styleUniformCount}};
-    if(configuration.flags() & Flag::BackgroundBlur)
+    if(configuration.flags() & BaseLayerSharedFlag::BackgroundBlur)
         backgroundBlurShader = BlurShaderGL{configuration.backgroundBlurRadius(), configuration.backgroundBlurCutoff()};
 }
 
@@ -414,8 +414,8 @@ struct BaseLayerGL::State: BaseLayer::State {
 BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState_._state))} {
     auto& state = static_cast<State&>(*_state);
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
-    if(!(sharedState.flags >= Shared::Flag::SubdividedQuads)) {
-        if(sharedState.flags & Shared::Flag::Textured) {
+    if(!(sharedState.flags >= BaseLayerSharedFlag::SubdividedQuads)) {
+        if(sharedState.flags & BaseLayerSharedFlag::Textured) {
             state.mesh.addVertexBuffer(state.vertexBuffer, 0,
                 BaseShaderGL::Position{},
                 BaseShaderGL::CenterDistance{},
@@ -432,7 +432,7 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLa
                 BaseShaderGL::Style{});
         }
     } else {
-        if(sharedState.flags & Shared::Flag::Textured) {
+        if(sharedState.flags & BaseLayerSharedFlag::Textured) {
             state.mesh.addVertexBuffer(state.vertexBuffer, 0,
                 BaseShaderGL::Position{},
                 BaseShaderGL::SubdividedQuadOutlineWidth{},
@@ -451,7 +451,7 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLa
     }
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
 
-    if(sharedState.flags >= Shared::Flag::BackgroundBlur) {
+    if(sharedState.flags >= BaseLayerSharedFlag::BackgroundBlur) {
         state.backgroundBlurVertexBuffer = GL::Buffer{GL::Buffer::TargetHint::Array};
         state.backgroundBlurIndexBuffer = GL::Buffer{GL::Buffer::TargetHint::ElementArray};
         (state.backgroundBlurMesh = GL::Mesh{})
@@ -469,7 +469,7 @@ BaseLayerGL& BaseLayerGL::setTexture(GL::Texture2DArray&& texture) {
     #ifndef CORRADE_NO_ASSERT
     auto& sharedState = static_cast<Shared::State&>(state.shared);
     #endif
-    CORRADE_ASSERT(sharedState.flags & Shared::Flag::Textured,
+    CORRADE_ASSERT(sharedState.flags & BaseLayerSharedFlag::Textured,
         "Whee::BaseLayerGL::setTexture(): texturing not enabled", *this);
     state.texture = Utility::move(texture);
     return *this;
@@ -496,7 +496,7 @@ void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize
     /* For scaling and Y-flipping the clip rects in doDraw() */
     state.clipScale = Vector2{framebufferSize}/size;
 
-    if(sharedState.flags & Shared::Flag::BackgroundBlur) {
+    if(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur) {
         (sharedState.backgroundBlurTextureVertical = GL::Texture2D{})
             .setWrapping(GL::SamplerWrapping::ClampToEdge)
             .setStorage(1, GL::TextureFormat::RGBA8, framebufferSize);
@@ -538,7 +538,7 @@ void BaseLayerGL::doUpdate(const LayerStates states, const Containers::StridedAr
     {
         state.vertexBuffer.setData(state.vertices);
     }
-    if(states >= LayerState::NeedsCompositeOffsetSizeUpdate && sharedState.flags & Shared::Flag::BackgroundBlur) {
+    if(states >= LayerState::NeedsCompositeOffsetSizeUpdate && sharedState.flags & BaseLayerSharedFlag::BackgroundBlur) {
         state.backgroundBlurIndexBuffer.setData(state.backgroundBlurIndices);
         state.backgroundBlurVertexBuffer.setData(state.backgroundBlurVertices);
         state.backgroundBlurMesh.setCount(state.backgroundBlurIndices.size());
@@ -604,7 +604,7 @@ void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
     auto& sharedState = static_cast<Shared::State&>(state.shared);
     CORRADE_ASSERT(sharedState.setStyleCalled,
         "Whee::BaseLayerGL::draw(): no style data was set", );
-    CORRADE_ASSERT(!(sharedState.flags & Shared::Flag::Textured) || state.texture.id(),
+    CORRADE_ASSERT(!(sharedState.flags & BaseLayerSharedFlag::Textured) || state.texture.id(),
         "Whee::BaseLayerGL::draw(): no texture to draw with was set", );
 
     /* If there are dynamic styles, bind the layer-specific buffer that
@@ -612,12 +612,12 @@ void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
     sharedState.shader.bindStyleBuffer(sharedState.dynamicStyleCount ?
         state.styleBuffer : sharedState.styleBuffer);
 
-    if(sharedState.flags & Shared::Flag::Textured)
+    if(sharedState.flags & BaseLayerSharedFlag::Textured)
         sharedState.shader.bindTexture(state.texture);
-    if(sharedState.flags & Shared::Flag::BackgroundBlur)
+    if(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur)
         sharedState.shader.bindBackgroundBlurTexture(sharedState.backgroundBlurTextureHorizontal);
 
-    const UnsignedInt drawSize = sharedState.flags >= Shared::Flag::SubdividedQuads ? 54 : 6;
+    const UnsignedInt drawSize = sharedState.flags >= BaseLayerSharedFlag::SubdividedQuads ? 54 : 6;
 
     std::size_t clipDataOffset = offset;
     for(std::size_t i = 0; i != clipRectCount; ++i) {

@@ -81,28 +81,28 @@ struct BaseLayerGLTest: GL::OpenGLTester {
 
     void renderSetup();
     void renderTeardown();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void render();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderCustomColor();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderCustomOutlineWidth();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderPadding();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void render();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderCustomColor();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderCustomOutlineWidth();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderPadding();
     /* The SubdividedQuads flag shouldn't cover any codepaths for style change
        that weren't already tested above, done "just in case" */
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderChangeStyle();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderTextured();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderOutlineEdgeSmoothness();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderGradientOutlineEdgeSmoothness();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderTexturedOutlineEdgeSmoothness();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderChangeStyle();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderTextured();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderOutlineEdgeSmoothness();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderGradientOutlineEdgeSmoothness();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderTexturedOutlineEdgeSmoothness();
 
     /* The SubdividedQuads flag shouldn't cover any codepaths for dynamic
        styles that weren't already tested above, done "just in case" */
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderDynamicStyles();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderDynamicStyles();
 
     void renderOrDrawCompositeSetup();
     void renderOrDrawCompositeTeardown();
 
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderComposite();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderCompositeEdgeSmoothness();
-    template<BaseLayer::Shared::Flag flag = BaseLayer::Shared::Flag{}> void renderCompositeTextured();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderComposite();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderCompositeEdgeSmoothness();
+    template<BaseLayerSharedFlag flag = BaseLayerSharedFlag{}> void renderCompositeTextured();
     /* Composite node rectangles aren't affected by the SubdividedQuads flag */
     void renderCompositeNodeRects();
 
@@ -134,7 +134,7 @@ const struct {
 const struct {
     const char* name;
     const char* filename;
-    BaseLayerGL::Shared::Flags flags;
+    BaseLayerSharedFlags flags;
     BaseLayerCommonStyleUniform styleUniformCommon;
     BaseLayerStyleUniform styleUniform;
 } RenderData[]{
@@ -218,7 +218,7 @@ const struct {
             .setOutlineColor(0x3333ff_rgbf)
             .setOutlineWidth(8.0f)},
     {"outline, rounded corners inside, no rounded corners", "outline-same.png",
-        BaseLayerGL::Shared::Flag::NoRoundedCorners,
+        BaseLayerSharedFlag::NoRoundedCorners,
         BaseLayerCommonStyleUniform{},
             /* Smoothness omitted to match the other image */
         BaseLayerStyleUniform{}
@@ -226,7 +226,7 @@ const struct {
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
     {"outline, rounded corners, different inner and outer smoothness, no outline", "rounded-corners-same.png",
-        BaseLayerGL::Shared::Flag::NoOutline,
+        BaseLayerSharedFlag::NoOutline,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f, 8.0f),
         BaseLayerStyleUniform{}
@@ -236,7 +236,7 @@ const struct {
             .setInnerOutlineCornerRadius(8.0f)
             .setOutlineWidth(8.0f)},
     {"outline, rounded corners, different inner and outer smoothness, no rounded corners, no outline", "default-smooth.png",
-        BaseLayerGL::Shared::Flag::NoRoundedCorners|BaseLayerGL::Shared::Flag::NoOutline,
+        BaseLayerSharedFlag::NoRoundedCorners|BaseLayerSharedFlag::NoOutline,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f, 8.0f),
         BaseLayerStyleUniform{}
@@ -251,7 +251,7 @@ const struct {
     const char* filename;
     bool setLater;
     bool partialUpdate;
-    BaseLayerGL::Shared::Flags flags;
+    BaseLayerSharedFlags flags;
 } RenderCustomColorOutlineWidthData[]{
     {"", "outline-same.png",
         false, false, {}},
@@ -260,7 +260,7 @@ const struct {
     {"set later, partial update", "outline-same.png",
         true, true, {}},
     {"no outline", "default.png",
-        false, false, BaseLayerGL::Shared::Flag::NoOutline}
+        false, false, BaseLayerSharedFlag::NoOutline}
 };
 
 const struct {
@@ -303,7 +303,7 @@ const struct {
     Color4 clearColor;
     Containers::Optional<Vector3> offset;
     Containers::Optional<Vector2> size;
-    BaseLayerGL::Shared::Flags extraFlags;
+    BaseLayerSharedFlags extraFlags;
     BaseLayerStyleUniform styleUniform;
 } RenderTexturedData[]{
     {"default offset and size", "blur-input.png", "textured-default.png",
@@ -349,7 +349,7 @@ const struct {
     {"alpha mask, TextureMask", "mask-premultiplied.png", "textured-mask.png",
         false, 0x999999_rgbf,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
-        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerSharedFlag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
@@ -363,7 +363,7 @@ const struct {
     {"alpha mask, colored, TextureMask", "mask-colored-premultiplied.png", "textured-mask-colored.png",
         false, 0x999999_rgbf,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
-        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerSharedFlag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setColor(0xffffff_rgbf)},
@@ -380,7 +380,7 @@ const struct {
     {"alpha mask, outline, TextureMask", "mask-premultiplied.png", "textured-mask-outline-mask.png",
         false, 0x999999_rgbf,
         {{8.0f/128.0f, 8.0f/64.0f, 7}}, {{112.0f/128.0f, 48.0f/64.0f}},
-        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerSharedFlag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setInnerOutlineCornerRadius(4.0f)
@@ -529,7 +529,7 @@ const struct {
 const struct {
     const char* name;
     const char* filename;
-    BaseLayerGL::Shared::Flags flags;
+    BaseLayerSharedFlags flags;
     Containers::Optional<UnsignedInt> backgroundBlurRadius;
     Containers::Optional<Float> backgroundBlurCutoff;
     Containers::Optional<UnsignedInt> backgroundBlurPassCount;
@@ -547,7 +547,7 @@ const struct {
             .setColor(0xffffffff_rgbaf*0.5f),
         0.0f, 0.0f},
     {"background blur, 0% opacity", "composite-background-blur-0.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, {}, {}, {},
+        BaseLayerSharedFlag::BackgroundBlur, {}, {}, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -555,7 +555,7 @@ const struct {
             .setColor(0xffffffff_rgbaf),
         0.0f, 0.0f},
     {"background blur, 50% opacity", "composite-background-blur-50.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, {}, {}, {},
+        BaseLayerSharedFlag::BackgroundBlur, {}, {}, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -566,7 +566,7 @@ const struct {
     /* Interaction of the compositing quads with smoothness radius tested in
        renderCompositeEdgeSmoothness() */
     {"background blur, 75% opacity, colored", "composite-background-blur-75-colored.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, {}, {}, {},
+        BaseLayerSharedFlag::BackgroundBlur, {}, {}, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -582,7 +582,7 @@ const struct {
        difference possibly due to the blend operation being done a bit
        differently? */
     {"background blur, 50% opacity, radius 0", "composite-default-50.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 0, {}, {},
+        BaseLayerSharedFlag::BackgroundBlur, 0, {}, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -592,7 +592,7 @@ const struct {
         0.75f, 0.247f},
     /* Should be the same as the default */
     {"background blur, 50% opacity, radius 4", "composite-background-blur-50.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 4, {}, {},
+        BaseLayerSharedFlag::BackgroundBlur, 4, {}, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -603,7 +603,7 @@ const struct {
     /* sqrt(4*(2^2)) == 4, so should be ~same as above (plus rounding
        errors) */
     {"background blur, 50% opacity, radius 2, 4 passes", "composite-background-blur-50.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 2, {}, 4,
+        BaseLayerSharedFlag::BackgroundBlur, 2, {}, 4,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -614,7 +614,7 @@ const struct {
     /* sqrt(16*(1^2)) == 4, so should ~same as above (plus even more rounding
        errors) */
     {"background blur, 50% opacity, radius 1, 16 passes", "composite-background-blur-50.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 1, {}, 16,
+        BaseLayerSharedFlag::BackgroundBlur, 1, {}, 16,
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -623,7 +623,7 @@ const struct {
             .setColor(0xffffffff_rgbaf*0.5f),
         12.25f, 1.555f},
     {"background blur, 50% opacity, radius 31", "composite-background-blur-50-r31.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
+        BaseLayerSharedFlag::BackgroundBlur, 31, {}, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -634,7 +634,7 @@ const struct {
     /* This shouldn't make any visible difference to the above but is using
        considerably less samples */
     {"background blur, 50% opacity, radius 31, cutoff 0.5/255", "composite-background-blur-50-r31.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, 0.5f/255.0f, {},
+        BaseLayerSharedFlag::BackgroundBlur, 31, 0.5f/255.0f, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -647,7 +647,7 @@ const struct {
        there's a slight difference possibly due to the blend operation being
        done a bit differently? */
     {"background blur, 50% opacity, radius 31, cutoff 1", "composite-default-50.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, 1.0f, {},
+        BaseLayerSharedFlag::BackgroundBlur, 31, 1.0f, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
         BaseLayerStyleUniform{}
@@ -656,7 +656,7 @@ const struct {
             .setColor(0xffffffff_rgbaf*0.5f),
         0.75f, 0.247f},
     {"background blur, 50% opacity, radius 31, 80% blur opacity", "composite-background-blur-50-r31-80.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
+        BaseLayerSharedFlag::BackgroundBlur, 31, {}, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f)
             .setBackgroundBlurAlpha(0.8f),
@@ -668,7 +668,7 @@ const struct {
     /* This should again look the same as if no compositing is done, as the
        blurred background contributes in no way to the output */
     {"background blur, 50% opacity, radius 31, 0% blur opacity", "composite-default-50.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur, 31, {}, {},
+        BaseLayerSharedFlag::BackgroundBlur, 31, {}, {},
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f)
             .setBackgroundBlurAlpha(0.0f),
@@ -685,7 +685,7 @@ const struct {
     const char* expectedFilename;
     Vector3 offset;
     Vector2 size;
-    BaseLayer::Shared::Flags extraFlags;
+    BaseLayerSharedFlags extraFlags;
     BaseLayerStyleUniform styleItem;
 } RenderCompositeTexturedData[]{
     /* Transparent areas are blurred by default as well */
@@ -701,7 +701,7 @@ const struct {
     {"background blur, 50% opacity, radius 31, alpha mask, TextureMask",
         "mask-premultiplied.png", "composite-background-blur-50-r31-mask-mask.png",
         {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f},
-        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerSharedFlag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
@@ -716,7 +716,7 @@ const struct {
     {"background blur, 50% opacity, radius 31, alpha mask, colored, TextureMask",
         "mask-colored-premultiplied.png", "composite-background-blur-50-r31-mask-colored-mask.png",
         {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f},
-        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerSharedFlag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             /* Premultiplied alpha */
@@ -726,7 +726,7 @@ const struct {
     {"background blur, 50% opacity, radius 31, alpha mask, outline, TextureMask",
         "mask-premultiplied.png", "composite-background-blur-50-r31-mask-outline-mask.png",
         {8.0f/128.0f, 8.0f/64.0f, 7}, {112.0f/128.0f, 48.0f/64.0f},
-        BaseLayer::Shared::Flag::TextureMask,
+        BaseLayerSharedFlag::TextureMask,
         BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setInnerOutlineCornerRadius(4.0f)
@@ -774,12 +774,12 @@ const struct {
 const struct {
     const char* name;
     const char* filename;
-    BaseLayerGL::Shared::Flags flags;
+    BaseLayerSharedFlags flags;
 } DrawOrderCompositeData[]{
     {"default", "draw-order-composite-default.png",
         {}},
     {"background blur", "draw-order-composite-background-blur.png",
-        BaseLayerGL::Shared::Flag::BackgroundBlur}
+        BaseLayerSharedFlag::BackgroundBlur}
 };
 
 const struct {
@@ -822,85 +822,85 @@ BaseLayerGLTest::BaseLayerGLTest() {
     /* MSVC needs explicit type due to default template args */
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::render,
-        &BaseLayerGLTest::render<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::render<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderCustomColor,
-        &BaseLayerGLTest::renderCustomColor<BaseLayer::Shared::Flag::SubdividedQuads>,
+        &BaseLayerGLTest::renderCustomColor<BaseLayerSharedFlag::SubdividedQuads>,
         &BaseLayerGLTest::renderCustomOutlineWidth,
-        &BaseLayerGLTest::renderCustomOutlineWidth<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderCustomOutlineWidth<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderCustomColorOutlineWidthData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderPadding,
-        &BaseLayerGLTest::renderPadding<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderPadding<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderPaddingData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderChangeStyle,
-        &BaseLayerGLTest::renderChangeStyle<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderChangeStyle<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderChangeStyleData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderTextured,
-        &BaseLayerGLTest::renderTextured<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderTextured<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderTexturedData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderOutlineEdgeSmoothness,
-        &BaseLayerGLTest::renderOutlineEdgeSmoothness<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderOutlineEdgeSmoothness<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderOutlineEdgeSmoothnessData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderGradientOutlineEdgeSmoothness,
-        &BaseLayerGLTest::renderGradientOutlineEdgeSmoothness<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderGradientOutlineEdgeSmoothness<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderGradientOutlineEdgeSmoothnessData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderTexturedOutlineEdgeSmoothness,
-        &BaseLayerGLTest::renderTexturedOutlineEdgeSmoothness<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderTexturedOutlineEdgeSmoothness<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderTexturedOutlineEdgeSmoothnessData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderDynamicStyles,
-        &BaseLayerGLTest::renderDynamicStyles<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderDynamicStyles<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderDynamicStylesData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderComposite,
-        &BaseLayerGLTest::renderComposite<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderComposite<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderCompositeData),
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
     addTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderCompositeEdgeSmoothness,
-        &BaseLayerGLTest::renderCompositeEdgeSmoothness<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderCompositeEdgeSmoothness<BaseLayerSharedFlag::SubdividedQuads>},
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderCompositeTextured,
-        &BaseLayerGLTest::renderCompositeTextured<BaseLayer::Shared::Flag::SubdividedQuads>},
+        &BaseLayerGLTest::renderCompositeTextured<BaseLayerSharedFlag::SubdividedQuads>},
         Containers::arraySize(RenderCompositeTexturedData),
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
@@ -941,16 +941,16 @@ void BaseLayerGLTest::sharedConstruct() {
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{3, 5}};
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
-    CORRADE_COMPARE(shared.flags(), BaseLayerGL::Shared::Flags{});
+    CORRADE_COMPARE(shared.flags(), BaseLayerSharedFlags{});
 }
 
 void BaseLayerGLTest::sharedConstructComposite() {
     BaseLayerGL::Shared shared{
         BaseLayerGL::Shared::Configuration{3, 5}
-            .addFlags(BaseLayerGL::Shared::Flag::BackgroundBlur)};
+            .addFlags(BaseLayerSharedFlag::BackgroundBlur)};
     CORRADE_COMPARE(shared.styleUniformCount(), 3);
     CORRADE_COMPARE(shared.styleCount(), 5);
-    CORRADE_COMPARE(shared.flags(), BaseLayerGL::Shared::Flag::BackgroundBlur);
+    CORRADE_COMPARE(shared.flags(), BaseLayerSharedFlag::BackgroundBlur);
 }
 
 void BaseLayerGLTest::sharedConstructCopy() {
@@ -1078,7 +1078,7 @@ void BaseLayerGLTest::drawNoTextureSet() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}
-        .addFlags(BaseLayer::Shared::Flag::Textured)};
+        .addFlags(BaseLayerSharedFlag::Textured)};
     shared.setStyle(
         BaseLayerCommonStyleUniform{},
         {BaseLayerStyleUniform{}},
@@ -1120,12 +1120,12 @@ void BaseLayerGLTest::renderTeardown() {
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::render() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::render() {
     auto&& data = RenderData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
-    if(flag == BaseLayer::Shared::Flag::SubdividedQuads && (data.flags & (BaseLayer::Shared::Flag::NoOutline|BaseLayer::Shared::Flag::NoRoundedCorners)))
+    if(flag == BaseLayerSharedFlag::SubdividedQuads && (data.flags & (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)))
         CORRADE_SKIP(flag << "and" << data.flags << "are mutually exclusive");
 
     AbstractUserInterface ui{RenderSize};
@@ -1179,10 +1179,10 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::render() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCustomColor() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     auto&& data = RenderCustomColorOutlineWidthData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* Basically the same as the "gradient" case in render(), except that the
        color is additionally taken from the per-vertex data as well */
@@ -1237,12 +1237,12 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCustomColor()
         DebugTools::CompareImageToFile{_manager});
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCustomOutlineWidth() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomOutlineWidth() {
     auto&& data = RenderCustomColorOutlineWidthData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
-    if(flag == BaseLayer::Shared::Flag::SubdividedQuads && (data.flags & (BaseLayer::Shared::Flag::NoOutline|BaseLayer::Shared::Flag::NoRoundedCorners)))
+    if(flag == BaseLayerSharedFlag::SubdividedQuads && (data.flags & (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)))
         CORRADE_SKIP(flag << "and" << data.flags << "are mutually exclusive");
 
     /* Like the "outline, all sides same" case in render(), except that the
@@ -1303,10 +1303,10 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCustomOutline
         DebugTools::CompareImageToFile{_manager});
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderPadding() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderPadding() {
     auto&& data = RenderPaddingData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* Basically the same as the "outline, rounded corners, different" case in
        render(), except that the node offset, size and style or data padding
@@ -1368,10 +1368,10 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderPadding() {
         DebugTools::CompareImageToFile{_manager});
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderChangeStyle() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderChangeStyle() {
     auto&& data = RenderChangeStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* Basically the same as the "gradient" case in render(), except that the
        style ID is changed to it only later. */
@@ -1423,10 +1423,10 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderChangeStyle()
         DebugTools::CompareImageToFile{_manager});
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderTextured() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTextured() {
     auto&& data = RenderTexturedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -1451,7 +1451,7 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderTextured() {
 
     BaseLayerGL::Shared layerShared{
         BaseLayer::Shared::Configuration{2}
-            .addFlags(BaseLayer::Shared::Flag::Textured|data.extraFlags|flag)};
+            .addFlags(BaseLayerSharedFlag::Textured|data.extraFlags|flag)};
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}
             .setSmoothness(1.0f),
@@ -1489,23 +1489,23 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderTextured() {
         CORRADE_SKIP("UBOs with dynamically indexed arrays don't seem to work on SwiftShader, can't test.");
     #endif
     {
-        CORRADE_EXPECT_FAIL_IF(flag == BaseLayer::Shared::Flag::SubdividedQuads && data.expectedFilename == "textured-colored.png"_s,
-            "A single differing pixel with" << BaseLayer::Shared::Flag::SubdividedQuads << "enabled, not sure why");
+        CORRADE_EXPECT_FAIL_IF(flag == BaseLayerSharedFlag::SubdividedQuads && data.expectedFilename == "textured-colored.png"_s,
+            "A single differing pixel with" << BaseLayerSharedFlag::SubdividedQuads << "enabled, not sure why");
         CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
             Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
             DebugTools::CompareImageToFile{_manager});
     }
     /* Verify that it's indeed just that one pixel */
-    if(flag == BaseLayer::Shared::Flag::SubdividedQuads && data.expectedFilename == "textured-colored.png"_s)
+    if(flag == BaseLayerSharedFlag::SubdividedQuads && data.expectedFilename == "textured-colored.png"_s)
         CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
             Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.expectedFilename}),
             (DebugTools::CompareImageToFile{_manager, 0.25f, 0.00004f}));
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderOutlineEdgeSmoothness() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderOutlineEdgeSmoothness() {
     auto&& data = RenderOutlineEdgeSmoothnessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -1567,23 +1567,23 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderOutlineEdgeSm
            pixels in total (which is verifiable if you remove the inner quad
            from the index buffer), and the difference is only about 16 pixels
            from the edge. */
-        CORRADE_EXPECT_FAIL_IF(flag == BaseLayer::Shared::Flag::SubdividedQuads && data.filename == "edge-smoothness-inner-larger.png"_s,
-            "Differing pixels on the innermost side of the smooth outline with" << BaseLayer::Shared::Flag::SubdividedQuads << "enabled, not sure why");
+        CORRADE_EXPECT_FAIL_IF(flag == BaseLayerSharedFlag::SubdividedQuads && data.filename == "edge-smoothness-inner-larger.png"_s,
+            "Differing pixels on the innermost side of the smooth outline with" << BaseLayerSharedFlag::SubdividedQuads << "enabled, not sure why");
         CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
             Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
             DebugTools::CompareImageToFile{_manager});
         }
     /* Verify that it's indeed just those pixels */
-    if(flag == BaseLayer::Shared::Flag::SubdividedQuads && data.filename == "edge-smoothness-inner-larger.png"_s)
+    if(flag == BaseLayerSharedFlag::SubdividedQuads && data.filename == "edge-smoothness-inner-larger.png"_s)
         CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
             Utility::Path::join({WHEE_TEST_DIR, "BaseLayerTestFiles", data.filename}),
             (DebugTools::CompareImageToFile{_manager, 3.25f, 0.028f}));
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderGradientOutlineEdgeSmoothness() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderGradientOutlineEdgeSmoothness() {
     auto&& data = RenderGradientOutlineEdgeSmoothnessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* The gradient should extend also under the outline. Testing by expanding
        the quad outside with negative padding, cancelling that with a
@@ -1630,10 +1630,10 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderGradientOutli
         DebugTools::CompareImageToFile{_manager});
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderTexturedOutlineEdgeSmoothness() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTexturedOutlineEdgeSmoothness() {
     auto&& data = RenderTexturedOutlineEdgeSmoothnessData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     /* The texture should extend also under the outline. Testing by expanding
        the quad outside with negative padding, cancelling that with a
@@ -1663,7 +1663,7 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderTexturedOutli
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}
-        .setFlags(BaseLayer::Shared::Flag::Textured|flag)
+        .setFlags(BaseLayerSharedFlag::Textured|flag)
     };
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{}
@@ -1695,10 +1695,10 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderTexturedOutli
         DebugTools::CompareImageToFile{_manager});
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderDynamicStyles() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderDynamicStyles() {
     auto&& data = RenderDynamicStylesData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     AbstractUserInterface ui{RenderSize};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -1830,10 +1830,10 @@ void BaseLayerGLTest::renderOrDrawCompositeTeardown() {
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderComposite() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderComposite() {
     auto&& data = RenderCompositeData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -1897,8 +1897,8 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderComposite() {
         (DebugTools::CompareImageToFile{_manager, data.maxThreshold, data.meanThreshold}));
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCompositeEdgeSmoothness() {
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeEdgeSmoothness() {
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -1932,7 +1932,7 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCompositeEdge
     renderer.compositingTexture().setSubImage(0, {}, imageCropped);
 
     BaseLayerGL::Shared layerShared{BaseLayerGL::Shared::Configuration{1}
-        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur|flag)
+        .addFlags(BaseLayerSharedFlag::BackgroundBlur|flag)
         .setBackgroundBlurRadius(2)
     };
     layerShared.setStyle(
@@ -1964,10 +1964,10 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCompositeEdge
         DebugTools::CompareImageToFile{_manager});
 }
 
-template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCompositeTextured() {
+template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeTextured() {
     auto&& data = RenderCompositeTexturedData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(flag == BaseLayer::Shared::Flag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
+    setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -1991,8 +1991,8 @@ template<BaseLayer::Shared::Flag flag> void BaseLayerGLTest::renderCompositeText
         .setSubImage(0, {0, 0, Int(data.offset.z())}, ImageView2D{*image});
 
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}
-        .addFlags(BaseLayer::Shared::Flag::BackgroundBlur|
-                  BaseLayer::Shared::Flag::Textured|
+        .addFlags(BaseLayerSharedFlag::BackgroundBlur|
+                  BaseLayerSharedFlag::Textured|
                   data.extraFlags|flag)
         .setBackgroundBlurRadius(31)};
     layerShared.setStyle(
@@ -2070,7 +2070,7 @@ void BaseLayerGLTest::renderCompositeNodeRects() {
     }), imageCropped.pixels<Color4ub>());
 
     BaseLayerGL::Shared layerShared{BaseLayerGL::Shared::Configuration{1}
-        .addFlags(BaseLayerGL::Shared::Flag::BackgroundBlur)
+        .addFlags(BaseLayerSharedFlag::BackgroundBlur)
         .setBackgroundBlurRadius(data.backgroundBlurRadius)};
     layerShared.setStyle(
         BaseLayerCommonStyleUniform{},

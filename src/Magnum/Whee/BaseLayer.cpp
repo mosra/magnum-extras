@@ -44,12 +44,12 @@
 
 namespace Magnum { namespace Whee {
 
-Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
-    debug << "Whee::BaseLayer::Shared::Flag" << Debug::nospace;
+Debug& operator<<(Debug& debug, const BaseLayerSharedFlag value) {
+    debug << "Whee::BaseLayerSharedFlag" << Debug::nospace;
 
     switch(value) {
         /* LCOV_EXCL_START */
-        #define _c(value) case BaseLayer::Shared::Flag::value: return debug << "::" #value;
+        #define _c(value) case BaseLayerSharedFlag::value: return debug << "::" #value;
         _c(Textured)
         _c(BackgroundBlur)
         _c(NoRoundedCorners)
@@ -63,15 +63,15 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
     return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
 }
 
-Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flags value) {
-    return Containers::enumSetDebugOutput(debug, value, "Whee::BaseLayer::Shared::Flags{}", {
-        BaseLayer::Shared::Flag::TextureMask,
+Debug& operator<<(Debug& debug, const BaseLayerSharedFlags value) {
+    return Containers::enumSetDebugOutput(debug, value, "Whee::BaseLayerSharedFlags{}", {
+        BaseLayerSharedFlag::TextureMask,
         /* Implied by TextureMask, has to be after */
-        BaseLayer::Shared::Flag::Textured,
-        BaseLayer::Shared::Flag::BackgroundBlur,
-        BaseLayer::Shared::Flag::NoRoundedCorners,
-        BaseLayer::Shared::Flag::NoOutline,
-        BaseLayer::Shared::Flag::SubdividedQuads
+        BaseLayerSharedFlag::Textured,
+        BaseLayerSharedFlag::BackgroundBlur,
+        BaseLayerSharedFlag::NoRoundedCorners,
+        BaseLayerSharedFlag::NoOutline,
+        BaseLayerSharedFlag::SubdividedQuads
     });
 }
 
@@ -93,8 +93,8 @@ BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLay
     #endif
     CORRADE_ASSERT(s.styleCount + s.dynamicStyleCount,
         "Whee::BaseLayer::Shared: expected non-zero total style count", );
-    CORRADE_ASSERT(!(s.flags & Flag::SubdividedQuads) || !(s.flags & (Flag::NoOutline|Flag::NoRoundedCorners)),
-        "Whee::BaseLayer::Shared:" << Flag::SubdividedQuads << "and" << (s.flags & (Flag::NoOutline|Flag::NoRoundedCorners)) << "are mutually exclusive", );
+    CORRADE_ASSERT(!(s.flags & BaseLayerSharedFlag::SubdividedQuads) || !(s.flags & (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)),
+        "Whee::BaseLayer::Shared:" << BaseLayerSharedFlag::SubdividedQuads << "and" << (s.flags & (BaseLayerSharedFlag::NoOutline|BaseLayerSharedFlag::NoRoundedCorners)) << "are mutually exclusive", );
 }
 
 BaseLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
@@ -105,7 +105,7 @@ UnsignedInt BaseLayer::Shared::styleUniformCount() const {
     return static_cast<const State&>(*_state).styleUniformCount;
 }
 
-BaseLayer::Shared::Flags BaseLayer::Shared::flags() const {
+BaseLayerSharedFlags BaseLayer::Shared::flags() const {
     return static_cast<const State&>(*_state).flags;
 }
 
@@ -211,7 +211,7 @@ UnsignedInt BaseLayer::backgroundBlurPassCount() const {
     #ifndef CORRADE_NO_ASSERT
     auto& sharedState = static_cast<const Shared::State&>(state.shared);
     #endif
-    CORRADE_ASSERT(sharedState.flags & Shared::Flag::BackgroundBlur,
+    CORRADE_ASSERT(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur,
         "Whee::BaseLayer::backgroundBlurPassCount(): background blur not enabled", {});
     return state.backgroundBlurPassCount;
 }
@@ -221,7 +221,7 @@ BaseLayer& BaseLayer::setBackgroundBlurPassCount(UnsignedInt count) {
     #ifndef CORRADE_NO_ASSERT
     auto& sharedState = static_cast<const Shared::State&>(state.shared);
     #endif
-    CORRADE_ASSERT(sharedState.flags & Shared::Flag::BackgroundBlur,
+    CORRADE_ASSERT(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur,
         "Whee::BaseLayer::setBackgroundBlurPassCount(): background blur not enabled", *this);
     CORRADE_ASSERT(count,
         "Whee::BaseLayer::setBackgroundBlurPassCount(): expected at least one pass", *this);
@@ -405,7 +405,7 @@ Vector3 BaseLayer::textureCoordinateOffset(const LayerDataHandle handle) const {
 
 Vector3 BaseLayer::textureCoordinateOffsetInternal(const UnsignedInt id) const {
     auto& state = static_cast<const State&>(*_state);
-    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & Shared::Flag::Textured,
+    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & BaseLayerSharedFlag::Textured,
         "Whee::BaseLayer::textureCoordinateOffset(): texturing not enabled", {});
     return state.data[id].textureCoordinateOffset;
 }
@@ -424,7 +424,7 @@ Vector2 BaseLayer::textureCoordinateSize(const LayerDataHandle handle) const {
 
 Vector2 BaseLayer::textureCoordinateSizeInternal(const UnsignedInt id) const {
     auto& state = static_cast<const State&>(*_state);
-    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & Shared::Flag::Textured,
+    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & BaseLayerSharedFlag::Textured,
         "Whee::BaseLayer::textureCoordinateSize(): texturing not enabled", {});
     return state.data[id].textureCoordinateSize;
 }
@@ -443,7 +443,7 @@ void BaseLayer::setTextureCoordinates(const LayerDataHandle handle, const Vector
 
 void BaseLayer::setTextureCoordinatesInternal(const UnsignedInt id, const Vector3& offset, const Vector2& size) {
     auto& state = static_cast<State&>(*_state);
-    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & Shared::Flag::Textured,
+    CORRADE_ASSERT(static_cast<const Shared::State&>(state.shared).flags & BaseLayerSharedFlag::Textured,
         "Whee::BaseLayer::setTextureCoordinates(): texturing not enabled", );
     Implementation::BaseLayerData& data = state.data[id];
     data.textureCoordinateOffset = offset;
@@ -453,7 +453,7 @@ void BaseLayer::setTextureCoordinatesInternal(const UnsignedInt id, const Vector
 
 LayerFeatures BaseLayer::doFeatures() const {
     auto& sharedState = static_cast<const Shared::State&>(_state->shared);
-    return AbstractVisualLayer::doFeatures()|(sharedState.dynamicStyleCount ? LayerFeature::AnimateStyles : LayerFeatures{})|LayerFeature::Draw|(sharedState.flags & Shared::Flag::BackgroundBlur ? LayerFeature::Composite : LayerFeatures{});
+    return AbstractVisualLayer::doFeatures()|(sharedState.dynamicStyleCount ? LayerFeature::AnimateStyles : LayerFeatures{})|LayerFeature::Draw|(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur ? LayerFeature::Composite : LayerFeatures{});
 }
 
 void BaseLayer::doSetSize(const Vector2& size, const Vector2i& framebufferSize) {
@@ -465,7 +465,7 @@ void BaseLayer::doSetSize(const Vector2& size, const Vector2i& framebufferSize) 
        any condition */
     state.framebufferSize = framebufferSize;
 
-    if(sharedState.flags & Shared::Flag::BackgroundBlur)
+    if(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur)
         state.backgroundBlurScale = 2.0f/size;
 }
 
@@ -503,7 +503,7 @@ LayerStates BaseLayer::doState() const {
             states |= LayerState::NeedsCommonDataUpdate;
         /* If background blur is enabled, the quads are also expanded based on
            smoothness */
-        if(sharedState.flags >= Shared::Flag::BackgroundBlur)
+        if(sharedState.flags >= BaseLayerSharedFlag::BackgroundBlur)
             states |= LayerState::NeedsCompositeOffsetSizeUpdate;
     }
     return states;
@@ -517,7 +517,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     auto& sharedState = static_cast<Shared::State&>(state.shared);
     /* Framebuffer size is only needed for calculating compositing rectangles
        right now */
-    CORRADE_ASSERT(!(sharedState.flags >= Shared::Flag::BackgroundBlur) || (!state.framebufferSize.isZero() && !state.backgroundBlurScale.isZero()),
+    CORRADE_ASSERT(!(sharedState.flags >= BaseLayerSharedFlag::BackgroundBlur) || (!state.framebufferSize.isZero() && !state.backgroundBlurScale.isZero()),
         "Whee::BaseLayer::update(): user interface size wasn't set", );
     /* Technically needed only if there's any actual data to update, but
        require it always for consistency (and easier testing) */
@@ -531,7 +531,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     const bool updateIndices =
         states >= LayerState::NeedsNodeOrderUpdate ||
         states >= LayerState::NeedsDataUpdate;
-    if(updateIndices && !(sharedState.flags >= Shared::Flag::SubdividedQuads)) {
+    if(updateIndices && !(sharedState.flags >= BaseLayerSharedFlag::SubdividedQuads)) {
         arrayResize(state.indices, NoInit, dataIds.size()*6);
         for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
             const UnsignedInt vertexOffset = dataIds[i]*4;
@@ -552,7 +552,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
     /* Then the more data-heavy case with 9 quads for every data, but a simpler
        fragment shader */
-    } else if(updateIndices && sharedState.flags >= Shared::Flag::SubdividedQuads) {
+    } else if(updateIndices && sharedState.flags >= BaseLayerSharedFlag::SubdividedQuads) {
         /* Vertex IDs divisible by 4 are the outer corners, ID % 4 == 3 are the
            inner corners. ID % 4 == 2 are outer vertical edges, ID % 4 == 1 are
            outer horizontal edges.
@@ -646,10 +646,10 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         states >= LayerState::NeedsNodeOffsetSizeUpdate ||
         states >= LayerState::NeedsNodeEnabledUpdate ||
         states >= LayerState::NeedsDataUpdate;
-    if(updateVertices && !(sharedState.flags >= Shared::Flag::SubdividedQuads)) {
+    if(updateVertices && !(sharedState.flags >= BaseLayerSharedFlag::SubdividedQuads)) {
         /* Resize the vertex array to fit all data, make a view on the common
            type prefix */
-        const std::size_t typeSize = sharedState.flags & Shared::Flag::Textured ?
+        const std::size_t typeSize = sharedState.flags & BaseLayerSharedFlag::Textured ?
             sizeof(Implementation::BaseLayerTexturedVertex) :
             sizeof(Implementation::BaseLayerVertex);
         arrayResize(state.vertices, NoInit, capacity()*4*typeSize);
@@ -710,7 +710,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         }
 
         /* Fill in also quad texture coordinates if enabled */
-        if(sharedState.flags & Shared::Flag::Textured) {
+        if(sharedState.flags & BaseLayerSharedFlag::Textured) {
             const Containers::ArrayView<Implementation::BaseLayerTexturedVertex> texturedVertices = Containers::arrayCast<Implementation::BaseLayerTexturedVertex>(vertices).asContiguous();
 
             for(const UnsignedInt dataId: dataIds) {
@@ -743,10 +743,10 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         }
 
     /* And then again the more data-heavy case with 9 quads for every data */
-    } else if(updateVertices && sharedState.flags >= Shared::Flag::SubdividedQuads) {
+    } else if(updateVertices && sharedState.flags >= BaseLayerSharedFlag::SubdividedQuads) {
         /* Resize the vertex array to fit all data, make a view on the common type
            prefix */
-        const std::size_t typeSize = sharedState.flags & Shared::Flag::Textured ?
+        const std::size_t typeSize = sharedState.flags & BaseLayerSharedFlag::Textured ?
             sizeof(Implementation::BaseLayerSubdividedTexturedVertex) :
             sizeof(Implementation::BaseLayerSubdividedVertex);
         arrayResize(state.vertices, NoInit, capacity()*16*typeSize);
@@ -834,7 +834,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         }
 
         /* Fill in also quad texture coordinates if enabled */
-        if(sharedState.flags & Shared::Flag::Textured) {
+        if(sharedState.flags & BaseLayerSharedFlag::Textured) {
             const Containers::ArrayView<Implementation::BaseLayerSubdividedTexturedVertex> texturedVertices = Containers::arrayCast<Implementation::BaseLayerSubdividedTexturedVertex>(vertices).asContiguous();
 
             for(const UnsignedInt dataId: dataIds) {
@@ -878,7 +878,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     /* Fill in quads for background blur. They're present only if the layer has
        background blur (and thus compositing) enabled and need to be updated
        only if the compositing rects actually changed */
-    if(states >= LayerState::NeedsCompositeOffsetSizeUpdate && sharedState.flags >= Shared::Flag::BackgroundBlur) {
+    if(states >= LayerState::NeedsCompositeOffsetSizeUpdate && sharedState.flags >= BaseLayerSharedFlag::BackgroundBlur) {
         arrayResize(state.backgroundBlurVertices, NoInit, compositeRectOffsets.size()*4);
         arrayResize(state.backgroundBlurIndices, NoInit, compositeRectOffsets.size()*6);
 
