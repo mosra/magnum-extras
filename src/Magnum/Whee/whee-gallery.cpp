@@ -28,6 +28,7 @@
 #include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Corrade/Utility/Arguments.h>
 #include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/TimeStl.h>
@@ -149,16 +150,27 @@ class WheeGallery: public Platform::Application {
         Whee::AnimationHandle _inputCursorAnimation{};
 };
 
-WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, Configuration{}.setTitle("Magnum::Whee Gallery"_s).setSize({900, 600})} {
-    /* Renderer with a compositing framebuffer enabled */
+WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{arguments, NoCreate}, _ui{NoCreate} {
+    Utility::Arguments args;
+    args.addBooleanOption("subdivided-quads").setHelp("subdivided-quads", "enable BaseLayerSharedFlag::SubdividedQuads")
+        .addSkippedPrefix("magnum", "engine-specific options")
+        .parse(arguments.argc, arguments.argv);
+
+    /* Create a GL context and the UI after the arguments were parsed to not
+       have a flickering window and console noise if --help is requested,
+       parsing fails, etc. */
+    create(Configuration{}.setTitle("Magnum::Whee Gallery"_s).setSize({900, 600}));
+
     _ui
+        /* Renderer with a compositing framebuffer enabled */
        .setRendererInstance(Containers::pointer<Whee::RendererGL>(Whee::RendererGL::Flag::CompositingFramebuffer))
         /* Set size and a style. Has to be done after creating the renderer as
            it otherwise adds its own. */
         // TODO ehhhh and here i wanted to AVOID doing this, and wanted to call create()
        .setSize({900, 600}, Vector2{windowSize()}, framebufferSize())
        .setStyle(Whee::McssDarkStyle{}
-            .setTextLayerDynamicStyleCount(2));
+            .setTextLayerDynamicStyleCount(2)
+            .setBaseLayerFlags(args.isSet("subdivided-quads") ? Whee::BaseLayerSharedFlag::SubdividedQuads : Whee::BaseLayerSharedFlags{}, {}));
 
     {
         Whee::BaseLayerCommonStyleUniform commonStyleUniform;
@@ -182,7 +194,8 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
         _backgroundBlurBaseLayerShared = Whee::BaseLayerGL::Shared{
             Whee::BaseLayerGL::Shared::Configuration{2}
                 .setDynamicStyleCount(10)
-                .setFlags(Whee::BaseLayerSharedFlag::BackgroundBlur)
+                .setFlags(Whee::BaseLayerSharedFlag::BackgroundBlur|
+                    (args.isSet("subdivided-quads") ? Whee::BaseLayerSharedFlag::SubdividedQuads : Whee::BaseLayerSharedFlags{}))
                 .setBackgroundBlurRadius(31)}
                 ;
         _backgroundBlurBaseLayerShared
