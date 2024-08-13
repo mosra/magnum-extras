@@ -180,6 +180,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/configure.h DESTINATION ${MAGNUM_INCLU
 add_library(MagnumExtras::Whee ALIAS MagnumWhee)
 
 if(MAGNUM_WITH_UI_GALLERY)
+    find_package(Magnum REQUIRED DebugTools)
     if(CORRADE_TARGET_EMSCRIPTEN)
         find_package(Magnum REQUIRED
             AnyImageImporter
@@ -195,7 +196,8 @@ if(MAGNUM_WITH_UI_GALLERY)
         whee-gallery.cpp)
     target_link_libraries(magnum-whee-gallery PRIVATE
         MagnumWhee
-        Magnum::Application)
+        Magnum::Application
+        Magnum::DebugTools)
     if(CORRADE_TARGET_EMSCRIPTEN)
         target_link_libraries(magnum-whee-gallery PRIVATE
             Magnum::AnyImageImporter
