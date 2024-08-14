@@ -41,6 +41,7 @@
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
 #include <Magnum/Text/Alignment.h>
+#include <Magnum/Text/Feature.h>
 
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/TextLayer.h"
@@ -1059,7 +1060,9 @@ void TextLayerStyleAnimatorTest::advance() {
     };
     shared.setGlyphCache(cache);
 
-    FontHandle fontHandle = shared.addFont(font, 1.0f);
+    FontHandle fontHandle1 = shared.addFont(font, 1.0f);
+    FontHandle fontHandle2 = shared.addFont(font, 2.0f);
+    FontHandle fontHandle3 = shared.addFont(font, 3.0f);
 
     shared.setStyle(
         TextLayerCommonStyleUniform{},
@@ -1073,16 +1076,38 @@ void TextLayerStyleAnimatorTest::advance() {
             .setColor(Color4{2.0f}),
          TextLayerStyleUniform{}},  /* 3, not used for animation */
         {3, 2, 3, 1, 3, 3, 0},
-        {fontHandle, fontHandle, fontHandle, fontHandle,
-         fontHandle, fontHandle, fontHandle},
-        {Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter,
-         Text::Alignment::MiddleCenter},
-        {}, {}, {},
+        {fontHandle1,  /* 0, not used for animation */
+         fontHandle2,  /* 1 */
+         fontHandle1,  /* 2, not used for animation */
+         fontHandle3,  /* 3 */
+         fontHandle1,  /* 4, not used for animation */
+         fontHandle1,  /* 5, not used for animation */
+         fontHandle2}, /* 6 */
+        {Text::Alignment::MiddleCenter, /* 0, not used for animation */
+         Text::Alignment::TopLeft,      /* 1 */
+         Text::Alignment::MiddleCenter, /* 2, not used for animation */
+         Text::Alignment::LineRight,    /* 3 */
+         Text::Alignment::MiddleCenter, /* 4, not used for animation */
+         Text::Alignment::MiddleCenter, /* 5, not used for animation */
+         Text::Alignment::BottomEnd},   /* 6 */
+        {Text::Feature::HistoricalLigatures,
+         Text::Feature::TabularFigures,
+         Text::Feature::SlashedZero,
+         {Text::Feature::StandardLigatures, false}},
+        {0,     /* 0, not used for animation */
+         3,     /* 1 */
+         0,     /* 2, not used for animation */
+         1,     /* 3 */
+         0,     /* 4, not used for animation */
+         0,     /* 5, not used for animation */
+         0},    /* 6 */
+        {0,     /* 0, not used for animation */
+         1,     /* 1 */
+         0,     /* 2, not used for animation */
+         2,     /* 3 */
+         0,     /* 4, not used for animation */
+         0,     /* 5, not used for animation */
+         1},    /* 6 */
         {-1,
          data.cursorStyles ? 2 : -1,
          -1,
@@ -1140,7 +1165,8 @@ void TextLayerStyleAnimatorTest::advance() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    /* Assign data to styles that aren't used for animation */
+    /* Assign data to styles that aren't used for animation, and which have
+       the font, alignment and features not used by any animation styles */
     DataHandle data0 = layer.create(4, "", {});
     DataHandle data1 = layer.create(0, "", {});
     DataHandle data2 = layer.create(2, "", {});
@@ -1193,10 +1219,11 @@ void TextLayerStyleAnimatorTest::advance() {
     };
 
     /* Advancing to 5 allocates a dynamic style for the playing animation,
-       switches the style to it and fills the dynamic data. For the stopped
-       & removed animation it switches the style to the destination one, for
-       the stopped & kept it allocates a dynamic style, transitions to the
-       final style but doesn't recycle it. */
+       sets its font, alignment and features, switches the style to it and
+       fills the dynamic data. For the stopped & removed animation it switches
+       the style to the destination one, for the stopped & kept it allocates a
+       dynamic style, sets its font, alignment and features as well,
+       transitions to the final style but doesn't recycle it. */
     {
         TextLayerStyleUniform uniforms[9];
         TextLayerEditingStyleUniform editingUniforms[6];
@@ -1230,6 +1257,23 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.dynamicStyle(stoppedKept), 1);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), Containers::NullOpt);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            fontHandle3,                    /* from style 3 */
+            fontHandle2,                    /* from style 6 */
+            FontHandle::Null,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::LineRight,     /* from style 3 */
+            Text::Alignment::BottomEnd,     /* from style 6 */
+            Text::Alignment::MiddleCenter,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::TabularFigures, true},
+            {Text::Feature::SlashedZero, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true}
+        })), TestSuite::Compare::Container);
         /* Style IDs in the layer aren't changed, the passed array is instead,
            and only where dynamic styles got allocated or the animation
            stopped */
@@ -1320,6 +1364,25 @@ void TextLayerStyleAnimatorTest::advance() {
             TextLayerStyleAnimation::Uniform|
             (data.cursorStyles || data.selectionStyles ? TextLayerStyleAnimation::EditingUniform : TextLayerStyleAnimations{}));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        /* Font, alignment and features isn't modified compared to last time as
+           no new style got allocated */
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            fontHandle3,
+            fontHandle2,
+            FontHandle::Null,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::LineRight,
+            Text::Alignment::BottomEnd,
+            Text::Alignment::MiddleCenter,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::TabularFigures, true},
+            {Text::Feature::SlashedZero, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true}
+        })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
@@ -1388,6 +1451,26 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(scheduledNullData), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 2);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            fontHandle3,
+            fontHandle2,
+            fontHandle2,                    /* from style 1 */
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::LineRight,
+            Text::Alignment::BottomEnd,
+            Text::Alignment::TopLeft,       /* from style 1 */
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::TabularFigures, true},
+            {Text::Feature::SlashedZero, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::StandardLigatures, false}
+        })), TestSuite::Compare::Container);
         /* Style 2 gets the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
@@ -1468,6 +1551,30 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        /* Font, alignment and features aren't modified compared to last time
+           as no new style got allocated. In particular, the now-recycled
+           dynamic style *isn't* changed to font, alignment and features of the
+           target style, as the dynamic style is now unused. */
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            fontHandle3,
+            fontHandle2,
+            fontHandle2,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::LineRight,
+            Text::Alignment::BottomEnd,
+            Text::Alignment::TopLeft,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::TabularFigures, true},
+            {Text::Feature::SlashedZero, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::StandardLigatures, false}
+        })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
@@ -1524,6 +1631,14 @@ void TextLayerStyleAnimatorTest::advance() {
         }
     }
 
+    /* Set dynamic style contents from outside to verify the font, alignment
+       and features are not being set from each advance() */
+    layer.setDynamicStyle(0,
+        TextLayerStyleUniform{},
+        FontHandle::Null,
+        Text::Alignment::MiddleCenterIntegral,
+        {}, {});
+
     /* Advancing to 25 stops the null data animation, recycling its dynamic
        style. Leads to no other change, i.e. no Style set. */
     {
@@ -1545,6 +1660,26 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        /* Again font, alignment and features aren't modified, thus the reset
+           values from above are staying */
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            FontHandle::Null,
+            fontHandle2,
+            fontHandle2,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::MiddleCenterIntegral,
+            Text::Alignment::BottomEnd,
+            Text::Alignment::TopLeft,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::StandardLigatures, false}
+        })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
@@ -1612,6 +1747,29 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        /* The newly allocated style is coincidentally again style 3 and again
+           in slot 0, so this looks the same as before the setDynamicStyle()
+           got called above */
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            fontHandle3,                    /* from style 3 again */
+            fontHandle2,
+            fontHandle2,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::LineRight,     /* from style 3 again */
+            Text::Alignment::BottomEnd,
+            Text::Alignment::TopLeft,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::TabularFigures, true},
+            {Text::Feature::SlashedZero, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::StandardLigatures, false}
+        })), TestSuite::Compare::Container);
         /* Style 0 gets the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? true : false,
@@ -1684,6 +1842,27 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Playing);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        /* No change to any of these again */
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            fontHandle3,
+            fontHandle2,
+            fontHandle2,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::LineRight,
+            Text::Alignment::BottomEnd,
+            Text::Alignment::TopLeft,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::TabularFigures, true},
+            {Text::Feature::SlashedZero, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::StandardLigatures, false}
+        })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,
@@ -1761,6 +1940,28 @@ void TextLayerStyleAnimatorTest::advance() {
             TextLayerStyleAnimation::Style);
         CORRADE_VERIFY(!animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+        /* No change to any of these again -- none of them are used anymore,
+           and they stay at whatever they were before */
+        CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
+            fontHandle3,
+            fontHandle2,
+            fontHandle2,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS(layer.dynamicStyleAlignments(), Containers::arrayView({
+            Text::Alignment::LineRight,
+            Text::Alignment::BottomEnd,
+            Text::Alignment::TopLeft,
+        }), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(0))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::TabularFigures, true},
+            {Text::Feature::SlashedZero, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(1))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::HistoricalLigatures, true}
+        })), TestSuite::Compare::Container);
+        CORRADE_COMPARE_AS((Containers::arrayCast<const Containers::Pair<Text::Feature, UnsignedInt>>(layer.dynamicStyleFeatures(2))), (Containers::arrayView<const Containers::Pair<Text::Feature, UnsignedInt>>({
+            {Text::Feature::StandardLigatures, false}
+        })), TestSuite::Compare::Container);
         /* No styles get the bits modified */
         CORRADE_COMPARE_AS(Containers::BitArrayView{cursorStyles}, Containers::stridedArrayView({
             data.cursorStyles ? false : true,

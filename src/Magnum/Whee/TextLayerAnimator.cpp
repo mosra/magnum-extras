@@ -88,16 +88,24 @@ struct Animation {
     TextLayerStyleUniform sourceSelectionTextUniform{NoInit},
         targetSelectionTextUniform{NoInit};
 
-    UnsignedInt targetStyle, dynamicStyle;
+    /* Font, alignment and features are all taken from the source style and
+       don't animate. Compared to the uniforms and paddings, which are copied
+       above to avoid redoing the extra logic and uniform mapping indirections
+       for all animations in every advance(), they're only used once at the
+       point where dynamic style is allocated, and referencing them in the
+       original style via `styleSrc` is more efficient than having to deal with
+       variable-length allocation for a copy of the feature list. */
 
+    UnsignedInt sourceStyle, targetStyle, dynamicStyle;
+
+    /** @todo pack the booleans to a single flag */
     bool hasCursorStyle,
         hasSelectionStyle;
     bool uniformDifferent,
         cursorUniformDifferent,
         selectionUniformDifferent,
         selectionTextUniformDifferent;
-    /* 2 bytes free. Yes, could pack all those booleans, but it'd still occupy
-       at least one byte with the remaining 7 being padding. So. */
+    /* 6/2 bytes free */
 
     Float(*easing)(Float);
 };
@@ -168,6 +176,7 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
     if(id >= state.animations.size())
         arrayResize(state.animations, NoInit, id + 1);
     Animation& animation = state.animations[id];
+    animation.sourceStyle = sourceStyle;
     animation.targetStyle = targetStyle;
     animation.dynamicStyle = ~UnsignedInt{};
     animation.easing = easing;
@@ -531,6 +540,24 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Nanoseconds time,
                 const Containers::Optional<UnsignedInt> style = state.layer->allocateDynamicStyle();
                 if(!style)
                     continue;
+
+                /* Initialize the dynamic style font, alignment and features
+                   from the source style. Those can't reasonably get animated
+                   in any way, but the dynamic style has to contain them so
+                   calls to setText(), updateText() and editText() while the
+                   style is being animated don't behave differently. The
+                   uniform and padding is left at the default-constructed state
+                   as it's filled through the `dynamicStyleUniforms` and
+                   `dynamicStylePaddings` views right after. */
+                {
+                    const Implementation::TextLayerStyle& styleData = layerSharedState.styles[animation.sourceStyle];
+                    state.layer->setDynamicStyle(*style,
+                        TextLayerStyleUniform{},
+                        styleData.font,
+                        styleData.alignment, layerSharedState.styleFeatures.sliceSize(styleData.featureOffset, styleData.featureCount),
+                        {});
+                }
+
                 animation.dynamicStyle = *style;
 
                 if(data != LayerDataHandle::Null) {
