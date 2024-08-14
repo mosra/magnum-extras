@@ -239,6 +239,18 @@ class MAGNUM_WHEE_EXPORT AbstractLayouter {
         Containers::StridedArrayView1D<const NodeHandle> nodes() const;
 
         /**
+         * @brief Set user interface size
+         *
+         * Used internally from @ref AbstractUserInterface::setSize() and
+         * @ref AbstractUserInterface::setLayouterInstance(). Exposed just for
+         * testing purposes, there should be no need to call this function
+         * directly. Expects that the size is non-zero. Delegates to
+         * @ref doSetSize(), see its documentation for more information about
+         * the arguments.
+         */
+        void setSize(const Vector2& size);
+
+        /**
          * @brief Clean layouts attached to no longer valid nodes
          *
          * Used internally from @ref AbstractUserInterface::clean(). Exposed
@@ -335,6 +347,27 @@ class MAGNUM_WHEE_EXPORT AbstractLayouter {
 
     private:
         /**
+         * @brief Set user interface size
+         * @param size              Size of the user interface to which
+         *      everything is positioned
+         *
+         * Implementation for @ref setSize(), which is called from
+         * @ref AbstractUserInterface::setSize() whenever the UI size changes,
+         * and from @ref AbstractUserInterface::setLayouterInstance(). The
+         * implementation is expected to refresh internal state that depends
+         * on the UI size.
+         *
+         * Note that compared to @ref AbstractLayer::doSetSize(), a followup
+         * @ref doUpdate() call isn't implicitly made after UI size changed
+         * because the layout may not be depending on it for anything.
+         * Explicitly call @ref setNeedsUpdate() in the implementation if the
+         * layout *is* depending on the UI size and requires an update after.
+         *
+         * Default implementation does nothing.
+         */
+        virtual void doSetSize(const Vector2& size);
+
+        /**
          * @brief Clean no longer valid layouts
          * @param layoutIdsToRemove   Layout IDs to remove
          *
@@ -367,7 +400,8 @@ class MAGNUM_WHEE_EXPORT AbstractLayouter {
          * @ref AbstractUserInterface::update() whenever
          * @ref UserInterfaceState::NeedsLayoutUpdate or any of the states that
          * imply it are present in @ref AbstractUserInterface::state(). Is
-         * always called after @ref doClean().
+         * always called after @ref doClean(), with at least one
+         * @ref doSetSize() call happening at some point before.
          *
          * The @p layoutIdsToUpdate view has the same size as @ref capacity()
          * and is guaranteed to have bits set only for valid layout IDs
