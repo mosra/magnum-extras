@@ -178,9 +178,10 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
          * see its documentation for more information.
          *
          * The animation affects the @ref TextLayerStyleUniform and the padding
-         * value, if it differs between the styles. Font, alignment or features
-         * being different between the two styles don't affect the animation in
-         * any way. If given style references a cursor or editing style, it
+         * value, if it differs between the styles. The animated dynamic style
+         * is initialized from font, alignment and features from @p styleSrc,
+         * if @p styleDst has them different, they don't affect the animation
+         * in any way. If given style references a cursor or editing style, it
          * affects also the corresponding @ref TextLayerEditingStyleUniform,
          * the editing padding value, if it differs between the editing styles,
          * and the @ref TextLayerStyleUniform override for selected portions of
