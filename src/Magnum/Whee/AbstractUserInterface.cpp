@@ -2720,6 +2720,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                 state.topLevelLayoutIds.slice(
                     state.topLevelLayoutOffsets[i],
                     state.topLevelLayoutOffsets[i + 1]),
+                stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
                 state.nodeOffsets,
                 state.nodeSizes);
 
@@ -2733,8 +2734,12 @@ AbstractUserInterface& AbstractUserInterface::update() {
         for(Layouter& layouter: state.layouters) {
             AbstractLayouter* const instance = layouter.used.instance.get();
             if(instance && instance->state() & LayouterState::NeedsAssignmentUpdate) {
-                /** @todo yeah and this allocation REALLY isn't great */
-                instance->update(Containers::BitArray{ValueInit, instance->capacity()}, {}, state.nodeOffsets, state.nodeSizes);
+                instance->update(
+                    /** @todo yeah and this allocation REALLY isn't great */
+                    Containers::BitArray{ValueInit, instance->capacity()},
+                    {},
+                    stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parent),
+                    state.nodeOffsets, state.nodeSizes);
             }
         }
 
