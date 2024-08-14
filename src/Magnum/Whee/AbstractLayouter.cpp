@@ -30,6 +30,7 @@
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/StridedArrayView.h>
+#include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Whee/Handle.h"
 
@@ -295,6 +296,14 @@ NodeHandle AbstractLayouter::node(LayouterDataHandle layout) const {
 Containers::StridedArrayView1D<const NodeHandle> AbstractLayouter::nodes() const {
     return stridedArrayView(_state->layouts).slice(&Layout::used).slice(&Layout::Used::node);
 }
+
+void AbstractLayouter::setSize(const Vector2& size) {
+    CORRADE_ASSERT(size.product(),
+        "Whee::AbstractLayouter::setSize(): expected a non-zero size, got" << size, );
+    doSetSize(size);
+}
+
+void AbstractLayouter::doSetSize(const Vector2&) {}
 
 void AbstractLayouter::cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations) {
     State& state = *_state;

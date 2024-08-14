@@ -650,6 +650,16 @@ AbstractUserInterface& AbstractUserInterface::setSize(const Vector2& size, const
             instance->setSize(size, framebufferSize);
     }
 
+    /* If the size is different, set it on all existing layouters that have an
+       instance (so, also aren't freed). Layouters that don't have an instance
+       set yet will get it proxied directly in their setLayouterInstance()
+       call. */
+    if(sizeDifferent) for(std::size_t i = 0; i != state.layouters.size(); ++i) {
+        Layouter& layouter = state.layouters[i];
+        if(AbstractLayouter* const instance = layouter.used.instance.get())
+            instance->setSize(size);
+    }
+
     return *this;
 }
 
@@ -1214,6 +1224,11 @@ AbstractLayouter& AbstractUserInterface::setLayouterInstance(Containers::Pointer
         "Whee::AbstractUserInterface::setLayouterInstance(): instance for" << handle << "already set", *state.layouters[0].used.instance);
     Layouter& layouter = state.layouters[id];
     layouter.used.instance = Utility::move(instance);
+
+    /* If the size is already set, immediately proxy it to the layouter. If it
+       isn't, it gets done during the next setSize() call. */
+    if(!state.size.isZero())
+        layouter.used.instance->setSize(state.size);
 
     return *layouter.used.instance;
 }

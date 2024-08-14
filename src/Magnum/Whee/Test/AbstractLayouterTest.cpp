@@ -58,6 +58,10 @@ struct AbstractLayouterTest: TestSuite::Tester {
     void removeInvalid();
     void nodeInvalid();
 
+    void setSize();
+    void setSizeZero();
+    void setSizeNotImplemented();
+
     void cleanNodes();
     void cleanNodesEmpty();
     void cleanNodesNotImplemented();
@@ -86,6 +90,10 @@ AbstractLayouterTest::AbstractLayouterTest() {
               &AbstractLayouterTest::addNoHandlesLeft,
               &AbstractLayouterTest::removeInvalid,
               &AbstractLayouterTest::nodeInvalid,
+
+              &AbstractLayouterTest::setSize,
+              &AbstractLayouterTest::setSizeZero,
+              &AbstractLayouterTest::setSizeNotImplemented,
 
               &AbstractLayouterTest::cleanNodes,
               &AbstractLayouterTest::cleanNodesEmpty,
@@ -452,6 +460,59 @@ void AbstractLayouterTest::nodeInvalid() {
         "Whee::AbstractLayouter::node(): invalid handle Whee::LayoutHandle(Null, {0x0, 0x1})\n"
         "Whee::AbstractLayouter::node(): invalid handle Whee::LayouterDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
+}
+
+void AbstractLayouterTest::setSize() {
+    struct: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doSetSize(const Vector2& size) override {
+            ++called;
+            CORRADE_COMPARE(size, (Vector2{1.0f, 2.0f}));
+        }
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+
+        Int called = 0;
+    } layouter{layouterHandle(0, 1)};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    layouter.setSize({1.0f, 2.0f});
+    CORRADE_COMPARE(layouter.called, 1);
+}
+
+void AbstractLayouterTest::setSizeZero() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+    } layouter{layouterHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layouter.setSize({0.0f, 1.0f});
+    layouter.setSize({1.0f, 0.0f});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayouter::setSize(): expected a non-zero size, got Vector(0, 1)\n"
+        "Whee::AbstractLayouter::setSize(): expected a non-zero size, got Vector(1, 0)\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractLayouterTest::setSizeNotImplemented() {
+    struct: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
+    } layouter{layouterHandle(0, 1)};
+
+    layouter.setSize({1.0f, 2.0f});
+
+    /* Shouldn't crash or anything */
+    CORRADE_VERIFY(true);
 }
 
 void AbstractLayouterTest::cleanNodes() {

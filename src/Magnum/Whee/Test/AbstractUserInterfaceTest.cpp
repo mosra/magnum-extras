@@ -131,6 +131,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void animationAttachDataInvalidFeatures();
 
     void setSizeToLayers();
+    void setSizeToLayouters();
     void setSizeToRenderer();
     void setSizeZero();
     void setSizeNotCalledBeforeUpdate();
@@ -1019,6 +1020,7 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
               &AbstractUserInterfaceTest::animationAttachDataInvalidFeatures,
 
               &AbstractUserInterfaceTest::setSizeToLayers,
+              &AbstractUserInterfaceTest::setSizeToLayouters,
               &AbstractUserInterfaceTest::setSizeToRenderer,
               &AbstractUserInterfaceTest::setSizeZero,
               &AbstractUserInterfaceTest::setSizeNotCalledBeforeUpdate,
@@ -4752,6 +4754,99 @@ void AbstractUserInterfaceTest::setSizeToLayers() {
     })), TestSuite::Compare::Container);
 }
 
+void AbstractUserInterfaceTest::setSizeToLayouters() {
+    AbstractUserInterface ui{NoCreate};
+
+    /* Like setSizeToLayers(), but affectings layouters. Again state flags from
+       setSize() affecting layout state are tested thoroughly in state(). Here
+       there are no nodes, which makes them not being set at all. */
+
+    struct Layouter: AbstractLayouter {
+        explicit Layouter(LayouterHandle handle, Containers::Array<Containers::Pair<LayouterHandle, Vector2>>& calls): AbstractLayouter{handle}, calls(calls) {}
+
+        void doSetSize(const Vector2& size) override {
+            arrayAppend(calls, InPlaceInit, handle(), size);
+        }
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&) override {}
+
+        Containers::Array<Containers::Pair<LayouterHandle, Vector2>>& calls;
+    };
+
+    Containers::Array<Containers::Pair<LayouterHandle, Vector2>> calls;
+
+    /* Layouter instances set before the size is set shouldn't have doSetSize()
+       called */
+    /*LayouterHandle layerWithNoInstance =*/ ui.createLayouter();
+    LayouterHandle layouterSetBeforeFirstSize = ui.createLayouter();
+    LayouterHandle layouterThatIsRemoved = ui.createLayouter();
+    ui.setLayouterInstance(Containers::pointer<Layouter>(layouterSetBeforeFirstSize, calls));
+    ui.removeLayouter(layouterThatIsRemoved);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<LayouterHandle, Vector2>>({
+        /* Nothing yet */
+    })), TestSuite::Compare::Container);
+
+    /* Setting the size should set it for all layers that have instances and
+       support Draw. UserInterfaceState::NeedsRendererSizeSetup shouldn't be
+       set because there's no renderer for which it would be deferred. */
+    ui.setSize({300.0f, 200.0f}, {3000.0f, 2000.0f}, {30, 20});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+    CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{3000.0f, 2000.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30, 20}));
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<LayouterHandle, Vector2>>({
+        {layouterSetBeforeFirstSize, {300.0f, 200.0f}},
+    })), TestSuite::Compare::Container);
+
+    /* Setting a layer instance after setSize() was called should call
+       doSetSize() directly, but again only if it supports Draw */
+    calls = {};
+    LayouterHandle layouterSetAfterFirstSize = ui.createLayouter();
+    ui.setLayouterInstance(Containers::pointer<Layouter>(layouterSetAfterFirstSize, calls));
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<LayouterHandle, Vector2>>({
+        {layouterSetAfterFirstSize, {300.0f, 200.0f}},
+    })), TestSuite::Compare::Container);
+
+    /* Calling setSize() again with the same size should do nothing even if
+       framebuffer and window size is different, as framebuffer or window size
+       never reaches the layouters */
+    calls = {};
+    ui.setSize({300.0f, 200.0f}, {3.0f, 2.0f}, {30000, 20000});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+    CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{3.0f, 2.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30000, 20000}));
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<LayouterHandle, Vector2>>({
+        /* Nothing */
+    })), TestSuite::Compare::Container);
+
+    /* Calling setSize() again with different size should call doSetSize() on
+       all layers that have an instance and support Draw even if
+       framebufferSize and windowSize stays the same */
+    calls = {};
+    ui.setSize({3000.0f, 2000.0f}, {3.0f, 2.0f}, {30000, 20000});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+    CORRADE_COMPARE(ui.size(), (Vector2{3000.0f, 2000.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{3.0f, 2.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{30000, 20000}));
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<LayouterHandle, Vector2>>({
+        {layouterSetBeforeFirstSize, {3000.0f, 2000.0f}},
+        {layouterSetAfterFirstSize, {3000.0f, 2000.0f}},
+    })), TestSuite::Compare::Container);
+
+    /* Finally, verify that the unscaled size overload works as well */
+    calls = {};
+    ui.setSize({300, 200});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+    CORRADE_COMPARE(ui.size(), (Vector2{300.0f, 200.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{300.0f, 200.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{300, 200}));
+    CORRADE_COMPARE_AS(calls, (Containers::arrayView<Containers::Pair<LayouterHandle, Vector2>>({
+        {layouterSetBeforeFirstSize, {300.0f, 200.0f}},
+        {layouterSetAfterFirstSize, {300.0f, 200.0f}},
+    })), TestSuite::Compare::Container);
+}
+
 void AbstractUserInterfaceTest::setSizeToRenderer() {
     AbstractUserInterface ui{NoCreate};
 
@@ -6458,6 +6553,9 @@ void AbstractUserInterfaceTest::state() {
         using AbstractLayouter::add;
         using AbstractLayouter::remove;
 
+        /* doSetSize() not implemented here as it isn't called from
+           ui.update(), tested thoroughly in setSizeToLayouters() instead */
+
         void doClean(Containers::BitArrayView layoutIdsToRemove) override {
             CORRADE_COMPARE_AS(layoutIdsToRemove,
                 expectedLayoutIdsToRemove.sliceBit(0),
@@ -7161,9 +7259,9 @@ void AbstractUserInterfaceTest::state() {
 
     /* Calling setSize() with all values different sets state flags to update
        the renderer and the clip state. Other interactions between
-       setRendererInstance(), setSize() and layer instances are tested
-       thoroughly in renderer(), setSizeToRenderer() and setSizeToLayers()
-       instead. */
+       setRendererInstance(), setSize() and layer / layouter instances are
+       tested thoroughly in renderer(), setSizeToRenderer(), setSizeToLayers()
+       and setSizeToLayouters() instead. */
     ui.setSize({4.0f, 5.0f}, {376.0f, 234.0f}, {17, 35});
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup|UserInterfaceState::NeedsNodeClipUpdate);
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);

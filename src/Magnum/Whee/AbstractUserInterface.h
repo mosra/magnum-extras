@@ -412,7 +412,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref PointerEvent. The @p size and @p framebufferSize is passed
          * through to @ref AbstractLayer::setSize() to all layers with
          * @ref LayerFeature::Draw so they can set appropriate projection and
-         * other framebuffer-related properties.
+         * other framebuffer-related properties, similarly the @p size is
+         * passed through to @ref AbstractLayouter::setSize() to all layouters.
          *
          * There's no default size and this function is expected to be called
          * before the first @ref update() happens, either directly or through
@@ -422,8 +423,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          *
          * Calling this function with new values will update the event position
          * scaling accordingly. If @p size or @p framebufferSize changes,
-         * @ref AbstractLayer::setSize() is called on all layers. If @p size
-         * changes and any nodes were already created,
+         * @ref AbstractLayer::setSize() is called on all layers; if @p size
+         * changes, @ref AbstractLayouter::setSize() is called on all
+         * layouters. If @p size changes and any nodes were already created,
          * @ref UserInterfaceState::NeedsNodeClipUpdate is set. If a renderer
          * instance is set and this function is called for the first time,
          * @ref AbstractRenderer::setupFramebuffers() is called to make the
@@ -863,6 +865,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Expects that @p instance was created with a @ref LayouterHandle
          * returned from @ref createLayouter() earlier, the handle is valid and
          * @ref setLayouterInstance() wasn't called for the same handle yet.
+         *
+         * Calls @ref AbstractLayouter::setSize() on the layouter, unless
+         * neither @ref setSize() nor @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
+         * was called yet.
          * @see @ref AbstractLayouter::handle(),
          *      @ref isHandleValid(LayouterHandle) const
          */
