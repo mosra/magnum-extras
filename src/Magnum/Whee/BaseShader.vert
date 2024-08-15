@@ -49,7 +49,7 @@ layout(std140
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
-uniform highp mat3 transformationProjectionMatrix;
+uniform highp vec2 projection;
 
 layout(location = 0) in highp vec2 position;
 #ifndef SUBDIVIDED_QUADS
@@ -120,7 +120,9 @@ void main() {
     interpolatedTextureCoordinates = textureCoordinates;
     #endif
 
-    gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
+    /* The projection scales from UI size to the 2x2 unit square and Y-flips,
+       the (-1, 1) then translates the origin from top left to center */
+    gl_Position = vec4(projection*position + vec2(-1.0, 1.0), 0.0, 1.0);
 
     /* Case with 16 subdivided quads. They're all initially positioned in the
        corners and get expanded based on corner radii, outline width and
@@ -212,7 +214,9 @@ void main() {
         (cornerId & 1) == 0 ? +1.0 : -1.0,
         (cornerId & 2) == 0 ? +1.0 : -1.0);
 
-    gl_Position = vec4(transformationProjectionMatrix*vec3(shift + position, 1.0), 0.0).xywz;
+    /* The projection scales from UI size to the 2x2 unit square and Y-flips,
+       the (-1, 1) then translates the origin from top left to center */
+    gl_Position = vec4(projection*(shift + position) + vec2(-1.0, 1.0), 0.0, 1.0);
 
     /* Compared to the non-SUBDIVIDED_QUADS case above, here it's both
        interpolated and extrapolated */

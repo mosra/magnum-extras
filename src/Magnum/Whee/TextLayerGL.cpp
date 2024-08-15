@@ -72,8 +72,11 @@ class TextShaderGL: public GL::AbstractShaderProgram {
 
         explicit TextShaderGL(UnsignedInt styleCount);
 
-        TextShaderGL& setTransformationProjectionMatrix(const Matrix3& matrix) {
-            setUniform(_transformationProjectionMatrixUniform, matrix);
+        TextShaderGL& setProjection(const Vector2& scaling) {
+            /* Y-flipped scale from the UI size to the 2x2 unit square, the
+               shader then translates by (-1, 1) on its own to put the origin
+               at center */
+            setUniform(_projectionUniform, Vector2{2.0f, -2.0f}/scaling);
             return *this;
         }
 
@@ -88,7 +91,7 @@ class TextShaderGL: public GL::AbstractShaderProgram {
         }
 
     private:
-        Int _transformationProjectionMatrixUniform = 0;
+        Int _projectionUniform = 0;
 };
 
 TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
@@ -135,7 +138,7 @@ TextShaderGL::TextShaderGL(const UnsignedInt styleCount) {
     if(version < GL::Version::GLES310)
     #endif
     {
-        _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix"_s);
+        _projectionUniform = uniformLocation("projection"_s);
     }
 
     #ifndef MAGNUM_TARGET_GLES
@@ -165,8 +168,11 @@ class TextEditingShaderGL: public GL::AbstractShaderProgram {
         explicit TextEditingShaderGL(NoCreateT): GL::AbstractShaderProgram{NoCreate} {}
         explicit TextEditingShaderGL(UnsignedInt styleCount);
 
-        TextEditingShaderGL& setTransformationProjectionMatrix(const Matrix3& matrix) {
-            setUniform(_transformationProjectionMatrixUniform, matrix);
+        TextEditingShaderGL& setProjection(const Vector2& scaling) {
+            /* Y-flipped scale from the UI size to the 2x2 unit square, the
+               shader then translates by (-1, 1) on its own to put the origin
+               at center */
+            setUniform(_projectionUniform, Vector2{2.0f, -2.0f}/scaling);
             return *this;
         }
 
@@ -176,7 +182,7 @@ class TextEditingShaderGL: public GL::AbstractShaderProgram {
         }
 
     private:
-        Int _transformationProjectionMatrixUniform = 0;
+        Int _projectionUniform = 0;
 };
 
 TextEditingShaderGL::TextEditingShaderGL(const UnsignedInt styleCount) {
@@ -224,7 +230,7 @@ TextEditingShaderGL::TextEditingShaderGL(const UnsignedInt styleCount) {
     if(version < GL::Version::GLES310)
     #endif
     {
-        _transformationProjectionMatrixUniform = uniformLocation("transformationProjectionMatrix"_s);
+        _projectionUniform = uniformLocation("projection"_s);
     }
 
     #ifndef MAGNUM_TARGET_GLES
@@ -376,15 +382,9 @@ void TextLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
 
-    /* The TextLayer populates the data expecting the origin is top left and Y
-       down */
-    const Matrix3 projectionMatrix =
-        Matrix3::scaling({1.0f, -1.0f})*
-        Matrix3::translation({-1.0f, -1.0f})*
-        Matrix3::projection(size);
-    sharedState.shader.setTransformationProjectionMatrix(projectionMatrix);
+    sharedState.shader.setProjection(size);
     if(sharedState.hasEditingStyles)
-        sharedState.editingShader.setTransformationProjectionMatrix(projectionMatrix);
+        sharedState.editingShader.setProjection(size);
 
     /* For scaling and Y-flipping the clip rects in doDraw() */
     state.clipScale = Vector2{framebufferSize}/size;
