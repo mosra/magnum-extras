@@ -42,7 +42,7 @@ layout(std140
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
-uniform highp mat3 transformationProjectionMatrix;
+uniform highp vec2 projection;
 
 layout(location = 0) in highp vec2 position;
 layout(location = 1) in mediump vec3 textureCoordinates;
@@ -58,5 +58,7 @@ void main() {
        fragment shader invocation */
     interpolatedColor = styles[style].color*color;
 
-    gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
+    /* The projection scales from UI size to the 2x2 unit square and Y-flips,
+       the (-1, 1) then translates the origin from top left to center */
+    gl_Position = vec4(projection*position + vec2(-1.0, 1.0), 0.0, 1.0);
 }
