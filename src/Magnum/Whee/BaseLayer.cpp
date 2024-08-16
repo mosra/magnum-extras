@@ -460,9 +460,23 @@ void BaseLayer::doSetSize(const Vector2& size, const Vector2i& framebufferSize) 
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
 
-    /* Framebuffer size is used by background blur but also subsequently by
-       BaseLayerGL for scaling and Y-flipping clip rects, so not wrapping it in
-       any condition */
+    /* UI and framebuffer size is used for scaling smoothness expansion to
+       actual pixels, framebuffer size is used by background blur but also
+       subsequently by BaseLayerGL for scaling and Y-flipping clip rects, so
+       not wrapping these in any condition.
+
+       If their ratio differs and there are any data already that are affected,
+       trigger a data update. It affects also background blur */
+    if(size/Vector2{framebufferSize} != state.uiSize/Vector2{state.framebufferSize} && !state.data.isEmpty()) {
+        /* Subdivided quads do smoothness expansion in the shader, so they
+           don't need any data update */
+        if(!(sharedState.flags >= BaseLayerSharedFlag::SubdividedQuads))
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
+        /* Background blur quads have smoothness expansion as well */
+        if(sharedState.flags >= BaseLayerSharedFlag::BackgroundBlur)
+            setNeedsUpdate(LayerState::NeedsCompositeOffsetSizeUpdate);
+    }
+    state.uiSize = size;
     state.framebufferSize = framebufferSize;
 
     if(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur)
@@ -655,6 +669,9 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             state.vertices.size()/typeSize,
             std::ptrdiff_t(typeSize)};
 
+        /* Convert smoothness from a pixel value to the UI coordinates */
+        const Float smoothness = sharedState.smoothness*(state.uiSize/Vector2{state.framebufferSize}).max();
+
         /* Fill in quad corner positions and colors */
         const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
         for(const UnsignedInt dataId: dataIds) {
@@ -671,7 +688,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                to get a 2D "smoothness expansion vector" value, different for
                every data (and then another for textures), instead of just a
                single smoothness uniform for all. */
-            Vector4 padding = data.padding - Vector4{sharedState.smoothness};
+            Vector4 padding = data.padding - Vector4{smoothness};
             if(data.calculatedStyle < sharedState.styleCount)
                 padding += sharedState.styles[data.calculatedStyle].padding;
             else {
@@ -723,8 +740,8 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                    calculation again, now I just undo the smoothness. And using
                    those is also nice to the cache because they're literally
                    next to where I'm writing. */
-                const Vector2 paddedQuadSizeWithoutSmoothness = vertices[dataId*4 + 3].position - vertices[dataId*4 + 0].position - Vector2{2.0f*sharedState.smoothness};
-                const Vector2 smoothnessExpansion = data.textureCoordinateSize*sharedState.smoothness/paddedQuadSizeWithoutSmoothness*Vector2::yScale(-1.0f);
+                const Vector2 paddedQuadSizeWithoutSmoothness = vertices[dataId*4 + 3].position - vertices[dataId*4 + 0].position - Vector2{2.0f*smoothness};
+                const Vector2 smoothnessExpansion = data.textureCoordinateSize*smoothness/paddedQuadSizeWithoutSmoothness*Vector2::yScale(-1.0f);
 
                 /* The texture coordinates are Y-flipped compared to the
                    positions to account for Y-down (positions) vs Y-up (GL
@@ -882,7 +899,12 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
            which is calculated as sqrt(passCount*radius*radius), plus extra
            padding to match smoothness expansion of the rendered quads. The
            radius is in pixels, convert it to match the [-1, +1] coordinates,
-           i.e. multiply by 2. */
+           i.e. multiply by 2.
+
+           Note that both the `sharedState.backgroundBlurRadius` as well as
+           `sharedState.smoothness` are in pixels so they don't need any
+           additional adjustment, unlike above, where the smoothness is
+           converted to be UI-size-relative. */
         /** @todo exclude the cutoff from this? how does the sqrt count into
             that? take a max of count*radiusWithCutoff and this? */
         const Vector2 blurRadiusPadding = Math::sqrt(Float(state.backgroundBlurPassCount))*(sharedState.backgroundBlurRadius + sharedState.smoothness)*2.0f/Vector2{state.framebufferSize};

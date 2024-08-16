@@ -42,7 +42,8 @@ layout(std140
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
-uniform highp vec2 projection;
+uniform highp vec3 projection; /* xy = UI size to unit square scaling,
+                                  z = pixel smoothness to UI size scaling */
 
 layout(location = 0) in highp vec2 position;
 layout(location = 1) in mediump vec2 centerDistance;
@@ -57,12 +58,12 @@ void main() {
        off with non-zero smoothness. Similar thing is done in BaseLayer,
        although there it has to be CPU-side in order to correctly adjust
        texture coordinates as well. */
-    lowp vec2 smoothnessExpansion = vec2(style_smoothness)*sign(centerDistance);
+    lowp vec2 smoothnessExpansion = vec2(style_smoothness)*projection.z*sign(centerDistance);
     halfQuadSize = abs(centerDistance);
     interpolatedCenterDistance = centerDistance + smoothnessExpansion;
     interpolatedStyle = style;
 
     /* The projection scales from UI size to the 2x2 unit square and Y-flips,
        the (-1, 1) then translates the origin from top left to center */
-    gl_Position = vec4(projection*(position + smoothnessExpansion) + vec2(-1.0, 1.0), 0.0, 1.0);
+    gl_Position = vec4(projection.xy*(position + smoothnessExpansion) + vec2(-1.0, 1.0), 0.0, 1.0);
 }

@@ -99,11 +99,12 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
         explicit BaseShaderGL(UnsignedInt styleCount);
         explicit BaseShaderGL(Flags flags, UnsignedInt styleCount);
 
-        BaseShaderGL& setProjection(const Vector2& scaling) {
-            /* Y-flipped scale from the UI size to the 2x2 unit square, the
-               shader then translates by (-1, 1) on its own to put the origin
-               at center */
-            setUniform(_projectionUniform, Vector2{2.0f, -2.0f}/scaling);
+        BaseShaderGL& setProjection(const Vector2& scaling, const Float pixelScaling) {
+            /* XY is Y-flipped scale from the UI size to the 2x2 unit square,
+               the shader then translates by (-1, 1) on its own to put the
+               origin at center. Z is multiplied with the pixel smoothness
+               value to get the smoothness in actual UI units. */
+            setUniform(_projectionUniform, Vector3{Vector2{2.0f, -2.0f}/scaling, pixelScaling});
             return *this;
         }
 
@@ -488,7 +489,8 @@ void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
 
-    sharedState.shader.setProjection(size);
+    /** @todo Max or min? Should I even bother with non-square scaling? */
+    sharedState.shader.setProjection(size, (size/Vector2{framebufferSize}).max());
 
     /* For scaling and Y-flipping the clip rects in doDraw() */
     state.clipScale = Vector2{framebufferSize}/size;

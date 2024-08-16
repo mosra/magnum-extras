@@ -49,7 +49,8 @@ layout(std140
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
 #endif
-uniform highp vec2 projection;
+uniform highp vec3 projection; /* xy = UI size to unit square scaling,
+                                  z = pixel smoothness to UI size scaling */
 
 layout(location = 0) in highp vec2 position;
 #ifndef SUBDIVIDED_QUADS
@@ -100,7 +101,7 @@ void main() {
     #ifndef SUBDIVIDED_QUADS
     /* The halfQuadSize passed to the fragment shader needs to be *without* the
        expansion to correctly know where the edges are */
-    halfQuadSize = abs(centerDistance) - vec2(style_smoothness);
+    halfQuadSize = abs(centerDistance) - vec2(style_smoothness*projection.z);
     #ifndef NO_OUTLINE
     /* Calculate the outline quad size here already to save a vec4 load in each
        fragment shader invocation */
@@ -122,7 +123,7 @@ void main() {
 
     /* The projection scales from UI size to the 2x2 unit square and Y-flips,
        the (-1, 1) then translates the origin from top left to center */
-    gl_Position = vec4(projection*position + vec2(-1.0, 1.0), 0.0, 1.0);
+    gl_Position = vec4(projection.xy*position + vec2(-1.0, 1.0), 0.0, 1.0);
 
     /* Case with 16 subdivided quads. They're all initially positioned in the
        corners and get expanded based on corner radii, outline width and
@@ -181,15 +182,15 @@ void main() {
 
     /* Minimal inner quad shift needed to cover the inner/outer corner radius
        or the smoothness, whichever is largest. At the very least it has to be
-       shifted by 1 in addition to the outline width in order to have a
-       non-zero `edgeDistance` value for the inner vertices. If they'd be zero,
-       all pixels in the center quad would classify as being on the inner
-       outline edge, causing the fragment shader to draw the whole thing with
-       just the outline color. */
-    lowp float smoothness = style_smoothness;
-    lowp float innerOutlineSmoothness = style_innerOutlineSmoothness;
+       shifted by 1 *pixel* (so, also multiplied by projection.z) in addition
+       to the outline width in order to have a non-zero `edgeDistance` value
+       for the inner vertices. If they'd be zero, all pixels in the center quad
+       would classify as being on the inner outline edge, causing the fragment
+       shader to draw the whole thing with just the outline color. */
+    lowp float smoothness = style_smoothness*projection.z;
+    lowp float innerOutlineSmoothness = style_innerOutlineSmoothness*projection.z;
     mediump float radiusOrSmoothnessShift = max(cornerRadius, smoothness);
-    mediump float innerRadiusOrSmoothnessShift = max(1.0, max(outlineCornerRadius, innerOutlineSmoothness));
+    mediump float innerRadiusOrSmoothnessShift = max(1.0*projection.z, max(outlineCornerRadius, innerOutlineSmoothness));
 
     /* Calculate how far to shift so the inner vertices include both radii and
        corresponding smoothness and the total outline width, and the outer
@@ -216,7 +217,7 @@ void main() {
 
     /* The projection scales from UI size to the 2x2 unit square and Y-flips,
        the (-1, 1) then translates the origin from top left to center */
-    gl_Position = vec4(projection*(shift + position) + vec2(-1.0, 1.0), 0.0, 1.0);
+    gl_Position = vec4(projection.xy*(shift + position) + vec2(-1.0, 1.0), 0.0, 1.0);
 
     /* Compared to the non-SUBDIVIDED_QUADS case above, here it's both
        interpolated and extrapolated */
