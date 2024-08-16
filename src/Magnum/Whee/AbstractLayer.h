@@ -609,7 +609,9 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref LayerFeature::Composite isn't supported,
          * @p compositeRectOffsets and @p compositeRectSizes are expected to
          * be empty. The @p nodeOffsets, @p nodeSizes and @p nodesEnabled views
-         * should be large enough to contain any valid node ID. Delegates to
+         * should be large enough to contain any valid node ID. If the layer
+         * advertises @ref LayerFeature::Draw, expects that @ref setSize() was
+         * called at least once before this function. Delegates to
          * @ref doUpdate(), see its documentation for more information about
          * the arguments.
          *

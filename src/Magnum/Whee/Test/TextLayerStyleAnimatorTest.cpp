@@ -2513,6 +2513,10 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
         }
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     DataHandle data1 = layer.create(2, "", {});
     DataHandle data2 = layer.create(2, "", {});
 

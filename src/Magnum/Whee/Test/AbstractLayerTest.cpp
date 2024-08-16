@@ -120,6 +120,7 @@ struct AbstractLayerTest: TestSuite::Tester {
     void updateInvalidState();
     void updateInvalidStateComposite();
     void updateInvalidSizes();
+    void updateNoSizeSet();
 
     void state();
 
@@ -262,7 +263,8 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::updateNotImplemented,
               &AbstractLayerTest::updateInvalidState,
               &AbstractLayerTest::updateInvalidStateComposite,
-              &AbstractLayerTest::updateInvalidSizes});
+              &AbstractLayerTest::updateInvalidSizes,
+              &AbstractLayerTest::updateNoSizeSet});
 
     addInstancedTests({&AbstractLayerTest::state},
         Containers::arraySize(StateData));
@@ -2056,6 +2058,10 @@ void AbstractLayerTest::updateComposite() {
 
     UnsignedByte nodesEnabled[1]{0x5};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     layer.update(
         LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsCommonDataUpdate,
         Containers::arrayView({
@@ -2327,6 +2333,28 @@ void AbstractLayerTest::updateInvalidSizes() {
         TestSuite::Compare::String);
 }
 
+void AbstractLayerTest::updateNoSizeSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Layer: AbstractLayer {
+        Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, _features{features} {}
+
+        LayerFeatures doFeatures() const override { return _features; }
+
+        private:
+            LayerFeatures _features;
+    } layerNoDraw{layerHandle(0, 1), {}},
+      layer{layerHandle(0, 1), LayerFeature::Draw};
+
+    /* It's fine if the layer doesn't support drawing */
+    layerNoDraw.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::update(): user interface size wasn't set\n");
+}
+
 void AbstractLayerTest::state() {
     auto&& data = StateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -2348,6 +2376,11 @@ void AbstractLayerTest::state() {
         private:
             LayerFeatures _features;
     } layer{layerHandle(0xab, 0x12), data.features};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    if(data.features >= LayerFeature::Draw)
+        layer.setSize({1, 1}, {1, 1});
 
     CORRADE_COMPARE(layer.state(), LayerStates{});
 

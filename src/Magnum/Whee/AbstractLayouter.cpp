@@ -112,7 +112,10 @@ struct AbstractLayouter::State {
     LayouterHandle handle;
     LayouterStates state;
 
-    /* 1 / 5 bytes free */
+    #ifndef CORRADE_NO_ASSERT
+    bool setSizeCalled = false;
+    #endif
+    /* 0/4 bytes free, 1/5 on a no-assert build */
 
     Containers::Array<Layout> layouts;
     /* Indices in the `layouts` array. The Layout then has a nextFree member
@@ -300,6 +303,9 @@ Containers::StridedArrayView1D<const NodeHandle> AbstractLayouter::nodes() const
 void AbstractLayouter::setSize(const Vector2& size) {
     CORRADE_ASSERT(size.product(),
         "Whee::AbstractLayouter::setSize(): expected a non-zero size, got" << size, );
+    #ifndef CORRADE_NO_ASSERT
+    _state->setSizeCalled = true;
+    #endif
     doSetSize(size);
 }
 
@@ -339,8 +345,11 @@ void AbstractLayouter::update(const Containers::BitArrayView layoutIdsToUpdate, 
         "Whee::AbstractLayouter::update(): expected layoutIdsToUpdate to have" << capacity() << "bits but got" << layoutIdsToUpdate.size(), );
     CORRADE_ASSERT(nodeOffsets.size() == nodeParents.size() && nodeSizes.size() == nodeParents.size(),
         "Whee::AbstractLayouter::update(): expected node parent, offset and size views to have the same size but got" << nodeParents.size() << Debug::nospace << "," << nodeOffsets.size() << "and" << nodeSizes.size(), );
+    State& state = *_state;
+    CORRADE_ASSERT(state.setSizeCalled,
+        "Whee::AbstractLayouter::update(): user interface size wasn't set", );
     doUpdate(layoutIdsToUpdate, topLevelLayoutIds, nodeParents, nodeOffsets, nodeSizes);
-    _state->state &= ~LayouterState::NeedsAssignmentUpdate;
+    state.state &= ~LayouterState::NeedsAssignmentUpdate;
 }
 
 }}

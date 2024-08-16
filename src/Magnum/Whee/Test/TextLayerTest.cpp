@@ -4966,6 +4966,10 @@ void TextLayerTest::dynamicStyleEditingStyles() {
         }
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     /* All styles should be set to their defaults initially. Checking just a
        subset of the non-editing properties that might actually change, should
        be enough. */
@@ -6273,6 +6277,10 @@ void TextLayerTest::setCursor() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     /* Just to be sure the setters aren't picking up the first ever data
        always */
     layer.create(0, "", {});
@@ -6443,6 +6451,10 @@ void TextLayerTest::updateText() {
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     /* Use style 2 to verify it actually uses that one and not some other
        in subsequent updateText(); have also some text before and after to
@@ -6689,6 +6701,10 @@ void TextLayerTest::editText() {
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     /* Use style 2 to verify it actually uses that one and not some other
        in subsequent editText(); have also some text before and after to
@@ -7275,6 +7291,10 @@ void TextLayerTest::setColor() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     /* Just to be sure the setters aren't picking up the first ever data
        always */
     layer.create(0, "", {});
@@ -7344,6 +7364,10 @@ void TextLayerTest::setPadding() {
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     /* Just to be sure the setters aren't picking up the first ever data
        always */
@@ -8069,6 +8093,10 @@ void TextLayerTest::updateCleanDataOrder() {
             return static_cast<const State&>(*_state);
         }
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     if(data.styleCount < 6 && data.dynamicStyleCount) {
         /* Dynamic style 0 and 1 is style 4 and 5, which is used by data3 and
@@ -9103,6 +9131,10 @@ void TextLayerTest::updateAlignment() {
         }
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     NodeHandle node3 = nodeHandle(3, 0);
 
     /* 3 chars, size x2, so the bounding box is 9x11 */
@@ -9214,6 +9246,10 @@ void TextLayerTest::updateAlignmentGlyph() {
             return static_cast<const State&>(*_state);
         }
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     NodeHandle node3 = nodeHandle(3, 0);
 
@@ -9364,6 +9400,10 @@ void TextLayerTest::updatePadding() {
         }
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     NodeHandle node3 = nodeHandle(3, 0);
 
     /* 3 chars, size x2, so the bounding box is 9x11 */
@@ -9476,6 +9516,10 @@ void TextLayerTest::updatePaddingGlyph() {
         }
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     NodeHandle node3 = nodeHandle(3, 0);
 
     /* Size x2, so the bounding box is 6x8 */
@@ -9530,6 +9574,10 @@ void TextLayerTest::updateNoStyleSet() {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     std::ostringstream out;
     Error redirectError{&out};
     layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
@@ -9559,6 +9607,10 @@ void TextLayerTest::updateNoEditingStyleSet() {
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     /* Set the base style but not the editing one */
     if(data.styleCount == 1)
@@ -9606,6 +9658,12 @@ void TextLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     CORRADE_COMPARE(layer1.state(), LayerStates{});
     CORRADE_COMPARE(layer2.state(), LayerStates{});
     CORRADE_COMPARE(layer3.state(), LayerStates{});
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer1.setSize({1, 1}, {1, 1});
+    layer2.setSize({1, 1}, {1, 1});
+    layer3.setSize({1, 1}, {1, 1});
 
     /* Explicitly set a non-trivial state on some of the layers */
     layer1.setNeedsUpdate(LayerState::NeedsCommonDataUpdate);

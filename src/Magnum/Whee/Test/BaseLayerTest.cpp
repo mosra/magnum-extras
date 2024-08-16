@@ -121,7 +121,6 @@ struct BaseLayerTest: TestSuite::Tester {
 
     void updateEmpty();
     void updateDataOrder();
-    void updateNoSizeSet();
     void updateNoStyleSet();
 
     void sharedNeedsUpdateStatePropagatedToLayers();
@@ -454,8 +453,6 @@ BaseLayerTest::BaseLayerTest() {
 
     addInstancedTests({&BaseLayerTest::updateDataOrder},
         Containers::arraySize(UpdateDataOrderData));
-
-    addTests({&BaseLayerTest::updateNoSizeSet});
 
     addInstancedTests({&BaseLayerTest::updateNoStyleSet},
         Containers::arraySize(UpdateNoStyleSetData));
@@ -1698,6 +1695,10 @@ void BaseLayerTest::setColor() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     /* Just to be sure the setters aren't picking up the first ever data
        always */
     layer.create(1);
@@ -1742,6 +1743,10 @@ void BaseLayerTest::setOutlineWidth() {
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     /* Just to be sure the setters aren't picking up the first ever data
        always */
@@ -1806,6 +1811,10 @@ void BaseLayerTest::setPadding() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
+
     /* Just to be sure the setters aren't picking up the first ever data
        always */
     layer.create(2);
@@ -1867,6 +1876,10 @@ void BaseLayerTest::setTextureCoordinates() {
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     DataHandle data = layer.create(0);
     CORRADE_COMPARE(layer.textureCoordinateOffset(data), Vector3{0.0f});
@@ -2145,10 +2158,9 @@ void BaseLayerTest::updateDataOrder() {
     nodesEnabled.set(15);
 
     /* If the layer has background blur enabled, it needs to know how large the
-       framebuffer is to appropriately pad compositing rectangles. Framebuffer
-       size is (10, 100) times UI size. */
-    if(data.backgroundBlurPassCount)
-        layer.setSize({25, 50}, {250, 5000});
+       framebuffer is to appropriately pad compositing rectangles, but the call
+       is required always. Framebuffer size is (10, 100) times UI size. */
+    layer.setSize({25, 50}, {250, 5000});
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
@@ -2581,30 +2593,6 @@ void BaseLayerTest::updateDataOrder() {
     }
 }
 
-void BaseLayerTest::updateNoSizeSet() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
-
-        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{1}
-        /* User interface size is only needed for compositing right now.
-           Without this flag it's not required, which is tested in
-           updateDataOrder() above. */
-        .addFlags(BaseLayerSharedFlag::BackgroundBlur)
-    };
-
-    struct Layer: BaseLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::update(): user interface size wasn't set\n");
-}
-
 void BaseLayerTest::updateNoStyleSet() {
     auto&& data = UpdateNoStyleSetData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -2624,6 +2612,10 @@ void BaseLayerTest::updateNoStyleSet() {
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer.setSize({1, 1}, {1, 1});
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -2656,13 +2648,11 @@ void BaseLayerTest::sharedNeedsUpdateStatePropagatedToLayers() {
     CORRADE_COMPARE(layer2.state(), LayerStates{});
     CORRADE_COMPARE(layer3.state(), LayerStates{});
 
-    /* If the layer has background blur enabled, setSize() is required to be
-       called. The actual sizes aren't used for testing anything here tho. */
-    if(data.flags >= BaseLayerSharedFlag::BackgroundBlur) {
-        layer1.setSize({1, 1}, {1, 1});
-        layer2.setSize({1, 1}, {1, 1});
-        layer3.setSize({1, 1}, {1, 1});
-    }
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layer1.setSize({1, 1}, {1, 1});
+    layer2.setSize({1, 1}, {1, 1});
+    layer3.setSize({1, 1}, {1, 1});
 
     /* Explicitly set a non-trivial state on some of the layers */
     layer1.setNeedsUpdate(LayerState::NeedsCommonDataUpdate);

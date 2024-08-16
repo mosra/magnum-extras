@@ -273,9 +273,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayouter {
          * just for testing purposes, there should be no need to call this
          * function directly and doing so may cause internal
          * @ref AbstractUserInterface state update to misbehave. Expects that
-         * the size of @p layoutIdsToUpdate is the same as @ref capacity(),
-         * and that the @p nodeParents, @p nodeOffsets and @p nodeSizes views
-         * have all the same size. The @p nodeParents, @p nodeOffsets and
+         * @ref setSize() was called at least once before this function, the
+         * size of @p layoutIdsToUpdate is the same as @ref capacity(), and
+         * that the @p nodeParents, @p nodeOffsets and @p nodeSizes views have
+         * all the same size. The @p nodeParents, @p nodeOffsets and
          * @p nodeSizes views should be large enough to contain any valid node
          * ID. Delegates to @ref doUpdate(), see its documentation for more
          * information about the arguments.
