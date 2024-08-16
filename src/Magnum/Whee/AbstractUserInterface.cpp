@@ -62,7 +62,6 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         _c(NeedsNodeUpdate)
         _c(NeedsDataClean)
         _c(NeedsNodeClean)
-        _c(NeedsRendererSizeSetup)
         _c(NeedsAnimationAdvance)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -90,7 +89,6 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         UserInterfaceState::NeedsDataAttachmentUpdate,
         /* Implied by NeedsDataAttachmentUpdate, has to be after */
         UserInterfaceState::NeedsDataUpdate,
-        UserInterfaceState::NeedsRendererSizeSetup,
         UserInterfaceState::NeedsAnimationAdvance
     });
 }
@@ -613,18 +611,13 @@ AbstractUserInterface& AbstractUserInterface::setSize(const Vector2& size, const
     state.framebufferSize = framebufferSize;
 
     /* If framebuffer size is different and renderer instance is already
-       present, schedule a framebuffer size setup. If the renderer doesn't have
-       the framebuffers set up yet, do it immediately so the renderer internals
-       such as custom framebuffers are ready to be used by the application.
-       Only the subsequent size changes get deferred to updateRenderer(). If a
-       renderer isn't present yet, this is done in setRendererInstance()
-       instead. */
-    if(framebufferSizeDifferent && state.renderer) {
-        if(state.renderer->framebufferSize().isZero())
-            state.renderer->setupFramebuffers(framebufferSize);
-        else
-            state.state |= UserInterfaceState::NeedsRendererSizeSetup;
-    }
+       present, perform a framebuffer size setup. This is always done
+       immediately so the renderer internals such as custom framebuffers are
+       ready to be used by the application (clearing before draw, etc.). Layers
+       that advertise LayerFeature::Composite then perform similar immediate
+       setup themselves. */
+    if(framebufferSizeDifferent && state.renderer)
+        state.renderer->setupFramebuffers(framebufferSize);
 
     /* If the size is different, set a state flag to recalculate the set of
        visible nodes. I.e., some might now be outside of the UI area and
@@ -2459,30 +2452,10 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
     return *this;
 }
 
-AbstractUserInterface& AbstractUserInterface::updateRenderer() {
-    /** @todo once this gets more logic, the direct setupFramebuffers() calls
-        in setSize() and setRendererInstance() should be (the state flag bit)
-        and calls to this function instead */
-
-    /* If renderer framebuffer setup is desired, do it. The flag should be set
-       only if there's actually a renderer instance and the size is set. */
-    State& state = *_state;
-    if(state.state >= UserInterfaceState::NeedsRendererSizeSetup) {
-        CORRADE_INTERNAL_ASSERT(state.renderer && !state.framebufferSize.isZero());
-        state.renderer->setupFramebuffers(state.framebufferSize);
-    }
-
-    state.state &= ~UserInterfaceState::NeedsRendererSizeSetup;
-    return *this;
-}
-
 AbstractUserInterface& AbstractUserInterface::update() {
     /* Call clean implicitly in order to make the internal state ready for
        update. Is a no-op if there's nothing to clean. */
     clean();
-
-    /* Update the renderer as the first thing, propagating sizes to it */
-    updateRenderer();
 
     /* Get the state after the clean call including what bubbles from layers.
        If there's nothing to update, bail. No other states should be left after

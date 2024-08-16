@@ -263,49 +263,44 @@ const struct {
     bool nodeAttachmentAnimators;
     bool dataAttachmentAnimators;
     bool clean;
-    bool updateRenderer;
     bool noOp;
 } StateData[]{
     {"",
-        false, false, false, false, true, true, false},
+        false, false, false, false, true, false},
     {"with no-op calls",
-        false, false, false, false, true, true, true},
+        false, false, false, false, true, true},
     {"with implicit clean",
-        false, false, false, false, false, true, false},
+        false, false, false, false, false, false},
     {"with implicit clean and no-op calls",
-        false, false, false, false, false, true, true},
-    {"with implicit clean and renderer update",
-        false, false, false, false, false, false, false},
+        false, false, false, false, false, true},
     {"with layouters",
-        false, true, false, false, true, true, false},
+        false, true, false, false, true, false},
     {"with layouters, with no-op calls",
-        false, true, false, false, true, true, true},
+        false, true, false, false, true, true},
     {"with layouters, with implicit clean",
-        false, true, false, false, false, true, false},
+        false, true, false, false, false, false},
     {"with layouters, with implicit clean and no-op calls",
-        false, true, false, false, false, true, true},
-    {"with layouters, with implicit clean and renderer update",
-        false, true, false, false, false, false, false},
+        false, true, false, false, false, true},
     {"with node attachment animators",
-        false, false, true, false, true, true, false},
+        false, false, true, false, true, false},
     {"with node attachment animators, with no-op calls",
-        false, false, true, false, true, true, true},
+        false, false, true, false, true, true},
     {"with node attachment animators, with implicit clean",
-        false, false, true, false, false, true, false},
+        false, false, true, false, false, false},
     {"with node attachment animators, with implicit clean and no-op calls",
-        false, false, true, false, false, true, true},
+        false, false, true, false, false, true},
     {"with data attachment animators",
-        false, false, false, true, true, true, false},
+        false, false, false, true, true, false},
     {"with data attachment animators, with no-op calls",
-        false, false, false, true, true, true, true},
+        false, false, false, true, true, true},
     {"with data attachment animators, with implicit clean",
-        false, false, false, true, false, true, false},
+        false, false, false, true, false, false},
     {"with data attachment animators, with implicit clean and no-op calls",
-        false, false, false, true, false, true, true},
+        false, false, false, true, false, true},
     {"compositing layer",
-        true, false, false, false, true, true, false},
+        true, false, false, false, true, false},
     {"compositing layer, with layouters",
-        true, true, false, false, true, true, false},
+        true, true, false, false, true, false},
 };
 
 const struct {
@@ -563,112 +558,103 @@ const struct {
 const struct {
     const char* name;
     bool clean;
-    bool updateRenderer;
     bool update;
     bool reorderLayers;
 } DrawData[]{
-    {"clean + updateRenderer + update before", true, true, true, false},
-    {"clean + update before", true, false, true, false},
-    {"clean before", true, false, false, false},
-    {"updateRenderer before", false, true, false, false},
-    {"update before", false, false, true, false},
-    {"", false, false, false, false},
-    {"non-implicit layer order", false, false, false, true},
+    {"clean + update before", true, true, false},
+    {"clean before", true, false, false},
+    {"update before", false, true, false},
+    {"", false, false, false},
+    {"non-implicit layer order", false, false, true},
 };
 
 const struct {
     const char* name;
     bool layer1, layer2, node;
-    bool hide, attach, clean, updateRenderer, update;
+    bool hide, attach, clean, update;
 } DrawEmptyData[]{
-    {"nothing, clean + updateRenderer + update before",
+    {"nothing, clean + update before",
         false, false, false,
-        false, false, true, true, true},
+        false, false, true, true},
     {"nothing, clean before",
         false, false, false,
-        false, false, true, false, false},
-    {"nothing, updateRenderer before",
-        false, false, false,
-        false, false, false, true, false},
+        false, false, true, false},
     {"nothing, update before",
         false, false, false,
-        false, false, false, false, true},
+        false, false, false, true},
     {"nothing",
         false, false, false,
-        false, false, false, false, false},
-
-    /* explicit updateRenderer() call tested only once above as it doesn't
-       affect the other cases any differently */
+        false, false, false, false},
 
     {"no node, one layer with update needed",
         true, false, false,
-        false, false, false, false, false},
+        false, false, false, false},
     {"no node, two layers with update needed",
         true, true, false,
-        false, false, false, false, false},
+        false, false, false, false},
     {"no node, two layers with update needed, clean + update before",
         true, true, false,
-        false, false, true, false, true},
+        false, false, true, true},
     {"no node, two layers with update needed, clean before",
         true, true, false,
-        false, false, true, false, false},
+        false, false, true, false},
     {"no node, two layers with update needed, update before",
         true, true, false,
-        false, false, false, false, true},
+        false, false, false, true},
 
     {"node but no data attachment, one layer with update needed",
         true, false, true,
-        false, false, false, false, false},
+        false, false, false, false},
     {"node but no data attachment, two layers with update needed",
         true, true, true,
-        false, false, false, false, false},
+        false, false, false, false},
     {"node but no data attachment, two layers with update needed, clean + update before",
         true, true, true,
-        false, false, true, false, true},
+        false, false, true, true},
     {"node but no data attachment, two layers with update needed, clean before",
         true, true, true,
-        false, false, true, false, false},
+        false, false, true, false},
     {"node but no data attachment, two layers with update needed, update before",
         true, true, true,
-        false, false, false, false, true},
+        false, false, false, true},
 
     {"node not in top-level order, no layers",
         false, false, true,
-        false, true, false, false, false},
+        false, true, false, false},
     {"node not in top-level order, one layer",
         true, false, true,
-        false, true, false, false, false},
+        false, true, false, false},
     {"node not in top-level order, two layers",
         true, true, true,
-        false, true, false, false, false},
+        false, true, false, false},
     {"node not in top-level order, two layers, clean + update before",
         true, true, true,
-        false, true, true, false, true},
+        false, true, true, true},
     {"node not in top-level order, two layers, clean before",
         true, true, true,
-        false, true, true, false, false},
+        false, true, true, false},
     {"node not in top-level order, two layers, update before",
         true, true, true,
-        false, true, false, false, true},
+        false, true, false, true},
 
     {"node hidden, no layers",
         false, false, true,
-        true, true, false, false, false},
+        true, true, false, false},
     {"node hidden, one layer",
         true, false, true,
-        true, true, false, false, false},
+        true, true, false, false},
     {"node hidden, two layers",
         true, true, true,
-        true, true, false, false, false},
+        true, true, false, false},
     {"node hidden, two layers, clean + update before",
         true, true, true,
-        true, true, true, false, true},
+        true, true, true, true},
     {"node hidden, two layers, clean before",
         true, true, true,
-        true, true, true, false, false},
+        true, true, true, false},
     {"node hidden, two layers, update before",
         true, true, true,
-        true, true, false, false, false},
+        true, true, false, false},
 };
 
 const struct {
@@ -4881,15 +4867,11 @@ void AbstractUserInterfaceTest::setSizeToRenderer() {
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().framebufferSize(), (Vector2i{10, 100}));
 
-    /* Calling setSize() again will not propagate it directly anymore but set a
-       state flag */
+    /* Calling setSize() again will propagate it directly again. Deferring it
+       to a later time would only cause pain on application side, as it'd have
+       to explicitly call update() before clearing a compositing framebuffer,
+       etc. etc.  */
     ui.setSize({165.0f, 156.0f}, {376.0f, 234.0f}, {17, 35});
-    CORRADE_COMPARE(called, 1);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup);
-    CORRADE_COMPARE(ui.renderer<Renderer>().framebufferSize(), (Vector2i{10, 100}));
-
-    /* Only a call to update() sets it */
-    ui.update();
     CORRADE_COMPARE(called, 2);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     CORRADE_COMPARE(ui.renderer<Renderer>().framebufferSize(), (Vector2i{17, 35}));
@@ -7257,15 +7239,14 @@ void AbstractUserInterfaceTest::state() {
     CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
     CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
 
-    /* Calling setSize() with all values different sets state flags to update
-       the renderer and the clip state. Other interactions between
-       setRendererInstance(), setSize() and layer / layouter instances are
+    /* Calling setSize() with all values different setups the renderer and sets
+       state flags to update the clip state. Other interactions between setRendererInstance(), setSize() and layer / layouter instances are
        tested thoroughly in renderer(), setSizeToRenderer(), setSizeToLayers()
        and setSizeToLayouters() instead. */
     ui.setSize({4.0f, 5.0f}, {376.0f, 234.0f}, {17, 35});
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup|UserInterfaceState::NeedsNodeClipUpdate);
-    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
-    CORRADE_COMPARE(ui.renderer().framebufferSize(), Vector2i{100});
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
+    CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
+    CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
 
     /* Calling clean() should be a no-op */
     if(data.clean && data.noOp) {
@@ -7273,7 +7254,7 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
             ui.clean();
         }
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup|UserInterfaceState::NeedsNodeClipUpdate);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
         if(data.layouters) {
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter1).cleanCallCount, 0);
             CORRADE_COMPARE(ui.layouter<Layouter>(layouter2).cleanCallCount, 0);
@@ -7286,17 +7267,8 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
     }
 
-    /* Calling updateRenderer() should setup renderer framebuffers again */
-    if(data.updateRenderer) {
-        ui.updateRenderer();
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
-        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
-        CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
-    }
-
-    /* Calling update() should delegate to updateRenderer() if needed and then
-       refresh the cull state in all layers. It doesn't call anything in the
-       layouters. */
+    /* Calling update() should refresh the cull state in all layers. It doesn't
+       call anything in the layouters. */
     {
         CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
         UnsignedInt expectedDataIds[]{
@@ -7386,14 +7358,6 @@ void AbstractUserInterfaceTest::state() {
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(nodeAttachmentAnimator).cleanCallCount, 0);
         if(data.dataAttachmentAnimators)
             CORRADE_COMPARE(ui.animator<AttachmentAnimator>(dataAttachmentAnimator).cleanCallCount, 0);
-    }
-
-    /* Calling updateRenderer() should be a no-op */
-    if(data.updateRenderer) {
-        ui.updateRenderer();
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClipUpdate);
-        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 2);
-        CORRADE_COMPARE(ui.renderer().framebufferSize(), (Vector2i{17, 35}));
     }
 
     /* Calling update() resets back to the "everything visible" state like
@@ -10685,25 +10649,15 @@ void AbstractUserInterfaceTest::draw() {
     auto&& data = DrawData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    /* windowSize isn't used for anything here, framebufferSize is subsequently
-       changed */
-    AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 30.0f}, {500, 400}};
+    /* windowSize isn't used for anything here */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 30.0f}, {400, 500}};
 
     struct Renderer: AbstractRenderer {
-        explicit Renderer(Int& setupFramebufferCallCount): setupFramebufferCallCount(setupFramebufferCallCount) {}
-
         RendererFeatures doFeatures() const override { return {}; }
-        void doSetupFramebuffers(const Vector2i& size) override {
-            if(!setupFramebufferCallCount)
-                CORRADE_COMPARE(size, (Vector2i{500, 400}));
-            else
-                CORRADE_COMPARE(size, (Vector2i{400, 500}));
-            ++setupFramebufferCallCount;
-        }
+        void doSetupFramebuffers(const Vector2i&) override {}
         void doTransition(RendererTargetState, RendererTargetState, RendererDrawStates, RendererDrawStates) override {}
-
-        Int& setupFramebufferCallCount;
     };
+    ui.setRendererInstance(Containers::pointer<Renderer>());
 
     struct Layer: AbstractLayer {
         explicit Layer(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, features{features} {}
@@ -10831,17 +10785,6 @@ void AbstractUserInterfaceTest::draw() {
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
-
-    /* Set up a renderer. It sets the size to it immediately. */
-    Int rendererSetupFramebufferCallCount = 0;
-    ui.setRendererInstance(Containers::pointer<Renderer>(rendererSetupFramebufferCallCount));
-    CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    CORRADE_COMPARE(rendererSetupFramebufferCallCount, 1);
-
-    /* The next setSize() call is then deferred */
-    ui.setSize({200.0f, 300.0f}, {20.0f, 30.0f}, {400, 500});
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsRendererSizeSetup);
-    CORRADE_COMPARE(rendererSetupFramebufferCallCount, 1);
 
     /*   1 2      3 4 5       6 7 8      9 10     11
        3 +------------------------+
@@ -11057,8 +11000,7 @@ void AbstractUserInterfaceTest::draw() {
     CORRADE_COMPARE(ui.layer(layer1).usedCount(), 5);
     CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
     CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
-    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean|UserInterfaceState::NeedsRendererSizeSetup);
-    CORRADE_COMPARE(rendererSetupFramebufferCallCount, 1);
+    CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeClean);
     CORRADE_COMPARE(layer1UpdateCallCount, 0);
     CORRADE_COMPARE(layer2UpdateCallCount, 0);
     CORRADE_COMPARE(layer3UpdateCallCount, 0);
@@ -11068,29 +11010,19 @@ void AbstractUserInterfaceTest::draw() {
         CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
         CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
         CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
-        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate|UserInterfaceState::NeedsRendererSizeSetup);
-        CORRADE_COMPARE(rendererSetupFramebufferCallCount, 1);
+        CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         CORRADE_COMPARE(layer1UpdateCallCount, 0);
         CORRADE_COMPARE(layer2UpdateCallCount, 0);
         CORRADE_COMPARE(layer3UpdateCallCount, 0);
     }
 
-    if(data.updateRenderer) {
-        ui.updateRenderer();
-        /* updateRenderer() doesn't call clean() implicitly as it doesn't rely
-           on its results, so NeedsNodeClean can stay after */
-        CORRADE_COMPARE(ui.state(), data.clean ? UserInterfaceState::NeedsNodeUpdate : UserInterfaceState::NeedsNodeClean);
-        CORRADE_COMPARE(rendererSetupFramebufferCallCount, 2);
-    }
-
-    /* update() should call clean() and updateRenderer() only if needed */
+    /* update() should call clean() only if needed */
     if(data.update) {
         ui.update();
         CORRADE_COMPARE(ui.layer(layer1).usedCount(), 4);
         CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
         CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(rendererSetupFramebufferCallCount, 2);
         CORRADE_COMPARE(layer1UpdateCallCount, 1);
         CORRADE_COMPARE(layer2UpdateCallCount, 1);
         CORRADE_COMPARE(layer3UpdateCallCount, 1);
@@ -11102,7 +11034,6 @@ void AbstractUserInterfaceTest::draw() {
     CORRADE_COMPARE(ui.layer(layer2).usedCount(), 9);
     CORRADE_COMPARE(ui.layer(layer3).usedCount(), 3);
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-    CORRADE_COMPARE(rendererSetupFramebufferCallCount, 2);
     CORRADE_COMPARE(layer1UpdateCallCount, 1);
     CORRADE_COMPARE(layer2UpdateCallCount, 1);
     CORRADE_COMPARE(layer3UpdateCallCount, 1);
@@ -11614,16 +11545,6 @@ void AbstractUserInterfaceTest::drawEmpty() {
 
     if(data.clean) {
         ui.clean();
-        if(data.layer1 || data.layer2)
-            CORRADE_COMPARE_AS(ui.state(),
-                UserInterfaceState::NeedsDataUpdate,
-                TestSuite::Compare::GreaterOrEqual);
-        else CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
-        CORRADE_COMPARE(ui.renderer<Renderer>().setupFramebufferCallCount, 1);
-        CORRADE_COMPARE(ui.renderer<Renderer>().transitionCallCount, 0);
-    }
-    if(data.updateRenderer) {
-        ui.updateRenderer();
         if(data.layer1 || data.layer2)
             CORRADE_COMPARE_AS(ui.state(),
                 UserInterfaceState::NeedsDataUpdate,

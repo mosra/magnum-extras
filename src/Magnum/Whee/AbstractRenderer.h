@@ -266,12 +266,12 @@ class MAGNUM_WHEE_EXPORT AbstractRenderer {
         /**
          * @brief Set up framebuffer properties
          *
-         * Used internally from @ref AbstractUserInterface::setSize() and
-         * @ref AbstractUserInterface::update(). Exposed just for testing
-         * purposes, there should be no need to call this function directly and
-         * doing so may cause internal @ref AbstractUserInterface state update
-         * to misbehave. Allowed to be called only if @ref currentTargetState()
-         * is @ref RendererTargetState::Initial or
+         * Used internally from @ref AbstractUserInterface::setSize(). Exposed
+         * just for testing purposes, there should be no need to call this
+         * function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave. Allowed to be
+         * called only if @ref currentTargetState() is
+         * @ref RendererTargetState::Initial or
          * @relativeref{RendererTargetState,Final}. Delegates to
          * @ref doSetupFramebuffers(), see its documentation for more
          * information about the arguments.
@@ -306,11 +306,8 @@ class MAGNUM_WHEE_EXPORT AbstractRenderer {
          *      rectangle and other framebuffer-related operations.
          *
          * Implementation for @ref setupFramebuffers(), which is called from
-         * @ref AbstractUserInterface::setSize() or from
-         * @ref AbstractUserInterface::update() whenever
-         * @ref UserInterfaceState::NeedsRendererSizeSetup or any of the states
-         * that imply it are present in @ref AbstractUserInterface::state(). Is
-         * guaranteed to be called only if @ref currentTargetState() is either
+         * @ref AbstractUserInterface::setSize(). Is guaranteed to be called
+         * only if @ref currentTargetState() is either
          * @ref RendererTargetState::Initial or
          * @ref RendererTargetState::Final, i.e. before any @ref doTransition()
          * call that transitions to other states.

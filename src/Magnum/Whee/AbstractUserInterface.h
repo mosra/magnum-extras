@@ -202,16 +202,6 @@ enum class UserInterfaceState: UnsignedShort {
     NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 8),
 
     /**
-     * @ref AbstractUserInterface::updateRenderer() needs to be called to set
-     * up renderer framebuffers after user interface size was changed. Set
-     * after every @ref AbstractUserInterface::setSize() call if the
-     * framebuffer size changes and a renderer instance is already set at that
-     * point, is reset next time @ref AbstractUserInterface::updateRenderer()
-     * is called.
-     */
-    NeedsRendererSizeSetup = 1 << 9,
-
-    /**
      * @ref AbstractUserInterface::advanceAnimations() needs to be called to
      * advance active animations. Set implicitly if any of the animators have
      * @ref AnimatorState::NeedsAdvance set, is reset next time
@@ -219,7 +209,7 @@ enum class UserInterfaceState: UnsignedShort {
      * animations are @ref AnimationState::Scheduled,
      * @ref AnimationState::Playing or @ref AnimationState::Paused anymore.
      */
-    NeedsAnimationAdvance = 1 << 10,
+    NeedsAnimationAdvance = 1 << 9,
 };
 
 /**
@@ -427,14 +417,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * changes, @ref AbstractLayouter::setSize() is called on all
          * layouters. If @p size changes and any nodes were already created,
          * @ref UserInterfaceState::NeedsNodeClipUpdate is set. If a renderer
-         * instance is set and this function is called for the first time,
-         * @ref AbstractRenderer::setupFramebuffers() is called to make the
-         * renderer populate its internal state. On subsequent calls to this
-         * function with a renderer instance present, only
-         * @ref UserInterfaceState::NeedsRendererSizeSetup is set and the
-         * framebuffer size setup is deferred to when @ref updateRenderer() is
-         * called, either directly or through @ref update() or @ref draw(). If
-         * a renderer instance isn't set yet when calling this function, the
+         * instance is set, @ref AbstractRenderer::setupFramebuffers() is
+         * called to make the renderer populate or update its internal state.
+         * If a renderer instance isn't set yet when calling this function, the
          * framebuffer setup is performed in the next
          * @ref setRendererInstance() call instead.
          */
@@ -485,10 +470,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * If framebuffer size was set with @ref setSize() already, calling
          * this function causes @ref AbstractRenderer::setupFramebuffers() to
          * be called. Otherwise the setup gets performed in the next
-         * @ref setSize() call. Subsequent calls to @ref setSize() only set
-         * @ref UserInterfaceState::NeedsRendererSizeSetup and the framebuffer
-         * size setup is deferred to when @ref updateRenderer() is called,
-         * either directly or through @ref update() or @ref draw().
+         * @ref setSize() call.
          * @see @ref hasRenderer()
          */
         AbstractRenderer& setRendererInstance(Containers::Pointer<AbstractRenderer>&& instance);
@@ -1650,10 +1632,10 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Implicitly calls @ref clean(), should be called before any
-         * @ref updateRenderer(), @ref update() or @ref draw() for given frame.
-         * Expects that @p time is greater or equal to @ref animationTime(). If
-         * @ref state() contains @ref UserInterfaceState::NeedsAnimationAdvance,
-         * this function delegates to @ref AbstractAnimator::advance() on all
+         * @ref update() or @ref draw() for given frame. Expects that @p time
+         * is greater or equal to @ref animationTime(). If @ref state()
+         * contains @ref UserInterfaceState::NeedsAnimationAdvance, this
+         * function delegates to @ref AbstractAnimator::advance() on all
          * animator instances that have @ref AnimatorState::NeedsAdvance set.
          *
          * Calling this function updates @ref animationTime(). Afterwards,
@@ -1668,25 +1650,6 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         AbstractUserInterface& advanceAnimations(Nanoseconds time);
 
         /**
-         * @brief Update renderer framebuffer sizes
-         * @return Reference to self (for method chaining)
-         *
-         * Called implicitly from @ref update() and subsequently also from
-         * @ref draw() and all event processing functions, but is a dedicated
-         * API to allow scheduling it separately from regular updates as it's
-         * potentially expensive due to framebuffer attachment reallocation.
-         *
-         * If @ref state() doesn't contain
-         * @ref UserInterfaceState::NeedsRendererSizeSetup, this function a
-         * no-op, otherwise it calls @ref AbstractRenderer::setupFramebuffers()
-         * with current framebuffer size.
-         *
-         * After calling this function, @ref state() doesn't contain
-         * @ref UserInterfaceState::NeedsRendererSizeSetup anymore.
-         */
-        AbstractUserInterface& updateRenderer();
-
-        /**
          * @brief Update node hierarchy, data order and data contents for drawing and event processing
          * @return Reference to self (for method chaining)
          *
@@ -1694,9 +1657,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref AbstractUserInterface(const Vector2&, const Vector2&, const Vector2i&)
          * constructor was used.
          *
-         * Implicitly calls @ref clean() and @ref updateRenderer(); called
-         * implicitly from @ref draw() and all event processing functions. If
-         * @ref state() contains none of
+         * Implicitly calls @ref clean(); called implicitly from @ref draw()
+         * and all event processing functions. If @ref state() contains none of
          * @ref UserInterfaceState::NeedsDataUpdate,
          * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
          * @ref UserInterfaceState::NeedsNodeEnabledUpdate,
@@ -1741,7 +1703,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @return Reference to self (for method chaining)
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
-         * @ref clean() and @ref updateRenderer(). Performs the following:
+         * @ref clean(). Performs the following:
          *
          * -    Calls @ref AbstractRenderer::transition() with
          *      @ref RendererTargetState::Initial
@@ -1768,9 +1730,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Handle a pointer press event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
-         * @ref clean() and @ref updateRenderer(). The @p globalPosition is
-         * assumed to be in respect to @ref windowSize(), and is internally
-         * scaled to match @ref size() before being set to @ref PointerEvent.
+         * @ref clean(). The @p globalPosition is assumed to be in respect to
+         * @ref windowSize(), and is internally scaled to match @ref size()
+         * before being set to @ref PointerEvent.
          *
          * Finds the front-most node under (scaled) @p globalPosition and
          * calls @ref AbstractLayer::pointerPressEvent() on all data attached
@@ -1844,9 +1806,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Handle a pointer release event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
-         * @ref clean() and @ref updateRenderer(). The @p globalPosition is
-         * assumed to be in respect to @ref windowSize(), and is internally
-         * scaled to match @ref size() before being set to @ref PointerEvent.
+         * @ref clean(). The @p globalPosition is assumed to be in respect to
+         * @ref windowSize(), and is internally scaled to match @ref size()
+         * before being set to @ref PointerEvent.
          *
          * If a node was captured by a previous @ref pointerPressEvent() or
          * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
@@ -1901,9 +1863,9 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Handle a pointer move event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
-         * @ref clean() and @ref updateRenderer(). The @p globalPosition is
-         * assumed to be in respect to @ref windowSize(), and is internally
-         * scaled to match @ref size() before being set to @ref PointerEvent.
+         * @ref clean(). The @p globalPosition is assumed to be in respect to
+         * @ref windowSize(), and is internally scaled to match @ref size()
+         * before being set to @ref PointerEvent.
          *
          * If a node was captured by a previous @ref pointerPressEvent() or
          * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
@@ -1983,9 +1945,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Handle a focus event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
-         * @ref clean() and @ref updateRenderer(). The @p node is expected to
-         * be either @ref NodeHandle::Null or valid with
-         * @ref NodeFlag::Focusable set.
+         * @ref clean(). The @p node is expected to be either
+         * @ref NodeHandle::Null or valid with @ref NodeFlag::Focusable set.
          *
          * If @p node is non-null and is or any of its parents are not visible
          * either due to @ref NodeFlag::Hidden set or due to the node hierarchy
@@ -2034,7 +1995,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Handle a key press event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
-         * @ref clean() and @ref updateRenderer().
+         * @ref clean().
          *
          * If @ref currentFocusedNode() is not @ref NodeHandle::Null, calls
          * @ref AbstractLayer::keyPressEvent() on all data attached to it
@@ -2078,7 +2039,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Handle a key release event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
-         * @ref clean() and @ref updateRenderer().
+         * @ref clean().
          *
          * If @ref currentFocusedNode() is not @ref NodeHandle::Null, calls
          * @ref AbstractLayer::keyReleaseEvent() on all data attached to it
@@ -2122,7 +2083,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @brief Handle a text input event
          *
          * Implicitly calls @ref update(), which in turn implicitly calls
-         * @ref clean() and @ref updateRenderer().
+         * @ref clean().
          *
          * If @ref currentFocusedNode() is not @ref NodeHandle::Null, calls
          * @ref AbstractLayer::textInputEvent() on all data attached to it
