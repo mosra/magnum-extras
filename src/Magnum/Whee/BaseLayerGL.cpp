@@ -77,13 +77,21 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
             NoRoundedCorners = 1 << 2,
             NoOutline = 1 << 3,
             TextureMask = 1 << 4,
+            SubdividedQuads = 1 << 5
         };
 
         typedef Containers::EnumSet<Flag> Flags;
 
         typedef GL::Attribute<0, Vector2> Position;
+        /* These two only if SubdividedQuads are not set */
         typedef GL::Attribute<1, Vector2> CenterDistance;
         typedef GL::Attribute<2, Vector4> OutlineWidth;
+        /* Only if SubdividedQuads are set and Textured isn't */
+        typedef GL::Attribute<1, Float> SubdividedQuadCenterDistanceY;
+        /* Only if SubdividedQuads are set and Textured is */
+        typedef GL::Attribute<1, Vector3> SubdividedQuadCenterDistanceYTextureScale;
+        /* Only if SubdividedQuads are set */
+        typedef GL::Attribute<2, Vector2> SubdividedQuadOutlineWidth;
         typedef GL::Attribute<3, Vector3> Color3;
         typedef GL::Attribute<4, UnsignedInt> Style;
         typedef GL::Attribute<5, Vector3> TextureCoordinates;
@@ -156,6 +164,7 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
         .addSource(flags & Flag::BackgroundBlur ? "#define BACKGROUND_BLUR\n"_s : ""_s)
         .addSource(flags & Flag::Textured ? "#define TEXTURED\n"_s : ""_s)
         .addSource(flags & Flag::NoOutline ? "#define NO_OUTLINE\n"_s : ""_s)
+        .addSource(flags & Flag::SubdividedQuads ? "#define SUBDIVIDED_QUADS\n"_s : ""_s)
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("BaseShader.vert"_s));
 
@@ -166,6 +175,7 @@ BaseShaderGL::BaseShaderGL(const Flags flags, const UnsignedInt styleCount): _fl
         .addSource(flags & Flag::NoRoundedCorners ? "#define NO_ROUNDED_CORNERS\n"_s : ""_s)
         .addSource(flags & Flag::NoOutline ? "#define NO_OUTLINE\n"_s : ""_s)
         .addSource(flags & Flag::TextureMask ? "#define TEXTURE_MASK\n"_s : ""_s)
+        .addSource(flags & Flag::SubdividedQuads ? "#define SUBDIVIDED_QUADS\n"_s : ""_s)
         .addSource(rs.getString("compatibility.glsl"_s))
         .addSource(rs.getString("BaseShader.frag"_s));
 
@@ -337,7 +347,8 @@ BaseLayerGL::Shared::State::State(Shared& self, const Configuration& configurati
     _c(Textured)|
     _c(NoRoundedCorners)|
     _c(NoOutline)|
-    _c(TextureMask),
+    _c(TextureMask)|
+    _c(SubdividedQuads),
     #undef _c
     configuration.styleUniformCount() + configuration.dynamicStyleCount()}
 {
@@ -403,21 +414,40 @@ struct BaseLayerGL::State: BaseLayer::State {
 BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*sharedState_._state))} {
     auto& state = static_cast<State&>(*_state);
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
-    if(sharedState.flags >= Shared::Flag::Textured) {
-        state.mesh.addVertexBuffer(state.vertexBuffer, 0,
-            BaseShaderGL::Position{},
-            BaseShaderGL::CenterDistance{},
-            BaseShaderGL::OutlineWidth{},
-            BaseShaderGL::Color3{},
-            BaseShaderGL::Style{},
-            BaseShaderGL::TextureCoordinates{});
+    if(!(sharedState.flags >= Shared::Flag::SubdividedQuads)) {
+        if(sharedState.flags & Shared::Flag::Textured) {
+            state.mesh.addVertexBuffer(state.vertexBuffer, 0,
+                BaseShaderGL::Position{},
+                BaseShaderGL::CenterDistance{},
+                BaseShaderGL::OutlineWidth{},
+                BaseShaderGL::Color3{},
+                BaseShaderGL::Style{},
+                BaseShaderGL::TextureCoordinates{});
+        } else {
+            state.mesh.addVertexBuffer(state.vertexBuffer, 0,
+                BaseShaderGL::Position{},
+                BaseShaderGL::CenterDistance{},
+                BaseShaderGL::OutlineWidth{},
+                BaseShaderGL::Color3{},
+                BaseShaderGL::Style{});
+        }
     } else {
-        state.mesh.addVertexBuffer(state.vertexBuffer, 0,
-            BaseShaderGL::Position{},
-            BaseShaderGL::CenterDistance{},
-            BaseShaderGL::OutlineWidth{},
-            BaseShaderGL::Color3{},
-            BaseShaderGL::Style{});
+        if(sharedState.flags & Shared::Flag::Textured) {
+            state.mesh.addVertexBuffer(state.vertexBuffer, 0,
+                BaseShaderGL::Position{},
+                BaseShaderGL::SubdividedQuadOutlineWidth{},
+                BaseShaderGL::Color3{},
+                BaseShaderGL::Style{},
+                BaseShaderGL::SubdividedQuadCenterDistanceYTextureScale{},
+                BaseShaderGL::TextureCoordinates{});
+        } else {
+            state.mesh.addVertexBuffer(state.vertexBuffer, 0,
+                BaseShaderGL::Position{},
+                BaseShaderGL::SubdividedQuadOutlineWidth{},
+                BaseShaderGL::Color3{},
+                BaseShaderGL::Style{},
+                BaseShaderGL::SubdividedQuadCenterDistanceY{});
+        }
     }
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
 
@@ -587,6 +617,8 @@ void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
     if(sharedState.flags & Shared::Flag::BackgroundBlur)
         sharedState.shader.bindBackgroundBlurTexture(sharedState.backgroundBlurTextureHorizontal);
 
+    const UnsignedInt drawSize = sharedState.flags >= Shared::Flag::SubdividedQuads ? 54 : 6;
+
     std::size_t clipDataOffset = offset;
     for(std::size_t i = 0; i != clipRectCount; ++i) {
         const UnsignedInt clipRectId = clipRectIds[clipRectOffset + i];
@@ -600,8 +632,8 @@ void BaseLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
             clipRectSize));
 
         state.mesh
-            .setIndexOffset(clipDataOffset*6)
-            .setCount(clipRectDataCount*6);
+            .setIndexOffset(clipDataOffset*drawSize)
+            .setCount(clipRectDataCount*drawSize);
         sharedState.shader
             .draw(state.mesh);
 

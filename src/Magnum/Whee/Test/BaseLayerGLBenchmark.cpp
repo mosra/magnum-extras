@@ -73,6 +73,8 @@ const struct {
     {"no rounded corners or outline", 0,
         BaseLayerGL::Shared::Flag::NoRoundedCorners|
         BaseLayerGL::Shared::Flag::NoOutline},
+    {"subdivided quads", 0,
+        BaseLayerGL::Shared::Flag::SubdividedQuads},
 };
 
 const struct {
@@ -95,6 +97,9 @@ const struct {
         0, 0.0f, 0.0f,
         BaseLayerGL::Shared::Flag::NoRoundedCorners|
         BaseLayerGL::Shared::Flag::NoOutline},
+    {"subdivided quads",
+        0, 0.0f, 0.0f,
+        BaseLayerGL::Shared::Flag::SubdividedQuads},
     {"just rounded corners",
         0, FragmentBenchmarkSize.x()*0.5f, 0.0f, {}},
     {"just outline",
