@@ -515,10 +515,6 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
 
     auto& state = static_cast<State&>(*_state);
     auto& sharedState = static_cast<Shared::State&>(state.shared);
-    /* Framebuffer size is only needed for calculating compositing rectangles
-       right now */
-    CORRADE_ASSERT(!(sharedState.flags >= BaseLayerSharedFlag::BackgroundBlur) || (!state.framebufferSize.isZero() && !state.backgroundBlurScale.isZero()),
-        "Whee::BaseLayer::update(): user interface size wasn't set", );
     /* Technically needed only if there's any actual data to update, but
        require it always for consistency (and easier testing) */
     CORRADE_ASSERT(sharedState.setStyleCalled,

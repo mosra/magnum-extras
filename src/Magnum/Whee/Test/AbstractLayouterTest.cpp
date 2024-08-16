@@ -69,6 +69,7 @@ struct AbstractLayouterTest: TestSuite::Tester {
     void update();
     void updateEmpty();
     void updateInvalidSizes();
+    void updateNoSizeSet();
 
     void state();
 };
@@ -102,6 +103,7 @@ AbstractLayouterTest::AbstractLayouterTest() {
               &AbstractLayouterTest::update,
               &AbstractLayouterTest::updateEmpty,
               &AbstractLayouterTest::updateInvalidSizes,
+              &AbstractLayouterTest::updateNoSizeSet,
 
               &AbstractLayouterTest::state});
 }
@@ -659,6 +661,10 @@ void AbstractLayouterTest::update() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layouter.setSize({1, 1});
+
     NodeHandle nodeParents[]{
         NodeHandle::Null,
         nodeHandle(7, 1),
@@ -699,6 +705,10 @@ void AbstractLayouterTest::updateEmpty() {
 
         Int called = 0;
     } layouter{layouterHandle(0, 1)};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layouter.setSize({1, 1});
 
     /* It should call the implementation even with empty contents */
     layouter.update({}, {}, {}, {}, {});
@@ -741,6 +751,25 @@ void AbstractLayouterTest::updateInvalidSizes() {
         "Whee::AbstractLayouter::update(): expected node parent, offset and size views to have the same size but got 2, 2 and 3\n");
 }
 
+void AbstractLayouterTest::updateNoSizeSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+
+        void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {
+            ++called;
+        }
+
+        Int called = 0;
+    } layouter{layouterHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layouter.update({}, {}, {}, {}, {});
+    CORRADE_COMPARE(out.str(), "Whee::AbstractLayouter::update(): user interface size wasn't set\n");
+}
+
 void AbstractLayouterTest::state() {
     struct: AbstractLayouter {
         using AbstractLayouter::AbstractLayouter;
@@ -749,6 +778,10 @@ void AbstractLayouterTest::state() {
 
         void doUpdate(Containers::BitArrayView, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>&, const  Containers::StridedArrayView1D<Vector2>&) override {}
     } layouter{layouterHandle(0, 1)};
+
+    /* Required to be called before update() (because AbstractUserInterface
+       guarantees the same on a higher level), not needed for anything here */
+    layouter.setSize({1, 1});
 
     CORRADE_COMPARE(layouter.state(), LayouterStates{});
 
