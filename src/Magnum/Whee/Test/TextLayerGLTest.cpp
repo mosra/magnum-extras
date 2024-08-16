@@ -292,6 +292,22 @@ const struct {
             .setColor(0x1f1f1f_rgbf)},
 };
 
+const struct {
+    const char* name;
+    Float scale;
+    bool setSizeLater;
+} RenderEdgeSmoothnessData[]{
+    {"", 1.0f, false},
+    {"UI 100x larger than framebuffer",
+        100.0f, false},
+    {"UI 100x larger than framebuffer, set later",
+        100.0f, true},
+    {"UI 100x smaller than framebuffer",
+        0.01f, false},
+    {"UI 100x smaller than framebuffer, set later",
+        0.01f, true},
+};
+
 constexpr Vector2i RenderSize{128, 64};
 
 /* Bounding box reported by Text::renderLineGlyphPositionsInto(). May change
@@ -823,7 +839,8 @@ TextLayerGLTest::TextLayerGLTest() {
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
-    addTests({&TextLayerGLTest::renderEdgeSmoothness},
+    addInstancedTests({&TextLayerGLTest::renderEdgeSmoothness},
+        Containers::arraySize(RenderEdgeSmoothnessData),
         &TextLayerGLTest::renderSetup,
         &TextLayerGLTest::renderTeardown);
 
@@ -1180,13 +1197,22 @@ void TextLayerGLTest::render() {
 }
 
 void TextLayerGLTest::renderEdgeSmoothness() {
+    auto&& data = RenderEdgeSmoothnessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     if(!(_fontManager.load("StbTrueTypeFont") & PluginManager::LoadState::Loaded))
         CORRADE_SKIP("StbTrueTypeFont plugin not found.");
 
     /* A stripped-down variant of render(colored, cursor + selection style)
-       that has excessive smoothness to test doesn't get cut off */
+       that has excessive smoothness to test doesn't get cut off. It should
+       produce the same result (5 *pixel* smoothness) regardless of the actual
+       UI size. */
 
-    AbstractUserInterface ui{RenderSize};
+    /* Window size isn't used for anything here, can be arbitrary. If the size
+       is meant to be set later, start with the framebuffer being 1x1. The UI
+       size has to stay unchanged, otherwise it'll set NeedsNodeClipUpdate,
+       which triggers data regeneration always. */
+    AbstractUserInterface ui{data.scale*Vector2{RenderSize}, {1, 1}, (data.setSizeLater ? Vector2i{1} : RenderSize)};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     /* Opened in the constructor together with cache filling to circumvent
@@ -1200,7 +1226,7 @@ void TextLayerGLTest::renderEdgeSmoothness() {
         TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)},
-        {layerShared.addFont(*_font, 32.0f)},
+        {layerShared.addFont(*_font, 32.0f*data.scale)},
         {Text::Alignment::MiddleCenter},
         {}, {}, {},
         {0},
@@ -1211,19 +1237,34 @@ void TextLayerGLTest::renderEdgeSmoothness() {
             .setSmoothness(5.0f),
         {TextLayerEditingStyleUniform{}
             .setBackgroundColor(0xcd3431_rgbf)
-            .setCornerRadius(5.5f),
-            TextLayerEditingStyleUniform{}
+            .setCornerRadius(5.5f*data.scale),
+         TextLayerEditingStyleUniform{}
             .setBackgroundColor(0xc7cf2f_rgbf)
-            .setCornerRadius(10.0f)},
+            .setCornerRadius(10.0f*data.scale)},
         {},
-        {{10.0f, -5.0f, -1.0f, 0.0f},
-         {5.0f, 0.0f, 7.5f, 5.0f}});
+        {Vector4{10.0f, -5.0f, -1.0f, 0.0f}*data.scale,
+         Vector4{5.0f, 0.0f, 7.5f, 5.0f}*data.scale});
 
     TextLayer& layer = ui.setLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), layerShared));
 
-    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    NodeHandle node = ui.createNode(Vector2{8.0f, 8.0f}*data.scale,
+                                    Vector2{112.0f, 48.0f}*data.scale);
     DataHandle nodeData = layer.create(0, "Maggi", {}, TextDataFlag::Editable, node);
     layer.setCursor(nodeData, 2, 5);
+
+    if(data.setSizeLater) {
+        /* Make sure everything is already processed before updating the size,
+           otherwise it'd be all deferred to draw() below, circumventing what
+           we want to test */
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+        /* Unlike with BaseLayer, setting the size doesn't need to trigger any
+           data regeneration as the pixel-ratio-dependent smoothness expansion
+           is done directly in the shader */
+        ui.setSize(data.scale*Vector2{RenderSize}, {1, 1}, RenderSize);
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
 
     ui.draw();
 

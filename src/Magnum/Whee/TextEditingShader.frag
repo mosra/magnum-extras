@@ -40,6 +40,12 @@ layout(std140
 #define style_smoothness smoothnessReserved.x
 #define style_cornerRadius cornerRadiusReserved.x
 
+#ifdef EXPLICIT_UNIFORM_LOCATION
+layout(location = 0)
+#endif
+uniform highp vec3 projection; /* xy = UI size to unit square scaling,
+                                  z = pixel smoothness to UI size scaling */
+
 flat in mediump vec2 halfQuadSize;
 NOPERSPECTIVE in mediump vec2 interpolatedCenterDistance;
 flat in mediump uint interpolatedStyle;
@@ -63,6 +69,6 @@ void main() {
         - min(max(cornerCenterDistance.x, cornerCenterDistance.y), 0.0);
 
     /* Final color */
-    lowp float smoothness = style_smoothness;
+    lowp float smoothness = style_smoothness*projection.z;
     fragmentColor = smoothstep(-smoothness, +smoothness, edgeDistance)*styles[interpolatedStyle].backgroundColor;
 }

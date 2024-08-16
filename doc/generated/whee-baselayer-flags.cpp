@@ -116,7 +116,7 @@ int WheeBaseLayerFlags::exec() {
     Whee::BaseLayerGL::Shared layerShared{Whee::BaseLayerGL::Shared::Configuration{1}};
     layerShared.setStyle(
         Whee::BaseLayerCommonStyleUniform{}
-            .setSmoothness(0.25f),
+            .setSmoothness(1.0f),
         {Whee::BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setColor(0xffffffff_rgbaf*0.667f)
@@ -129,7 +129,7 @@ int WheeBaseLayerFlags::exec() {
         .setBackgroundBlurRadius(31)};
     layerSharedBackgroundBlur.setStyle(
         Whee::BaseLayerCommonStyleUniform{}
-            .setSmoothness(0.25f),
+            .setSmoothness(1.0f),
         {Whee::BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setColor(0xffffffff_rgbaf*0.667f)
@@ -144,7 +144,7 @@ int WheeBaseLayerFlags::exec() {
         .setBackgroundBlurRadius(31)};
     layerSharedBackgroundBlurAlpha.setStyle(
         Whee::BaseLayerCommonStyleUniform{}
-            .setSmoothness(0.25f)
+            .setSmoothness(1.0f)
             .setBackgroundBlurAlpha(0.75f),
         {Whee::BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
@@ -161,7 +161,7 @@ int WheeBaseLayerFlags::exec() {
         .setBackgroundBlurRadius(31)};
     layerSharedBackgroundBlurTextured.setStyle(
         Whee::BaseLayerCommonStyleUniform{}
-            .setSmoothness(0.25f),
+            .setSmoothness(1.0f),
         {Whee::BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setInnerOutlineCornerRadius(4.0f)
@@ -180,7 +180,7 @@ int WheeBaseLayerFlags::exec() {
         .setBackgroundBlurRadius(31)};
     layerSharedBackgroundBlurTextureMask.setStyle(
         Whee::BaseLayerCommonStyleUniform{}
-            .setSmoothness(0.25f),
+            .setSmoothness(1.0f),
         {Whee::BaseLayerStyleUniform{}
             .setCornerRadius(12.0f)
             .setInnerOutlineCornerRadius(4.0f)

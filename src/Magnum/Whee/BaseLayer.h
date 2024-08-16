@@ -110,18 +110,18 @@ struct BaseLayerCommonStyleUniform {
     /**
      * @brief Edge smoothness radius
      *
-     * In layout units, i.e. setting the value to @cpp 1.0f @ce will make the
-     * smoothing extend 1 layout unit on each side of the edge. Default value
-     * is @cpp 0.0f @ce.
+     * In pixels, i.e. setting the value to @cpp 1.0f @ce will make the
+     * smoothing extend 1 pixel on each side of the edge. Default value is
+     * @cpp 0.0f @ce.
      */
     Float smoothness;
 
     /**
      * @brief Inner outline edge smoothness radius
      *
-     * In layout units, i.e. setting the value to @cpp 1.0f @ce will make the
-     * smoothing extend 1 layout unit on each side of the edge. Default value
-     * is @cpp 0.0f @ce. Not used if @ref BaseLayerSharedFlag::NoOutline is
+     * In pixels, i.e. setting the value to @cpp 1.0f @ce will make the
+     * smoothing extend 1 pixel on each side of the edge. Default value is
+     * @cpp 0.0f @ce. Not used if @ref BaseLayerSharedFlag::NoOutline is
      * enabled.
      */
     Float innerOutlineSmoothness;

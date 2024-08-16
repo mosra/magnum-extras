@@ -392,33 +392,73 @@ const struct {
 const struct {
     const char* name;
     const char* filename;
-    Float smoothness, innerOutlineSmoothness;
+    Float smoothness, innerOutlineSmoothness, scale;
+    bool setSizeLater;
 } RenderOutlineEdgeSmoothnessData[]{
-    {"", "edge-smoothness-same.png", 8.0f, 8.0f},
-    {"inner smoothness larger", "edge-smoothness-inner-larger.png", 1.0f, 8.0f},
-    {"inner smoothness smaller", "edge-smoothness-inner-smaller.png", 8.0f, 1.0f},
+    {"",
+        "edge-smoothness-same.png", 8.0f, 8.0f, 1.0f, false},
+    {"UI 100x larger than framebuffer",
+        "edge-smoothness-same.png", 8.0f, 8.0f, 100.0f, false},
+    {"UI 100x larger than framebuffer, set later",
+        "edge-smoothness-same.png", 8.0f, 8.0f, 100.0f, true},
+    {"UI 100x smaller than framebuffer",
+        "edge-smoothness-same.png", 8.0f, 8.0f, 0.01f, false},
+    {"UI 100x smaller than framebuffer, set later",
+        "edge-smoothness-same.png", 8.0f, 8.0f, 0.01f, true},
+    {"inner smoothness larger",
+        "edge-smoothness-inner-larger.png", 1.0f, 8.0f, 1.0f, false},
+    {"inner smoothness larger, UI 100x larger than framebuffer",
+        "edge-smoothness-inner-larger.png", 1.0f, 8.0f, 100.0f, false},
+    {"inner smoothness larger, UI 100x smaller than framebuffer",
+        "edge-smoothness-inner-larger.png", 1.0f, 8.0f, 0.01f, false},
+    {"inner smoothness smaller",
+        "edge-smoothness-inner-smaller.png", 8.0f, 1.0f, 1.0f, false},
+    {"inner smoothness smaller, UI 100x larger than framebuffer",
+        "edge-smoothness-inner-smaller.png", 8.0f, 1.0f, 100.0f, false},
+    {"inner smoothness smaller, UI 100x smaller than framebuffer",
+        "edge-smoothness-inner-smaller.png", 8.0f, 1.0f, 0.01f, false},
 };
 
 const struct {
     const char* name;
-    Float smoothness;
+    Float smoothness, scale;
+    bool setSizeLater;
 } RenderGradientOutlineEdgeSmoothnessData[]{
-    {"", 0.0f},
+    {"", 0.0f, 1.0f, false},
     /* Like above, but with the outer smoothness matching the outline width.
        The quad area gets expanded for it, but the gradient shouldn't. */
-    {"large outer smoothness", 8.0f},
+    {"large outer smoothness",
+        8.0f, 1.0f, false},
+    {"large outer smoothness, UI 100x larger than framebuffer",
+        8.0f, 100.0f, false},
+    {"large outer smoothness, UI 100x larger than framebuffer, set later",
+        8.0f, 100.0f, true},
+    {"large outer smoothness, UI 100x smaller than framebuffer",
+        8.0f, 0.01f, false},
+    {"large outer smoothness, UI 100x smaller than framebuffer, set later",
+        8.0f, 0.01f, true},
 };
 
 const struct {
     const char* name;
-    Float smoothness;
+    Float smoothness, scale;
+    bool setSizeLater;
 } RenderTexturedOutlineEdgeSmoothnessData[]{
-    {"", 1.0f},
+    {"", 1.0f, 1.0f, false},
     /* The quad gets expanded for the outer smoothness to not cut off, the
        texture coordinates should get adjusted as well to not change the
        texture scale. There's however a transparent outline so it should look
        exactly as above. */
-    {"large outer smoothness", 7.0f}
+    {"large outer smoothness",
+        7.0f, 1.0f, false},
+    {"large outer smoothness, UI 100x larger than framebuffer",
+        7.0f, 100.0f, false},
+    {"large outer smoothness, UI 100x larger than framebuffer, set later",
+        7.0f, 100.0f, true},
+    {"large outer smoothness, UI 100x smaller than framebuffer",
+        7.0f, 0.01f, false},
+    {"large outer smoothness, UI 100x smaller than framebuffer, set later",
+        7.0f, 0.01f, true},
 };
 
 const struct {
@@ -681,6 +721,22 @@ const struct {
 
 const struct {
     const char* name;
+    Float scale;
+    bool setSizeLater;
+} RenderCompositeEdgeSmoothnessData[]{
+    {"", 1.0f, false},
+    {"UI 100x larger than framebuffer",
+        100.0f, false},
+    {"UI 100x larger than framebuffer, set later",
+        100.0f, true},
+    {"UI 100x smaller than framebuffer",
+        0.01f, false},
+    {"UI 100x smaller than framebuffer, set later",
+        0.01f, true},
+};
+
+const struct {
+    const char* name;
     const char* textureFilename;
     const char* expectedFilename;
     Vector3 offset;
@@ -892,9 +948,10 @@ BaseLayerGLTest::BaseLayerGLTest() {
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
-    addTests<BaseLayerGLTest>({
+    addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderCompositeEdgeSmoothness,
         &BaseLayerGLTest::renderCompositeEdgeSmoothness<BaseLayerSharedFlag::SubdividedQuads>},
+        Containers::arraySize(RenderCompositeEdgeSmoothnessData),
         &BaseLayerGLTest::renderOrDrawCompositeSetup,
         &BaseLayerGLTest::renderOrDrawCompositeTeardown);
 
@@ -1507,7 +1564,14 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderOutlineEdgeSmooth
     setTestCaseDescription(data.name);
     setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
-    AbstractUserInterface ui{RenderSize};
+    /* It should produce the same result (8 *pixel* smoothness either inside or
+       outside or both) regardless of the actual UI size */
+
+    /* Window size isn't used for anything here, can be arbitrary. If the size
+       is meant to be set later, start with the framebuffer being 1x1. The UI
+       size has to stay unchanged, otherwise it'll set NeedsNodeClipUpdate,
+       which triggers data regeneration always. */
+    AbstractUserInterface ui{data.scale*Vector2{RenderSize}, {1, 1}, (data.setSizeLater ? Vector2i{1} : RenderSize)};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}
@@ -1519,15 +1583,15 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderOutlineEdgeSmooth
         {BaseLayerStyleUniform{}
             .setColor(0x2f83ccff_rgbaf)
             .setOutlineColor(0xc7cf2fff_rgbaf)
-            .setCornerRadius(4.0f)
-            .setInnerOutlineCornerRadius(12.0f)
-            .setOutlineWidth({0.0f, 0.0f, 0.0f, 8.0f}),
+            .setCornerRadius(4.0f*data.scale)
+            .setInnerOutlineCornerRadius(12.0f*data.scale)
+            .setOutlineWidth(Vector4{0.0f, 0.0f, 0.0f, 8.0f}*data.scale),
          BaseLayerStyleUniform{}
             .setColor(0x2f83ccff_rgbaf)
             .setOutlineColor(0xc7cf2fff_rgbaf)
-            .setCornerRadius(4.0f)
-            .setInnerOutlineCornerRadius(12.0f)
-            .setOutlineWidth({0.0f, 0.0f, 8.0f, 0.0f})},
+            .setCornerRadius(4.0f*data.scale)
+            .setInnerOutlineCornerRadius(12.0f*data.scale)
+            .setOutlineWidth(Vector4{0.0f, 0.0f, 8.0f, 0.0f}*data.scale)},
         {});
     BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
@@ -1542,10 +1606,27 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderOutlineEdgeSmooth
         - The outline color not leaking into the base color on the edges that
           don't have it, unless the inner smoothness is even larger */
 
-    NodeHandle node1 = ui.createNode({12.0f, 12.0f}, {52.0f, 40.0f});
-    NodeHandle node2 = ui.createNode({64.0f, 12.0f}, {52.0f, 40.0f});
+    NodeHandle node1 = ui.createNode(Vector2{12.0f, 12.0f}*data.scale,
+                                     Vector2{52.0f, 40.0f}*data.scale);
+    NodeHandle node2 = ui.createNode(Vector2{64.0f, 12.0f}*data.scale,
+                                     Vector2{52.0f, 40.0f}*data.scale);
     layer.create(0, node1);
     layer.create(1, node2);
+
+    if(data.setSizeLater) {
+        /* Make sure everything is already processed before updating the size,
+           otherwise it'd be all deferred to draw() below, circumventing what
+           we want to test */
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+        /* Setting the size should correctly regenerate whatever needs to be
+           regenerated (except for SubdividedQuads, where it's all done in the
+           shader) in order to adapt to the new DPI scaling. All state flag
+           possibilities are tested in BaseLayerTest::setSize(). */
+        ui.setSize(data.scale*Vector2{RenderSize}, {1, 1}, RenderSize);
+        CORRADE_COMPARE(ui.state(), flag == BaseLayerSharedFlag::SubdividedQuads ? UserInterfaceStates{} : UserInterfaceState::NeedsDataUpdate);
+    }
 
     ui.draw();
 
@@ -1588,9 +1669,14 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderGradientOutlineEd
     /* The gradient should extend also under the outline. Testing by expanding
        the quad outside with negative padding, cancelling that with a
        transparent outline, and extrapolating the gradient accordingly for the
-       outline. The result should be the same as render(gradient) above. */
+       outline. The result should be the same as render(gradient) above, it
+       should also produce the same result regardless of the actual UI size. */
 
-    AbstractUserInterface ui{RenderSize};
+    /* Window size isn't used for anything here, can be arbitrary. If the size
+       is meant to be set later, start with the framebuffer being 1x1. The UI
+       size has to stay unchanged, otherwise it'll set NeedsNodeClipUpdate,
+       which triggers data regeneration always. */
+    AbstractUserInterface ui{data.scale*Vector2{RenderSize}, {1, 1}, (data.setSizeLater ? Vector2i{1} : RenderSize)};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}
@@ -1600,16 +1686,32 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderGradientOutlineEd
         BaseLayerCommonStyleUniform{}
             .setSmoothness(data.smoothness, 0.0f),
         {BaseLayerStyleUniform{}
-            .setOutlineWidth(8.0f)
+            .setOutlineWidth(8.0f*data.scale)
             .setOutlineColor(0x00000000_rgbaf)
             .setColor(Math::lerp(0x774422_rgbf, 0xeeddaa_rgbf, 56.0f/48.0f),
                       Math::lerp(0xeeddaa_rgbf, 0x774422_rgbf, 56.0f/48.0f))},
-        {Vector4{-8.0f}});
+        {Vector4{-8.0f}*data.scale});
 
     BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
-    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    NodeHandle node = ui.createNode(Vector2{8.0f, 8.0f}*data.scale,
+                                    Vector2{112.0f, 48.0f}*data.scale);
     layer.create(0, node);
+
+    if(data.setSizeLater) {
+        /* Make sure everything is already processed before updating the size,
+           otherwise it'd be all deferred to draw() below, circumventing what
+           we want to test */
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+        /* Setting the size should correctly regenerate whatever needs to be
+           regenerated (except for SubdividedQuads, where it's all done in the
+           shader) in order to adapt to the new DPI scaling. All state flag
+           possibilities are tested in BaseLayerTest::setSize(). */
+        ui.setSize(data.scale*Vector2{RenderSize}, {1, 1}, RenderSize);
+        CORRADE_COMPARE(ui.state(), flag == BaseLayerSharedFlag::SubdividedQuads ? UserInterfaceStates{} : UserInterfaceState::NeedsDataUpdate);
+    }
 
     ui.draw();
 
@@ -1639,7 +1741,8 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTexturedOutlineEd
        the quad outside with negative padding, cancelling that with a
        transparent outline, and extrapolating the texture coordinates
        accordingly for the outline. The result should be the same as
-       renderTextured() above. */
+       renderTextured() above, it should also produce the same result
+       regardless of the actual UI size. */
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
        !(_manager.load("StbImageImporter") & PluginManager::LoadState::Loaded))
@@ -1659,7 +1762,11 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTexturedOutlineEd
         .setStorage(1, GL::textureFormat(image->format()), Vector3i{image->size(), 1})
         .setSubImage(0, {}, ImageView2D{*image});
 
-    AbstractUserInterface ui{RenderSize};
+    /* Window size isn't used for anything here, can be arbitrary. If the size
+       is meant to be set later, start with the framebuffer being 1x1. The UI
+       size has to stay unchanged, otherwise it'll set NeedsNodeClipUpdate,
+       which triggers data regeneration always. */
+    AbstractUserInterface ui{data.scale*Vector2{RenderSize}, {1, 1}, (data.setSizeLater ? Vector2i{1} : RenderSize)};
     ui.setRendererInstance(Containers::pointer<RendererGL>());
 
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{1}
@@ -1669,16 +1776,32 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTexturedOutlineEd
         BaseLayerCommonStyleUniform{}
             .setSmoothness(data.smoothness, 1.0f),
         {BaseLayerStyleUniform{}
-            .setOutlineWidth(8.0f)
+            .setOutlineWidth(8.0f*data.scale)
             .setOutlineColor(0x00000000_rgbaf)},
-        {Vector4{-8.0f}});
+        {Vector4{-8.0f}*data.scale});
 
     BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
     layer.setTexture(texture);
 
-    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    NodeHandle node = ui.createNode(Vector2{8.0f, 8.0f}*data.scale,
+                                    Vector2{112.0f, 48.0f}*data.scale);
     DataHandle nodeData = layer.create(0, node);
     layer.setTextureCoordinates(nodeData, {40.0f/160.0f, -8.0f/106.0f, 0}, {128.0f/160.0f, 64.0f/106.0f});
+
+    if(data.setSizeLater) {
+        /* Make sure everything is already processed before updating the size,
+           otherwise it'd be all deferred to draw() below, circumventing what
+           we want to test */
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+        /* Setting the size should correctly regenerate whatever needs to be
+           regenerated (except for SubdividedQuads, where it's all done in the
+           shader) in order to adapt to the new DPI scaling. All state flag
+           possibilities are tested in BaseLayerTest::setSize(). */
+        ui.setSize(data.scale*Vector2{RenderSize}, {1, 1}, RenderSize);
+        CORRADE_COMPARE(ui.state(), flag == BaseLayerSharedFlag::SubdividedQuads ? UserInterfaceStates{} : UserInterfaceState::NeedsDataUpdate);
+    }
 
     ui.draw();
 
@@ -1692,7 +1815,8 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderTexturedOutlineEd
     #endif
     CORRADE_COMPARE_WITH(_framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm}),
         Utility::Path::join(WHEE_TEST_DIR, "BaseLayerTestFiles/textured.png"),
-        DebugTools::CompareImageToFile{_manager});
+        /* One pixel has one channel off-by-one in the 100x smaller case */
+        (DebugTools::CompareImageToFile{_manager, 0.25f, 0.0001f}));
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderDynamicStyles() {
@@ -1898,6 +2022,8 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderComposite() {
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeEdgeSmoothness() {
+    auto&& data = RenderCompositeEdgeSmoothnessData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
     setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
     if(!(_manager.load("AnyImageImporter") & PluginManager::LoadState::Loaded) ||
@@ -1908,9 +2034,14 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeEdgeSmoo
        smoothness (thus in this case the whole UI size), otherwise the smooth
        edges get random values. Picking a radius that's not too large as
        otherwise the random noise would smoothen out, making the comparison
-       more likely to pass. */
+       more likely to pass. It should also produce the same result regardless
+       of the actual UI size. */
 
-    AbstractUserInterface ui{RenderSize};
+    /* Window size isn't used for anything here, can be arbitrary. If the size
+       is meant to be set later, start with the framebuffer being 1x1. The UI
+       size has to stay unchanged, otherwise it'll set NeedsNodeClipUpdate,
+       which triggers data regeneration always. */
+    AbstractUserInterface ui{data.scale*Vector2{RenderSize}, {1, 1}, (data.setSizeLater ? Vector2i{1} : RenderSize)};
     RendererGL& renderer = ui.setRendererInstance(Containers::pointer<RendererGL>(RendererGL::Flag::CompositingFramebuffer));
 
     /* Upload (a crop of) the blur source image as a framebuffer background */
@@ -1929,8 +2060,6 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeEdgeSmoo
         std::size_t(RenderSize.x()),
     }), imageCropped.pixels<Color4ub>());
 
-    renderer.compositingTexture().setSubImage(0, {}, imageCropped);
-
     BaseLayerGL::Shared layerShared{BaseLayerGL::Shared::Configuration{1}
         .addFlags(BaseLayerSharedFlag::BackgroundBlur|flag)
         .setBackgroundBlurRadius(2)
@@ -1939,15 +2068,35 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCompositeEdgeSmoo
         BaseLayerCommonStyleUniform{}
             .setSmoothness(8.0f),
         {BaseLayerStyleUniform{}
-            .setCornerRadius(24.0f)
+            .setCornerRadius(24.0f*data.scale)
             /* Premultiplied alpha */
             .setColor(0xffffffff_rgbaf*0.5f)},
         {});
 
     BaseLayerGL& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
 
-    NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    NodeHandle node = ui.createNode(Vector2{8.0f, 8.0f}*data.scale,
+                                    Vector2{112.0f, 48.0f}*data.scale);
     layer.create(0, node);
+
+    if(data.setSizeLater) {
+        /* Make sure everything is already processed before updating the size,
+           otherwise it'd be all deferred to draw() below, circumventing what
+           we want to test */
+        ui.update();
+        CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+
+        /* Setting the size should correctly regenerate whatever needs to be
+           regenerated (except for SubdividedQuads, where it's all done in the
+           shader) in order to adapt to the new DPI scaling. All state flag
+           possibilities are tested in BaseLayerTest::setSize(). */
+        ui.setSize(data.scale*Vector2{RenderSize}, {1, 1}, RenderSize);
+        CORRADE_COMPARE(ui.state(), flag == BaseLayerSharedFlag::SubdividedQuads ? UserInterfaceStates{} : UserInterfaceState::NeedsDataUpdate);
+    }
+
+    /* Set the background image only after setSize() to make sure it's uploaded
+       to the current framebuffer */
+    renderer.compositingTexture().setSubImage(0, {}, imageCropped);
 
     ui.draw();
 

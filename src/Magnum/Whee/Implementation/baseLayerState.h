@@ -170,7 +170,10 @@ struct BaseLayer::State: AbstractVisualLayer::State {
     Containers::Array<char> vertices;
     Containers::Array<UnsignedInt> indices;
 
-    /* Used by BaseLayerGL, and here if Flag::BackgroundBlur is enabled */
+    /* Used for scaling the smoothness expansion to actual pixels, for clipping
+       rects in BaseLayerGL and for expanding compositing rects for blur radius
+       if BackgroundBlur is enabled */
+    Vector2 uiSize;
     Vector2i framebufferSize;
 
     /* Used only if Flag::BackgroundBlur is enabled */
