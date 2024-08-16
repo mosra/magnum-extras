@@ -55,6 +55,7 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flag value) {
         _c(NoRoundedCorners)
         _c(NoOutline)
         _c(TextureMask)
+        _c(SubdividedQuads)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -69,7 +70,8 @@ Debug& operator<<(Debug& debug, const BaseLayer::Shared::Flags value) {
         BaseLayer::Shared::Flag::Textured,
         BaseLayer::Shared::Flag::BackgroundBlur,
         BaseLayer::Shared::Flag::NoRoundedCorners,
-        BaseLayer::Shared::Flag::NoOutline
+        BaseLayer::Shared::Flag::NoOutline,
+        BaseLayer::Shared::Flag::SubdividedQuads
     });
 }
 
@@ -91,6 +93,8 @@ BaseLayer::Shared::Shared(Containers::Pointer<State>&& state): AbstractVisualLay
     #endif
     CORRADE_ASSERT(s.styleCount + s.dynamicStyleCount,
         "Whee::BaseLayer::Shared: expected non-zero total style count", );
+    CORRADE_ASSERT(!(s.flags & Flag::SubdividedQuads) || !(s.flags & (Flag::NoOutline|Flag::NoRoundedCorners)),
+        "Whee::BaseLayer::Shared:" << Flag::SubdividedQuads << "and" << (s.flags & (Flag::NoOutline|Flag::NoRoundedCorners)) << "are mutually exclusive", );
 }
 
 BaseLayer::Shared::Shared(const Configuration& configuration): Shared{Containers::pointer<State>(*this, configuration)} {}
@@ -521,10 +525,13 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
         "Whee::BaseLayer::update(): no style data was set", );
 
     /* Fill in indices in desired order if either the data themselves or the
-       node order changed */
-    if(states >= LayerState::NeedsNodeOrderUpdate ||
-       states >= LayerState::NeedsDataUpdate)
-    {
+       node order changed. Flattening the logic for less indentation, first the
+       less-data-heavy case with just a single quad for every data but a more
+       complicated fragment shader. */
+    const bool updateIndices =
+        states >= LayerState::NeedsNodeOrderUpdate ||
+        states >= LayerState::NeedsDataUpdate;
+    if(updateIndices && !(sharedState.flags >= Shared::Flag::SubdividedQuads)) {
         arrayResize(state.indices, NoInit, dataIds.size()*6);
         for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
             const UnsignedInt vertexOffset = dataIds[i]*4;
@@ -542,16 +549,104 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             state.indices[indexOffset++] = vertexOffset + 3;
             state.indices[indexOffset++] = vertexOffset + 1;
         }
+
+    /* Then the more data-heavy case with 9 quads for every data, but a simpler
+       fragment shader */
+    } else if(updateIndices && sharedState.flags >= Shared::Flag::SubdividedQuads) {
+        /* Vertex IDs divisible by 4 are the outer corners, ID % 4 == 3 are the
+           inner corners. ID % 4 == 2 are outer vertical edges, ID % 4 == 1 are
+           outer horizontal edges.
+
+            0---1---5---4   0---2  5 6---8 11 12-14 17
+            |   |   |   |   | /  / | | /  / | | /  / |
+            2---3---7---6   1  3---4 7  9--10-13 15 16
+            |   |   |   |   18-20 23 24-26 29 30-32 35
+            |   |   |   |   | /  / | | /  / | | /  / |
+            |   |   |   |   19 21-22 25 27-28 31 33-34
+            10-11---15-14   36-38 41 42-44 47 48-50 53
+            |   |   |   |   | /  / | | /  / | | /  / |
+            8---9---13-12   37 39-40 43 45-46 49 51-52 */
+        arrayResize(state.indices, NoInit, dataIds.size()*6*9);
+        for(UnsignedInt i = 0; i != dataIds.size(); ++i) {
+            const UnsignedInt vertexOffset = dataIds[i]*16;
+            UnsignedInt indexOffset = i*54;
+
+            state.indices[indexOffset +  0] = vertexOffset +  0;
+            state.indices[indexOffset +  1] = vertexOffset +  2;
+            state.indices[indexOffset +  2] = vertexOffset +  1;
+            state.indices[indexOffset +  3] = vertexOffset +  2;
+            state.indices[indexOffset +  4] = vertexOffset +  3;
+            state.indices[indexOffset +  5] = vertexOffset +  1;
+
+            state.indices[indexOffset +  6] = vertexOffset +  1;
+            state.indices[indexOffset +  7] = vertexOffset +  3;
+            state.indices[indexOffset +  8] = vertexOffset +  5;
+            state.indices[indexOffset +  9] = vertexOffset +  3;
+            state.indices[indexOffset + 10] = vertexOffset +  7;
+            state.indices[indexOffset + 11] = vertexOffset +  5;
+
+            state.indices[indexOffset + 12] = vertexOffset +  5;
+            state.indices[indexOffset + 13] = vertexOffset +  7;
+            state.indices[indexOffset + 14] = vertexOffset +  4;
+            state.indices[indexOffset + 15] = vertexOffset +  7;
+            state.indices[indexOffset + 16] = vertexOffset +  6;
+            state.indices[indexOffset + 17] = vertexOffset +  4;
+
+            state.indices[indexOffset + 18] = vertexOffset +  2;
+            state.indices[indexOffset + 19] = vertexOffset + 10;
+            state.indices[indexOffset + 20] = vertexOffset +  3;
+            state.indices[indexOffset + 21] = vertexOffset + 10;
+            state.indices[indexOffset + 22] = vertexOffset + 11;
+            state.indices[indexOffset + 23] = vertexOffset +  3;
+
+            state.indices[indexOffset + 24] = vertexOffset +  3;
+            state.indices[indexOffset + 25] = vertexOffset + 11;
+            state.indices[indexOffset + 26] = vertexOffset +  7;
+            state.indices[indexOffset + 27] = vertexOffset + 11;
+            state.indices[indexOffset + 28] = vertexOffset + 15;
+            state.indices[indexOffset + 29] = vertexOffset +  7;
+
+            state.indices[indexOffset + 30] = vertexOffset +  7;
+            state.indices[indexOffset + 31] = vertexOffset + 15;
+            state.indices[indexOffset + 32] = vertexOffset +  6;
+            state.indices[indexOffset + 33] = vertexOffset + 15;
+            state.indices[indexOffset + 34] = vertexOffset + 14;
+            state.indices[indexOffset + 35] = vertexOffset +  6;
+
+            state.indices[indexOffset + 36] = vertexOffset + 10;
+            state.indices[indexOffset + 37] = vertexOffset +  8;
+            state.indices[indexOffset + 38] = vertexOffset + 11;
+            state.indices[indexOffset + 39] = vertexOffset +  8;
+            state.indices[indexOffset + 40] = vertexOffset +  9;
+            state.indices[indexOffset + 41] = vertexOffset + 11;
+
+            state.indices[indexOffset + 42] = vertexOffset + 11;
+            state.indices[indexOffset + 43] = vertexOffset +  9;
+            state.indices[indexOffset + 44] = vertexOffset + 15;
+            state.indices[indexOffset + 45] = vertexOffset +  9;
+            state.indices[indexOffset + 46] = vertexOffset + 13;
+            state.indices[indexOffset + 47] = vertexOffset + 15;
+
+            state.indices[indexOffset + 48] = vertexOffset + 15;
+            state.indices[indexOffset + 49] = vertexOffset + 13;
+            state.indices[indexOffset + 50] = vertexOffset + 14;
+            state.indices[indexOffset + 51] = vertexOffset + 13;
+            state.indices[indexOffset + 52] = vertexOffset + 12;
+            state.indices[indexOffset + 53] = vertexOffset + 14;
+        }
     }
 
     /* Fill in vertex data if the data themselves, the node offset/size or node
-       enablement (and thus calculated styles) changed */
+       enablement (and thus calculated styles) changed. Again flattening the
+       logic for less indentation, first the less-data-heavy case with just a
+       single quad for every data. */
     /** @todo split this further to just position-related data update and other
         data if it shows to help with perf */
-    if(states >= LayerState::NeedsNodeOffsetSizeUpdate ||
-       states >= LayerState::NeedsNodeEnabledUpdate ||
-       states >= LayerState::NeedsDataUpdate)
-    {
+    const bool updateVertices =
+        states >= LayerState::NeedsNodeOffsetSizeUpdate ||
+        states >= LayerState::NeedsNodeEnabledUpdate ||
+        states >= LayerState::NeedsDataUpdate;
+    if(updateVertices && !(sharedState.flags >= Shared::Flag::SubdividedQuads)) {
         /* Resize the vertex array to fit all data, make a view on the common
            type prefix */
         const std::size_t typeSize = sharedState.flags & Shared::Flag::Textured ?
@@ -644,6 +739,138 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                 const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x()) + smoothnessExpansion;
                 for(UnsignedByte i = 0; i != 4; ++i)
                     texturedVertices[dataId*4 + i].textureCoordinates = {Math::lerp(min, max, BitVector2{i}), data.textureCoordinateOffset.z()};
+            }
+        }
+
+    /* And then again the more data-heavy case with 9 quads for every data */
+    } else if(updateVertices && sharedState.flags >= Shared::Flag::SubdividedQuads) {
+        /* Resize the vertex array to fit all data, make a view on the common type
+           prefix */
+        const std::size_t typeSize = sharedState.flags & Shared::Flag::Textured ?
+            sizeof(Implementation::BaseLayerSubdividedTexturedVertex) :
+            sizeof(Implementation::BaseLayerSubdividedVertex);
+        arrayResize(state.vertices, NoInit, capacity()*16*typeSize);
+        const Containers::StridedArrayView1D<Implementation::BaseLayerSubdividedVertex> vertices{
+            state.vertices,
+            reinterpret_cast<Implementation::BaseLayerSubdividedVertex*>(state.vertices.data()),
+            state.vertices.size()/typeSize,
+            std::ptrdiff_t(typeSize)};
+
+        /* Fill in the vertex data. In each corner the vertices are collapsed
+           to a single point that's in the position of points 0, 4, 8 and 12,
+           the inner vertices then get shifted to contain the inner & outer
+           radius and outline width.
+
+            0---1---5---4
+            |   |   |   |
+            2---3---7---6
+            |   |   |   |
+            |   |   |   |
+            |   |   |   |
+            10-11---15-14
+            |   |   |   |
+            8---9---13-12 */
+        const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+        for(const UnsignedInt dataId: dataIds) {
+            const UnsignedInt nodeId = nodeHandleId(nodes[dataId]);
+            const Implementation::BaseLayerData& data = state.data[dataId];
+
+            /* All 16 vertices get the same color and style */
+            for(std::size_t i = 0; i != 16; ++i) {
+                Implementation::BaseLayerSubdividedVertex& vertex = vertices[dataId*16 + i];
+
+                vertex.color = data.color;
+                /* For dynamic styles the uniform mapping is implicit and
+                   they're placed right after all non-dynamic styles */
+                vertex.styleUniform = data.calculatedStyle < sharedState.styleCount ?
+                    sharedState.styles[data.calculatedStyle].uniform :
+                    sharedState.styleUniformCount + data.calculatedStyle - sharedState.styleCount;
+            }
+
+            /* Note that here, compared to the non-SubdividedQuads case above,
+               the padding *does not* include the smoothness expansion. This is
+               because the shader has to do expansion for outline width and
+               corner radii on its own anyway, and doing the outer smoothness
+               expansion there as well makes the code more understandable. */
+            Vector4 padding = data.padding;
+            if(data.calculatedStyle < sharedState.styleCount)
+                padding += sharedState.styles[data.calculatedStyle].padding;
+            else {
+                CORRADE_INTERNAL_DEBUG_ASSERT(data.calculatedStyle < sharedState.styleCount + sharedState.dynamicStyleCount);
+                padding += state.dynamicStylePaddings[data.calculatedStyle - sharedState.styleCount];
+            }
+
+            /* All four vertices in each corner get set to the same position
+               and center distance */
+            const Vector2 offset = nodeOffsets[nodeId];
+            const Vector2 min = offset + padding.xy();
+            const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
+            const Float sizeHalfY = (max.y() - min.y())*0.5f;
+            const Float sizeHalfYNegative = -sizeHalfY;
+            for(UnsignedByte i = 0; i != 4; ++i) {
+                /* ✨ */
+                const Vector2 position = Math::lerp(min, max, BitVector2{i});
+                const Float centerDistanceY = Math::lerp(sizeHalfYNegative, sizeHalfY, i >> 1);
+                for(std::size_t j = 0; j != 4; ++j) {
+                    Implementation::BaseLayerSubdividedVertex& vertex = vertices[dataId*16 + i *4 + j];
+                    vertex.position = position;
+                    vertex.centerDistanceY = centerDistanceY;
+                }
+            }
+
+            /* All left vertices get the left outline width in the x coordinate
+               and all right vertices get the right outline width */
+            for(const std::size_t i: {0, 1, 2, 3, 8, 9, 10, 11})
+                vertices[dataId*16 + i].outlineWidth.x() = data.outlineWidth.x();
+            for(const std::size_t i: {4, 5, 6, 7, 12, 13, 14, 15})
+                vertices[dataId*16 + i].outlineWidth.x() = data.outlineWidth.z();
+
+            /* All top vertices get the top outline width in the y coordinate
+               and all bottom vertices get the bottom width */
+            for(const std::size_t i: {0, 1, 2, 3, 4, 5, 6, 7})
+                vertices[dataId*16 + i].outlineWidth.y() = data.outlineWidth.y();
+            for(const std::size_t i: {8, 9, 10, 11, 12, 13, 14, 15})
+                vertices[dataId*16 + i].outlineWidth.y() = data.outlineWidth.w();
+        }
+
+        /* Fill in also quad texture coordinates if enabled */
+        if(sharedState.flags & Shared::Flag::Textured) {
+            const Containers::ArrayView<Implementation::BaseLayerSubdividedTexturedVertex> texturedVertices = Containers::arrayCast<Implementation::BaseLayerSubdividedTexturedVertex>(vertices).asContiguous();
+
+            for(const UnsignedInt dataId: dataIds) {
+                const Implementation::BaseLayerData& data = state.data[dataId];
+
+                /* The texture coordinates are Y-flipped compared to the
+                   positions to account for Y-down (positions) vs Y-up (GL
+                   textures) */
+                /** @todo which may get annoying with non-GL renderers that
+                    don't Y-flip the projection, reconsider? */
+                const Vector2 min = data.textureCoordinateOffset.xy() + Vector2::yAxis(data.textureCoordinateSize.y());
+                const Vector2 max = data.textureCoordinateOffset.xy() + Vector2::xAxis(data.textureCoordinateSize.x());
+
+                /* Calculate texture scale relative to one projection unit in
+                   order to correctly inter/extrapolate texture coordinates for
+                   expanded quads. Similarly to the non-SubdividedQuads case,
+                   taking the actual vertex positions to not have to deal with
+                   the padding logic again, this time the size is without the
+                   smoothness expansion so don't need to undo anything. The
+                   scale is also passed through an extra vertex attribute
+                   instead of being applied to the vertex data as the shader
+                   needs to combine it with the actual expansion size based on
+                   corner radius, outline size etc.
+
+                   Here the scale is again Y flipping. */
+                const Vector2 paddedQuadSize = vertices[dataId*16 + 12].position - vertices[dataId*16 + 0].position;
+                const Vector2 textureScale = data.textureCoordinateSize/paddedQuadSize*Vector2::yScale(-1.0f);
+
+                for(UnsignedByte i = 0; i != 4; ++i) {
+                    const std::size_t index = dataId*16 + i *4;
+                    const Vector3 coordinate{Math::lerp(min, max, BitVector2{i}), data.textureCoordinateOffset.z()};
+                    for(std::size_t j = 0; j != 4; ++j) {
+                        texturedVertices[index + j].textureScale = textureScale;
+                        texturedVertices[index + j].textureCoordinates = coordinate;
+                    }
+                }
             }
         }
     }

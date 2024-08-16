@@ -42,6 +42,9 @@ layout(std140
 };
 
 #define style_smoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.x
+#ifndef NO_OUTLINE
+#define style_innerOutlineSmoothness smoothnessInnerOutlineSmoothnessBackgroundBlurAlphaReserved.y
+#endif
 
 #ifdef EXPLICIT_UNIFORM_LOCATION
 layout(location = 0)
@@ -49,9 +52,20 @@ layout(location = 0)
 uniform highp mat3 transformationProjectionMatrix;
 
 layout(location = 0) in highp vec2 position;
+#ifndef SUBDIVIDED_QUADS
 layout(location = 1) in mediump vec2 centerDistance;
 #ifndef NO_OUTLINE
 layout(location = 2) in mediump vec4 outlineWidth;
+#endif
+#else
+#ifndef TEXTURED
+layout(location = 1) in mediump float centerDistanceY;
+#else
+layout(location = 1) in mediump vec3 centerDistanceYTextureScale;
+#define centerDistanceY centerDistanceYTextureScale.x
+#define textureScale centerDistanceYTextureScale.yz
+#endif
+layout(location = 2) in mediump vec2 outlineWidth;
 #endif
 layout(location = 3) in lowp vec4 color;
 layout(location = 4) in mediump uint style;
@@ -60,23 +74,32 @@ layout(location = 5) in mediump vec3 textureCoordinates;
 #endif
 
 flat out mediump uint interpolatedStyle;
-flat out mediump vec2 halfQuadSize;
-flat out mediump vec4 outlineQuadSize;
 NOPERSPECTIVE out lowp vec4 interpolatedColor;
-NOPERSPECTIVE out mediump vec2 interpolatedCenterDistance;
 #ifdef TEXTURED
 NOPERSPECTIVE out mediump vec3 interpolatedTextureCoordinates;
 #endif
 #ifdef BACKGROUND_BLUR
 NOPERSPECTIVE out highp vec2 backgroundBlurTextureCoordinates;
 #endif
+#ifndef SUBDIVIDED_QUADS
+flat out mediump vec2 halfQuadSize;
+flat out mediump vec4 outlineQuadSize;
+NOPERSPECTIVE out mediump vec2 interpolatedCenterDistance;
+#else
+/* Horizontal, vertical, outline horizontal, outline vertical */
+NOPERSPECTIVE out mediump vec4 edgeDistance;
+NOPERSPECTIVE out mediump float cornerRadius;
+NOPERSPECTIVE out mediump float outlineCornerRadius;
+#endif
 
 void main() {
     interpolatedStyle = style;
-    /* The center distance already contains the smoothness expansion, together
-       with position and texture coordinates. The halfQuadSize passed to the
-       fragment shader however needs to be without the expansion to correctly
-       know where the edges are. */
+
+    /* Case with just a single quad -- the position, center distance and
+       texture coordinates all already contain the smoothness expansion */
+    #ifndef SUBDIVIDED_QUADS
+    /* The halfQuadSize passed to the fragment shader needs to be *without* the
+       expansion to correctly know where the edges are */
     halfQuadSize = abs(centerDistance) - vec2(style_smoothness);
     #ifndef NO_OUTLINE
     /* Calculate the outline quad size here already to save a vec4 load in each
@@ -86,16 +109,119 @@ void main() {
                            +halfQuadSize - combinedOutlineWidth.zw);
     #endif
     /* Calculate the gradient here already to save two vec4 loads in each
-       fragment shader invocation. Have to extrapolate to undo the quad
+       fragment shader invocation. Have to extrapolate to again undo the quad
        expansion, i.e. at a top/bottom edge it should still be exactly the
        (alpha-faded) top/bottom color no matter what the smoothness is. */
     interpolatedColor = mix(styles[style].topColor, styles[style].bottomColor, 0.5*centerDistance.y/halfQuadSize.y + 0.5)*color;
     interpolatedCenterDistance = centerDistance;
     #ifdef TEXTURED
+    /* Texture coordinates are already containing the smoothness expansion,
+       pass then unchanged */
     interpolatedTextureCoordinates = textureCoordinates;
     #endif
 
     gl_Position = vec4(transformationProjectionMatrix*vec3(position, 1.0), 0.0).xywz;
+
+    /* Case with 16 subdivided quads. They're all initially positioned in the
+       corners and get expanded based on corner radii, outline width and
+       smoothness. */
+    #else
+    /* Pick corner radii and horizontal/vertical outline width belonging to
+       this corner based on vertex ID
+
+        0---1---5---4
+        |   |   |   |
+        2---3---7---6
+        |   |   |   |
+        |   |   |   |
+        |   |   |   |
+        10-11---15-14
+        |   |   |   |
+        8---9---13-12 */
+    lowp int vertexId = gl_VertexID & 15;
+    lowp int cornerId = vertexId >> 2;
+    mediump vec2 totalOutlineWidth = outlineWidth;
+    /* Could use vector component indexing into a xzyw / xzxz / yyww swizzle to
+       deduplicate, unfortunately Mesa (or Intel?) seems to incorrectly
+       interpret xzyw as xyzw, swapping bottom left and top right corner. NV
+       doesn't. One solution could be to reorder the vertices to not need that
+       first swizzle, but benchmark shows that component indexing and these
+       branches have comparable speed so I won't bother, plus certain GPUs and
+       drivers don't allow access with a dynamic index, so this works
+       everywhere. */
+    if(cornerId == 0) {         /* Top left */
+        cornerRadius = styles[style].cornerRadius.x;
+        outlineCornerRadius = styles[style].outlineCornerRadius.x;
+        totalOutlineWidth += vec2(styles[style].outlineWidth.x,
+                                  styles[style].outlineWidth.y);
+    } else if(cornerId == 1) {  /* Top right */
+        cornerRadius = styles[style].cornerRadius.z;
+        outlineCornerRadius = styles[style].outlineCornerRadius.z;
+        totalOutlineWidth += vec2(styles[style].outlineWidth.z,
+                                  styles[style].outlineWidth.y);
+    } else if(cornerId == 2) {  /* Bottom left */
+        cornerRadius = styles[style].cornerRadius.y;
+        outlineCornerRadius = styles[style].outlineCornerRadius.y;
+        totalOutlineWidth += vec2(styles[style].outlineWidth.x,
+                                  styles[style].outlineWidth.w);
+    } else if(cornerId == 3) {  /* Bottom right */
+        cornerRadius = styles[style].cornerRadius.w;
+        outlineCornerRadius = styles[style].outlineCornerRadius.w;
+        totalOutlineWidth += vec2(styles[style].outlineWidth.z,
+                                  styles[style].outlineWidth.w);
+    } else {
+        /* Without this, NV says "warning C7050: "<ver>" might be used before
+           being initialized". It isn't, as cornerId is only ever those four
+           values. */
+        cornerRadius = 0.0f;
+        outlineCornerRadius = 0.0f;
+    }
+
+    /* Minimal inner quad shift needed to cover the inner/outer corner radius
+       or the smoothness, whichever is largest. At the very least it has to be
+       shifted by 1 in addition to the outline width in order to have a
+       non-zero `edgeDistance` value for the inner vertices. If they'd be zero,
+       all pixels in the center quad would classify as being on the inner
+       outline edge, causing the fragment shader to draw the whole thing with
+       just the outline color. */
+    lowp float smoothness = style_smoothness;
+    lowp float innerOutlineSmoothness = style_innerOutlineSmoothness;
+    mediump float radiusOrSmoothnessShift = max(cornerRadius, smoothness);
+    mediump float innerRadiusOrSmoothnessShift = max(1.0, max(outlineCornerRadius, innerOutlineSmoothness));
+
+    /* Calculate how far to shift so the inner vertices include both radii and
+       corresponding smoothness and the total outline width, and the outer
+       vertices include the outer smoothness in the opposite direction. */
+    if((vertexId & 1) == 1) { /* Horizontal shift */
+        edgeDistance.x = max(radiusOrSmoothnessShift, innerRadiusOrSmoothnessShift + totalOutlineWidth.x);
+    } else {
+        edgeDistance.x = -smoothness;
+    }
+    if((vertexId & 2) == 2) { /* Vertical shift */
+        edgeDistance.y = max(radiusOrSmoothnessShift, innerRadiusOrSmoothnessShift + totalOutlineWidth.y);
+    } else {
+        edgeDistance.y = -smoothness;
+    }
+
+    /* Inner edge distance is then with the outline width subtracted */
+    edgeDistance.zw = edgeDistance.xy - totalOutlineWidth.xy;
+
+    /* And the actual signed shift value is based on whether it's the top /
+       left or bottom / right corner */
+    mediump vec2 shift = edgeDistance.xy*vec2(
+        (cornerId & 1) == 0 ? +1.0 : -1.0,
+        (cornerId & 2) == 0 ? +1.0 : -1.0);
+
+    gl_Position = vec4(transformationProjectionMatrix*vec3(shift + position, 1.0), 0.0).xywz;
+
+    /* Compared to the non-SUBDIVIDED_QUADS case above, here it's both
+       interpolated and extrapolated */
+    interpolatedColor = mix(styles[style].topColor, styles[style].bottomColor, 0.5*(centerDistanceY + shift.y)/abs(centerDistanceY) + 0.5)*color;
+
+    #ifdef TEXTURED
+    interpolatedTextureCoordinates = textureCoordinates + vec3(shift*textureScale, 0.0);
+    #endif
+    #endif
 
     #ifdef BACKGROUND_BLUR
     backgroundBlurTextureCoordinates = gl_Position.xy*0.5 + vec2(0.5);
