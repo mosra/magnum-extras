@@ -129,6 +129,7 @@ class WheeGallery: public Platform::Application {
         explicit WheeGallery(const Arguments& arguments);
 
     private:
+        void viewportEvent(ViewportEvent& event) override;
         void drawEvent() override;
         void mousePressEvent(MouseEvent& event) override;
         void mouseReleaseEvent(MouseEvent& event) override;
@@ -167,7 +168,10 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     /* Create a GL context and the UI after the arguments were parsed to not
        have a flickering window and console noise if --help is requested,
        parsing fails, etc. */
-    create(Configuration{}.setTitle("Magnum::Whee Gallery"_s).setSize({900, 600}));
+    create(Configuration{}
+        .setTitle("Magnum::Whee Gallery"_s)
+        .setSize({900, 600})
+        .setWindowFlags(Configuration::WindowFlag::Resizable));
 
     _ui
         /* Renderer with a compositing framebuffer enabled */
@@ -175,7 +179,8 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
         /* Set size and a style. Has to be done after creating the renderer as
            it otherwise adds its own. */
         // TODO ehhhh and here i wanted to AVOID doing this, and wanted to call create()
-       .setSize({900, 600}, Vector2{windowSize()}, framebufferSize())
+       // TODO er what's the er actual er equation
+       .setSize(Vector2{windowSize()}/dpiScaling(), Vector2{windowSize()}, framebufferSize())
        .setStyle(Whee::McssDarkStyle{}
             .setTextLayerDynamicStyleCount(2)
             .setBaseLayerFlags(args.isSet("subdivided-quads") ? Whee::BaseLayerSharedFlag::SubdividedQuads : Whee::BaseLayerSharedFlags{}, {}));
@@ -476,6 +481,13 @@ void WheeGallery::popup() {
     _ui.eventLayer().onTapOrClick(more, [this]{
         _backgroundBlurBaseLayer->setBackgroundBlurPassCount(_backgroundBlurBaseLayer->backgroundBlurPassCount()*2);
     });
+}
+
+void WheeGallery::viewportEvent(ViewportEvent& event) {
+    GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
+
+    // TODO er what's the er actual er equation
+    _ui.setSize(Vector2{windowSize()}/dpiScaling(), Vector2{windowSize()}, framebufferSize());
 }
 
 void WheeGallery::drawEvent() {
