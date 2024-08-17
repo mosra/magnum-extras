@@ -478,9 +478,6 @@ void BaseLayer::doSetSize(const Vector2& size, const Vector2i& framebufferSize) 
     }
     state.uiSize = size;
     state.framebufferSize = framebufferSize;
-
-    if(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur)
-        state.backgroundBlurScale = 2.0f/size;
 }
 
 void BaseLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) {
@@ -907,18 +904,11 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
            converted to be UI-size-relative. */
         /** @todo exclude the cutoff from this? how does the sqrt count into
             that? take a max of count*radiusWithCutoff and this? */
-        const Vector2 blurRadiusPadding = Math::sqrt(Float(state.backgroundBlurPassCount))*(sharedState.backgroundBlurRadius + sharedState.smoothness)*2.0f/Vector2{state.framebufferSize};
+        const Vector2 blurRadiusPadding = Math::sqrt(Float(state.backgroundBlurPassCount))*(sharedState.backgroundBlurRadius + sharedState.smoothness)*state.uiSize/Vector2{state.framebufferSize};
 
         for(std::size_t i = 0; i != compositeRectOffsets.size(); ++i) {
-            /* The compositing vertices are converted from the [0, uiSize]
-               coordinate system to [-1, +1] (backgroundBlurScale is 2/uiSize),
-               the extra padding is added and additionally Y-flipped to match
-               GL's Y-up without having to do any additional transformation in
-               the shader itself. */
-            /** @todo which may get annoying with non-GL renderers that don't
-                Y-flip, reconsider? */
-            const Vector2 min = (compositeRectOffsets[i]*state.backgroundBlurScale - Vector2{1.0f} - blurRadiusPadding)*Vector2::yScale(-1.0f);
-            const Vector2 max = ((compositeRectOffsets[i] + compositeRectSizes[i])*state.backgroundBlurScale - Vector2{1.0f} + blurRadiusPadding)*Vector2::yScale(-1.0f);
+            const Vector2 min = compositeRectOffsets[i] - blurRadiusPadding;
+            const Vector2 max = compositeRectOffsets[i] + compositeRectSizes[i] + blurRadiusPadding;
             const UnsignedInt vertexOffset = i*4;
 
             /* 0---1 0---2 5

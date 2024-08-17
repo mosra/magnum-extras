@@ -309,6 +309,7 @@ BlurShaderGL::BlurShaderGL(UnsignedInt radius, Float limit) {
     if(version < GL::Version::GLES310)
     #endif
     {
+        _projectionUniform = uniformLocation("projection"_s);
         /* For a zero radius we check just the center pixel, the direction
            isn't used by the shader at all. Originally it was queried always
            but some shader compilers DCE the access and some not, leading to
@@ -496,6 +497,8 @@ void BaseLayerGL::doSetSize(const Vector2& size, const Vector2i& framebufferSize
     state.clipScale = Vector2{framebufferSize}/size;
 
     if(sharedState.flags & BaseLayerSharedFlag::BackgroundBlur) {
+        sharedState.backgroundBlurShader.setProjection(size);
+
         (sharedState.backgroundBlurTextureVertical = GL::Texture2D{})
             .setWrapping(GL::SamplerWrapping::ClampToEdge)
             .setStorage(1, GL::TextureFormat::RGBA8, framebufferSize);

@@ -328,27 +328,26 @@ const struct {
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     /* These two should result in the same padding; total radius is 36 and
-       framebuffer size is {250, 5000}. The compositing rects are in the
-       normalized [-1, +1] range, so additionally times 2. */
+       UI / framebuffer size ratio is {10, 100} */
     {"background blur with radius 9 and 16 passes",
         false, false, false, 5, 0, 9, 16, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
-        0.0f, {72.0f/250.0f, 72.0f/5000.0f},
+        0.0f, {36.0f/10.0f, 36.0f/100.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     {"background blur with radius 9 and 16 passes, smoothness expansion",
         false, false, false, 5, 0, 9, 16, 10.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
-        1.0f, {2*4.0f*(9.0f + 10)/250.0f, 2*4.0f*(9.0f + 10)/5000.0f},
+        1.0f, {4.0f*(9.0f + 10)/10.0f, 4.0f*(9.0f + 10)/100.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     {"background blur with radius 18 and 4 passes",
         false, false, false, 5, 0, 18, 4, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
-        0.0f, {72.0f/250.0f, 72.0f/5000.0f},
+        0.0f, {36.0f/10.0f, 36.0f/100.0f},
         LayerState::NeedsDataUpdate|LayerState::NeedsCompositeOffsetSizeUpdate, true, true, true},
     {"background blur with radius 18 and 4 passes, composite offset/size update only",
         false, false, false, 5, 0, 18, 4, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {},
-        0.0f, {72.0f/250.0f, 72.0f/5000.0f},
+        0.0f, {36.0f/10.0f, 36.0f/100.0f},
         LayerState::NeedsCompositeOffsetSizeUpdate, false, false, true},
 };
 
@@ -2649,16 +2648,16 @@ void BaseLayerTest::updateDataOrder() {
                 0--1 0-2 5
                 |  | |/ /|
                 2--3 1 3-4 */
-            Vector2{ 0.2f,  0.2f} + data.expectedBlurPadding*Vector2{-1.0f, +1.0f},
-            Vector2{ 1.0f,  0.2f} + data.expectedBlurPadding*Vector2{+1.0f, +1.0f},
-            Vector2{ 0.2f, -0.4f} + data.expectedBlurPadding*Vector2{-1.0f, -1.0f},
-            Vector2{ 1.0f, -0.4f} + data.expectedBlurPadding*Vector2{+1.0f, -1.0f},
+            Vector2{15.0f, 20.0f} + data.expectedBlurPadding*Vector2{-1.0f, -1.0f},
+            Vector2{25.0f, 20.0f} + data.expectedBlurPadding*Vector2{+1.0f, -1.0f},
+            Vector2{15.0f, 35.0f} + data.expectedBlurPadding*Vector2{-1.0f, +1.0f},
+            Vector2{25.0f, 35.0f} + data.expectedBlurPadding*Vector2{+1.0f, +1.0f},
 
             /* Rect from {5, 0} to {10, 5} */
-            Vector2{-0.6f,  1.0f} + data.expectedBlurPadding*Vector2{-1.0f, +1.0f},
-            Vector2{-0.2f,  1.0f} + data.expectedBlurPadding*Vector2{+1.0f, +1.0f},
-            Vector2{-0.6f,  0.8f} + data.expectedBlurPadding*Vector2{-1.0f, -1.0f},
-            Vector2{-0.2f,  0.8f} + data.expectedBlurPadding*Vector2{+1.0f, -1.0f}
+            Vector2{ 5.0f,  0.0f} + data.expectedBlurPadding*Vector2{-1.0f, -1.0f},
+            Vector2{10.0f,  0.0f} + data.expectedBlurPadding*Vector2{+1.0f, -1.0f},
+            Vector2{ 5.0f,  5.0f} + data.expectedBlurPadding*Vector2{-1.0f, +1.0f},
+            Vector2{10.0f,  5.0f} + data.expectedBlurPadding*Vector2{+1.0f, +1.0f}
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(layer.stateData().backgroundBlurIndices, Containers::arrayView<UnsignedInt>({
             0, 2, 1, 2, 3, 1,

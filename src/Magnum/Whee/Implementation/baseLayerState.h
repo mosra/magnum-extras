@@ -179,7 +179,6 @@ struct BaseLayer::State: AbstractVisualLayer::State {
     /* Used only if Flag::BackgroundBlur is enabled */
     Containers::Array<Vector2> backgroundBlurVertices;
     Containers::Array<UnsignedInt> backgroundBlurIndices;
-    Vector2 backgroundBlurScale; /* 2/uiSize */
     UnsignedInt backgroundBlurPassCount = 1;
 
     /* 0/4 bytes free */
