@@ -155,14 +155,15 @@ layout(location = 0) in highp vec2 position;
 out mediump vec2 textureCoordinates;
 
 void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    textureCoordinates = position*0.5 + vec2(0.5);
+    /* To match what BlurShader.vert would do with identity projection */
+    gl_Position = vec4(position + vec2(-1.0, 1.0), 0.0, 1.0);
+    textureCoordinates = gl_Position.xy*0.5 + vec2(0.5);
 })", "#line " CORRADE_LINE_STRING R"(
 #define RADIUS 8
 const highp float weights[9] = float[](0.140245, 0.131995, 0.109996, 0.0810496, 0.0526822, 0.0301041, 0.0150521, 0.00654438, 0.00245414);
 
 #ifdef EXPLICIT_UNIFORM_LOCATION
-layout(location = 0)
+layout(location = 1)
 #endif
 uniform highp vec2 direction;
 
@@ -193,14 +194,15 @@ layout(location = 0) in highp vec2 position;
 out mediump vec2 textureCoordinates;
 
 void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    textureCoordinates = position*0.5 + vec2(0.5);
+    /* To match what BlurShader.vert would do with identity projection */
+    gl_Position = vec4(position + vec2(-1.0, 1.0), 0.0, 1.0);
+    textureCoordinates = gl_Position.xy*0.5 + vec2(0.5);
 })", "#line " CORRADE_LINE_STRING R"(
 #define RADIUS 8
 #define REAL_RADIUS 16
 
 #ifdef EXPLICIT_UNIFORM_LOCATION
-layout(location = 0)
+layout(location = 1)
 #endif
 uniform highp vec2 direction;
 
@@ -241,13 +243,14 @@ void main() {
 layout(location = 0) in highp vec2 position;
 
 void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
+    /* To match what BlurShader.vert would do with identity projection */
+    gl_Position = vec4(position + vec2(-1.0, 1.0), 0.0, 1.0);
 })", "#line " CORRADE_LINE_STRING R"(
 #define RADIUS 8
 const highp float weights[9] = float[](0.140245, 0.131995, 0.109996, 0.0810496, 0.0526822, 0.0301041, 0.0150521, 0.00654438, 0.00245414);
 
 #ifdef EXPLICIT_UNIFORM_LOCATION
-layout(location = 0)
+layout(location = 1)
 #endif
 uniform highp ivec2 direction;
 
@@ -273,7 +276,7 @@ void main() {
        next case below) */
     {"discrete, unrolled", nullptr, "#line " CORRADE_LINE_STRING R"(
 #ifdef EXPLICIT_UNIFORM_LOCATION
-layout(location = 0)
+layout(location = 1)
 #endif
 uniform highp vec2 direction;
 
@@ -314,7 +317,7 @@ void main() {
        reads" in the fragment shader used to be considerably faster in 2012 */
     {"discrete, coordinate passthrough, unrolled", "#line " CORRADE_LINE_STRING R"(
 #ifdef EXPLICIT_UNIFORM_LOCATION
-layout(location = 0)
+layout(location = 1)
 #endif
 uniform highp vec2 direction;
 
@@ -323,8 +326,9 @@ layout(location = 0) in highp vec2 position;
 out mediump vec4 textureCoordinates[9];
 
 void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    mediump vec2 baseTextureCoordinates = position*0.5 + vec2(0.5);
+    /* To match what BlurShader.vert would do with identity projection */
+    gl_Position = vec4(position + vec2(-1.0, 1.0), 0.0, 1.0);
+    mediump vec2 baseTextureCoordinates = gl_Position.xy*0.5 + vec2(0.5);
     for(int i = 0; i != 9; ++i) {
         textureCoordinates[i].xy = baseTextureCoordinates + float(i)*direction;
         textureCoordinates[i].zw = baseTextureCoordinates - float(i)*direction;
@@ -407,8 +411,10 @@ BlurShaderGLTest::BlurShaderGLTest() {
         _importerManager.setPreferredPlugins("PngImporter", {"StbImageImporter"});
     }
 
-    /* Could also use MeshTools::compile() and Primitives::squareSolid() but
-       this is way less dependencies */
+    /* The builtin shader asumes Y down, origin top left and takes an extra
+       projection scale uniform which then flips it to Y up. The other variants
+       in this test don't take a projection scale, so craft the data to have
+       both behave the same way with a projection scale being identity. */
     _square
         .setPrimitive(GL::MeshPrimitive::TriangleStrip)
         .setCount(4)
@@ -417,10 +423,10 @@ BlurShaderGLTest::BlurShaderGLTest() {
                |\ |
                | \|
                0--1 */
-            Vector2{-1.0f, -1.0f},
-            Vector2{ 1.0f, -1.0f},
-            Vector2{-1.0f,  1.0f},
-            Vector2{ 1.0f,  1.0f},
+            Vector2{0.0f, -2.0f},
+            Vector2{2.0f, -2.0f},
+            Vector2{0.0f,  0.0f},
+            Vector2{2.0f,  0.0f},
         }}, 0, BlurShaderGL::Position{});
 }
 
@@ -485,6 +491,9 @@ void BlurShaderGLTest::render() {
         .setSubImage(0, {}, *image);
 
     BlurShaderGL shader{data.radius, data.limit};
+    /* Internally this divides {2, -2}, resulting in an identity to match other
+       vertex shaders in this test */
+    shader.setProjection({2.0f, -2.0f});
 
     MAGNUM_VERIFY_NO_GL_ERROR();
 
@@ -596,6 +605,11 @@ class BlurShaderCustomRadius8: public GL::AbstractShaderProgram {
             {
                 setUniform(uniformLocation("textureData"_s), TextureBinding);
             }
+
+            /* The builtin vertex shader has an extra projection uniform, the
+               others not. Set it to an identity value to match the others. */
+            if(!vertSource)
+                setUniform(uniformLocation("projection"_s), Vector2{1.0f});
         }
 
         BlurShaderCustomRadius8& setDirection(const Vector2& direction) {
@@ -614,7 +628,7 @@ class BlurShaderCustomRadius8: public GL::AbstractShaderProgram {
         }
 
     private:
-        Int _directionUniform = 0;
+        Int _directionUniform = 1;
 };
 
 void BlurShaderGLTest::renderCustom16Cutoff8() {
@@ -708,6 +722,9 @@ void BlurShaderGLTest::benchmark() {
         .setSubImage(0, {}, ImageView2D{PixelFormat::RGBA8Unorm, BenchmarkSize, Containers::Array<Color4ub>{DirectInit, std::size_t(BenchmarkSize.product()), 0xff336699_rgba}});
 
     BlurShaderGL shader{data.radius, data.limit};
+    /* Internally this divides {2, -2}, resulting in an identity to match other
+       vertex shaders in this test */
+    shader.setProjection({2.0f, -2.0f});
 
     MAGNUM_VERIFY_NO_GL_ERROR();
 

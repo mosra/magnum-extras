@@ -23,14 +23,20 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#ifdef EXPLICIT_UNIFORM_LOCATION
+layout(location = 0)
+#endif
+uniform highp vec2 projection;
+
 layout(location = 0) in highp vec2 position;
 
 out mediump vec2 textureCoordinates;
 
 void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
+    /* The projection scales from UI size to the 2x2 unit square and Y-flips,
+       the (-1, 1) then translates the origin from top left to center */
+    gl_Position = vec4(projection*position + vec2(-1.0, 1.0), 0.0, 1.0);
 
-    /* The position should be already in a normalized [-1, +1] range, so
-       texture coordinates are just that range shifted to [0, 1] */
-    textureCoordinates = position*0.5 + vec2(0.5);
+    /* Texture coordinates are just the [-1, +1] range shifted to [0, 1] */
+    textureCoordinates = gl_Position.xy*0.5 + vec2(0.5);
 }

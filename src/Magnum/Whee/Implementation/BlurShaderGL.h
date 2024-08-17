@@ -59,6 +59,14 @@ BlurShaderGL: public GL::AbstractShaderProgram {
         explicit BlurShaderGL(NoCreateT): GL::AbstractShaderProgram{NoCreate} {}
         explicit BlurShaderGL(UnsignedInt radius, Float limit);
 
+        BlurShaderGL& setProjection(const Vector2& scaling) {
+            /* Y-flipped scale from the UI size to the 2x2 unit square, the
+               shader then translates by (-1, 1) on its own to put the
+               origin at center */
+            setUniform(_projectionUniform, Vector2{2.0f, -2.0f}/scaling);
+            return *this;
+        }
+
         BlurShaderGL& setDirection(const Vector2& direction) {
             /* If we check just the center pixel, the direction isn't used by
                the shader at all */
@@ -74,7 +82,8 @@ BlurShaderGL: public GL::AbstractShaderProgram {
 
     private:
         UnsignedInt _sampleCount;
-        Int _directionUniform = 0;
+        Int _projectionUniform = 0,
+            _directionUniform = 1;
 };
 
 }}

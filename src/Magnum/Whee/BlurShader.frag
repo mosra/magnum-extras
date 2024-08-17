@@ -25,7 +25,7 @@
 
 #if !defined(FIRST_TAP_AT_CENTER) || COUNT > 1
 #ifdef EXPLICIT_UNIFORM_LOCATION
-layout(location = 0)
+layout(location = 1)
 #endif
 uniform highp vec2 direction;
 #endif
