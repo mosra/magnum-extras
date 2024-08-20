@@ -1491,6 +1491,18 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
         return;
     }
 
+    /* Check if the text is a slice of our internal text array (i.e., coming
+       from another widget, possibly). In that case we'll have to relocate the
+       view when we copy() it below. Other cases in create() and setText() are
+       handled by the relocating logic in arrayAppend() directly, but as here
+       the growing and copying is decoupled, we have to handle it directly.
+
+       Checking against the capacity and not size for consistency with
+       arrayAppend(), see comments in its implementation for details why. */
+    std::size_t insertTextRelocateOffset = std::size_t(insertText.data() - state.textData.data());
+    if(insertTextRelocateOffset >= arrayCapacity(state.textData))
+        insertTextRelocateOffset = ~std::size_t{};
+
     /* Add a new text run for the modified contents */
     const UnsignedInt textRun = state.textRuns.size();
     const UnsignedInt textOffset = state.textData.size();
@@ -1552,8 +1564,14 @@ void TextLayer::updateTextInternal(const UnsignedInt id, const UnsignedInt remov
     }
 
     /* Copy the inserted text, if not empty */
-    if(insertText)
-        Utility::copy(insertText, text.sliceSize(insertOffset, insertText.size()));
+    if(insertText) {
+        Utility::copy(
+            /* If text to insert was a slice of our textData array, relocate
+               the view relative to the (potentially) reallocated array */
+            insertTextRelocateOffset != ~std::size_t{} ? state.textData.sliceSize(insertTextRelocateOffset, insertText.size())
+                : insertText,
+            text.sliceSize(insertOffset, insertText.size()));
+    }
 
     /* Mark the previous run (potentially reallocated somewhere) as unused.
        It'll be removed during the next recompaction run in doUpdate(). Save
