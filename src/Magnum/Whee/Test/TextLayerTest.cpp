@@ -933,35 +933,42 @@ const struct {
     Vector2 offset;
     /* Glyph ounding box is {6, 8}, offset {-4, -6} */
     Vector2 offsetGlyph;
+    Float editingPaddingL, editingPaddingR;
 } UpdateAlignmentPaddingData[]{
     {"line left",
         Text::Alignment::LineLeft, Text::ShapeDirection::Unspecified,
         /* 20.5 + 100.4/2 = 70.7 */
         {50.5f, 70.7f},
-        {50.5f, 76.7f}},
+        {50.5f, 76.7f},
+        0.1f, 0.3f},
     {"line right",
         Text::Alignment::LineRight, Text::ShapeDirection::Unspecified,
         {50.5f + 200.8f - 9.0f, 70.7f},
-        {50.5f + 200.8f - 6.0f, 76.7f}},
+        {50.5f + 200.8f - 6.0f, 76.7f},
+        0.1f, 0.3f},
     {"top center",
         Text::Alignment::TopCenter, Text::ShapeDirection::Unspecified,
         {50.5f + 100.4f - 4.5f, 20.5f + 7.0f},
-        {50.5f + 100.4f - 3.0f, 20.5f + 8.0f}},
+        {50.5f + 100.4f - 3.0f, 20.5f + 8.0f},
+        0.1f, 0.3f},
     {"top center, interal",
         Text::Alignment::TopCenterIntegral, Text::ShapeDirection::Unspecified,
         /* Only the offset inside the node and the bounding box is rounded,
            not the node offset itself; not the Y coordinate either */
         {50.5f + 100.0f - 5.0f, 20.5f + 7.0f},
         /* No change for the glyph as the glyph cache has integer sizes */
-        {50.5f + 100.0f - 3.0f, 20.5f + 8.0f}},
+        {50.5f + 100.0f - 3.0f, 20.5f + 8.0f},
+        0.1f, 0.3f},
     {"bottom left",
         Text::Alignment::BottomLeft, Text::ShapeDirection::Unspecified,
         {50.5f, 120.9f - 4.0f},
-        {50.5f, 120.9f}},
+        {50.5f, 120.9f},
+        0.1f, 0.3f},
     {"middle right",
         Text::Alignment::MiddleRight, Text::ShapeDirection::Unspecified,
         {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
-        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f},
+        0.1f, 0.3f},
     {"middle right, integral",
         Text::Alignment::MiddleRightIntegral, Text::ShapeDirection::Unspecified,
         /* Only the offset inside the node and the bounding box is rounded,
@@ -969,38 +976,45 @@ const struct {
            the Y rounding is in the other direction compared to X because of Y
            flip. */
         {50.5f + 200.8f - 9.0f, 20.5f + 50.0f - 5.0f + 7.0f},
-        {50.5f + 200.8f - 6.0f, 20.5f + 50.0f - 4.0f + 8.0f}},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.0f - 4.0f + 8.0f},
+        0.1f, 0.3f},
     {"middle center",
         Text::Alignment::MiddleCenter, Text::ShapeDirection::Unspecified,
         {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
-        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
+        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f},
+        0.1f, 0.3f},
     {"middle center, integral",
         Text::Alignment::MiddleCenterIntegral, Text::ShapeDirection::Unspecified,
         /* Only the offset inside the node and the bounding box is rounded,
            not the node offset itself. Note that the Y rounding is in the other
            direction compared to X because of Y flip. */
         {50.5f + 100.0f - 5.0f, 20.5f + 50.0f - 5.0f + 7.0f},
-        {50.5f + 100.0f - 3.0f, 20.5f + 50.0f - 4.0f + 8.0f}},
+        {50.5f + 100.0f - 3.0f, 20.5f + 50.0f - 4.0f + 8.0f},
+        0.1f, 0.3f},
     {"line end, RTL",
         Text::Alignment::LineEnd, Text::ShapeDirection::RightToLeft,
         /* Same as line left */
         {50.5f, 70.7f},
-        {50.5f, 76.7f}},
+        {50.5f, 76.7f},
+        0.3f, 0.1f}, /* Swapped compared to LTR */
     {"bottom start, unspecified direction",
         Text::Alignment::BottomStart, Text::ShapeDirection::Unspecified,
         /* Same as bottom start */
         {50.5f, 120.9f - 4.0f},
-        {50.5f, 120.9f}},
+        {50.5f, 120.9f},
+        0.1f, 0.3f},
     {"middle start, RTL",
         Text::Alignment::MiddleStart, Text::ShapeDirection::RightToLeft,
         /* Same as middle right */
         {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
-        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f},
+        0.3f, 0.1f}, /* Swapped compared to LTR */
     {"middle center, RTL",
         Text::Alignment::MiddleCenter, Text::ShapeDirection::RightToLeft,
         /* No change compared to middle center above */
         {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
-        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
+        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f},
+        0.3f, 0.1f}, /* Swapped compared to LTR */
 };
 
 const struct {
@@ -5330,10 +5344,22 @@ void TextLayerTest::dynamicStyleInvalid() {
 }
 
 struct ThreeGlyphShaper: Text::AbstractShaper {
-    explicit ThreeGlyphShaper(Text::AbstractFont& font, Text::ShapeDirection direction = Text::ShapeDirection::Unspecified): Text::AbstractShaper{font}, _direction{direction} {}
+    explicit ThreeGlyphShaper(Text::AbstractFont& font, Text::ShapeDirection direction = Text::ShapeDirection::Unspecified): Text::AbstractShaper{font}, _direction{direction}, _constructedDirection{direction} {}
 
     UnsignedInt doShape(Containers::StringView text, UnsignedInt, UnsignedInt, Containers::ArrayView<const Text::FeatureRange>) override {
         return text.size();
+    }
+    bool doSetDirection(Text::ShapeDirection direction) override {
+        /* The direction should be either specified in the constructor (in the
+           editText() test case) or from TextProperties (in
+           updateCleanDataOrder()), never both */
+        if(_constructedDirection == Text::ShapeDirection::Unspecified) {
+            _direction = direction;
+            return true;
+        } else {
+            CORRADE_INTERNAL_ASSERT(direction == Text::ShapeDirection::Unspecified);
+            return false;
+        }
     }
     Text::ShapeDirection doDirection() const override {
         return _direction;
@@ -5364,7 +5390,7 @@ struct ThreeGlyphShaper: Text::AbstractShaper {
     }
 
     private:
-        Text::ShapeDirection _direction;
+        Text::ShapeDirection _direction, _constructedDirection;
 };
 
 struct OneGlyphShaper: Text::AbstractShaper {
@@ -8225,11 +8251,20 @@ void TextLayerTest::updateCleanDataOrder() {
         Text::Alignment::BottomRight, 0x112233_rgbf, data.flags, node15);
     layer.create(0, "", {});                            /* 8, quad 12 */
     DataHandle data9 = layer.create(3, "hi",            /* 9, quad 13 to 14 */
-        Text::Alignment::LineLeft, 0x663399_rgbf, data.flags, node15);
+        TextProperties{}
+            /* Gets resolved to LineLeft */
+            .setAlignment(Text::Alignment::LineEnd)
+            /* Swaps horizontal padding of the cursor */
+            .setShapeDirection(Text::ShapeDirection::RightToLeft),
+        0x663399_rgbf, data.flags, node15);
     /* Node 6 is disabled, but style 3 has no disabled transition so this stays
        the same */
     layer.create(3, "",                                 /* 10, no quad */
-        Text::Alignment::MiddleCenter, data.flags, node6);
+        TextProperties{}
+            .setAlignment(Text::Alignment::MiddleCenter)
+            /* Should behave the same as Unspecified */
+            .setShapeDirection(Text::ShapeDirection::LeftToRight),
+        data.flags, node6);
 
     if(!data.paddingFromData.isZero()) {
         layer.setPadding(data3, data.paddingFromData);
@@ -8653,12 +8688,13 @@ void TextLayerTest::updateCleanDataOrder() {
         /* Text 9 cursor (quad 5) is at glyph 1 position on X w/o offset, on Y
            it's again the threeGlyphFont ascent 8*0.5 and descent -4*0.5. Here
            the alignment is LineLeft, so no additional Y shift. Then paddings
-           from style 2. */
+           from style 2, but ordered ZYXW instead of XYZW because the text is
+           RTL. */
         CORRADE_COMPARE_AS(editingPositions.sliceSize(5*4, 1*4), Containers::arrayView<Vector2>({
-            {3.0f + 1.5f        - 0.01f, 6.5f - 4.0f        - 0.02f},
-            {3.0f + 1.5f        + 0.03f, 6.5f - 4.0f        - 0.02f},
-            {3.0f + 1.5f        - 0.01f, 6.5f + 2.0f        + 0.04f},
-            {3.0f + 1.5f        + 0.03f, 6.5f + 2.0f        + 0.04f},
+            {3.0f + 1.5f        - 0.03f, 6.5f - 4.0f        - 0.02f},
+            {3.0f + 1.5f        + 0.01f, 6.5f - 4.0f        - 0.02f},
+            {3.0f + 1.5f        - 0.03f, 6.5f + 2.0f        + 0.04f},
+            {3.0f + 1.5f        + 0.01f, 6.5f + 2.0f        + 0.04f},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(editingCenterDistances.sliceSize(5*4, 1*4), Containers::arrayView<Vector2>({
             /* Cursor quad size on X is 0, on Y 6, padding size (0.04, 0.06) */
@@ -8913,12 +8949,13 @@ void TextLayerTest::updateCleanDataOrder() {
             {+1.0f              + 0.07f, +1.5f              + 0.08f},
         }), TestSuite::Compare::Container);
 
-        /* Text 9 cursor, now quad 3 */
+        /* Text 9 cursor, now quad 3, Again ordered ZYXW instead of XYZW
+           because the text is RTL. */
         CORRADE_COMPARE_AS(editingPositions.sliceSize(3*4, 1*4), Containers::arrayView<Vector2>({
-            {3.0f + 1.5f        - 0.01f, 6.5f - 4.0f        - 0.02f},
-            {3.0f + 1.5f        + 0.03f, 6.5f - 4.0f        - 0.02f},
-            {3.0f + 1.5f        - 0.01f, 6.5f + 2.0f        + 0.04f},
-            {3.0f + 1.5f        + 0.03f, 6.5f + 2.0f        + 0.04f},
+            {3.0f + 1.5f        - 0.03f, 6.5f - 4.0f        - 0.02f},
+            {3.0f + 1.5f        + 0.01f, 6.5f - 4.0f        - 0.02f},
+            {3.0f + 1.5f        - 0.03f, 6.5f + 2.0f        + 0.04f},
+            {3.0f + 1.5f        + 0.01f, 6.5f + 2.0f        + 0.04f},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(editingCenterDistances.sliceSize(3*4, 1*4), Containers::arrayView<Vector2>({
             { 0.0f              - 0.02f, -3.0f              - 0.03f},
@@ -9072,12 +9109,13 @@ void TextLayerTest::updateCleanDataOrder() {
         Containers::StridedArrayView1D<const Vector2> editingPositions = stridedArrayView(layer.stateData().editingVertices).slice(&Implementation::TextLayerEditingVertex::position);
         Containers::StridedArrayView1D<const Vector2> editingCenterDistances = stridedArrayView(layer.stateData().editingVertices).slice(&Implementation::TextLayerEditingVertex::centerDistance);
 
-        /* Text 9 cursor, now quad 1 */
+        /* Text 9 cursor, now quad 1. Again ordered ZYXW instead of XYZW
+           because the text is RTL. */
         CORRADE_COMPARE_AS(editingPositions.sliceSize(1*4, 1*4), Containers::arrayView<Vector2>({
-            {3.0f + 1.5f        - 0.01f, 6.5f - 4.0f        - 0.02f},
-            {3.0f + 1.5f        + 0.03f, 6.5f - 4.0f        - 0.02f},
-            {3.0f + 1.5f        - 0.01f, 6.5f + 2.0f        + 0.04f},
-            {3.0f + 1.5f        + 0.03f, 6.5f + 2.0f        + 0.04f},
+            {3.0f + 1.5f        - 0.03f, 6.5f - 4.0f        - 0.02f},
+            {3.0f + 1.5f        + 0.01f, 6.5f - 4.0f        - 0.02f},
+            {3.0f + 1.5f        - 0.03f, 6.5f + 2.0f        + 0.04f},
+            {3.0f + 1.5f        + 0.01f, 6.5f + 2.0f        + 0.04f},
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(editingCenterDistances.sliceSize(1*4, 1*4), Containers::arrayView<Vector2>({
             { 0.0f              - 0.02f, -3.0f              - 0.03f},
@@ -9250,16 +9288,16 @@ void TextLayerTest::updateAlignment() {
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().editingVertices).slice(&Implementation::TextLayerEditingVertex::position), Containers::arrayView<Vector2>({
         /* Selection containing glyph 1 and 2 (advance of 1.5*2), plus
            padding; ascent 3.5*2, descent 2.0*2 */
-        Vector2{3.0f        - 0.1f, -7.0f - 0.2f} + data.offset,
-        Vector2{6.0f + 3.0f + 0.3f, -7.0f - 0.2f} + data.offset,
-        Vector2{3.0f        - 0.1f,  4.0f + 0.4f} + data.offset,
-        Vector2{6.0f + 3.0f + 0.3f,  4.0f + 0.4f} + data.offset,
+        Vector2{3.0f        - data.editingPaddingL, -7.0f - 0.2f} + data.offset,
+        Vector2{6.0f + 3.0f + data.editingPaddingR, -7.0f - 0.2f} + data.offset,
+        Vector2{3.0f        - data.editingPaddingL,  4.0f + 0.4f} + data.offset,
+        Vector2{6.0f + 3.0f + data.editingPaddingR,  4.0f + 0.4f} + data.offset,
 
         /* Cursor before glyph 1, plus padding */
-        Vector2{3.0f        - 0.1f, -7.0f - 0.2f} + data.offset,
-        Vector2{3.0f        + 0.3f, -7.0f - 0.2f} + data.offset,
-        Vector2{3.0f        - 0.1f,  4.0f + 0.4f} + data.offset,
-        Vector2{3.0f        + 0.3f,  4.0f + 0.4f} + data.offset,
+        Vector2{3.0f        - data.editingPaddingL, -7.0f - 0.2f} + data.offset,
+        Vector2{3.0f        + data.editingPaddingR, -7.0f - 0.2f} + data.offset,
+        Vector2{3.0f        - data.editingPaddingL,  4.0f + 0.4f} + data.offset,
+        Vector2{3.0f        + data.editingPaddingR,  4.0f + 0.4f} + data.offset,
     }), TestSuite::Compare::Container);
 }
 
@@ -9514,16 +9552,16 @@ void TextLayerTest::updatePadding() {
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().editingVertices).slice(&Implementation::TextLayerEditingVertex::position), Containers::arrayView<Vector2>({
         /* Selection containing glyph 1 and 2 (advance of 1.5*2), plus
            padding; ascent 3.5*2, descent 2.0*2 */
-        Vector2{3.0f        - 0.1f, -7.0f - 0.2f} + data.offset,
-        Vector2{6.0f + 3.0f + 0.3f, -7.0f - 0.2f} + data.offset,
-        Vector2{3.0f        - 0.1f,  4.0f + 0.4f} + data.offset,
-        Vector2{6.0f + 3.0f + 0.3f,  4.0f + 0.4f} + data.offset,
+        Vector2{3.0f        - data.editingPaddingL, -7.0f - 0.2f} + data.offset,
+        Vector2{6.0f + 3.0f + data.editingPaddingR, -7.0f - 0.2f} + data.offset,
+        Vector2{3.0f        - data.editingPaddingL,  4.0f + 0.4f} + data.offset,
+        Vector2{6.0f + 3.0f + data.editingPaddingR,  4.0f + 0.4f} + data.offset,
 
         /* Cursor before glyph 1, plus padding */
-        Vector2{3.0f        - 0.1f, -7.0f - 0.2f} + data.offset,
-        Vector2{3.0f        + 0.3f, -7.0f - 0.2f} + data.offset,
-        Vector2{3.0f        - 0.1f,  4.0f + 0.4f} + data.offset,
-        Vector2{3.0f        + 0.3f,  4.0f + 0.4f} + data.offset,
+        Vector2{3.0f        - data.editingPaddingL, -7.0f - 0.2f} + data.offset,
+        Vector2{3.0f        + data.editingPaddingR, -7.0f - 0.2f} + data.offset,
+        Vector2{3.0f        - data.editingPaddingL,  4.0f + 0.4f} + data.offset,
+        Vector2{3.0f        + data.editingPaddingR,  4.0f + 0.4f} + data.offset,
     }), TestSuite::Compare::Container);
 }
 

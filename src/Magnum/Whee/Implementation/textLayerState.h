@@ -219,9 +219,9 @@ struct TextLayerData {
        relayouting the text. */
     Text::Alignment alignment;
     /* Actual direction used by the shaper, for direction-aware cursor
-       movement in editable text. Unused otherwise, put here instead of inside
-       TextLayerTextRun because here was a free space and it's easier to have
-       it saved directly after shaping. */
+       movement and cursor styling in editable text. Unused otherwise, put here
+       instead of inside TextLayerTextRun because here was a free space and
+       it's easier to have it saved directly after shaping. */
     Text::ShapeDirection usedDirection;
     TextDataFlags flags;
     /* 1 byte free */

@@ -2398,7 +2398,7 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * @param textUniforms      Base style uniform IDs to use for selected
          *      portions of the text. Not used if given style is for a cursor.
          * @param paddings          Paddings outside the cursor or selection
-         *      rectangle in order left, top, right, bottom corresponding to
+         *      rectangle in order begin, top, end, bottom corresponding to
          *      style uniforms
          * @return Reference to self (for method chaining)
          *
@@ -2413,6 +2413,14 @@ class MAGNUM_WHEE_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          * instead, or are @cpp -1 @ce, in which case the original style
          * uniform ID is used unchanged. If the view is empty, it's the same as
          * all values being @cpp -1 @ce.
+         *
+         * The order in which @p paddings get used depends on direction of
+         * given text --- for @ref Text::ShapeDirection::LeftToRight, the order
+         * is left, top, right, bottom; for
+         * @relativeref{Text::ShapeDirection,RightToLeft} the order is right,
+         * top, left, bottom. This makes it possible to for example position
+         * the cursor to always overlap the *next* character depending on the
+         * direction.
          *
          * Can only be called if @ref editingStyleUniformCount() and
          * @ref editingStyleCount() were set to the same value in

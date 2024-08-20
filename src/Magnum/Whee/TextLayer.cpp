@@ -2251,7 +2251,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     return Vector2::xAxis(glyph == glyphData.size() ?
                         data.rectangle.max().x() : glyphData[glyph].position.x());
                 };
-                const auto createEditingQuad = [&state, &sharedState, &lineTop, &lineBottom, &cursorPositionForGlyph, &vertexData](const bool dynamicEditingStyle, const UnsignedInt editingStyleId, const UnsignedInt glyphBegin, const UnsignedInt glyphEnd, const UnsignedInt vertexOffset) {
+                const auto createEditingQuad = [&state, &sharedState, &lineTop, &lineBottom, &cursorPositionForGlyph, &vertexData](const bool dynamicEditingStyle, const UnsignedInt editingStyleId, const UnsignedInt glyphBegin, const UnsignedInt glyphEnd, const UnsignedInt vertexOffset, Text::ShapeDirection direction) {
                     Vector4 padding{NoInit};
                     UnsignedInt uniform;
                     Int textUniform;
@@ -2275,6 +2275,11 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                            styles */
                         textUniform = sharedState.styleUniformCount + Implementation::textUniformForEditingStyle(sharedState.dynamicStyleCount, editingStyleId);
                     }
+
+                    /* LTR text interprets padding as left, top, right, bottom,
+                       RTL as right, top, left, bottom */
+                    if(direction == Text::ShapeDirection::RightToLeft)
+                        padding = Math::gather<'z', 'y', 'x', 'w'>(padding);
 
                     /* 0---1
                        |   |
@@ -2314,7 +2319,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                         selectionStyle,
                         selection.first(),
                         selection.second(),
-                        data.textRun*2*4);
+                        data.textRun*2*4,
+                        data.usedDirection);
                 }
                 /* Create a cursor quad, if it has a style. It's drawn on top
                    of the selection, so it's later in the vertex buffer for
@@ -2325,7 +2331,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                         cursorStyle,
                         glyphRangeForCursorSelection.first(),
                         glyphRangeForCursorSelection.first(),
-                        data.textRun*2*4 + 4);
+                        data.textRun*2*4 + 4,
+                        data.usedDirection);
                 }
             }
         }
