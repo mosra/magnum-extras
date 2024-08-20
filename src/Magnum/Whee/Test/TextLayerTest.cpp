@@ -168,6 +168,8 @@ struct TextLayerTest: TestSuite::Tester {
     void createSetTextTextPropertiesEditable();
     void createSetTextTextPropertiesEditableInvalid();
 
+    void createSetUpdateTextFromLayerItself();
+
     void setColor();
     void setPadding();
 
@@ -1310,6 +1312,8 @@ TextLayerTest::TextLayerTest() {
 
     addInstancedTests({&TextLayerTest::createSetTextTextPropertiesEditableInvalid},
         Containers::arraySize(CreateSetTextTextPropertiesEditableInvalidData));
+
+    addRepeatedTests({&TextLayerTest::createSetUpdateTextFromLayerItself}, 10);
 
     addTests({&TextLayerTest::setColor,
               &TextLayerTest::setPadding,
@@ -7247,6 +7251,70 @@ void TextLayerTest::createSetTextTextPropertiesEditableInvalid() {
         "Whee::TextLayer::setText(): {0}\n"
         "Whee::TextLayer::setText(): {0}\n",
     data.expected), TestSuite::Compare::String);
+}
+
+void TextLayerTest::createSetUpdateTextFromLayerItself() {
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return Containers::pointer<ThreeGlyphShaper>(*this); }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(98, &font);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{1}};
+    shared.setGlyphCache(cache);
+    /* Interestingly enough, these two can't be chained together as on some
+       compilers it'd call addFont() before setGlyphCache(), causing an
+       assert */
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {shared.addFont(font, 1.0f)},
+        {Text::Alignment::MiddleCenter},
+        {}, {}, {}, {}, {}, {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    /* Assuming the implementation stores all texts in one large array, this
+       working correctly relies on arrayAppend() detecting if the view being
+       copied is a slice of the array itself. If it wouldn't, inevitably it'd
+       happen that garbage gets copied, or it blows up due to invalid memory
+       access.
+
+       To make sure this indeed gets hit, the test is repeated a few times with
+       varying string sizes to minimize the chance of realloc() growing
+       in-place every time. */
+    DataHandle first = layer.create(0, "hello there" + " how is everyone"_s*testCaseRepeatId(), {}, TextDataFlag::Editable);
+    DataHandle firstCopy = layer.create(0, layer.text(first), {}, TextDataFlag::Editable);
+    DataHandle second = layer.create(0, "hiya", {}, TextDataFlag::Editable);
+    DataHandle third = layer.create(0, "hey hey", {}, TextDataFlag::Editable);
+    layer.setText(second, layer.text(third), {});
+    layer.updateText(third, 0, 0, 7, layer.text(first).exceptPrefix(5), 0);
+
+    CORRADE_COMPARE(layer.text(first), "hello there" + " how is everyone"_s*testCaseRepeatId());
+    CORRADE_COMPARE(layer.text(firstCopy), "hello there" + " how is everyone"_s*testCaseRepeatId());
+    CORRADE_COMPARE(layer.text(second), "hey hey");
+    CORRADE_COMPARE(layer.text(third), "hey hey there" + " how is everyone"_s*testCaseRepeatId());
 }
 
 void TextLayerTest::setColor() {
