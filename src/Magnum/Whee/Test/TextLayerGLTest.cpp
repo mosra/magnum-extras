@@ -290,6 +290,9 @@ const struct {
             .setCornerRadius(10.0f), {5.0f, 0.0f, 7.5f, 5.0f},
         TextLayerStyleUniform{}
             .setColor(0x1f1f1f_rgbf)},
+    /** @todo test padding applied swizzled for RTL text once we can use
+        HarfBuzzFont (rendering `iggaM`, forcing RTL and supplying swizzled
+        padding, should result in the same as above) */
 };
 
 const struct {
