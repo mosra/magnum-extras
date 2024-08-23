@@ -83,7 +83,7 @@ CORRADE_ENUMSET_OPERATORS(LayerFeatures)
 @brief Layer state
 @m_since_latest
 
-Used to decide whether @ref AbstractLayer::clean() (called from
+Used to decide whether @ref AbstractLayer::cleanNodes() (called from
 @ref AbstractUserInterface::clean()) or @ref AbstractLayer::update() (called
 from @ref AbstractUserInterface::update()) need to be called to refresh the
 internal state before the interface is drawn or an event is handled. See
@@ -96,26 +96,38 @@ enum class LayerState: UnsignedByte {
      * @ref AbstractUserInterface::update()) needs to be called to recalculate
      * or reupload data after they've been changed. Has to be explicitly set by
      * the layer implementation using @ref AbstractLayer::setNeedsUpdate(), is
-     * reset next time @ref AbstractLayer::update() is called.
+     * reset next time @ref AbstractLayer::update() is called. Implied by
+     * @ref LayerState::NeedsAttachmentUpdate.
      *
      * This flag *isn't* set implicitly after a @ref AbstractLayer::create()
      * call, as newly created data only become a part of the visible node
-     * hierarchy with @ref AbstractUserInterface::attachData().
+     * hierarchy with @ref AbstractLayer::attach() (or
+     * @ref AbstractUserInterface::attachData()).
      *
      * Note that there's also interface-wide
-     * @ref UserInterfaceState::NeedsDataUpdate, which is set when the node
-     * hierarchy or the node data attachments changed. The two flags are set
-     * independently, but both of them imply @ref AbstractLayer::update() needs
-     * to be called.
+     * @ref UserInterfaceState::NeedsDataAttachmentUpdate, which is set when
+     * the node hierarchy or the node data attachments changed. The two flags
+     * are set independently, but both of them imply
+     * @ref AbstractLayer::update() needs to be called.
      */
     NeedsUpdate = 1 << 0,
 
     /**
-     * @ref AbstractLayer::clean() (which is called from
-     * @ref AbstractUserInterface::clean()) needs to be called to prune
-     * no-longer-valid data references. Set implicitly after every
+     * @ref AbstractLayer::update() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to refresh the
+     * data attached to visible node hierarchy after the node attachments were
+     * changed. Set implicitly after every @ref AbstractLayer::attach() call,
+     * is reset next time @ref AbstractLayer::update() is called. Implies
+     * @ref LayerState::NeedsUpdate.
+     */
+    NeedsAttachmentUpdate = NeedsUpdate|(1 << 1),
+
+    /**
+     * @ref AbstractLayer::cleanNodes() (which is called from
+     * @ref AbstractUserInterface::clean()) needs to be called to prune state
+     * belonging to no-longer-valid data. Set implicitly after every
      * @ref AbstractLayer::remove() call, is reset next time
-     * @ref AbstractLayer::clean() is called.
+     * @ref AbstractLayer::cleanNodes() is called.
      *
      * Note that there's also interface-wide
      * @ref UserInterfaceState::NeedsDataClean, which is set when nodes get
@@ -123,7 +135,7 @@ enum class LayerState: UnsignedByte {
      * independently, but both of them imply
      * @ref AbstractUserInterface::clean() needs to be called.
      */
-    NeedsClean = 1 << 1
+    NeedsClean = 1 << 2
 };
 
 /**
@@ -267,7 +279,9 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * operation if the data is already known to belong to this layer.
          *
          * Calling this function causes @ref LayerState::NeedsClean to be set.
-         * @see @ref clean()
+         * If @p handle is attached to a node, calling this function also
+         * causes @ref LayerState::NeedsAttachmentUpdate to be set.
+         * @see @ref cleanNodes(), @ref node()
          */
         void remove(DataHandle handle);
 
@@ -280,9 +294,93 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * checks that the data belongs to this layer.
          *
          * Calling this function causes @ref LayerState::NeedsClean to be set.
-         * @see @ref dataHandleData(), @ref clean()
+         * If @p handle is attached to a node, calling this function also
+         * causes @ref LayerState::NeedsAttachmentUpdate to be set.
+         * @see @ref dataHandleData(), @ref cleanNodes(), @ref node()
          */
         void remove(LayerDataHandle handle);
+
+        /**
+         * @brief Attach data to a node
+         *
+         * Makes the @p data handle tied to a particular @p node, meaning it
+         * gets included in draw or event processing depending on node position
+         * and visibility. Also, @ref AbstractUserInterface::removeNode()
+         * called for @p node or any parent node will then mean that the
+         * @p data gets scheduled for removal during the next @ref cleanNodes()
+         * call.
+         *
+         * Expects that @p data is valid. The @p node can be anything including
+         * @ref NodeHandle::Null, but if it's non-null and not valid the data
+         * will be scheduled for deletion during the next @ref cleanNodes()
+         * call. If the @p data is already attached to some node, this will
+         * overwrite the previous attachment --- i.e., it's not possible to
+         * have the same data attached to multiple nodes. The inverse,
+         * attaching multiple different data handles to a single node, is
+         * supported however.
+         *
+         * Calling this function causes @ref LayerState::NeedsAttachmentUpdate
+         * to be set.
+         * @see @ref isHandleValid(DataHandle) const,
+         *      @ref AbstractUserInterface::attachData()
+         */
+        void attach(DataHandle data, NodeHandle node);
+
+        /**
+         * @brief Attach data to a node assuming it belongs to this layer
+         *
+         * Like @ref attach(DataHandle, NodeHandle) but without checking that
+         * @p data indeed belongs to this layer. See its documentation for more
+         * information.
+         */
+        void attach(LayerDataHandle data, NodeHandle node);
+
+        /**
+         * @brief Node attachment for given data
+         *
+         * Expects that @p data is valid. If given data isn't attached to any
+         * node, returns @ref NodeHandle::Null. See also
+         * @ref node(LayerDataHandle) const which is a simpler operation if the
+         * data is already known to belong to this layer.
+         *
+         * The returned handle may be invalid if either the data got attached
+         * to an invalid node in the first place or the node or any of its
+         * parents were removed and @ref AbstractUserInterface::clean() wasn't
+         * called since.
+         * @see @ref isHandleValid(DataHandle) const
+         */
+        NodeHandle node(DataHandle data) const;
+
+        /**
+         * @brief Node attachment for given data assuming it belongs to this layer
+         *
+         * Like @ref node(DataHandle) const but without checking that @p data
+         * indeed belongs to this layer. See its documentation for more
+         * information.
+         * @see @ref isHandleValid(LayerDataHandle) const,
+         *      @ref dataHandleData()
+         */
+        NodeHandle node(LayerDataHandle data) const;
+
+        /**
+         * @brief Generation counters for all data
+         *
+         * Used internally from @ref AbstractUserInterface::update(). Size of
+         * the returned view is the same as @ref capacity().
+         */
+        Containers::StridedArrayView1D<const UnsignedShort> generations() const;
+
+        /**
+         * @brief Node attachments for all data
+         *
+         * Used internally from @ref AbstractUserInterface::update(), meant to
+         * be also used by @ref doUpdate() implementations to map data IDs to
+         * node handles. Size of the returned view is the same as
+         * @ref capacity(). Items that are @ref NodeHandle::Null are either
+         * data with no node attachments or corresponding to data that are
+         * freed.
+         */
+        Containers::StridedArrayView1D<const NodeHandle> nodes() const;
 
         /**
          * @brief Set user interface size
@@ -297,40 +395,44 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         void setSize(const Vector2& size, const Vector2i& framebufferSize);
 
         /**
-         * @brief Clean no longer valid layer data
+         * @brief Clean data attached to no longer valid nodes
          *
          * Used internally from @ref AbstractUserInterface::clean(). Exposed
          * just for testing purposes, there should be no need to call this
-         * function directly. Expects that @p dataIdsToRemove has the same size
-         * as @ref capacity(). Bits should be set only for valid data IDs.
-         * Data which have a corresponding bit set in @p dataIdsToRemove are
-         * removed. Delegates to @ref doClean(), see its documentation for more
-         * information about the arguments.
+         * function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave. Assumes that
+         * @p nodeHandleGenerations contains handle generation counters for all
+         * nodes, where the index is implicitly the handle ID. They're used to
+         * decide about node attachment validity, data with invalid node
+         * attachments are then removed. Delegates to @ref doClean(), see its
+         * documentation for more information about the arguments.
          *
          * Calling this function resets @ref LayerState::NeedsClean, however
          * note that behavior of this function is independent of @ref state()
          * --- it performs the clean always regardless of what flags are set.
          */
-        void clean(Containers::BitArrayView dataIdsToRemove);
+        void cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations);
 
         /**
          * @brief Update visible layer data to given offsets and positions
          *
          * Used internally from @ref AbstractUserInterface::update(). Exposed
          * just for testing purposes, there should be no need to call this
-         * function directly. Expects that the @p dataIds and @p dataNodeIds
-         * views have the same size and the @p nodeOffsets and @p nodeSizes
-         * have the same size. The @p nodeOffsets and @p nodeSizes views should
-         * be large enough to contain any ID from @p dataNodeIds. Delegates to
-         * @ref doUpdate(), see its documentation for more information about
-         * the arguments.
+         * function directly and doing so may cause internal
+         * @ref AbstractUserInterface state update to misbehave. Expects that
+         * the @p dataIds and @p dataNodeIds views have the same size and the
+         * @p nodeOffsets and @p nodeSizes have the same size. The
+         * @p nodeOffsets and @p nodeSizes views should be large enough to
+         * contain any ID from @p dataNodeIds. Delegates to @ref doUpdate(),
+         * see its documentation for more information about the arguments.
          *
-         * Calling this function resets @ref LayerState::NeedsUpdate, however
-         * note that behavior of this function is independent of @ref state()
-         * --- it performs the update always regardless of what flags are set.
-         * The function can be called even in case @ref LayerState::NeedsClean
-         * is set as long as @p dataIds contain only IDs that aren't scheduled
-         * for removal, the two states are independent.
+         * Calling this function resets @ref LayerState::NeedsUpdate and
+         * @ref LayerState::NeedsAttachmentUpdate, however note that behavior
+         * of this function is independent of @ref state() --- it performs the
+         * update always regardless of what flags are set. The function can be
+         * called even in case @ref LayerState::NeedsClean is set as long as
+         * @p dataIds contain only IDs that aren't scheduled for removal, the
+         * two states are independent.
          */
         void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& nodeIds, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes);
 
@@ -468,7 +570,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @brief Clean no longer valid layer data
          * @param dataIdsToRemove   Data IDs to remove
          *
-         * Implementation for @ref clean(), which is called from
+         * Implementation for @ref cleanNodes(), which is called from
          * @ref AbstractUserInterface::clean(). The @p dataIdsToRemove view has
          * the same size as @ref capacity() and is guaranteed to have bits set
          * only for valid data IDs, i.e. data IDs that are already removed are
@@ -668,8 +770,9 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          */
         virtual void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
-        /* Common implementation for remove(DataHandle) and
-           remove(LayerDataHandle) */
+        /* Common implementations for foo(DataHandle, ...) and
+           foo(LayerDataHandle, ...) */
+        MAGNUM_WHEE_LOCAL void attachInternal(UnsignedInt id, NodeHandle node);
         MAGNUM_WHEE_LOCAL void removeInternal(UnsignedInt id);
 
         struct State;

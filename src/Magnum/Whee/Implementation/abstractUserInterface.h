@@ -348,10 +348,11 @@ void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& a
     }
 }
 
-/* The `visibleNodeDataOffsets` and `visibleNodeData` arrays get filled with
-   data handles for visible nodes, with `visibleNodeDataOffsets[i]` to
-   `visibleNodeDataOffsets[i + 1]` being the range of data in
-   `visibleNodeData` corresponding to visible node at index `i`.
+/* The `visibleNodeEventDataCounts` array gets the visible per-node data counts
+   added if `layerFeatures` contains `LayerFeature::Event`, otherwise it's left
+   untouched. The `visibleNodeEventDataCounts` is meant to be
+   `visibleNodeEventDataOffsets.exceptPrefix(1)` that's then passed to
+   `orderNodeDataForEventHandling()` below.
 
    The `dataToUpdateLayerOffsets`, `dataToUpdateIds` and `dataToUpdateNodeIds`
    arrays get filled with data and node IDs in the desired draw order,
@@ -364,87 +365,68 @@ void cullVisibleNodesInto(const Containers::StridedArrayView1D<const Vector2>& a
    `dataToDrawLayerIds[j]`, with their total count being the return value of
    this function.
 
-   The `previousDataToUpdateLayerOffsets` array is temporary storage. The
-   `visibleNodeDataOffsets` and `dataToUpdateLayerOffsets` arrays are expected
-   to be zero-initialized. */
-UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::StridedArrayView1D<const DataHandle>& data, const Containers::StridedArrayView1D<const LayerHandle>& layersNext, const LayerHandle firstLayer, const Containers::StridedArrayView1D<const LayerFeatures>& layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<DataHandle> visibleNodeData, const Containers::ArrayView<UnsignedInt> dataToUpdateLayerOffsets, const Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateNodeIds, const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
+   The `visibleNodeDataOffsets` and `visibleNodeDataIds` arrays are temporary
+   storage -- they get filled with data IDs for visible nodes, with  `visibleNodeDataOffsets[i]` to
+   `visibleNodeDataOffsets[i + 1]` being the range of data in
+   `visibleNodeDataIds` corresponding to visible node at index `i`. */
+UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeIds, const Containers::StridedArrayView1D<const UnsignedInt>& visibleNodeChildrenCounts, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, LayerFeatures layerFeatures, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataCounts, const Containers::ArrayView<UnsignedInt> visibleNodeDataIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToUpdateNodeIds, UnsignedInt offset, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
     CORRADE_INTERNAL_ASSERT(
         visibleNodeChildrenCounts.size() == visibleNodeIds.size() &&
-        data.size() == dataNodes.size() &&
         visibleNodeDataOffsets.size() == visibleNodeMask.size() + 1 &&
-        visibleNodeData.size() == dataNodes.size() &&
-        dataToUpdateLayerOffsets.size() == layersNext.size() + 1 &&
-        previousDataToUpdateLayerOffsets.size() == layersNext.size() + 1 &&
-        dataToUpdateIds.size() == dataNodes.size() &&
-        dataToUpdateNodeIds.size() == dataNodes.size() &&
-        dataToDrawLayerIds.size() == dataNodes.size() &&
-        dataToDrawOffsets.size() == dataNodes.size() &&
-        dataToDrawSizes.size() == dataNodes.size());
+        visibleNodeEventDataCounts.size() == visibleNodeMask.size() &&
+        visibleNodeDataIds.size() == dataNodes.size() &&
+        dataToUpdateIds.size() == dataToUpdateNodeIds.size() &&
+        /* These should have the size matching the top-level node count */
+        dataToDrawSizes.size() == dataToDrawOffsets.size());
 
-    /* There are no valid layers, which means there's also no data to draw */
-    if(firstLayer == LayerHandle::Null) {
-        CORRADE_INTERNAL_ASSERT(data.isEmpty());
-        /* There can however be a non-zero count of invalid layers (i.e.,
-           present before but then removed), so be sure to set all running
-           offsets to 0 */
-        for(UnsignedInt& i: dataToUpdateLayerOffsets)
-            i = 0;
-        return 0;
-    }
+    /* Zero out the visibleNodeDataOffsets array */
+    std::memset(visibleNodeDataOffsets.data(), 0, visibleNodeDataOffsets.size()*sizeof(UnsignedInt));
 
     /* Count how much data belongs to each visible node, skipping the first
        element ...*/
     for(const NodeHandle node: dataNodes) {
+        if(node == NodeHandle::Null)
+            continue;
         const UnsignedInt id = nodeHandleId(node);
         if(visibleNodeMask[id])
             ++visibleNodeDataOffsets[id + 1];
     }
 
+    /* If this is an event layer, add those counts to the event data counters.
+       After accumulating the counts across all layers, they'll get turned into
+       a running offset and passed to orderNodeDataForEventHandling() below. */
+    if(layerFeatures & LayerFeature::Event) for(std::size_t i = 0, iMax = visibleNodeMask.size(); i != iMax; ++i) {
+        visibleNodeEventDataCounts[i] += visibleNodeDataOffsets[i + 1];
+    }
+
     /* ... then convert the counts to a running offset. Now
        `[visibleNodeDataOffsets[i + 1], visibleNodeDataOffsets[i + 2])` is a
-       range in which the `visibleNodeData` array contains a list of data
+       range in which the `visibleNodeDataIds` array contains a list of data
        handles for visible node with ID `i`. The last element (containing the
        end offset) is omitted at this step. */
-    UnsignedInt visibleNodeDataCount = 0;
-    for(UnsignedInt& i: visibleNodeDataOffsets) {
-        const UnsignedInt nextOffset = visibleNodeDataCount + i;
-        i = visibleNodeDataCount;
-        visibleNodeDataCount = nextOffset;
+    {
+        UnsignedInt visibleNodeDataCount = 0;
+        for(UnsignedInt& i: visibleNodeDataOffsets) {
+            const UnsignedInt nextOffset = visibleNodeDataCount + i;
+            i = visibleNodeDataCount;
+            visibleNodeDataCount = nextOffset;
+        }
     }
 
     /* Go through the data list again, convert that to data handle ranges. The
        `visibleNodeDataOffsets` array gets shifted by one element by the
        process, thus now
        `[visibleNodeDataOffsets[i], visibleNodeDataOffsets[i + 1])` is a range
-       in which the `visibleNodeData` array contains a list of data handles for
-       visible node with ID `i`. The last array element is now containing the
-       end offset. */
-    for(std::size_t i = 0; i != data.size(); ++i) {
-        const DataHandle handle = data[i];
+       in which the `visibleNodeDataIds` array contains a list of data handles
+       for visible node with ID `i`. The last array element is now containing
+       the end offset. */
+    for(std::size_t i = 0; i != dataNodes.size(); ++i) {
         const NodeHandle node = dataNodes[i];
+        if(node == NodeHandle::Null)
+            continue;
         const UnsignedInt id = nodeHandleId(node);
         if(visibleNodeMask[id])
-            visibleNodeData[visibleNodeDataOffsets[id + 1]++] = handle;
-    }
-
-    /* Count how much data there is for each layer, skipping the first element
-       ... */
-    for(const DataHandle handle: visibleNodeData.prefix(visibleNodeDataCount))
-        ++dataToUpdateLayerOffsets[dataHandleLayerId(handle) + 1];
-
-    /* ... then convert the counts to a running offset. Now
-       `[dataToUpdateLayerOffsets[i + 1], dataToUpdateLayerOffsets[i + 2])` is
-       a range in which the `dataToUpdateIds` and `dataToUpdateNodeIds` arrays
-       contains a list of data and node IDs for layer `i`. The last element
-       (containing the end offset) is omitted at this step. */
-    {
-        UnsignedInt offset = 0;
-        for(UnsignedInt& i: dataToUpdateLayerOffsets) {
-            const UnsignedInt nextOffset = offset + i;
-            i = offset;
-            offset = nextOffset;
-        }
-        CORRADE_INTERNAL_ASSERT(offset == visibleNodeDataCount);
+            visibleNodeDataIds[visibleNodeDataOffsets[id + 1]++] = i;
     }
 
     /* Now populate the "to update" and "to draw" arrays. The "to update"
@@ -455,152 +437,120 @@ UnsignedInt orderVisibleNodeDataInto(const Containers::StridedArrayView1D<const 
        in a back-to-front order is issued.
 
        First go through each visible top-level node... */
-    UnsignedInt drawCount = 0;
+    UnsignedInt drawOffset = 0;
     for(UnsignedInt visibleTopLevelNodeIndex = 0; visibleTopLevelNodeIndex != visibleNodeChildrenCounts.size(); visibleTopLevelNodeIndex += visibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1) {
         /* Remember how much data was drawn for the previous node so we can
-           figure out the per-layer ranges to draw for this one... */
-        Utility::copy(dataToUpdateLayerOffsets, previousDataToUpdateLayerOffsets);
+           figure out the range to draw for this one... */
+        const UnsignedInt previousOffset = offset;
 
         /* Go through all (direct and nested) children of the top-level node
-           and then all data of each, and copy their IDs to the per-layer
-           ranges. The `dataToUpdateLayerOffsets` array gets shifted by one
-           element by the process, thus now
-           `[dataToUpdateLayerOffsets[i], dataToUpdateLayerOffsets[i + 1])` is
-           a range in which the `visibleLayerNodeData` array contains a list of
-           data handles for layer `i`, mapping back to node IDs is done from
-           the second pair element. */
+           and then all data of each, and copy their IDs to the output range */
         for(UnsignedInt i = 0, iMax = visibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1; i != iMax; ++i) {
             const UnsignedInt visibleNodeId = visibleNodeIds[visibleTopLevelNodeIndex + i];
 
             for(UnsignedInt j = visibleNodeDataOffsets[visibleNodeId], jMax = visibleNodeDataOffsets[visibleNodeId + 1]; j != jMax; ++j) {
-                const DataHandle handle = visibleNodeData[j];
-                const UnsignedInt offset = dataToUpdateLayerOffsets[dataHandleLayerId(handle) + 1]++;
-                dataToUpdateIds[offset] = dataHandleId(handle);
+                dataToUpdateIds[offset] = visibleNodeDataIds[j];
                 dataToUpdateNodeIds[offset] = visibleNodeId;
+                ++offset;
             }
         }
 
-        /* Go through the layer draw order. It's cyclic, so stop when reaching
-           the first layer again. If there's any data to be drawn by this layer
-           added by the above loop, add a draw, which is a range to the
-           `dataToUpdateIds` and `dataToUpdateNodeIds` arrays. */
-        LayerHandle layer = firstLayer;
-        do {
-            const UnsignedInt layerId = layerHandleId(layer);
-            if(layerFeatures[layerId] >= LayerFeature::Draw) {
-                if(const UnsignedInt size = dataToUpdateLayerOffsets[layerId + 1] - previousDataToUpdateLayerOffsets[layerId + 1]) {
-                    dataToDrawLayerIds[drawCount] = layerId;
-                    dataToDrawOffsets[drawCount] = previousDataToUpdateLayerOffsets[layerId + 1];
-                    dataToDrawSizes[drawCount] = size;
-                    ++drawCount;
-                }
+        /* If this layer is a drawing layer and there's any data to be drawn
+           added by the above loop, save a range to the `dataToUpdateIds` and
+           `dataToUpdateNodeIds` arrays. If there's no data to be drawn, put
+           zeros there. */
+        if(layerFeatures >= LayerFeature::Draw) {
+            if(const UnsignedInt size = offset - previousOffset) {
+                dataToDrawOffsets[drawOffset] = previousOffset;
+                dataToDrawSizes[drawOffset] = offset - previousOffset;
+            } else {
+                dataToDrawOffsets[drawOffset] = 0;
+                dataToDrawSizes[drawOffset] = 0;
             }
+            ++drawOffset;
+        }
+    }
 
-            layer = layersNext[layerHandleId(layer)];
-        } while(layer != firstLayer);
+    return offset;
+}
+
+/* The `dataNodes` array is expected to be the same as passed into
+   `orderVisibleNodeDataInto()`. The `dataGenerations` array is then matching
+   generations and together with `layer` is used to form actual data handles in
+   the output.
+
+   The `visibleNodeEventDataOffsets` is expected to be the output of
+   `orderVisibleNodeDataInto()` above with an additional first zero element,
+   turned into an offset array. The process of calling this function for all
+   event layers shifts the array by one element, with
+   `visibleNodeEventDataOffsets[i]` to `visibleNodeEventDataOffsets[i + 1]`
+   then being the range of data in `visibleNodeEventData` corresponding to node
+   `i`. */
+void orderNodeDataForEventHandlingInto(const LayerHandle layer, const Containers::StridedArrayView1D<const UnsignedShort>& dataGenerations, const Containers::StridedArrayView1D<const NodeHandle>& dataNodes, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets, const Containers::BitArrayView visibleNodeMask, const Containers::ArrayView<DataHandle> visibleNodeEventData) {
+    CORRADE_INTERNAL_ASSERT(
+        dataNodes.size() == dataGenerations.size() &&
+        visibleNodeEventDataOffsets.size() == visibleNodeMask.size() + 1);
+
+    /* Go through the data list in reverse, convert that to data handle ranges.
+       The `visibleNodeEventDataOffsets` array gets shifted by one element by
+       the process, thus now
+       `[visibleNodeEventDataOffsets[i], visibleNodeEventDataOffsets[i + 1])`
+       is a range in which the `visibleNodeDataIds` array contains a list of
+       data handles for visible node with ID `i`. The last array element is now
+       containing the end offset. */
+    for(std::size_t i = dataNodes.size(); i != 0; --i) {
+        const NodeHandle node = dataNodes[i - 1];
+        if(node == NodeHandle::Null)
+            continue;
+        const UnsignedInt id = nodeHandleId(node);
+        if(visibleNodeMask[id])
+            visibleNodeEventData[visibleNodeEventDataOffsets[id + 1]++] = dataHandle(layer, i - 1, dataGenerations[i - 1]);
+    }
+}
+
+/* Reduces the three arrays by throwing away items where size is 0. Returns the
+   resulting size. */
+UnsignedInt compactDrawsInPlace(const Containers::StridedArrayView1D<UnsignedByte>& dataToDrawLayerIds, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawOffsets, const Containers::StridedArrayView1D<UnsignedInt>& dataToDrawSizes) {
+    CORRADE_INTERNAL_ASSERT(
+        dataToDrawOffsets.size() == dataToDrawLayerIds.size() &&
+        dataToDrawSizes.size() == dataToDrawLayerIds.size());
+
+    std::size_t offset = 0;
+    for(std::size_t i = 0, iMax = dataToDrawLayerIds.size(); i != iMax; ++i) {
+        if(!dataToDrawSizes[i])
+            continue;
+
+        /* Don't copy to itself */
+        if(i != offset) {
+            dataToDrawLayerIds[offset] = dataToDrawLayerIds[i];
+            dataToDrawOffsets[offset] = dataToDrawOffsets[i];
+            dataToDrawSizes[offset] = dataToDrawSizes[i];
+        }
+
+        ++offset;
     }
 
     /** @todo optimization step where draws of the same layer following each
         other are merged into one (with the assumption that the draw order is
         kept), that allows imgui-level efficiency where the whole UI with all
         widgets can be drawn in a single call, assuming most of the content
-        (text, backgrounds, ...) is implemented in a single layer */
+        (text, backgrounds, ...) is implemented in a single layer
 
-    return drawCount;
-}
+        this would require that UserInterface populates the to-update data in
+        the draw order, not in the layer ID order */
 
-/* The `visibleNodeEventDataOffsets` and `visibleNodeEventData` arrays get
-   filled with a subset of `visibleNodeDataOffsets` and `visibleNodeData` with
-   only layers that have LayerFeature::Event, and in a front-to-back order. */
-void orderNodeDataForEventHandling(const Containers::ArrayView<const UnsignedInt> visibleNodeDataOffsets, const Containers::ArrayView<const DataHandle> visibleNodeData, const Containers::StridedArrayView1D<const LayerHandle>& layersPrevious, const LayerHandle lastLayer, const Containers::StridedArrayView1D<const LayerFeatures>& layerFeatures, const Containers::ArrayView<UnsignedInt> visibleNodeEventDataOffsets, const Containers::ArrayView<DataHandle> visibleNodeEventData) {
-    CORRADE_INTERNAL_ASSERT(
-        layerFeatures.size() == layersPrevious.size() &&
-        !visibleNodeEventDataOffsets.isEmpty() &&
-        visibleNodeEventDataOffsets.size() == visibleNodeDataOffsets.size());
+    /** @todo top-level nodes that have mutually disjoint bounding rect for all
+        (clipped) subnodes can be also be drawn together without worrying about
+        incorrect draw order -- however it needs some algorithm that is better
+        than O(n^2) in finding mutually disjoint sets, plus also things like
+        two top-level nodes being disjoint but between them is ordered another
+        that overlaps with both
 
-    /* There are no layers, which means there's also no data to draw */
-    if(lastLayer == LayerHandle::Null) {
-        /* There can however be a non-zero count of nodes (though with no data
-           attached), so be sure to set all running offsets to 0 */
-        for(UnsignedInt& i: visibleNodeEventDataOffsets)
-            i = 0;
-        return;
-    }
+        so pick just nodes that are disjoint in a sequence, and stop when
+        something overlaps? that's still O(n^2) though, every new node
+        considered has to be checked with all previous */
 
-    /* Build a layer ID -> layer order mapping. Elements for which there aren't
-       any layer IDs are left uninitialized. Layers that don't support
-       LayerFeature::Event are not handled in any special way here, as data
-       corresponding to those have to be handled below in any case. */
-    UnsignedByte order[1 << Implementation::LayerHandleIdBits];
-    UnsignedInt layerCount = 0;
-    {
-        LayerHandle layer = lastLayer;
-        do {
-            const UnsignedInt layerId = layerHandleId(layer);
-            order[layerId] = layerCount++;
-            layer = layersPrevious[layerId];
-        } while(layer != lastLayer);
-    }
-
-    /* Go through data for all visible nodes */
-    UnsignedInt offset = 0;
-    visibleNodeEventDataOffsets[0] = 0;
-    for(std::size_t i = 0; i != visibleNodeDataOffsets.size() - 1; ++i) {
-        const std::size_t nodeDataBegin = visibleNodeDataOffsets[i];
-        const std::size_t nodeDataEnd = visibleNodeDataOffsets[i + 1];
-        if(nodeDataBegin != nodeDataEnd) {
-            /* First calculate how much data there is for each layer order
-               index, skipping data in layers without LayerFeature::Event. The
-               array is sized for the max layer count but only `layerCount + 1`
-               elements get filled. Also only those get zero-initialized --
-               compared to a {} it makes a significant difference when there's
-               just a few layers but a ton of nodes. */
-            UnsignedInt dataOffsets[(1 << Implementation::LayerHandleIdBits) + 1];
-            std::memset(dataOffsets, 0, (layerCount + 1)*sizeof(UnsignedInt));
-            for(std::size_t j = nodeDataBegin; j != nodeDataEnd; ++j) {
-                const UnsignedInt layerId = dataHandleLayerId(visibleNodeData[j]);
-                /* Might possbily be faster to do this just once for every layer
-                   than for every data, but as we're going node-by-node here that's
-                   not really possible I think. And then what in the second loop
-                   below? */
-                if(!(layerFeatures[layerId] >= LayerFeature::Event))
-                    continue;
-                ++dataOffsets[order[layerId] + 1];
-            }
-
-            /* Then convert the first `layerCount + 1` counts to a running
-               offset. Now `[dataOffsets[k + 1], dataOffsets[k + 2])` is a
-               range in which the `visibleNodeEventData` array contains a list
-               of data for node `i` and layer `k`. The last element (containing
-               the end offset) is omitted at this step. */
-            for(UnsignedInt& i: Containers::arrayView(dataOffsets).prefix(layerCount + 1)) {
-                const UnsignedInt nextOffset = offset + i;
-                i = offset;
-                offset = nextOffset;
-            }
-
-            /* Go through the data list again, convert that to per-layer
-               ranges. The `dataOffsets` array gets shifted by one element by
-               this, so now `[dataOffsets[k], dataOffsets[k + 1])` is a range
-               in which the `visibleNodeEventData` array below contains a list
-               of data for node `i` and layer `k`. We don't need the per-layer
-               offsets for anything though, only the end offset for the whole
-               node, which is saved to the `visibleNodeEventDataOffsets` array.
-
-               Populate in reverse order so we're consistent (data get drawn in
-               the order they were added, first being at the bottom, so the
-               events should get processed in the other direction). */
-            for(std::size_t j = nodeDataEnd; j != nodeDataBegin; --j) {
-                const DataHandle data = visibleNodeData[j - 1];
-                const UnsignedInt layerId = dataHandleLayerId(data);
-                if(!(layerFeatures[layerId] >= LayerFeature::Event))
-                    continue;
-                visibleNodeEventData[dataOffsets[order[layerId] + 1]++] = data;
-            }
-        }
-
-        visibleNodeEventDataOffsets[i + 1] = offset;
-    }
+    return offset;
 }
 
 }}}}

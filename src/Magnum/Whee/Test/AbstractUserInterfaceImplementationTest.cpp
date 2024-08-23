@@ -24,6 +24,7 @@
 */
 
 #include <Corrade/Containers/BitArray.h>
+#include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Pair.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/TestSuite/Tester.h>
@@ -52,14 +53,10 @@ struct AbstractUserInterfaceImplementationTest: TestSuite::Tester {
     void cullVisibleNodes();
 
     void orderVisibleNodeData();
-    void orderVisibleNodeDataNoLayers();
-    void orderVisibleNodeDataNoValidLayers();
 
     void orderNodeDataForEventHandling();
-    void orderNodeDataForEventHandlingNoLayers();
-    void orderNodeDataForEventHandlingNoVisibleNodes();
-    void orderNodeDataForEventHandlingNoVisibleNodesNoLayers();
-    void orderNodeDataForEventHandlingAllLayers();
+
+    void compactDraws();
 };
 
 const struct {
@@ -152,14 +149,10 @@ AbstractUserInterfaceImplementationTest::AbstractUserInterfaceImplementationTest
         Containers::arraySize(CullVisibleNodesData));
 
     addTests({&AbstractUserInterfaceImplementationTest::orderVisibleNodeData,
-              &AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoLayers,
-              &AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoValidLayers,
 
               &AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling,
-              &AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandlingNoLayers,
-              &AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandlingNoVisibleNodes,
-              &AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandlingNoVisibleNodesNoLayers,
-              &AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandlingAllLayers});
+
+              &AbstractUserInterfaceImplementationTest::compactDraws});
 }
 
 void AbstractUserInterfaceImplementationTest::orderNodesBreadthFirst() {
@@ -634,127 +627,123 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
         {12, 0},
     };
 
-    /* Node data assignments. Node and data generations don't matter in any
-       way, the same node ID can even have different generations. */
-    LayerHandle layer1 = layerHandle(1, 0xef);
-    LayerHandle layer2 = layerHandle(2, 0xfe);
-    /* Layer 0 doesn't have any data referenced, layer 3 doesn't have a Draw
-       feature, layer 4 is referenced only by a node that isn't in the visible
-       hierarchy */
-    LayerHandle layer3 = layerHandle(3, 0xfe);
-    LayerHandle layer4 = layerHandle(4, 0xde);
-    LayerHandle layer5 = layerHandle(5, 0xad);
-    const Containers::Pair<NodeHandle, DataHandle> data[]{
-        {nodeHandle(3, 0xfef),  dataHandle(layer2, 3, 0xded)},
-        {nodeHandle(4, 0xbab),  dataHandle(layer2, 2, 0x0b0)},
-        {nodeHandle(3, 0xc0c),  dataHandle(layer5, 2, 0xfff)},
-        /* Nodes 0 and 8 aren't in the visible hierarchy so the assignments
-           get ignored */
-        {nodeHandle(0, 0xefe),  dataHandle(layer4, 17, 0x777)},
-        {nodeHandle(8, 0xbbb),  dataHandle(layer5, 4, 0xccc)},
-        {nodeHandle(7, 0xf0f),  dataHandle(layer3, 2, 0xbbb)},
-        {nodeHandle(3, 0xc0c),  dataHandle(layer5, 1, 0xfff)},
-        {nodeHandle(7, 0xeee),  dataHandle(layer1, 0, 0x000)},
-        {nodeHandle(12, 0xccc), dataHandle(layer2, 4, 0xcec)},
-        {nodeHandle(2, 0xddd),  dataHandle(layer2, 6, 0x999)},
-        {nodeHandle(2, 0xaba),  dataHandle(layer1, 1, 0xaaa)},
-        /* Nodes 5, 6 aren't present anywhere */
-        {nodeHandle(2, 0xefe),  dataHandle(layer3, 0, 0xaba)},
+    /* Node data assignments. Node generations don't matter in any way, the
+       same node ID can even have different generations. */
+    const NodeHandle layer1NodeAttachments[]{
+        nodeHandle(7, 0xeee),  /* data handle ID 0 */
+        nodeHandle(2, 0xaba),  /* data handle ID 1 */
     };
-
-    /* The layers are in order 4, 2, 3, 1, 5. Handle generation isn't used or
-       checked for anything except for comparing to the first handle again. */
-    LayerHandle layerFirst = layerHandle(4, 0x00);
-    LayerHandle layersNext[]{
-        LayerHandle{},
-        layerHandle(5, 0x11),
-        layerHandle(3, 0x44),
-        layerHandle(1, 0x22),
-        layerHandle(2, 0x33),
-        layerHandle(4, 0x00)
+    const NodeHandle layer2NodeAttachments[]{
+        NodeHandle{},          /* 0 */
+        NodeHandle{},          /* 1 */
+        nodeHandle(4, 0xbab),  /* 2 */
+        nodeHandle(3, 0xfef),  /* 3 */
+        nodeHandle(12, 0xccc), /* 4 */
+        NodeHandle{},          /* 5 */
+        nodeHandle(2, 0xddd),  /* 6 */
     };
-    LayerFeatures layerFeatures[]{
-        {},
-        LayerFeature::Draw,
-        LayerFeature::Event|LayerFeature::Draw,
-        LayerFeature::Event,
-        LayerFeature::Draw,
-        LayerFeature::Draw,
+    const NodeHandle layer3NodeAttachments[]{
+        nodeHandle(2, 0xefe),  /* 0 */
+        NodeHandle{},          /* 1 */
+        nodeHandle(7, 0xf0f),  /* 2 */
     };
+    const NodeHandle layer4NodeAttachments[]{
+        NodeHandle{}, NodeHandle{}, NodeHandle{}, NodeHandle{}, NodeHandle{},
+        NodeHandle{}, NodeHandle{}, NodeHandle{}, NodeHandle{}, NodeHandle{},
+        NodeHandle{}, NodeHandle{}, NodeHandle{}, NodeHandle{}, NodeHandle{},
+        NodeHandle{}, NodeHandle{}, /* 0 - 16 */
+        /* Node 0 isn't in the visible hierarchy so the assignment gets
+           ignored */
+        nodeHandle(0, 0xefe),  /* 17 */
+    };
+    const NodeHandle layer5NodeAttachments[]{
+        NodeHandle{},          /* 0 */
+        nodeHandle(3, 0xc0c),  /* 1 */
+        nodeHandle(3, 0xc0c),  /* 2 */
+        NodeHandle{},          /* 3 */
+        /* Node 8 isn't in the visible hierarchy so the assignment gets
+           ignored */
+        nodeHandle(8, 0xbbb),  /* 4 */
+    };
+    /* Nodes 5, 6 aren't present anywhere */
 
     /* Everything except nodes 0 and 8 is visible */
     UnsignedShort visibleNodeMask[]{0xffff & ~(1 << 0) & ~(1 << 8)};
 
+    /* The layers are in order 4, 2, 3, 1, 5. Layer 0 doesn't have any data
+       referenced, layer 3 doesn't have a Draw feature, layer 4 is referenced
+       only by a node that isn't in the visible hierarchy. */
+    Containers::Pair<Containers::StridedArrayView1D<const NodeHandle>, LayerFeatures> layers[]{
+        {Containers::arrayView(layer4NodeAttachments), LayerFeature::Draw},
+        {Containers::arrayView(layer2NodeAttachments), LayerFeature::Event|LayerFeature::Draw},
+        {Containers::arrayView(layer3NodeAttachments), LayerFeature::Event},
+        {Containers::arrayView(layer1NodeAttachments), LayerFeature::Draw},
+        {Containers::arrayView(layer5NodeAttachments), LayerFeature::Draw|LayerFeature::Event}
+    };
+
     UnsignedInt visibleNodeDataOffsets[15]{};
-    DataHandle visibleNodeData[Containers::arraySize(data)];
-    UnsignedInt dataToUpdateLayerOffsets[6 + 1]{};
-    UnsignedInt previousDataToUpdateLayerOffsets[6 + 1];
-    Containers::Pair<UnsignedInt, UnsignedInt> dataIdsNodeIdsToUpdate[Containers::arraySize(data)];
-    Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt> dataLayerIdsDataOffsetsSizesToDraw[Containers::arraySize(data)];
+    UnsignedInt visibleNodeEventDataCounts[14]{};
+    UnsignedInt visibleNodeDataIds[18];
+    Containers::Pair<UnsignedInt, UnsignedInt> dataIdsNodeIdsToUpdate[18];
+    Containers::Pair<UnsignedInt, UnsignedInt> dataOffsetsSizesToDraw[Containers::arraySize(layers)*4];
 
-    UnsignedInt drawCount = Implementation::orderVisibleNodeDataInto(
-        Containers::stridedArrayView(visibleNodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
-        Containers::stridedArrayView(visibleNodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
-        Containers::stridedArrayView(data).slice(&Containers::Pair<NodeHandle, DataHandle>::first),
-        Containers::stridedArrayView(data).slice(&Containers::Pair<NodeHandle, DataHandle>::second),
-        layersNext,
-        layerFirst,
-        layerFeatures,
-        Containers::BitArrayView{visibleNodeMask, 0, 14},
-        visibleNodeDataOffsets,
-        visibleNodeData,
-        dataToUpdateLayerOffsets,
-        previousDataToUpdateLayerOffsets,
-        Containers::stridedArrayView(dataIdsNodeIdsToUpdate).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
-        Containers::stridedArrayView(dataIdsNodeIdsToUpdate).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
-        Containers::stridedArrayView(dataLayerIdsDataOffsetsSizesToDraw).slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::first),
-        Containers::stridedArrayView(dataLayerIdsDataOffsetsSizesToDraw).slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::second),
-        Containers::stridedArrayView(dataLayerIdsDataOffsetsSizesToDraw).slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::third));
+    /* This is similar to the process done by UserInterface::update(), except
+       that here the layers aren't in a circular linked list */
+    Containers::Array<UnsignedInt> dataToUpdateLayerOffsets{InPlaceInit, {0}};
+    UnsignedInt offset = 0;
+    for(const auto& layer: layers) {
+        CORRADE_ITERATION(dataToUpdateLayerOffsets.size() - 1);
+        offset = Implementation::orderVisibleNodeDataInto(
+            Containers::stridedArrayView(visibleNodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+            Containers::stridedArrayView(visibleNodeIdsChildrenCount).slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+            layer.first(),
+            layer.second(),
+            Containers::BitArrayView{visibleNodeMask, 0, 14},
+            visibleNodeDataOffsets,
+            visibleNodeEventDataCounts,
+            Containers::arrayView(visibleNodeDataIds).prefix(layer.first().size()),
+            Containers::stridedArrayView(dataIdsNodeIdsToUpdate)
+                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first),
+            Containers::stridedArrayView(dataIdsNodeIdsToUpdate)
+                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second),
+            offset,
+            Containers::stridedArrayView(dataOffsetsSizesToDraw)
+                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::first)
+                .exceptPrefix(dataToUpdateLayerOffsets.size() - 1)
+                .every(Containers::arraySize(layers)),
+            Containers::stridedArrayView(dataOffsetsSizesToDraw)
+                .slice(&Containers::Pair<UnsignedInt, UnsignedInt>::second)
+                .exceptPrefix(dataToUpdateLayerOffsets.size() - 1)
+                .every(Containers::arraySize(layers)));
+        arrayAppend(dataToUpdateLayerOffsets, offset);
+    }
 
-    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeDataOffsets), Containers::arrayView<UnsignedInt>({
+    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataCounts), Containers::arrayView<UnsignedInt>({
         0,  /* Node 0 */
         0,  /* Node 1 */
-        0,  /* Node 2, three data */
-        3,  /* Node 3, three data */
-        6,  /* Node 4, one data */
-        7,  /* Node 5 */
-        7,  /* Node 6 */
-        7,  /* Node 7, two data */
-        9,  /* Node 8 */
-        9,  /* Node 9 */
-        9,  /* Node 10 */
-        9,  /* Node 11 */
-        9,  /* Node 12, one data */
-        10, /* Node 13 */
-        10
+        2,  /* Node 2, layers 2 and 3 */
+        3,  /* Node 3, layer 2 and 5 */
+        1,  /* Node 4, layer 2 */
+        0,  /* Node 5 */
+        0,  /* Node 6 */
+        1,  /* Node 7, layer 3 */
+        0,  /* Node 8, layer 5, but node 8 is invisible */
+        0,  /* Node 9 */
+        0,  /* Node 10 */
+        0,  /* Node 11 */
+        1,  /* Node 12, layer 2 */
+        0   /* Node 13 */
     }), TestSuite::Compare::Container);
 
-    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeData).prefix(visibleNodeDataOffsets[Containers::arraySize(visibleNodeDataOffsets) - 1]), Containers::arrayView<DataHandle>({
-        /* Node 2 */
-        dataHandle(layer2, 6, 0x999),
-        dataHandle(layer1, 1, 0xaaa),
-        dataHandle(layer3, 0, 0xaba),
-        /* Node 3 */
-        dataHandle(layer2, 3, 0xded),
-        dataHandle(layer5, 2, 0xfff),
-        dataHandle(layer5, 1, 0xfff),
-        /* Node 4 */
-        dataHandle(layer2, 2, 0x0b0),
-        /* Node 7 */
-        dataHandle(layer3, 2, 0xbbb),
-        dataHandle(layer1, 0, 0x000),
-        /* Node 12 */
-        dataHandle(layer2, 4, 0xcec)
-    }), TestSuite::Compare::Container);
-
-    CORRADE_COMPARE_AS(Containers::arrayView(dataToUpdateLayerOffsets), Containers::arrayView<UnsignedInt>({
+    /* This is the offset filled in by the test itself above, in the order in
+       which layers are processed */
+    CORRADE_COMPARE_AS(dataToUpdateLayerOffsets, Containers::arrayView<UnsignedInt>({
         0,
-        0,  /* Layer 0 has nothing */
-        2,  /* Layer 1 has 2 items */
-        6,  /* Layer 2 has 4 items */
-        8,  /* Layer 3 has two items but doesn't have a Draw feature, so
+        0,  /* Layer 4 has one item that isn't in the hierarchy, so nothing */
+        4,  /* Layer 2 has 4 items */
+        6,  /* Layer 3 has two items but doesn't have a Draw feature, so
                these are then excluded from the draw call list */
-        8,  /* Layer 4 has one item that isn't in the hierarchy, so nothing */
+        8,  /* Layer 1 has 2 items */
         10, /* Layer 5 has 2 items plus one that isn't in the hierarchy, so
                nothing */
     }), TestSuite::Compare::Container);
@@ -765,9 +754,7 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             /* The last element is the total filled size of the output array */
             .prefix(Containers::arrayView(dataToUpdateLayerOffsets).back()),
         (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
-            /* Layer 1 */
-            {1, 2},
-            {0, 7},
+            /* Layer 4 has nothing */
             /* Layer 2 */
             {3, 3},
             {2, 4},
@@ -776,41 +763,58 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
             /* Layer 3, but those aren't included in the draws below */
             {0, 2},
             {2, 7},
-            /* Layer 4 has nothing */
-            /* Layer 5, same node, order in which the assignments were found */
-            {2, 3},
+            /* Layer 1 */
+            {1, 2},
+            {0, 7},
+            /* Layer 5, same node. Order matches the data ID order, not the
+               order in which they were created or attached. */
             {1, 3},
+            {2, 3},
         })),
         TestSuite::Compare::Container);
 
-    CORRADE_COMPARE_AS(drawCount,
-        Containers::arraySize(dataLayerIdsDataOffsetsSizesToDraw),
-        TestSuite::Compare::LessOrEqual);
-    CORRADE_COMPARE_AS(
-        Containers::arrayView(dataLayerIdsDataOffsetsSizesToDraw)
-            .prefix(drawCount),
-        (Containers::arrayView<Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>>({
-            /* For top-level node 3 offset 2 from layer 2 (data 3) and offset
-               8, 9 from layer 5 (data 2, 1) is drawn */
-            {2, 2, 1},
-            {5, 8, 2},
-            /* For top-level node 13 draws offset 3, 4 from layer 2 (data 2, 6)
+    /* The draws are filled in for the whole layer across all top-level
+       widgets, thus to be correctly ordered they have to be interleaved. If
+       any of the layers doesn't have anything to draw for given top level
+       node, the particular draw call count is zero. */
+    CORRADE_COMPARE_AS(Containers::arrayView(dataOffsetsSizesToDraw),
+        (Containers::arrayView<Containers::Pair<UnsignedInt, UnsignedInt>>({
+            /* For top-level node 3 offset 0 from layer 2 (data 3) and offset
+               8, 9 from layer 5 (data 1, 2) is drawn */
+            {},     /* 4 */
+            {0, 1}, /* 2 */
+            {},     /* 3 */
+            {},     /* 1 */
+            {8, 2}, /* 5 */
+            /* For top-level node 13 draws offset 1, 2 from layer 2 (data 2, 6)
                and offset 0, 1 from layer 1 (data 1, 0) is drawn */
-            {2, 3, 2},
-            {1, 0, 2},
+            {},     /* 4 */
+            {1, 2}, /* 2 */
+            {},     /* 3 */
+            {6, 2}, /* 1 */
+            {},     /* 5 */
             /* For top-level node 11 nothing is drawn */
+            {},     /* 4 */
+            {},     /* 2 */
+            {},     /* 3 */
+            {},     /* 1 */
+            {},     /* 5 */
             /* Top-level node 12 draws offset 5 from layer 2 (data 4) */
-            {2, 5, 1}
+            {},     /* 4 */
+            {3, 1}, /* 2 */
+            {},     /* 3 */
+            {},     /* 1 */
+            {}      /* 5 */
     })), TestSuite::Compare::Container);
 
     /* Each index in the draw data should appear exactly once */
     Containers::BitArray dataDrawn{DirectInit, Containers::arrayView(dataToUpdateLayerOffsets).back(), false};
-    for(const Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>& i: dataLayerIdsDataOffsetsSizesToDraw) {
+    for(const Containers::Pair<UnsignedInt, UnsignedInt>& i: dataOffsetsSizesToDraw) {
         CORRADE_ITERATION(i);
-        for(UnsignedInt j = 0; j != i.third(); ++j) {
+        for(UnsignedInt j = 0; j != i.second(); ++j) {
             CORRADE_ITERATION(j);
-            CORRADE_VERIFY(!dataDrawn[i.second() + j]);
-            dataDrawn.set(i.second() + j);
+            CORRADE_VERIFY(!dataDrawn[i.first() + j]);
+            dataDrawn.set(i.first() + j);
         }
     }
 
@@ -819,257 +823,146 @@ void AbstractUserInterfaceImplementationTest::orderVisibleNodeData() {
     CORRADE_COMPARE(dataDrawn.count(), Containers::arrayView(dataToUpdateLayerOffsets).back() - 2);
 }
 
-void AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoLayers() {
-    UnsignedInt visibleNodeDataOffsets[1];
-    UnsignedInt dataToUpdateLayerOffsets[1]{0xdeadbeef};
-    UnsignedInt previousDataToUpdateLayerOffsets[1];
-    UnsignedInt drawCount = Implementation::orderVisibleNodeDataInto(
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        LayerHandle::Null,
-        nullptr,
-        nullptr,
-        visibleNodeDataOffsets,
-        nullptr,
-        dataToUpdateLayerOffsets,
-        previousDataToUpdateLayerOffsets,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr);
-    CORRADE_COMPARE(drawCount, 0);
-    CORRADE_COMPARE(dataToUpdateLayerOffsets[0], 0);
-}
-
-void AbstractUserInterfaceImplementationTest::orderVisibleNodeDataNoValidLayers() {
-    /* Compared to orderVisibleNodeDataNoLayers() above, there's a non-empty
-       layer list, but all of them are removed and thus not part of the
-       order */
-    LayerHandle layersNext[3];
-    UnsignedInt visibleNodeDataOffsets[1];
-    UnsignedInt dataToUpdateLayerOffsets[4]{
-        0xdeadbeef, 0xdeadbeef, 0xdeadbeef, 0xdeadbeef
-    };
-    UnsignedInt previousDataToUpdateLayerOffsets[4];
-    UnsignedInt drawCount = Implementation::orderVisibleNodeDataInto(
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        layersNext,
-        LayerHandle::Null,
-        nullptr,
-        nullptr,
-        visibleNodeDataOffsets,
-        nullptr,
-        dataToUpdateLayerOffsets,
-        previousDataToUpdateLayerOffsets,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr);
-    CORRADE_COMPARE(drawCount, 0);
-    CORRADE_COMPARE_AS(Containers::arrayView(dataToUpdateLayerOffsets), Containers::arrayView<UnsignedInt>({
-        0, 0, 0, 0
-    }), TestSuite::Compare::Container);
-}
-
 void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandling() {
-    UnsignedInt visibleNodeDataOffsets[]{
-        0,
-        4,
-        4, /* Second node has no data */
-        8,
+    /* Subset of data node attachments from orderVisibleNodeData() above for
+       layers that have Event set */
+    const Containers::Pair<NodeHandle, UnsignedShort> layer2NodeAttachments[]{
+        {},                             /* 0 */
+        {},                             /* 1 */
+        {nodeHandle(4, 0xbab), 0x111},  /* 2 */
+        {nodeHandle(3, 0xfef), 0x333},  /* 3 */
+        {nodeHandle(12, 0xccc), 0x222}, /* 4 */
+        {},                             /* 5 */
+        {nodeHandle(2, 0xddd), 0x777}   /* 6 */
     };
-    /* Handle generations aren't used for anything here */
-    DataHandle visibleNodeData[]{
-        /* First node has one data from layer 3 that doesn't have the Event
-           feature */
-        dataHandle(layerHandle(2, 0xef), 1776, 0xded),
-        dataHandle(layerHandle(5, 0xfe), 62326, 0xf0f),
-        dataHandle(layerHandle(3, 0xef), 282912, 0xdfd),
-        dataHandle(layerHandle(1, 0xfe), 275286, 0xe0e),
-        /* Second node has nothing */
-        /* Third node has has three data from layer 1 */
-        dataHandle(layerHandle(1, 0xbe), 78, 0xdad),
-        dataHandle(layerHandle(4, 0xeb), 2267, 0x000),
-        dataHandle(layerHandle(1, 0xee), 79, 0xbeb),
-        dataHandle(layerHandle(1, 0xbb), 80, 0xcec),
+    const Containers::Pair<NodeHandle, UnsignedShort> layer3NodeAttachments[]{
+        {nodeHandle(2, 0xefe), 0x555},  /* 0 */
+        {},                             /* 1 */
+        {nodeHandle(7, 0xf0f), 0x888}   /* 2 */
     };
-    /* The layers are in order 4, 2, 3, 1, 5, same as in orderVisibleNodeData()
-       above, only that this points the other direction. Handle generation
-       isn't used or checked for anything except for comparing to the first
-       handle again. */
-    LayerHandle layerLast = layerHandle(5, 0x11);
-    LayerHandle layersPrevious[]{
-        LayerHandle{},
-        layerHandle(3, 0x44),
-        layerHandle(4, 0x00),
-        layerHandle(2, 0x33),
-        layerHandle(5, 0x11),
-        layerHandle(1, 0x22)
-    };
-    LayerFeatures layerFeatures[]{
-        {},
-        LayerFeature::Event|LayerFeature::Draw,
-        LayerFeature::Event,
-        LayerFeature::Draw,
-        LayerFeature::Event,
-        LayerFeature::Event|LayerFeature::Draw,
+    const Containers::Pair<NodeHandle, UnsignedShort> layer5NodeAttachments[]{
+        {},                             /* 0 */
+        {nodeHandle(3, 0xc0c), 0x444},  /* 1 */
+        {nodeHandle(3, 0xc0c), 0x666},  /* 2 */
+        {},                             /* 3 */
+        /* Node 8 isn't in the visible hierarchy so the assignment gets
+           ignored */
+        {nodeHandle(8, 0xbbb), 0x999},  /* 4 */
     };
 
-    UnsignedInt visibleNodeEventDataOffsets[4]{};
-    DataHandle visibleNodeEventData[7];
-    Implementation::orderNodeDataForEventHandling(
-        visibleNodeDataOffsets,
-        visibleNodeData,
-        layersPrevious,
-        layerLast,
-        layerFeatures,
-        visibleNodeEventDataOffsets,
-        visibleNodeEventData);
-    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataOffsets), Containers::arrayView<UnsignedInt>({
-        0,
-        3,
-        3,
-        7
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventData), Containers::arrayView({
-        /* First node */
-        dataHandle(layerHandle(5, 0xfe), 62326, 0xf0f),
-        dataHandle(layerHandle(1, 0xfe), 275286, 0xe0e),
-        /* Data from layer 3 that doesn't have LayerFeature::Event omitted */
-        dataHandle(layerHandle(2, 0xef), 1776, 0xded),
-        /* Second node */
-        /* Third node. Items from the same layer are in the order they were
-           added, but reversed. */
-        dataHandle(layerHandle(1, 0xbb), 80, 0xcec),
-        dataHandle(layerHandle(1, 0xee), 79, 0xbeb),
-        dataHandle(layerHandle(1, 0xbe), 78, 0xdad),
-        dataHandle(layerHandle(4, 0xeb), 2267, 0x000),
-    }), TestSuite::Compare::Container);
-}
+    /* Compared to orderVisibleNodeData(), only node 8 is left among the
+       assignments, all others can stay visible even if they aren't as it
+       shouldn't matter for them */
+    UnsignedShort visibleNodeMask[]{0xffff & ~(1 << 8)};
 
-void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandlingNoLayers() {
-    UnsignedInt visibleNodeDataOffsets[]{
-        0,
-        0,
-        0
-    };
+    /* Output from orderVisibleNodeData() above, turned into an offset array
+       with an extra 0 at the front */
     UnsignedInt visibleNodeEventDataOffsets[]{
-        0xdeadbeef,
-        0xdeadbeef,
-        0xdeadbeef
+        0,
+        0,  /* Node 0 */
+        0,  /* Node 1 */
+        0,  /* Node 2, 2 items from layers 2 and 3 */
+        2,  /* Node 3, 3 items from layer 2 and 5 */
+        5,  /* Node 4, 1 item from layer 2 */
+        6,  /* Node 5 */
+        6,  /* Node 6 */
+        6,  /* Node 7, 1 item from layer 3 */
+        7,  /* Node 8, 1 item from layer 5 which isn't visible */
+        7,  /* Node 9 */
+        7,  /* Node 10 */
+        7,  /* Node 11 */
+        7,  /* Node 12, 1 item from layer 2 */
+        8,  /* Node 13 */
     };
-    Implementation::orderNodeDataForEventHandling(
-        visibleNodeDataOffsets,
-        nullptr,
-        nullptr,
-        LayerHandle::Null,
-        nullptr,
-        visibleNodeEventDataOffsets,
-        nullptr);
+
+    LayerHandle layer2 = layerHandle(2, 0x88);
+    LayerHandle layer3 = layerHandle(3, 0x22);
+    LayerHandle layer5 = layerHandle(5, 0x44);
+    Containers::Pair<Containers::StridedArrayView1D<const Containers::Pair<NodeHandle, UnsignedShort>>, LayerHandle> layers[]{
+        {layer5NodeAttachments, layer5},
+        {layer3NodeAttachments, layer3},
+        {layer2NodeAttachments, layer2},
+    };
+
+    DataHandle visibleNodeEventData[9];
+    for(const auto& layer: layers) {
+        CORRADE_ITERATION(layer.second());
+        Implementation::orderNodeDataForEventHandlingInto(
+            layer.second(),
+            layer.first().slice(&Containers::Pair<NodeHandle, UnsignedShort>::second),
+            layer.first().slice(&Containers::Pair<NodeHandle, UnsignedShort>::first),
+            visibleNodeEventDataOffsets,
+            Containers::BitArrayView{visibleNodeMask, 0, 14},
+            visibleNodeEventData);
+    }
+
     CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventDataOffsets), Containers::arrayView<UnsignedInt>({
-        0, 0, 0
+        0,  /* Node 0 */
+        0,  /* Node 1 */
+        0,  /* Node 2, 2 items from layers 2 and 3 */
+        2,  /* Node 3, 3 items from layer 2 and 5 */
+        5,  /* Node 4, 1 item from layer 2 */
+        6,  /* Node 5 */
+        6,  /* Node 6 */
+        6,  /* Node 7, 1 item from layer 3 */
+        7,  /* Node 8, 1 item from layer 5 which isn't visible */
+        7,  /* Node 9 */
+        7,  /* Node 10 */
+        7,  /* Node 11 */
+        7,  /* Node 12, 1 item from layer 2 */
+        8,  /* Node 13 */
+        8
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventData).prefix(Containers::arrayView(visibleNodeEventDataOffsets).back()), Containers::arrayView({
+        /* Node 2 */
+        dataHandle(layer3, 0, 0x555),
+        dataHandle(layer2, 6, 0x777),
+        /* Node 3. Order of items from the same layer matches inverse data ID
+           order, not the order in which they were created or attached. */
+        dataHandle(layer5, 2, 0x666),
+        dataHandle(layer5, 1, 0x444),
+        dataHandle(layer2, 3, 0x333),
+        /* Node 4 */
+        dataHandle(layer2, 2, 0x111),
+        /* Node 7 */
+        dataHandle(layer3, 2, 0x888),
+        /* Node 8 isn't visible */
+        /* Node 12 */
+        dataHandle(layer2, 4, 0x222)
     }), TestSuite::Compare::Container);
 }
 
-void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandlingNoVisibleNodes() {
-    UnsignedInt visibleNodeDataOffsets[]{
-        0
-    };
-    LayerHandle layerLast = layerHandle(5, 0x11);
-    LayerHandle layersPrevious[]{
-        LayerHandle{},
-        layerHandle(2, 0x33),
-        layerHandle(4, 0x00),
-        LayerHandle{},
-        layerHandle(5, 0x11),
-        layerHandle(1, 0x22)
-    };
-    LayerFeatures layerFeatures[]{
-        {},
-        LayerFeature::Event,
-        LayerFeature::Event,
-        {},
-        LayerFeature::Event,
-        LayerFeature::Event,
+void AbstractUserInterfaceImplementationTest::compactDraws() {
+    Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt> draws[]{
+        {8, 15, 3},
+        {3, 226, 762},
+        {4, 0, 0},
+        {7, 287628, 0},
+        {8, 18, 2},
+        {3, 0, 226},
+        {4, 0, 6777},
+        {4, 0, 0},
+        {4, 6777, 2}
     };
 
-    /* It shouldn't crash or loop indefinitely */
-    UnsignedInt visibleNodeEventDataOffsets[1]{};
-    Implementation::orderNodeDataForEventHandling(
-        visibleNodeDataOffsets,
-        nullptr,
-        layersPrevious,
-        layerLast,
-        layerFeatures,
-        visibleNodeEventDataOffsets,
-        nullptr);
-    CORRADE_VERIFY(true);
-}
-
-void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandlingNoVisibleNodesNoLayers() {
-    UnsignedInt visibleNodeDataOffsets[1];
-    UnsignedInt visibleNodeEventDataOffsets[1]{0xdeadbeef};
-    Implementation::orderNodeDataForEventHandling(
-        visibleNodeDataOffsets,
-        nullptr,
-        nullptr,
-        LayerHandle::Null,
-        nullptr,
-        visibleNodeEventDataOffsets,
-        nullptr);
-    CORRADE_COMPARE(visibleNodeEventDataOffsets[0], 0);
-}
-
-void AbstractUserInterfaceImplementationTest::orderNodeDataForEventHandlingAllLayers() {
-    /* All layers used */
-    LayerHandle layerLast = layerHandle(0, 0x1);
-    LayerHandle layersPrevious[1 << Implementation::LayerHandleIdBits];
-    for(std::size_t i = 0; i != Containers::arraySize(layersPrevious) - 1; ++i)
-        layersPrevious[i] = layerHandle(i + 1, 0x1);
-    layersPrevious[Containers::arraySize(layersPrevious) - 1] = layerHandle(0, 0x1);
-    LayerFeatures layerFeatures[1 << Implementation::LayerHandleIdBits];
-    for(LayerFeatures& i: layerFeatures)
-        i = LayerFeature::Event;
-
-    /* Data in the last two layers */
-    UnsignedInt visibleNodeDataOffsets[]{
-        0,
-        2
-    };
-    /* Handle generations aren't used for anything here */
-    DataHandle visibleNodeData[]{
-        dataHandle(layerHandle((1 << Implementation::LayerHandleIdBits) - 1, 0x1), 27542, 0xb0b),
-        dataHandle(layerHandle((1 << Implementation::LayerHandleIdBits) - 2, 0x1), 24567, 0xded),
-    };
-
-    /* Should not cause any memory corruption due to the internal statically
-       sized arrays being too tiny or something */
-    UnsignedInt visibleNodeEventDataOffsets[2]{};
-    DataHandle visibleNodeEventData[2];
-    Implementation::orderNodeDataForEventHandling(
-        visibleNodeDataOffsets,
-        visibleNodeData,
-        layersPrevious,
-        layerLast,
-        layerFeatures,
-        visibleNodeEventDataOffsets,
-        visibleNodeEventData);
-    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeDataOffsets), Containers::arrayView<UnsignedInt>({
-        0,
-        2
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(Containers::arrayView(visibleNodeEventData), Containers::arrayView({
-        dataHandle(layerHandle(254, 0x1), 24567, 0xded),
-        dataHandle(layerHandle(255, 0x1), 27542, 0xb0b),
-    }), TestSuite::Compare::Container);
+    UnsignedInt count = Implementation::compactDrawsInPlace(
+        Containers::stridedArrayView(draws)
+            .slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::first),
+        Containers::stridedArrayView(draws)
+            .slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::second),
+        Containers::stridedArrayView(draws)
+            .slice(&Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>::third));
+    CORRADE_COMPARE_AS(count, Containers::arraySize(draws),
+        TestSuite::Compare::LessOrEqual);
+    CORRADE_COMPARE_AS(Containers::arrayView(draws).prefix(count), (Containers::arrayView<Containers::Triple<UnsignedByte, UnsignedInt, UnsignedInt>>({
+        {8, 15, 3},
+        {3, 226, 762},
+        {8, 18, 2},
+        {3, 0, 226},
+        /* These two *could* get merged together eventually. So far aren't. */
+        {4, 0, 6777},
+        {4, 6777, 2}
+    })), TestSuite::Compare::Container);
 }
 
 }}}}

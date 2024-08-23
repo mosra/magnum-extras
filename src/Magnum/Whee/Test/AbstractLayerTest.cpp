@@ -48,6 +48,7 @@ struct AbstractLayerTest: TestSuite::Tester {
     void debugFeatures();
     void debugState();
     void debugStates();
+    void debugStatesSupersets();
 
     void construct();
     void constructInvalidHandle();
@@ -60,15 +61,17 @@ struct AbstractLayerTest: TestSuite::Tester {
     void createNoHandlesLeft();
     void removeInvalid();
 
+    void attach();
+    void attachInvalid();
+
     void setSize();
     void setSizeZero();
     void setSizeNotSupported();
     void setSizeNotImplemented();
 
-    void clean();
-    void cleanEmpty();
-    void cleanNotImplemented();
-    void cleanInvalidSize();
+    void cleanNodes();
+    void cleanNodesEmpty();
+    void cleanNodesNotImplemented();
 
     void update();
     void updateEmpty();
@@ -95,6 +98,7 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::debugFeatures,
               &AbstractLayerTest::debugState,
               &AbstractLayerTest::debugStates,
+              &AbstractLayerTest::debugStatesSupersets,
 
               &AbstractLayerTest::construct,
               &AbstractLayerTest::constructInvalidHandle,
@@ -107,15 +111,17 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::createNoHandlesLeft,
               &AbstractLayerTest::removeInvalid,
 
+              &AbstractLayerTest::attach,
+              &AbstractLayerTest::attachInvalid,
+
               &AbstractLayerTest::setSize,
               &AbstractLayerTest::setSizeZero,
               &AbstractLayerTest::setSizeNotSupported,
               &AbstractLayerTest::setSizeNotImplemented,
 
-              &AbstractLayerTest::clean,
-              &AbstractLayerTest::cleanEmpty,
-              &AbstractLayerTest::cleanNotImplemented,
-              &AbstractLayerTest::cleanInvalidSize,
+              &AbstractLayerTest::cleanNodes,
+              &AbstractLayerTest::cleanNodesEmpty,
+              &AbstractLayerTest::cleanNodesNotImplemented,
 
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateEmpty,
@@ -159,6 +165,16 @@ void AbstractLayerTest::debugStates() {
     std::ostringstream out;
     Debug{&out} << (LayerState::NeedsClean|LayerState(0xe0)) << LayerStates{};
     CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsClean|Whee::LayerState(0xe0) Whee::LayerStates{}\n");
+}
+
+void AbstractLayerTest::debugStatesSupersets() {
+    /* NeedsAttachmentUpdate is a superset of NeedsUpdate, so only one should
+       be printed */
+    {
+        std::ostringstream out;
+        Debug{&out} << (LayerState::NeedsUpdate|LayerState::NeedsAttachmentUpdate);
+        CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsAttachmentUpdate\n");
+    }
 }
 
 void AbstractLayerTest::construct() {
@@ -233,6 +249,7 @@ void AbstractLayerTest::createRemove() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.capacity(), 1);
     CORRADE_COMPARE(layer.usedCount(), 1);
+    CORRADE_COMPARE(layer.node(first), NodeHandle::Null);
 
     DataHandle second = layer.create();
     CORRADE_COMPARE(second, dataHandle(layer.handle(), 1, 1));
@@ -240,6 +257,7 @@ void AbstractLayerTest::createRemove() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 2);
+    CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
 
     layer.remove(first);
     CORRADE_VERIFY(!layer.isHandleValid(first));
@@ -275,9 +293,24 @@ void AbstractLayerTest::createRemoveHandleRecycle() {
     CORRADE_VERIFY(layer.isHandleValid(second));
     CORRADE_VERIFY(layer.isHandleValid(third));
     CORRADE_VERIFY(layer.isHandleValid(fourth));
-    CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
+    CORRADE_COMPARE(layer.node(first), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(third), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(fourth), NodeHandle::Null);
+
+    /* Attach some handles to an arbitrary node to populate their internals */
+    layer.attach(first, NodeHandle(0xabc12345));
+    layer.attach(third, NodeHandle(0x123abcde));
+    CORRADE_COMPARE(layer.node(first), NodeHandle(0xabc12345));
+    CORRADE_COMPARE(layer.node(third), NodeHandle(0x123abcde));
+    CORRADE_COMPARE_AS(layer.nodes(), Containers::arrayView({
+        NodeHandle(0xabc12345),
+        NodeHandle::Null,
+        NodeHandle(0x123abcde),
+        NodeHandle::Null
+    }), TestSuite::Compare::Container);
 
     /* Remove three out of the four in an arbitrary order */
     layer.remove(fourth);
@@ -287,21 +320,33 @@ void AbstractLayerTest::createRemoveHandleRecycle() {
     CORRADE_VERIFY(layer.isHandleValid(second));
     CORRADE_VERIFY(!layer.isHandleValid(third));
     CORRADE_VERIFY(!layer.isHandleValid(fourth));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 1);
+    CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
+
+    /* Internally all attachments should be set to a null handle after
+       deletion */
+    CORRADE_COMPARE_AS(layer.nodes(), Containers::arrayView({
+        NodeHandle::Null,
+        NodeHandle::Null,
+        NodeHandle::Null,
+        NodeHandle::Null
+    }), TestSuite::Compare::Container);
 
     /* Allocating new handles should recycle the handles in the order they were
-       removed (oldest first) */
+       removed (oldest first). Their properties should be cleared. */
     DataHandle fourth2 = layer.create();
     DataHandle first2 = layer.create();
     DataHandle third2 = layer.create();
     CORRADE_COMPARE(first2, dataHandle(layer.handle(), 0, 2));
     CORRADE_COMPARE(third2, dataHandle(layer.handle(), 2, 2));
     CORRADE_COMPARE(fourth2, dataHandle(layer.handle(), 3, 2));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
+    CORRADE_COMPARE(layer.node(first2), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(third2), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(fourth2), NodeHandle::Null);
 
     /* Old handles shouldn't get valid again */
     CORRADE_VERIFY(!layer.isHandleValid(first));
@@ -319,17 +364,27 @@ void AbstractLayerTest::createRemoveHandleRecycle() {
     CORRADE_VERIFY(!layer.isHandleValid(third));
     CORRADE_VERIFY(!layer.isHandleValid(third2));
     CORRADE_VERIFY(layer.isHandleValid(third3));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
     CORRADE_COMPARE(layer.capacity(), 4);
     CORRADE_COMPARE(layer.usedCount(), 4);
+    CORRADE_COMPARE(layer.node(third3), NodeHandle::Null);
 
     /* Allocating a new handle with the free list empty will grow it */
     DataHandle fifth = layer.create();
     CORRADE_COMPARE(fifth, dataHandle(layer.handle(), 4, 1));
     CORRADE_VERIFY(layer.isHandleValid(fifth));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
     CORRADE_COMPARE(layer.capacity(), 5);
     CORRADE_COMPARE(layer.usedCount(), 5);
+    CORRADE_COMPARE(layer.node(fifth), NodeHandle::Null);
+
+    /* The generation counter view should reflect the number of how given ID
+       was recycled */
+    CORRADE_COMPARE_AS(layer.generations(), Containers::arrayView<UnsignedShort>({
+        2,
+        1,
+        3,
+        2,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractLayerTest::createRemoveHandleDisable() {
@@ -416,6 +471,97 @@ void AbstractLayerTest::removeInvalid() {
         TestSuite::Compare::String);
 }
 
+void AbstractLayerTest::attach() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+
+    DataHandle first = layer.create();
+    DataHandle second = layer.create();
+    CORRADE_COMPARE(layer.node(first), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
+
+    NodeHandle nodeFirst = nodeHandle(2865, 0xcec);
+    NodeHandle nodeSecond = nodeHandle(9872, 0xbeb);
+    NodeHandle nodeThird = nodeHandle(12, 0x888);
+
+    layer.attach(first, nodeSecond);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.node(first), nodeSecond);
+
+    /* The attachment should be reflected in the view as well */
+    CORRADE_COMPARE_AS(layer.nodes(), Containers::arrayView({
+        nodeSecond,
+        NodeHandle::Null
+    }), TestSuite::Compare::Container);
+
+    /* Calling with the layer-specific handles should work too */
+    layer.attach(dataHandleData(second), nodeFirst);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.node(dataHandleData(second)), nodeFirst);
+
+    /* Attaching to a new node should overwrite the previous */
+    layer.attach(first, nodeThird);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.node(first), nodeThird);
+
+    /* Attaching two data to the same node should work too */
+    layer.attach(second, nodeThird);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.node(first), nodeThird);
+    CORRADE_COMPARE(layer.node(second), nodeThird);
+
+    /* Detaching as well */
+    layer.attach(first, NodeHandle::Null);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.node(first), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(second), nodeThird);
+
+    /* The cleared attachment should be reflected in the view as well */
+    CORRADE_COMPARE_AS(layer.nodes(), Containers::arrayView({
+        NodeHandle::Null,
+        nodeThird
+    }), TestSuite::Compare::Container);
+}
+
+void AbstractLayerTest::attachInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0xab, 0x12)};
+
+    DataHandle handle = layer.create();
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.attach(DataHandle::Null, nodeHandle(2865, 0xcec));
+    layer.node(DataHandle::Null);
+    /* Valid layer, invalid data */
+    layer.attach(dataHandle(layer.handle(), LayerDataHandle(0x123abcde)), nodeHandle(2865, 0xcec));
+    layer.node(dataHandle(layer.handle(), LayerDataHandle(0x123abcde)));
+    /* Invalid layer, valid data */
+    layer.attach(dataHandle(LayerHandle::Null, dataHandleData(handle)), nodeHandle(2865, 0xcec));
+    layer.node(dataHandle(LayerHandle::Null, dataHandleData(handle)));
+    /* LayerDataHandle directly */
+    layer.attach(LayerDataHandle(0x123abcde), nodeHandle(2865, 0xcec));
+    layer.node(LayerDataHandle(0x123abcde));
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::attach(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::AbstractLayer::node(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::AbstractLayer::attach(): invalid handle Whee::DataHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
+        "Whee::AbstractLayer::node(): invalid handle Whee::DataHandle({0xab, 0x12}, {0xabcde, 0x123})\n"
+        "Whee::AbstractLayer::attach(): invalid handle Whee::DataHandle(Null, {0x0, 0x1})\n"
+        "Whee::AbstractLayer::node(): invalid handle Whee::DataHandle(Null, {0x0, 0x1})\n"
+        "Whee::AbstractLayer::attach(): invalid handle Whee::LayerDataHandle(0xabcde, 0x123)\n"
+        "Whee::AbstractLayer::node(): invalid handle Whee::LayerDataHandle(0xabcde, 0x123)\n",
+        TestSuite::Compare::String);
+}
+
 void AbstractLayerTest::setSize() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -496,7 +642,7 @@ void AbstractLayerTest::setSizeNotImplemented() {
     CORRADE_VERIFY(true);
 }
 
-void AbstractLayerTest::clean() {
+void AbstractLayerTest::cleanNodes() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
 
@@ -505,7 +651,7 @@ void AbstractLayerTest::clean() {
         void doClean(Containers::BitArrayView dataIdsToRemove) override {
             ++called;
             CORRADE_COMPARE_AS(dataIdsToRemove, Containers::stridedArrayView({
-                true, false, false, true
+                true, false, false, true, false, true, false
             }).sliceBit(0), TestSuite::Compare::Container);
         }
 
@@ -515,26 +661,68 @@ void AbstractLayerTest::clean() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    /* Create four data to match the four bits, delete one of them (which still
-       keeps the capacity at 4) */
+    /* Create seven data to match the seven bits */
     DataHandle first = layer.create();
     DataHandle second = layer.create();
     DataHandle third = layer.create();
     DataHandle fourth = layer.create();
-    layer.remove(third);
+    DataHandle fifth = layer.create();
+    DataHandle sixth = layer.create();
+    DataHandle seventh = layer.create();
 
-    UnsignedByte dataIdsToRemove[]{0x9};
-    layer.clean(Containers::BitArrayView{dataIdsToRemove, 0, 4});
+    /* Attach them to random handles, leave one unassigned, attach two data to
+       one node */
+    NodeHandle nodeFirst = nodeHandle(0, 0xcec);
+    NodeHandle nodeSecond = nodeHandle(1, 0xded);
+    NodeHandle nodeFourth = nodeHandle(3, 0xaba);
+    NodeHandle nodeEighth = nodeHandle(7, 0xfef);
+    layer.attach(first, nodeEighth);
+    layer.attach(third, nodeSecond);
+    layer.attach(fourth, nodeFirst);
+    layer.attach(fifth, nodeFourth);
+    layer.attach(sixth, nodeFirst);
+    layer.attach(seventh, nodeFourth);
+
+    /* Remove two of them */
+    layer.remove(third);
+    layer.remove(seventh);
+
+    /* Call cleanNodes() with updated generation counters */
+    layer.cleanNodes(Containers::arrayView({
+        /* First node generation gets different, affecting fourth and sixth
+           data */
+        UnsignedShort(nodeHandleGeneration(nodeFirst) + 1),
+        /* Second node generation gets different but since the third data is
+           already removed it doesn't affect anything */
+        UnsignedShort(nodeHandleGeneration(nodeSecond) - 1),
+        /* Third node has no attachments so it can be arbitrary */
+        UnsignedShort{0xbeb},
+        /* Fourth node stays the same generation so the fifth data stay.
+           Seventh data are already removed so they aren't set for deletion
+           either. */
+        UnsignedShort(nodeHandleGeneration(nodeFourth)),
+        /* Fifth, sixth, seventh nodes have no attachments so they can be
+           arbitrary again */
+        UnsignedShort{0xaca},
+        UnsignedShort{0x808},
+        UnsignedShort{0xefe},
+        /* Eighth node is now a zero generation, i.e. disabled, which should
+           trigger removal of first data */
+        UnsignedShort{},
+    }));
     CORRADE_COMPARE(layer.called, 1);
 
-    /* Only the second data should stay afterwards */
+    /* Only the second and fifth data should stay afterwards */
     CORRADE_VERIFY(!layer.isHandleValid(first));
     CORRADE_VERIFY(layer.isHandleValid(second));
     CORRADE_VERIFY(!layer.isHandleValid(third));
     CORRADE_VERIFY(!layer.isHandleValid(fourth));
+    CORRADE_VERIFY(layer.isHandleValid(fifth));
+    CORRADE_VERIFY(!layer.isHandleValid(sixth));
+    CORRADE_VERIFY(!layer.isHandleValid(seventh));
 }
 
-void AbstractLayerTest::cleanEmpty() {
+void AbstractLayerTest::cleanNodesEmpty() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
 
@@ -548,49 +736,21 @@ void AbstractLayerTest::cleanEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.clean({});
+    layer.cleanNodes({});
     CORRADE_COMPARE(layer.called, 1);
 }
 
-void AbstractLayerTest::cleanNotImplemented() {
+void AbstractLayerTest::cleanNodesNotImplemented() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
 
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    /* Create three data to match the three bits */
-    layer.create();
-    layer.create();
-    layer.create();
-
-    UnsignedByte bits[]{0x5};
-    layer.clean(Containers::BitArrayView{bits, 0, 3});
+    layer.cleanNodes({});
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
-}
-
-void AbstractLayerTest::cleanInvalidSize() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct: AbstractLayer {
-        using AbstractLayer::AbstractLayer;
-
-        LayerFeatures doFeatures() const override { return {}; }
-    } layer{layerHandle(0, 1)};
-
-    /* Create three data to (not) match the two bits */
-    layer.create();
-    layer.create();
-    layer.create();
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    UnsignedByte bits[1]{};
-    layer.clean(Containers::BitArrayView{bits, 0, 2});
-    CORRADE_COMPARE(out.str(),
-        "Whee::AbstractLayer::clean(): expected 3 bits but got 2\n");
 }
 
 void AbstractLayerTest::update() {
@@ -745,27 +905,79 @@ void AbstractLayerTest::state() {
 
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
+    /* Creating a data adds no state flag as the data don't show up anywhere
+       implicitly */
+    DataHandle data1 = layer.create();
+    DataHandle data2 = layer.create();
+    DataHandle data3 = layer.create();
+    DataHandle data4 = layer.create();
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* No other way to trigger this flag */
     layer.setNeedsUpdate();
     CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
 
-    /* remove() adds NeedsClean */
-    layer.remove(layer.create());
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate|LayerState::NeedsClean);
+    /* update() then resets it */
+    layer.update({}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* NeedsClean is cleaned by this, NeedsUpdate stays. There's one (removed)
-       data so have to pass one bit. */
-    UnsignedByte dataIdsToRemove[]{0x00};
-    layer.clean(Containers::BitArrayView{dataIdsToRemove, 0, 1});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    /* Attaching to a node sets a state flag */
+    layer.attach(data2, nodeHandle(0, 0x123));
+    layer.attach(data3, nodeHandle(0, 0x123));
+    layer.attach(data4, nodeHandle(0, 0x123));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
-    /* Add both flags again; this time with the other overload to verify both
-       do the same */
-    layer.remove(dataHandleData(layer.create()));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate|LayerState::NeedsClean);
+    /* update() then resets it */
+    layer.update({}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* update() then resets NeedsUpdate */
+    /* Detaching sets a state flag as well (even if the data originally weren't
+       attached either). Also testing the other overload here. */
+    layer.attach(dataHandleData(data1), NodeHandle::Null);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+
+    /* update() then resets it */
+    layer.update({}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* remove() adds NeedClean */
+    layer.remove(data1);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
+
+    /* cleanNodes() then resets NeedsClean. Passing the matching generation to
+       not make it remove the other nodes too. */
+    layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* remove() adds also NeedsAttachmentUpdate if the data were attached */
+    layer.remove(data2);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean|LayerState::NeedsAttachmentUpdate);
+
+    /* update() then resets one */
     layer.update({}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsClean);
+
+    /* cleanNodes() the other */
+    layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Testing the other overload */
+    layer.remove(dataHandleData(data3));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsClean|LayerState::NeedsAttachmentUpdate);
+
+    /* update() and cleanNodes() then reset it */
+    layer.update({}, {}, {}, {});
+    layer.cleanNodes(Containers::arrayView({UnsignedShort{0x123}}));
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* cleanNodes() that removes a data attached to an invalid node doesn't set
+       any flags -- there it's assumed a proper cleanup happened upfront in the
+       UserInterface itself, otherwise this would require another round of
+       cleanNodes() calls */
+    CORRADE_VERIFY(layer.isHandleValid(data4));
+    layer.cleanNodes(Containers::arrayView({UnsignedShort{0xfef}}));
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_VERIFY(!layer.isHandleValid(data4));
 }
 
 void AbstractLayerTest::draw() {
