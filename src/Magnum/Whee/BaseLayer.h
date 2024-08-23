@@ -650,7 +650,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * custom color is @cpp 0xffffff_srgbf @ce, i.e. not affecting the
          * style in any way.
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setColor(DataHandle handle, const Color3& color);
@@ -690,7 +691,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * zero vector, i.e. not affecting the style in any way. Has no visual
          * effect if @ref BaseLayer::Shared::Flag::NoOutline is enabled.
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setOutlineWidth(DataHandle handle, const Vector4& width);
@@ -704,7 +706,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * zero, i.e. not affecting the style in any way. Has no visual effect
          * if @ref BaseLayer::Shared::Flag::NoOutline is enabled.
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setOutlineWidth(DataHandle handle, Float width) {
@@ -755,7 +758,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * specified in @ref Shared::setStyle(). By default the padding is a
          * zero vector, i.e. the quad fills the node area completely.
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setPadding(DataHandle handle, const Vector4& padding);
@@ -777,7 +781,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * default there's zero padding, i.e. the quad fills the node area
          * completely.
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref isHandleValid(DataHandle) const
          */
         void setPadding(DataHandle handle, Float padding) {
@@ -843,7 +848,8 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
          * @cpp {1.0f, 1.0f} @ce, i.e. covering the whole first slice of the
          * texture.
          *
-         * Calling this function causes @ref LayerState::NeedsUpdate to be set.
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set.
          * @see @ref BaseLayerGL::setTexture()
          */
         void setTextureCoordinates(DataHandle handle, const Vector3& offset, const Vector2& size);
@@ -876,7 +882,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
            on the subclass */
         LayerFeatures doFeatures() const override;
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
+        void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override;
 
     private:
         MAGNUM_WHEE_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);

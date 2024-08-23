@@ -55,7 +55,9 @@ enum class UserInterfaceState: UnsignedShort {
      * @ref AbstractUserInterface::update() needs to be called to recalculate
      * or reupload data attached to visible node hierarchy after they've been
      * changed. Set implicitly if any of the layers have
-     * @ref LayerState::NeedsUpdate set, is reset next time
+     * @ref LayerState::NeedsDataUpdate,
+     * @relativeref{LayerState,NeedsCommonDataUpdate} or
+     * @relativeref{LayerState,NeedsSharedDataUpdate} set, is reset next time
      * @ref AbstractUserInterface::update() is called. Implied by
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
      * @relativeref{UserInterfaceState,NeedsNodeEnabledUpdate},

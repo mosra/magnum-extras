@@ -60,6 +60,13 @@ struct AbstractLayerTest: TestSuite::Tester {
     void constructCopy();
     void constructMove();
 
+    void stateQuery();
+    void stateQueryNotImplemented();
+    void stateQueryInvalid();
+
+    void setNeedsUpdate();
+    void setNeedsUpdateInvalid();
+
     void createRemove();
     void createRemoveHandleRecycle();
     void createRemoveHandleDisable();
@@ -109,6 +116,7 @@ struct AbstractLayerTest: TestSuite::Tester {
     void update();
     void updateEmpty();
     void updateNotImplemented();
+    void updateInvalidState();
     void updateInvalidSizes();
 
     void state();
@@ -152,6 +160,13 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::constructInvalidHandle,
               &AbstractLayerTest::constructCopy,
               &AbstractLayerTest::constructMove,
+
+              &AbstractLayerTest::stateQuery,
+              &AbstractLayerTest::stateQueryNotImplemented,
+              &AbstractLayerTest::stateQueryInvalid,
+
+              &AbstractLayerTest::setNeedsUpdate,
+              &AbstractLayerTest::setNeedsUpdateInvalid,
 
               &AbstractLayerTest::createRemove,
               &AbstractLayerTest::createRemoveHandleRecycle,
@@ -202,6 +217,7 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateEmpty,
               &AbstractLayerTest::updateNotImplemented,
+              &AbstractLayerTest::updateInvalidState,
               &AbstractLayerTest::updateInvalidSizes,
 
               &AbstractLayerTest::state,
@@ -269,23 +285,40 @@ void AbstractLayerTest::debugFeaturesSupersets() {
 
 void AbstractLayerTest::debugState() {
     std::ostringstream out;
-    Debug{&out} << LayerState::NeedsAttachmentUpdate << LayerState(0xbe);
-    CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsAttachmentUpdate Whee::LayerState(0xbe)\n");
+    Debug{&out} << LayerState::NeedsAttachmentUpdate << LayerState(0xbebe);
+    CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsAttachmentUpdate Whee::LayerState(0xbebe)\n");
 }
 
 void AbstractLayerTest::debugStates() {
     std::ostringstream out;
-    Debug{&out} << (LayerState::NeedsUpdate|LayerState(0xe0)) << LayerStates{};
-    CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsUpdate|Whee::LayerState(0xe0) Whee::LayerStates{}\n");
+    Debug{&out} << (LayerState::NeedsSharedDataUpdate|LayerState(0xbe00)) << LayerStates{};
+    CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsSharedDataUpdate|Whee::LayerState(0xbe00) Whee::LayerStates{}\n");
 }
 
 void AbstractLayerTest::debugStatesSupersets() {
-    /* NeedsAttachmentUpdate is a superset of NeedsUpdate, so only one should
-       be printed */
+    /* NeedsAttachmentUpdate and NeedsNodeOffsetSizeUpdate are both supersets
+       of NeedsNodeOrderUpdate, so only one should be printed, but if there are
+       both then both should be */
     {
         std::ostringstream out;
-        Debug{&out} << (LayerState::NeedsUpdate|LayerState::NeedsAttachmentUpdate);
+        Debug{&out} << (LayerState::NeedsNodeOrderUpdate|LayerState::NeedsAttachmentUpdate);
         CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsAttachmentUpdate\n");
+    } {
+        std::ostringstream out;
+        Debug{&out} << (LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeOffsetSizeUpdate);
+        CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsNodeOffsetSizeUpdate\n");
+    } {
+        std::ostringstream out;
+        Debug{&out} << (LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate);
+        CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate\n");
+    } {
+
+    /* NeedsNodeOrderUpdate is a superset of NeedsNodeEnabledUpdate, so only
+       one should be printed */
+    } {
+        std::ostringstream out;
+        Debug{&out} << (LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate);
+        CORRADE_COMPARE(out.str(), "Whee::LayerState::NeedsNodeOrderUpdate\n");
     }
 }
 
@@ -348,6 +381,90 @@ void AbstractLayerTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<Layer>::value);
 }
 
+void AbstractLayerTest::stateQuery() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+        LayerStates doState() const override {
+            return LayerState::NeedsSharedDataUpdate;
+        }
+    } layer{layerHandle(0, 1)};
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate);
+
+    /* The output of doState() should be combined with flags set directly */
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|LayerState::NeedsDataUpdate);
+}
+
+void AbstractLayerTest::stateQueryNotImplemented() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+}
+
+void AbstractLayerTest::stateQueryInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+        LayerStates doState() const override {
+            return LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsSharedDataUpdate;
+        }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.state();
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::state(): implementation expected to return a subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsNodeEnabledUpdate|Whee::LayerState::NeedsSharedDataUpdate\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::setNeedsUpdate() {
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    layer.setNeedsUpdate(LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
+
+    /* Subsequent set doesn't overwrite, but ORs with existing */
+    layer.setNeedsUpdate(LayerState::NeedsDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
+}
+
+void AbstractLayerTest::setNeedsUpdateInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.setNeedsUpdate({});
+    layer.setNeedsUpdate(LayerState::NeedsNodeOffsetSizeUpdate);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerStates{}\n"
+        "Whee::AbstractLayer::setNeedsUpdate(): expected a non-empty subset of Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsNodeOffsetSizeUpdate\n",
+        TestSuite::Compare::String);
+}
+
 void AbstractLayerTest::createRemove() {
     struct: AbstractLayer {
         using AbstractLayer::AbstractLayer;
@@ -362,7 +479,7 @@ void AbstractLayerTest::createRemove() {
     DataHandle first = layer.create();
     CORRADE_COMPARE(first, dataHandle(layer.handle(), 0, 1));
     CORRADE_VERIFY(layer.isHandleValid(first));
-    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(layer.capacity(), 1);
     CORRADE_COMPARE(layer.usedCount(), 1);
     CORRADE_COMPARE(layer.node(first), NodeHandle::Null);
@@ -370,7 +487,7 @@ void AbstractLayerTest::createRemove() {
     DataHandle second = layer.create();
     CORRADE_COMPARE(second, dataHandle(layer.handle(), 1, 1));
     CORRADE_VERIFY(layer.isHandleValid(second));
-    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 2);
     CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
@@ -378,7 +495,7 @@ void AbstractLayerTest::createRemove() {
     layer.remove(first);
     CORRADE_VERIFY(!layer.isHandleValid(first));
     CORRADE_VERIFY(layer.isHandleValid(second));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsDataClean);
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 1);
 
@@ -386,7 +503,7 @@ void AbstractLayerTest::createRemove() {
     layer.remove(dataHandleData(second));
     CORRADE_VERIFY(!layer.isHandleValid(first));
     CORRADE_VERIFY(!layer.isHandleValid(second));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsDataClean);
     CORRADE_COMPARE(layer.capacity(), 2);
     CORRADE_COMPARE(layer.usedCount(), 0);
 }
@@ -564,16 +681,21 @@ void AbstractLayerTest::createAttached() {
 
     NodeHandle node = nodeHandle(9872, 0xbeb);
 
-    /* Explicitly passing a null handle should work too, and cause no state
-       change */
+    /* Explicitly passing a null handle should work too, and causes only
+       NeedsDataUpdate */
     DataHandle notAttached = layer.create(NodeHandle::Null);
     CORRADE_COMPARE(layer.node(notAttached), NodeHandle::Null);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Passing a non-null handle causes a state change */
+    /* Passing a non-null handle causes NeedsAttachmentUpdate and everything
+       related to updating node-related state as well */
     DataHandle attached = layer.create(node);
     CORRADE_COMPARE(layer.node(attached), node);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate);
 
     /* The attachment should be reflected in the view as well */
     CORRADE_COMPARE_AS(layer.nodes(), Containers::arrayView({
@@ -624,13 +746,19 @@ void AbstractLayerTest::attach() {
     DataHandle second = layer.create();
     CORRADE_COMPARE(layer.node(first), NodeHandle::Null);
     CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     NodeHandle nodeFirst = nodeHandle(2865, 0xcec);
     NodeHandle nodeSecond = nodeHandle(9872, 0xbeb);
     NodeHandle nodeThird = nodeHandle(12, 0x888);
 
+    /* Attaching to a non-null node sets all state related to nodes as well */
     layer.attach(first, nodeSecond);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate);
     CORRADE_COMPARE(layer.node(first), nodeSecond);
 
     /* The attachment should be reflected in the view as well */
@@ -639,25 +767,58 @@ void AbstractLayerTest::attach() {
         NodeHandle::Null
     }), TestSuite::Compare::Container);
 
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
     /* Calling with the layer-specific handles should work too */
     layer.attach(dataHandleData(second), nodeFirst);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate);
     CORRADE_COMPARE(layer.node(dataHandleData(second)), nodeFirst);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching to a new node should overwrite the previous */
     layer.attach(first, nodeThird);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate);
     CORRADE_COMPARE(layer.node(first), nodeThird);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching two data to the same node should work too */
     layer.attach(second, nodeThird);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate);
     CORRADE_COMPARE(layer.node(first), nodeThird);
     CORRADE_COMPARE(layer.node(second), nodeThird);
 
-    /* Detaching as well */
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Attaching data to the same node is a no-op, not setting any flags */
+    layer.attach(second, nodeThird);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+    CORRADE_COMPARE(layer.node(first), nodeThird);
+    CORRADE_COMPARE(layer.node(second), nodeThird);
+
+    /* Detaching sets only the attachment update, not
+       NeedsNodeOffsetSizeUpdate */
     layer.attach(first, NodeHandle::Null);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE(layer.node(first), NodeHandle::Null);
+    CORRADE_COMPARE(layer.node(second), nodeThird);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Detaching an already-detached data is a no-op again */
+    layer.attach(first, NodeHandle::Null);
+    CORRADE_COMPARE(layer.state(), LayerStates{});
     CORRADE_COMPARE(layer.node(first), NodeHandle::Null);
     CORRADE_COMPARE(layer.node(second), nodeThird);
 
@@ -1627,8 +1788,9 @@ void AbstractLayerTest::update() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             ++called;
+            CORRADE_COMPARE(state, LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsCommonDataUpdate);
             CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
                 0xabcdeu,
                 0x45678u
@@ -1681,6 +1843,7 @@ void AbstractLayerTest::update() {
     UnsignedByte nodesEnabled[1]{0x5};
 
     layer.update(
+        LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsCommonDataUpdate,
         Containers::arrayView({
             0xabcdeu,
             0x45678u,
@@ -1724,7 +1887,7 @@ void AbstractLayerTest::updateEmpty() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             ++called;
         }
 
@@ -1732,7 +1895,7 @@ void AbstractLayerTest::updateEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -1746,6 +1909,7 @@ void AbstractLayerTest::updateNotImplemented() {
     UnsignedByte nodesEnabled[1]{};
 
     layer.update(
+        LayerState::NeedsSharedDataUpdate,
         Containers::arrayView({
             0u,
             0u
@@ -1785,6 +1949,25 @@ void AbstractLayerTest::updateNotImplemented() {
     CORRADE_VERIFY(true);
 }
 
+void AbstractLayerTest::updateInvalidState() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+    } layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.update({}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::update(): expected a non-empty subset of Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate|Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerStates{}\n"
+        "Whee::AbstractLayer::update(): expected a non-empty subset of Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsAttachmentUpdate|Whee::LayerState::NeedsDataUpdate|Whee::LayerState::NeedsCommonDataUpdate|Whee::LayerState::NeedsSharedDataUpdate but got Whee::LayerState::NeedsDataClean\n",
+        TestSuite::Compare::String);
+}
+
 void AbstractLayerTest::updateInvalidSizes() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -1799,6 +1982,7 @@ void AbstractLayerTest::updateInvalidSizes() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.update(
+        LayerState::NeedsDataUpdate,
         {},
         Containers::arrayView({
             0u,
@@ -1813,6 +1997,7 @@ void AbstractLayerTest::updateInvalidSizes() {
         {}, {}
     );
     layer.update(
+        LayerState::NeedsDataUpdate,
         {}, {}, {},
         Containers::arrayView<Vector2>({
             {},
@@ -1827,6 +2012,7 @@ void AbstractLayerTest::updateInvalidSizes() {
         {}, {}
     );
     layer.update(
+        LayerState::NeedsDataUpdate,
         {}, {}, {},
         Containers::arrayView<Vector2>({
             {},
@@ -1840,6 +2026,7 @@ void AbstractLayerTest::updateInvalidSizes() {
         {}, {}
     );
     layer.update(
+        LayerState::NeedsDataUpdate,
         {}, {}, {},
         {}, {}, {},
         Containers::arrayView<Vector2>({
@@ -1867,43 +2054,63 @@ void AbstractLayerTest::state() {
         using AbstractLayer::remove;
 
         LayerFeatures doFeatures() const override { return {}; }
+
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            /* The doUpdate() should never get the NeedsAttachmentUpdate, only
+               the NeedsNodeOrderUpdate that's a subset of it */
+            CORRADE_VERIFY(!(state >= LayerState::NeedsAttachmentUpdate));
+        }
     } layer{layerHandle(0xab, 0x12)};
 
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Creating a data adds no state flag as the data don't show up anywhere
-       implicitly */
+    /* Creating a data adds NeedsDataUpdate */
     DataHandle data1 = layer.create();
     DataHandle data2 = layer.create();
     DataHandle data3 = layer.create();
     DataHandle data4 = layer.create();
+    DataHandle data5 = layer.create();
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* update() then resets it, if passed the same flag */
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsNodeOrderUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* No other way to trigger this flag */
-    layer.setNeedsUpdate();
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    /* No other way to trigger any of these flags */
+    layer.setNeedsUpdate(LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
 
-    /* update() then resets it */
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    /* update() then resets the subset that was passed */
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate);
+
+    /* update() again for the remaining */
+    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Attaching to a node sets a state flag */
+    /* Attaching to a node sets state flags */
     layer.attach(data2, nodeHandle(0, 0x123));
     layer.attach(data3, nodeHandle(0, 0x123));
     layer.attach(data4, nodeHandle(0, 0x123));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    layer.attach(data5, nodeHandle(0, 0x123));
+    CORRADE_COMPARE(layer.state(), Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate);
 
-    /* update() then resets it */
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    /* update() then resets them */
+    layer.update(Whee::LayerState::NeedsNodeOffsetSizeUpdate|Whee::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
-    /* Detaching sets a state flag as well (even if the data originally weren't
-       attached either). Also testing the other overload here. */
-    layer.attach(dataHandleData(data1), NodeHandle::Null);
+    /* Detaching sets a state flag as well. Also testing the other overload
+       here. */
+    layer.attach(dataHandleData(data5), NodeHandle::Null);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets it */
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* Attaching/detaching an already-attached/detached data does nothing */
+    layer.attach(data1, NodeHandle::Null);
+    layer.attach(data4, nodeHandle(0, 0x123));
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* remove() adds NeedsDataClean */
@@ -1925,7 +2132,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets one */
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
 
     /* cleanData() the other */
@@ -1937,7 +2144,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() and cleanData() then resets it */
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     layer.cleanData({});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 

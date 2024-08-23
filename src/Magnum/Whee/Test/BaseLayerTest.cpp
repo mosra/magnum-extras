@@ -152,11 +152,11 @@ const struct {
     bool layerDataHandleOverloads;
 } CreateRemoveData[]{
     {"create",
-        NodeHandle::Null, LayerStates{}, false},
+        NodeHandle::Null, LayerState::NeedsDataUpdate, false},
     {"create and attach",
-        nodeHandle(9872, 0xbeb), LayerState::NeedsAttachmentUpdate, false},
+        nodeHandle(9872, 0xbeb), LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate, false},
     {"LayerDataHandle overloads",
-        NodeHandle::Null, LayerStates{}, true},
+        NodeHandle::Null, LayerState::NeedsDataUpdate, true},
 };
 
 BaseLayerTest::BaseLayerTest() {
@@ -1201,6 +1201,12 @@ void BaseLayerTest::setColor() {
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{1, 3}};
 
+    /* Needed in order to be able to call update() */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}},
+        {0, 0, 0},
+        {});
+
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
@@ -1211,17 +1217,25 @@ void BaseLayerTest::setColor() {
 
     DataHandle data = layer.create(2, 0xff3366_rgbf);
     CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a color marks the layer as dirty */
     layer.setColor(data, 0xaabbc_rgbf);
     CORRADE_COMPARE(layer.color(data), 0xaabbc_rgbf);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setColor(dataHandleData(data), 0x112233_rgbf);
     CORRADE_COMPARE(layer.color(data), 0x112233_rgbf);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
 void BaseLayerTest::setOutlineWidth() {
@@ -1230,6 +1244,13 @@ void BaseLayerTest::setOutlineWidth() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{2, 3}};
+
+    /* Needed in order to be able to call update() */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}},
+        {0, 0, 0},
+        {});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1241,27 +1262,43 @@ void BaseLayerTest::setOutlineWidth() {
 
     DataHandle data = layer.create(1, 0xff3366_rgbf, {3.0f, 1.0f, 2.0f, 4.0f});
     CORRADE_COMPARE(layer.outlineWidth(data), (Vector4{3.0f, 1.0f, 2.0f, 4.0f}));
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting an outline width marks the layer as dirty */
     layer.setOutlineWidth(data, {2.0f, 4.0f, 3.0f, 1.0f});
     CORRADE_COMPARE(layer.outlineWidth(data), (Vector4{2.0f, 4.0f, 3.0f, 1.0f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setOutlineWidth(dataHandleData(data), {1.0f, 2.0f, 3.0f, 4.0f});
     CORRADE_COMPARE(layer.outlineWidth(data), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Single-value width */
     layer.setOutlineWidth(data, 4.0f);
     CORRADE_COMPARE(layer.outlineWidth(data), Vector4{4.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setOutlineWidth(dataHandleData(data), 3.0f);
     CORRADE_COMPARE(layer.outlineWidth(data), Vector4{3.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
 void BaseLayerTest::setPadding() {
@@ -1270,6 +1307,13 @@ void BaseLayerTest::setPadding() {
 
         void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
     } shared{BaseLayer::Shared::Configuration{2, 3}};
+
+    /* Needed in order to be able to call update() */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{},
+         BaseLayerStyleUniform{}},
+        {0, 0, 0},
+        {});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1281,27 +1325,43 @@ void BaseLayerTest::setPadding() {
 
     DataHandle data = layer.create(1, 0xff3366_rgbf);
     CORRADE_COMPARE(layer.padding(data), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a padding marks the layer as dirty */
     layer.setPadding(data, {2.0f, 4.0f, 3.0f, 1.0f});
     CORRADE_COMPARE(layer.padding(data), (Vector4{2.0f, 4.0f, 3.0f, 1.0f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setPadding(dataHandleData(data), {1.0f, 2.0f, 3.0f, 4.0f});
     CORRADE_COMPARE(layer.padding(dataHandleData(data)), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Single-value padding */
     layer.setPadding(data, 4.0f);
     CORRADE_COMPARE(layer.padding(data), Vector4{4.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setPadding(dataHandleData(data), 3.0f);
     CORRADE_COMPARE(layer.padding(dataHandleData(data)), Vector4{3.0f});
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
 void BaseLayerTest::setTextureCoordinates() {
@@ -1312,6 +1372,11 @@ void BaseLayerTest::setTextureCoordinates() {
     } shared{BaseLayer::Shared::Configuration{1}
         .addFlags(BaseLayer::Shared::Flag::Textured)};
 
+    /* Needed in order to be able to call update() */
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}},
+        {});
+
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
@@ -1319,19 +1384,27 @@ void BaseLayerTest::setTextureCoordinates() {
     DataHandle data = layer.create(0);
     CORRADE_COMPARE(layer.textureCoordinateOffset(data), Vector3{0.0f});
     CORRADE_COMPARE(layer.textureCoordinateSize(data), Vector2{1.0f});
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting texture coordinates marks the layer as dirty */
     layer.setTextureCoordinates(data, {0.5f, 0.75f, 35.0f}, {0.25f, 0.125f});
     CORRADE_COMPARE(layer.textureCoordinateOffset(data), (Vector3{0.5f, 0.75f, 35.0f}));
     CORRADE_COMPARE(layer.textureCoordinateSize(data), (Vector2{0.25f, 0.125f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
+
+    /* Clear the state flags */
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
     layer.setTextureCoordinates(dataHandleData(data), {0.25f, 0.5f, 5.0f}, {0.75f, 0.5f});
     CORRADE_COMPARE(layer.textureCoordinateOffset(data), (Vector3{0.25f, 0.5f, 5.0f}));
     CORRADE_COMPARE(layer.textureCoordinateSize(data), (Vector2{0.75f, 0.5f}));
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsUpdate);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
 void BaseLayerTest::setTextureCoordinatesInvalid() {
@@ -1465,7 +1538,7 @@ void BaseLayerTest::updateEmpty() {
     } layer{layerHandle(0, 1), shared};
 
     /* Shouldn't crash or do anything weird */
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_VERIFY(true);
 }
 
@@ -1544,7 +1617,7 @@ void BaseLayerTest::updateDataOrder() {
 
     /* An empty update should generate an empty draw list */
     if(data.emptyUpdate) {
-        layer.update({}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+        layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
         CORRADE_COMPARE_AS(layer.stateData().indices,
             Containers::ArrayView<const UnsignedInt>{},
             TestSuite::Compare::Container);
@@ -1553,7 +1626,7 @@ void BaseLayerTest::updateDataOrder() {
 
     /* Just the filled subset is getting updated */
     UnsignedInt dataIds[]{9, 7, 3};
-    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, dataIds, {}, {}, nodeOffsets, nodeSizes, nodesEnabled, {}, {});
 
     /* The indices should be filled just for the three items */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
@@ -1669,7 +1742,7 @@ void BaseLayerTest::updateNoStyleSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update({}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Whee::BaseLayer::update(): no style data was set\n");
 }
 

@@ -565,7 +565,7 @@ void TextLayer::setTextInternal(const UnsignedInt id, const Containers::StringVi
         "Whee::TextLayer::setText():",
         #endif
         id, data.style, text, properties);
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 void TextLayer::setGlyph(const DataHandle handle, const UnsignedInt glyph, const TextProperties& properties) {
@@ -597,7 +597,7 @@ void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, 
         "Whee::TextLayer::setGlyph():",
         #endif
         id, data.style, glyph, properties);
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 Color3 TextLayer::color(const DataHandle handle) const {
@@ -626,7 +626,7 @@ void TextLayer::setColor(const LayerDataHandle handle, const Color3& color) {
 
 void TextLayer::setColorInternal(const UnsignedInt id, const Color3& color) {
     static_cast<State&>(*_state).data[id].color = color;
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 Vector4 TextLayer::padding(const DataHandle handle) const {
@@ -655,7 +655,7 @@ void TextLayer::setPadding(const LayerDataHandle handle, const Vector4& padding)
 
 void TextLayer::setPaddingInternal(const UnsignedInt id, const Vector4& padding) {
     static_cast<State&>(*_state).data[id].padding = padding;
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 LayerFeatures TextLayer::doFeatures() const {
@@ -677,9 +677,9 @@ void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
        remove(). See a comment there for more information. */
 }
 
-void TextLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
+void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     /* The base implementation populates data.calculatedStyle */
-    AbstractVisualLayer::doUpdate(dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+    AbstractVisualLayer::doUpdate(states, dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
 
     State& state = static_cast<State&>(*_state);
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);

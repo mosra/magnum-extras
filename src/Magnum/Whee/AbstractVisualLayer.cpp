@@ -145,7 +145,7 @@ void AbstractVisualLayer::setStyleInternal(const UnsignedInt id, const UnsignedI
     CORRADE_INTERNAL_DEBUG_ASSERT(_state->styles.size() == capacity());
     _state->styles[id] = style;
     /* _state->calculatedStyles is filled by AbstractVisualLayer::doUpdate() */
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 void AbstractVisualLayer::setTransitionedStyle(const AbstractUserInterface& ui, const DataHandle handle, const UnsignedInt style) {
@@ -179,7 +179,7 @@ void AbstractVisualLayer::setTransitionedStyleInternal(const AbstractUserInterfa
         sharedState.styleTransitionToInactiveOver :
         sharedState.styleTransitionToInactiveOut;
     state.styles[layerDataHandleId(handle)] = transition(style);
-    setNeedsUpdate();
+    setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
 UnsignedInt AbstractVisualLayer::dynamicStyleUsedCount() const {
@@ -212,7 +212,7 @@ LayerFeatures AbstractVisualLayer::doFeatures() const {
     return LayerFeature::Event;
 }
 
-void AbstractVisualLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void AbstractVisualLayer::doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     State& state = *_state;
     CORRADE_INTERNAL_ASSERT(
         state.styles.size() == capacity() &&
@@ -288,7 +288,7 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
             "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         if(nextStyle != style) {
             style = nextStyle;
-            setNeedsUpdate();
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
     }
 
@@ -323,7 +323,7 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
             "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         if(nextStyle != style) {
             style = nextStyle;
-            setNeedsUpdate();
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
     }
 
@@ -353,7 +353,7 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
             "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         if(nextStyle != style) {
             style = nextStyle;
-            setNeedsUpdate();
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
     }
 }
@@ -376,7 +376,7 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
             "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from" << style << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         if(nextStyle != style) {
             style = nextStyle;
-            setNeedsUpdate();
+            setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
     }
 }
