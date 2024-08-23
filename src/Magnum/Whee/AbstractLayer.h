@@ -131,27 +131,70 @@ internal state before the interface is drawn or an event is handled. See
 @ref UserInterfaceState for interface-wide state.
 @see @ref LayerStates, @ref AbstractLayer::state()
 */
-enum class LayerState: UnsignedByte {
+enum class LayerState: UnsignedShort {
     /**
      * @ref AbstractLayer::update() (which is called from
      * @ref AbstractUserInterface::update()) needs to be called to recalculate
-     * or reupload data after they've been changed. Has to be explicitly set by
-     * the layer implementation using @ref AbstractLayer::setNeedsUpdate(), is
-     * reset next time @ref AbstractLayer::update() is called. Implied by
-     * @ref LayerState::NeedsAttachmentUpdate.
+     * and reupload node-disabled-related state after the set of enabled nodes
+     * changed. Transitively set after every @ref AbstractLayer::create() with
+     * a non-null @ref NodeHandle and after every @ref AbstractLayer::attach()
+     * call that attaches data to a different non-null @ref NodeHandle. Is
+     * reset next time @ref AbstractLayer::update() is called with this flag
+     * present. Is reset next time @ref AbstractLayer::update() is called with
+     * this flag present. Implied by @ref LayerState::NeedsNodeEnabledUpdate.
      *
-     * This flag *isn't* set implicitly after a @ref AbstractLayer::create()
-     * call with a null @ref NodeHandle, as such newly created data only become
-     * a part of the visible node hierarchy with @ref AbstractLayer::attach()
-     * (or @ref AbstractUserInterface::attachData()).
-     *
-     * Note that there's also interface-wide
-     * @ref UserInterfaceState::NeedsDataAttachmentUpdate, which is set when
-     * the node hierarchy or the node data attachments changed. The two flags
-     * are set independently, but both of them imply
-     * @ref AbstractLayer::update() needs to be called.
+     * Gets passed to @ref AbstractLayer::update() when
+     * @ref UserInterfaceState::NeedsNodeEnabledUpdate or anything that implies
+     * it is set on the user interface. Is never returned by
+     * @ref AbstractLayer::state() alone.
      */
-    NeedsUpdate = 1 << 0,
+    NeedsNodeEnabledUpdate = 1 << 0,
+
+    /**
+     * @ref AbstractLayer::update() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to recalculate
+     * and reupload draw-order-related state such as index buffers after node
+     * order changed. Transitively set after every @ref AbstractLayer::create()
+     * with a non-null @ref NodeHandle and after every
+     * @ref AbstractLayer::attach() call that attaches data to a different
+     * non-null @ref NodeHandle. Is reset next time
+     * @ref AbstractLayer::update() is called with with this flag present.
+     * Implies @ref LayerState::NeedsNodeEnabledUpdate, as a change in the set
+     * of visible nodes may cause the set of enabled nodes to change. Implied
+     * by @relativeref{LayerState,NeedsNodeOffsetSizeUpdate} and
+     * @relativeref{LayerState,NeedsAttachmentUpdate}.
+     *
+     * Gets passed to @ref AbstractLayer::update() when
+     * @ref UserInterfaceState::NeedsNodeClipUpdate,
+     * @ref UserInterfaceState::NeedsDataAttachmentUpdate or anything that
+     * implies those is set on the user interface. Is only returned together
+     * with @ref LayerState::NeedsAttachmentUpdate by
+     * @ref AbstractLayer::state(), never alone.
+     */
+    NeedsNodeOrderUpdate = NeedsNodeEnabledUpdate|(1 << 1),
+
+    /**
+     * @ref AbstractLayer::update() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to recalculate
+     * and reupload position-related state after offsets and sizes of nodes the
+     * data are attached to changed, including the case when data get attached
+     * to a different node without the node offsets or sizes itself changing.
+     * Set implicitly after every @ref AbstractLayer::create() with a non-null
+     * @ref NodeHandle and after every @ref AbstractLayer::attach() call that
+     * attaches data to a different non-null @ref NodeHandle. Is reset next
+     * time @ref AbstractLayer::update() is called with this flag present.
+     * Implies @ref LayerState::NeedsNodeOrderUpdate, as nodes changing their
+     * offsets or sizes may cause the set of visible nodes, and thus their
+     * order, to change; often gets set together with
+     * @ref LayerState::NeedsAttachmentUpdate by
+     * @ref AbstractLayer::attach() and @ref AbstractLayer::create().
+     *
+     * Besides being present in @ref AbstractLayer::state() gets passed to
+     * @ref AbstractLayer::update() when
+     * @ref UserInterfaceState::NeedsLayoutUpdate or anything that implies it
+     * is set on the user interface.
+     */
+    NeedsNodeOffsetSizeUpdate = NeedsNodeOrderUpdate|(1 << 2),
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -160,19 +203,82 @@ enum class LayerState: UnsignedByte {
      * changed. Set implicitly after every @ref AbstractLayer::attach() call,
      * after @ref AbstractLayer::create() with a non-null @ref NodeHandle and
      * after @ref AbstractLayer::remove() for a data that's attached to a node,
-     * is reset next time @ref AbstractLayer::update() is called. Implies
-     * @ref LayerState::NeedsUpdate.
+     * is reset next time @ref AbstractLayer::update() is called with this flag
+     * present. Implies @ref LayerState::NeedsNodeOrderUpdate, as node
+     * attachment change may cause the set of visible nodes, and thus their
+     * order, to change; often gets set together with
+     * @ref LayerState::NeedsNodeOffsetSizeUpdate by
+     * @ref AbstractLayer::attach() and @ref AbstractLayer::create().
+     *
+     * If set on a layer, causes @ref UserInterfaceState::NeedsDataAttachmentUpdate
+     * to be set on the user interface. Gets passed to
+     * @ref AbstractLayer::update() only if the layer itself has it set,
+     * independently of @ref UserInterfaceState::NeedsDataAttachmentUpdate
+     * being present.
      */
-    NeedsAttachmentUpdate = NeedsUpdate|(1 << 1),
+    NeedsAttachmentUpdate = NeedsNodeOrderUpdate|(1 << 3),
+
+    /**
+     * @ref AbstractLayer::update() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to recalculate
+     * and reupload data after they've been changed. Set implicitly after every
+     * @ref AbstractLayer::create() independently of whether also attached to a
+     * @ref NodeHandle or not and whether that node is currently visible. Can
+     * also be returned by @ref AbstractLayer::doState() or be explicitly set
+     * by the layer implementation using @ref AbstractLayer::setNeedsUpdate().
+     * Is reset next time @ref AbstractLayer::update() is called with this flag
+     * present.
+     *
+     * If set on a layer, causes @ref UserInterfaceState::NeedsDataUpdate to
+     * be set on the user interface. Gets passed to @ref AbstractLayer::update()
+     * only if the layer itself has it set, independently of
+     * @ref UserInterfaceState::NeedsDataUpdate being present.
+     */
+    NeedsDataUpdate = 1 << 4,
+
+    /**
+     * @ref AbstractLayer::update() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to recalculate
+     * or reupload common layer data such as dynamic style data after they've
+     * been changed. Can be returned by @ref AbstractLayer::doState(), can also
+     * be explicitly set by the layer implementation using
+     * @ref AbstractLayer::setNeedsUpdate(), is reset next time
+     * @ref AbstractLayer::update() is called with this flag present.
+     *
+     * If set on a layer, causes @ref UserInterfaceState::NeedsDataUpdate to
+     * be set on the user interface. Gets passed to @ref AbstractLayer::update()
+     * only if the layer itself has it set, independently of
+     * @ref UserInterfaceState::NeedsDataUpdate being present.
+     */
+    NeedsCommonDataUpdate = 1 << 5,
+
+    /**
+     * @ref AbstractLayer::update() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to recalculate
+     * or reupload shared layer data such as shared style data after they've
+     * been changed. Can be returned by @ref AbstractLayer::doState(), can also
+     * be explicitly set by the layer implementation using
+     * @ref AbstractLayer::setNeedsUpdate(). Is reset next time
+     * @ref AbstractLayer::update() is called with this flag present.
+     *
+     * If set on a layer, causes @ref UserInterfaceState::NeedsDataUpdate to
+     * be set on the user interface. Gets passed to @ref AbstractLayer::update()
+     * only if the layer itself has it set, independently of
+     * @ref UserInterfaceState::NeedsDataUpdate being present.
+     */
+    NeedsSharedDataUpdate = 1 << 6,
 
     /**
      * @ref AbstractLayer::cleanData() (which is called from
      * @ref AbstractUserInterface::clean()) needs to be called to prune
      * animations attached to removed data. Set implicitly after every
      * @ref AbstractLayer::remove() call, is reset next time
-     * @ref AbstractLayer::cleanData() is called.
+     * @ref AbstractLayer::cleanData() is called with this flag present.
+     *
+     * If set on a layer, causes @ref UserInterfaceState::NeedsDataClean
+     * to be set on the user interface.
      */
-    NeedsDataClean = 1 << 2
+    NeedsDataClean = 1 << 7
 };
 
 /**
@@ -248,13 +354,17 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         LayerStates state() const;
 
         /**
-         * @brief Mark the layer with @ref LayerState::NeedsUpdate
+         * @brief Mark the layer as needing an update
          *
          * Meant to be called by layer implementations when the data get
-         * modified. See the flag for more information.
+         * modified. Expects that @p state is a non-empty subset of
+         * @ref LayerState::NeedsDataUpdate,
+         * @ref LayerState::NeedsCommonDataUpdate and
+         * @ref LayerState::NeedsSharedDataUpdate. See the flags for more
+         * information.
          * @see @ref state(), @ref update()
          */
-        void setNeedsUpdate();
+        void setNeedsUpdate(LayerStates state);
 
         /**
          * @brief Current capacity of the data storage
@@ -315,8 +425,10 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * attaching multiple different data handles to a single node, is
          * supported however.
          *
-         * Calling this function causes @ref LayerState::NeedsAttachmentUpdate
-         * to be set.
+         * If @p data wasn't attached to @p node before, calling this function
+         * causes @ref LayerState::NeedsAttachmentUpdate to be set.
+         * Additionally, if @p node isn't @ref NodeHandle::Null,
+         * @ref LayerState::NeedsNodeOffsetSizeUpdate is set as well.
          * @see @ref isHandleValid(DataHandle) const, @ref create(),
          *      @ref AbstractUserInterface::attachData()
          */
@@ -455,21 +567,30 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Used internally from @ref AbstractUserInterface::update(). Exposed
          * just for testing purposes, there should be no need to call this
          * function directly and doing so may cause internal
-         * @ref AbstractUserInterface state update to misbehave. Expects that
-         * the @p clipRectIds and @p clipRectDataCounts views have the same
-         * size, @p nodeOffsets and @p nodeSizes have the same size and
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that @p states isn't empty and is a subset of
+         * @ref LayerState::NeedsNodeOffsetSizeUpdate,
+         * @relativeref{LayerState,NeedsNodeOrderUpdate},
+         * @relativeref{LayerState,NeedsNodeEnabledUpdate},
+         * @relativeref{LayerState,NeedsDataUpdate},
+         * @relativeref{LayerState,NeedsCommonDataUpdate},
+         * @relativeref{LayerState,NeedsSharedDataUpdate} and
+         * @relativeref{LayerState,NeedsAttachmentUpdate}, that the
+         * @p clipRectIds and @p clipRectDataCounts views have the same size,
+         * @p nodeOffsets and @p nodeSizes have the same size and
          * @p clipRectOffsets and @p clipRectOffset have the same size. The
          * @p nodeOffsets, @p nodeSizes and @p nodesEnabled views should be
          * large enough to contain any valid node ID. Delegates to
          * @ref doUpdate(), see its documentation for more information about
          * the arguments.
          *
-         * Calling this function resets @ref LayerState::NeedsUpdate and
-         * @ref LayerState::NeedsAttachmentUpdate, however note that behavior
-         * of this function is independent of @ref state() --- it performs the
-         * update always regardless of what flags are set.
+         * Calling this function resets @ref LayerStates present in @p state,
+         * however note that behavior of this function is independent of
+         * @ref state() --- it performs the update only based on what's passed
+         * in @p state.
          */
-        void update(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        void update(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Composite previously rendered contents
@@ -647,12 +768,14 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Allocates a new handle in a free slot in the internal storage or
          * grows the storage if there's no free slots left. Expects that
          * there's at most 1048576 data. The returned handle can be removed
-         * again with @ref remove().
+         * again with @ref remove(). If @p node is not @ref NodeHandle::Null,
+         * directly attaches the created data to given node, equivalent to
+         * calling @ref attach().
          *
-         * If @p node is not @ref NodeHandle::Null, directly attaches the
-         * created data to given node, equivalent to calling @ref attach().
-         * That then causes @ref LayerState::NeedsAttachmentUpdate to be set.
-         * If @p node is @ref NodeHandle::Null, no @ref LayerState is set. The
+         * Calling this function causes @ref LayerState::NeedsDataUpdate to be
+         * set. If @p node is not @ref NodeHandle::Null, causes also
+         * @ref LayerState::NeedsAttachmentUpdate and
+         * @relativeref{LayerState,NeedsNodeOffsetSizeUpdate} to be set. The
          * subclass is meant to wrap this function in a public API and perform
          * appropriate additional initialization work there.
          */
@@ -765,6 +888,21 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         virtual LayerFeatures doFeatures() const = 0;
 
         /**
+         * @brief Query layer state
+         *
+         * Called by @ref state() to retrieve additional state bits that might
+         * have changed without layer's direct involvement, such as data shared
+         * between multiple layers getting modified by another layer. The
+         * implementation is expected to return a subset of
+         * @ref LayerState::NeedsDataUpdate,
+         * @relativeref{LayerState,NeedsCommonDataUpdate} and
+         * @relativeref{LayerState,NeedsSharedDataUpdate}.
+         *
+         * Default implementation returns an empty set.
+         */
+        virtual LayerStates doState() const;
+
+        /**
          * @brief Set user interface size
          * @param size              Size of the user interface to which
          *      everything including events is positioned
@@ -848,6 +986,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
 
         /**
          * @brief Update visible layer data to given offsets and positions
+         * @param state             State that's needed to be updated
          * @param dataIds           Data IDs to update, in order that matches
          *      the draw order
          * @param clipRectIds       IDs of clip rects to use for @p dataIds
@@ -865,11 +1004,25 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          *
          * Implementation for @ref update(), which is called from
          * @ref AbstractUserInterface::update() whenever
-         * @ref UserInterfaceState::NeedsDataUpdate or any of the states that
-         * imply it are present in @ref AbstractUserInterface::state(). Is
-         * always called after @ref doClean() and before @ref doComposite() and
-         * @ref doDraw(), with at least one @ref doSetSize() call happening at
-         * some point before.
+         * @ref UserInterfaceState::NeedsDataUpdate or any of the global or
+         * layer-specific states that imply it are present in
+         * @ref AbstractUserInterface::state(). Is always called after
+         * @ref doClean() and before @ref doComposite() and @ref doDraw(), with
+         * at least one @ref doSetSize() call happening at some point before.
+         *
+         * The @p state is guaranteed to be a subset of
+         * @ref LayerState::NeedsNodeOffsetSizeUpdate,
+         * @relativeref{LayerState,NeedsNodeOrderUpdate},
+         * @relativeref{LayerState,NeedsNodeEnabledUpdate},
+         * @relativeref{LayerState,NeedsDataUpdate},
+         * @relativeref{LayerState,NeedsCommonDataUpdate} and
+         * @relativeref{LayerState,NeedsSharedDataUpdate} and the
+         * implementation can make use of this information to skip some of its
+         * internal update logic. It can however also update everything always.
+         * The @ref LayerState::NeedsAttachmentUpdate flag isn't passed through
+         * from @ref update() as it's only meant to be used by the layer to
+         * signalize a state update to @ref AbstractUserInterface, not the
+         * other way around.
          *
          * Node handles corresponding to @p dataIds are available in
          * @ref nodes(), node IDs can be then extracted from the handles
@@ -911,7 +1064,7 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * data to update, while @ref doDraw() is called several times with
          * different sub-ranges of the data based on desired draw order.
          */
-        virtual void doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        virtual void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Composite previously rendered contents

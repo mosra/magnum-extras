@@ -666,7 +666,7 @@ UserInterfaceStates AbstractUserInterface::state() const {
     if(!(state.state >= (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))) for(const Layer& layer: state.layers) {
         if(const AbstractLayer* const instance = layer.used.instance.get()) {
             const LayerStates layerState = instance->state();
-            if(layerState >= LayerState::NeedsUpdate)
+            if(layerState & (LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate))
                 states |= UserInterfaceState::NeedsDataUpdate;
             if(layerState >= LayerState::NeedsAttachmentUpdate)
                 states |= UserInterfaceState::NeedsDataAttachmentUpdate;
@@ -2759,7 +2759,31 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.dataToDrawClipRectSizes);
     }
 
-    /* 14. For each layer (if there are actually any) submit an update of
+    /* 14. Decide what all to update on all layers */
+    LayerStates allLayerStateToUpdate;
+    /** @todo might be worth to have a dedicated state bit for just the
+        order, not sure if it's feasible to have a bit for just node offsets
+        and sizes and not the visible mask due to the visibility depending on
+        them */
+    if(states >= UserInterfaceState::NeedsLayoutUpdate) {
+        /* NeedsNodeOrderUpdate is implied by this as well, as this is a
+           superset of NeedsNodeClipUpdate */
+        CORRADE_INTERNAL_ASSERT(states >= UserInterfaceState::NeedsNodeClipUpdate);
+        allLayerStateToUpdate |= LayerState::NeedsNodeOffsetSizeUpdate;
+    }
+    if(states >= UserInterfaceState::NeedsNodeClipUpdate)
+        allLayerStateToUpdate |= LayerState::NeedsNodeOrderUpdate;
+    if(states >= UserInterfaceState::NeedsNodeEnabledUpdate)
+        allLayerStateToUpdate |= LayerState::NeedsNodeEnabledUpdate;
+    /** @todo state.state doesn't contain anything from the layers, what
+        difference would that make? */
+    if(states >= UserInterfaceState::NeedsDataAttachmentUpdate)
+        /* The implementation doesn't need to get NeedsAttachmentUpdate for
+           anything as it's meant to be used by the layer to signalize a need
+           to update , supply just the subset it should care about */
+        allLayerStateToUpdate |= LayerState::NeedsNodeOrderUpdate;
+
+    /* 15. For each layer (if there are actually any) submit an update of
        visible data across all visible top-level nodes. If no data update is
        needed, the data in layers is already up-to-date. */
     if(states >= UserInterfaceState::NeedsDataUpdate && state.firstLayer != LayerHandle::Null) {
@@ -2771,15 +2795,22 @@ AbstractUserInterface& AbstractUserInterface::update() {
             const UnsignedInt layerId = layerHandleId(layer);
             Layer& layerItem = state.layers[layerId];
 
+            /* Decide what all to update on this layer. If nothing is in the
+               global enum and nothing here either, skip it. Note that it
+               should never happen that we iterate through all layers here and
+               skip all because in that case the `states` wouldn't contain
+               NeedsDataUpdate and it wouldn't even get here. */
+            AbstractLayer* const instance = layerItem.used.instance.get();
+            LayerStates layerStateToUpdate = allLayerStateToUpdate;
+            if(instance)
+                layerStateToUpdate |= instance->state();
+
             /* If the layer has an instance (as layers may have been created
-               but without instances set yet), call update() on it even if the
-               particular data range is empty in order to allow the
-               implementations to do various cleanups. Plus the update() call
-               resets the NeedsUpdate state on the layer, if it's set. */
-            /** @todo include a bitmask of what node offsets / sizes / enabled
-                bits / data actually changed, or if it's just the set / order
-                of drawn IDs */
-            if(AbstractLayer* const instance = layerItem.used.instance.get()) instance->update(
+               but without instances set yet) and there's something to update,
+               call update() on it */
+            /** @todo include a bitmask of what data actually changed */
+            if(instance && layerStateToUpdate) instance->update(
+                layerStateToUpdate,
                 state.dataToUpdateIds.slice(
                     state.dataToUpdateLayerOffsets[layerId].first(),
                     state.dataToUpdateLayerOffsets[layerId + 1].first()),
@@ -2810,7 +2841,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
     /** @todo layer-specific cull/clip step? */
 
-    /* 15. Refresh the event handling state based on visible nodes. */
+    /* 16. Refresh the event handling state based on visible nodes. */
     if(states >= UserInterfaceState::NeedsNodeEnabledUpdate) {
         /* If the pressed node is no longer valid, is now invisible or doesn't
            react to events, reset it */
