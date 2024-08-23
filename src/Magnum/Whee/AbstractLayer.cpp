@@ -25,6 +25,7 @@
 
 #include "AbstractLayer.h"
 
+#include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/GrowableArray.h>
@@ -64,6 +65,7 @@ Debug& operator<<(Debug& debug, const LayerState value) {
         /* LCOV_EXCL_START */
         #define _c(value) case LayerState::value: return debug << "::" #value;
         _c(NeedsUpdate)
+        _c(NeedsAttachmentUpdate)
         _c(NeedsClean)
         #undef _c
         /* LCOV_EXCL_STOP */
@@ -74,6 +76,8 @@ Debug& operator<<(Debug& debug, const LayerState value) {
 
 Debug& operator<<(Debug& debug, const LayerStates value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::LayerStates{}", {
+        LayerState::NeedsAttachmentUpdate,
+        /* Implied by NeedsAttachmentUpdate, has to be after */
         LayerState::NeedsUpdate,
         LayerState::NeedsClean
     });
@@ -92,7 +96,14 @@ union Data {
            `1 << LayerDataHandleGenerationBits` the handle gets disabled. */
         UnsignedShort generation = 1;
 
-        /* Six bytes free */
+        /* Two bytes free */
+
+        /* Node the data is attached to. Becomes null again when the data is
+           freed. Has to be re-filled every time a handle is recycled, so it
+           doesn't make sense to initialize it to anything. */
+        NodeHandle node;
+
+        /* Four bytes free */
     } used;
 
     /* Used only if the Data is among free ones */
@@ -100,6 +111,11 @@ union Data {
         /* The generation value has to be preserved in order to increment it
            next time it gets used */
         UnsignedShort generation;
+
+        /* The node field is needed to discard free items when directly
+           iterating the list. */
+        /** @todo any idea how to better pack this? this is a bit awful */
+        NodeHandle node;
 
         /* See State::firstFree for more information */
         UnsignedInt next;
@@ -110,7 +126,8 @@ union Data {
 static_assert(std::is_trivially_copyable<Data>::value, "Data not trivially copyable");
 #endif
 static_assert(
-    offsetof(Data::Used, generation) == offsetof(Data::Free, generation),
+    offsetof(Data::Used, generation) == offsetof(Data::Free, generation) &&
+    offsetof(Data::Used, node) == offsetof(Data::Free, node),
     "Data::Used and Free layout not compatible");
 
 }
@@ -225,24 +242,34 @@ DataHandle AbstractLayer::create() {
 void AbstractLayer::remove(const DataHandle handle) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractLayer::remove(): invalid handle" << handle, );
+
+    State& state = *_state;
+    state.state |= LayerState::NeedsClean;
+    /* If the data was attached to a node, mark the layer also as needing a
+       update() call to refresh node data attachment state, which also bubbles
+       up to the UI itself */
+    if(state.data[dataHandleId(handle)].used.node != NodeHandle::Null)
+        state.state |= LayerState::NeedsAttachmentUpdate;
+
     /* Doesn't delegate to remove(LayerDataHandle) to avoid a double check;
        doesn't check just the layer portion of the handle and delegate to avoid
        a confusing assertion message if the data portion would be invalid */
     removeInternal(dataHandleId(handle));
-
-    /* Mark the layer as needing a clean() call to refresh its state, which
-       also bubbles up to the UI itself */
-    _state->state |= LayerState::NeedsClean;
 }
 
 void AbstractLayer::remove(const LayerDataHandle handle) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::AbstractLayer::remove(): invalid handle" << handle, );
-    removeInternal(layerDataHandleId(handle));
 
-    /* Mark the layer as needing a clean() call to refresh its state, which
-       also bubbles up to the UI itself */
-    _state->state |= LayerState::NeedsClean;
+    State& state = *_state;
+    state.state |= LayerState::NeedsClean;
+    /* If the data was attached to a node, mark the layer also as needing a
+       update() call to refresh node data attachment state, which also bubbles
+       up to the UI itself */
+    if(state.data[layerDataHandleId(handle)].used.node != NodeHandle::Null)
+        state.state |= LayerState::NeedsAttachmentUpdate;
+
+    removeInternal(layerDataHandleId(handle));
 }
 
 void AbstractLayer::removeInternal(const UnsignedInt id) {
@@ -252,6 +279,10 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
     /* Increase the data generation so existing handles pointing to this data
        are invalidated */
     ++data.used.generation;
+
+    /* Set the node attachment to null to avoid falsely recognizing this item
+       as used when directly iterating the list */
+    data.used.node = NodeHandle::Null;
 
     /* Put the data at the end of the free list (while they're allocated from
        the front) to not exhaust the generation counter too fast. If the free
@@ -276,6 +307,44 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
        clean() below *unsets* NeedsClean instead of setting it. */
 }
 
+void AbstractLayer::attach(DataHandle data, NodeHandle node) {
+    CORRADE_ASSERT(isHandleValid(data),
+        "Whee::AbstractLayer::attach(): invalid handle" << data, );
+    attachInternal(dataHandleId(data), node);
+}
+
+void AbstractLayer::attach(LayerDataHandle data, NodeHandle node) {
+    CORRADE_ASSERT(isHandleValid(data),
+        "Whee::AbstractLayer::attach(): invalid handle" << data, );
+    attachInternal(layerDataHandleId(data), node);
+}
+
+void AbstractLayer::attachInternal(const UnsignedInt id, const NodeHandle node) {
+    State& state = *_state;
+    state.data[id].used.node = node;
+    state.state |= LayerState::NeedsAttachmentUpdate;
+}
+
+NodeHandle AbstractLayer::node(DataHandle data) const {
+    CORRADE_ASSERT(isHandleValid(data),
+        "Whee::AbstractLayer::node(): invalid handle" << data, {});
+    return _state->data[dataHandleId(data)].used.node;
+}
+
+NodeHandle AbstractLayer::node(LayerDataHandle data) const {
+    CORRADE_ASSERT(isHandleValid(data),
+        "Whee::AbstractLayer::node(): invalid handle" << data, {});
+    return _state->data[layerDataHandleId(data)].used.node;
+}
+
+Containers::StridedArrayView1D<const UnsignedShort> AbstractLayer::generations() const {
+    return stridedArrayView(_state->data).slice(&Data::used).slice(&Data::Used::generation);
+}
+
+Containers::StridedArrayView1D<const NodeHandle> AbstractLayer::nodes() const {
+    return stridedArrayView(_state->data).slice(&Data::used).slice(&Data::Used::node);
+}
+
 void AbstractLayer::setSize(const Vector2& size, const Vector2i& framebufferSize) {
     CORRADE_ASSERT(features() & LayerFeature::Draw,
         "Whee::AbstractLayer::setSize():" << LayerFeature::Draw << "not supported", );
@@ -286,14 +355,31 @@ void AbstractLayer::setSize(const Vector2& size, const Vector2i& framebufferSize
 
 void AbstractLayer::doSetSize(const Vector2&, const Vector2i&) {}
 
-void AbstractLayer::clean(const Containers::BitArrayView dataIdsToRemove) {
+void AbstractLayer::cleanNodes(const Containers::StridedArrayView1D<const UnsignedShort>& nodeHandleGenerations) {
     State& state = *_state;
-    CORRADE_ASSERT(dataIdsToRemove.size() == state.data.size(),
-        "Whee::AbstractLayer::clean(): expected" << state.data.size() << "bits but got" << dataIdsToRemove.size(), );
-    /** @todo some way to efficiently iterate set bits */
-    for(std::size_t i = 0; i != dataIdsToRemove.size(); ++i) {
-        if(dataIdsToRemove[i]) removeInternal(i);
+    /** @todo have some bump allocator for this */
+    Containers::BitArray dataIdsToRemove{ValueInit, state.data.size()};
+
+    for(std::size_t i = 0; i != state.data.size(); ++i) {
+        const Data& data = state.data[i];
+
+        /* Skip data that are free or that aren't attached to any node */
+        if(data.used.node == NodeHandle::Null)
+            continue;
+
+        /* For used & attached data compare the generation of the node they're
+           attached to. If it differs, remove the data and mark the
+           corresponding index so the implementation can do its own cleanup in
+           doClean(). */
+        /** @todo check that the ID is in bounds and if it's not, remove as
+            well? to avoid OOB access if the data is accidentally attached to a
+            NodeHandle from a different UI instance that has more nodes */
+        if(nodeHandleGeneration(data.used.node) != nodeHandleGenerations[nodeHandleId(data.used.node)]) {
+            removeInternal(i);
+            dataIdsToRemove.set(i);
+        }
     }
+
     doClean(dataIdsToRemove);
     /* Unmark the UI as needing a clean() call. Unlike in UserInterface, the
        NeedsUpdate state is independent of this flag. */
@@ -308,7 +394,7 @@ void AbstractLayer::update(const Containers::StridedArrayView1D<const UnsignedIn
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size(),
         "Whee::AbstractLayer::update(): expected node offset and size views to have the same size but got" << nodeOffsets.size() << "and" << nodeSizes.size(), );
     doUpdate(dataIds, dataNodeIds, nodeOffsets, nodeSizes);
-    _state->state &= ~LayerState::NeedsUpdate;
+    _state->state &= ~LayerState::NeedsAttachmentUpdate;
 }
 
 void AbstractLayer::doUpdate(const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}

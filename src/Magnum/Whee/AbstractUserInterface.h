@@ -59,8 +59,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate,
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
-     * @relativeref{UserInterfaceState,NeedsNodeUpdate},
-     * @relativeref{UserInterfaceState,NeedsDataClean} and
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
@@ -70,16 +69,15 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref AbstractUserInterface::update() needs to be called to refresh the
      * data attached to visible node hierarchy after new data were attached or
      * after existing attachments were removed and
-     * @ref AbstractUserInterface::clean() was called. Set implicitly after
-     * every @ref AbstractUserInterface::attachData() call and after
-     * @ref AbstractUserInterface::clean() if
-     * @ref UserInterfaceState::NeedsDataClean was set, is reset next time
+     * @ref AbstractUserInterface::clean() was called. Set implicitly if any of
+     * the layers have @ref LayerState::NeedsAttachmentUpdate set, after every
+     * @ref AbstractUserInterface::removeLayer() call and transitively after
+     * every @ref AbstractUserInterface::attachData() call, is reset next time
      * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClipUpdate},
      * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
-     * @relativeref{UserInterfaceState,NeedsNodeUpdate},
-     * @relativeref{UserInterfaceState,NeedsDataClean} and
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
@@ -96,8 +94,7 @@ enum class UserInterfaceState: UnsignedByte {
      * @ref AbstractUserInterface::update() is called. Implies
      * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeLayoutUpdate},
-     * @relativeref{UserInterfaceState,NeedsNodeUpdate},
-     * @relativeref{UserInterfaceState,NeedsDataClean} and
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
@@ -109,8 +106,7 @@ enum class UserInterfaceState: UnsignedByte {
      * implicitly after every @ref AbstractUserInterface::setNodeOffset() call,
      * is reset next time @ref AbstractUserInterface::update() is called.
      * Implies @ref UserInterfaceState::NeedsNodeClipUpdate. Implied by
-     * @relativeref{UserInterfaceState,NeedsNodeUpdate},
-     * @relativeref{UserInterfaceState,NeedsDataClean} and
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets those flags.
      */
@@ -136,24 +132,21 @@ enum class UserInterfaceState: UnsignedByte {
     NeedsNodeUpdate = NeedsNodeLayoutUpdate|(1 << 4),
 
     /**
-     * @ref AbstractUserInterface::clean() needs to be called to prune
-     * no-longer-valid data attachments and data no longer used by any node.
-     * Set implicitly after every @ref AbstractUserInterface::removeLayer()
-     * call and if any of the layers have @ref LayerState::NeedsClean set, is
-     * reset to @ref UserInterfaceState::NeedsDataAttachmentUpdate next time
-     * @ref AbstractUserInterface::clean() is called. Implies
-     * @ref UserInterfaceState::NeedsDataAttachmentUpdate. Implied by
+     * @ref AbstractUserInterface::clean() needs to be called to prune state
+     * belonging to no-longer-valid data. Set implicitly if any of the layers
+     * have @ref LayerState::NeedsClean set, is reset next time
+     * @ref AbstractUserInterface::clean() is called. Implied by
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsDataClean = NeedsDataAttachmentUpdate|(1 << 5),
+    NeedsDataClean = 1 << 5,
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
-     * hierarchies of removed nodes, data attached to those, and
-     * no-longer-valid data attachments. Set implicitly after every
-     * @relativeref{AbstractUserInterface,removeNode()} call, is reset next
-     * time @ref AbstractUserInterface::clean() is called. Implies
+     * hierarchies of removed nodes and data attached to those. Set implicitly
+     * after every @relativeref{AbstractUserInterface,removeNode()} call, is
+     * reset to @ref UserInterfaceState::NeedsNodeUpdate next time
+     * @ref AbstractUserInterface::clean() is called. Implies
      * @ref UserInterfaceState::NeedsNodeUpdate and
      * @ref UserInterfaceState::NeedsDataClean.
      */
@@ -589,50 +582,35 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
         /**
          * @brief Remove a layer
          *
-         * Expects that @p handle is valid. Data from this layer attached to
-         * hierarchies with @ref attachData() are removed during the next call
-         * to @ref update(). After this call, @ref isHandleValid(LayerHandle) const
-         * returns @cpp false @ce for @p handle and
-         * @ref isHandleValid(DataHandle) const returns @cpp false @ce for all
-         * data associated with @p handle.
+         * Expects that @p handle is valid. After this call,
+         * @ref isHandleValid(LayerHandle) const returns @cpp false @ce for
+         * @p handle and @ref isHandleValid(DataHandle) const returns
+         * @cpp false @ce for all data associated with @p handle.
          *
-         * Calling this function causes @ref UserInterfaceState::NeedsDataClean
-         * to be set.
+         * Calling this function causes
+         * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set.
          * @see @ref clean()
          */
         void removeLayer(LayerHandle handle);
 
         /**
-         * @brief Count of node data attachments
-         *
-         * May include also invalid data and data attached to invalid node
-         * handles if either data or nodes were removed and @ref update()
-         * wasn't called since.
-         * @see @ref attachData()
-         */
-        std::size_t dataAttachmentCount() const;
-
-        /**
          * @brief Attach data to a node
          *
-         * Makes the @p data handle tied to a particular @p node, meaning
-         * that @ref removeNode() of @p node or any parent node will also
-         * cause the @p data to be scheduled for removal during the next
-         * @ref clean() call. While it's technically possible to add the same
-         * @p data handle to multiple node, the actual behavior depends on the
-         * particular @ref AbstractLayer implementation the data belongs to.
-         * Attaching multiple different data handles to a single @p node is
-         * supported always.
+         * A shorthand for extracting a @ref LayerHandle from @p data using
+         * @ref dataHandleLayer(), retrieving the particular layer instance
+         * using @ref layer() and then calling
+         * @ref AbstractLayer::attach(LayerDataHandle, NodeHandle) with a
+         * @ref LayerDataHandle extracted with @ref dataHandleData(). See these
+         * functions for more information. In addition to
+         * @ref AbstractLayer::attach(LayerDataHandle, NodeHandle), this
+         * function checks that @p node is either valid or
+         * @ref NodeHandle::Null.
          *
-         * The internal representation doesn't allow removing data attached to
-         * a node. Instead you can remove the data with
-         * @ref AbstractLayer::remove() or remove the whole node, attachments
-         * with invalid node handles or invalid data handles then get pruned
-         * during the next @ref clean() call.
-         *
-         * Calling this function causes
-         * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set.
-         * @see @ref dataAttachmentCount(), @ref update()
+         * Calling this function transitively causes
+         * @ref UserInterfaceState::NeedsDataAttachmentUpdate to be set, which
+         * is a consequence of @ref LayerState::NeedsAttachmentUpdate being set
+         * by @ref AbstractLayer::attach().
+         * @see @ref update()
          */
         void attachData(NodeHandle node, DataHandle data);
 
@@ -961,15 +939,13 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * state:
          *
          * -    Removes nodes with an invalid (removed) parent node
-         * -    Removes data attached to invalid nodes
-         * -    Removes attachments with invalid (removed) data
-         * -    Calls @ref AbstractLayer::clean() with the newly removed data
+         * -    Calls @ref AbstractLayer::cleanNodes() with updated node
+         *      generations, causing removal of data attached to invalid nodes
          *
          * After calling this function, @ref state() contains neither
          * @ref UserInterfaceState::NeedsDataClean nor
-         * @ref UserInterfaceState::NeedsNodeClean; @ref nodeUsedCount(),
-         * @ref dataAttachmentCount() and @ref AbstractLayer::usedCount() may
-         * get smaller.
+         * @ref UserInterfaceState::NeedsNodeClean; @ref nodeUsedCount() and
+         * @ref AbstractLayer::usedCount() may get smaller.
          */
         AbstractUserInterface& clean();
 
@@ -991,13 +967,12 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * otherwise it performs a subset of the following depending on the
          * state:
          *
-         * -    Orders visible nodes back-to-front for drawing, front-to-back
-         *      for event processing and collects their data attachments
+         * -    Orders visible nodes back-to-front for drawing and
+         *      front-to-back for event processing
          * -    Calculates absolute offsets for visible nodes
          * -    Culls invisible nodes
-         * -    Partitions node data attachments by the layer and then by draw
-         *      order
-         * -    Calls @ref AbstractLayer::update() with the partitioned data
+         * -    Orders data attachments in each layer by draw order
+         * -    Calls @ref AbstractLayer::update() with the ordered data
          * -    Resets @ref pointerEventCapturedNode() or
          *      @ref pointerEventHoveredNode() if the nodes no longer exist or
          *      are not visible
@@ -1168,7 +1143,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * or hidden and @ref update() was called since.
          *
          * The returned handle may be invalid if the node or any of its parents
-         * were removed and @ref update() wasn't called since.
+         * were removed and @ref clean() wasn't called since.
          */
         NodeHandle pointerEventCapturedNode() const;
 
@@ -1186,7 +1161,7 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * called since.
          *
          * The returned handle may be invalid if the node or any of its parents
-         * were removed and @ref update() wasn't called since.
+         * were removed and @ref clean() wasn't called since.
          */
         NodeHandle pointerEventHoveredNode() const;
 

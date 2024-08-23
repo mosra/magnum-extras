@@ -40,12 +40,6 @@
 namespace Magnum { namespace Whee {
 
 Debug& operator<<(Debug& debug, const UserInterfaceState value) {
-    /* Special case coming from the UserInterfaceStates printer. As both are a
-       superset of NeedsDataAttachmentUpdate, printing just one would result in
-       `NeedsDataClean|UserInterfaceState(0x4)` in the output. */
-    if(value == UserInterfaceState(UnsignedByte(UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataClean)))
-        return debug << UserInterfaceState::NeedsNodeClipUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsDataClean;
-
     debug << "Whee::UserInterfaceState" << Debug::nospace;
 
     switch(value) {
@@ -68,11 +62,6 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
 Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
     return Containers::enumSetDebugOutput(debug, value, "Whee::UserInterfaceStates{}", {
         UserInterfaceState::NeedsNodeClean,
-        /* Both are a superset of NeedsDataAttachmentUpdate, meaning printing
-           just one would result in `NeedsDataClean|UserInterfaceState(0x4)` in
-           the output. So we pass both and let the UserInterfaceState printer
-           deal with that. */
-        UserInterfaceState(UnsignedByte(UserInterfaceState::NeedsNodeClipUpdate|UserInterfaceState::NeedsDataClean)),
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsDataClean,
         /* Implied by NeedsNodeClean, has to be after */
@@ -263,20 +252,6 @@ union NodeOrder {
 static_assert(std::is_trivially_copyable<NodeOrder>::value, "NodeOrder not trivially copyable");
 #endif
 
-struct Data {
-    /* Node the data belongs to */
-    NodeHandle node;
-
-    /* 4 (or maybe even six) bytes free */
-
-    /* Data handle */
-    DataHandle data;
-};
-
-#ifdef CORRADE_STD_IS_TRIVIALLY_TRAITS_SUPPORTED
-static_assert(std::is_trivially_copyable<Data>::value, "Data not trivially copyable");
-#endif
-
 }
 
 struct AbstractUserInterface::State {
@@ -318,9 +293,6 @@ struct AbstractUserInterface::State {
        recycling doesn't need to be made from the opposite side. A value with
        all bits set means there's no (first/next) free node order. */
     UnsignedInt firstFreeNodeOrder = ~UnsignedInt{};
-
-    /* Node data assignments, in no particular order */
-    Containers::Array<Data> data;
 
     /* Set by setSize(), checked in update(), used for event scaling and
        passing to layers */
@@ -436,22 +408,25 @@ AbstractUserInterface& AbstractUserInterface::setSize(const Vector2i& size) {
 UserInterfaceStates AbstractUserInterface::state() const {
     const State& state = *_state;
 
-    /* Unless UserInterfaceState::NeedsDataClean (or its subset,
-       NeedsDataUpdate) is set already, go through all layers and inherit the
-       NeedsUpdate flag from them. Invalid (removed) layers have instances
-       set to nullptr as well, so this will skip them. */
+    /* Unless UserInterfaceState::NeedsDataAttachmentUpdate is set already, go
+       through all layers and inherit the Needs* flags from them. Invalid
+       (removed) layers have instances set to nullptr as well, so this will
+       skip them. */
     UserInterfaceStates states;
-    if(!(state.state >= UserInterfaceState::NeedsDataClean)) for(const Layer& layer: state.layers) {
+    if(!(state.state >= (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))) for(const Layer& layer: state.layers) {
         if(const AbstractLayer* const instance = layer.used.instance.get()) {
             const LayerStates layerState = instance->state();
             if(layerState >= LayerState::NeedsUpdate)
                 states |= UserInterfaceState::NeedsDataUpdate;
-            if(layerState >= LayerState::NeedsClean) {
+            if(layerState >= LayerState::NeedsAttachmentUpdate)
+                states |= UserInterfaceState::NeedsDataAttachmentUpdate;
+            if(layerState >= LayerState::NeedsClean)
                 states |= UserInterfaceState::NeedsDataClean;
-                /* There's no broader state than NeedsDataClean so we can stop
-                   iterating further */
+
+            /* There's no broader state than this so if it's set, we can stop
+               iterating further */
+            if(states == (UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsDataClean))
                 break;
-            }
         }
     }
 
@@ -508,6 +483,7 @@ bool AbstractUserInterface::isHandleValid(const DataHandle handle) const {
     if(!layer.used.instance)
         return false;
     return dataHandleLayerGeneration(handle) == layer.used.generation && layer.used.instance->isHandleValid(dataHandleData(handle));
+        return false;
 }
 
 LayerHandle AbstractUserInterface::layerFirst() const {
@@ -691,26 +667,23 @@ void AbstractUserInterface::removeLayer(const LayerHandle handle) {
         state.lastFreeLayer = id;
     }
 
-    /* Mark the UI as needing a clean() call to refresh data state */
-    state.state |= UserInterfaceState::NeedsDataClean;
-}
-
-std::size_t AbstractUserInterface::dataAttachmentCount() const {
-    return _state->data.size();
+    /* Mark the UI as needing an update() call to refresh per-node data
+       lists */
+    state.state |= UserInterfaceState::NeedsDataAttachmentUpdate;
 }
 
 void AbstractUserInterface::attachData(const NodeHandle node, const DataHandle data) {
-    CORRADE_ASSERT(isHandleValid(node),
+    CORRADE_ASSERT(node == NodeHandle::Null || isHandleValid(node),
         "Whee::AbstractUserInterface::attachData(): invalid handle" << node, );
     CORRADE_ASSERT(isHandleValid(data),
         "Whee::AbstractUserInterface::attachData(): invalid handle" << data, );
+    /** @todo this performs the data handle validity check redundantly again,
+        consider using some internal assert-less helper if it proves to be a
+        bottleneck */
+    _state->layers[dataHandleLayerId(data)].used.instance->attach(dataHandleData(data), node);
 
-    State& state = *_state;
-    arrayAppend(state.data, InPlaceInit, node, data);
-
-    /* Mark the UI as needing an update() call to refresh data attachment
-       state */
-    state.state |= UserInterfaceState::NeedsDataAttachmentUpdate;
+    /* The AbstractLayer::attach() call then sets an appropriate LayerState,
+       nothing to set here */
 }
 
 std::size_t AbstractUserInterface::nodeCapacity() const {
@@ -1148,50 +1121,24 @@ AbstractUserInterface& AbstractUserInterface::clean() {
         return *this;
     }
 
-    /* Get total data count in all layers. Invalid (removed) layers have
-       instances set to nullptr as well, so this will skip them. */
-    std::size_t dataCount = 0;
     State& state = *_state;
-    for(const Layer& layer: state.layers) {
-        if(const AbstractLayer* const instance = layer.used.instance.get())
-            dataCount += instance->capacity();
-    }
 
     /* Single allocation for all temporary data */
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Int> nodeIds;
-    Containers::ArrayView<std::size_t> layerDataIdsOffsets;
-    Containers::MutableBitArrayView dataIdsToRemove;
     Containers::ArrayTuple storage{
         /* Running children offset (+1) for each node including root (+1) */
         {ValueInit, state.nodes.size() + 2, childrenOffsets},
         {NoInit, state.nodes.size(), children},
         /* One more item for the -1 at the front */
         {NoInit, state.nodes.size() + 1, nodeIds},
-        {NoInit, state.layers.size(), layerDataIdsOffsets},
-        {ValueInit, dataCount, dataIdsToRemove}
     };
-
-    /* 1. Populate offsets into the bit array view for each layer. Sizes are
-       implicitly taken from the layers themselves, so there's no need for any
-       extra steps for running offsets. */
-    {
-        std::size_t dataOffset = 0;
-        for(std::size_t i = 0; i != state.layers.size(); ++i) {
-            const Layer& layer = state.layers[i];
-            if(const AbstractLayer* const instance = layer.used.instance.get()) {
-                layerDataIdsOffsets[i] = dataOffset;
-                dataOffset += instance->capacity();
-            }
-        }
-        CORRADE_INTERNAL_ASSERT(dataOffset == dataCount);
-    }
 
     /* If no node clean is needed, there's no need to build and iterate an
        ordered list of nodes */
     if(states >= UserInterfaceState::NeedsNodeClean) {
-        /* 2. Order the whole node hierarchy */
+        /* 1. Order the whole node hierarchy */
         /** @todo here it may happen that a handle gets recycled and then
             parented to some of its original children, leading to an
             unreachable cycle and a internal assertion inside, see the
@@ -1201,7 +1148,7 @@ AbstractUserInterface& AbstractUserInterface::clean() {
             stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::parentOrOrder),
             childrenOffsets, children, nodeIds);
 
-        /* 3. Go through the ordered nodes (skipping the first element which is
+        /* 2. Go through the ordered nodes (skipping the first element which is
            -1) and remove ones that have an invalid parent. Since children are
            ordered after their parents, they'll get subsequently removed as
            well.
@@ -1216,50 +1163,18 @@ AbstractUserInterface& AbstractUserInterface::clean() {
         }
     }
 
-    /* 4. Next filter the node data assignments and keep only ones that are
-       both attached to (remaining) valid node handles and are valid
-       themselves. If no data update is needed, skip this altogether. */
+    /* 3. Next perform a clean for data node assignments, keeping only data
+       that are either not attached or attached to (remaining) valid node
+       handles. If no data update is needed, skip this altogether. */
     if(states >= UserInterfaceState::NeedsDataClean) {
-        /* Go through all data assignments, mark data attached to invalid nodes
-           for deletion, and move valid assignments to a contiguous range at
-           the front */
-        std::size_t end = 0;
-        for(std::size_t i = 0; i != state.data.size(); ++i) {
-            const Data& data = state.data[i];
-            if(!isHandleValid(data.node)) {
-                /* If it's valid data that belongs to a removed node, mark it
-                   for removal */
-                /** @todo isHandleValid() is still a lot of unnecessary
-                    indirections to randomly ordered layers, replacing with
-                    something that first populates a "possible removal
-                    candidate" list of handles per layer and then passes that
-                    to the layer itself where it just compares generations to
-                    cull away the already-removed data might be faster ... but
-                    maybe also not? */
-                if(isHandleValid(data.data))
-                    dataIdsToRemove.set(layerDataIdsOffsets[dataHandleLayerId(data.data)] + dataHandleId(data.data));
-                continue;
-            }
-            if(!isHandleValid(data.data))
-                continue;
-            /* Don't copy to itself */
-            if(i != end)
-                state.data[end] = state.data[i];
-            ++end;
-        }
-        arrayResize(state.data, end);
+        const Containers::StridedArrayView1D<const UnsignedShort> nodeGenerations = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::generation);
 
-        /* Call clean() on all layers, passing a corresponding range of the
-           mask to each */
-        std::size_t dataOffset = 0;
-        for(Layer& layer: state.layers) if(AbstractLayer* const instance = layer.used.instance.get()) {
-            instance->clean(dataIdsToRemove.sliceSize(dataOffset, instance->capacity()));
-            dataOffset += instance->capacity();
-        }
-        CORRADE_INTERNAL_ASSERT(dataOffset == dataCount);
+        /* In each layer remove data attached to invalid non-null nodes */
+        for(Layer& layer: state.layers) if(AbstractLayer* const instance = layer.used.instance.get())
+            instance->cleanNodes(nodeGenerations);
     }
 
-    /* 5. Refresh the event handling state based on valid data. */
+    /* 4. Refresh the event handling state based on valid data. */
     if(states >= UserInterfaceState::NeedsDataClean) {
         /* If the data used for pointer capture is no longer valid, reset it.
            Can't decide anything about the pointerEventCapturedNode, visibility
@@ -1306,25 +1221,35 @@ AbstractUserInterface& AbstractUserInterface::update() {
     CORRADE_ASSERT(!state.size.isZero(),
         "Whee::AbstractUserInterface::update(): user interface size wasn't set", *this);
 
+    /* If node data attachment update is desired, calculate the total
+       conservative count of data in all layers to size the output arrays.
+       Conservative as it includes also freed and non-attached data, however
+       the assumption is that in majority of cases there will be very little
+       freed data and all of them attached to some node. */
+    std::size_t dataCount = 0;
+    if(states >= UserInterfaceState::NeedsDataAttachmentUpdate)
+        for(Layer& layer: state.layers)
+            if(AbstractLayer* const instance = layer.used.instance.get())
+                dataCount += instance->capacity();
+
     /* Single allocation for all temporary data */
     Containers::ArrayView<UnsignedInt> childrenOffsets;
     Containers::ArrayView<UnsignedInt> children;
     Containers::ArrayView<Containers::Triple<UnsignedInt, UnsignedInt, UnsignedInt>> parentsToProcess;
     Containers::ArrayView<Containers::Triple<Vector2, Vector2, UnsignedInt>> clipStack;
     Containers::ArrayView<UnsignedInt> visibleNodeDataOffsets;
-    Containers::ArrayView<DataHandle> visibleNodeData;
-    Containers::ArrayView<UnsignedInt> previousDataToUpdateLayerOffsets;
+    Containers::ArrayView<UnsignedInt> visibleNodeDataIds;
     Containers::ArrayTuple storage{
         /* Running children offset (+1) for each node */
         {ValueInit, state.nodes.size() + 1, childrenOffsets},
         {NoInit, state.nodes.size(), children},
         {NoInit, state.nodes.size(), parentsToProcess},
-        /* Running data offset (+1) for each item */
-        {ValueInit, state.nodes.size() + 1, visibleNodeDataOffsets},
+        /* Running data offset (+1) for each item. This array gets overwritten
+           from scratch for each layer so zero-initializing is done inside
+           orderVisibleNodeDataInto() instead. */
+        {NoInit, state.nodes.size() + 1, visibleNodeDataOffsets},
         {NoInit, state.nodes.size(), clipStack},
-        {NoInit, state.data.size(), visibleNodeData},
-        /* Running data offset (+1) for each item */
-        {ValueInit, state.layers.size() + 1, previousDataToUpdateLayerOffsets},
+        {NoInit, dataCount, visibleNodeDataIds},
     };
 
     /* If no node update is needed, the data in `state.nodeStateStorage` and
@@ -1393,55 +1318,163 @@ AbstractUserInterface& AbstractUserInterface::update() {
        `state.dataStateStorage` and all views pointing to it is already
        up-to-date. */
     if(states >= UserInterfaceState::NeedsDataAttachmentUpdate) {
+        /* Calculate count of visible top-level nodes and layers that draw in
+           order to accurately size the array with draws */
+        UnsignedInt visibleTopLevelNodeCount = 0;
+        for(UnsignedInt visibleTopLevelNodeIndex = 0; visibleTopLevelNodeIndex != state.visibleNodeChildrenCounts.size(); visibleTopLevelNodeIndex += state.visibleNodeChildrenCounts[visibleTopLevelNodeIndex] + 1) {
+            if(!(state.nodes[state.visibleNodeIds[visibleTopLevelNodeIndex]].used.flags & NodeFlag::Hidden))
+                ++visibleTopLevelNodeCount;
+        }
+        UnsignedInt drawLayerCount = 0;
+        for(const Layer& layer: state.layers) {
+            if(layer.used.features & LayerFeature::Draw)
+                ++drawLayerCount;
+        }
+
         /* Make a resident allocation for all node-related state */
         state.dataStateStorage = Containers::ArrayTuple{
-            /* Running data offset (+1) for each item */
-            {ValueInit, state.layers.size() + 1, state.dataToUpdateLayerOffsets},
-            {NoInit, state.data.size(), state.dataToUpdateIds},
-            {NoInit, state.data.size(), state.dataToUpdateNodeIds},
-            {NoInit, state.data.size(), state.dataToDrawLayerIds},
-            {NoInit, state.data.size(), state.dataToDrawOffsets},
-            {NoInit, state.data.size(), state.dataToDrawSizes},
+            /* Running data offset (+1) for each item. Populated sequentially
+               so it doesn't need to be zero-initialized. */
+            {NoInit, state.layers.size() + 1, state.dataToUpdateLayerOffsets},
+            {NoInit, dataCount, state.dataToUpdateIds},
+            {NoInit, dataCount, state.dataToUpdateNodeIds},
+            {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawLayerIds},
+            {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawOffsets},
+            {NoInit, visibleTopLevelNodeCount*drawLayerCount, state.dataToDrawSizes},
             /* Running data offset (+1) for each item */
             {ValueInit, state.nodes.size() + 1, state.visibleNodeEventDataOffsets},
-            {NoInit, state.data.size(), state.visibleNodeEventData},
+            {NoInit, dataCount, state.visibleNodeEventData},
         };
 
-        /* 5. Order data assignments of visible nodes so each layer is a
-           contiguous range, and inside the layer the order follows the visible
-           node hierarchy order from above. */
-        state.drawCount = Implementation::orderVisibleNodeDataInto(
-            state.visibleNodeIds,
-            state.visibleNodeChildrenCounts,
-            stridedArrayView(state.data).slice(&Data::node),
-            stridedArrayView(state.data).slice(&Data::data),
-            stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::next),
-            state.firstLayer,
-            stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::features),
-            state.visibleNodeMask,
-            visibleNodeDataOffsets,
-            visibleNodeData,
-            state.dataToUpdateLayerOffsets,
-            previousDataToUpdateLayerOffsets,
-            state.dataToUpdateIds,
-            state.dataToUpdateNodeIds,
+        state.dataToUpdateLayerOffsets[0] = 0;
+        if(state.firstLayer != LayerHandle::Null) {
+            /* 5. Go through the layer draw order and order data of each layer
+               that are assigned to visible nodes into a contiguous range,
+               populating also the draw list and count of event data per
+               visible node as a side effect. */
+
+            /* Build a layer order map for proper draw order. The layer order
+               is cyclic, so stop when reaching the first layer again. */
+            LayerHandle layer = state.firstLayer;
+            UnsignedInt drawLayerOrder[1 << Implementation::LayerHandleIdBits];
+            UnsignedInt layerOrderIndex = 0;
+            do {
+                const UnsignedInt layerId = layerHandleId(layer);
+                const Layer& layerItem = state.layers[layerId];
+                if(layerItem.used.features & LayerFeature::Draw)
+                    drawLayerOrder[layerId] = layerOrderIndex++;
+                layer = layerItem.used.next;
+            } while(layer != state.firstLayer);
+
+            /* Next iterate through all layers directly, skipping ones that
+               don't have an instance, and populate the to-update, to-draw and
+               event data count arrays. The data order matches the visible node
+               hierarchy order from above. */
+            UnsignedInt offset = 0;
+            for(UnsignedInt i = 0; i != state.layers.size(); ++i) {
+                const Layer& layerItem = state.layers[i];
+
+                if(const AbstractLayer* const instance = layerItem.used.instance.get()) {
+                    const bool isDrawing = layerItem.used.features >= LayerFeature::Draw;
+
+                    offset = Implementation::orderVisibleNodeDataInto(
+                        state.visibleNodeIds,
+                        state.visibleNodeChildrenCounts,
+                        instance->nodes(),
+                        layerItem.used.features,
+                        state.visibleNodeMask,
+                        visibleNodeDataOffsets,
+                        state.visibleNodeEventDataOffsets.exceptPrefix(1),
+                        visibleNodeDataIds.prefix(instance->capacity()),
+                        state.dataToUpdateIds,
+                        state.dataToUpdateNodeIds,
+                        offset,
+                        /* If the layer has LayerFeature::Draw, it also
+                           populates the draw call list for all top-level
+                           nodes. This has to be interleaved with other layers
+                           (thus the every() "sparsening") in order to be first
+                           by the top-level node and then by layer. If the
+                           layer doesn't draw anything, these aren't used. */
+                        isDrawing ? stridedArrayView(state.dataToDrawOffsets)
+                            .exceptPrefix(drawLayerOrder[i])
+                            .every(drawLayerCount) : nullptr,
+                        isDrawing ? stridedArrayView(state.dataToDrawSizes)
+                            .exceptPrefix(drawLayerOrder[i])
+                            .every(drawLayerCount) : nullptr);
+
+                    /* If the layer has LayerFeature::Draw, increment to the
+                       next interleaved position for the next. Also save the
+                       matching layer index to have the draw information
+                       complete. */
+                    if(isDrawing) {
+                        for(UnsignedByte& j: stridedArrayView(state.dataToDrawLayerIds)
+                            .exceptPrefix(drawLayerOrder[i])
+                            .every(drawLayerCount)
+                        )
+                            j = i;
+                    }
+                }
+
+                state.dataToUpdateLayerOffsets[i + 1] = offset;
+            }
+
+            /* 6. Take the count of event data per visible node, turn that into
+               an offset array and populate it. */
+
+            /* `[state.visibleNodeEventDataOffsets[i + 1], state.visibleNodeEventDataOffsets[i + 2])`
+               is now a range in which the `state.visibleNodeEventData` array
+               will contain a list of event data handles for visible node with
+               ID `i`. The last element (containing the end offset) is omitted
+               at this step. */
+            {
+                UnsignedInt visibleNodeEventDataCount = 0;
+                for(UnsignedInt& i: state.visibleNodeEventDataOffsets) {
+                    const UnsignedInt nextOffset = visibleNodeEventDataCount + i;
+                    i = visibleNodeEventDataCount;
+                    visibleNodeEventDataCount = nextOffset;
+                }
+            }
+
+            /* 7. Go through all event handling layers and populate the
+               `state.visibleNodeEventData` array based on the
+               `state.visibleNodeEventDataOffsets` populated above. Compared
+               to drawing, event handling has the layers in a front-to-back
+               order, multiple data from the same layer attached to the same
+               node are also added in reverse way. */
+            const LayerHandle lastLayer = state.layers[layerHandleId(state.firstLayer)].used.previous;
+            layer = lastLayer;
+            do {
+                const UnsignedInt layerId = layerHandleId(layer);
+                const Layer& layerItem = state.layers[layerId];
+
+                if(layerItem.used.features & LayerFeature::Event) {
+                    Implementation::orderNodeDataForEventHandlingInto(
+                        layer,
+                        /* If the Layer::features is non-empty, it means the
+                           instance is present (from which it was taken). No
+                           need to explicitly check that as well. */
+                        layerItem.used.instance->generations(),
+                        layerItem.used.instance->nodes(),
+                        state.visibleNodeEventDataOffsets,
+                        state.visibleNodeMask,
+                        state.visibleNodeEventData);
+                }
+
+                layer = layerItem.used.previous;
+            } while(layer != lastLayer);
+        }
+
+        /* 8. Compact the draw calls by throwing away the empty ones. This
+           cannot be done in the above loop directly as it'd need to go first
+           by top-level node and then by layer in each. That it used to do in a
+           certain way before which was much slower. */
+        state.drawCount = Implementation::compactDrawsInPlace(
             state.dataToDrawLayerIds,
             state.dataToDrawOffsets,
             state.dataToDrawSizes);
-
-        /* 6. Filter data in visible nodes in a front-to-back order for event
-           handling. */
-        Implementation::orderNodeDataForEventHandling(
-            visibleNodeDataOffsets,
-            visibleNodeData,
-            stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::previous),
-            layerLast(),
-            stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::features),
-            state.visibleNodeEventDataOffsets,
-            state.visibleNodeEventData);
     }
 
-    /* 7. For each layer submit an update of visible data across all visible
+    /* 9. For each layer submit an update of visible data across all visible
        top-level nodes. If no data update is needed, the data in layers is
        already up-to-date. */
     if(states >= UserInterfaceState::NeedsDataUpdate) for(std::size_t i = 0; i != state.layers.size(); ++i) {
@@ -1472,7 +1505,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
 
     /** @todo layer-specific cull/clip step? */
 
-    /* 8. Refresh the event handling state based on visible nodes. */
+    /* 10. Refresh the event handling state based on visible nodes. */
     if(states >= UserInterfaceState::NeedsNodeUpdate) {
         /* If the node capturing pointer events is no longer valid or is now
            invisible, reset it */
