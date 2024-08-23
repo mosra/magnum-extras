@@ -176,6 +176,10 @@ std::size_t AbstractLayer::capacity() const {
 }
 
 std::size_t AbstractLayer::usedCount() const {
+    /* The "pointer" chasing in here is a bit nasty, but there's no other way
+       to know which data are actually used and which not. The node is Null
+       for unused data, yes, but it's also null for data that haven't been
+       attached yet. */
     const State& state = *_state;
     std::size_t free = 0;
     UnsignedInt index = state.firstFree;

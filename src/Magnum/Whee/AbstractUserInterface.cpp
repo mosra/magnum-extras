@@ -438,6 +438,10 @@ std::size_t AbstractUserInterface::layerCapacity() const {
 }
 
 std::size_t AbstractUserInterface::layerUsedCount() const {
+    /* The "pointer" chasing in here is a bit nasty, but there's no other way
+       to know which layers are actually used and which not. The instance is a
+       nullptr for unused layers, yes, but it's also null for layers that don't
+       have it set yet. */
     const State& state = *_state;
     std::size_t free = 0;
     UnsignedShort index = state.firstFreeLayer;
@@ -691,6 +695,10 @@ std::size_t AbstractUserInterface::nodeCapacity() const {
 }
 
 std::size_t AbstractUserInterface::nodeUsedCount() const {
+    /* The "pointer" chasing in here is a bit nasty, but there's no other way
+       to know which nodes are actually used and which not. The parentOrOrder
+       is a certain bit pattern for unused nodes, yes, but it's also the same
+       pattern for top-level nodes that aren't included in draw order. */
     const State& state = *_state;
     std::size_t free = 0;
     UnsignedInt index = state.firstFreeNode;
@@ -912,6 +920,10 @@ std::size_t AbstractUserInterface::nodeOrderCapacity() const {
 }
 
 std::size_t AbstractUserInterface::nodeOrderUsedCount() const {
+    /* The "pointer" chasing in here is a bit nasty, but there's no other way
+       to know which node order items are used and which not, and adding such
+       field would inflate the data size for little advantage -- this function
+       isn't meant to be used that often, and no other code needs this info. */
     std::size_t free = 0;
     const State& state = *_state;
     UnsignedInt index = state.firstFreeNodeOrder;
