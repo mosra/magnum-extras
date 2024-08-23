@@ -30,6 +30,7 @@
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/StridedArrayView.h>
 
+#include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 
 namespace Magnum { namespace Whee {
@@ -326,6 +327,8 @@ void AbstractLayer::pointerPressEvent(const UnsignedInt dataId, PointerEvent& ev
     #endif
     CORRADE_ASSERT(dataId < state.data.size(),
         "Whee::AbstractLayer::pointerPressEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::pointerPressEvent(): event already accepted", );
     return doPointerPressEvent(dataId, event);
 }
 
@@ -339,6 +342,8 @@ void AbstractLayer::pointerReleaseEvent(const UnsignedInt dataId, PointerEvent& 
     #endif
     CORRADE_ASSERT(dataId < state.data.size(),
         "Whee::AbstractLayer::pointerReleaseEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::pointerReleaseEvent(): event already accepted", );
     return doPointerReleaseEvent(dataId, event);
 }
 
@@ -352,6 +357,8 @@ void AbstractLayer::pointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent&
     #endif
     CORRADE_ASSERT(dataId < state.data.size(),
         "Whee::AbstractLayer::pointerMoveEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(!event.isAccepted(),
+        "Whee::AbstractLayer::pointerMoveEvent(): event already accepted", );
     return doPointerMoveEvent(dataId, event);
 }
 

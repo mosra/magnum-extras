@@ -347,8 +347,11 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
          * with the assumption that the ID points to a valid data and
          * @ref PointerEvent::position() is relative to the node to which the
-         * data is attached. Delegates to @ref doPointerPressEvent(), see its
-         * documentation for more information.
+         * data is attached. The event is expected to not be accepted yet.
+         * Delegates to @ref doPointerPressEvent(), see its documentation for
+         * more information.
+         * @see @ref PointerEvent::isAccepted(),
+         *      @ref PointerEvent::setAccepted()
          */
         void pointerPressEvent(UnsignedInt dataId, PointerEvent& event);
 
@@ -361,8 +364,11 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
          * with the assumption that the ID points to a valid data and
          * @ref PointerEvent::position() is relative to the node to which the
-         * data is attached. Delegates to @ref doPointerReleaseEvent(), see its
-         * documentation for more information.
+         * data is attached. The event is expected to not be accepted yet.
+         * Delegates to @ref doPointerReleaseEvent(), see its documentation for
+         * more information.
+         * @see @ref PointerEvent::isAccepted(),
+         *      @ref PointerEvent::setAccepted()
          */
         void pointerReleaseEvent(UnsignedInt dataId, PointerEvent& event);
 
@@ -375,8 +381,11 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
          * with the assumption that the ID points to a valid data and
          * @ref PointerMoveEvent::position() is relative to the node to which
-         * the data is attached. Delegates to @ref doPointerMoveEvent(), see
-         * its documentation for more information.
+         * the data is attached. The event is expected to not be accepted yet.
+         * Delegates to @ref doPointerMoveEvent(), see its documentation for
+         * more information.
+         * @see @ref PointerMoveEvent::isAccepted(),
+         *      @ref PointerMoveEvent::setAccepted()
          */
         void pointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
