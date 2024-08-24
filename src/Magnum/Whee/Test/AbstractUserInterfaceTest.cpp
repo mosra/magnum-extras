@@ -151,6 +151,10 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void advanceAnimationsEmpty();
     void advanceAnimationsNoOp();
     void advanceAnimations();
+    void advanceAnimationsGeneric();
+    void advanceAnimationsNode();
+    void advanceAnimationsData();
+    void advanceAnimationsStyle();
     void advanceAnimationsInvalidTime();
 
     void updateOrder();
@@ -246,6 +250,15 @@ const struct {
     /* Layers need to be enabled as well to have something to attach to */
     {"data attachment animators", true, false, false, true},
     {"all", true, true, true, true},
+};
+
+const struct {
+    const char* name;
+    AnimatorFeatures features;
+} AdvanceAnimationsGenericData[]{
+    {"", {}},
+    {"node attachment", AnimatorFeature::NodeAttachment},
+    {"data attachment", AnimatorFeature::DataAttachment},
 };
 
 const struct {
@@ -1030,7 +1043,14 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
               &AbstractUserInterfaceTest::advanceAnimationsEmpty,
               &AbstractUserInterfaceTest::advanceAnimationsNoOp,
-              &AbstractUserInterfaceTest::advanceAnimations,
+              &AbstractUserInterfaceTest::advanceAnimations});
+
+    addInstancedTests({&AbstractUserInterfaceTest::advanceAnimationsGeneric},
+        Containers::arraySize(AdvanceAnimationsGenericData));
+
+    addTests({&AbstractUserInterfaceTest::advanceAnimationsNode,
+              &AbstractUserInterfaceTest::advanceAnimationsData,
+              &AbstractUserInterfaceTest::advanceAnimationsStyle,
               &AbstractUserInterfaceTest::advanceAnimationsInvalidTime});
 
     addInstancedTests({&AbstractUserInterfaceTest::updateOrder},
@@ -5936,6 +5956,17 @@ void AbstractUserInterfaceTest::advanceAnimationsNoOp() {
 }
 
 void AbstractUserInterfaceTest::advanceAnimations() {
+    /* Verifies that all possible kinds of animators get advanced when they
+       should, not when they shouldn't, and that each animator kind gets
+       advanced through the correct interface.
+
+       Correctness of the arguments passed to them is verified with singular
+       animator instances in advanceAnimationsGeneric(),
+       advanceAnimationsNode(), advanceAnimationsData() and
+       advanceAnimationsStyle(). Proper handling of things affected by
+       animators (such as node removal) and corresponding state flags being set
+       is tested in stateAnimations(). */
+
     AbstractUserInterface ui{{100, 100}};
 
     struct Layer: AbstractLayer {
@@ -6001,19 +6032,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         }
         /* Called by the layer. Not strictly necessary in order to test things
            but shows how a real implementation would look like. */
-        void advance(Nanoseconds time) {
-            CORRADE_COMPARE(capacity(), 1);
-            Float factors[1];
-            UnsignedByte activeData[1]{};
-            UnsignedByte removeData[1]{};
-            Containers::MutableBitArrayView active{activeData, 0, 1};
-            Containers::MutableBitArrayView remove{removeData, 0, 1};
-            const Containers::Pair<bool, bool> advanceCleanNeeded = AbstractAnimator::advance(time, active, factors, remove);
-
-            if(advanceCleanNeeded.first())
-                arrayAppend(calls, InPlaceInit, handle(), Advance);
-            if(advanceCleanNeeded.second())
-                clean(remove);
+        void advance() {
+            arrayAppend(calls, InPlaceInit, handle(), Advance);
         }
 
         Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls;
@@ -6031,19 +6051,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         }
         /* Called by the layer. Not strictly necessary in order to test things
            but shows how a real implementation would look like. */
-        void advance(Nanoseconds time) {
-            CORRADE_COMPARE(capacity(), 1);
-            Float factors[1];
-            UnsignedByte activeData[1]{};
-            UnsignedByte removeData[1]{};
-            Containers::MutableBitArrayView active{activeData, 0, 1};
-            Containers::MutableBitArrayView remove{removeData, 0, 1};
-            const Containers::Pair<bool, bool> advanceCleanNeeded = AbstractAnimator::advance(time, active, factors, remove);
-
-            if(advanceCleanNeeded.first())
-                arrayAppend(calls, InPlaceInit, handle(), Advance);
-            if(advanceCleanNeeded.second())
-                clean(remove);
+        void advance() {
+            arrayAppend(calls, InPlaceInit, handle(), Advance);
         }
 
         Containers::Array<Containers::Pair<AnimatorHandle, Call>>& calls;
@@ -6061,15 +6070,43 @@ void AbstractUserInterfaceTest::advanceAnimations() {
         LayerFeatures doFeatures() const override {
             return _features;
         }
-        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators) override {
-            for(AbstractDataAnimator& animator: animators)
-                if(animator.state() >= AnimatorState::NeedsAdvance)
-                    static_cast<DataAnimator&>(animator).advance(time);
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) override {
+            for(AbstractDataAnimator& animator: animators) {
+                if(!(animator.state() >= AnimatorState::NeedsAdvance))
+                    continue;
+
+                /* Not strictly necessary in order to test things but shows how
+                   a real implementation would look like */
+                CORRADE_COMPARE(animator.capacity(), 1);
+                CORRADE_COMPARE(activeStorage.size(), 1);
+                CORRADE_COMPARE(factorStorage.size(), 1);
+                CORRADE_COMPARE(removeStorage.size(), 1);
+                Containers::Pair<bool, bool> advanceCleanNeeded = animator.update(time, activeStorage, factorStorage, removeStorage);
+
+                if(advanceCleanNeeded.first())
+                    static_cast<DataAnimator&>(animator).advance();
+                if(advanceCleanNeeded.second())
+                    animator.clean(removeStorage);
+            }
         }
-        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
-            for(AbstractStyleAnimator& animator: animators)
-                if(animator.state() >= AnimatorState::NeedsAdvance)
-                    static_cast<StyleAnimator&>(animator).advance(time);
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
+            for(AbstractStyleAnimator& animator: animators) {
+                if(!(animator.state() >= AnimatorState::NeedsAdvance))
+                    continue;
+
+                /* Not strictly necessary in order to test things but shows how
+                   a real implementation would look like */
+                CORRADE_COMPARE(animator.capacity(), 1);
+                CORRADE_COMPARE(activeStorage.size(), 1);
+                CORRADE_COMPARE(factorStorage.size(), 1);
+                CORRADE_COMPARE(removeStorage.size(), 1);
+                Containers::Pair<bool, bool> advanceCleanNeeded = animator.update(time, activeStorage, factorStorage, removeStorage);
+
+                if(advanceCleanNeeded.first())
+                    static_cast<StyleAnimator&>(animator).advance();
+                if(advanceCleanNeeded.second())
+                    animator.clean(removeStorage);
+            }
         }
 
         private:
@@ -6340,6 +6377,525 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     CORRADE_COMPARE(animatorLayer3Data.time(), 15_nsec);
     CORRADE_COMPARE(animatorLayer4StyleNoAdvanceNeeded.time(), 0_nsec);
     CORRADE_COMPARE(animatorLayer4Style.time(), 15_nsec);
+}
+
+void AbstractUserInterfaceTest::advanceAnimationsGeneric() {
+    auto&& data = AdvanceAnimationsGenericData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Verifies that generic animators have doAdvance() and doClean() called
+       with proper data. Handling multiple heterogenous animators is tested in
+       advanceAnimations(), effect of the animators on state flags etc is
+       tested in stateAnimations(). */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Animator: AbstractGenericAnimator {
+        explicit Animator(AnimatorHandle handle, AnimatorFeatures features): AbstractGenericAnimator{handle}, _features{features} {}
+
+        using AbstractGenericAnimator::setLayer;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return _features; }
+        void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override {
+            CORRADE_COMPARE_AS(active,
+                expectedActive,
+                TestSuite::Compare::Container);
+            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
+                CORRADE_ITERATION(i);
+                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+            }
+            ++advanceCallCount;
+        }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            CORRADE_COMPARE_AS(animationIdsToRemove,
+                expectedAnimationIdsToRemove,
+                TestSuite::Compare::Container);
+            ++cleanCallCount;
+        }
+
+        Containers::StridedBitArrayView1D expectedActive;
+        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
+        Containers::StridedArrayView1D<const Float> expectedFactors;
+        Int advanceCallCount = 0;
+        Int cleanCallCount = 0;
+
+        private:
+            AnimatorFeatures _features;
+    };
+
+    Containers::Pointer<Animator> animatorInstance{InPlaceInit, ui.createAnimator(), data.features};
+    if(data.features >= AnimatorFeature::DataAttachment) {
+        struct Layer: AbstractLayer {
+            using AbstractLayer::AbstractLayer;
+
+            LayerFeatures doFeatures() const override { return {}; }
+        };
+        Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+        animatorInstance->setLayer(layer);
+    }
+    Animator& animator = ui.setGenericAnimatorInstance(Utility::move(animatorInstance));
+
+    /* Call to advance(5) advances the first, nothing to clean */
+    animator.create(0_nsec, 10_nsec);
+    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animator.create(6_nsec, 4_nsec);
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            false
+        };
+        Float factors[]{
+            0.5f,
+            0.0f, /* unused */
+            0.0f, /* unused */
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = {};
+        ui.advanceAnimations(5_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 1);
+    CORRADE_COMPARE(animator.cleanCallCount, 0);
+
+    /* Call to advance(10) advances the first and last to end, both get
+       cleaned afterwards */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            true
+        };
+        Float factors[]{
+            1.0f,
+            0.0f, /* unused */
+            1.0f,
+        };
+        bool animationIdsToRemove[]{
+            true,
+            false,
+            true
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
+        ui.advanceAnimations(10_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+
+    /* Call to advance(20) does nothing */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        animator.expectedActive = {};
+        animator.expectedFactors = {};
+        animator.expectedAnimationIdsToRemove = {};
+        ui.advanceAnimations(20_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+}
+
+void AbstractUserInterfaceTest::advanceAnimationsNode() {
+    /* Verifies that node animators have doAdvance() and doClean() called
+       with proper data. Handling multiple heterogenous animators is tested in
+       advanceAnimations(), effect of the animators on state flags etc is
+       tested in stateAnimations(). */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Animator: AbstractNodeAnimator {
+        using AbstractNodeAnimator::AbstractNodeAnimator;
+        using AbstractNodeAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::NodeAttachment;
+        }
+        NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
+            CORRADE_COMPARE_AS(active,
+                expectedActive,
+                TestSuite::Compare::Container);
+            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
+                CORRADE_ITERATION(i);
+                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+            }
+            /* We're not touching the output in any way, just verify it was
+               passed through correctly */
+            CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
+                {1.0f, 2.0f},
+                {3.0f, 4.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeSizes, Containers::stridedArrayView<Vector2>({
+                {5.0f, 6.0f},
+                {8.0f, 9.0f},
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeFlags, Containers::stridedArrayView({
+                NodeFlags{},
+                NodeFlag::Clip|NodeFlag::Disabled,
+            }), TestSuite::Compare::Container);
+            /* The nodesRemove view is all zeros initially */
+            CORRADE_COMPARE_AS(nodesRemove, Containers::stridedArrayView({
+                false,
+                false
+            }).sliceBit(0), TestSuite::Compare::Container);
+            ++advanceCallCount;
+
+            return {};
+        }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            CORRADE_COMPARE_AS(animationIdsToRemove,
+                expectedAnimationIdsToRemove,
+                TestSuite::Compare::Container);
+            ++cleanCallCount;
+        }
+
+        Containers::StridedBitArrayView1D expectedActive;
+        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
+        Containers::StridedArrayView1D<const Float> expectedFactors;
+        Int advanceCallCount = 0;
+        Int cleanCallCount = 0;
+    };
+    Animator& animator = ui.setNodeAnimatorInstance(Containers::pointer<Animator>(ui.createAnimator()));
+
+    ui.createNode({1.0f, 2.0f}, {5.0f, 6.0f});
+    ui.createNode({3.0f, 4.0f}, {8.0f, 9.0f}, NodeFlag::Clip|NodeFlag::Disabled);
+
+    /* Call to advance(5) advances the first, nothing to clean */
+    animator.create(0_nsec, 10_nsec);
+    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animator.create(6_nsec, 4_nsec);
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            false
+        };
+        Float factors[]{
+            0.5f,
+            0.0f, /* unused */
+            0.0f, /* unused */
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = {};
+        ui.advanceAnimations(5_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 1);
+    CORRADE_COMPARE(animator.cleanCallCount, 0);
+
+    /* Call to advance(10) advances the first and last to end, both get
+       cleaned afterwards */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            true
+        };
+        Float factors[]{
+            1.0f,
+            0.0f, /* unused */
+            1.0f,
+        };
+        bool animationIdsToRemove[]{
+            true,
+            false,
+            true
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
+        ui.advanceAnimations(10_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+
+    /* Call to advance(20) does nothing */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        animator.expectedActive = {};
+        animator.expectedFactors = {};
+        animator.expectedAnimationIdsToRemove = {};
+        ui.advanceAnimations(20_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+}
+
+void AbstractUserInterfaceTest::advanceAnimationsData() {
+    /* Verifies that data animators have doAdvanceAnimations() and doClean()
+       called with proper data. Handling multiple heterogenous animators is
+       tested in advanceAnimations(), effect of the animators on state flags
+       etc is tested in stateAnimations(). */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Animator: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+        using AbstractDataAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+            CORRADE_COMPARE_AS(active,
+                expectedActive,
+                TestSuite::Compare::Container);
+            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
+                CORRADE_ITERATION(i);
+                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+            }
+            ++advanceCallCount;
+        }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            CORRADE_COMPARE_AS(animationIdsToRemove,
+                expectedAnimationIdsToRemove,
+                TestSuite::Compare::Container);
+            ++cleanCallCount;
+        }
+
+        Containers::StridedBitArrayView1D expectedActive;
+        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
+        Containers::StridedArrayView1D<const Float> expectedFactors;
+        Int advanceCallCount = 0;
+        Int cleanCallCount = 0;
+
+        private:
+            AnimatorFeatures _features;
+    };
+
+    Containers::Pointer<Animator> animatorInstance{InPlaceInit, ui.createAnimator()};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+        void setAnimator(Animator& animator) const {
+            AbstractLayer::setAnimator(animator);
+        }
+
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) override {
+            for(AbstractDataAnimator& animator: animators) {
+                if(!(animator.state() >= AnimatorState::NeedsAdvance))
+                    continue;
+
+                /* Not strictly necessary in order to test things but shows how
+                   a real implementation would look like. */
+                Containers::Pair<bool, bool> advanceCleanNeeded = animator.update(time, activeStorage, factorStorage, removeStorage);
+                if(advanceCleanNeeded.first())
+                    static_cast<Animator&>(animator).advance(activeStorage, factorStorage);
+                if(advanceCleanNeeded.second())
+                    animator.clean(removeStorage);
+            }
+        }
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    layer.setAnimator(*animatorInstance);
+    Animator& animator = ui.setDataAnimatorInstance(Utility::move(animatorInstance));
+
+    /* Call to advance(5) advances the first, nothing to clean */
+    animator.create(0_nsec, 10_nsec);
+    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animator.create(6_nsec, 4_nsec);
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            false
+        };
+        Float factors[]{
+            0.5f,
+            0.0f, /* unused */
+            0.0f, /* unused */
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = {};
+        ui.advanceAnimations(5_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 1);
+    CORRADE_COMPARE(animator.cleanCallCount, 0);
+
+    /* Call to advance(10) advances the first and last to end, both get
+       cleaned afterwards */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            true
+        };
+        Float factors[]{
+            1.0f,
+            0.0f, /* unused */
+            1.0f,
+        };
+        bool animationIdsToRemove[]{
+            true,
+            false,
+            true
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
+        ui.advanceAnimations(10_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+
+    /* Call to advance(20) does nothing */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        animator.expectedActive = {};
+        animator.expectedFactors = {};
+        animator.expectedAnimationIdsToRemove = {};
+        ui.advanceAnimations(20_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+}
+
+void AbstractUserInterfaceTest::advanceAnimationsStyle() {
+    /* Verifies that style animators have doAdvanceAnimations() and doClean()
+       called with proper data. Handling multiple heterogenous animators is
+       tested in advanceAnimations(), effect of the animators on state flags
+       etc is tested in stateAnimations(). */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Animator: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+        using AbstractStyleAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+        void advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+            CORRADE_COMPARE_AS(active,
+                expectedActive,
+                TestSuite::Compare::Container);
+            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
+                CORRADE_ITERATION(i);
+                CORRADE_COMPARE(factors[i], expectedFactors[i]);
+            }
+            ++advanceCallCount;
+        }
+        void doClean(Containers::BitArrayView animationIdsToRemove) override {
+            CORRADE_COMPARE_AS(animationIdsToRemove,
+                expectedAnimationIdsToRemove,
+                TestSuite::Compare::Container);
+            ++cleanCallCount;
+        }
+
+        Containers::StridedBitArrayView1D expectedActive;
+        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
+        Containers::StridedArrayView1D<const Float> expectedFactors;
+        Int advanceCallCount = 0;
+        Int cleanCallCount = 0;
+
+        private:
+            AnimatorFeatures _features;
+    };
+
+    Containers::Pointer<Animator> animatorInstance{InPlaceInit, ui.createAnimator()};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+        void setAnimator(Animator& animator) const {
+            AbstractLayer::setAnimator(animator);
+        }
+
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
+            for(AbstractStyleAnimator& animator: animators) {
+                if(!(animator.state() >= AnimatorState::NeedsAdvance))
+                    continue;
+
+                /* Not strictly necessary in order to test things but shows how
+                   a real implementation would look like. */
+                Containers::Pair<bool, bool> advanceCleanNeeded = animator.update(time, activeStorage, factorStorage, removeStorage);
+                if(advanceCleanNeeded.first())
+                    static_cast<Animator&>(animator).advance(activeStorage, factorStorage);
+                if(advanceCleanNeeded.second())
+                    animator.clean(removeStorage);
+            }
+        }
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    layer.setAnimator(*animatorInstance);
+    Animator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+
+    /* Call to advance(5) advances the first, nothing to clean */
+    animator.create(0_nsec, 10_nsec);
+    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
+    animator.create(6_nsec, 4_nsec);
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            false
+        };
+        Float factors[]{
+            0.5f,
+            0.0f, /* unused */
+            0.0f, /* unused */
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = {};
+        ui.advanceAnimations(5_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 1);
+    CORRADE_COMPARE(animator.cleanCallCount, 0);
+
+    /* Call to advance(10) advances the first and last to end, both get
+       cleaned afterwards */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        bool active[]{
+            true,
+            false,
+            true
+        };
+        Float factors[]{
+            1.0f,
+            0.0f, /* unused */
+            1.0f,
+        };
+        bool animationIdsToRemove[]{
+            true,
+            false,
+            true
+        };
+        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
+        animator.expectedFactors = factors;
+        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
+        ui.advanceAnimations(10_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
+
+    /* Call to advance(20) does nothing */
+    {
+        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
+        animator.expectedActive = {};
+        animator.expectedFactors = {};
+        animator.expectedAnimationIdsToRemove = {};
+        ui.advanceAnimations(20_nsec);
+    }
+    CORRADE_COMPARE(animator.advanceCallCount, 2);
+    CORRADE_COMPARE(animator.cleanCallCount, 1);
 }
 
 void AbstractUserInterfaceTest::advanceAnimationsInvalidTime() {
@@ -9988,7 +10544,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
             ++updateCallCount;
         }
 
-        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators) override {
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>& animators) override {
             for(AbstractDataAnimator& animator: animators)
                 if(animator.state() & AnimatorState::NeedsAdvance) {
                     CORRADE_COMPARE(time, 5_nsec);
@@ -9996,7 +10552,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
                     setNeedsUpdate(LayerState::NeedsDataUpdate);
                 }
         }
-        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
             for(AbstractStyleAnimator& animator: animators)
                 if(animator.state() & AnimatorState::NeedsAdvance) {
                     CORRADE_COMPARE(time, 5_nsec);

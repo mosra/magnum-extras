@@ -522,11 +522,12 @@ void AbstractLayer::cleanData(const Containers::Iterable<AbstractAnimator>& anim
     state.state &= ~LayerState::NeedsDataClean;
 }
 
-void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators) {
+void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) {
     CORRADE_ASSERT(features() & LayerFeature::AnimateData,
         "Whee::AbstractLayer::advanceAnimations(): data animation not supported", );
 
     #ifndef CORRADE_NO_ASSERT
+    std::size_t maxCapacity = 0;
     for(const AbstractDataAnimator& animator: animators) {
         CORRADE_ASSERT(animator.features() & AnimatorFeature::DataAttachment,
             "Whee::AbstractLayer::advanceAnimations(): data attachment not supported by an animator", );
@@ -534,21 +535,28 @@ void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::
             "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment", );
         CORRADE_ASSERT(animator.layer() == handle(),
             "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with" << handle() << "but got" << animator.layer(), );
+        maxCapacity = Math::max(animator.capacity(), maxCapacity);
     }
+    CORRADE_ASSERT(
+        activeStorage.size() >= maxCapacity &&
+        factorStorage.size() == activeStorage.size() &&
+        removeStorage.size() == activeStorage.size(),
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least" << maxCapacity << "elements but got" << activeStorage.size() << Debug::nospace << "," << factorStorage.size() << "and" << removeStorage.size(), );
     #endif
 
-    doAdvanceAnimations(time, animators);
+    doAdvanceAnimations(time, activeStorage, factorStorage, removeStorage, animators);
 }
 
-void AbstractLayer::doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&) {
+void AbstractLayer::doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractLayer::advanceAnimations(): data animation advertised but not implemented", );
 }
 
-void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) {
+void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
     CORRADE_ASSERT(features() & LayerFeature::AnimateStyles,
         "Whee::AbstractLayer::advanceAnimations(): style animation not supported", );
 
     #ifndef CORRADE_NO_ASSERT
+    std::size_t maxCapacity = 0;
     for(const AbstractStyleAnimator& animator: animators) {
         CORRADE_ASSERT(animator.features() & AnimatorFeature::DataAttachment,
             "Whee::AbstractLayer::advanceAnimations(): data attachment not supported by an animator", );
@@ -556,13 +564,19 @@ void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::
             "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment", );
         CORRADE_ASSERT(animator.layer() == handle(),
             "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with" << handle() << "but got" << animator.layer(), );
+        maxCapacity = Math::max(animator.capacity(), maxCapacity);
     }
+    CORRADE_ASSERT(
+        activeStorage.size() >= maxCapacity &&
+        factorStorage.size() == activeStorage.size() &&
+        removeStorage.size() == activeStorage.size(),
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least" << maxCapacity << "elements but got" << activeStorage.size() << Debug::nospace << "," << factorStorage.size() << "and" << removeStorage.size(), );
     #endif
 
-    doAdvanceAnimations(time, animators);
+    doAdvanceAnimations(time, activeStorage, factorStorage, removeStorage, animators);
 }
 
-void AbstractLayer::doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&) {
+void AbstractLayer::doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) {
     CORRADE_ASSERT_UNREACHABLE("Whee::AbstractLayer::advanceAnimations(): style animation advertised but not implemented", );
 }
 

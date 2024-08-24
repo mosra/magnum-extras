@@ -44,7 +44,7 @@ Depending on which of these are returned from
 @ref BaseLayerStyleAnimator::advance(), causes various @ref LayerState flags
 and other internal @ref AbstractLayer state to be set after an
 @ref AbstractUserInterface::advanceAnimations() (and transitively
-@ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&))
+@ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&))
 call.
 @see @ref BaseLayerStyleAnimations
 */
@@ -394,7 +394,10 @@ class MAGNUM_WHEE_EXPORT BaseLayerStyleAnimator: public AbstractStyleAnimator {
 
         /**
          * @brief Advance the animations
-         * @param[in] time                      Time to which to advance
+         * @param[in] active                    Animation IDs that are active
+         * @param[in] factors                   Interpolation factors indexed
+         *      by animation ID
+         * @param[in] remove                    Animation IDs to be removed
          * @param[in,out] dynamicStyleUniforms  Uniforms to animate indexed by
          *      dynamic style ID
          * @param[in,out] dynamicStylePaddings  Paddings to animate indexed by
@@ -403,19 +406,21 @@ class MAGNUM_WHEE_EXPORT BaseLayerStyleAnimator: public AbstractStyleAnimator {
          *      data indexed by data ID
          * @return Style properties that were affected by the animation
          *
-         * Used internally from @ref BaseLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&),
+         * Used internally from @ref BaseLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&),
          * which is called from @ref AbstractUserInterface::advanceAnimations().
          * Exposed just for testing purposes, there should be no need to call
          * this function directly and doing so may cause internal
-         * @ref AbstractUserInterface state update to misbehave. Expects that
-         * @p dynamicStyleUniforms and @p dynamicStylePaddings have the same
-         * size, the views should be large enough to contain any valid dynamic
-         * style ID. The @p dataStyles view should be large enough to contain
-         * any valid layer data ID. Delegates into
-         * @ref AbstractAnimator::advance() and subsequently to @ref clean(),
-         * see their documentation for more information.
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that size of @p active, @p factors and @p remove matches
+         * @ref capacity(), it's assumed that their contents were filled by
+         * @ref update() before. Expects that @p dynamicStyleUniforms and
+         * @p dynamicStylePaddings have the same size, the views should be
+         * large enough to contain any valid dynamic style ID. The
+         * @p dataStyles view should be large enough to contain any valid layer
+         * data ID.
          */
-        BaseLayerStyleAnimations advance(Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        BaseLayerStyleAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         /* Only BaseLayer::setAnimator(), but we don't want to include the

@@ -86,14 +86,14 @@ enum class LayerFeature: UnsignedByte {
     /**
      * Associating data animators using
      * @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const and
-     * animating data using @ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&).
+     * animating data using @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&).
      */
     AnimateData = 1 << 5,
 
     /**
      * Associating style animators using
      * @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const and
-     * animating styles using @ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&).
+     * animating styles using @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&).
      */
     AnimateStyles = 1 << 6,
 };
@@ -558,15 +558,19 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Used internally from @ref AbstractUserInterface::advanceAnimations().
          * Exposed just for testing purposes, there should be no need to call
          * this function directly and doing so may cause internal
-         * @ref AbstractUserInterface state update to misbehave. Expects that
-         * all @p animators expose @ref AnimatorFeature::DataAttachment and
-         * their @ref AbstractAnimator::layer() matches @ref handle(), in other
-         * words that they were passed to
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that @p activeStorage, @p factorStorage and @p removeStorage
+         * have the same size, which is at least as large as the largest
+         * capacity of all @p animators, and that all @p animators expose
+         * @ref AnimatorFeature::DataAttachment and their
+         * @ref AbstractAnimator::layer() matches @ref handle(), in other words
+         * that they were passed to
          * @ref setAnimator(AbstractDataAnimator&) const earlier. Delegates to
-         * @ref doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&),
+         * @ref doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&),
          * see its documentation for more information.
          */
-        void advanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators);
+        void advanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators);
 
         /**
          * @brief Advance style animations associated with this layer
@@ -574,15 +578,19 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * Used internally from @ref AbstractUserInterface::advanceAnimations().
          * Exposed just for testing purposes, there should be no need to call
          * this function directly and doing so may cause internal
-         * @ref AbstractUserInterface state update to misbehave. Expects that
-         * all @p animators expose @ref AnimatorFeature::DataAttachment and
-         * their @ref AbstractAnimator::layer() matches @ref handle(), in other
-         * words that they were passed to
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that @p activeStorage, @p factorStorage and @p removeStorage
+         * have the same size, which is at least as large as the largest
+         * capacity of all @p animators, and that all @p animators expose
+         * @ref AnimatorFeature::DataAttachment and their
+         * @ref AbstractAnimator::layer() matches @ref handle(), in other words
+         * that they were passed to
          * @ref setAnimator(AbstractStyleAnimator&) const earlier. Delegates to
-         * @ref doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&),
+         * @ref doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&),
          * see its documentation for more information.
          */
-        void advanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators);
+        void advanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators);
 
         /**
          * @brief Update visible layer data to given offsets and positions
@@ -929,12 +937,12 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref AbstractAnimator::attach(AnimationHandle, LayerDataHandle),
          * @ref AbstractAnimator::attach(AnimatorDataHandle, DataHandle) and
          * @ref AbstractAnimator::attach(AnimatorDataHandle, LayerDataHandle)
-         * and pass the @p animator to @ref advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&).
+         * and pass the @p animator to @ref advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&).
          *
          * A concrete layer implementation is meant to wrap this function in a
          * public API, restricting to a more concrete animator type, in order
          * to be able to safely cast back to that type in
-         * @ref doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&).
+         * @ref doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&).
          *
          * See @ref setAnimator(AbstractStyleAnimator&) const for style
          * animators, a corresponding API for an @ref AbstractGenericAnimator
@@ -958,12 +966,12 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref AbstractAnimator::attach(AnimationHandle, LayerDataHandle),
          * @ref AbstractAnimator::attach(AnimatorDataHandle, DataHandle) and
          * @ref AbstractAnimator::attach(AnimatorDataHandle, LayerDataHandle)
-         * and pass the @p animator to @ref advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&).
+         * and pass the @p animator to @ref advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&).
          *
          * A concrete layer implementation is meant to wrap this function in a
          * public API, restricting to a more concrete animator type, in order
          * to be able to safely cast back to that type in
-         * @ref doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&).
+         * @ref doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&).
          **
          * See @ref setAnimator(AbstractDataAnimator&) const for data
          * animators, a corresponding API for an @ref AbstractGenericAnimator
@@ -1037,6 +1045,14 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
 
         /**
          * @brief Advance data animations associated with this layer
+         * @param[in] time                  Time to which to advance
+         * @param[in,out] activeStorage     Storage for animators to put a mask
+         *      of active animations into
+         * @param[in,out] factorStorage     Storage for animators to put
+         *      animation interpolation factors into
+         * @param[in,out] removeStorage     Storage for animators to put a mask
+         *      of animations to remove into
+         * @param[in] animators             Animators to advance
          *
          * Implementation for @ref advanceAnimations(), which is called from
          * @ref AbstractUserInterface::advanceAnimations() whenever
@@ -1044,19 +1060,40 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref AbstractUserInterface::state() and there are animators
          * associated with given layer.
          *
-         * The @p animators are all guaranteed to support
+         * The @p activeStorage, @p factorStorage and @p removeStorage are
+         * guaranteed to be at least as large as the largest capacity of all
+         * @p animators. The @p animators are all guaranteed to support
          * @ref AnimatorFeature::DataAttachment, with their
          * @ref AbstractAnimator::layer() matching @ref handle(), in other
          * words that they were passed to
-         * @ref setAnimator(AbstractDataAnimator&) const earlier. Assuming the
-         * layer implementation publicizes @ref setAnimator() with a restricted
-         * type, the animators can then be safely cast back to that type in
-         * order to call a concrete layer-specific advance function.
+         * @ref setAnimator(AbstractDataAnimator&) const earlier.
+         *
+         * For each animator in @p animators the implementation is expected to
+         * call @ref AbstractAnimator::update() to fill a correctly-sized slice
+         * of @p activeStorage, @p factorStorage and @p removeStorage; then, if
+         * the returned value says advance is needed, pass the slices of
+         * @p activeStorage, @p factorStorage and @p removeStorage to the
+         * animator-specific advance function; and then, if the returned value
+         * says clean is needed, pass the slice of @p removeStorage to
+         * @ref AbstractAnimator::clean().
+         *
+         * Assuming the layer implementation publicizes @ref setAnimator() with
+         * a restricted type, the animators can then be safely cast back to
+         * that type in order to call a concrete layer-specific advance
+         * function.
          */
-        virtual void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators);
+        virtual void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators);
 
         /**
          * @brief Advance style animations associated with this layer
+         * @param[in] time                  Time to which to advance
+         * @param[in,out] activeStorage     Storage for animators to put a mask
+         *      of active animations into
+         * @param[in,out] factorStorage     Storage for animators to put
+         *      animation interpolation factors into
+         * @param[in,out] removeStorage     Storage for animators to put a mask
+         *      of animations to remove into
+         * @param[in] animators             Animators to advance
          *
          * Implementation for @ref advanceAnimations(), which is called from
          * @ref AbstractUserInterface::advanceAnimations() whenever
@@ -1064,16 +1101,29 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
          * @ref AbstractUserInterface::state() and there are animators
          * associated with given layer.
          *
-         * The @p animators are all guaranteed to support
+         * The @p activeStorage, @p factorStorage and @p removeStorage are
+         * guaranteed to be at least as large as the largest capacity of all
+         * @p animators. The @p animators are all guaranteed to support
          * @ref AnimatorFeature::DataAttachment, with their
          * @ref AbstractAnimator::layer() matching @ref handle(), in other
          * words that they were passed to
-         * @ref setAnimator(AbstractStyleAnimator&) const earlier. Assuming the
-         * layer implementation publicizes @ref setAnimator() with a restricted
-         * type, the animators can then be safely cast back to that type in
-         * order to call a concrete layer-specific advance function.
+         * @ref setAnimator(AbstractStyleAnimator&) const earlier.
+         *
+         * For each animator in @p animators the implementation is expected to
+         * call @ref AbstractAnimator::update() to fill a correctly-sized slice
+         * of @p activeStorage, @p factorStorage and @p removeStorage; then, if
+         * the returned value says advance is needed, pass the slices of
+         * @p activeStorage, @p factorStorage and @p removeStorage to the
+         * animator-specific advance function; and then, if the returned value
+         * says clean is needed, pass the slice of @p removeStorage to
+         * @ref AbstractAnimator::clean().
+         *
+         * Assuming the layer implementation publicizes @ref setAnimator() with
+         * a restricted type, the animators can then be safely cast back to
+         * that type in order to call a concrete layer-specific advance
+         * function.
          */
-        virtual void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators);
+        virtual void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators);
 
         /**
          * @brief Update visible layer data to given offsets and positions

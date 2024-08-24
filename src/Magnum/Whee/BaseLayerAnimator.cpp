@@ -246,131 +246,111 @@ Containers::Pair<Vector4, Vector4> BaseLayerStyleAnimator::paddings(const Animat
     return {animation.sourcePadding, animation.targetPadding};
 }
 
-BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Nanoseconds time, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::BitArrayView remove, const Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+    CORRADE_ASSERT(active.size() == capacity() &&
+                   factors.size() == capacity() &&
+                   remove.size() == capacity(),
+        "Whee::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of" << capacity() << "but got" << active.size() << Debug::nospace << "," << factors.size() << "and" << remove.size(), {});
     CORRADE_ASSERT(dynamicStylePaddings.size() == dynamicStyleUniforms.size(),
         "Whee::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have the same size but got" << dynamicStyleUniforms.size() << "and" << dynamicStylePaddings.size(), {});
 
-    /** @todo have some bump allocator for this (doesn't make sense to have it
-        as a persistent allocation as the memory could be shared among several
-        animators) */
-    Containers::ArrayView<Float> factors;
-    Containers::MutableBitArrayView active;
-    Containers::MutableBitArrayView remove;
-    const Containers::ArrayTuple storage{
-        {NoInit, capacity(), factors},
-        {ValueInit, capacity(), active},
-        {ValueInit, capacity(), remove},
-    };
-    const Containers::Pair<bool, bool> advanceCleanNeeded = AbstractAnimator::advance(time, active, factors, remove);
-
     State& state = *_state;
 
+    /* If there are any running animations, create() had to be called
+       already, which ensures the layer is already set */
+    CORRADE_INTERNAL_ASSERT(!capacity() || state.layerSharedState);
+    const BaseLayer::Shared::State& layerSharedState = *state.layerSharedState;
+    const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
+
     BaseLayerStyleAnimations animations;
-    if(advanceCleanNeeded.first()) {
-        /* If there are any running animations, create() had to be called
-           already, which ensures the layer is already set */
-        CORRADE_INTERNAL_ASSERT(state.layerSharedState);
-        const BaseLayer::Shared::State& layerSharedState = *state.layerSharedState;
+    /** @todo some way to iterate set bits */
+    for(std::size_t i = 0; i != active.size(); ++i) {
+        if(!active[i]) continue;
 
-        const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
+        Animation& animation = state.animations[i];
+        /* The handle is assumed to be valid if not null, i.e. that appropriate
+           dataClean() got called before advance() */
+        const LayerDataHandle data = layerData[i];
 
-        /** @todo some way to iterate set bits */
-        for(std::size_t i = 0; i != active.size(); ++i) {
-            if(!active[i]) continue;
+        /* If the animation is scheduled for removal (and thus finished),
+           switch the data to the target style, if any. No need to animate
+           anything else as the dynamic style is going to get recycled right
+           away in clean() after. */
+        if(remove[i]) {
+            CORRADE_INTERNAL_ASSERT(factors[i] == 1.0f);
+            if(data != LayerDataHandle::Null) {
+                dataStyles[layerDataHandleId(data)] = animation.targetStyle;
+                animations |= BaseLayerStyleAnimation::Style;
+            }
+            continue;
+        }
 
-            Animation& animation = state.animations[i];
-            /* The handle is assumed to be valid if not null, i.e. that
-               appropriate dataClean() got called before advance() */
-            const LayerDataHandle data = layerData[i];
+        /* The animation is running, allocate a dynamic style if it isn't yet
+           and switch to it. Doing it here instead of in create() avoids
+           unnecessary pressure on peak used count of dynamic styles,
+           especially when there's a lot of animations scheduled. */
+        if(animation.dynamicStyle == ~UnsignedInt{}) {
+            /* If dynamic style allocation fails (for example because there's
+               too many animations running at the same time), do nothing -- the
+               data stays at the original style, causing no random visual
+               glitches, and we'll try in next advance() again (where some
+               animations may already be finished, freeing up some slots, and
+               there we'll also advance to a later point in the animation).
 
-            /* If the animation is scheduled for removal (and thus finished),
-               switch the data to the target style, if any. No need to animate
-               anything else as the dynamic style is going to get recycled
-               right away in clean() below. */
-            if(remove[i]) {
-                CORRADE_INTERNAL_ASSERT(factors[i] == 1.0f);
-                if(data != LayerDataHandle::Null) {
-                    dataStyles[layerDataHandleId(data)] = animation.targetStyle;
-                    animations |= BaseLayerStyleAnimation::Style;
-                }
+               A better way would be to recycle the oldest running animations,
+               but there's no logic for that so far, so do the second best
+               thing at least. One could also just let it assert when there's
+               no free slots anymore, but letting a program assert just because
+               it couldn't animate feels silly. */
+            const Containers::Optional<UnsignedInt> style = state.layer->allocateDynamicStyle();
+            if(!style)
                 continue;
-            }
+            animation.dynamicStyle = *style;
 
-            /* The animation is running, allocate a dynamic style if it isn't
-               yet and switch to it. Doing it here instead of in create()
-               avoids unnecessary pressure on peak used count of dynamic
-               styles, especially when there's a lot of animations
-               scheduled. */
-            if(animation.dynamicStyle == ~UnsignedInt{}) {
-                /* If dynamic style allocation fails (for example because
-                   there's too many animations running at the same time), do
-                   nothing -- the data stays at the original style, causing no
-                   random visual glitches, and we'll try in next advance()
-                   again (where some animations may already be finished,
-                   freeing up some slots, and there we'll also advance to a
-                   later point in the animation).
-
-                   A better way would be to recycle the oldest running
-                   animations, but there's no logic for that so far, so do the
-                   second best thing at least. One could also just let it
-                   assert when there's no free slots anymore, but letting a
-                   program assert just because it couldn't animate feels
-                   silly. */
-                const Containers::Optional<UnsignedInt> style = state.layer->allocateDynamicStyle();
-                if(!style)
-                    continue;
-                animation.dynamicStyle = *style;
-
-                if(data != LayerDataHandle::Null) {
-                    dataStyles[layerDataHandleId(data)] = layerSharedState.styleCount + animation.dynamicStyle;
-                    animations |= BaseLayerStyleAnimation::Style;
-                    /* If the uniform IDs are the same between the source and
-                       target style, the uniform interpolation below won't
-                       happen. We still need to upload it at least once though,
-                       so trigger it here unconditionally. */
-                    animations |= BaseLayerStyleAnimation::Uniform;
-                }
-            }
-
-            const Float factor = animation.easing(factors[i]);
-
-            /* Interpolate the uniform. If the source and target uniforms were
-               the same, just copy one of them and don't report that the
-               uniforms got changed. The only exception is the first ever
-               switch to the dynamic uniform in which case the data has to be
-               uploaded. That's handled in the animation.dynamicStyle
-               allocation above. */
-            if(animation.uniformDifferent) {
-                BaseLayerStyleUniform uniform{NoInit};
-                #define _c(member) uniform.member = Math::lerp(             \
-                    animation.sourceUniform.member,                         \
-                    animation.targetUniform.member, factor);
-                _c(topColor)
-                _c(bottomColor)
-                _c(outlineColor)
-                _c(outlineWidth)
-                _c(cornerRadius)
-                _c(innerOutlineCornerRadius)
-                #undef _c
-                dynamicStyleUniforms[animation.dynamicStyle] = uniform;
+            if(data != LayerDataHandle::Null) {
+                dataStyles[layerDataHandleId(data)] = layerSharedState.styleCount + animation.dynamicStyle;
+                animations |= BaseLayerStyleAnimation::Style;
+                /* If the uniform IDs are the same between the source and
+                   target style, the uniform interpolation below won't happen.
+                   We still need to upload it at least once though, so trigger
+                   it here unconditionally. */
                 animations |= BaseLayerStyleAnimation::Uniform;
-            } else dynamicStyleUniforms[animation.dynamicStyle] = animation.targetUniform;
-
-            /* Interpolate the padding. Compared to the uniforms, updated
-               padding causes doUpdate() to be triggered on the layer, which is
-               expensive, thus trigger it only if there's actually anything
-               changing. */
-            const Vector4 padding = Math::lerp(animation.sourcePadding,
-                                               animation.targetPadding, factor);
-            if(dynamicStylePaddings[animation.dynamicStyle] != padding) {
-               dynamicStylePaddings[animation.dynamicStyle] = padding;
-                animations |= BaseLayerStyleAnimation::Padding;
             }
         }
-    }
 
-    if(advanceCleanNeeded.second())
-        clean(remove);
+        const Float factor = animation.easing(factors[i]);
+
+        /* Interpolate the uniform. If the source and target uniforms were the
+           same, just copy one of them and don't report that the uniforms got
+           changed. The only exception is the first ever switch to the dynamic
+           uniform in which case the data has to be uploaded. That's handled in
+           the animation.styleDynamic allocation above. */
+        if(animation.uniformDifferent) {
+            BaseLayerStyleUniform uniform{NoInit};
+            #define _c(member) uniform.member = Math::lerp(             \
+                animation.sourceUniform.member,                         \
+                animation.targetUniform.member, factor);
+            _c(topColor)
+            _c(bottomColor)
+            _c(outlineColor)
+            _c(outlineWidth)
+            _c(cornerRadius)
+            _c(innerOutlineCornerRadius)
+            #undef _c
+            dynamicStyleUniforms[animation.dynamicStyle] = uniform;
+            animations |= BaseLayerStyleAnimation::Uniform;
+        } else dynamicStyleUniforms[animation.dynamicStyle] = animation.targetUniform;
+
+        /* Interpolate the padding. Compared to the uniforms, updated padding
+           causes doUpdate() to be triggered on the layer, which is expensive,
+           thus trigger it only if there's actually anything changing. */
+        const Vector4 padding = Math::lerp(animation.sourcePadding,
+                                           animation.targetPadding, factor);
+        if(dynamicStylePaddings[animation.dynamicStyle] != padding) {
+           dynamicStylePaddings[animation.dynamicStyle] = padding;
+            animations |= BaseLayerStyleAnimation::Padding;
+        }
+    }
 
     return animations;
 }

@@ -1040,14 +1040,20 @@ void AbstractAnimator::cleanData(const Containers::StridedArrayView1D<const Unsi
     doClean(animationIdsToRemove);
 }
 
-Containers::Pair<bool, bool> AbstractAnimator::advance(const Nanoseconds time, const Containers::MutableBitArrayView active, const Containers::StridedArrayView1D<Float>& factors, const Containers::MutableBitArrayView remove) {
+Containers::Pair<bool, bool> AbstractAnimator::update(const Nanoseconds time, const Containers::MutableBitArrayView active, const Containers::StridedArrayView1D<Float>& factors, const Containers::MutableBitArrayView remove) {
     State& state = *_state;
     CORRADE_ASSERT(active.size() == state.animations.size() &&
                    factors.size() == state.animations.size() &&
                    remove.size() == state.animations.size(),
-        "Whee::AbstractAnimator::advance(): expected active, factors and remove views to have a size of" << state.animations.size() << "but got" << active.size() << Debug::nospace << "," << factors.size() << "and" << remove.size(), {});
+        "Whee::AbstractAnimator::update(): expected active, factors and remove views to have a size of" << state.animations.size() << "but got" << active.size() << Debug::nospace << "," << factors.size() << "and" << remove.size(), {});
     CORRADE_ASSERT(time >= state.time,
-        "Whee::AbstractAnimator::advance(): expected a time at least" << state.time << "but got" << time, {});
+        "Whee::AbstractAnimator::update(): expected a time at least" << state.time << "but got" << time, {});
+
+    /* Zero both bitmasks. AbstractUserInterface::advanceAnimations()
+       repeatedly reuses this memory, so without this it'd have to do an
+       explicit clear in each case there otherwise. */
+    active.resetAll();
+    remove.resetAll();
 
     const Nanoseconds timeBefore = state.time;
     bool cleanNeeded = false;
@@ -1142,24 +1148,11 @@ void AbstractGenericAnimator::setLayer(const AbstractLayer& layer) {
     setLayerInternal(layer);
 }
 
-void AbstractGenericAnimator::advance(const Nanoseconds time) {
-    /** @todo have some bump allocator for this (doesn't make sense to have it
-        as a persistent allocation as the memory could be shared among several
-        animators) */
-    Containers::ArrayView<Float> factors;
-    Containers::MutableBitArrayView active;
-    Containers::MutableBitArrayView remove;
-    const Containers::ArrayTuple storage{
-        {NoInit, capacity(), factors},
-        {ValueInit, capacity(), active},
-        {ValueInit, capacity(), remove},
-    };
-    const Containers::Pair<bool, bool> advanceCleanNeeded = AbstractAnimator::advance(time, active, factors, remove);
-
-    if(advanceCleanNeeded.first())
-        doAdvance(active, factors);
-    if(advanceCleanNeeded.second())
-        clean(remove);
+void AbstractGenericAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) {
+    CORRADE_ASSERT(active.size() == capacity() &&
+                   factors.size() == capacity(),
+        "Whee::AbstractGenericAnimator::advance(): expected active and factors views to have a size of" << capacity() << "but got" << active.size() << "and" << factors.size(), );
+    doAdvance(active, factors);
 }
 
 AbstractNodeAnimator::AbstractNodeAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}
@@ -1174,31 +1167,14 @@ AnimatorFeatures AbstractNodeAnimator::doFeatures() const {
     return AnimatorFeature::NodeAttachment;
 }
 
-NodeAnimations AbstractNodeAnimator::advance(const Nanoseconds time, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
+NodeAnimations AbstractNodeAnimator::advance(const Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, const Containers::MutableBitArrayView nodesRemove) {
+    CORRADE_ASSERT(active.size() == capacity() && factors.size() == capacity(),
+        "Whee::AbstractNodeAnimator::advance(): expected active and factors views to have a size of" << capacity() << "but got" << active.size() << "and" << factors.size(), {});
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size() &&
                    nodeFlags.size() == nodeSizes.size() &&
                    nodesRemove.size() == nodeSizes.size(),
         "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeFlags.size() << "and" << nodesRemove.size(), {});
-
-    /** @todo have some bump allocator for this (doesn't make sense to have it
-        as a persistent allocation as the memory could be shared among several
-        animators) */
-    Containers::ArrayView<Float> factors;
-    Containers::MutableBitArrayView active;
-    Containers::MutableBitArrayView remove;
-    const Containers::ArrayTuple storage{
-        {NoInit, capacity(), factors},
-        {ValueInit, capacity(), active},
-        {ValueInit, capacity(), remove},
-    };
-    const Containers::Pair<bool, bool> advanceCleanNeeded = AbstractAnimator::advance(time, active, factors, remove);
-
-    NodeAnimations animations;
-    if(advanceCleanNeeded.first())
-        animations = doAdvance(active, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove);
-    if(advanceCleanNeeded.second())
-        clean(remove);
-    return animations;
+    return doAdvance(active, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove);
 }
 
 AbstractDataAnimator::AbstractDataAnimator(AnimatorHandle handle): AbstractAnimator{handle} {}

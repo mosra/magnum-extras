@@ -2363,43 +2363,94 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
        there's nothing to clean. */
     clean();
 
+    /* Storage for temporary data needed by animators, sized to cover the
+       largest capacity */
+    std::size_t maxCapacity = 0;
+    for(const Animator& animator: state.animators) {
+        if(const AbstractAnimator* const instance = animator.used.instance.get())
+            maxCapacity = Math::max(instance->capacity(), maxCapacity);
+    }
+    Containers::MutableBitArrayView active;
+    Containers::MutableBitArrayView remove;
+    Containers::ArrayView<Float> factors;
+    Containers::MutableBitArrayView nodesRemove;
+    Containers::ArrayTuple storage{
+        {NoInit, maxCapacity, active},
+        {NoInit, maxCapacity, remove},
+        {NoInit, maxCapacity, factors},
+        {ValueInit, state.nodes.size(), nodesRemove}
+    };
+
     /* Get the state including what bubbles from animators, then go through
        them only if there's something to advance */
     const UserInterfaceStates states = this->state();
     if(states >= UserInterfaceState::NeedsAnimationAdvance) {
+        /* Common code for advancing AbstractGenericAnimator instances. It's
+           done in three separate loops because generic animators are not
+           contiguous in the `state.animatorInstances` array, instead they're
+           grouped by whether they have node or data attachments to make the
+           implementation in clean() simpler */
+        const auto advanceGenericAnimator = [&](AbstractAnimator& instance) {
+            if(!(instance.state() & AnimatorState::NeedsAdvance))
+                return;
+
+            const std::size_t capacity = instance.capacity();
+            const Containers::Pair<bool, bool> needsAdvanceClean = instance.update(time,
+                active.prefix(capacity),
+                factors.prefix(capacity),
+                remove.prefix(capacity));
+
+            if(needsAdvanceClean.first())
+                static_cast<AbstractGenericAnimator&>(instance).advance(
+                    active.prefix(capacity),
+                    factors.prefix(capacity));
+            if(needsAdvanceClean.second())
+                instance.clean(remove.prefix(capacity));
+        };
+
         /* Go through all generic animators with neither NodeAttachment nor
            DataAttachment and advance ones that need it */
-        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNone(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset)) {
-            if(instance.state() & AnimatorState::NeedsAdvance)
-                static_cast<AbstractGenericAnimator&>(instance).advance(time);
-        }
+        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNone(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset))
+            advanceGenericAnimator(instance);
 
         /* Then all generic animators with NodeAttachment */
         const Containers::StridedArrayView1D<const UnsignedShort> dataAttachmentAnimatorOffsets = stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAttachmentAnimatorOffset);
-        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsGenericNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, state.animatorInstancesNodeOffset, dataAttachmentAnimatorOffsets)) {
-            if(instance.state() & AnimatorState::NeedsAdvance)
-                static_cast<AbstractGenericAnimator&>(instance).advance(time);
-        }
+        for(AbstractAnimator& instance: Implementation::partitionedAnimatorsGenericNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, state.animatorInstancesNodeOffset, dataAttachmentAnimatorOffsets))
+            advanceGenericAnimator(instance);
 
         /* Then, for each layer all generic animators with DataAttachment */
         const Containers::StridedArrayView1D<const UnsignedShort> dataAnimatorOffsets = stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::dataAnimatorOffset);
         const Containers::StridedArrayView1D<const UnsignedShort> styleAnimatorOffsets = stridedArrayView(state.layers).slice(&Layer::used).slice(&Layer::Used::styleAnimatorOffset);
         for(std::size_t i = 0; i != state.layers.size(); ++i)
             for(AbstractAnimator& instance: Implementation::partitionedAnimatorsGenericDataAttachment(state.animatorInstances, dataAttachmentAnimatorOffsets, dataAnimatorOffsets, styleAnimatorOffsets, layerHandle(i, state.layers[i].used.generation)))
-                if(instance.state() & AnimatorState::NeedsAdvance)
-                    static_cast<AbstractGenericAnimator&>(instance).advance(time);
+                advanceGenericAnimator(instance);
 
         /* After that, all AbstractNodeAnimator instances, remembering what all
            they modified */
         const Containers::StridedArrayView1D<Vector2> nodeOffsets = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::offset);
         const Containers::StridedArrayView1D<Vector2> nodeSizes = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::size);
         const Containers::StridedArrayView1D<NodeFlags> nodeFlags = stridedArrayView(state.nodes).slice(&Node::used).slice(&Node::Used::flags);
-        /** @todo some bump allocator for this */
-        Containers::BitArray nodesRemove{ValueInit, state.nodes.size()};
         NodeAnimations nodeAnimations;
         for(AbstractAnimator& instance: Implementation::partitionedAnimatorsNodeNodeAttachment(state.animatorInstances, state.animatorInstancesNodeAttachmentOffset, state.animatorInstancesNodeOffset, dataAttachmentAnimatorOffsets)) {
-            if(instance.state() & AnimatorState::NeedsAdvance)
-                nodeAnimations |= static_cast<AbstractNodeAnimator&>(instance).advance(time, nodeOffsets, nodeSizes, nodeFlags, nodesRemove);
+            if(!(instance.state() & AnimatorState::NeedsAdvance))
+                continue;
+
+            const std::size_t capacity = instance.capacity();
+            const Containers::Pair<bool, bool> needsAdvanceClean = instance.update(time,
+                active.prefix(capacity),
+                factors.prefix(capacity),
+                remove.prefix(capacity));
+
+            if(needsAdvanceClean.first())
+                nodeAnimations |= static_cast<AbstractNodeAnimator&>(instance).advance(
+                    active.prefix(capacity),
+                    factors.prefix(capacity),
+                    nodeOffsets,
+                    nodeSizes,
+                    nodeFlags,
+                    nodesRemove);
+            if(needsAdvanceClean.second())
+                instance.clean(remove.prefix(capacity));
         }
 
         /* Propagate to the global state */
@@ -2417,6 +2468,10 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
         }
 
         /* Then, for each layer ... */
+        /** @todo I still don't really like how much busywork has to be done
+            by each layer's advanceAnimations() implementation to call
+            animator.update() and then pass some of that to animator advance()
+            and some to clean()... */
         for(std::size_t i = 0; i != state.layers.size(); ++i) {
             Layer& layer = state.layers[i];
 
@@ -2426,8 +2481,14 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
                 /* If there are any animators partitioned for this layer, it
                    implies that the layer supports data animation */
                 CORRADE_INTERNAL_ASSERT(layer.used.features >= LayerFeature::AnimateData);
-                /* The cast is a bit ew, yeah */
-                state.layers[i].used.instance->advanceAnimations(time, Containers::arrayView(reinterpret_cast<Containers::Reference<AbstractDataAnimator>*>(const_cast<Containers::Reference<AbstractAnimator>*>(dataAnimators.data())), dataAnimators.size()));
+                state.layers[i].used.instance->advanceAnimations(time,
+                    /* Pass the whole arrays, the internals will slice them up
+                       as needed before passing to individual animators */
+                    active,
+                    factors,
+                    remove,
+                    /* The cast is a bit ew, yeah */
+                    Containers::arrayView(reinterpret_cast<Containers::Reference<AbstractDataAnimator>*>(const_cast<Containers::Reference<AbstractAnimator>*>(dataAnimators.data())), dataAnimators.size()));
             }
 
             /* ... and all AbstractStyleAnimator instances */
@@ -2436,8 +2497,14 @@ AbstractUserInterface& AbstractUserInterface::advanceAnimations(const Nanosecond
                 /* If there are any animators partitioned for this layer, it
                    implies that the layer supports style animation */
                 CORRADE_INTERNAL_ASSERT(layer.used.features >= LayerFeature::AnimateStyles);
-                /* The cast is a bit ew, yeah */
-                state.layers[i].used.instance->advanceAnimations(time, Containers::arrayView(reinterpret_cast<Containers::Reference<AbstractStyleAnimator>*>(const_cast<Containers::Reference<AbstractAnimator>*>(styleAnimators.data())), styleAnimators.size()));
+                state.layers[i].used.instance->advanceAnimations(time,
+                    /* Pass the whole arrays, the internals will slice them up
+                       as needed before passing to individual animators */
+                    active,
+                    factors,
+                    remove,
+                    /* The cast is a bit ew, yeah */
+                    Containers::arrayView(reinterpret_cast<Containers::Reference<AbstractStyleAnimator>*>(const_cast<Containers::Reference<AbstractAnimator>*>(styleAnimators.data())), styleAnimators.size()));
             }
         }
     }
