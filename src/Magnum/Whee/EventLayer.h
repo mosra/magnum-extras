@@ -61,7 +61,8 @@ class MAGNUM_WHEE_EXPORT EventConnection {
          * If @ref data() is not @ref DataHandle::Null and is valid, removes
          * the connection from associated @ref layer().
          */
-        ~EventConnection();
+        /* MinGW needs inline here to not say "redeclared without dllimport" */
+        inline ~EventConnection();
 
         /** @brief Copying is not allowed */
         EventConnection& operator=(const EventConnection&) = delete;

@@ -514,6 +514,13 @@ template<class StyleIndex, StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*t
        being cast. */
     /** @todo revert back to the + once CORRADE_MSVC2015_COMPATIBILITY is
         dropped */
+    #if defined(CORRADE_TARGET_GCC) && __GNUC__ < 13
+    #pragma GCC diagnostic push
+    /* GCC since at least version 8 warns that function pointers passed here,
+       if not null, will never be null. Well, yes. Fixed in GCC 13.
+        https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94554 */
+    #pragma GCC diagnostic ignored "-Waddress"
+    #endif
     return setStyleTransition(
         toInactiveOut == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toInactiveOut(StyleIndex(index)));
@@ -536,6 +543,9 @@ template<class StyleIndex, StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*t
         toDisabled == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toDisabled(StyleIndex(index)));
         });
+    #if defined(CORRADE_TARGET_GCC) && __GNUC__ < 13
+    #pragma GCC diagnostic pop
+    #endif
 }
 #endif
 
