@@ -112,6 +112,8 @@ struct AbstractLayerTest: TestSuite::Tester {
     void advanceStyleAnimationsLayerNotSet();
     void advanceDataAnimationsInvalidLayer();
     void advanceStyleAnimationsInvalidLayer();
+    void advanceDataAnimationsInvalidSize();
+    void advanceStyleAnimationsInvalidSize();
 
     void update();
     void updateComposite();
@@ -256,6 +258,8 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::advanceStyleAnimationsLayerNotSet,
               &AbstractLayerTest::advanceDataAnimationsInvalidLayer,
               &AbstractLayerTest::advanceStyleAnimationsInvalidLayer,
+              &AbstractLayerTest::advanceDataAnimationsInvalidSize,
+              &AbstractLayerTest::advanceStyleAnimationsInvalidSize,
 
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateComposite,
@@ -1541,8 +1545,11 @@ void AbstractLayerTest::advanceDataAnimations() {
             return LayerFeature::AnimateData;
         }
 
-        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractDataAnimator>& animators) override {
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) override {
             CORRADE_COMPARE(time, 476_nsec);
+            CORRADE_COMPARE(activeStorage.size(), 17);
+            CORRADE_COMPARE(factorStorage.size(), 17);
+            CORRADE_COMPARE(removeStorage.size(), 17);
             CORRADE_COMPARE(animators.size(), 2);
             CORRADE_COMPARE(animators[0].handle(), animatorHandle(0xab, 0x12));
             CORRADE_COMPARE(animators[1].handle(), animatorHandle(0xcd, 0x34));
@@ -1566,7 +1573,10 @@ void AbstractLayerTest::advanceDataAnimations() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    layer.advanceAnimations(476_nsec, {animator1, animator2});
+    UnsignedInt maskData[1];
+    Containers::MutableBitArrayView maskStorage{maskData, 0, 17};
+    Float factorStorage[17];
+    layer.advanceAnimations(476_nsec, maskStorage, factorStorage, maskStorage, {animator1, animator2});
     CORRADE_COMPARE(layer.advanceCalled, 1);
 }
 
@@ -1579,8 +1589,11 @@ void AbstractLayerTest::advanceStyleAnimations() {
             return LayerFeature::AnimateStyles;
         }
 
-        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
             CORRADE_COMPARE(time, 476_nsec);
+            CORRADE_COMPARE(activeStorage.size(), 17);
+            CORRADE_COMPARE(factorStorage.size(), 17);
+            CORRADE_COMPARE(removeStorage.size(), 17);
             CORRADE_COMPARE(animators.size(), 2);
             CORRADE_COMPARE(animators[0].handle(), animatorHandle(0xab, 0x12));
             CORRADE_COMPARE(animators[1].handle(), animatorHandle(0xcd, 0x34));
@@ -1604,7 +1617,10 @@ void AbstractLayerTest::advanceStyleAnimations() {
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    layer.advanceAnimations(476_nsec, {animator1, animator2});
+    UnsignedInt maskData[1];
+    Containers::MutableBitArrayView maskStorage{maskData, 0, 17};
+    Float factorStorage[17];
+    layer.advanceAnimations(476_nsec, maskStorage, factorStorage, maskStorage, {animator1, animator2});
     CORRADE_COMPARE(layer.advanceCalled, 1);
 }
 
@@ -1615,11 +1631,11 @@ void AbstractLayerTest::advanceDataAnimationsEmpty() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateData;
         }
-        void doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&) override {}
+        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) override {}
     } layer{layerHandle(0, 1)};
 
     /* It shouldn't crash or anything */
-    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractDataAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
     CORRADE_VERIFY(true);
 }
 
@@ -1630,11 +1646,11 @@ void AbstractLayerTest::advanceStyleAnimationsEmpty() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateStyles;
         }
-        void doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&) override {}
+        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) override {}
     } layer{layerHandle(0, 1)};
 
     /* It shouldn't crash or anything */
-    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractStyleAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
     CORRADE_VERIFY(true);
 }
 
@@ -1652,7 +1668,7 @@ void AbstractLayerTest::advanceDataAnimationsNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractDataAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data animation not supported\n");
 }
 
@@ -1670,7 +1686,7 @@ void AbstractLayerTest::advanceStyleAnimationsNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractStyleAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): style animation not supported\n");
 }
 
@@ -1683,14 +1699,14 @@ void AbstractLayerTest::advanceDataAnimationsNotImplemented() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateData;
         }
-        void doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&) override {
+        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&) override {
             CORRADE_FAIL("This shouldn't be called");
         }
     } layer{layerHandle(0, 1)};
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractDataAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractDataAnimator>{});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data animation advertised but not implemented\n");
 }
 
@@ -1703,14 +1719,14 @@ void AbstractLayerTest::advanceStyleAnimationsNotImplemented() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateStyles;
         }
-        void doAdvanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&) override {
+        void doAdvanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&) override {
             CORRADE_FAIL("This shouldn't be called");
         }
     } layer{layerHandle(0, 1)};
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, Containers::Iterable<AbstractStyleAnimator>{});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, Containers::Iterable<AbstractStyleAnimator>{});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): style animation advertised but not implemented\n");
 }
 
@@ -1739,7 +1755,7 @@ void AbstractLayerTest::advanceDataAnimationsInvalidFeatures() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {animator1, animator2});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
 }
 
@@ -1768,7 +1784,7 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidFeatures() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {animator1, animator2});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): data attachment not supported by an animator\n");
 }
 
@@ -1796,7 +1812,7 @@ void AbstractLayerTest::advanceDataAnimationsLayerNotSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {animator1, animator2});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
 }
 
@@ -1824,7 +1840,7 @@ void AbstractLayerTest::advanceStyleAnimationsLayerNotSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.advanceAnimations(0_nsec, {animator1, animator2});
+    layer.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment\n");
 }
 
@@ -1852,7 +1868,7 @@ void AbstractLayerTest::advanceDataAnimationsInvalidLayer() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer1.advanceAnimations(0_nsec, {animator1, animator2});
+    layer1.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with Whee::LayerHandle(0xab, 0x12) but got Whee::LayerHandle(0xcd, 0x34)\n");
 }
 
@@ -1880,8 +1896,128 @@ void AbstractLayerTest::advanceStyleAnimationsInvalidLayer() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer1.advanceAnimations(0_nsec, {animator1, animator2});
+    layer1.advanceAnimations(0_nsec, {}, {}, {}, {animator1, animator2});
     CORRADE_COMPARE(out.str(), "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with Whee::LayerHandle(0xab, 0x12) but got Whee::LayerHandle(0xcd, 0x34)\n");
+}
+
+void AbstractLayerTest::advanceDataAnimationsInvalidSize() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateData;
+        }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractDataAnimator {
+        using AbstractDataAnimator::AbstractDataAnimator;
+        using AbstractDataAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator1{animatorHandle(0, 1)}, animator2{animatorHandle(1, 3)}, animator3{animatorHandle(2, 2)};
+    layer.setAnimator(animator1);
+    layer.setAnimator(animator2);
+    layer.setAnimator(animator3);
+
+    animator1.create(0_nsec, 1_nsec);
+    animator1.create(0_nsec, 1_nsec);
+    animator1.create(0_nsec, 1_nsec);
+
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+
+    animator3.create(0_nsec, 1_nsec);
+    animator3.create(0_nsec, 1_nsec);
+
+    UnsignedInt maskData[1];
+    Containers::MutableBitArrayView maskStorageLow{maskData, 0, 5};
+    Containers::MutableBitArrayView maskStorage{maskData, 0, 6};
+    Containers::MutableBitArrayView maskStorageHigh{maskData, 0, 7};
+    Float factorStorageLow[5];
+    Float factorStorage[6];
+    Float factorStorageHigh[7];
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, maskStorageLow, factorStorageLow, maskStorageLow, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, factorStorage, maskStorageHigh, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, factorStorageHigh, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorageHigh, factorStorage, maskStorage, {animator1, animator2, animator3});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 5, 5 and 5\n"
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6 and 7\n"
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7 and 6\n"
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 7, 6 and 6\n",
+        TestSuite::Compare::String);
+}
+
+void AbstractLayerTest::advanceStyleAnimationsInvalidSize() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::setAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+    } layer{layerHandle(0, 1)};
+
+    struct: AbstractStyleAnimator {
+        using AbstractStyleAnimator::AbstractStyleAnimator;
+        using AbstractStyleAnimator::create;
+
+        AnimatorFeatures doFeatures() const override {
+            return AnimatorFeature::DataAttachment;
+        }
+    } animator1{animatorHandle(0, 1)}, animator2{animatorHandle(1, 3)}, animator3{animatorHandle(2, 2)};
+    layer.setAnimator(animator1);
+    layer.setAnimator(animator2);
+    layer.setAnimator(animator3);
+
+    animator1.create(0_nsec, 1_nsec);
+    animator1.create(0_nsec, 1_nsec);
+    animator1.create(0_nsec, 1_nsec);
+
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+    animator2.create(0_nsec, 1_nsec);
+
+    animator3.create(0_nsec, 1_nsec);
+    animator3.create(0_nsec, 1_nsec);
+
+    UnsignedInt maskData[1];
+    Containers::MutableBitArrayView maskStorageLow{maskData, 0, 5};
+    Containers::MutableBitArrayView maskStorage{maskData, 0, 6};
+    Containers::MutableBitArrayView maskStorageHigh{maskData, 0, 7};
+    Float factorStorageLow[5];
+    Float factorStorage[6];
+    Float factorStorageHigh[7];
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.advanceAnimations(0_nsec, maskStorageLow, factorStorageLow, maskStorageLow, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, factorStorage, maskStorageHigh, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorage, factorStorageHigh, maskStorage, {animator1, animator2, animator3});
+    layer.advanceAnimations(0_nsec, maskStorageHigh, factorStorage, maskStorage, {animator1, animator2, animator3});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 5, 5 and 5\n"
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 6 and 7\n"
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 6, 7 and 6\n"
+        "Whee::AbstractLayer::advanceAnimations(): expected activeStorage, factorStorage and removeStorage views to have the same size of at least 6 elements but got 7, 6 and 6\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractLayerTest::update() {

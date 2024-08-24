@@ -417,10 +417,17 @@ void BaseLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
     /* Let it advance to allocate the dynamic style */
+    Containers::BitArray active{DirectInit, 1, true};
+    Float factors[]{0.0f};
+    Containers::BitArray remove{DirectInit, 1, false};
     BaseLayerStyleUniform dynamicStyleUniforms[1];
     Vector4 dynamicStylePaddings[1];
     UnsignedInt dataStyles[1];
-    animator.advance(0_nsec, dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
+    animator.advance(
+        active,
+        factors,
+        remove,
+        dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
     CORRADE_COMPARE(animator.dynamicStyle(first), 0);
     /* Verify the AnimatorDataHandle overload correctly detecting a valid style
        also */
@@ -705,6 +712,27 @@ void BaseLayerStyleAnimatorTest::advance() {
     CORRADE_COMPARE(layer.style(data4), 5);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
 
+    /* Does what layer's advanceAnimations() is doing internally for all
+       animators (as we need to test also the interaction with animation being
+       removed, etc.), but with an ability to peek into the filled data to
+       verify they're written only when they should be. Layer's
+       advanceAnimations() is then tested in layerAdvance() below. */
+    const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+        UnsignedByte activeData[1];
+        Containers::MutableBitArrayView active{activeData, 0, 5};
+        Float factors[5];
+        UnsignedByte removeData[1];
+        Containers::MutableBitArrayView remove{removeData, 0, 5};
+
+        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, factors, remove);
+        BaseLayerStyleAnimations animations;
+        if(needsAdvanceClean.first())
+            animations = animator.advance(active, factors, remove, dynamicStyleUniforms, dynamicStylePaddings, dataStyles);
+        if(needsAdvanceClean.second())
+            animator.clean(remove);
+        return animations;
+    };
+
     /* The padding resulting from the animation gets checked against these
        values, so set them to something very different to make sure they get
        updated */
@@ -722,7 +750,7 @@ void BaseLayerStyleAnimatorTest::advance() {
     {
         BaseLayerStyleUniform uniforms[3];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
-        CORRADE_COMPARE(animator.advance(5_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Padding);
+        CORRADE_COMPARE(advance(5_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Padding);
         CORRADE_VERIFY(animator.isHandleValid(playing));
         CORRADE_VERIFY(!animator.isHandleValid(stopped));
         CORRADE_VERIFY(animator.isHandleValid(scheduledNullData));
@@ -782,7 +810,7 @@ void BaseLayerStyleAnimatorTest::advance() {
     {
         BaseLayerStyleUniform uniforms[3];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
-        CORRADE_COMPARE(animator.advance(10_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform);
+        CORRADE_COMPARE(advance(10_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u, 666u, 666u, 666u, 666u,
@@ -803,7 +831,7 @@ void BaseLayerStyleAnimatorTest::advance() {
     {
         BaseLayerStyleUniform uniforms[3];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
-        CORRADE_COMPARE(animator.advance(15_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Padding);
+        CORRADE_COMPARE(advance(15_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Padding);
         CORRADE_COMPARE(animator.state(scheduledNullData), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 2);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
@@ -828,7 +856,7 @@ void BaseLayerStyleAnimatorTest::advance() {
     {
         BaseLayerStyleUniform uniforms[3];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
-        CORRADE_COMPARE(animator.advance(20_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Uniform);
+        CORRADE_COMPARE(advance(20_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Uniform);
         CORRADE_VERIFY(!animator.isHandleValid(playing));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
@@ -856,7 +884,7 @@ void BaseLayerStyleAnimatorTest::advance() {
     {
         BaseLayerStyleUniform uniforms[3];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
-        CORRADE_COMPARE(animator.advance(25_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimations{});
+        CORRADE_COMPARE(advance(25_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimations{});
         CORRADE_VERIFY(!animator.isHandleValid(scheduledNullData));
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
@@ -878,7 +906,7 @@ void BaseLayerStyleAnimatorTest::advance() {
     {
         BaseLayerStyleUniform uniforms[3];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
-        CORRADE_COMPARE(animator.advance(35_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Padding);
+        CORRADE_COMPARE(advance(35_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style|BaseLayerStyleAnimation::Padding);
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
@@ -907,7 +935,7 @@ void BaseLayerStyleAnimatorTest::advance() {
     {
         BaseLayerStyleUniform uniforms[3];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
-        CORRADE_COMPARE(animator.advance(45_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Padding);
+        CORRADE_COMPARE(advance(45_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Padding);
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(animator.state(stoppedKept), AnimationState::Stopped);
@@ -944,7 +972,7 @@ void BaseLayerStyleAnimatorTest::advance() {
         BaseLayerStyleUniform uniforms[3];
         UnsignedInt dataStyles[]{666, 666, 666, 666, 666};
         animator.stop(scheduledChangesPadding, 46_nsec);
-        CORRADE_COMPARE(animator.advance(47_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style);
+        CORRADE_COMPARE(advance(47_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style);
         CORRADE_VERIFY(!animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
@@ -1006,6 +1034,30 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
 
     AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, layerData);
 
+    /* Does what layer's advanceAnimations() is doing internally for all
+       animators (as we need to test also the interaction with animation being
+       removed, etc.), but with an ability to peek into the filled data to
+       verify they're written only when they should be. Compared to the helper
+       in advance() above it's not exposing all data. */
+    const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+        UnsignedByte activeData[1];
+        Containers::MutableBitArrayView active{activeData, 0, 1};
+        Float factors[1];
+        UnsignedByte removeData[1];
+        Containers::MutableBitArrayView remove{removeData, 0, 1};
+
+        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, factors, remove);
+        BaseLayerStyleAnimations animations;
+        if(needsAdvanceClean.first()) {
+            animations = animator.advance(
+                active, factors, remove, dynamicStyleUniforms,
+                dynamicStylePaddings, dataStyles);
+        }
+        if(needsAdvanceClean.second())
+            animator.clean(remove);
+        return animations;
+    };
+
     /* The padding resulting from the animation gets checked against these.
        Contrary to the advance() test case, set it to the initial padding value
        so the initial advance doesn't report padding as changed. */
@@ -1020,7 +1072,7 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
     {
         BaseLayerStyleUniform uniforms[1];
         UnsignedInt dataStyles[]{666};
-        CORRADE_COMPARE(animator.advance(5_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style|data.expected);
+        CORRADE_COMPARE(advance(5_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style|data.expected);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
         CORRADE_COMPARE(uniforms[0].topColor, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.25f));
@@ -1031,7 +1083,7 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
     } {
         BaseLayerStyleUniform uniforms[1];
         UnsignedInt dataStyles[]{666};
-        CORRADE_COMPARE(animator.advance(15_nsec, uniforms, paddings, dataStyles), data.expected);
+        CORRADE_COMPARE(advance(15_nsec, uniforms, paddings, dataStyles), data.expected);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(animation), 0);
         CORRADE_COMPARE(uniforms[0].topColor, Math::lerp(Color4{2.0f}, Color4{uniformColors[data.uniform]}, 0.75f));
@@ -1043,7 +1095,7 @@ void BaseLayerStyleAnimatorTest::advanceProperties() {
     } {
         BaseLayerStyleUniform uniforms[1];
         UnsignedInt dataStyles[]{666};
-        CORRADE_COMPARE(animator.advance(25_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style);
+        CORRADE_COMPARE(advance(25_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style);
         CORRADE_VERIFY(!animator.isHandleValid(animation));
         CORRADE_COMPARE(dataStyles[0], 0);
     }
@@ -1079,13 +1131,34 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
     AnimationHandle second = animator.create(1, 0, Animation::Easing::linear, 10_nsec, 20_nsec, data1);
 
+    /* Does what layer's advanceAnimations() is doing internally for all
+       animators (as we need to test also the interaction with animation being
+       removed, etc.), but with an ability to peek into the filled data to
+       verify they're written only when they should be. Compared to the helper
+       in advance() above it exposes only some data. */
+    const auto advance = [&](Nanoseconds time, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles) {
+        UnsignedByte activeData[1];
+        Containers::MutableBitArrayView active{activeData, 0, 2};
+        Float factors[2];
+        UnsignedByte removeData[1];
+        Containers::MutableBitArrayView remove{removeData, 0, 2};
+
+        Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time, active, factors, remove);
+        BaseLayerStyleAnimations animations;
+        if(needsAdvanceClean.first()) {
+            Vector4 paddings[1];
+            animations = animator.advance(active, factors, remove, dynamicStyleUniforms, paddings, dataStyles);
+        } if(needsAdvanceClean.second())
+            animator.clean(remove);
+        return animations;
+    };
+
     BaseLayerStyleUniform uniforms[1];
-    Vector4 paddings[1];
     UnsignedInt dataStyles[]{666, 666};
 
     /* First advance takes the only dynamic style and switches to it */
     {
-        CORRADE_COMPARE(animator.advance(5_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style);
+        CORRADE_COMPARE(advance(5_nsec, uniforms, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style);
         CORRADE_COMPARE(animator.dynamicStyle(first), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
@@ -1097,7 +1170,7 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     /* Next advance plays the other animation also, but isn't able to take any
        other dynamic style, so it doesn't update any style index */
     } {
-        CORRADE_COMPARE(animator.advance(10_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform);
+        CORRADE_COMPARE(advance(10_nsec, uniforms, dataStyles), BaseLayerStyleAnimation::Uniform);
         CORRADE_COMPARE(animator.dynamicStyle(first), 0);
         CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
@@ -1111,7 +1184,7 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
        style. But the recycling is done after the allocation, so the second
        animation still isn't doing anything. */
     } {
-        CORRADE_COMPARE(animator.advance(20_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style);
+        CORRADE_COMPARE(advance(20_nsec, uniforms, dataStyles), BaseLayerStyleAnimation::Style);
         CORRADE_VERIFY(!animator.isHandleValid(first));
         CORRADE_COMPARE(animator.dynamicStyle(second), Containers::NullOpt);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
@@ -1123,7 +1196,7 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 
     /* Advancing right after is finally able to allocate the recycled style */
     } {
-        CORRADE_COMPARE(animator.advance(25_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style);
+        CORRADE_COMPARE(advance(25_nsec, uniforms, dataStyles), BaseLayerStyleAnimation::Uniform|BaseLayerStyleAnimation::Style);
         CORRADE_COMPARE(animator.dynamicStyle(second), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
@@ -1137,7 +1210,7 @@ void BaseLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
 void BaseLayerStyleAnimatorTest::advanceEmpty() {
     /* This should work even with no layer being set */
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
-    animator.advance({}, {}, {}, {});
+    animator.advance({}, {}, {}, {}, {}, {});
 
     CORRADE_VERIFY(true);
 }
@@ -1152,6 +1225,9 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
     } shared{BaseLayer::Shared::Configuration{2}
         .setDynamicStyleCount(1)
     };
+    shared.setStyle(BaseLayerCommonStyleUniform{},
+        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
+        {});
 
     struct Layer: BaseLayer {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
@@ -1160,13 +1236,31 @@ void BaseLayerStyleAnimatorTest::advanceInvalid() {
     BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
     layer.setAnimator(animator);
 
+    DataHandle data = layer.create(0);
+    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
+    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
+    animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
+
+    Containers::BitArray mask{NoInit, 3};
+    Containers::BitArray maskInvalid{NoInit, 4};
+    Float factors[3];
+    Float factorsInvalid[4];
     BaseLayerStyleUniform dynamicStyleUniforms[2];
+    Vector4 dynamicStylePaddings[2];
     Vector4 dynamicStylePaddingsInvalid[3];
 
     std::ostringstream out;
     Error redirectError{&out};
-    animator.advance(12_nsec, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have the same size but got 2 and 3\n");
+    animator.advance(mask, factors, maskInvalid, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(mask, factorsInvalid, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(maskInvalid, factors, mask, dynamicStyleUniforms, dynamicStylePaddings, {});
+    animator.advance(mask, factors, mask, dynamicStyleUniforms, dynamicStylePaddingsInvalid, {});
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
+        "Whee::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
+        "Whee::BaseLayerStyleAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n"
+        "Whee::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have the same size but got 2 and 3\n",
+        TestSuite::Compare::String);
 }
 
 void BaseLayerStyleAnimatorTest::layerAdvance() {
@@ -1214,9 +1308,15 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
     animator1.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
     animator2.create(1, 0, Animation::Easing::linear, 13_nsec, 1_nsec, data1);
 
+    /* The storage can be bigger than needed, the layer should slice it for
+       each animator */
+    Containers::BitArray activeStorage{NoInit, 7};
+    Float factorStorage[7];
+    Containers::BitArray removeStorage{NoInit, 7};
+
     /* Advancing just the first animation to 1/4, which sets the style,
        uniform and optionally padding */
-    layer.advanceAnimations(5_nsec, {animator2, animatorEmpty, animator1});
+    layer.advanceAnimations(5_nsec, activeStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
     CORRADE_COMPARE(layer.style(data2), shared.styleCount() + 0);
     CORRADE_COMPARE(layer.dynamicStyleUniforms()[0].topColor, Color4{0.375f});
@@ -1228,7 +1328,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
        optionally padding */
     layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
-    layer.advanceAnimations(10_nsec, {animator2, animatorEmpty, animator1});
+    layer.advanceAnimations(10_nsec, activeStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
     CORRADE_COMPARE(layer.style(data2), shared.styleCount() + 0);
     CORRADE_COMPARE(layer.dynamicStyleUniforms()[0].topColor, Color4{0.5f});
@@ -1241,7 +1341,7 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
        change. */
     layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
-    layer.advanceAnimations(15_nsec, {animator2, animatorEmpty, animator1});
+    layer.advanceAnimations(15_nsec, activeStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
     CORRADE_COMPARE(layer.style(data1), 0);
     CORRADE_COMPARE(layer.style(data2), shared.styleCount() + 0);
@@ -1251,10 +1351,11 @@ void BaseLayerStyleAnimatorTest::layerAdvance() {
     CORRADE_VERIFY(layer.stateData().dynamicStyleChanged);
 
     /* Advancing the first animation to the end & the final style. Only the
-       style data is updated, no uniforms or paddings. */
+       style data is updated, no uniforms or paddings.  */
     layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.stateData().dynamicStyleChanged = false;
-    layer.advanceAnimations(20_nsec, {animator2, animatorEmpty, animator1});
+    layer.advanceAnimations(20_nsec, activeStorage, factorStorage, removeStorage, {animator2, animatorEmpty, animator1});
+    /* If clean() wouldn't be called, the dynamic style won't get recycled */
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
     CORRADE_COMPARE(layer.style(data2), 1);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);

@@ -1635,8 +1635,12 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref update() or @ref draw() for given frame. Expects that @p time
          * is greater or equal to @ref animationTime(). If @ref state()
          * contains @ref UserInterfaceState::NeedsAnimationAdvance, this
-         * function delegates to @ref AbstractAnimator::advance() on all
-         * animator instances that have @ref AnimatorState::NeedsAdvance set.
+         * function delegates to @ref AbstractAnimator::update() and then a
+         * corresponding animator-specific advance function such as
+         * @ref AbstractGenericAnimator::advance(),
+         * @ref AbstractNodeAnimator::advance() or layer-specific
+         * @ref AbstractLayer::advanceAnimations() on all animator instances
+         * that have @ref AnimatorState::NeedsAdvance set.
          *
          * Calling this function updates @ref animationTime(). Afterwards,
          * @ref state() may still contain

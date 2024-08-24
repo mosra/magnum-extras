@@ -44,7 +44,7 @@ Depending on which of these are returned from
 @ref TextLayerStyleAnimator::advance(), causes various @ref LayerState flags
 and other internal @ref AbstractLayer state to be set after an
 @ref AbstractUserInterface::advanceAnimations() (and transitively
-@ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&))
+@ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&))
 call.
 @see @ref TextLayerStyleAnimations
 */
@@ -544,7 +544,10 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
 
         /**
          * @brief Advance the animations
-         * @param[in] time                      Time to which to advance
+         * @param[in] active                    Animation IDs that are active
+         * @param[in] factors                   Interpolation factors indexed
+         *      by animation ID
+         * @param[in] remove                    Animation IDs to be removed
          * @param[in,out] dynamicStyleUniforms  Uniforms to animate indexed by
          *      dynamic style ID or dynamic editing style text uniform ID
          * @param[in,out] dynamicStyleCursorStyles  Cursor style association to
@@ -561,27 +564,28 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
          *      data indexed by data ID
          * @return Style properties that were affected by the animation
          *
-         * Used internally from @ref TextLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&),
+         * Used internally from @ref TextLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&),
          * which is called from @ref AbstractUserInterface::advanceAnimations().
          * Exposed just for testing purposes, there should be no need to call
          * this function directly and doing so may cause internal
-         * @ref AbstractUserInterface state update to misbehave. Assuming the
-         * layer the animator is associated with doesn't contain editing
-         * styles, the @p dynamicStyleUniforms, @p dynamicStyleCursorStyles,
-         * @p dynamicStyleSelectionStyles and @p dynamicStylePaddings,
-         * are expected to all have the same size and should be large enough to
-         * contain any valid dynamic style ID, the
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that size of @p active,  @p factors and @p remove matches
+         * @ref capacity(), it's assumed that their contents were filled by
+         * @ref update() before. Assuming the layer the animator is associated
+         * with doesn't contain editing styles, the @p dynamicStyleUniforms,
+         * @p dynamicStyleCursorStyles, @p dynamicStyleSelectionStyles and
+         * @p dynamicStylePaddings, are expected to all have the same size and
+         * should be large enough to contain any valid dynamic style ID, the
          * @p dynamicEditingStyleUniforms and @p dynamicEditingStylePaddings
          * views are then expected to be empty. Assuming the layer contains
          * editing styles, the @p dynamicStyleUniforms is expected to be three
          * times as large as the others, and the @p dynamicEditingStyleUniforms
          * and @p dynamicEditingStylePaddings views twice as large as the
          * others instead. The @p dataStyles view should be large enough to
-         * contain any valid layer data ID. Delegates into
-         * @ref AbstractAnimator::advance() and subsequently to @ref clean(),
-         * see their documentation for more information.
+         * contain any valid layer data ID.
          */
-        TextLayerStyleAnimations advance(Nanoseconds time, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
+        TextLayerStyleAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
         /* Only TextLayer::setAnimator(), but we don't want to include the

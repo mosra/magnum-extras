@@ -127,11 +127,12 @@ struct AbstractAnimatorTest: TestSuite::Tester {
     void playPauseStopInvalid();
     void playPaused();
 
-    void advance();
-    void advanceEmpty();
-    void advanceInvalid();
+    void update();
+    void updateEmpty();
+    void updateInvalid();
 
     void advanceGeneric();
+    void advanceGenericInvalid();
     void advanceNode();
     void advanceNodeInvalid();
 
@@ -407,11 +408,12 @@ AbstractAnimatorTest::AbstractAnimatorTest() {
     addInstancedTests({&AbstractAnimatorTest::playPaused},
         Containers::arraySize(PlayPausedData));
 
-    addTests({&AbstractAnimatorTest::advance,
-              &AbstractAnimatorTest::advanceEmpty,
-              &AbstractAnimatorTest::advanceInvalid,
+    addTests({&AbstractAnimatorTest::update,
+              &AbstractAnimatorTest::updateEmpty,
+              &AbstractAnimatorTest::updateInvalid,
 
               &AbstractAnimatorTest::advanceGeneric,
+              &AbstractAnimatorTest::advanceGenericInvalid,
               &AbstractAnimatorTest::advanceNode,
               &AbstractAnimatorTest::advanceNodeInvalid,
 
@@ -1599,7 +1601,7 @@ void AbstractAnimatorTest::propertiesStateFactor() {
 
     Containers::BitArray mask{NoInit, 2};
     Float factors[2];
-    animator.advance(offset, mask, factors, mask);
+    animator.update(offset, mask, factors, mask);
 
     CORRADE_COMPARE(animator.state(handle), data.expectedState);
     CORRADE_COMPARE(animator.factor(handle), data.expectedFactor);
@@ -2797,7 +2799,7 @@ void AbstractAnimatorTest::playPaused() {
     CORRADE_COMPARE(animator.stopped(handle), Nanoseconds::max());
 }
 
-void AbstractAnimatorTest::advance() {
+void AbstractAnimatorTest::update() {
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
         using AbstractAnimator::create;
@@ -2851,13 +2853,13 @@ void AbstractAnimatorTest::advance() {
 
     constexpr Float unused = Constants::inf();
 
-    /* Call to advance(10) advances also stopped and paused animations that
+    /* Call to update(10) advances also stopped and paused animations that
        changed their state compared to last time (i.e., time 0) */
     {
-        Containers::BitArray active{ValueInit, 13};
+        Containers::BitArray active{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{ValueInit, 13};
-        CORRADE_COMPARE(animator.advance(10_nsec, active, factors, remove), Containers::pair(true, true));
+        Containers::BitArray remove{NoInit, 13};
+        CORRADE_COMPARE(animator.update(10_nsec, active, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
@@ -2938,15 +2940,15 @@ void AbstractAnimatorTest::advance() {
     /* stopped is gone */
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 
-    /* Call to advance(10) again marks only the currently playing animations as
+    /* Call to update(10) again marks only the currently playing animations as
        active. As there's no difference in current and previous state and all
        stopped animations got already removed, clean() isn't meant to be
        called. */
     {
-        Containers::BitArray active{ValueInit, 13};
+        Containers::BitArray active{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{ValueInit, 13};
-        CORRADE_COMPARE(animator.advance(10_nsec, active, factors, remove), Containers::pair(true, false));
+        Containers::BitArray remove{NoInit, 13};
+        CORRADE_COMPARE(animator.update(10_nsec, active, factors, remove), Containers::pair(true, false));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
@@ -3021,10 +3023,10 @@ void AbstractAnimatorTest::advance() {
        before as well. The active mask is thus the same as the second call at
        10. */
     {
-        Containers::BitArray active{ValueInit, 13};
+        Containers::BitArray active{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{ValueInit, 13};
-        CORRADE_COMPARE(animator.advance(20_nsec, active, factors, remove), Containers::pair(true, true));
+        Containers::BitArray remove{NoInit, 13};
+        CORRADE_COMPARE(animator.update(20_nsec, active, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             false,  /*  0 scheduledKeep */
             true,   /*  1 scheduledToPlayingBegin */
@@ -3113,10 +3115,10 @@ void AbstractAnimatorTest::advance() {
     animator.stop(playingToPausedKeep, 30_nsec);
     animator.stop(paused, 30_nsec);
     {
-        Containers::BitArray active{ValueInit, 13};
+        Containers::BitArray active{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{ValueInit, 13};
-        CORRADE_COMPARE(animator.advance(30_nsec, active, factors, remove), Containers::pair(true, true));
+        Containers::BitArray remove{NoInit, 13};
+        CORRADE_COMPARE(animator.update(30_nsec, active, factors, remove), Containers::pair(true, true));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
@@ -3201,10 +3203,10 @@ void AbstractAnimatorTest::advance() {
 
     /* Call at 40 doesn't need to delegeate to clean() anymore */
     {
-        Containers::BitArray active{ValueInit, 13};
+        Containers::BitArray active{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{ValueInit, 13};
-        CORRADE_COMPARE(animator.advance(40_nsec, active, factors, remove), Containers::pair(true, false));
+        Containers::BitArray remove{NoInit, 13};
+        CORRADE_COMPARE(animator.update(40_nsec, active, factors, remove), Containers::pair(true, false));
         CORRADE_COMPARE_AS(Containers::BitArrayView{active}, Containers::stridedArrayView({
             true,   /*  0 scheduledKeep */
             false,  /*  1 scheduledToPlayingBegin */
@@ -3275,10 +3277,10 @@ void AbstractAnimatorTest::advance() {
 
     /* Call at 50 needs neither advance nor clean anymore */
     {
-        Containers::BitArray active{ValueInit, 13};
+        Containers::BitArray active{NoInit, 13};
         Containers::StaticArray<13, Float> factors{DirectInit, unused};
-        Containers::BitArray remove{ValueInit, 13};
-        CORRADE_COMPARE(animator.advance(50_nsec, active, factors, remove), Containers::pair(false, false));
+        Containers::BitArray remove{NoInit, 13};
+        CORRADE_COMPARE(animator.update(50_nsec, active, factors, remove), Containers::pair(false, false));
         CORRADE_COMPARE_AS(active,
             (Containers::BitArray{DirectInit, 13, false}),
             TestSuite::Compare::Container);
@@ -3324,7 +3326,7 @@ void AbstractAnimatorTest::advance() {
     CORRADE_COMPARE(animator.state(stoppedKeep), AnimationState::Stopped);
 }
 
-void AbstractAnimatorTest::advanceEmpty() {
+void AbstractAnimatorTest::updateEmpty() {
     struct: AbstractAnimator {
         using AbstractAnimator::AbstractAnimator;
 
@@ -3333,12 +3335,12 @@ void AbstractAnimatorTest::advanceEmpty() {
     CORRADE_COMPARE(animator.time(), 0_nsec);
     CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
-    CORRADE_COMPARE(animator.advance(56_nsec, {}, {}, {}), Containers::pair(false, false));
+    CORRADE_COMPARE(animator.update(56_nsec, {}, {}, {}), Containers::pair(false, false));
     CORRADE_COMPARE(animator.time(), 56_nsec);
     CORRADE_COMPARE(animator.state(), AnimatorStates{});
 }
 
-void AbstractAnimatorTest::advanceInvalid() {
+void AbstractAnimatorTest::updateInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct: AbstractAnimator {
@@ -3361,21 +3363,21 @@ void AbstractAnimatorTest::advanceInvalid() {
     Float factorsIncorrect[4];
 
     /* Same time should be okay */
-    animator.advance(46_nsec, mask, factors, mask);
-    animator.advance(46_nsec, mask, factors, mask);
+    animator.update(46_nsec, mask, factors, mask);
+    animator.update(46_nsec, mask, factors, mask);
     CORRADE_COMPARE(animator.time(), 46_nsec);
 
     std::ostringstream out;
     Error redirectError{&out};
-    animator.advance(45_nsec, mask, factors, mask);
-    animator.advance(46_nsec, mask, factors, maskIncorrect);
-    animator.advance(46_nsec, mask, factorsIncorrect, mask);
-    animator.advance(46_nsec, maskIncorrect, factors, mask);
+    animator.update(45_nsec, mask, factors, mask);
+    animator.update(46_nsec, mask, factors, maskIncorrect);
+    animator.update(46_nsec, mask, factorsIncorrect, mask);
+    animator.update(46_nsec, maskIncorrect, factors, mask);
     CORRADE_COMPARE_AS(out.str(),
-        "Whee::AbstractAnimator::advance(): expected a time at least Nanoseconds(46) but got Nanoseconds(45)\n"
-        "Whee::AbstractAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
-        "Whee::AbstractAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
-        "Whee::AbstractAnimator::advance(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n",
+        "Whee::AbstractAnimator::update(): expected a time at least Nanoseconds(46) but got Nanoseconds(45)\n"
+        "Whee::AbstractAnimator::update(): expected active, factors and remove views to have a size of 3 but got 3, 3 and 4\n"
+        "Whee::AbstractAnimator::update(): expected active, factors and remove views to have a size of 3 but got 3, 4 and 3\n"
+        "Whee::AbstractAnimator::update(): expected active, factors and remove views to have a size of 3 but got 4, 3 and 3\n",
         TestSuite::Compare::String);
 }
 
@@ -3386,94 +3388,67 @@ void AbstractAnimatorTest::advanceGeneric() {
 
         AnimatorFeatures doFeatures() const override { return {}; }
         void doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors) override {
-            CORRADE_COMPARE_AS(active,
-                expectedActive,
-                TestSuite::Compare::Container);
-            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
-                CORRADE_ITERATION(i);
-                CORRADE_COMPARE(factors[i], expectedFactors[i]);
-            }
+            CORRADE_COMPARE_AS(active, Containers::stridedArrayView({
+                true,
+                false,
+                true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(factors, Containers::arrayView({
+                1.0f,
+                0.5f,
+                0.75f
+            }), TestSuite::Compare::Container);
             ++advanceCallCount;
         }
-        void doClean(Containers::BitArrayView animationIdsToRemove) override {
-            CORRADE_COMPARE_AS(animationIdsToRemove,
-                expectedAnimationIdsToRemove,
-                TestSuite::Compare::Container);
-            ++cleanCallCount;
-        }
-
-        Containers::StridedBitArrayView1D expectedActive;
-        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
-        Containers::StridedArrayView1D<const Float> expectedFactors;
         Int advanceCallCount = 0;
-        Int cleanCallCount = 0;
     } animator{animatorHandle(0, 1)};
 
-    /* The mask and factor calculation is thoroughly tested in advance() and
-       propertiesStateFactor(), so just create some non-trivial state to verify
-       it gets correctly passed through. */
+    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 1_nsec);
 
-    /* Call to advance(5) advances the first, nothing to clean */
-    animator.create(0_nsec, 10_nsec);
-    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
-    animator.create(6_nsec, 4_nsec);
-    {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        bool active[]{
-            true,
-            false,
-            false
-        };
-        Float factors[]{
-            0.5f,
-            0.0f, /* unused */
-            0.0f, /* unused */
-        };
-        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
-        animator.expectedFactors = factors;
-        animator.expectedAnimationIdsToRemove = {};
-        animator.advance(5_nsec);
-    }
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::BitArray active{DirectInit, 3, true};
+    active.reset(1);
+    Float factors[]{
+        1.0f,
+        0.5f,
+        0.75f
+    };
+    animator.advance(active, factors);
     CORRADE_COMPARE(animator.advanceCallCount, 1);
-    CORRADE_COMPARE(animator.cleanCallCount, 0);
+}
 
-    /* Call to advance(10) advances the first and last to end, both get
-       cleaned afterwards */
-    {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        bool active[]{
-            true,
-            false,
-            true
-        };
-        Float factors[]{
-            1.0f,
-            0.0f, /* unused */
-            1.0f,
-        };
-        bool animationIdsToRemove[]{
-            true,
-            false,
-            true
-        };
-        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
-        animator.expectedFactors = factors;
-        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
-        animator.advance(10_nsec);
-    }
-    CORRADE_COMPARE(animator.advanceCallCount, 2);
-    CORRADE_COMPARE(animator.cleanCallCount, 1);
+void AbstractAnimatorTest::advanceGenericInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
 
-    /* Call to advance(20) does nothing */
-    {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        animator.expectedActive = {};
-        animator.expectedFactors = {};
-        animator.expectedAnimationIdsToRemove = {};
-        animator.advance(20_nsec);
-    }
-    CORRADE_COMPARE(animator.advanceCallCount, 2);
-    CORRADE_COMPARE(animator.cleanCallCount, 1);
+    struct: AbstractGenericAnimator {
+        using AbstractGenericAnimator::AbstractGenericAnimator;
+        using AbstractGenericAnimator::create;
+
+        AnimatorFeatures doFeatures() const override { return {}; }
+        void doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&) override {}
+    } animator{animatorHandle(0, 1)};
+
+    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 1_nsec);
+
+    Containers::BitArray active{NoInit, 3};
+    Containers::BitArray activeInvalid{NoInit, 4};
+    Float factors[3];
+    Float factorsInvalid[4];
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    animator.advance(active, factorsInvalid);
+    animator.advance(activeInvalid, factors);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractGenericAnimator::advance(): expected active and factors views to have a size of 3 but got 3 and 4\n"
+        "Whee::AbstractGenericAnimator::advance(): expected active and factors views to have a size of 3 but got 4 and 3\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractAnimatorTest::advanceNode() {
@@ -3483,15 +3458,16 @@ void AbstractAnimatorTest::advanceNode() {
 
         AnimatorFeatures doFeatures() const override { return {}; }
         NodeAnimations doAdvance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove) override {
-            CORRADE_COMPARE_AS(active,
-                expectedActive,
-                TestSuite::Compare::Container);
-            for(std::size_t i = 0; i != active.size(); ++i) if(active[i]) {
-                CORRADE_ITERATION(i);
-                CORRADE_COMPARE(factors[i], expectedFactors[i]);
-            }
-            /* We're not touching the output in any way, just verify it was
-               passed through correctly */
+            CORRADE_COMPARE_AS(active, Containers::stridedArrayView({
+                true,
+                false,
+                true
+            }).sliceBit(0), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(factors, Containers::arrayView({
+                1.0f,
+                0.5f,
+                0.75f
+            }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodeOffsets, Containers::stridedArrayView<Vector2>({
                 {1.0f, 2.0f},
                 {3.0f, 4.0f},
@@ -3512,20 +3488,23 @@ void AbstractAnimatorTest::advanceNode() {
 
             return NodeAnimations{0xc0};
         }
-        void doClean(Containers::BitArrayView animationIdsToRemove) override {
-            CORRADE_COMPARE_AS(animationIdsToRemove,
-                expectedAnimationIdsToRemove,
-                TestSuite::Compare::Container);
-            ++cleanCallCount;
-        }
-
-        Containers::StridedBitArrayView1D expectedActive;
-        Containers::StridedBitArrayView1D expectedAnimationIdsToRemove;
-        Containers::StridedArrayView1D<const Float> expectedFactors;
         Int advanceCallCount = 0;
-        Int cleanCallCount = 0;
     } animator{animatorHandle(0, 1)};
 
+    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 1_nsec);
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    Containers::BitArray active{DirectInit, 3, true};
+    active.reset(1);
+    Float factors[]{
+        1.0f,
+        0.5f,
+        0.75f
+    };
     Vector2 nodeOffsets[]{
         {1.0f, 2.0f},
         {3.0f, 4.0f},
@@ -3540,72 +3519,8 @@ void AbstractAnimatorTest::advanceNode() {
     };
     Containers::BitArray nodesRemove{ValueInit, 2};
     nodesRemove.set(1);
-
-    /* The mask and factor calculation is thoroughly tested in advance() and
-       propertiesStateFactor(), so just create some non-trivial state to verify
-       it gets correctly passed through. */
-
-    /* Call to advance(5) advances the first, nothing to clean */
-    animator.create(0_nsec, 10_nsec);
-    animator.create(-20_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
-    animator.create(6_nsec, 4_nsec);
-    {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        bool active[]{
-            true,
-            false,
-            false
-        };
-        Float factors[]{
-            0.5f,
-            0.0f, /* unused */
-            0.0f, /* unused */
-        };
-        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
-        animator.expectedFactors = factors;
-        animator.expectedAnimationIdsToRemove = {};
-        CORRADE_COMPARE(animator.advance(5_nsec, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{0xc0});
-    }
+    CORRADE_COMPARE(animator.advance(active, factors, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{0xc0});
     CORRADE_COMPARE(animator.advanceCallCount, 1);
-    CORRADE_COMPARE(animator.cleanCallCount, 0);
-
-    /* Call to advance(10) advances the first and last to end, both get
-       cleaned afterwards */
-    {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        bool active[]{
-            true,
-            false,
-            true
-        };
-        Float factors[]{
-            1.0f,
-            0.0f, /* unused */
-            1.0f,
-        };
-        bool animationIdsToRemove[]{
-            true,
-            false,
-            true
-        };
-        animator.expectedActive = Containers::stridedArrayView(active).sliceBit(0);
-        animator.expectedFactors = factors;
-        animator.expectedAnimationIdsToRemove = Containers::stridedArrayView(animationIdsToRemove).sliceBit(0);
-        CORRADE_COMPARE(animator.advance(10_nsec, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{0xc0});
-    }
-    CORRADE_COMPARE(animator.advanceCallCount, 2);
-    CORRADE_COMPARE(animator.cleanCallCount, 1);
-
-    /* Call to advance(20) does nothing */
-    {
-        CORRADE_ITERATION(Utility::format("{}:{}", __FILE__, __LINE__));
-        animator.expectedActive = {};
-        animator.expectedFactors = {};
-        animator.expectedAnimationIdsToRemove = {};
-        CORRADE_COMPARE(animator.advance(20_nsec, nodeOffsets, nodeSizes, nodeFlags, nodesRemove), NodeAnimations{});
-    }
-    CORRADE_COMPARE(animator.advanceCallCount, 2);
-    CORRADE_COMPARE(animator.cleanCallCount, 1);
 }
 
 void AbstractAnimatorTest::advanceNodeInvalid() {
@@ -3613,6 +3528,7 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
 
     struct: AbstractNodeAnimator {
         using AbstractNodeAnimator::AbstractNodeAnimator;
+        using AbstractNodeAnimator::create;
 
         AnimatorFeatures doFeatures() const override { return {}; }
         NodeAnimations doAdvance(Containers::BitArrayView, const Containers::StridedArrayView1D<const Float>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<Vector2>&, const Containers::StridedArrayView1D<NodeFlags>&, Containers::MutableBitArrayView) override {
@@ -3621,6 +3537,13 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
         }
     } animator{animatorHandle(0, 1)};
 
+    animator.create(0_nsec, 1_nsec);
+    animator.create(0_nsec, 1_nsec);
+
+    Containers::BitArray active{NoInit, 2};
+    Containers::BitArray activeInvalid{NoInit, 3};
+    Float factors[2];
+    Float factorsInvalid[3];
     Containers::BitArray nodesEnabled{NoInit, 3};
     Containers::BitArray nodesEnabledInvalid{NoInit, 4};
     Vector2 nodeOffsetsSizes[3];
@@ -3630,11 +3553,15 @@ void AbstractAnimatorTest::advanceNodeInvalid() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    animator.advance(0_nsec, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabledInvalid);
-    animator.advance(0_nsec, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlagsInvalid, nodesEnabled);
-    animator.advance(0_nsec, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeFlags, nodesEnabled);
-    animator.advance(0_nsec, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(active, factorsInvalid, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(activeInvalid, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabled);
+    animator.advance(active, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlags, nodesEnabledInvalid);
+    animator.advance(active, factors, nodeOffsetsSizes, nodeOffsetsSizes, nodeFlagsInvalid, nodesEnabled);
+    animator.advance(active, factors, nodeOffsetsSizes, nodeOffsetsSizesInvalid, nodeFlags, nodesEnabled);
+    animator.advance(active, factors, nodeOffsetsSizesInvalid, nodeOffsetsSizes, nodeFlags, nodesEnabled);
     CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractNodeAnimator::advance(): expected active and factors views to have a size of 2 but got 2 and 3\n"
+        "Whee::AbstractNodeAnimator::advance(): expected active and factors views to have a size of 2 but got 3 and 2\n"
         "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 3 and 4\n"
         "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 3, 4 and 3\n"
         "Whee::AbstractNodeAnimator::advance(): expected node offset, size, flags and remove views to have the same size but got 3, 4, 3 and 3\n"
@@ -3655,24 +3582,24 @@ void AbstractAnimatorTest::state() {
     Containers::BitArray mask{NoInit, 1};
     Float factors[1];
 
-    /* Animation that's created scheduled sets a state, removal & advance
+    /* Animation that's created scheduled sets a state, removal & update()
        clears it */
     {
         AnimationHandle animation = animator.create(10_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
-    /* Animation that's created playing sets a state, removal & advance
+    /* Animation that's created playing sets a state, removal & update()
        clears it */
     } {
         AnimationHandle animation = animator.create(0_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that's created stopped and with KeepOncePlayed doesn't set
@@ -3683,19 +3610,19 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
         animator.remove(animation);
 
-    /* Animation that's created stopped sets a state, advance then marks it for
-       removal and clears the state */
+    /* Animation that's created stopped sets a state, update() then marks it
+       for removal and clears the state */
     } {
         AnimationHandle animation = animator.create(-10_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Stopped);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, true));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, true));
         CORRADE_COMPARE(mask[0], true);
         animator.remove(animation);
         CORRADE_VERIFY(!animator.isHandleValid(animation));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
-    /* Animation that's scheduled after play() sets a state, removal & advance
+    /* Animation that's scheduled after play() sets a state, removal & update()
        clears it */
     } {
         AnimationHandle animation = animator.create(-10_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
@@ -3706,10 +3633,10 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
-    /* Animation that's playing after play() sets a state, removal & advance
+    /* Animation that's playing after play() sets a state, removal & update()
        clears it */
     } {
         AnimationHandle animation = animator.create(-10_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
@@ -3720,7 +3647,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that's stopped after play() doesn't set anything */
@@ -3735,7 +3662,7 @@ void AbstractAnimatorTest::state() {
         animator.remove(animation);
 
     /* Animation that stays scheduled after pause() keeps the state, removal &
-       advance clears it */
+       update() clears it */
     } {
         AnimationHandle animation = animator.create(10_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
@@ -3745,11 +3672,11 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays playing after pause() keeps the state, removal &
-       advance clears it */
+       update() clears it */
     } {
         AnimationHandle animation = animator.create(0_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
@@ -3759,11 +3686,11 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
-    /* Animation that's paused after pause() keeps the state, removal & advance
-       clears it */
+    /* Animation that's paused after pause() keeps the state, removal &
+       update() clears it */
     } {
         AnimationHandle animation = animator.create(0_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
@@ -3773,7 +3700,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Paused);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays stopped after pause() doesn't set anything */
@@ -3788,7 +3715,7 @@ void AbstractAnimatorTest::state() {
         animator.remove(animation);
 
     /* Animation that stays scheduled after stop() keeps the state, removal &
-       advance clears it */
+       update() clears it */
     } {
         AnimationHandle animation = animator.create(10_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
@@ -3798,11 +3725,11 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Scheduled);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays playing after stop() keeps the state, removal &
-       advance clears it */
+       update() clears it */
     } {
         AnimationHandle animation = animator.create(0_nsec, 10_nsec);
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
@@ -3812,11 +3739,11 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Playing);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays paused after stop() keeps the state, removal &
-       advance clears it */
+       update() clears it */
     } {
         AnimationHandle animation = animator.create(0_nsec, 10_nsec, AnimationFlag::KeepOncePlayed);
         animator.pause(animation, 0_nsec);
@@ -3827,7 +3754,7 @@ void AbstractAnimatorTest::state() {
         CORRADE_COMPARE(animator.state(animation), AnimationState::Paused);
         CORRADE_COMPARE(animator.state(), AnimatorState::NeedsAdvance);
         animator.remove(animation);
-        CORRADE_COMPARE(animator.advance(0_nsec, mask, factors, mask), Containers::pair(false, false));
+        CORRADE_COMPARE(animator.update(0_nsec, mask, factors, mask), Containers::pair(false, false));
         CORRADE_COMPARE(animator.state(), AnimatorStates{});
 
     /* Animation that stays stopped after stop() doesn't set anything */

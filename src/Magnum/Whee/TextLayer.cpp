@@ -1885,7 +1885,7 @@ void TextLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
        remove(). See a comment there for more information. */
 }
 
-void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) {
+void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, const Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) {
     auto& state = static_cast<State&>(*_state);
 
     TextLayerStyleAnimations animations;
@@ -1893,14 +1893,26 @@ void TextLayer::doAdvanceAnimations(const Nanoseconds time, const Containers::It
         if(!(animator.state() >= AnimatorState::NeedsAdvance))
             continue;
 
-        animations |= static_cast<TextLayerStyleAnimator&>(animator).advance(time,
-            state.dynamicStyleUniforms,
-            state.dynamicStyleCursorStyles,
-            state.dynamicStyleSelectionStyles,
-            stridedArrayView(state.dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding),
-            state.dynamicEditingStyleUniforms,
-            state.dynamicEditingStylePaddings,
-            stridedArrayView(state.data).slice(&Implementation::TextLayerData::style));
+        const std::size_t capacity = animator.capacity();
+        const Containers::Pair<bool, bool> needsAdvanceClean = animator.update(time,
+            activeStorage.prefix(capacity),
+            factorStorage.prefix(capacity),
+            removeStorage.prefix(capacity));
+
+        if(needsAdvanceClean.first())
+            animations |= static_cast<TextLayerStyleAnimator&>(animator).advance(
+                activeStorage.prefix(capacity),
+                factorStorage.prefix(capacity),
+                removeStorage.prefix(capacity),
+                state.dynamicStyleUniforms,
+                state.dynamicStyleCursorStyles,
+                state.dynamicStyleSelectionStyles,
+                stridedArrayView(state.dynamicStyles).slice(&Implementation::TextLayerDynamicStyle::padding),
+                state.dynamicEditingStyleUniforms,
+                state.dynamicEditingStylePaddings,
+                stridedArrayView(state.data).slice(&Implementation::TextLayerData::style));
+        if(needsAdvanceClean.second())
+            animator.clean(removeStorage.prefix(capacity));
     }
 
     if(animations & (TextLayerStyleAnimation::Style|TextLayerStyleAnimation::Padding|TextLayerStyleAnimation::EditingPadding))

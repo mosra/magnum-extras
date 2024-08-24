@@ -974,7 +974,7 @@ class MAGNUM_WHEE_EXPORT BaseLayer: public AbstractVisualLayer {
 
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
-        void doAdvanceAnimations(Nanoseconds time, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
+        void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override;
 };
 
 /**

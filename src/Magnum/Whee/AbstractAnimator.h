@@ -95,22 +95,29 @@ CORRADE_ENUMSET_OPERATORS(AnimatorFeatures)
 @brief Animator state
 @m_since_latest
 
-Used to decide whether @ref AbstractAnimator::advance() (called from
+Used to decide whether @ref AbstractGenericAnimator::advance(),
+@ref AbstractNodeAnimator::advance(), @ref BaseLayerStyleAnimator::advance() or
+@ref TextLayerStyleAnimator::advance() (called from
 @ref AbstractUserInterface::advanceAnimations()) needs to be called. See
 @ref UserInterfaceState for interface-wide state.
 @see @ref AnimatorStates, @ref AbstractAnimator::state() const
 */
 enum class AnimatorState: UnsignedByte {
     /**
-     * @ref AbstractAnimator::advance() (which is called from
+     * @ref AbstractAnimator::update(), then optionally a corresponding
+     * animator-specific advance function such as
+     * @ref AbstractGenericAnimator::advance(),
+     * @ref AbstractNodeAnimator::advance() or layer-specific
+     * @ref AbstractLayer::advanceAnimations(), and then optionally
+     * @ref AbstractAnimator::clean() (which are all called from
      * @ref AbstractUserInterface::advanceAnimations()) needs to be called to
      * advance active animations. Set implicitly after
      * @ref AbstractAnimator::create(), @relativeref{AbstractAnimator,play()},
      * @relativeref{AbstractAnimator,pause()} and
-     * @relativeref{AbstractAnimator,advance()} that results in at least one
+     * @relativeref{AbstractAnimator,update()} that results in at least one
      * animation being @ref AnimationState::Scheduled,
      * @ref AnimationState::Playing or @ref AnimationState::Paused, is reset
-     * once @relativeref{AbstractAnimator,advance()} results in no animation
+     * once @relativeref{AbstractAnimator,update()} results in no animation
      * being in that state anymore.
      */
     NeedsAdvance = 1 << 0
@@ -151,7 +158,7 @@ CORRADE_ENUMSET_OPERATORS(AnimatorStates)
 enum class AnimationFlag: UnsignedByte {
     /**
      * Keep the animation once it's played. By default a call to
-     * @ref AbstractAnimator::advance() schedules all animations that reached
+     * @ref AbstractAnimator::update() schedules all animations that reached
      * @ref AnimationState::Stopped for removal in a subsequent
      * @ref AbstractAnimator::clean() call. With this flag the animation is
      * kept and is only removable directly with
@@ -201,7 +208,7 @@ enum class AnimationState: UnsignedByte {
      * @ref AbstractAnimator::time(). Can transition to
      * @ref AnimationState::Playing, @ref AnimationState::Paused or
      * @ref AnimationState::Stopped after the next
-     * @ref AbstractAnimator::advance().
+     * @ref AbstractAnimator::update().
      */
     Scheduled,
 
@@ -217,7 +224,7 @@ enum class AnimationState: UnsignedByte {
      * @ref AbstractAnimator::paused() for given animation is greater than
      * current time. Can transition to @ref AnimationState::Paused or
      * @ref AnimationState::Stopped after the next
-     * @ref AbstractAnimator::advance().
+     * @ref AbstractAnimator::update().
      */
     Playing,
 
@@ -233,7 +240,7 @@ enum class AnimationState: UnsignedByte {
      * @ref AbstractAnimator::paused() for given animation is less than or
      * equal to current time. Can transition to @ref AnimationState::Playing or
      * @ref AnimationState::Stopped after the next
-     * @ref AbstractAnimator::advance().
+     * @ref AbstractAnimator::update().
      */
     Paused,
 
@@ -248,7 +255,7 @@ enum class AnimationState: UnsignedByte {
      * where `duration` is @ref AbstractAnimator::duration() for given
      * animation.
      *
-     * Note that @ref AbstractAnimator::advance() automatically schedules
+     * Note that @ref AbstractAnimator::update() automatically schedules
      * stopped animations for removal in a subsequent
      * @ref AbstractAnimator::clean() call unless
      * @ref AnimationFlag::KeepOncePlayed is set.
@@ -330,7 +337,7 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         /**
          * @brief Animator time
          *
-         * Time value last passed to @ref advance(). Initial value is
+         * Time value last passed to @ref update(). Initial value is
          * @cpp 0_nsec @ce.
          * @see @ref AbstractUserInterface::animationTime()
          */
@@ -827,7 +834,7 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * @brief Animation state
          *
          * Expects that @p handle is valid. Calculated based on the value of
-         * @ref time() recorded in last @ref advance(),
+         * @ref time() recorded in last @ref update(),
          * @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const,
          * @ref played(AnimationHandle) const,
@@ -854,14 +861,14 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * @brief Animation interpolation factor
          *
          * Expects that @p handle is valid. Calculated based on the value of
-         * @ref time() recorded in last @ref advance(),
+         * @ref time() recorded in last @ref update(),
          * @ref duration(AnimationHandle) const,
          * @ref repeatCount(AnimationHandle) const,
          * @ref played(AnimationHandle) const,
          * @ref paused(AnimationHandle) const and
          * @ref stopped(AnimationHandle) const for a particular animation. The
          * returned value is always in the @f$ [0, 1] @f$ range and matches
-         * what would be returned from @ref advance() for given animation at
+         * what would be returned from @ref update() for given animation at
          * @ref time(). For @ref AnimationState::Scheduled always returns
          * @cpp 0.0f @ce, for @ref AnimationState::Stopped @cpp 1.0f @ce.
          * @see @ref state(AnimationHandle) const
@@ -1022,22 +1029,18 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         void cleanData(const Containers::StridedArrayView1D<const UnsignedShort>& dataHandleGenerations);
 
         /**
-         * @brief Advance the animations
-         * @param[in]  time     Time to which to advance
+         * @brief Update the internal state and calculate factors for animation advance
+         * @param[in]  time     Time to which to calculate the factors
          * @param[out] active   Where to put a mask of active animations
          * @param[out] factors  Where to put animation interpolation factors
          * @param[out] remove   Where to put a mask of animations to remove
          * @return Whether any bits are set in @p active and in @p remove
          *
-         * Used internally from subclass implementations such as
-         * @ref AbstractGenericAnimator::advance(), which is then called from
-         * @ref AbstractUserInterface::advanceAnimations(). Exposed just for
-         * testing purposes, there should be no need to call this function
-         * directly and doing so may cause internal @ref AbstractUserInterface
-         * state update to misbehave. Expects that @p time is greater or equal
-         * to @ref time(), size of @p active, @p factors and @p remove is
-         * the same as @ref capacity(), and that the @p active and @p remove
-         * views are zero-initialized.
+         * Used by @ref AbstractUserInterface::advanceAnimations() and by
+         * @ref AbstractLayer::advanceAnimations() implementations to generate
+         * data to subsequently pass to animator implementations. Expects that
+         * @p time is greater or equal to @ref time() and size of @p active,
+         * @p factors and @p remove is the same as @ref capacity().
          *
          * The @p active view gets filled with a mask of animations that are
          * @ref AnimationState::Playing at @p time or which changed to
@@ -1049,11 +1052,12 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * @ref AnimationFlag::KeepOncePlayed. See documentation of
          * @ref AnimationState values for how the state transition behaves.
          *
-         * If the first return value is @cpp true @ce, the @p active and
-         * @p factors views are meant to be passed to subclass implementations
-         * such as @ref AbstractGenericAnimator::doAdvance(), if the second
-         * return value is @cpp true @ce, the @p remove view is then meant to
-         * be passed to @ref clean().
+         * If the first return value is @cpp true @ce, the @p active,
+         * @p factors and @p remove views are meant to be passed to subclass
+         * implementations such as @ref AbstractGenericAnimator::advance() or
+         * @ref AbstractNodeAnimator::advance(), if the second return value is
+         * @cpp true @ce, the @p remove view is then meant to be passed to
+         * @ref clean().
          *
          * Calling this function updates @ref time() and sets
          * @ref AnimatorState::NeedsAdvance if and only if there are
@@ -1064,7 +1068,7 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * flags are set.
          * @see @ref state(AnimationHandle) const
          */
-        Containers::Pair<bool, bool> advance(Nanoseconds time, Containers::MutableBitArrayView active, const Containers::StridedArrayView1D<Float>& factors, Containers::MutableBitArrayView remove);
+        Containers::Pair<bool, bool> update(Nanoseconds time, Containers::MutableBitArrayView active, const Containers::StridedArrayView1D<Float>& factors, Containers::MutableBitArrayView remove);
 
     protected:
         /**
@@ -1335,12 +1339,14 @@ class MAGNUM_WHEE_EXPORT AbstractGenericAnimator: public AbstractAnimator {
          * Used internally from @ref AbstractUserInterface::advanceAnimations().
          * Exposed just for testing purposes, there should be no need to call
          * this function directly and doing so may cause internal
-         * @ref AbstractUserInterface state update to misbehave. Delegates into
-         * @ref AbstractAnimator::advance() and subsequently to
-         * @ref doAdvance() and @ref clean(), see their documentation for more
-         * information.
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that size of @p active and @p factors matches
+         * @ref capacity(), it's assumed that their contents were filled by
+         * @ref update() before. Delegates to @ref doAdvance(), see its
+         * documentation for more information.
          */
-        void advance(Nanoseconds time);
+        void advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors);
 
     protected:
         /**
@@ -1490,14 +1496,16 @@ class MAGNUM_WHEE_EXPORT AbstractNodeAnimator: public AbstractAnimator {
          * Used internally from @ref AbstractUserInterface::advanceAnimations().
          * Exposed just for testing purposes, there should be no need to call
          * this function directly and doing so may cause internal
-         * @ref AbstractUserInterface state update to misbehave. Expects that
-         * @p nodeOffsets, @p nodeSizes, @p nodeFlags and @p nodesRemove have
-         * the same size, the views should be large enough to contain any valid
-         * node ID. Delegates into @ref AbstractAnimator::advance() and
-         * subsequently to @ref doAdvance() and @ref clean(), see their
-         * documentation for more information.
+         * @ref AbstractUserInterface state update to misbehave.
+         *
+         * Expects that size of @p active and @p factors matches
+         * @ref capacity(), it's assumed that their contents were filled by
+         * @ref update() before. Expects that @p nodeOffsets, @p nodeSizes,
+         * @p nodeFlags and @p nodesRemove have the same size, the views should
+         * be large enough to contain any valid node ID. Delegates to
+         * @ref doAdvance(), see its documentation for more information.
          */
-        NodeAnimations advance(Nanoseconds time, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
+        NodeAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const Containers::StridedArrayView1D<Vector2>& nodeSizes, const Containers::StridedArrayView1D<NodeFlags>& nodeFlags, Containers::MutableBitArrayView nodesRemove);
 
     protected:
         /**
@@ -1571,7 +1579,7 @@ class MAGNUM_WHEE_EXPORT AbstractNodeAnimator: public AbstractAnimator {
 
 @see @ref AbstractUserInterface::setDataAnimatorInstance(),
     @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const,
-    @ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractDataAnimator>&)
+    @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&)
 */
 class MAGNUM_WHEE_EXPORT AbstractDataAnimator: public AbstractAnimator {
     public:
@@ -1613,7 +1621,7 @@ class MAGNUM_WHEE_EXPORT AbstractDataAnimator: public AbstractAnimator {
 
 @see @ref AbstractUserInterface::setStyleAnimatorInstance(),
     @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const,
-    @ref AbstractLayer::advanceAnimations(Nanoseconds, const Containers::Iterable<AbstractStyleAnimator>&)
+    @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&)
 */
 class MAGNUM_WHEE_EXPORT AbstractStyleAnimator: public AbstractAnimator {
     public:
