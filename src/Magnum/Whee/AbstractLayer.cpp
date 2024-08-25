@@ -461,6 +461,10 @@ Containers::StridedArrayView1D<const NodeHandle> AbstractLayer::nodes() const {
     return stridedArrayView(_state->data).slice(&Data::used).slice(&Data::Used::node);
 }
 
+Containers::StridedArrayView1D<const UnsignedShort> AbstractLayer::generations() const {
+    return stridedArrayView(_state->data).slice(&Data::used).slice(&Data::Used::generation);
+}
+
 void AbstractLayer::setSize(const Vector2& size, const Vector2i& framebufferSize) {
     CORRADE_ASSERT(features() & LayerFeature::Draw,
         "Whee::AbstractLayer::setSize():" << LayerFeature::Draw << "not supported", );

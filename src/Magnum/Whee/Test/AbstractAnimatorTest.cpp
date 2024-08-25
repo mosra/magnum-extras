@@ -1149,6 +1149,16 @@ void AbstractAnimatorTest::createRemoveHandleRecycle() {
         CORRADE_COMPARE(animator.node(fifth), NodeHandle::Null);
     if(data.features & AnimatorFeature::DataAttachment)
         CORRADE_COMPARE(animator.data(fifth), DataHandle::Null);
+
+    /* The generation counter view should reflect the number of how much was
+       given ID recycled */
+    CORRADE_COMPARE_AS(animator.generations(), Containers::arrayView<UnsignedShort>({
+        2,
+        1,
+        3,
+        2,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractAnimatorTest::createRemoveHandleDisable() {

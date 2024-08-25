@@ -300,6 +300,10 @@ Containers::StridedArrayView1D<const NodeHandle> AbstractLayouter::nodes() const
     return stridedArrayView(_state->layouts).slice(&Layout::used).slice(&Layout::Used::node);
 }
 
+Containers::StridedArrayView1D<const UnsignedShort> AbstractLayouter::generations() const {
+    return stridedArrayView(_state->layouts).slice(&Layout::used).slice(&Layout::Used::generation);
+}
+
 void AbstractLayouter::setSize(const Vector2& size) {
     CORRADE_ASSERT(size.product(),
         "Whee::AbstractLayouter::setSize(): expected a non-zero size, got" << size, );

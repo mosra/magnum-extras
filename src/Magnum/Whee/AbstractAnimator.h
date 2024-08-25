@@ -978,6 +978,16 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
         void stop(AnimatorDataHandle handle, Nanoseconds time);
 
         /**
+         * @brief Generation counters for all data
+         *
+         * Meant to be used by code that only gets data IDs or masks but needs
+         * the full @ref AnimationHandle / @ref AnimatorDataHandle. Size of the
+         * returned view is the same as @ref capacity().
+         * @see @ref handle()
+         */
+        Containers::StridedArrayView1D<const UnsignedShort> generations() const;
+
+        /**
          * @brief Clean no longer valid animations
          *
          * Used internally from subclass implementations such as

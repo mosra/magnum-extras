@@ -712,6 +712,16 @@ void AbstractLayerTest::createRemoveHandleRecycle() {
     CORRADE_COMPARE(layer.capacity(), 5);
     CORRADE_COMPARE(layer.usedCount(), 5);
     CORRADE_COMPARE(layer.node(fifth), NodeHandle::Null);
+
+    /* The generation counter view should reflect the number of how much was
+       given ID recycled */
+    CORRADE_COMPARE_AS(layer.generations(), Containers::arrayView<UnsignedShort>({
+        2,
+        1,
+        3,
+        2,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractLayerTest::createRemoveHandleDisable() {

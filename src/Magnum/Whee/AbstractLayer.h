@@ -506,6 +506,16 @@ class MAGNUM_WHEE_EXPORT AbstractLayer {
         Containers::StridedArrayView1D<const NodeHandle> nodes() const;
 
         /**
+         * @brief Generation counters for all data
+         *
+         * Meant to be used by code that only gets data IDs or masks but needs
+         * the full @ref DataHandle / @ref LayerDataHandle. Size of the
+         * returned view is the same as @ref capacity().
+         * @see @ref handle()
+         */
+        Containers::StridedArrayView1D<const UnsignedShort> generations() const;
+
+        /**
          * @brief Set user interface size
          *
          * Used internally from @ref AbstractUserInterface::setSize() and

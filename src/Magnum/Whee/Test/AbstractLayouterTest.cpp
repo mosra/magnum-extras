@@ -327,6 +327,16 @@ void AbstractLayouterTest::addRemoveHandleRecycle() {
     CORRADE_COMPARE(layouter.capacity(), 5);
     CORRADE_COMPARE(layouter.usedCount(), 5);
     CORRADE_COMPARE(layouter.node(fifth), nodeHandle(0x5, 0xded));
+
+    /* The generation counter view should reflect the number of how much was
+       given ID recycled */
+    CORRADE_COMPARE_AS(layouter.generations(), Containers::arrayView<UnsignedShort>({
+        2,
+        1,
+        3,
+        2,
+        1
+    }), TestSuite::Compare::Container);
 }
 
 void AbstractLayouterTest::addRemoveHandleDisable() {
