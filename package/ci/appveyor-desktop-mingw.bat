@@ -73,17 +73,21 @@ ctest -V -E GLTest --timeout 60 || exit /b
 rem Test install, after running the tests as for them it shouldn't be needed
 cmake --build . --target install || exit /b
 
-rem Coverage upload
-set PATH=C:\msys64\usr\bin;%PATH%
-bash %APPVEYOR_BUILD_FOLDER%\package\ci\appveyor-lcov.sh || exit /b
+rem Coverage upload. Disabled as of 2024-08-25 because it reports a ton of
+rem bogus uncovered lines containing just }. Tried to use newer lcov, newer
+rem mingw, grcov instead of lcov, it was either producing the same crap or was
+rem not working at all. Fuck it, then.
+
+rem set PATH=C:\msys64\usr\bin;%PATH%
+rem bash %APPVEYOR_BUILD_FOLDER%\package\ci\appveyor-lcov.sh || exit /b
 rem The damn new codecov binary is apparently unable to work with
 rem subdirectories on Windows. Nobody cares.
 rem https://github.com/codecov/codecov-action/issues/862
-cd %APPVEYOR_BUILD_FOLDER%
-move build\coverage.info coverage.info || exit /b
+rem cd %APPVEYOR_BUILD_FOLDER%
+rem move build\coverage.info coverage.info || exit /b
 rem Official docs say "not needed for public repos", in reality not using the
 rem token is "extremely flakey". What's best is that if the upload fails, the
 rem damn thing exits with a success error code, and nobody cares:
 rem https://github.com/codecov/codecov-circleci-orb/issues/139
 rem https://community.codecov.com/t/commit-sha-does-not-match-circle-build/4266
-codecov -f ./coverage.info -t 14b2f31d-6cee-4ad3-9391-f60d4ba85612 -X gcov || exit /b
+rem codecov -f ./coverage.info -t 14b2f31d-6cee-4ad3-9391-f60d4ba85612 -X gcov || exit /b
