@@ -1801,9 +1801,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Converts the @p event to a @ref PointerEvent and delegates to
          * @ref pointerPressEvent(), see its documentation and
          * @ref Whee-AbstractUserInterface-application for more information.
+         * The @p args allow passing optional extra arguments to a particular
+         * event converter.
          */
-        template<class Event, class = decltype(Implementation::PointerEventConverter<Event>::press(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool pointerPressEvent(Event& event) {
-            return Implementation::PointerEventConverter<Event>::press(*this, event);
+        template<class Event, class ...Args, class = decltype(Implementation::PointerEventConverter<Event>::press(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool pointerPressEvent(Event& event, Args&&... args) {
+            return Implementation::PointerEventConverter<Event>::press(*this, event, Utility::forward<Args>(args)...);
         }
 
         /**
@@ -1858,9 +1860,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Converts the @p event to a @ref PointerEvent and delegates to
          * @ref pointerReleaseEvent(), see its documentation and
          * @ref Whee-AbstractUserInterface-application for more information.
+         * The @p args allow passing optional extra arguments to a particular
+         * event converter.
          */
-        template<class Event, class = decltype(Implementation::PointerEventConverter<Event>::release(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool pointerReleaseEvent(Event& event) {
-            return Implementation::PointerEventConverter<Event>::release(*this, event);
+        template<class Event, class ...Args, class = decltype(Implementation::PointerEventConverter<Event>::release(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool pointerReleaseEvent(Event& event, Args&&... args) {
+            return Implementation::PointerEventConverter<Event>::release(*this, event, Utility::forward<Args>(args)...);
         }
 
         /**
@@ -1940,9 +1944,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Converts the @p event to a @ref PointerMoveEvent and delegates to
          * @ref pointerMoveEvent(), see its documentation and
          * @ref Whee-AbstractUserInterface-application for more information.
+         * The @p args allow passing optional extra arguments to a particular
+         * event converter.
          */
-        template<class Event, class = decltype(Implementation::PointerMoveEventConverter<Event>::move(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool pointerMoveEvent(Event& event) {
-            return Implementation::PointerMoveEventConverter<Event>::move(*this, event);
+        template<class Event, class ...Args, class = decltype(Implementation::PointerMoveEventConverter<Event>::move(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool pointerMoveEvent(Event& event, Args&&... args) {
+            return Implementation::PointerMoveEventConverter<Event>::move(*this, event, Utility::forward<Args>(args)...);
         }
 
         /**
@@ -2034,9 +2040,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Converts the @p event to a @ref KeyEvent and delegates to
          * @ref keyPressEvent(), see its documentation and
          * @ref Whee-AbstractUserInterface-application for more information.
+         * The @p args allow passing optional extra arguments to a particular
+         * event converter.
          */
-        template<class Event, class = decltype(Implementation::KeyEventConverter<Event>::press(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool keyPressEvent(Event& event) {
-            return Implementation::KeyEventConverter<Event>::press(*this, event);
+        template<class Event, class ...Args, class = decltype(Implementation::KeyEventConverter<Event>::press(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool keyPressEvent(Event& event, Args&&... args) {
+            return Implementation::KeyEventConverter<Event>::press(*this, event, Utility::forward<Args>(args)...);
         }
 
         /**
@@ -2078,9 +2086,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Converts the @p event to a @ref KeyEvent and delegates to
          * @ref keyReleaseEvent(), see its documentation and
          * @ref Whee-AbstractUserInterface-application for more information.
+         * The @p args allow passing optional extra arguments to a particular
+         * event converter.
          */
-        template<class Event, class = decltype(Implementation::KeyEventConverter<Event>::release(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool keyReleaseEvent(Event& event) {
-            return Implementation::KeyEventConverter<Event>::release(*this, event);
+        template<class Event, class ...Args, class = decltype(Implementation::KeyEventConverter<Event>::release(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool keyReleaseEvent(Event& event, Args&&... args) {
+            return Implementation::KeyEventConverter<Event>::release(*this, event, Utility::forward<Args>(args)...);
         }
 
         /**
@@ -2110,9 +2120,11 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * Converts the @p event to a @ref TextInputEvent and delegates to
          * @ref textInputEvent(), see its documentation and
          * @ref Whee-AbstractUserInterface-application for more information.
+         * The @p args allow passing optional extra arguments to a particular
+         * event converter.
          */
-        template<class Event, class = decltype(Implementation::TextInputEventConverter<Event>::trigger(std::declval<AbstractUserInterface&>(), std::declval<Event&>()))> bool textInputEvent(Event& event) {
-            return Implementation::TextInputEventConverter<Event>::trigger(*this, event);
+        template<class Event, class ...Args, class = decltype(Implementation::TextInputEventConverter<Event>::trigger(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool textInputEvent(Event& event, Args&&... args) {
+            return Implementation::TextInputEventConverter<Event>::trigger(*this, event, Utility::forward<Args>(args)...);
         }
 
         /**
