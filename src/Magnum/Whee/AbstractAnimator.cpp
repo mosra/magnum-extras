@@ -943,6 +943,10 @@ void AbstractAnimator::stopInternal(const UnsignedInt id, const Nanoseconds time
     #endif
 }
 
+Containers::StridedArrayView1D<const UnsignedShort> AbstractAnimator::generations() const {
+    return stridedArrayView(_state->animations).slice(&Animation::used).slice(&Animation::Used::generation);
+}
+
 void AbstractAnimator::clean(const Containers::BitArrayView animationIdsToRemove) {
     #ifndef CORRADE_NO_ASSERT
     State& state = *_state;
