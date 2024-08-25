@@ -18985,36 +18985,70 @@ void AbstractUserInterfaceTest::eventTextInput() {
 
 struct CustomEvent {};
 
+struct Movable {
+    Movable(int a): a{a} {}
+    Movable(const Movable&) = delete;
+    Movable& operator=(const Movable&) = delete;
+    /* With the defaulted moves MSVC 2015 segfaults (!!) when executing the
+       test. LOLOL. */
+    #ifndef CORRADE_MSVC2015_COMPATIBILITY
+    Movable(Movable&&) = default;
+    Movable& operator=(Movable&&) = default;
+    #else
+    Movable(Movable&& other): time{other.time} {}
+    Movable& operator=(Movable&& other) {
+        Corrade::Utility::swap(time, other.time);
+        return *this;
+    }
+    #endif
+
+    int a;
+};
+
+struct Immovable {
+    Immovable() = default;
+    Immovable(const Immovable&) = delete;
+    Immovable(Immovable&&) = delete;
+    Immovable& operator=(const Immovable&) = delete;
+    Immovable& operator=(Immovable&&) = delete;
+};
+
 namespace Magnum { namespace Whee { namespace Implementation {
 
 template<> struct PointerEventConverter<CustomEvent> {
-    static bool press(AbstractUserInterface& ui, CustomEvent&) {
+    static bool press(AbstractUserInterface& ui, CustomEvent&, Immovable&, Movable a) {
+        CORRADE_COMPARE(a.a, 13);
         PointerEvent e{Pointer::MouseLeft};
         return ui.pointerPressEvent(Vector2{}, e);
     }
-    static bool release(AbstractUserInterface& ui, CustomEvent&) {
+    static bool release(AbstractUserInterface& ui, CustomEvent&, Immovable&, Movable a) {
+        CORRADE_COMPARE(a.a, 14);
         PointerEvent e{Pointer::MouseLeft};
         return ui.pointerReleaseEvent(Vector2{}, e);
     }
 };
 template<> struct PointerMoveEventConverter<CustomEvent> {
-    static bool move(AbstractUserInterface& ui, CustomEvent&) {
+    static bool move(AbstractUserInterface& ui, CustomEvent&, Immovable&, Movable a) {
+        CORRADE_COMPARE(a.a, 15);
         PointerMoveEvent e{{}, {}};
         return ui.pointerMoveEvent(Vector2{}, e);
     }
 };
 template<> struct KeyEventConverter<CustomEvent> {
-    static bool press(AbstractUserInterface& ui, CustomEvent&) {
+    static bool press(AbstractUserInterface& ui, CustomEvent&, Immovable&, Movable a) {
+        CORRADE_COMPARE(a.a, 16);
         KeyEvent e{Key::C, {}};
         return ui.keyPressEvent(e);
     }
-    static bool release(AbstractUserInterface& ui, CustomEvent&) {
+    static bool release(AbstractUserInterface& ui, CustomEvent&, Immovable&, Movable a) {
+        CORRADE_COMPARE(a.a, 17);
         KeyEvent e{Key::E, {}};
         return ui.keyReleaseEvent(e);
     }
 };
 template<> struct TextInputEventConverter<CustomEvent> {
-    static bool trigger(AbstractUserInterface& ui, CustomEvent&) {
+    static bool trigger(AbstractUserInterface& ui, CustomEvent&, Immovable&, Movable a) {
+        CORRADE_COMPARE(a.a, 18);
         TextInputEvent e{"e"};
         return ui.textInputEvent(e);
     }
@@ -19085,13 +19119,14 @@ void AbstractUserInterfaceTest::eventConvertExternal() {
     FocusEvent focusEvent;
     CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
 
+    Immovable a;
     CustomEvent e;
-    CORRADE_VERIFY(ui.pointerPressEvent(e));
-    CORRADE_VERIFY(ui.pointerReleaseEvent(e));
-    CORRADE_VERIFY(ui.pointerMoveEvent(e));
-    CORRADE_VERIFY(ui.keyPressEvent(e));
-    CORRADE_VERIFY(ui.keyReleaseEvent(e));
-    CORRADE_VERIFY(ui.textInputEvent(e));
+    CORRADE_VERIFY(ui.pointerPressEvent(e, a, Movable{13}));
+    CORRADE_VERIFY(ui.pointerReleaseEvent(e, a, Movable{14}));
+    CORRADE_VERIFY(ui.pointerMoveEvent(e, a, Movable{15}));
+    CORRADE_VERIFY(ui.keyPressEvent(e, a, Movable{16}));
+    CORRADE_VERIFY(ui.keyReleaseEvent(e, a, Movable{17}));
+    CORRADE_VERIFY(ui.textInputEvent(e, a, Movable{18}));
     CORRADE_COMPARE_AS(layer.eventCalls, Containers::arrayView<Int>({
         PointerPress,
         PointerRelease,
