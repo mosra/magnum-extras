@@ -31,6 +31,7 @@
  */
 
 #include <Corrade/Containers/StringView.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Whee/Whee.h"
@@ -92,12 +93,19 @@ class PointerEvent {
     public:
         /**
          * @brief Constructor
+         * @param time      Time at which the event happened
          * @param type      Pointer type that got pressed or released
          *
-         * The position, capture and hover properties are set from
-         * @ref AbstractUserInterface event handler internals.
+         * The @p time may get used for UI animations. A default-constructed
+         * value causes an animation play time to be in the past, thus
+         * immediately transitioning to a stopped state. The position, capture
+         * and hover properties are set from @ref AbstractUserInterface event
+         * handler internals.
          */
-        explicit PointerEvent(Pointer type): _type{type} {}
+        explicit PointerEvent(Nanoseconds time, Pointer type): _time{time}, _type{type} {}
+
+        /** @brief Time at which the event happened */
+        Nanoseconds time() const { return _time; }
 
         /** @brief Pointer type that got pressed or released */
         Pointer type() const { return _type; }
@@ -187,6 +195,7 @@ class PointerEvent {
     private:
         friend AbstractUserInterface;
 
+        Nanoseconds _time;
         Vector2 _position;
         Pointer _type;
         bool _accepted = false;
@@ -208,14 +217,18 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
     public:
         /**
          * @brief Constructor
+         * @param time      Time at which the event happened
          * @param type      Pointer type that changed in this event or
          *      @ref Containers::NullOpt
          * @param types     Pointer types pressed in this event
          *
-         * The position, capture and hover properties are set from
-         * @ref AbstractUserInterface event handler internals.
+         * The @p time may get used for UI animations. A default-constructed
+         * value causes an animation play time to be in the past, thus
+         * immediately transitioning to a stopped state. The position, capture
+         * and hover properties are set from @ref AbstractUserInterface event
+         * handler internals.
          */
-        explicit PointerMoveEvent(Containers::Optional<Pointer> type, Pointers types);
+        explicit PointerMoveEvent(Nanoseconds time, Containers::Optional<Pointer> type, Pointers types);
 
         /**
          * @brief Constructor
@@ -223,7 +236,10 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
          * Meant to be used for testing purposes. The @p relativePosition gets
          * overwritten in @ref AbstractUserInterface event handler internals.
          */
-        explicit PointerMoveEvent(Containers::Optional<Pointer> type, Pointers types, const Vector2& relativePosition);
+        explicit PointerMoveEvent(Nanoseconds time, Containers::Optional<Pointer> type, Pointers types, const Vector2& relativePosition);
+
+        /** @brief Time at which the event happened */
+        Nanoseconds time() const { return _time; }
 
         /**
          * @brief Pointer type that changed in this event
@@ -342,6 +358,7 @@ class MAGNUM_WHEE_EXPORT PointerMoveEvent {
     private:
         friend AbstractUserInterface;
 
+        Nanoseconds _time;
         Vector2 _position, _relativePosition;
         Pointer _type; /* NullOpt encoded as Pointer{} to avoid an include */
         Pointers _types;
@@ -363,11 +380,18 @@ class FocusEvent {
     public:
         /**
          * @brief Constructor
+         * @param time      Time at which the event happened
          *
-         * The pressed and hover properties are set from
-         * @ref AbstractUserInterface event handler internals.
+         * The @p time may get used for UI animations. A default-constructed
+         * value causes an animation play time to be in the past, thus
+         * immediately transitioning to a stopped state. The pressed and hover
+         * properties are set from @ref AbstractUserInterface event handler
+         * internals.
          */
-        explicit FocusEvent() {}
+        explicit FocusEvent(Nanoseconds time): _time{time} {}
+
+        /** @brief Time at which the event happened */
+        Nanoseconds time() const { return _time; }
 
         /**
          * @brief Whether the event is called on a node that's currently pressed
@@ -409,6 +433,7 @@ class FocusEvent {
     private:
         friend AbstractUserInterface;
 
+        Nanoseconds _time;
         bool _accepted = false;
         bool _pressed = false;
         bool _hovering = false;
@@ -703,13 +728,20 @@ class MAGNUM_WHEE_EXPORT KeyEvent {
     public:
         /**
          * @brief Constructor
+         * @param time          Time at which the event happened
          * @param key           Key that got pressed or released
          * @param modifiers     Active keyboard modifiers
          *
-         * The position, capture and hover properties are set from
-         * @ref AbstractUserInterface event handler internals.
+         * The @p time may get used for UI animations. A default-constructed
+         * value causes an animation play time to be in the past, thus
+         * immediately transitioning to a stopped state. The position, capture
+         * and hover properties are set from @ref AbstractUserInterface event
+         * handler internals.
          */
-        explicit KeyEvent(Key key, Modifiers modifiers): _key{key}, _modifiers{modifiers} {}
+        explicit KeyEvent(Nanoseconds time, Key key, Modifiers modifiers): _time{time}, _key{key}, _modifiers{modifiers} {}
+
+        /** @brief Time at which the event happened */
+        Nanoseconds time() const { return _time; }
 
         /** @brief Key that got pressed or released */
         Key key() const { return _key; }
@@ -784,6 +816,7 @@ class MAGNUM_WHEE_EXPORT KeyEvent {
     private:
         friend AbstractUserInterface;
 
+        Nanoseconds _time;
         /* NullOpt encoded as NaNs to avoid an include */
         Vector2 _position{Constants::nan()};
         Key _key;
@@ -805,12 +838,18 @@ class TextInputEvent {
     public:
         /**
          * @brief Constructor
+         * @param time      Time at which the event happened
          * @param text      Text produced by the event
          *
-         * Expects that @p text is valid for the whole lifetime of the text
-         * input event.
+         * The @p time may get used for UI animations. A default-constructed
+         * value causes an animation play time to be in the past, thus
+         * immediately transitioning to a stopped state. Expects that @p text
+         * is valid for the whole lifetime of the text input event.
          */
-        explicit TextInputEvent(Containers::StringView text): _text{text} {}
+        explicit TextInputEvent(Nanoseconds time, Containers::StringView text): _time{time}, _text{text} {}
+
+        /** @brief Time at which the event happened */
+        Nanoseconds time() const { return _time; }
 
         /** @brief Input text */
         Containers::StringView text() const { return _text; }
@@ -834,6 +873,7 @@ class TextInputEvent {
     private:
         friend AbstractUserInterface;
 
+        Nanoseconds _time;
         Containers::StringView _text;
         bool _accepted = false;
 };
@@ -844,7 +884,8 @@ class TextInputEvent {
 
 Unlike all other events, this event is fired from
 @ref AbstractUserInterface::update() and is without any relation to events
-coming from the application.
+coming from the application. As such it also doesn't carry a timestamp, thus
+visual changes done in response to this event don't animate.
 @see @ref AbstractLayer::visibilityLostEvent()
 */
 class VisibilityLostEvent {

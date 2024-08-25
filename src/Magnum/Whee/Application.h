@@ -77,7 +77,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
     >= 0
     #endif
 >::type> {
-    static bool press(AbstractUserInterface& ui, Event& event) {
+    static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         /** @todo if some other buttons are pressed and this is just one
             released, translate to a move event instead -- requires the
             applications to expose a way to query all currently pressed
@@ -87,7 +87,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         if(pointer == Pointer{})
             return false;
 
-        PointerEvent e{pointer};
+        PointerEvent e{time, pointer};
         if(ui.pointerPressEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;
@@ -96,7 +96,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         return false;
     }
 
-    static bool release(AbstractUserInterface& ui, Event& event) {
+    static bool release(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         /** @todo if some other buttons are pressed and this is just one
             released, translate to a move event instead -- requires the
             applications to expose a way to query all currently pressed
@@ -106,7 +106,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         if(pointer == Pointer{})
             return false;
 
-        PointerEvent e{pointer};
+        PointerEvent e{time, pointer};
         if(ui.pointerReleaseEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;
@@ -125,10 +125,10 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
     >= 0
     #endif
 >::type> {
-    static bool move(AbstractUserInterface& ui, Event& event) {
+    static bool move(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         const Pointers pointers = pointersForButtons<Event>(event.buttons());
 
-        PointerMoveEvent e{{}, pointers};
+        PointerMoveEvent e{time, {}, pointers};
         if(ui.pointerMoveEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;
@@ -333,12 +333,12 @@ template<class Event> struct KeyEventConverter<Event, typename std::enable_if<si
     >= 0
     #endif
 >::type> {
-    static bool press(AbstractUserInterface& ui, Event& event) {
+    static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         const Key key = keyFor<Event>(event.key());
         if(key == Key{})
             return false;
 
-        KeyEvent e{key, modifiersFor<Event>(event.modifiers())};
+        KeyEvent e{time, key, modifiersFor<Event>(event.modifiers())};
         if(ui.keyPressEvent(e)) {
             event.setAccepted();
             return true;
@@ -347,12 +347,12 @@ template<class Event> struct KeyEventConverter<Event, typename std::enable_if<si
         return false;
     }
 
-    static bool release(AbstractUserInterface& ui, Event& event) {
+    static bool release(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         const Key key = keyFor<Event>(event.key());
         if(key == Key{})
             return false;
 
-        KeyEvent e{key, modifiersFor<Event>(event.modifiers())};
+        KeyEvent e{time, key, modifiersFor<Event>(event.modifiers())};
         if(ui.keyReleaseEvent(e)) {
             event.setAccepted();
             return true;
@@ -374,8 +374,8 @@ template<class Event> struct TextInputEventConverter<Event,
     void
     #endif
 > {
-    static bool trigger(AbstractUserInterface& ui, Event& event) {
-        TextInputEvent e{event.text()};
+    static bool trigger(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
+        TextInputEvent e{time, event.text()};
         if(ui.textInputEvent(e)) {
             event.setAccepted();
             return true;

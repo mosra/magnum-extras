@@ -2572,7 +2572,7 @@ void BaseLayerGLTest::eventStyleTransition() {
     MAGNUM_VERIFY_NO_GL_ERROR();
     Image2D before = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
 
-    PointerEvent event{Pointer::MouseLeft};
+    PointerEvent event{{}, Pointer::MouseLeft};
     CORRADE_VERIFY(ui.pointerPressEvent({64.0f, 24.0f}, event));
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 

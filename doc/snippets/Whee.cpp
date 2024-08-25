@@ -84,7 +84,7 @@ void mainWhee() {
 {
 Whee::AbstractUserInterface ui{{100, 100}};
 Whee::NodeHandle node{};
-Whee::FocusEvent event;
+Whee::FocusEvent event{{}};
 /* [AbstractUserInterface-focusEvent-blur-if-not-focusable] */
 if(!ui.focusEvent(node, event))
     ui.focusEvent(Whee::NodeHandle::Null, event);

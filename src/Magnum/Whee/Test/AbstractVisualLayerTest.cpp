@@ -664,7 +664,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
 
     /* Hovering node 2 causes the style to be changed to InactiveOver */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node2);
@@ -682,7 +682,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
 
     /* Pressing on node 2 causes the style to be changed to PressedOver */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentHoveredNode(), node2);
@@ -701,7 +701,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     /* Moving onto node 1 causes the style to be changed to PressedOut. No
        node is hovered due to event capture on node 2. */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 75}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -719,7 +719,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
 
     /* Releasing causes the style to be changed to InactiveOut */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 75}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -739,7 +739,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
 
     /* Focusing causes the style to be changed to FocusedOut */
     {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(ui.focusEvent(node2, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -757,7 +757,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     /* Pressing on node 2 causes the style to be changed to PressedOut, as it
        has a priority over focus */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -775,7 +775,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     /* Hovering on node 2 while being pressed & focused makes PressedOver win
        again over FocusedOver */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentHoveredNode(), node2);
@@ -792,7 +792,7 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
 
     /* Releasing causes the style to be changed to FocusedOver */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50, 25}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node2);
@@ -1205,7 +1205,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     /* Press, release, over, hovered press, hovered release, out should all do
        nothing by default */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1213,7 +1213,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1221,7 +1221,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -1229,7 +1229,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -1237,7 +1237,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -1245,7 +1245,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({5.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1259,7 +1259,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
     {
         ui.addNodeFlags(node, NodeFlag::Focusable);
 
-        FocusEvent focusEvent;
+        FocusEvent focusEvent{{}};
         CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1267,7 +1267,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
-        FocusEvent blurEvent;
+        FocusEvent blurEvent{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, blurEvent));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1288,7 +1288,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1307,7 +1307,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1326,7 +1326,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({1.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -1345,7 +1345,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         nullptr,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -1361,7 +1361,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         nullptr,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -1377,7 +1377,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedOut,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -1402,7 +1402,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(ui.focusEvent(node, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -1421,7 +1421,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1440,7 +1440,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1532,7 +1532,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
        a press without a hover. Which usually happens with taps, for example,
        although it's not restricted to a particular Pointer type. */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1557,7 +1557,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Release on the green node. Again, the node isn't registered as hovered,
        so neither the hover stays. */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1578,7 +1578,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Move on the red node makes it hovered */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({5.0f, 3.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
@@ -1599,7 +1599,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Tap on it makes it hovered & pressed */
     {
-        PointerEvent event{Pointer::Finger};
+        PointerEvent event{{}, Pointer::Finger};
         CORRADE_VERIFY(ui.pointerPressEvent({4.5f, 3.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
@@ -1621,7 +1621,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Move away makes it only pressed, without hover, as implicit capture is
        in effect */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({7.0f, 3.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1642,7 +1642,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Move back makes it hovered & pressed again */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({5.5f, 3.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeRed);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
@@ -1663,7 +1663,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Release makes it only hover again */
     {
-        PointerEvent event{Pointer::Finger};
+        PointerEvent event{{}, Pointer::Finger};
         CORRADE_VERIFY(ui.pointerReleaseEvent({5.0f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeRed);
@@ -1684,7 +1684,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Move away makes it not hovered anymore */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({7.0f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1711,7 +1711,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Focusing the green node makes it focused */
     {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(ui.focusEvent(nodeGreen, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1732,7 +1732,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Moving onto the green node makes it focused & hovered */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
@@ -1754,7 +1754,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Pressing on the green node makes it pressed & hovered, as that has a
        priority over focus */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
@@ -1776,7 +1776,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Moving away from the green node makes it only pressed, again with that
        taking precedence over focus */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({100.0f, 100.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1798,7 +1798,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Moving back to the green node makes it again pressed & hovered, taking
        precedence over focus */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
@@ -1819,7 +1819,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Releasing on the green node makes it focused & hovered */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
@@ -1840,7 +1840,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Blurring the green node makes it just focused */
     {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
@@ -1861,7 +1861,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Focusing the green node makes it focused & hovered again */
     {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(ui.focusEvent(nodeGreen, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
@@ -1882,7 +1882,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Moving away from the green node makes it only focused */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1904,7 +1904,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Pressing on the green node makes it pressed, as that has again a
        priority over focus */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeGreen);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1925,7 +1925,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Releasing on the green node makes it again focused */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1946,7 +1946,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Blurring the green node makes it inactive again */
     {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1968,7 +1968,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Move on and away from the blue is accepted but makes no change to it,
        thus no update is needed */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 6.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeBlue);
@@ -1977,7 +1977,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({2.5f, 8.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -1990,13 +1990,13 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Press and release on the white is accepted but makes no change to it,
        thus no update is needed */
     {
-        PointerEvent event{Pointer::Pen};
+        PointerEvent event{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerPressEvent({5.0f, 5.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeWhite);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        PointerEvent event{Pointer::Pen};
+        PointerEvent event{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerReleaseEvent({5.5f, 4.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
@@ -2006,13 +2006,13 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Press and release on the green node again, but with a right click. Such
        event isn't even accepted and should cause no change either. */
     {
-        PointerEvent event{Pointer::MouseRight};
+        PointerEvent event{{}, Pointer::MouseRight};
         CORRADE_VERIFY(!ui.pointerPressEvent({2.0f, 3.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        PointerEvent event{Pointer::MouseRight};
+        PointerEvent event{{}, Pointer::MouseRight};
         CORRADE_VERIFY(!ui.pointerReleaseEvent({1.5f, 2.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataGreen), StyleIndex::Green);
@@ -2022,13 +2022,13 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Focus and blur on the red node is accepted but makes no changes to it,
        thus no update is needed */
     {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(ui.focusEvent(nodeRed, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeRed);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        FocusEvent event;
+        FocusEvent event{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
@@ -2085,7 +2085,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     auto testPressRelease = [&]{
         {
-            PointerEvent event{Pointer::MouseLeft};
+            PointerEvent event{{}, Pointer::MouseLeft};
             CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
             CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenPressed);
             CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
@@ -2097,7 +2097,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
         }
 
         {
-            PointerEvent event{Pointer::MouseLeft};
+            PointerEvent event{{}, Pointer::MouseLeft};
             CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
             CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
             CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
@@ -2114,7 +2114,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Moving onto the node should do nothing */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
@@ -2126,7 +2126,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Moving away should do nothing again */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
@@ -2138,7 +2138,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     auto testFocusBlur = [&]{
         {
-            FocusEvent event;
+            FocusEvent event{{}};
             CORRADE_VERIFY(ui.focusEvent(node, event));
             CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::GreenFocused);
             CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
@@ -2148,7 +2148,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
         {
-            FocusEvent event;
+            FocusEvent event{{}};
             CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
             CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
             CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
@@ -2163,7 +2163,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Moving onto the node should do nothing */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
@@ -2175,7 +2175,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
 
     /* Moving away should do nothing again */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(layer.style<StyleIndex>(layerData), StyleIndex::Green);
@@ -2392,7 +2392,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
 
     /* Move onto the node is capture-independent */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -2400,7 +2400,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
 
     /* Press will enable the capture, maybe */
     } {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), data.disableCapture ? NodeHandle::Null : node);
@@ -2409,7 +2409,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
 
     /* Move away will only preserve the press if capture is set */
     } {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_COMPARE(ui.pointerMoveEvent({7.0f, 2.0f}, event), !data.disableCapture);
         CORRADE_COMPARE(ui.currentPressedNode(), data.disableCapture ? NodeHandle::Null : node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -2418,7 +2418,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoCapture() {
 
     /* Move back will only preserve the press if capture is set */
     } {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), data.disableCapture ? NodeHandle::Null : node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -2474,9 +2474,9 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
 
     /* Press on the green node, hover on the red, focus on the blue */
     {
-        PointerMoveEvent moveEvent{{}, {}};
-        PointerEvent pressEvent{Pointer::MouseLeft};
-        FocusEvent focusEvent;
+        PointerMoveEvent moveEvent{{}, {}, {}};
+        PointerEvent pressEvent{{}, Pointer::MouseLeft};
+        FocusEvent focusEvent{{}};
         CORRADE_VERIFY(ui.pointerMoveEvent({5.0f, 3.0f}, moveEvent));
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, pressEvent));
         CORRADE_VERIFY(ui.focusEvent(nodeBlue, focusEvent));
@@ -2532,8 +2532,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
 
     /* Both press & hover on the green node */
     {
-        PointerMoveEvent moveEvent{{}, {}};
-        PointerEvent pressEvent{Pointer::MouseLeft};
+        PointerMoveEvent moveEvent{{}, {}, {}};
+        PointerEvent pressEvent{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 3.0f}, moveEvent));
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, pressEvent));
 
@@ -2579,8 +2579,8 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeBecomesHiddenDisabledNoEve
 
     /* Focus & hover on the green node but then marking it as disabled */
     {
-        PointerMoveEvent moveEvent{{}, {}};
-        FocusEvent focusEvent;
+        PointerMoveEvent moveEvent{{}, {}, {}};
+        FocusEvent focusEvent{{}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 3.0f}, moveEvent));
         CORRADE_VERIFY(ui.focusEvent(nodeGreen, focusEvent));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeGreen);
@@ -2633,14 +2633,14 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeNoLongerFocusable() {
     DataHandle nodeData = layer.create(data.style, node);
 
     if(data.hovered) {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 1.0f}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
     }
 
     /* Doing a press on a non-focusable node so it doesn't imply a focus */
     if(data.pressed) {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({1.0f, 2.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
@@ -2650,7 +2650,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNodeNoLongerFocusable() {
     {
         ui.addNodeFlags(node, NodeFlag::Focusable);
 
-        FocusEvent focusEvent;
+        FocusEvent focusEvent{{}};
         CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
     }
@@ -2721,7 +2721,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
 
         std::ostringstream out;
         Error redirectError{&out};
@@ -2741,9 +2741,9 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerMoveEvent moveEvent{{}, {}};
+        PointerMoveEvent moveEvent{{}, {}, {}};
         ui.pointerMoveEvent({1.5f, 2.0f}, moveEvent);
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
 
         std::ostringstream out;
         Error redirectError{&out};
@@ -2761,7 +2761,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
 
         std::ostringstream out;
         Error redirectError{&out};
@@ -2779,7 +2779,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
 
         std::ostringstream out;
         Error redirectError{&out};
@@ -2797,7 +2797,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
 
         std::ostringstream out;
         Error redirectError{&out};
@@ -2815,7 +2815,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        FocusEvent event;
+        FocusEvent event{{}};
 
         std::ostringstream out;
         Error redirectError{&out};
@@ -2835,9 +2835,9 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionToPressedOver,
         styleIndexTransitionToDisabledDoNotCall>();
     {
-        FocusEvent event1;
+        FocusEvent event1{{}};
         ui.focusEvent(node, event1);
-        FocusEvent event2;
+        FocusEvent event2{{}};
 
         std::ostringstream out;
         Error redirectError{&out};
@@ -2913,7 +2913,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
     /* toPressedOut transition */
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -2924,10 +2924,10 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
     /* toPressedOver transition in the press event. Doing a move before so the
        hovered node is properly registered. */
     } {
-        PointerMoveEvent moveEvent{{}, {}};
+        PointerMoveEvent moveEvent{{}, {}, {}};
         ui.pointerMoveEvent({1.5f, 2.0f}, moveEvent);
 
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         ui.pointerPressEvent({2.0f, 2.0f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -2937,7 +2937,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
     /* toInactiveOver transition */
     } {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{{}, Pointer::MouseLeft};
         ui.pointerReleaseEvent({1.5f, 2.5f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -2947,7 +2947,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
     /* toInactiveOut transition in the leave event */
     } {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         ui.pointerMoveEvent({8.5f, 2.0f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -2957,7 +2957,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
     /* toInactiveOver transition in the enter event */
     } {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         ui.pointerMoveEvent({1.5f, 2.0f}, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -2967,7 +2967,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
     /* toFocused transition in the focus event */
     } {
-        FocusEvent event;
+        FocusEvent event{{}};
         ui.focusEvent(nodeFocusable, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -2977,7 +2977,7 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
     /* toInactive transition in the blur event */
     } {
-        FocusEvent event;
+        FocusEvent event{{}};
         ui.focusEvent(NodeHandle::Null, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -2987,10 +2987,10 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
     /* toInactiveOver transition in doUpdate(), from a focused hovered node */
     } {
-        PointerMoveEvent moveEvent{{}, {}};
+        PointerMoveEvent moveEvent{{}, {}, {}};
         ui.pointerMoveEvent({3.5f, 4.0f}, moveEvent);
 
-        FocusEvent event;
+        FocusEvent event{{}};
         ui.focusEvent(nodeFocusable, event);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable);

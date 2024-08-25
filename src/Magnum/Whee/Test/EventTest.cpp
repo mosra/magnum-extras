@@ -56,6 +56,7 @@ struct EventTest: TestSuite::Tester {
 };
 
 using namespace Containers::Literals;
+using namespace Math::Literals;
 
 EventTest::EventTest() {
     addTests({&EventTest::debugPointer,
@@ -109,7 +110,8 @@ void EventTest::debugModifiers() {
 }
 
 void EventTest::pointer() {
-    PointerEvent event{Pointer::MouseMiddle};
+    PointerEvent event{1234567_nsec, Pointer::MouseMiddle};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_COMPARE(event.type(), Pointer::MouseMiddle);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
@@ -128,7 +130,8 @@ void EventTest::pointer() {
 }
 
 void EventTest::pointerMove() {
-    PointerMoveEvent event{Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger};
+    PointerMoveEvent event{1234567_nsec, Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_COMPARE(event.type(), Pointer::MouseRight);
     CORRADE_COMPARE(event.types(), Pointer::MouseLeft|Pointer::Finger);
     CORRADE_COMPARE(event.position(), Vector2{});
@@ -149,7 +152,8 @@ void EventTest::pointerMove() {
 }
 
 void EventTest::pointerMoveRelativePosition() {
-    PointerMoveEvent event{Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger, {3.0f, -6.5f}};
+    PointerMoveEvent event{1234567_nsec, Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger, {3.0f, -6.5f}};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_COMPARE(event.type(), Pointer::MouseRight);
     CORRADE_COMPARE(event.types(), Pointer::MouseLeft|Pointer::Finger);
     CORRADE_COMPARE(event.position(), Vector2{});
@@ -161,7 +165,8 @@ void EventTest::pointerMoveRelativePosition() {
 }
 
 void EventTest::pointerMoveNoPointer() {
-    PointerMoveEvent event{{}, Pointer::MouseLeft|Pointer::Finger};
+    PointerMoveEvent event{1234567_nsec, {}, Pointer::MouseLeft|Pointer::Finger};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_COMPARE(event.type(), Containers::NullOpt);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
@@ -172,7 +177,8 @@ void EventTest::pointerMoveNoPointer() {
 }
 
 void EventTest::pointerMoveNoPointerRelativePosition() {
-    PointerMoveEvent event{{}, Pointer::MouseLeft|Pointer::Finger, {3.0f, -6.5f}};
+    PointerMoveEvent event{1234567_nsec, {}, Pointer::MouseLeft|Pointer::Finger, {3.0f, -6.5f}};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_COMPARE(event.type(), Containers::NullOpt);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
@@ -183,7 +189,8 @@ void EventTest::pointerMoveNoPointerRelativePosition() {
 }
 
 void EventTest::focus() {
-    FocusEvent event;
+    FocusEvent event{1234567_nsec};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_VERIFY(!event.isPressed());
     CORRADE_VERIFY(!event.isHovering());
     CORRADE_VERIFY(!event.isAccepted());
@@ -196,7 +203,8 @@ void EventTest::focus() {
 }
 
 void EventTest::key() {
-    KeyEvent event{Key::Delete, Modifier::Ctrl|Modifier::Alt};
+    KeyEvent event{1234567_nsec, Key::Delete, Modifier::Ctrl|Modifier::Alt};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
     CORRADE_COMPARE(event.key(), Key::Delete);
     CORRADE_COMPARE(event.modifiers(), Modifier::Ctrl|Modifier::Alt);
     CORRADE_COMPARE(event.position(), Containers::NullOpt);
@@ -214,8 +222,10 @@ void EventTest::key() {
 
 void EventTest::textInput() {
     /* The input string view isn't copied anywhere */
-    TextInputEvent event1{"hello!"_s.exceptSuffix(1)};
-    TextInputEvent event2{"hello"};
+    TextInputEvent event1{1234567_nsec, "hello!"_s.exceptSuffix(1)};
+    TextInputEvent event2{1234567_nsec, "hello"};
+    CORRADE_COMPARE(event1.time(), 1234567_nsec);
+    CORRADE_COMPARE(event2.time(), 1234567_nsec);
     CORRADE_COMPARE(event1.text(), "hello");
     CORRADE_COMPARE(event2.text(), "hello");
     CORRADE_COMPARE(event1.text().flags(), Containers::StringViewFlag::Global);

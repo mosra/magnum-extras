@@ -261,6 +261,12 @@ Example usage:
 
 @snippet Whee-sdl2.cpp AbstractUserInterface-application-events
 
+Currently, none of the application classes expose event timestamps and thus
+@ref PointerEvent::time() and the corresponding field in all other events is
+default-constructed. If timestamps are needed, for example for animations, they
+can be supplied as a second @ref Nanoseconds argument when calling
+@ref pointerPressEvent(Event&, Args&&... args) and others.
+
 @section Whee-AbstractUserInterface-dpi DPI awareness
 
 There are three separate concepts for DPI-aware UI rendering:

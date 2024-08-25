@@ -3118,31 +3118,37 @@ void AbstractLayerTest::pointerEvent() {
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
+            CORRADE_COMPARE(event.time(), 123_nsec);
             CORRADE_COMPARE(event.type(), Pointer::MouseLeft);
             called *= 2;
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 2);
+            CORRADE_COMPARE(event.time(), 1234_nsec);
             CORRADE_COMPARE(event.type(), Pointer::MouseRight);
             called *= 3;
         }
         void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 3);
+            CORRADE_COMPARE(event.time(), 12345_nsec);
             CORRADE_COMPARE(event.type(), Pointer::Pen);
             called *= 5;
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 4);
+            CORRADE_COMPARE(event.time(), 123456_nsec);
             CORRADE_COMPARE(event.type(), Pointer::Finger);
             called *= 7;
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 5);
+            CORRADE_COMPARE(event.time(), 1234567_nsec);
             CORRADE_COMPARE(event.type(), Pointer::Finger);
             called *= 11;
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 6);
+            CORRADE_COMPARE(event.time(), 12345678_nsec);
             CORRADE_COMPARE(event.type(), Pointer::Finger);
             called *= 13;
         }
@@ -3161,22 +3167,22 @@ void AbstractLayerTest::pointerEvent() {
     layer.create();
     layer.create();
     {
-        PointerEvent event{Pointer::MouseLeft};
+        PointerEvent event{123_nsec, Pointer::MouseLeft};
         layer.pointerPressEvent(1, event);
     } {
-        PointerEvent event{Pointer::MouseRight};
+        PointerEvent event{1234_nsec, Pointer::MouseRight};
         layer.pointerReleaseEvent(2, event);
     } {
-        PointerEvent event{Pointer::Pen};
+        PointerEvent event{12345_nsec, Pointer::Pen};
         layer.pointerTapOrClickEvent(3, event);
     } {
-        PointerMoveEvent event{Pointer::Finger, {}};
+        PointerMoveEvent event{123456_nsec, Pointer::Finger, {}};
         layer.pointerMoveEvent(4, event);
     } {
-        PointerMoveEvent event{Pointer::Finger, {}};
+        PointerMoveEvent event{1234567_nsec, Pointer::Finger, {}};
         layer.pointerEnterEvent(5, event);
     } {
-        PointerMoveEvent event{Pointer::Finger, {}};
+        PointerMoveEvent event{12345678_nsec, Pointer::Finger, {}};
         layer.pointerLeaveEvent(6, event);
     }
     CORRADE_COMPARE(layer.called, 2*3*5*7*11*13);
@@ -3193,8 +3199,8 @@ void AbstractLayerTest::pointerEventNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    PointerEvent event{Pointer::MouseMiddle};
-    PointerMoveEvent moveEvent{{}, {}};
+    PointerEvent event{{}, Pointer::MouseMiddle};
+    PointerMoveEvent moveEvent{{}, {}, {}};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerTapOrClickEvent(0, event);
@@ -3223,8 +3229,8 @@ void AbstractLayerTest::pointerEventNotImplemented() {
 
     layer.create();
 
-    PointerEvent event{Pointer::MouseMiddle};
-    PointerMoveEvent moveEvent{{}, {}};
+    PointerEvent event{{}, Pointer::MouseMiddle};
+    PointerMoveEvent moveEvent{{}, {}, {}};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerTapOrClickEvent(0, event);
@@ -3253,8 +3259,8 @@ void AbstractLayerTest::pointerEventOutOfRange() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    PointerEvent event{Pointer::MouseMiddle};
-    PointerMoveEvent moveEvent{{}, {}};
+    PointerEvent event{{}, Pointer::MouseMiddle};
+    PointerMoveEvent moveEvent{{}, {}, {}};
     layer.pointerPressEvent(2, event);
     layer.pointerReleaseEvent(2, event);
     layer.pointerTapOrClickEvent(2, event);
@@ -3287,9 +3293,9 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    PointerEvent event{Pointer::MouseMiddle};
+    PointerEvent event{{}, Pointer::MouseMiddle};
     event.setAccepted();
-    PointerMoveEvent moveEvent{{}, {}};
+    PointerMoveEvent moveEvent{{}, {}, {}};
     moveEvent.setAccepted();
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
@@ -3315,12 +3321,14 @@ void AbstractLayerTest::focusBlurEvent() {
             return LayerFeature::Event;
         }
 
-        void doFocusEvent(UnsignedInt dataId, FocusEvent&) override {
+        void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
+            CORRADE_COMPARE(event.time(), 123_nsec);
             called *= 2;
         }
-        void doBlurEvent(UnsignedInt dataId, FocusEvent&) override {
+        void doBlurEvent(UnsignedInt dataId, FocusEvent& event) override {
             CORRADE_COMPARE(dataId, 2);
+            CORRADE_COMPARE(event.time(), 1234_nsec);
             called *= 3;
         }
 
@@ -3334,10 +3342,10 @@ void AbstractLayerTest::focusBlurEvent() {
     layer.create();
     layer.create();
     {
-        FocusEvent event;
+        FocusEvent event{123_nsec};
         layer.focusEvent(1, event);
     } {
-        FocusEvent event;
+        FocusEvent event{1234_nsec};
         layer.blurEvent(2, event);
     }
     CORRADE_COMPARE(layer.called, 2*3);
@@ -3354,7 +3362,7 @@ void AbstractLayerTest::focusBlurEventNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    FocusEvent event;
+    FocusEvent event{{}};
     layer.focusEvent(0, event);
     layer.blurEvent(0, event);
     CORRADE_COMPARE(out.str(),
@@ -3374,7 +3382,7 @@ void AbstractLayerTest::focusBlurEventNotImplemented() {
 
     layer.create();
 
-    FocusEvent event;
+    FocusEvent event{{}};
     layer.focusEvent(0, event);
     layer.blurEvent(0, event);
 
@@ -3399,7 +3407,7 @@ void AbstractLayerTest::focusBlurEventOutOfRange() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    FocusEvent event;
+    FocusEvent event{{}};
     layer.focusEvent(2, event);
     layer.blurEvent(2, event);
     CORRADE_COMPARE(out.str(),
@@ -3423,7 +3431,7 @@ void AbstractLayerTest::focusBlurEventAlreadyAccepted() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    FocusEvent event;
+    FocusEvent event{{}};
     event.setAccepted();
     layer.focusEvent(0, event);
     layer.blurEvent(0, event);
@@ -3443,11 +3451,13 @@ void AbstractLayerTest::keyEvent() {
 
         void doKeyPressEvent(UnsignedInt dataId, KeyEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
+            CORRADE_COMPARE(event.time(), 1234_nsec);
             CORRADE_COMPARE(event.key(), Key::Comma);
             called *= 2;
         }
         void doKeyReleaseEvent(UnsignedInt dataId, KeyEvent& event) override {
             CORRADE_COMPARE(dataId, 2);
+            CORRADE_COMPARE(event.time(), 123_nsec);
             CORRADE_COMPARE(event.key(), Key::Delete);
             CORRADE_COMPARE(event.modifiers(), Modifier::Ctrl|Modifier::Alt);
             called *= 3;
@@ -3463,10 +3473,10 @@ void AbstractLayerTest::keyEvent() {
     layer.create();
     layer.create();
     {
-        KeyEvent event{Key::Comma, {}};
+        KeyEvent event{1234_nsec, Key::Comma, {}};
         layer.keyPressEvent(1, event);
     } {
-        KeyEvent event{Key::Delete, Modifier::Ctrl|Modifier::Alt};
+        KeyEvent event{123_nsec, Key::Delete, Modifier::Ctrl|Modifier::Alt};
         layer.keyReleaseEvent(2, event);
     }
     CORRADE_COMPARE(layer.called, 2*3);
@@ -3483,7 +3493,7 @@ void AbstractLayerTest::keyEventNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    KeyEvent event{Key::C, {}};
+    KeyEvent event{{}, Key::C, {}};
     layer.keyPressEvent(0, event);
     layer.keyReleaseEvent(0, event);
     CORRADE_COMPARE(out.str(),
@@ -3503,7 +3513,7 @@ void AbstractLayerTest::keyEventNotImplemented() {
 
     layer.create();
 
-    KeyEvent event{Key::NumDivide, {}};
+    KeyEvent event{{}, Key::NumDivide, {}};
     layer.keyPressEvent(0, event);
     layer.keyReleaseEvent(0, event);
 
@@ -3528,7 +3538,7 @@ void AbstractLayerTest::keyEventOutOfRange() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    KeyEvent event{Key::Backquote, {}};
+    KeyEvent event{{}, Key::Backquote, {}};
     layer.keyPressEvent(2, event);
     layer.keyReleaseEvent(2, event);
     CORRADE_COMPARE(out.str(),
@@ -3552,7 +3562,7 @@ void AbstractLayerTest::keyEventAlreadyAccepted() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    KeyEvent event{Key::Space, {}};
+    KeyEvent event{{}, Key::Space, {}};
     event.setAccepted();
     layer.keyPressEvent(0, event);
     layer.keyReleaseEvent(0, event);
@@ -3572,6 +3582,7 @@ void AbstractLayerTest::textInputEvent() {
 
         void doTextInputEvent(UnsignedInt dataId, TextInputEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
+            CORRADE_COMPARE(event.time(), 123_nsec);
             CORRADE_COMPARE(event.text(), "hello");
             CORRADE_COMPARE(event.text().flags(), Containers::StringViewFlag::Global);
             called *= 2;
@@ -3587,7 +3598,7 @@ void AbstractLayerTest::textInputEvent() {
     layer.create();
     {
         /* To verify the string view doesn't get copied anywhere on the way */
-        TextInputEvent event{"hello!"_s.exceptSuffix(1)};
+        TextInputEvent event{123_nsec, "hello!"_s.exceptSuffix(1)};
         layer.textInputEvent(1, event);
     }
     CORRADE_COMPARE(layer.called, 2);
@@ -3604,7 +3615,7 @@ void AbstractLayerTest::textInputEventNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    TextInputEvent event{"oh"};
+    TextInputEvent event{{}, "oh"};
     layer.textInputEvent(0, event);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::textInputEvent(): feature not supported\n");
@@ -3622,7 +3633,7 @@ void AbstractLayerTest::textInputEventNotImplemented() {
 
     layer.create();
 
-    TextInputEvent event{"hey"};
+    TextInputEvent event{{}, "hey"};
     layer.textInputEvent(0, event);
 
     /* Shouldn't crash or anything */
@@ -3646,7 +3657,7 @@ void AbstractLayerTest::textInputEventOutOfRange() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    TextInputEvent event{"ooh"};
+    TextInputEvent event{{}, "ooh"};
     layer.textInputEvent(2, event);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractLayer::textInputEvent(): index 2 out of range for 2 data\n");
@@ -3668,7 +3679,7 @@ void AbstractLayerTest::textInputEventAlreadyAccepted() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    TextInputEvent event{"welp"};
+    TextInputEvent event{{}, "welp"};
     event.setAccepted();
     layer.textInputEvent(0, event);
     CORRADE_COMPARE(out.str(),

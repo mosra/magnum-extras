@@ -9940,20 +9940,20 @@ void TextLayerTest::keyTextEvent() {
 
     /* Hover the node */
     {
-        PointerMoveEvent event{{}, {}};
+        PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 50}, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
 
     /* Nothing should happen if not focused even if the node is under cursor */
     } {
-        KeyEvent right{Key::Right, {}};
-        KeyEvent left{Key::Left, {}};
-        KeyEvent backspace{Key::Backspace, {}};
-        KeyEvent delete_{Key::Delete, {}};
-        KeyEvent home{Key::Home, {}};
-        KeyEvent end{Key::End, {}};
-        TextInputEvent input{"hello"};
+        KeyEvent right{{}, Key::Right, {}};
+        KeyEvent left{{}, Key::Left, {}};
+        KeyEvent backspace{{}, Key::Backspace, {}};
+        KeyEvent delete_{{}, Key::Delete, {}};
+        KeyEvent home{{}, Key::Home, {}};
+        KeyEvent end{{}, Key::End, {}};
+        TextInputEvent input{{}, "hello"};
         CORRADE_VERIFY(!ui.keyPressEvent(right));
         CORRADE_VERIFY(!ui.keyPressEvent(left));
         CORRADE_VERIFY(!ui.keyPressEvent(backspace));
@@ -9967,8 +9967,8 @@ void TextLayerTest::keyTextEvent() {
 
     /* Move pointer away, focus the node instead */
     } {
-        PointerMoveEvent move{{}, {}};
-        FocusEvent focus;
+        PointerMoveEvent move{{}, {}, {}};
+        FocusEvent focus{{}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({1000, 1000}, move));
         CORRADE_VERIFY(ui.focusEvent(node, focus));
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
@@ -9980,7 +9980,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Left / right arrow */
     } {
-        KeyEvent event{Key::Left, {}};
+        KeyEvent event{{}, Key::Left, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(2u, 2u));
@@ -9990,7 +9990,7 @@ void TextLayerTest::keyTextEvent() {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        KeyEvent event{Key::Right, {}};
+        KeyEvent event{{}, Key::Right, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(3u, 3u));
@@ -10003,7 +10003,7 @@ void TextLayerTest::keyTextEvent() {
     /* Shift home / right / end / left, ordered like this so I don't need to
        specially craft cursor positions for each */
     } {
-        KeyEvent event{Key::Home, Modifier::Shift};
+        KeyEvent event{{}, Key::Home, Modifier::Shift};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 3u));
@@ -10013,7 +10013,7 @@ void TextLayerTest::keyTextEvent() {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        KeyEvent event{Key::Right, Modifier::Shift};
+        KeyEvent event{{}, Key::Right, Modifier::Shift};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(1u, 3u));
@@ -10023,7 +10023,7 @@ void TextLayerTest::keyTextEvent() {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        KeyEvent event{Key::End, Modifier::Shift};
+        KeyEvent event{{}, Key::End, Modifier::Shift};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 3u));
@@ -10033,7 +10033,7 @@ void TextLayerTest::keyTextEvent() {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        KeyEvent event{Key::Left, Modifier::Shift};
+        KeyEvent event{{}, Key::Left, Modifier::Shift};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(4u, 3u));
@@ -10045,7 +10045,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Home / end, resetting the selection again */
     } {
-        KeyEvent event{Key::Home, {}};
+        KeyEvent event{{}, Key::Home, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(0u, 0u));
@@ -10055,7 +10055,7 @@ void TextLayerTest::keyTextEvent() {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        KeyEvent event{Key::End, {}};
+        KeyEvent event{{}, Key::End, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "hello");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(5u, 5u));
@@ -10071,7 +10071,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Backspace / delete */
     {
-        KeyEvent event{Key::Backspace, {}};
+        KeyEvent event{{}, Key::Backspace, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "helo");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(2u, 2u));
@@ -10081,7 +10081,7 @@ void TextLayerTest::keyTextEvent() {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
-        KeyEvent event{Key::Delete, {}};
+        KeyEvent event{{}, Key::Delete, {}};
         CORRADE_VERIFY(ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "heo");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(2u, 2u));
@@ -10093,7 +10093,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Text input */
     } {
-        TextInputEvent event{"avenly may"};
+        TextInputEvent event{{}, "avenly may"};
         CORRADE_VERIFY(ui.textInputEvent(event));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
@@ -10105,12 +10105,12 @@ void TextLayerTest::keyTextEvent() {
 
     /* Nothing should happen with other modifiers set */
     } {
-        KeyEvent right{Key::Right, Modifier::Ctrl};
-        KeyEvent left{Key::Left, Modifier::Ctrl};
-        KeyEvent backspace{Key::Backspace, Modifier::Ctrl};
-        KeyEvent delete_{Key::Delete, Modifier::Ctrl};
-        KeyEvent home{Key::Home, Modifier::Ctrl};
-        KeyEvent end{Key::End, Modifier::Ctrl};
+        KeyEvent right{{}, Key::Right, Modifier::Ctrl};
+        KeyEvent left{{}, Key::Left, Modifier::Ctrl};
+        KeyEvent backspace{{}, Key::Backspace, Modifier::Ctrl};
+        KeyEvent delete_{{}, Key::Delete, Modifier::Ctrl};
+        KeyEvent home{{}, Key::Home, Modifier::Ctrl};
+        KeyEvent end{{}, Key::End, Modifier::Ctrl};
         CORRADE_VERIFY(!ui.keyPressEvent(right));
         CORRADE_VERIFY(!ui.keyPressEvent(left));
         CORRADE_VERIFY(!ui.keyPressEvent(backspace));
@@ -10123,8 +10123,8 @@ void TextLayerTest::keyTextEvent() {
 
     /* Nothing should happen for other keys */
     } {
-        KeyEvent a{Key::A, {}};
-        KeyEvent aShift{Key::A, Modifier::Shift};
+        KeyEvent a{{}, Key::A, {}};
+        KeyEvent aShift{{}, Key::A, Modifier::Shift};
         CORRADE_VERIFY(!ui.keyPressEvent(a));
         CORRADE_VERIFY(!ui.keyPressEvent(aShift));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
@@ -10133,12 +10133,12 @@ void TextLayerTest::keyTextEvent() {
 
     /* Nothing should happen for a key release */
     } {
-        KeyEvent right{Key::Right, Modifier::Ctrl};
-        KeyEvent left{Key::Left, Modifier::Ctrl};
-        KeyEvent backspace{Key::Backspace, Modifier::Ctrl};
-        KeyEvent delete_{Key::Delete, Modifier::Ctrl};
-        KeyEvent home{Key::Home, Modifier::Ctrl};
-        KeyEvent end{Key::End, Modifier::Ctrl};
+        KeyEvent right{{}, Key::Right, Modifier::Ctrl};
+        KeyEvent left{{}, Key::Left, Modifier::Ctrl};
+        KeyEvent backspace{{}, Key::Backspace, Modifier::Ctrl};
+        KeyEvent delete_{{}, Key::Delete, Modifier::Ctrl};
+        KeyEvent home{{}, Key::Home, Modifier::Ctrl};
+        KeyEvent end{{}, Key::End, Modifier::Ctrl};
         CORRADE_VERIFY(!ui.keyReleaseEvent(right));
         CORRADE_VERIFY(!ui.keyReleaseEvent(left));
         CORRADE_VERIFY(!ui.keyReleaseEvent(backspace));
@@ -10151,7 +10151,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Nothing happens with a focus lost again */
     } {
-        FocusEvent blur;
+        FocusEvent blur{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, blur));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -10160,7 +10160,7 @@ void TextLayerTest::keyTextEvent() {
         ui.update();
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
-        KeyEvent event{Key::Left, {}};
+        KeyEvent event{{}, Key::Left, {}};
         CORRADE_VERIFY(!ui.keyPressEvent(event));
         CORRADE_COMPARE(layer.text(text), "heavenly mayo");
         CORRADE_COMPARE(layer.cursor(text), Containers::pair(12u, 12u));
