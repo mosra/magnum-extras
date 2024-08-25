@@ -3636,7 +3636,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
         /* If the node to be focused is different from the currently focused
            one, call a blur event on the original, if there's any. */
         if(nodeToFocus != state.currentFocusedNode && state.currentFocusedNode != NodeHandle::Null) {
-            FocusEvent blurEvent;
+            FocusEvent blurEvent{event.time()};
             callFocusEventOnNode<&AbstractLayer::blurEvent>(nodeHandleId(state.currentFocusedNode), blurEvent);
         }
 
@@ -3644,7 +3644,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
            even if the node is already focused. If it gets accepted, update the
            currently focused node, otherwise set it to null. */
         if(nodeToFocus != NodeHandle::Null) {
-            FocusEvent focusEvent;
+            FocusEvent focusEvent{event.time()};
             if(callFocusEventOnNode<&AbstractLayer::focusEvent>(nodeHandleId(nodeToFocus), focusEvent))
                 state.currentFocusedNode = nodeToFocus;
             else {

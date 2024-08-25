@@ -642,7 +642,7 @@ void ApplicationTest::keyPressEvent() {
 
     /* Have to first submit an event that actually makes a node hovered, to
        have something to call the event on */
-    PointerMoveEvent moveEvent{{}, {}};
+    PointerMoveEvent moveEvent{{}, {}, {}};
     CORRADE_VERIFY(ui.pointerMoveEvent({1560.0f, 23.0f}, moveEvent));
     CORRADE_VERIFY(ui.currentHoveredNode() != NodeHandle::Null);
 
@@ -718,7 +718,7 @@ void ApplicationTest::keyReleaseEvent() {
 
     /* Have to first submit an event that actually makes a node hovered, to
        have something to call the event on */
-    PointerMoveEvent moveEvent{{}, {}};
+    PointerMoveEvent moveEvent{{}, {}, {}};
     CORRADE_VERIFY(ui.pointerMoveEvent({15.0f, 2360.0f}, moveEvent));
     CORRADE_VERIFY(ui.currentHoveredNode() != NodeHandle::Null);
 
@@ -791,7 +791,7 @@ void ApplicationTest::textInputEvent() {
 
     /* Have to first submit an event that actually makes a node focused, to
        have something to call the event on */
-    FocusEvent focusEvent;
+    FocusEvent focusEvent{{}};
     CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
     CORRADE_COMPARE(ui.currentFocusedNode(), node);
 
