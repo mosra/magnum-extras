@@ -61,6 +61,7 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
     void setStyleRendererAlreadyPresent();
     void setStyleNoFeatures();
     void setStyleFeaturesNotSupported();
+    void setStyleNoSizeSet();
     void setStyleBaseLayerAlreadyPresent();
     void setStyleTextLayerAlreadyPresent();
     void setStyleTextLayerArrayGlyphCache();
@@ -190,6 +191,7 @@ UserInterfaceGLTest::UserInterfaceGLTest() {
     addTests({&UserInterfaceGLTest::setStyleRendererAlreadyPresent,
               &UserInterfaceGLTest::setStyleNoFeatures,
               &UserInterfaceGLTest::setStyleFeaturesNotSupported,
+              &UserInterfaceGLTest::setStyleNoSizeSet,
               &UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent,
               &UserInterfaceGLTest::setStyleTextLayerAlreadyPresent,
               &UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache,
@@ -492,6 +494,7 @@ void UserInterfaceGLTest::setStyle() {
     } style{applyCalled, glyphCacheSizeQueriedFeatures, actualFeatures, data.supportedFeatures, data.succeed};
 
     UserInterfaceGL ui{NoCreate};
+    ui.setSize({200, 300});
     CORRADE_VERIFY(!ui.hasRenderer());
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
 
@@ -539,6 +542,7 @@ void UserInterfaceGLTest::setStyle() {
 
 void UserInterfaceGLTest::setStyleRendererAlreadyPresent() {
     UserInterfaceGL ui{NoCreate};
+    ui.setSize({200, 300});
     CORRADE_VERIFY(!ui.hasRenderer());
 
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -559,6 +563,7 @@ void UserInterfaceGLTest::setStyleNoFeatures() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     UserInterfaceGL ui{NoCreate};
+    ui.setSize({200, 300});
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
@@ -581,6 +586,7 @@ void UserInterfaceGLTest::setStyleFeaturesNotSupported() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     UserInterfaceGL ui{NoCreate};
+    ui.setSize({200, 300});
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
@@ -599,10 +605,34 @@ void UserInterfaceGLTest::setStyleFeaturesNotSupported() {
     CORRADE_COMPARE(out.str(), "Whee::UserInterfaceGL::trySetStyle(): Whee::StyleFeature::BaseLayer|Whee::StyleFeature::TextLayer not a subset of supported Whee::StyleFeature::BaseLayer\n");
 }
 
+void UserInterfaceGLTest::setStyleNoSizeSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::EventLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            return false;
+        }
+    } style;
+
+    UserInterfaceGL ui{NoCreate};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.setStyle(style);
+    ui.trySetStyle(style);
+    CORRADE_COMPARE(out.str(),
+        "Whee::UserInterfaceGL::trySetStyle(): user interface size wasn't set\n"
+        "Whee::UserInterfaceGL::trySetStyle(): user interface size wasn't set\n");
+}
+
 void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}};
     UserInterfaceGL ui{NoCreate};
-    ui.setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), shared));
+    ui.setSize({200, 300})
+      .setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), shared));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
@@ -624,7 +654,8 @@ void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
 void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
     TextLayerGL::Shared shared{TextLayer::Shared::Configuration{1}};
     UserInterfaceGL ui{NoCreate};
-    ui.setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), shared));
+    ui.setSize({200, 300})
+      .setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), shared));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
@@ -645,6 +676,7 @@ void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
 
 void UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache() {
     UserInterfaceGL ui{NoCreate};
+    ui.setSize({200, 300});
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
@@ -667,6 +699,7 @@ void UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache() {
 
 void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied() {
     UserInterfaceGL ui{NoCreate};
+    ui.setSize({200, 300});
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayerImages; }
@@ -687,7 +720,8 @@ void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied()
 
 void UserInterfaceGLTest::setStyleEventLayerAlreadyPresent() {
     UserInterfaceGL ui{NoCreate};
-    ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    ui.setSize({200, 300})
+      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::EventLayer; }

@@ -73,6 +73,7 @@ struct AbstractStyleTest: TestSuite::Tester {
     void setTextLayerGlyphCacheSize();
 
     void apply();
+    void applyNoSizeSet();
     void applyNoFeatures();
     void applyFeaturesNotSupported();
     void applyBaseLayerNotPresent();
@@ -149,6 +150,7 @@ AbstractStyleTest::AbstractStyleTest() {
 
     addTests({&AbstractStyleTest::applyNoFeatures,
               &AbstractStyleTest::applyFeaturesNotSupported,
+              &AbstractStyleTest::applyNoSizeSet,
               &AbstractStyleTest::applyBaseLayerNotPresent,
               &AbstractStyleTest::applyBaseLayerDifferentStyleCount,
               &AbstractStyleTest::applyTextLayerNotPresent,
@@ -723,6 +725,7 @@ void AbstractStyleTest::apply() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    ui.setSize({200, 300});
     if(data.baseLayerPresent)
         ui.setBaseLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBase));
     if(data.textLayerPresent)
@@ -815,6 +818,30 @@ void AbstractStyleTest::applyFeaturesNotSupported() {
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): Whee::StyleFeature::BaseLayer|Whee::StyleFeature::TextLayer not a subset of supported Whee::StyleFeature::TextLayer\n");
 }
 
+void AbstractStyleTest::applyNoSizeSet() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::TextLayer, nullptr, nullptr);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): user interface size wasn't set\n");
+}
+
 void AbstractStyleTest::applyBaseLayerNotPresent() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -832,8 +859,9 @@ void AbstractStyleTest::applyBaseLayerNotPresent() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    ui.setSize({200, 300})
+      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared))
+      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
@@ -870,7 +898,8 @@ void AbstractStyleTest::applyBaseLayerDifferentStyleCount() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    ui.setSize({200, 300})
+      .setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
     struct Style: AbstractStyle {
         Style(UnsignedInt styleUniformCount, UnsignedInt styleCount, UnsignedInt dynamicStyleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount}, _dynamicStyleCount{dynamicStyleCount} {}
@@ -932,8 +961,9 @@ void AbstractStyleTest::applyTextLayerNotPresent() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
-    ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    ui.setSize({200, 300})
+      .setBaseLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared))
+      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
@@ -982,7 +1012,8 @@ void AbstractStyleTest::applyTextLayerDifferentStyleCount() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    ui.setSize({200, 300})
+      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
     struct Style: AbstractStyle {
         Style(UnsignedInt styleUniformCount, UnsignedInt styleCount, UnsignedInt editingStyleUniformCount, UnsignedInt editingStyleCount, UnsignedInt dynamicStyleCount): _styleUniformCount{styleUniformCount}, _styleCount{styleCount}, _editingStyleUniformCount{editingStyleUniformCount}, _editingStyleCount{editingStyleCount}, _dynamicStyleCount{dynamicStyleCount} {}
@@ -1056,7 +1087,8 @@ void AbstractStyleTest::applyTextLayerNoGlyphCache() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    ui.setSize({200, 300})
+      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
@@ -1103,7 +1135,8 @@ void AbstractStyleTest::applyTextLayerDifferentGlyphCache() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    ui.setSize({200, 300})
+      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
     struct Style: AbstractStyle {
         Style(PixelFormat format, const Vector3i& size, const Vector2i& padding): _format{format}, _size{size}, _padding{padding} {}
@@ -1194,7 +1227,8 @@ void AbstractStyleTest::applyTextLayerNoFontManager() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    ui.setSize({200, 300})
+      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
@@ -1221,6 +1255,7 @@ void AbstractStyleTest::applyTextLayerImagesTextLayerNotPresent() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
+    ui.setSize({200, 300});
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayerImages; }
@@ -1268,7 +1303,8 @@ void AbstractStyleTest::applyTextLayerImagesNoImporterManager() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
+    ui.setSize({200, 300})
+      .setTextLayerInstance(Containers::pointer<Layer>(ui.createLayer(), shared));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayerImages; }
@@ -1316,8 +1352,9 @@ void AbstractStyleTest::applyEventLayerNotPresent() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    ui.setBaseLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBase));
-    ui.setTextLayerInstance(Containers::pointer<LayerText>(ui.createLayer(), sharedText));
+    ui.setSize({200, 300})
+      .setBaseLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBase))
+      .setTextLayerInstance(Containers::pointer<LayerText>(ui.createLayer(), sharedText));
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::EventLayer; }

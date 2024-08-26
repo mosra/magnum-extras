@@ -197,10 +197,12 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
          * apply the style to those layers. If it fails, the program exits, see
          * @ref trySetStyle() for an alternative.
          *
-         * Expects that @p features are a subset of @ref AbstractStyle::features()
-         * of @p style, contain at least one feature and that the user
-         * interface doesn't yet contain any layers corresponding to
-         * @p features as documented in the @ref StyleFeature enum values.
+         * Expects that user interface size is already set, either using the
+         * constructor or by calling @ref setSize(). Expects that @p features
+         * are a subset of @ref AbstractStyle::features() of @p style, contain
+         * at least one feature and that the user interface doesn't yet contain
+         * any layers corresponding to @p features as documented in the
+         * @ref StyleFeature enum values.
          *
          * @m_class{m-note m-warning}
          *
