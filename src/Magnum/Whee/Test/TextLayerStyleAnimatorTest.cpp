@@ -62,8 +62,8 @@ struct TextLayerStyleAnimatorTest: TestSuite::Tester {
     void constructCopy();
     void constructMove();
 
-    void setAnimator();
-    void setAnimatorInvalid();
+    void assignAnimator();
+    void assignAnimatorInvalid();
 
     template<class T> void createRemove();
     void createRemoveHandleRecycle();
@@ -251,8 +251,8 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
               &TextLayerStyleAnimatorTest::constructCopy,
               &TextLayerStyleAnimatorTest::constructMove,
 
-              &TextLayerStyleAnimatorTest::setAnimator,
-              &TextLayerStyleAnimatorTest::setAnimatorInvalid,
+              &TextLayerStyleAnimatorTest::assignAnimator,
+              &TextLayerStyleAnimatorTest::assignAnimatorInvalid,
 
               &TextLayerStyleAnimatorTest::createRemove<UnsignedInt>,
               &TextLayerStyleAnimatorTest::createRemove<Enum>});
@@ -321,7 +321,7 @@ void TextLayerStyleAnimatorTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<TextLayerStyleAnimator>::value);
 }
 
-void TextLayerStyleAnimatorTest::setAnimator() {
+void TextLayerStyleAnimatorTest::assignAnimator() {
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
 
@@ -338,11 +338,11 @@ void TextLayerStyleAnimatorTest::setAnimator() {
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
     CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
 
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
     CORRADE_COMPARE(animator.layer(), layer.handle());
 }
 
-void TextLayerStyleAnimatorTest::setAnimatorInvalid() {
+void TextLayerStyleAnimatorTest::assignAnimatorInvalid() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
     struct LayerShared: TextLayer::Shared {
@@ -361,8 +361,8 @@ void TextLayerStyleAnimatorTest::setAnimatorInvalid() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.setAnimator(animator);
-    CORRADE_COMPARE(out.str(), "Whee::TextLayer::setAnimator(): can't animate a layer with zero dynamic styles\n");
+    layer.assignAnimator(animator);
+    CORRADE_COMPARE(out.str(), "Whee::TextLayer::assignAnimator(): can't animate a layer with zero dynamic styles\n");
 }
 
 struct EmptyShaper: Text::AbstractShaper {
@@ -469,7 +469,7 @@ template<class T> void TextLayerStyleAnimatorTest::createRemove() {
     } layer{layerHandle(0, 1), shared};
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     /* The style used for the actual data shouldn't affect anything */
     DataHandle data1 = layer.create(1, "", {});
@@ -691,7 +691,7 @@ void TextLayerStyleAnimatorTest::createRemoveHandleRecycle() {
     } layer{layerHandle(0, 1), shared};
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     DataHandle layerData = layer.create(1, "", {});
 
@@ -812,13 +812,13 @@ void TextLayerStyleAnimatorTest::createInvalid() {
     TextLayerStyleAnimator animatorNoLayerSet{animatorHandle(0, 1)};
 
     TextLayerStyleAnimator animatorNoLayerStyleSet{animatorHandle(0, 1)};
-    layerNoStyleSet.setAnimator(animatorNoLayerStyleSet);
+    layerNoStyleSet.assignAnimator(animatorNoLayerStyleSet);
 
     TextLayerStyleAnimator animatorNoLayerEditingStyleSet{animatorHandle(0, 1)};
-    layerNoEditingStyleSet.setAnimator(animatorNoLayerEditingStyleSet);
+    layerNoEditingStyleSet.assignAnimator(animatorNoLayerEditingStyleSet);
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -881,7 +881,7 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     } layer{layerHandle(0, 1), shared};
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     AnimationHandle handle = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
 
@@ -1000,7 +1000,7 @@ void TextLayerStyleAnimatorTest::clean() {
     } layer{layerHandle(0, 1), shared};
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     /* Creating animations doesn't allocate dynamic styles just yet, only
        advance() does */
@@ -1181,7 +1181,7 @@ void TextLayerStyleAnimatorTest::advance() {
     DataHandle data4 = layer.create(5, "", {});
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     /* This one allocates a dynamic style, interpolates between uniforms 1 and
        2 with just Uniform set and when stopped sets the data2 style to 1 */
@@ -2130,7 +2130,7 @@ void TextLayerStyleAnimatorTest::advanceProperties() {
     DataHandle layerData = layer.create(1, "", {});
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     AnimationHandle animation = animator.create(2, 0, Animation::Easing::linear, 0_nsec, 20_nsec, layerData);
 
@@ -2305,7 +2305,7 @@ void TextLayerStyleAnimatorTest::advanceNoFreeDynamicStyles() {
     } layer{layerHandle(0, 1), shared};
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     DataHandle data1 = layer.create(2, "", {});
     DataHandle data2 = layer.create(2, "", {});
@@ -2451,7 +2451,7 @@ void TextLayerStyleAnimatorTest::advanceInvalid() {
     } layer{layerHandle(0, 1), shared};
 
     TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.setAnimator(animator);
+    layer.assignAnimator(animator);
 
     DataHandle data = layer.createGlyph(0, 0, {});
     animator.create(0, 1, Animation::Easing::linear, 0_nsec, 1_nsec, data);
@@ -2666,9 +2666,9 @@ void TextLayerStyleAnimatorTest::layerAdvance() {
     TextLayerStyleAnimator animator1{animatorHandle(0, 1)};
     TextLayerStyleAnimator animatorEmpty{animatorHandle(0, 1)};
     TextLayerStyleAnimator animator2{animatorHandle(0, 1)};
-    layer.setAnimator(animator1);
-    layer.setAnimator(animatorEmpty);
-    layer.setAnimator(animator2);
+    layer.assignAnimator(animator1);
+    layer.assignAnimator(animatorEmpty);
+    layer.assignAnimator(animator2);
 
     animator1.create(0, 1, Animation::Easing::linear, 0_nsec, 20_nsec, data2);
     animator2.create(1, 0, Animation::Easing::linear, 13_nsec, 1_nsec, data1);

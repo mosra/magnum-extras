@@ -1040,8 +1040,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref setStyleAnimatorInstance() was called for the same handle yet.
          * The @ref AbstractDataAnimator is expected to advertise
          * @ref AnimatorFeature::DataAttachment and it's expected that
-         * @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const has
-         * already been called with it.
+         * @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const has
+         * already been called for it.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$
@@ -1066,8 +1066,8 @@ class MAGNUM_WHEE_EXPORT AbstractUserInterface {
          * @ref setStyleAnimatorInstance() was called for the same handle yet.
          * The @ref AbstractStyleAnimator is expected to advertise
          * @ref AnimatorFeature::DataAttachment and it's expected that
-         * @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const has
-         * already been called with it.
+         * @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const has
+         * already been called for it.
          *
          * Internally, the instance is inserted into a list partitioned by
          * animator type, which is done with a @f$ \mathcal{O}(n) @f$

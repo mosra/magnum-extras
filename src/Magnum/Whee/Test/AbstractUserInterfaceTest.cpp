@@ -2552,7 +2552,7 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
 
         struct Layer: AbstractLayer {
             using AbstractLayer::AbstractLayer;
-            using AbstractLayer::setAnimator;
+            using AbstractLayer::assignAnimator;
 
             LayerFeatures doFeatures() const override {
                 return LayerFeature::AnimateData|LayerFeature::AnimateStyles;
@@ -2620,8 +2620,8 @@ void AbstractUserInterfaceTest::animatorSetInstance() {
         Containers::Pointer<GenericAnimator> fourthInstance{InPlaceInit, fourth, fourthDestructed};
         Containers::Pointer<DataAnimator> fifthInstance{InPlaceInit, fifth, fifthDestructed};
         Containers::Pointer<StyleAnimator> sixthInstance{InPlaceInit, sixth, sixthDestructed};
-        layer.setAnimator(*fifthInstance);
-        layer.setAnimator(*sixthInstance);
+        layer.assignAnimator(*fifthInstance);
+        layer.assignAnimator(*sixthInstance);
         GenericAnimator* firstInstancePointer = firstInstance.get();
         NodeAnimator* secondInstancePointer = secondInstance.get();
         GenericAnimator* fourthInstancePointer = fourthInstance.get();
@@ -5797,7 +5797,7 @@ void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
     };
     struct LayerAnimatingDataStyles: AbstractLayer {
         using AbstractLayer::AbstractLayer;
-        using AbstractLayer::setAnimator;
+        using AbstractLayer::assignAnimator;
 
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateData|LayerFeature::AnimateStyles;
@@ -5852,9 +5852,9 @@ void AbstractUserInterfaceTest::cleanRecycledLayerWithAnimators() {
     Containers::Pointer<StyleAnimator> instance23{InPlaceInit, ui.createAnimator()};
     instance11->setLayer(layer1);
     instance12->setLayer(layer1);
-    layer2.setAnimator(*instance21);
+    layer2.assignAnimator(*instance21);
     instance22->setLayer(layer2);
-    layer2.setAnimator(*instance23);
+    layer2.assignAnimator(*instance23);
     GenericAnimator& animator11 = ui.setGenericAnimatorInstance(Utility::move(instance11));
     GenericAnimator& animator12 = ui.setGenericAnimatorInstance(Utility::move(instance12));
     DataAnimator& animator21 = ui.setDataAnimatorInstance(Utility::move(instance21));
@@ -6060,11 +6060,11 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     struct LayerAnimatingDataStyles: AbstractLayer {
         explicit LayerAnimatingDataStyles(LayerHandle handle, LayerFeatures features): AbstractLayer{handle}, _features{features} {}
 
-        void setAnimator(DataAnimator& animator) const {
-            AbstractLayer::setAnimator(animator);
+        void assignAnimator(DataAnimator& animator) const {
+            AbstractLayer::assignAnimator(animator);
         }
-        void setAnimator(StyleAnimator& animator) const {
-            AbstractLayer::setAnimator(animator);
+        void assignAnimator(StyleAnimator& animator) const {
+            AbstractLayer::assignAnimator(animator);
         }
 
         LayerFeatures doFeatures() const override {
@@ -6136,8 +6136,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     Containers::Pointer<DataAnimator> animatorLayer3DataNoAdvanceNeededInstance{InPlaceInit, ui.createAnimator(), calls};
     Containers::Pointer<DataAnimator> animatorLayer3DataInstance{InPlaceInit, ui.createAnimator(), calls};
     animatorLayer3DataAttachmentInstance->setLayer(layer3);
-    layer3.setAnimator(*animatorLayer3DataNoAdvanceNeededInstance);
-    layer3.setAnimator(*animatorLayer3DataInstance);
+    layer3.assignAnimator(*animatorLayer3DataNoAdvanceNeededInstance);
+    layer3.assignAnimator(*animatorLayer3DataInstance);
     GenericAnimator& animatorLayer3DataAttachment = ui.setGenericAnimatorInstance(Utility::move(animatorLayer3DataAttachmentInstance));
     DataAnimator& animatorLayer3DataNoAdvanceNeeded = ui.setDataAnimatorInstance(Utility::move(animatorLayer3DataNoAdvanceNeededInstance));
     DataAnimator& animatorLayer3Data = ui.setDataAnimatorInstance(Utility::move(animatorLayer3DataInstance));
@@ -6145,8 +6145,8 @@ void AbstractUserInterfaceTest::advanceAnimations() {
     /* Layer 4 has style animators associated */
     Containers::Pointer<StyleAnimator> animatorLayer4StyleNoAdvanceNeededInstance{InPlaceInit, ui.createAnimator(), calls};
     Containers::Pointer<StyleAnimator> animatorLayer4StyleInstance{InPlaceInit, ui.createAnimator(), calls};
-    layer4.setAnimator(*animatorLayer4StyleNoAdvanceNeededInstance);
-    layer4.setAnimator(*animatorLayer4StyleInstance);
+    layer4.assignAnimator(*animatorLayer4StyleNoAdvanceNeededInstance);
+    layer4.assignAnimator(*animatorLayer4StyleInstance);
     StyleAnimator& animatorLayer4StyleNoAdvanceNeeded = ui.setStyleAnimatorInstance(Utility::move(animatorLayer4StyleNoAdvanceNeededInstance));
     StyleAnimator& animatorLayer4Style = ui.setStyleAnimatorInstance(Utility::move(animatorLayer4StyleInstance));
 
@@ -6676,8 +6676,8 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateData;
         }
-        void setAnimator(Animator& animator) const {
-            AbstractLayer::setAnimator(animator);
+        void assignAnimator(Animator& animator) const {
+            AbstractLayer::assignAnimator(animator);
         }
 
         void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractDataAnimator>& animators) override {
@@ -6696,7 +6696,7 @@ void AbstractUserInterfaceTest::advanceAnimationsData() {
         }
     };
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-    layer.setAnimator(*animatorInstance);
+    layer.assignAnimator(*animatorInstance);
     Animator& animator = ui.setDataAnimatorInstance(Utility::move(animatorInstance));
 
     /* Call to advance(5) advances the first, nothing to clean */
@@ -6812,8 +6812,8 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
         LayerFeatures doFeatures() const override {
             return LayerFeature::AnimateStyles;
         }
-        void setAnimator(Animator& animator) const {
-            AbstractLayer::setAnimator(animator);
+        void assignAnimator(Animator& animator) const {
+            AbstractLayer::assignAnimator(animator);
         }
 
         void doAdvanceAnimations(Nanoseconds time, Containers::MutableBitArrayView activeStorage, const Containers::StridedArrayView1D<Float>& factorStorage, Containers::MutableBitArrayView removeStorage, const Containers::Iterable<AbstractStyleAnimator>& animators) override {
@@ -6832,7 +6832,7 @@ void AbstractUserInterfaceTest::advanceAnimationsStyle() {
         }
     };
     Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
-    layer.setAnimator(*animatorInstance);
+    layer.assignAnimator(*animatorInstance);
     Animator& animator = ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
 
     /* Call to advance(5) advances the first, nothing to clean */
@@ -10508,7 +10508,7 @@ void AbstractUserInterfaceTest::stateAnimations() {
     /* Creating a layer sets no state flags */
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
-        using AbstractLayer::setAnimator;
+        using AbstractLayer::assignAnimator;
         using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override {
@@ -10694,12 +10694,12 @@ void AbstractUserInterfaceTest::stateAnimations() {
         nodeAnimator2 = &ui.setNodeAnimatorInstance(Containers::pointer<NodeAnimator>(ui.createAnimator(), *data.nodeAnimations2));
     if(data.dataAnimations) {
         Containers::Pointer<DataAnimator> instance{InPlaceInit, ui.createAnimator()};
-        layer.setAnimator(*instance);
+        layer.assignAnimator(*instance);
         dataAnimator = &ui.setDataAnimatorInstance(Utility::move(instance));
     }
     if(data.styleAnimations) {
         Containers::Pointer<StyleAnimator> instance{InPlaceInit, ui.createAnimator()};
-        layer.setAnimator(*instance);
+        layer.assignAnimator(*instance);
         styleAnimator = &ui.setStyleAnimatorInstance(Utility::move(instance));
     }
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});

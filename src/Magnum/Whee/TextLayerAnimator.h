@@ -156,7 +156,7 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
          *      indefinitely repeating animation.
          * @param flags         Flags
          *
-         * Expects that @ref TextLayer::setAnimator(TextLayerStyleAnimator&)
+         * Expects that @ref TextLayer::assignAnimator(TextLayerStyleAnimator&)
          * has been already called for this animator, that both @p sourceStyle
          * and @p targetStyle are less than @ref TextLayer::Shared::styleCount()
          * (not @ref TextLayer::Shared::totalStyleCount() --- the style
@@ -588,11 +588,11 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
         TextLayerStyleAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
-        /* Only TextLayer::setAnimator(), but we don't want to include the
+        /* Only TextLayer::assignAnimator(), but we don't want to include the
            whole thing */
         friend TextLayer;
 
-        /* Called by TextLayer::setAnimator() to set the actual instance for
+        /* Called by TextLayer::assignAnimator() to set the actual instance for
            dynamic style allocation and recycling, and for accessing the input
            style data (which is a typeless pointer to not need to include the
            whole TextLayer header). Yeah, it's quite ew. */

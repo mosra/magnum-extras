@@ -326,7 +326,7 @@ void AbstractLayer::remove(const DataHandle handle) {
         "Whee::AbstractLayer::remove(): invalid handle" << handle, );
 
     State& state = *_state;
-    /* Mark the layer as needing a cleanData() call for any associated
+    /* Mark the layer as needing a cleanData() call for any assigned
        animators */
     state.state |= LayerState::NeedsDataClean;
 
@@ -347,7 +347,7 @@ void AbstractLayer::remove(const LayerDataHandle handle) {
         "Whee::AbstractLayer::remove(): invalid handle" << handle, );
 
     State& state = *_state;
-    /* Mark the layer as needing a cleanData() call for any associated
+    /* Mark the layer as needing a cleanData() call for any assigned
        animators */
     state.state |= LayerState::NeedsDataClean;
 
@@ -395,24 +395,24 @@ void AbstractLayer::removeInternal(const UnsignedInt id) {
        clean() below doesn't set any state after calling removeInternal(). */
 }
 
-void AbstractLayer::setAnimator(AbstractDataAnimator& animator) const {
+void AbstractLayer::assignAnimator(AbstractDataAnimator& animator) const {
     CORRADE_ASSERT(features() & LayerFeature::AnimateData,
-        "Whee::AbstractLayer::setAnimator(): data animation not supported", );
+        "Whee::AbstractLayer::assignAnimator(): data animation not supported", );
     CORRADE_ASSERT(animator.features() & AnimatorFeature::DataAttachment,
-        "Whee::AbstractLayer::setAnimator(): data attachment not supported by the animator", );
+        "Whee::AbstractLayer::assignAnimator(): data attachment not supported by the animator", );
     CORRADE_ASSERT(animator.layer() == LayerHandle::Null,
-        "Whee::AbstractLayer::setAnimator(): animator already associated with" << animator.layer(), );
+        "Whee::AbstractLayer::assignAnimator(): animator already assigned to" << animator.layer(), );
 
     animator.setLayerInternal(*this);
 }
 
-void AbstractLayer::setAnimator(AbstractStyleAnimator& animator) const {
+void AbstractLayer::assignAnimator(AbstractStyleAnimator& animator) const {
     CORRADE_ASSERT(features() & LayerFeature::AnimateStyles,
-        "Whee::AbstractLayer::setAnimator(): style animation not supported", );
+        "Whee::AbstractLayer::assignAnimator(): style animation not supported", );
     CORRADE_ASSERT(animator.features() & AnimatorFeature::DataAttachment,
-        "Whee::AbstractLayer::setAnimator(): data attachment not supported by the animator", );
+        "Whee::AbstractLayer::assignAnimator(): data attachment not supported by the animator", );
     CORRADE_ASSERT(animator.layer() == LayerHandle::Null,
-        "Whee::AbstractLayer::setAnimator(): animator already associated with" << animator.layer(), );
+        "Whee::AbstractLayer::assignAnimator(): animator already assigned to" << animator.layer(), );
 
     animator.setLayerInternal(*this);
 }
@@ -518,7 +518,7 @@ void AbstractLayer::cleanData(const Containers::Iterable<AbstractAnimator>& anim
         CORRADE_ASSERT(animator.layer() != LayerHandle::Null,
             "Whee::AbstractLayer::cleanData(): animator has no layer set for data attachment", );
         CORRADE_ASSERT(animator.layer() == handle(),
-            "Whee::AbstractLayer::cleanData(): expected an animator associated with" << handle() << "but got" << animator.layer(), );
+            "Whee::AbstractLayer::cleanData(): expected an animator assigned to" << handle() << "but got" << animator.layer(), );
 
         animator.cleanData(dataGenerations);
     }
@@ -538,7 +538,7 @@ void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::
         CORRADE_ASSERT(animator.layer() != LayerHandle::Null,
             "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment", );
         CORRADE_ASSERT(animator.layer() == handle(),
-            "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with" << handle() << "but got" << animator.layer(), );
+            "Whee::AbstractLayer::advanceAnimations(): expected an animator assigned to" << handle() << "but got" << animator.layer(), );
         maxCapacity = Math::max(animator.capacity(), maxCapacity);
     }
     CORRADE_ASSERT(
@@ -567,7 +567,7 @@ void AbstractLayer::advanceAnimations(const Nanoseconds time, const Containers::
         CORRADE_ASSERT(animator.layer() != LayerHandle::Null,
             "Whee::AbstractLayer::advanceAnimations(): animator has no layer set for data attachment", );
         CORRADE_ASSERT(animator.layer() == handle(),
-            "Whee::AbstractLayer::advanceAnimations(): expected an animator associated with" << handle() << "but got" << animator.layer(), );
+            "Whee::AbstractLayer::advanceAnimations(): expected an animator assigned to" << handle() << "but got" << animator.layer(), );
         maxCapacity = Math::max(animator.capacity(), maxCapacity);
     }
     CORRADE_ASSERT(

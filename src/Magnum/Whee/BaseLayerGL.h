@@ -107,8 +107,8 @@ class MAGNUM_WHEE_EXPORT BaseLayerGL: public BaseLayer {
         BaseLayerGL& setBackgroundBlurPassCount(UnsignedInt count) {
             return static_cast<BaseLayerGL&>(BaseLayer::setBackgroundBlurPassCount(count));
         }
-        BaseLayerGL& setAnimator(BaseLayerStyleAnimator& animator) {
-            return static_cast<BaseLayerGL&>(BaseLayer::setAnimator(animator));
+        BaseLayerGL& assignAnimator(BaseLayerStyleAnimator& animator) {
+            return static_cast<BaseLayerGL&>(BaseLayer::assignAnimator(animator));
         }
         #endif
 

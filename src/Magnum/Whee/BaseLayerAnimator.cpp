@@ -356,7 +356,7 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
 }
 
 void BaseLayerStyleAnimator::setLayerInstance(BaseLayer& instance, const void* sharedState) {
-    /* This is called from BaseLayer::setAnimator(), which should itself
+    /* This is called from BaseLayer::assignAnimator(), which should itself
        prevent the layer from being set more than once */
     CORRADE_INTERNAL_ASSERT(!_state->layer && sharedState);
     _state->layer = &instance;

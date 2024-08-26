@@ -230,11 +230,11 @@ BaseLayer& BaseLayer::setBackgroundBlurPassCount(UnsignedInt count) {
     return *this;
 }
 
-BaseLayer& BaseLayer::setAnimator(BaseLayerStyleAnimator& animator) {
+BaseLayer& BaseLayer::assignAnimator(BaseLayerStyleAnimator& animator) {
     CORRADE_ASSERT(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount,
-        "Whee::BaseLayer::setAnimator(): can't animate a layer with zero dynamic styles", *this);
+        "Whee::BaseLayer::assignAnimator(): can't animate a layer with zero dynamic styles", *this);
 
-    AbstractLayer::setAnimator(animator);
+    AbstractLayer::assignAnimator(animator);
     animator.setLayerInstance(*this, &_state->shared);
     return *this;
 }
