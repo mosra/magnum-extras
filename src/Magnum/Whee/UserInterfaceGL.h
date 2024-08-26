@@ -56,47 +56,16 @@ instance.
 class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
     public:
         /**
-         * @brief Construct without creating the user interface with concrete parameters and setting up a style
+         * @brief Construct without creating the user interface
          *
-         * You're expected to call @ref setSize() afterwards in order to define
-         * scaling of event coordinates, node positions and projection matrices
-         * for drawing; and then either set up builtin layers configured for a
-         * particular style using @ref setStyle() or supply your own
-         * instances with @ref setBaseLayerInstance(),
-         * @ref setTextLayerInstance() and @ref setEventLayerInstance() as
-         * needed.
+         * You're expected to call @ref create() or @ref tryCreate() afterwards
+         * in order to define the UI size and coordinate scaling and set up a
+         * style.
          */
         explicit UserInterfaceGL(NoCreateT);
 
         /**
-         * @brief Construct without setting up a style
-         * @param size              Size of the user interface to which
-         *      everything is positioned
-         * @param windowSize        Size of the window to which all input
-         *      events are related
-         * @param framebufferSize   Size of the window framebuffer. On some
-         *      platforms with HiDPI screens may be different from window size.
-         *
-         * Equivalent to constructing with @ref UserInterfaceGL(NoCreateT)
-         * and then calling @ref setSize(const Vector2&, const Vector2&, const Vector2i&).
-         * You're expected to either set up builtin layers configured for a
-         * particular style using @ref setStyle() or supply your own instances
-         * with @ref setBaseLayerInstance(), @ref setTextLayerInstance() and
-         * @ref setEventLayerInstance() as needed.
-         */
-        explicit UserInterfaceGL(NoCreateT, const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize);
-
-        /**
-         * @brief Construct with an unscaled size without setting up a style
-         *
-         * Delegates to @ref UserInterfaceGL(NoCreateT, const Vector2&, const Vector2&, const Vector2i&)
-         * with all sizes set to @p size. Doing so assumes that the coordinate
-         * system in which events are passed matches framebuffer size.
-         */
-        explicit UserInterfaceGL(NoCreateT, const Vector2i& size);
-
-        /**
-         * @brief Construct and set up a style
+         * @brief Construct
          * @param size              Size of the user interface to which
          *      everything is positioned
          * @param windowSize        Size of the window to which all input
@@ -110,24 +79,81 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
          *      loading
          *
          * Equivalent to constructing with @ref UserInterfaceGL(NoCreateT)
-         * and then calling @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
-         * and @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * and then calling @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information. In
          * particular, if style application fails, the program exits. Use the
-         * @ref UserInterfaceGL(NoCreateT, const Vector2&, const Vector2&, const Vector2i&)
-         * constructor in combination with @ref trySetStyle() for a more
-         * graceful failure handling.
+         * @ref UserInterfaceGL(NoCreateT) constructor in combination with
+         * @ref tryCreate() for a more graceful failure handling.
          */
         explicit UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
-         * @brief Construct with an unscaled size and set up a style
+         * @brief Construct with an unscaled size
          *
          * Delegates to @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          * with all sizes set to @p size. Doing so assumes that the coordinate
          * system in which events are passed matches framebuffer size.
          */
         explicit UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+
+        /**
+         * @brief Create the user interface
+         * @param size              Size of the user interface to which
+         *      everything is positioned
+         * @param windowSize        Size of the window to which all input
+         *      events are related
+         * @param framebufferSize   Size of the window framebuffer. On some
+         *      platforms with HiDPI screens may be different from window size.
+         * @param style             Style instance to use
+         * @param importerManager   Optional plugin manager instance for image
+         *      loading
+         * @param fontManager       Optional plugin manager instance for font
+         *      loading
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that none of @ref create(), @ref tryCreate(),
+         * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
+         * @ref setEventLayerInstance() or @ref setRendererInstance() was
+         * called yet. Equivalent to calling
+         * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
+         * followed by @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         * See documentation of these functions for more information and
+         * alternative ways to create the user interface. If style application
+         * fails during the creation process, the program exits. Use
+         * @ref tryCreate() for a more graceful failure handling.
+         */
+        UserInterfaceGL& create(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+
+        /**
+         * @brief Create the user interface with an unscaled size
+         *
+         * Delegates to @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * with all sizes set to @p size. Doing so assumes that the coordinate
+         * system in which events are passed matches framebuffer size.
+         */
+        UserInterfaceGL& create(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+
+        /**
+         * @brief Try to create the user interface
+         *
+         * Unlike @ref create(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * of exiting, @cpp true @ce otherwise. Equivalent to calling
+         * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
+         * followed by @ref trySetStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         */
+        bool tryCreate(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
+
+        /**
+         * @brief Try to create the user interface with an unscaled size
+         *
+         * Unlike @ref create(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
+         * returns @cpp false @ce if @ref AbstractStyle::apply() failed instead
+         * of exiting, @cpp true @ce otherwise. Equivalent to calling
+         * @ref setSize(const Vector2i&) followed by
+         * @ref trySetStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
+         */
+        bool tryCreate(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* importerManager = nullptr, PluginManager::Manager<Text::AbstractFont>* fontManager = nullptr);
 
         /**
          * @brief Set renderer instance
