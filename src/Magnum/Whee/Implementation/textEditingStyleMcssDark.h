@@ -41,6 +41,9 @@
 #if defined(_c) && defined(_s)
 _c(InputCursor,                         {0.5f, 3.5f, 2.5f, 3.5f}, 0xdcdcdc_rgbf, 1.5f)
 _c(InputCursorFocused,                  {0.5f, 3.5f, 2.5f, 3.5f}, 0xa5c9ea_rgbf, 1.5f)
+_c(InputCursorFocusedBlink,             {10.5f, 43.5f, 15.5f, 43.5f}, 0xff3333_rgbf, 13.0f)
+_c(InputCursorFocusedFadeOut,           {0.0f, 3.5f, 0.0f, 3.5f}, 0xa5c9ea_rgbf, 0.0f)
 _s(InputSelection,       InputSelection,{1.0f, 2.0f, 1.0f, 2.0f}, 0x747474_rgbf, 4.0f)
 _s(InputSelectionFocused,InputSelection,{1.0f, 2.0f, 1.0f, 2.0f}, 0x2f83cc_rgbf, 4.0f)
+_s(InputSelectionFocusedFlash,InputSelection,{1.0f, -3.0f, 1.0f, -3.0f}, 0x34424dff_rgbaf*0.8f, 1.0f)
 #endif

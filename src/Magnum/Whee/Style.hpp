@@ -235,6 +235,8 @@ enum class TextStyle: UnsignedShort {
     InputDefaultInactiveOut,
     InputDefaultInactiveOver,
     InputDefaultFocused,
+    InputDefaultFocusedBlink,
+    InputDefaultFocusedFadeOut,
     InputDefaultPressed,
     InputDefaultDisabled,
 
@@ -266,8 +268,11 @@ enum class TextStyle: UnsignedShort {
 enum class TextEditingStyle: UnsignedShort {
     InputCursor = 0,
     InputCursorFocused,
+    InputCursorFocusedBlink,
+    InputCursorFocusedFadeOut,
     InputSelection,
     InputSelectionFocused,
+    InputSelectionFocusedFlash,
 };
 
 MAGNUM_WHEE_EXPORT TextStyle styleTransitionToInactiveOut(TextStyle index);

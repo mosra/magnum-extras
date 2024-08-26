@@ -112,6 +112,10 @@ _e(InputDefault,InactiveOver,   InputCursorFocused,     InputSelection,
                                     mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
 _e(InputDefault,Focused,        InputCursorFocused,     InputSelectionFocused,
                                     mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputDefault,FocusedBlink,   InputCursorFocusedBlink, InputSelectionFocusedFlash,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputDefault,FocusedFadeOut,InputCursorFocusedFadeOut,InputSelection,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
 _e(InputDefault,Pressed,        InputCursorFocused,     InputSelectionFocused,
                                     mainFont, MiddleLeft,   {10.0f, 9.0f,   6.0f, 7.0f})
 _c(InputDefaultDisabled,,           mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
