@@ -388,8 +388,10 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * for applying another compatible style to a user interface that
          * already has a style set.
          *
-         * Expects that @p features are a subset of @ref features() and contain
-         * at least one feature, that @p ui already contains all layers
+         * Expects that @p ui has user interface size already set, either using
+         * the constructor or by calling @ref UserInterface::setSize(). Expects
+         * that @p features are a subset of @ref features() and contain at
+         * least one feature, that @p ui already contains all layers
          * corresponding to @p features, that their shared state style uniform
          * and style count matches the subset of
          * @ref baseLayerStyleUniformCount(), @ref baseLayerStyleCount(),
@@ -550,7 +552,9 @@ class MAGNUM_WHEE_EXPORT AbstractStyle {
          * some runtime error happens, should print a message to
          * @relativeref{Magnum,Error} and return @cpp false @ce.
          *
-         * The @p features are guaranteed to be a subset of @ref features() and
+         * The @p ui is guaranteed to have user interface set for the style to
+         * use to calculate font rasterization and icon sizes, for example. The
+         * @p features are guaranteed to be a subset of @ref features() and
          * contain at least one feature, that @p ui already contains all layers
          * corresponding to @p features, that their shared state style uniform
          * and style count matches the subset of

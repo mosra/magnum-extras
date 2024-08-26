@@ -231,6 +231,10 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
         "Whee::AbstractStyle::apply(): no features specified", {});
     CORRADE_ASSERT(features <= this->features(),
         "Whee::AbstractStyle::apply():" << features << "not a subset of supported" << this->features(), {});
+    /* Checking the integer property to be sure we don't accidentally do a too
+       fuzzy comparison like could happen with .isZero() */
+    CORRADE_ASSERT(ui.framebufferSize() != Vector2i{},
+        "Whee::AbstractStyle::apply(): user interface size wasn't set", {});
     #ifndef CORRADE_NO_ASSERT
     if(features >= StyleFeature::BaseLayer) {
         CORRADE_ASSERT(ui.hasBaseLayer(),
