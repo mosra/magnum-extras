@@ -102,6 +102,13 @@ AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(Uns
     return *this;
 }
 
+AbstractVisualLayer::State::State(Shared::State& shared): shared(shared), styleTransitionToDisabledUpdateStamp{shared.styleTransitionToDisabledUpdateStamp} {
+    dynamicStyleStorage = Containers::ArrayTuple{
+        {ValueInit, shared.dynamicStyleCount, dynamicStylesUsed},
+        {ValueInit, shared.dynamicStyleCount, dynamicStyleAnimations}
+    };
+}
+
 AbstractVisualLayer::AbstractVisualLayer(const LayerHandle handle, Containers::Pointer<State>&& state): AbstractLayer{handle}, _state{Utility::move(state)} {}
 
 AbstractVisualLayer::AbstractVisualLayer(const LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, Containers::pointer<State>(*shared._state)} {}
@@ -198,17 +205,25 @@ UnsignedInt AbstractVisualLayer::dynamicStyleUsedCount() const {
     return _state->dynamicStylesUsed.count();
 }
 
-Containers::Optional<UnsignedInt> AbstractVisualLayer::allocateDynamicStyle() {
+Containers::Optional<UnsignedInt> AbstractVisualLayer::allocateDynamicStyle(const AnimationHandle animation) {
     State& state = *_state;
     /** @todo some builtin "find first unset" API, tzcnt etc */
     for(std::size_t i = 0; i != state.dynamicStylesUsed.size(); ++i) {
         if(state.dynamicStylesUsed[i])
             continue;
         state.dynamicStylesUsed.set(i);
+        state.dynamicStyleAnimations[i] = animation;
         return i;
     }
 
     return {};
+}
+
+AnimationHandle AbstractVisualLayer::dynamicStyleAnimation(const UnsignedInt id) const {
+    const State& state = *_state;
+    CORRADE_ASSERT(id < state.dynamicStylesUsed.size(),
+        "Whee::AbstractVisualLayer::dynamicStyleAnimation(): index" << id << "out of range for" << state.dynamicStylesUsed.size() << "dynamic styles", {});
+    return state.dynamicStyleAnimations[id];
 }
 
 void AbstractVisualLayer::recycleDynamicStyle(const UnsignedInt id) {
@@ -218,6 +233,7 @@ void AbstractVisualLayer::recycleDynamicStyle(const UnsignedInt id) {
     CORRADE_ASSERT(state.dynamicStylesUsed[id],
         "Whee::AbstractVisualLayer::recycleDynamicStyle(): style" << id << "not allocated", );
     state.dynamicStylesUsed.reset(id);
+    state.dynamicStyleAnimations[id] = AnimationHandle::Null;
 }
 
 LayerFeatures AbstractVisualLayer::doFeatures() const {

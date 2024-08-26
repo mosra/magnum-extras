@@ -246,9 +246,31 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * @ref recycleDynamicStyle() to make it available for allocation
          * again. If there are no free dynamic styles left, returns
          * @ref Containers::NullOpt.
+         *
+         * If the dynamic style is driven by an animation, its handle can be
+         * passed to the @p animation argument to retrieve later with
+         * @ref dynamicStyleAnimation(). No validation is performed on the
+         * handle, it can be arbitrary.
          * @see @ref dynamicStyleUsedCount(), @ref Shared::dynamicStyleCount()
          */
-        Containers::Optional<UnsignedInt> allocateDynamicStyle();
+        Containers::Optional<UnsignedInt> allocateDynamicStyle(AnimationHandle animation =
+            #ifdef DOXYGEN_GENERATING_OUTPUT
+            AnimationHandle::Null
+            #else
+            AnimationHandle{} /* To not have to include Handle.h */
+            #endif
+        );
+
+        /**
+         * @brief Animation associated with a dynamic style
+         *
+         * Expects that @p id is less than @ref Shared::dynamicStyleCount(). If
+         * @ref allocateDynamicStyle() was called with a null handle, wasn't
+         * called with @p id yet or @ref recycleDynamicStyle() was called for
+         * @p id since, returns @ref AnimationHandle::Null. The returned handle
+         * isn't guaranteed to be valid if non-null.
+         */
+        AnimationHandle dynamicStyleAnimation(UnsignedInt id) const;
 
         /**
          * @brief Recycle a dynamic style index
@@ -256,7 +278,9 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * Expects that @p id is less than @ref Shared::dynamicStyleCount(),
          * that it was returned from @ref allocateDynamicStyle() earlier and
          * that @ref recycleDynamicStyle() hasn't been called on the allocated
-         * @p id yet.
+         * @p id yet. Animation handle associated with @p id is reset to
+         * @ref AnimationHandle::Null after calling this function.
+         * @see @ref dynamicStyleAnimation()
          */
         void recycleDynamicStyle(UnsignedInt id);
 

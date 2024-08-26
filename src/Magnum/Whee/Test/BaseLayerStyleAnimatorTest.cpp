@@ -24,6 +24,7 @@
 */
 
 #include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/Optional.h>
@@ -765,6 +766,8 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.dynamicStyle(stoppedKept), 1);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), Containers::NullOpt);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), playing);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
         /* Style IDs in the layer aren't changed, the passed array is instead,
            and only where dynamic styles got allocated or the animation
            stopped */
@@ -835,6 +838,7 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(scheduledNullData), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 2);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), scheduledNullData);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u, 666u, 666u, 666u, 666u,
         }), TestSuite::Compare::Container);
@@ -861,6 +865,9 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), scheduledNullData);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u,
             666u,
@@ -889,6 +896,9 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u, 666u, 666u, 666u, 666u,
         }), TestSuite::Compare::Container);
@@ -913,6 +923,7 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), scheduledChangesPadding);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u,
             666u,
@@ -975,6 +986,9 @@ void BaseLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(advance(47_nsec, uniforms, paddings, dataStyles), BaseLayerStyleAnimation::Style);
         CORRADE_VERIFY(!animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
         CORRADE_COMPARE_AS(Containers::arrayView(dataStyles), Containers::arrayView({
             666u,
             666u,

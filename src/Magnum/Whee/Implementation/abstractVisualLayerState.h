@@ -30,7 +30,8 @@
    header gets published) eventually possibly also 3rd party renderer
    implementations */
 
-#include <Corrade/Containers/BitArray.h>
+#include <Corrade/Containers/ArrayTuple.h>
+#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
 
@@ -81,7 +82,7 @@ struct AbstractVisualLayer::Shared::State {
 };
 
 struct AbstractVisualLayer::State {
-    explicit State(Shared::State& shared): dynamicStylesUsed{ValueInit, shared.dynamicStyleCount}, shared(shared), styleTransitionToDisabledUpdateStamp{shared.styleTransitionToDisabledUpdateStamp} {}
+    explicit State(Shared::State& shared);
     /* Assumes that the derived state structs have non-trivially-destructible
        members. Without a virtual destructor those wouldn't be destructed
        properly when deleting from the base pointer. This is also checked with
@@ -95,7 +96,9 @@ struct AbstractVisualLayer::State {
 
     /* Has bits set for dynamic styles that are used */
     /** @todo the allocation could be shared with subclass data */
-    Containers::BitArray dynamicStylesUsed;
+    Containers::ArrayTuple dynamicStyleStorage;
+    Containers::MutableBitArrayView dynamicStylesUsed;
+    Containers::ArrayView<AnimationHandle> dynamicStyleAnimations;
 
     /* These views are assumed to point to subclass own data and maintained to
        have its size always match layer capacity. The `calculatedStyles` are a

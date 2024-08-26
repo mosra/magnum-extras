@@ -302,7 +302,7 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
                thing at least. One could also just let it assert when there's
                no free slots anymore, but letting a program assert just because
                it couldn't animate feels silly. */
-            const Containers::Optional<UnsignedInt> style = state.layer->allocateDynamicStyle();
+            const Containers::Optional<UnsignedInt> style = state.layer->allocateDynamicStyle(animationHandle(handle(), i, generations()[i]));
             if(!style)
                 continue;
             animation.dynamicStyle = *style;
