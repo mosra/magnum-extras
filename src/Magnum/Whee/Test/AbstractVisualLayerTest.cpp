@@ -888,28 +888,37 @@ void AbstractVisualLayerTest::dynamicStyleAllocateRecycle() {
     Containers::Optional<UnsignedInt> first = layer.allocateDynamicStyle();
     CORRADE_COMPARE(first, 0);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+    CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
 
-    Containers::Optional<UnsignedInt> second = layer.allocateDynamicStyle();
+    /* Remember an associated animation handle */
+    Containers::Optional<UnsignedInt> second = layer.allocateDynamicStyle(AnimationHandle(0x12ab34567cde));
     CORRADE_COMPARE(second, 1);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+    CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle(0x12ab34567cde));
 
     Containers::Optional<UnsignedInt> third = layer.allocateDynamicStyle();
     CORRADE_COMPARE(third, 2);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
+    CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
 
     Containers::Optional<UnsignedInt> fourth = layer.allocateDynamicStyle();
     CORRADE_COMPARE(fourth, 3);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 4);
+    CORRADE_COMPARE(layer.dynamicStyleAnimation(3), AnimationHandle::Null);
 
     /* Recycle a subset in random order */
     layer.recycleDynamicStyle(*third);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
+    CORRADE_COMPARE(layer.dynamicStyleAnimation(*third), AnimationHandle::Null);
 
+    /* The animation handle is cleared on recycle */
     layer.recycleDynamicStyle(*second);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+    CORRADE_COMPARE(layer.dynamicStyleAnimation(*second), AnimationHandle::Null);
 
     layer.recycleDynamicStyle(*fourth);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+    CORRADE_COMPARE(layer.dynamicStyleAnimation(*fourth), AnimationHandle::Null);
 
     /* Allocating new ones simply picks up the first free */
     Containers::Optional<UnsignedInt> second2 = layer.allocateDynamicStyle();
@@ -919,6 +928,8 @@ void AbstractVisualLayerTest::dynamicStyleAllocateRecycle() {
     CORRADE_COMPARE(third2, 2);
     CORRADE_COMPARE(fourth2, 3);
     CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 4);
+    /* The animation handle doesn't show up when the slot is reused either */
+    CORRADE_COMPARE(layer.dynamicStyleAnimation(*second), AnimationHandle::Null);
 
     /* Try recycling the first also */
     layer.recycleDynamicStyle(*first);
@@ -967,9 +978,11 @@ void AbstractVisualLayerTest::dynamicStyleRecycleInvalid() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.recycleDynamicStyle(2);
+    layer.dynamicStyleAnimation(4);
     layer.recycleDynamicStyle(4);
     CORRADE_COMPARE(out.str(),
         "Whee::AbstractVisualLayer::recycleDynamicStyle(): style 2 not allocated\n"
+        "Whee::AbstractVisualLayer::dynamicStyleAnimation(): index 4 out of range for 4 dynamic styles\n"
         "Whee::AbstractVisualLayer::recycleDynamicStyle(): index 4 out of range for 4 dynamic styles\n");
 }
 

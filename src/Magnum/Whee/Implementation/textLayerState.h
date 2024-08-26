@@ -31,8 +31,6 @@
    implementations */
 
 #include <Corrade/Containers/Array.h>
-#include <Corrade/Containers/ArrayTuple.h>
-#include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/Reference.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Text/AbstractFont.h>

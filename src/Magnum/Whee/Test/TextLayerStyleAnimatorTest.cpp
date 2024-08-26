@@ -24,6 +24,7 @@
 */
 
 #include <sstream> /** @todo remove once Debug is stream-free */
+#include <Corrade/Containers/BitArray.h>
 #include <Corrade/Containers/StridedBitArrayView.h>
 #include <Corrade/Containers/Iterable.h>
 #include <Corrade/Containers/Optional.h>
@@ -1283,6 +1284,8 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.dynamicStyle(stoppedKept), 1);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), Containers::NullOpt);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), playing);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,                    /* from style 3 */
             fontHandle2,                    /* from style 6 */
@@ -1477,6 +1480,7 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(scheduledNullData), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledNullData), 2);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 3);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), scheduledNullData);
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
             fontHandle3,
             fontHandle2,
@@ -1577,6 +1581,9 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), scheduledNullData);
         /* Font, alignment and features aren't modified compared to last time
            as no new style got allocated. In particular, the now-recycled
            dynamic style *isn't* changed to font, alignment and features of the
@@ -1686,6 +1693,9 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_VERIFY(animator.isHandleValid(stoppedKept));
         CORRADE_VERIFY(animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 1);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), stoppedKept);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
         /* Again font, alignment and features aren't modified, thus the reset
            values from above are staying */
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({
@@ -1773,6 +1783,7 @@ void TextLayerStyleAnimatorTest::advance() {
         CORRADE_COMPARE(animator.state(scheduledChangesPadding), AnimationState::Playing);
         CORRADE_COMPARE(animator.dynamicStyle(scheduledChangesPadding), 0);
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 2);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), scheduledChangesPadding);
         /* The newly allocated style is coincidentally again style 3 and again
            in slot 0, so this looks the same as before the setDynamicStyle()
            got called above */
@@ -1966,6 +1977,9 @@ void TextLayerStyleAnimatorTest::advance() {
             TextLayerStyleAnimation::Style);
         CORRADE_VERIFY(!animator.isHandleValid(scheduledChangesPadding));
         CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(0), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(1), AnimationHandle::Null);
+        CORRADE_COMPARE(layer.dynamicStyleAnimation(2), AnimationHandle::Null);
         /* No change to any of these again -- none of them are used anymore,
            and they stay at whatever they were before */
         CORRADE_COMPARE_AS(layer.dynamicStyleFonts(), Containers::arrayView({

@@ -30,7 +30,6 @@
    eventually possibly also 3rd party renderer implementations */
 
 #include <Corrade/Containers/Array.h>
-#include <Corrade/Containers/ArrayTuple.h>
 
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
