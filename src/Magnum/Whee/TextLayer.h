@@ -665,15 +665,15 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
         inline const Shared& shared() const; /**< @overload */
 
         /**
-         * @brief Set this layer to be associated with a style animator
+         * @brief Assign a style animator to this layer
          * @return Reference to self (for method chaining)
          *
          * Expects that @ref Shared::dynamicStyleCount() is non-zero and that
-         * given @p animator wasn't passed to @ref setAnimator() on any layer
-         * yet. On the other hand, it's possible to associate multiple
+         * given @p animator wasn't passed to @ref assignAnimator() on any
+         * layer yet. On the other hand, it's possible to associate multiple
          * different animators with the same layer.
          */
-        TextLayer& setAnimator(TextLayerStyleAnimator& animator);
+        TextLayer& assignAnimator(TextLayerStyleAnimator& animator);
 
         /**
          * @brief Dynamic style uniforms

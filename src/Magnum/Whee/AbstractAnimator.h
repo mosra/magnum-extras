@@ -60,8 +60,8 @@ enum class AnimatorFeature: UnsignedByte {
      * automatically removed when given data is removed. Mutually exclusive
      * with @ref AnimatorFeature::NodeAttachment.
      * @see @ref AbstractGenericAnimator::setLayer(),
-     *      @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const,
-     *      @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const,
+     *      @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const,
+     *      @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const,
      *      @ref AbstractAnimator::create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
      *      @ref AbstractAnimator::data(AnimationHandle) const,
      *      @ref AbstractAnimator::cleanData()
@@ -319,9 +319,9 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
          * @ref AbstractGenericAnimator, @ref AbstractDataAnimator or an
          * @ref AbstractStyleAnimator and
          * @ref AbstractGenericAnimator::setLayer(),
-         * @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const or
-         * @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const wasn't
-         * called yet, returns @ref LayerHandle::Null.
+         * @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const or
+         * @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const
+         * wasn't called yet, returns @ref LayerHandle::Null.
          * @see @ref features()
          */
         LayerHandle layer() const;
@@ -1246,7 +1246,7 @@ class MAGNUM_WHEE_EXPORT AbstractAnimator {
     protected:
     #endif
         /* Used by AbstractGenericAnimator::setLayer() and
-           AbstractLayer::setAnimator() */
+           AbstractLayer::assignAnimator() */
         MAGNUM_WHEE_LOCAL void setLayerInternal(const AbstractLayer& layer);
 
     private:
@@ -1381,9 +1381,10 @@ class MAGNUM_WHEE_EXPORT AbstractGenericAnimator: public AbstractAnimator {
          *
          * A corresponding API for an @ref AbstractDataAnimator /
          * @ref AbstractStyleAnimator is
-         * @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const /
-         * @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const, where
-         * the layer has the control over a concrete animator type instead.
+         * @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const /
+         * @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const,
+         * where the layer has the control over a concrete animator type
+         * instead.
          */
         void setLayer(const AbstractLayer& layer);
 
@@ -1588,7 +1589,7 @@ class MAGNUM_WHEE_EXPORT AbstractNodeAnimator: public AbstractAnimator {
 @m_since_latest
 
 @see @ref AbstractUserInterface::setDataAnimatorInstance(),
-    @ref AbstractLayer::setAnimator(AbstractDataAnimator&) const,
+    @ref AbstractLayer::assignAnimator(AbstractDataAnimator&) const,
     @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractDataAnimator>&)
 */
 class MAGNUM_WHEE_EXPORT AbstractDataAnimator: public AbstractAnimator {
@@ -1630,7 +1631,7 @@ class MAGNUM_WHEE_EXPORT AbstractDataAnimator: public AbstractAnimator {
 @m_since_latest
 
 @see @ref AbstractUserInterface::setStyleAnimatorInstance(),
-    @ref AbstractLayer::setAnimator(AbstractStyleAnimator&) const,
+    @ref AbstractLayer::assignAnimator(AbstractStyleAnimator&) const,
     @ref AbstractLayer::advanceAnimations(Nanoseconds, Containers::MutableBitArrayView, const Containers::StridedArrayView1D<Float>&, Containers::MutableBitArrayView, const Containers::Iterable<AbstractStyleAnimator>&)
 */
 class MAGNUM_WHEE_EXPORT AbstractStyleAnimator: public AbstractAnimator {

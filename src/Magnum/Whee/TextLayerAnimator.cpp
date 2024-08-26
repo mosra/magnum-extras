@@ -639,7 +639,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
 }
 
 void TextLayerStyleAnimator::setLayerInstance(TextLayer& instance, const void* sharedState) {
-    /* This is called from TextLayer::setAnimator(), which should itself
+    /* This is called from TextLayer::assignAnimator(), which should itself
        prevent the layer from being set more than once */
     CORRADE_INTERNAL_ASSERT(!_state->layer && sharedState);
     _state->layer = &instance;

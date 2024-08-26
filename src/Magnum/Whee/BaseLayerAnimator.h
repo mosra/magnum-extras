@@ -137,7 +137,7 @@ class MAGNUM_WHEE_EXPORT BaseLayerStyleAnimator: public AbstractStyleAnimator {
          *      indefinitely repeating animation.
          * @param flags         Flags
          *
-         * Expects that @ref BaseLayer::setAnimator(BaseLayerStyleAnimator&)
+         * Expects that @ref BaseLayer::assignAnimator(BaseLayerStyleAnimator&)
          * has been already called for this animator, that both @p sourceStyle
          * and @p targetStyle are less than @ref BaseLayer::Shared::styleCount()
          * (not @ref BaseLayer::Shared::totalStyleCount() --- the style
@@ -423,11 +423,11 @@ class MAGNUM_WHEE_EXPORT BaseLayerStyleAnimator: public AbstractStyleAnimator {
         BaseLayerStyleAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<BaseLayerStyleUniform> dynamicStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
-        /* Only BaseLayer::setAnimator(), but we don't want to include the
+        /* Only BaseLayer::assignAnimator(), but we don't want to include the
            whole thing */
         friend BaseLayer;
 
-        /* Called by BaseLayer::setAnimator() to set the actual instance for
+        /* Called by BaseLayer::assignAnimator() to set the actual instance for
            dynamic style allocation and recycling, and for accessing the input
            style data (which is a typeless pointer to not need to include the
            whole BaseLayer header). Yeah, it's quite ew. */
