@@ -49,21 +49,38 @@ struct UserInterfaceGL::State: UserInterface::State {
 
 UserInterfaceGL::UserInterfaceGL(NoCreateT): UserInterface{NoCreate, Containers::pointer<State>()} {}
 
-UserInterfaceGL::UserInterfaceGL(NoCreateT, const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize): UserInterfaceGL{NoCreate} {
-    setSize(size, windowSize, framebufferSize);
-}
-
-UserInterfaceGL::UserInterfaceGL(NoCreateT, const Vector2i& size): UserInterfaceGL{NoCreate, Vector2{size}, Vector2{size}, size} {}
-
-UserInterfaceGL::UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{NoCreate, size, windowSize, framebufferSize} {
-    /* If this fails, the program exits. Which is consistent with e.g. how
-       Platform::*Application implicitly handles failures, and users have an
-       option to use tryCreate() in that case for more graceful handling (or
-       trySetStyle() in this case). */
-    setStyle(style, importerManager, fontManager);
+UserInterfaceGL::UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{NoCreate} {
+    create(size, windowSize, framebufferSize, style, importerManager, fontManager);
 }
 
 UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, style, importerManager, fontManager} {}
+
+UserInterfaceGL& UserInterfaceGL::create(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    if(!tryCreate(size, windowSize, framebufferSize, style, importerManager, fontManager))
+        std::exit(1); /* LCOV_EXCL_LINE */
+    return *this;
+}
+
+UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return create(Vector2{size}, Vector2{size}, size, style, importerManager, fontManager);
+}
+
+bool UserInterfaceGL::tryCreate(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    #ifndef CORRADE_NO_ASSERT
+    State& state = static_cast<State&>(*_state);
+    #endif
+    CORRADE_ASSERT(!hasRenderer() && !state.baseLayer && !state.textLayer && !state.eventLayer,
+        "Whee::UserInterfaceGL::tryCreate(): user interface already created",
+        /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
+           through create() it doesn't std::exit() the whole executable */
+        true);
+    setSize(size, windowSize, framebufferSize);
+    return trySetStyle(style, importerManager, fontManager);
+}
+
+bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return tryCreate(Vector2{size}, Vector2{size}, size, style, importerManager, fontManager);
+}
 
 UserInterfaceGL& UserInterfaceGL::setRendererInstance(Containers::Pointer<RendererGL>&& instance) {
     UserInterface::setRendererInstance(Utility::move(instance));

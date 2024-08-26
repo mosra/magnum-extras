@@ -46,11 +46,16 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
     explicit UserInterfaceGLTest();
 
     void construct();
-    /* All NoCreate variants tested in UserInterfaceGL_Test to verify they work
-       without a GL context */
+    /* NoCreate tested in UserInterfaceGL_Test to verify it works without a GL
+       context */
     void constructSingleSize();
     void constructCopy();
     void constructMove();
+
+    void create();
+    void createSingleSize();
+    void createAlreadyCreated();
+    void createFailed();
 
     void setStyle();
     void setStyleRendererAlreadyPresent();
@@ -65,6 +70,37 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
     private:
         PluginManager::Manager<Trade::AbstractImporter> _importerManager;
         PluginManager::Manager<Text::AbstractFont> _fontManager;
+};
+
+const struct {
+    const char* name;
+    bool tryCreate;
+} CreateData[]{
+    {"", false},
+    {"try", false},
+};
+
+const struct {
+    const char* name;
+    bool tryCreate, hasRenderer;
+    StyleFeatures features;
+} CreateAlreadyCreatedData[]{
+    {"base layer present", false, false,
+        StyleFeature::BaseLayer},
+    /* The assertion is printed by tryCreate() so it doesn't need to be tested
+       in all combinations */
+    {"base layer present, try create", true, false,
+        StyleFeature::BaseLayer},
+    {"text layer present", false, false,
+        StyleFeature::TextLayer},
+    {"event layer present", false, false,
+        StyleFeature::EventLayer},
+    {"renderer present", false, true,
+        StyleFeatures{}},
+    {"all layers + renderer present", false, true,
+        StyleFeature::BaseLayer|
+        StyleFeature::TextLayer|
+        StyleFeature::EventLayer},
 };
 
 const struct {
@@ -138,6 +174,15 @@ UserInterfaceGLTest::UserInterfaceGLTest() {
               &UserInterfaceGLTest::constructSingleSize,
               &UserInterfaceGLTest::constructCopy,
               &UserInterfaceGLTest::constructMove});
+
+    addInstancedTests({&UserInterfaceGLTest::create,
+                       &UserInterfaceGLTest::createSingleSize},
+        Containers::arraySize(CreateData));
+
+    addInstancedTests({&UserInterfaceGLTest::createAlreadyCreated},
+        Containers::arraySize(CreateAlreadyCreatedData));
+
+    addTests({&UserInterfaceGLTest::createFailed});
 
     addInstancedTests({&UserInterfaceGLTest::setStyle},
         Containers::arraySize(SetStyleData));
@@ -251,6 +296,148 @@ void UserInterfaceGLTest::constructMove() {
     CORRADE_VERIFY(std::is_nothrow_move_assignable<UserInterfaceGL>::value);
 }
 
+void UserInterfaceGLTest::create() {
+    auto&& data = CreateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    Int applyCalled = 0;
+    struct Style: AbstractStyle {
+        explicit Style(Int& applyCalled): applyCalled(applyCalled) {}
+        StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
+        bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_COMPARE(features, StyleFeatures{0x10});
+            ++applyCalled;
+            return true;
+        }
+
+        Int& applyCalled;
+    } style{applyCalled};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    UserInterfaceGL ui{NoCreate};
+    if(data.tryCreate)
+        CORRADE_VERIFY(ui.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, &_importerManager, &_fontManager));
+    else
+        ui.create({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, &_importerManager, &_fontManager);
+    CORRADE_COMPARE(ui.size(), (Vector2{100.0f, 150.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{50.0f, 75.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
+    CORRADE_COMPARE(ui.layerCapacity(), 0);
+    CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_COMPARE(applyCalled, 1);
+
+    /* The renderer instance is set implicitly first time a style is */
+    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_COMPARE(ui.renderer().currentTargetState(), RendererTargetState::Initial);
+    /* const overload */
+    const UserInterfaceGL& cui = ui;
+    CORRADE_COMPARE(cui.renderer().currentTargetState(), RendererTargetState::Initial);
+}
+
+void UserInterfaceGLTest::createSingleSize() {
+    auto&& data = CreateData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    Int applyCalled = 0;
+    struct Style: AbstractStyle {
+        explicit Style(Int& applyCalled): applyCalled(applyCalled) {}
+        StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
+        bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_COMPARE(features, StyleFeatures{0x10});
+            ++applyCalled;
+            return true;
+        }
+
+        Int& applyCalled;
+    } style{applyCalled};
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    UserInterfaceGL ui{NoCreate};
+    if(data.tryCreate)
+        CORRADE_VERIFY(ui.tryCreate({200, 300}, style, &_importerManager, &_fontManager));
+    else
+        ui.create({200, 300}, style, &_importerManager, &_fontManager);
+    CORRADE_COMPARE(ui.size(), (Vector2{200.0f, 300.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{200.0f, 300.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
+    CORRADE_COMPARE(ui.layerCapacity(), 0);
+    CORRADE_COMPARE(ui.layerUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasBaseLayer());
+    CORRADE_VERIFY(!ui.hasTextLayer());
+    CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_COMPARE(applyCalled, 1);
+
+    /* The renderer instance is set implicitly first time a style is */
+    CORRADE_VERIFY(ui.hasRenderer());
+    CORRADE_COMPARE(ui.renderer().currentTargetState(), RendererTargetState::Initial);
+    /* const overload */
+    const UserInterfaceGL& cui = ui;
+    CORRADE_COMPARE(cui.renderer().currentTargetState(), RendererTargetState::Initial);
+}
+
+void UserInterfaceGLTest::createAlreadyCreated() {
+    auto&& data = CreateAlreadyCreatedData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer;
+        }
+        UnsignedInt doBaseLayerStyleCount() const override { return 1; }
+        UnsignedInt doTextLayerStyleCount() const override { return 1; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override {
+            return {100, 100, 1};
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            return true;
+        }
+    } style;
+
+    UserInterfaceGL ui{NoCreate};
+    ui.setSize({100, 100});
+    if(data.hasRenderer)
+        ui.setRendererInstance(Containers::pointer<RendererGL>());
+    if(data.features)
+        ui.setStyle(style, data.features, nullptr, &_fontManager);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    if(data.tryCreate)
+        ui.tryCreate({100, 100}, style);
+    else
+        ui.create({100, 100}, style);
+    /* The message is printed by tryCreate() always */
+    CORRADE_COMPARE(out.str(), "Whee::UserInterfaceGL::tryCreate(): user interface already created\n");
+}
+
+void UserInterfaceGLTest::createFailed() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::EventLayer;
+        }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            return false;
+        }
+    } style;
+
+    UserInterfaceGL ui1{NoCreate}, ui2{NoCreate};
+    CORRADE_VERIFY(!ui1.tryCreate({200, 300}, style));
+    /* Testing on another instance because the above has the EventLayer already
+       created at this point */
+    CORRADE_VERIFY(!ui2.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style));
+}
+
 void UserInterfaceGLTest::setStyle() {
     auto&& data = SetStyleData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -304,7 +491,7 @@ void UserInterfaceGLTest::setStyle() {
         bool _succeed;
     } style{applyCalled, glyphCacheSizeQueriedFeatures, actualFeatures, data.supportedFeatures, data.succeed};
 
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
     CORRADE_VERIFY(!ui.hasRenderer());
     CORRADE_COMPARE(ui.layerUsedCount(), 0);
 
@@ -351,7 +538,7 @@ void UserInterfaceGLTest::setStyle() {
 }
 
 void UserInterfaceGLTest::setStyleRendererAlreadyPresent() {
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
     CORRADE_VERIFY(!ui.hasRenderer());
 
     ui.setRendererInstance(Containers::pointer<RendererGL>());
@@ -371,7 +558,7 @@ void UserInterfaceGLTest::setStyleRendererAlreadyPresent() {
 void UserInterfaceGLTest::setStyleNoFeatures() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
@@ -393,7 +580,7 @@ void UserInterfaceGLTest::setStyleNoFeatures() {
 void UserInterfaceGLTest::setStyleFeaturesNotSupported() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::BaseLayer; }
@@ -414,7 +601,7 @@ void UserInterfaceGLTest::setStyleFeaturesNotSupported() {
 
 void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
     BaseLayerGL::Shared shared{BaseLayer::Shared::Configuration{1}};
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
     ui.setBaseLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), shared));
 
     struct: AbstractStyle {
@@ -436,7 +623,7 @@ void UserInterfaceGLTest::setStyleBaseLayerAlreadyPresent() {
 
 void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
     TextLayerGL::Shared shared{TextLayer::Shared::Configuration{1}};
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
     ui.setTextLayerInstance(Containers::pointer<TextLayerGL>(ui.createLayer(), shared));
 
     struct: AbstractStyle {
@@ -457,7 +644,7 @@ void UserInterfaceGLTest::setStyleTextLayerAlreadyPresent() {
 }
 
 void UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache() {
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayer; }
@@ -479,7 +666,7 @@ void UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache() {
 }
 
 void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied() {
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override { return StyleFeature::TextLayerImages; }
@@ -499,7 +686,7 @@ void UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied()
 }
 
 void UserInterfaceGLTest::setStyleEventLayerAlreadyPresent() {
-    UserInterfaceGL ui{NoCreate, {200, 300}};
+    UserInterfaceGL ui{NoCreate};
     ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
 
     struct: AbstractStyle {
