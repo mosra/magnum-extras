@@ -295,6 +295,10 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
         /* Used by tests to avoid having to include / allocate the state */
         explicit AbstractVisualLayer(LayerHandle handle, Shared& shared);
 
+        /* Can't be MAGNUM_WHEE_LOCAL otherwise this can't be called from
+           tests */
+        AbstractVisualLayer& assignAnimator(AbstractVisualLayerStyleAnimator& animator);
+
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
         LayerFeatures doFeatures() const override;
@@ -502,6 +506,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
     #endif
         struct State;
         friend AbstractVisualLayer;
+        friend AbstractVisualLayerStyleAnimator;
 
         MAGNUM_WHEE_LOCAL explicit Shared(Containers::Pointer<State>&& state);
         /* Used by tests to avoid having to include / allocate the state */

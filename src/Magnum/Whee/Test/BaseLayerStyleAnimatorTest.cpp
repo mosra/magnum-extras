@@ -56,7 +56,9 @@ struct BaseLayerStyleAnimatorTest: TestSuite::Tester {
     void constructMove();
 
     void assignAnimator();
-    void assignAnimatorInvalid();
+    /* There's no assert to trigger in assignAnimator() other than what's
+       checked by AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid()
+       already */
 
     template<class T> void createRemove();
     void createRemoveHandleRecycle();
@@ -64,11 +66,6 @@ struct BaseLayerStyleAnimatorTest: TestSuite::Tester {
     /* There's no assert to trigger in remove() other than what's checked by
        AbstractAnimator::remove() already */
     void propertiesInvalid();
-
-    void clean();
-    void cleanEmpty();
-    /* There's no assert to trigger in clean() other than what's checked by
-       AbstractAnimator::clean() already */
 
     void advance();
     void advanceProperties();
@@ -124,16 +121,12 @@ BaseLayerStyleAnimatorTest::BaseLayerStyleAnimatorTest() {
               &BaseLayerStyleAnimatorTest::constructMove,
 
               &BaseLayerStyleAnimatorTest::assignAnimator,
-              &BaseLayerStyleAnimatorTest::assignAnimatorInvalid,
 
               &BaseLayerStyleAnimatorTest::createRemove<UnsignedInt>,
               &BaseLayerStyleAnimatorTest::createRemove<Enum>,
               &BaseLayerStyleAnimatorTest::createRemoveHandleRecycle,
               &BaseLayerStyleAnimatorTest::createInvalid,
               &BaseLayerStyleAnimatorTest::propertiesInvalid,
-
-              &BaseLayerStyleAnimatorTest::clean,
-              &BaseLayerStyleAnimatorTest::cleanEmpty,
 
               &BaseLayerStyleAnimatorTest::advance});
 
@@ -207,28 +200,6 @@ void BaseLayerStyleAnimatorTest::assignAnimator() {
 
     layer.assignAnimator(animator);
     CORRADE_COMPARE(animator.layer(), layer.handle());
-}
-
-void BaseLayerStyleAnimatorTest::assignAnimatorInvalid() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
-
-        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{2}};
-
-    struct Layer: BaseLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
-    CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    layer.assignAnimator(animator);
-    CORRADE_COMPARE(out.str(), "Whee::BaseLayer::assignAnimator(): can't animate a layer with zero dynamic styles\n");
 }
 
 template<class T> void BaseLayerStyleAnimatorTest::createRemove() {
@@ -537,101 +508,38 @@ void BaseLayerStyleAnimatorTest::propertiesInvalid() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    animator.targetStyle(AnimationHandle::Null);
-    animator.dynamicStyle(AnimationHandle::Null);
     animator.easing(AnimationHandle::Null);
     animator.uniforms(AnimationHandle::Null);
     animator.paddings(AnimationHandle::Null);
     /* Valid animator, invalid data */
-    animator.targetStyle(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.dynamicStyle(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.uniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.paddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     /* Invalid animator, valid data */
-    animator.targetStyle(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.dynamicStyle(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.uniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.paddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
-    animator.targetStyle(AnimatorDataHandle(0x123abcde));
-    animator.dynamicStyle(AnimatorDataHandle(0x123abcde));
     animator.easing(AnimatorDataHandle(0x123abcde));
     animator.uniforms(AnimatorDataHandle(0x123abcde));
     animator.paddings(AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE_AS(out.str(),
-        "Whee::BaseLayerStyleAnimator::targetStyle(): invalid handle Whee::AnimationHandle::Null\n"
-        "Whee::BaseLayerStyleAnimator::dynamicStyle(): invalid handle Whee::AnimationHandle::Null\n"
         "Whee::BaseLayerStyleAnimator::easing(): invalid handle Whee::AnimationHandle::Null\n"
         "Whee::BaseLayerStyleAnimator::uniforms(): invalid handle Whee::AnimationHandle::Null\n"
         "Whee::BaseLayerStyleAnimator::paddings(): invalid handle Whee::AnimationHandle::Null\n"
 
-        "Whee::BaseLayerStyleAnimator::targetStyle(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Whee::BaseLayerStyleAnimator::dynamicStyle(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Whee::BaseLayerStyleAnimator::easing(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Whee::BaseLayerStyleAnimator::uniforms(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Whee::BaseLayerStyleAnimator::paddings(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
-        "Whee::BaseLayerStyleAnimator::targetStyle(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Whee::BaseLayerStyleAnimator::dynamicStyle(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
         "Whee::BaseLayerStyleAnimator::easing(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
         "Whee::BaseLayerStyleAnimator::uniforms(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
         "Whee::BaseLayerStyleAnimator::paddings(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
 
-        "Whee::BaseLayerStyleAnimator::targetStyle(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Whee::BaseLayerStyleAnimator::dynamicStyle(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Whee::BaseLayerStyleAnimator::easing(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Whee::BaseLayerStyleAnimator::uniforms(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Whee::BaseLayerStyleAnimator::paddings(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
-}
-
-void BaseLayerStyleAnimatorTest::clean() {
-    struct LayerShared: BaseLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
-
-        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
-    } shared{BaseLayer::Shared::Configuration{2}
-        .setDynamicStyleCount(3)
-    };
-    shared.setStyle(
-        BaseLayerCommonStyleUniform{},
-        {BaseLayerStyleUniform{}, BaseLayerStyleUniform{}},
-        {});
-
-    struct Layer: BaseLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.assignAnimator(animator);
-
-    /* Creating animations doesn't allocate dynamic styles just yet, only
-       advance() does */
-    AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    AnimationHandle second = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    AnimationHandle third = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    CORRADE_COMPARE(animator.usedCount(), 3);
-    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
-
-    /* So cleaning them shouldn't try to recycle them either. Cleaning
-       animations with allocated dynamic styles is tested in advance(). */
-    UnsignedByte animationIdsToRemove[]{0x05}; /* 0b101 */
-    animator.clean(Containers::BitArrayView{animationIdsToRemove, 0, 3});
-    CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
-    CORRADE_VERIFY(!animator.isHandleValid(first));
-    CORRADE_VERIFY(animator.isHandleValid(second));
-    CORRADE_VERIFY(!animator.isHandleValid(third));
-}
-
-void BaseLayerStyleAnimatorTest::cleanEmpty() {
-    /* This should work even with no layer being set */
-    BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
-    animator.clean({});
-
-    CORRADE_VERIFY(true);
 }
 
 void BaseLayerStyleAnimatorTest::advance() {

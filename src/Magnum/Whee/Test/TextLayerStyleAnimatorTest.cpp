@@ -63,7 +63,9 @@ struct TextLayerStyleAnimatorTest: TestSuite::Tester {
     void constructMove();
 
     void assignAnimator();
-    void assignAnimatorInvalid();
+    /* There's no assert to trigger in assignAnimator() other than what's
+       checked by AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid()
+       already */
 
     template<class T> void createRemove();
     void createRemoveHandleRecycle();
@@ -71,11 +73,6 @@ struct TextLayerStyleAnimatorTest: TestSuite::Tester {
     /* There's no assert to trigger in remove() other than what's checked by
        AbstractAnimator::remove() already */
     void propertiesInvalid();
-
-    void clean();
-    void cleanEmpty();
-    /* There's no assert to trigger in clean() other than what's checked by
-       AbstractAnimator::clean() already */
 
     void advance();
     void advanceProperties();
@@ -252,7 +249,6 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
               &TextLayerStyleAnimatorTest::constructMove,
 
               &TextLayerStyleAnimatorTest::assignAnimator,
-              &TextLayerStyleAnimatorTest::assignAnimatorInvalid,
 
               &TextLayerStyleAnimatorTest::createRemove<UnsignedInt>,
               &TextLayerStyleAnimatorTest::createRemove<Enum>});
@@ -261,10 +257,7 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
         Containers::arraySize(CreateRemoveHandleRecycleData));
 
     addTests({&TextLayerStyleAnimatorTest::createInvalid,
-              &TextLayerStyleAnimatorTest::propertiesInvalid,
-
-              &TextLayerStyleAnimatorTest::clean,
-              &TextLayerStyleAnimatorTest::cleanEmpty});
+              &TextLayerStyleAnimatorTest::propertiesInvalid});
 
     addInstancedTests({&TextLayerStyleAnimatorTest::advance},
         Containers::arraySize(AdvanceData));
@@ -340,29 +333,6 @@ void TextLayerStyleAnimatorTest::assignAnimator() {
 
     layer.assignAnimator(animator);
     CORRADE_COMPARE(animator.layer(), layer.handle());
-}
-
-void TextLayerStyleAnimatorTest::assignAnimatorInvalid() {
-    CORRADE_SKIP_IF_NO_ASSERT();
-
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2}};
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    CORRADE_COMPARE(animator.layer(), LayerHandle::Null);
-
-    std::ostringstream out;
-    Error redirectError{&out};
-    layer.assignAnimator(animator);
-    CORRADE_COMPARE(out.str(), "Whee::TextLayer::assignAnimator(): can't animate a layer with zero dynamic styles\n");
 }
 
 struct EmptyShaper: Text::AbstractShaper {
@@ -887,8 +857,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    animator.targetStyle(AnimationHandle::Null);
-    animator.dynamicStyle(AnimationHandle::Null);
     animator.easing(AnimationHandle::Null);
     animator.uniforms(AnimationHandle::Null);
     animator.paddings(AnimationHandle::Null);
@@ -898,8 +866,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionPaddings(AnimationHandle::Null);
     animator.selectionTextUniforms(AnimationHandle::Null);
     /* Valid animator, invalid data */
-    animator.targetStyle(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
-    animator.dynamicStyle(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.easing(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.uniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.paddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
@@ -909,8 +875,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionPaddings(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     animator.selectionTextUniforms(animationHandle(animator.handle(), AnimatorDataHandle(0x123abcde)));
     /* Invalid animator, valid data */
-    animator.targetStyle(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
-    animator.dynamicStyle(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.easing(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.uniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.paddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
@@ -920,8 +884,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionPaddings(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     animator.selectionTextUniforms(animationHandle(AnimatorHandle::Null, animationHandleData(handle)));
     /* AnimatorDataHandle directly */
-    animator.targetStyle(AnimatorDataHandle(0x123abcde));
-    animator.dynamicStyle(AnimatorDataHandle(0x123abcde));
     animator.easing(AnimatorDataHandle(0x123abcde));
     animator.uniforms(AnimatorDataHandle(0x123abcde));
     animator.paddings(AnimatorDataHandle(0x123abcde));
@@ -931,8 +893,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
     animator.selectionPaddings(AnimatorDataHandle(0x123abcde));
     animator.selectionTextUniforms(AnimatorDataHandle(0x123abcde));
     CORRADE_COMPARE_AS(out.str(),
-        "Whee::TextLayerStyleAnimator::targetStyle(): invalid handle Whee::AnimationHandle::Null\n"
-        "Whee::TextLayerStyleAnimator::dynamicStyle(): invalid handle Whee::AnimationHandle::Null\n"
         "Whee::TextLayerStyleAnimator::easing(): invalid handle Whee::AnimationHandle::Null\n"
         "Whee::TextLayerStyleAnimator::uniforms(): invalid handle Whee::AnimationHandle::Null\n"
         "Whee::TextLayerStyleAnimator::paddings(): invalid handle Whee::AnimationHandle::Null\n"
@@ -942,8 +902,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         "Whee::TextLayerStyleAnimator::selectionPaddings(): invalid handle Whee::AnimationHandle::Null\n"
         "Whee::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Whee::AnimationHandle::Null\n"
 
-        "Whee::TextLayerStyleAnimator::targetStyle(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
-        "Whee::TextLayerStyleAnimator::dynamicStyle(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Whee::TextLayerStyleAnimator::easing(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Whee::TextLayerStyleAnimator::uniforms(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Whee::TextLayerStyleAnimator::paddings(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
@@ -953,8 +911,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         "Whee::TextLayerStyleAnimator::selectionPaddings(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
         "Whee::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Whee::AnimationHandle({0x0, 0x1}, {0xabcde, 0x123})\n"
 
-        "Whee::TextLayerStyleAnimator::targetStyle(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
-        "Whee::TextLayerStyleAnimator::dynamicStyle(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
         "Whee::TextLayerStyleAnimator::easing(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
         "Whee::TextLayerStyleAnimator::uniforms(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
         "Whee::TextLayerStyleAnimator::paddings(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
@@ -964,8 +920,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         "Whee::TextLayerStyleAnimator::selectionPaddings(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
         "Whee::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Whee::AnimationHandle(Null, {0x0, 0x1})\n"
 
-        "Whee::TextLayerStyleAnimator::targetStyle(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
-        "Whee::TextLayerStyleAnimator::dynamicStyle(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Whee::TextLayerStyleAnimator::easing(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Whee::TextLayerStyleAnimator::uniforms(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Whee::TextLayerStyleAnimator::paddings(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
@@ -975,58 +929,6 @@ void TextLayerStyleAnimatorTest::propertiesInvalid() {
         "Whee::TextLayerStyleAnimator::selectionPaddings(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n"
         "Whee::TextLayerStyleAnimator::selectionTextUniforms(): invalid handle Whee::AnimatorDataHandle(0xabcde, 0x123)\n",
         TestSuite::Compare::String);
-}
-
-void TextLayerStyleAnimatorTest::clean() {
-    struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
-
-        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
-    } shared{TextLayer::Shared::Configuration{2}
-        .setDynamicStyleCount(3)
-    };
-    shared.setStyle(
-        TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {FontHandle::Null, FontHandle::Null},
-        {Text::Alignment{}, Text::Alignment{}},
-        {}, {}, {}, {},
-        /* Editing styles don't affect clean() in any way */
-        {}, {});
-
-    struct Layer: TextLayer {
-        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
-    } layer{layerHandle(0, 1), shared};
-
-    TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    layer.assignAnimator(animator);
-
-    /* Creating animations doesn't allocate dynamic styles just yet, only
-       advance() does */
-    AnimationHandle first = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    AnimationHandle second = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    AnimationHandle third = animator.create(0, 1, Animation::Easing::linear, 12_nsec, 13_nsec, DataHandle::Null);
-    CORRADE_COMPARE(animator.usedCount(), 3);
-    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
-
-    /* So cleaning them shouldn't try to recycle them either. Cleaning
-       animations with allocated dynamic styles is tested in advance(). */
-    UnsignedByte animationIdsToRemove[]{0x05}; /* 0b101 */
-    animator.clean(Containers::BitArrayView{animationIdsToRemove, 0, 3});
-    CORRADE_COMPARE(animator.usedCount(), 1);
-    CORRADE_COMPARE(layer.dynamicStyleUsedCount(), 0);
-    CORRADE_VERIFY(!animator.isHandleValid(first));
-    CORRADE_VERIFY(animator.isHandleValid(second));
-    CORRADE_VERIFY(!animator.isHandleValid(third));
-}
-
-void TextLayerStyleAnimatorTest::cleanEmpty() {
-    /* This should work even with no layer being set */
-    TextLayerStyleAnimator animator{animatorHandle(0, 1)};
-    animator.clean({});
-
-    CORRADE_VERIFY(true);
 }
 
 void TextLayerStyleAnimatorTest::advance() {

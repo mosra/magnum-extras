@@ -52,6 +52,7 @@ set(MagnumWhee_GracefulAssert_SRCS
     AbstractStyle.cpp
     AbstractUserInterface.cpp
     AbstractVisualLayer.cpp
+    AbstractVisualLayerAnimator.cpp
     BaseLayer.cpp
     BaseLayerAnimator.cpp
     EventLayer.cpp
@@ -68,6 +69,7 @@ set(MagnumWhee_HEADERS
     AbstractStyle.h
     AbstractUserInterface.h
     AbstractVisualLayer.h
+    AbstractVisualLayerAnimator.h
     Application.h
     BaseLayer.h
     BaseLayerAnimator.h
@@ -85,6 +87,7 @@ set(MagnumWhee_HEADERS
 set(MagnumWhee_PRIVATE_HEADERS
     Implementation/abstractUserInterface.h
     Implementation/abstractVisualLayerState.h
+    Implementation/abstractVisualLayerAnimatorState.h
     Implementation/baseLayerState.h
     Implementation/textLayerState.h
     Implementation/userInterfaceState.h)

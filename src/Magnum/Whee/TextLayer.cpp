@@ -502,12 +502,7 @@ TextLayer::TextLayer(const LayerHandle handle, Containers::Pointer<State>&& stat
 TextLayer::TextLayer(const LayerHandle handle, Shared& shared): TextLayer{handle, Containers::pointer<State>(static_cast<Shared::State&>(*shared._state))} {}
 
 TextLayer& TextLayer::assignAnimator(TextLayerStyleAnimator& animator) {
-    CORRADE_ASSERT(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount,
-        "Whee::TextLayer::assignAnimator(): can't animate a layer with zero dynamic styles", *this);
-
-    AbstractLayer::assignAnimator(animator);
-    animator.setLayerInstance(*this, &_state->shared);
-    return *this;
+    return static_cast<TextLayer&>(AbstractVisualLayer::assignAnimator(animator));
 }
 
 Containers::ArrayView<const TextLayerStyleUniform> TextLayer::dynamicStyleUniforms() const {

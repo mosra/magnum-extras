@@ -58,6 +58,9 @@ class AbstractLayouter;
 class AbstractRenderer;
 class AbstractUserInterface;
 
+class AbstractVisualLayer;
+class AbstractVisualLayerStyleAnimator;
+
 class BaseLayer;
 struct BaseLayerCommonStyleUniform;
 struct BaseLayerStyleUniform;

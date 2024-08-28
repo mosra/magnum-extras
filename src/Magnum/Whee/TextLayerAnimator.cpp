@@ -35,6 +35,7 @@
 
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/Implementation/abstractVisualLayerAnimatorState.h"
 #include "Magnum/Whee/Implementation/textLayerState.h"
 
 namespace Magnum { namespace Whee {
@@ -112,13 +113,11 @@ struct Animation {
 
 }
 
-struct TextLayerStyleAnimator::State {
-    TextLayer* layer = nullptr;
-    const TextLayer::Shared::State* layerSharedState = nullptr;
+struct TextLayerStyleAnimator::State: AbstractVisualLayerStyleAnimator::State {
     Containers::Array<Animation> animations;
 };
 
-TextLayerStyleAnimator::TextLayerStyleAnimator(AnimatorHandle handle): AbstractStyleAnimator{handle}, _state{InPlaceInit} {}
+TextLayerStyleAnimator::TextLayerStyleAnimator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle, Containers::pointer<State>()} {}
 
 TextLayerStyleAnimator::TextLayerStyleAnimator(TextLayerStyleAnimator&&) noexcept = default;
 
@@ -155,10 +154,10 @@ AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, co
 }
 
 void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float)) {
-    State& state = *_state;
+    State& state = static_cast<State&>(*_state);
     /* Layer being set had to be checked in create() already */
     CORRADE_INTERNAL_ASSERT(state.layerSharedState);
-    const TextLayer::Shared::State& layerSharedState = *state.layerSharedState;
+    const TextLayer::Shared::State& layerSharedState = static_cast<const TextLayer::Shared::State&>(*state.layerSharedState);
     CORRADE_ASSERT(layerSharedState.setStyleCalled,
         "Whee::TextLayerStyleAnimator::create(): no style data was set on the layer", );
     /* Like in TextLayer::doUpdate(), technically needed only if there's any
@@ -173,8 +172,11 @@ void TextLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
         "Whee::TextLayerStyleAnimator::create(): easing is null", );
 
     const UnsignedInt id = animationHandleId(handle);
-    if(id >= state.animations.size())
+    if(id >= state.animations.size()) {
         arrayResize(state.animations, NoInit, id + 1);
+        state.targetStyles = stridedArrayView(state.animations).slice(&Animation::targetStyle);
+        state.dynamicStyles = stridedArrayView(state.animations).slice(&Animation::dynamicStyle);
+    }
     Animation& animation = state.animations[id];
     animation.sourceStyle = sourceStyle;
     animation.targetStyle = targetStyle;
@@ -253,82 +255,43 @@ void TextLayerStyleAnimator::remove(const AnimatorDataHandle handle) {
     removeInternal(animatorDataHandleId(handle));
 }
 
-void TextLayerStyleAnimator::removeInternal(const UnsignedInt id) {
-    /* If it gets here, the removed handle was valid. Thus it was create()d
-       before and so the layer and everything should be set properly. */
-    State& state = *_state;
-    CORRADE_INTERNAL_ASSERT(state.layer);
-
-    /* Recycle the dynamic style if it was allocated already. It might not be
-       if advance() wasn't called for this animation yet or if it was already
-       stopped by the time it reached advance(). */
-    if(state.animations[id].dynamicStyle != ~UnsignedInt{})
-        state.layer->recycleDynamicStyle(state.animations[id].dynamicStyle);
-}
-
-UnsignedInt TextLayerStyleAnimator::targetStyle(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::TextLayerStyleAnimator::targetStyle(): invalid handle" << handle, {});
-    return _state->animations[animationHandleId(handle)].targetStyle;
-}
-
-UnsignedInt TextLayerStyleAnimator::targetStyle(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::TextLayerStyleAnimator::targetStyle(): invalid handle" << handle, {});
-    return _state->animations[animatorDataHandleId(handle)].targetStyle;
-}
-
-Containers::Optional<UnsignedInt> TextLayerStyleAnimator::dynamicStyle(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::TextLayerStyleAnimator::dynamicStyle(): invalid handle" << handle, {});
-    const UnsignedInt style = _state->animations[animationHandleId(handle)].dynamicStyle;
-    return style == ~UnsignedInt{} ? Containers::NullOpt : Containers::optional(style);
-}
-
-Containers::Optional<UnsignedInt> TextLayerStyleAnimator::dynamicStyle(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::TextLayerStyleAnimator::dynamicStyle(): invalid handle" << handle, {});
-    const UnsignedInt style = _state->animations[animatorDataHandleId(handle)].dynamicStyle;
-    return style == ~UnsignedInt{} ? Containers::NullOpt : Containers::optional(style);
-}
-
 auto TextLayerStyleAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayerStyleAnimator::easing(): invalid handle" << handle, {});
-    return _state->animations[animationHandleId(handle)].easing;
+    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
 }
 
 auto TextLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayerStyleAnimator::easing(): invalid handle" << handle, {});
-    return _state->animations[animatorDataHandleId(handle)].easing;
+    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
 }
 
 Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> TextLayerStyleAnimator::uniforms(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
-    const Animation& animation = _state->animations[animationHandleId(handle)];
+    const Animation& animation = static_cast<const State&>(*_state).animations[animationHandleId(handle)];
     return {animation.sourceUniform, animation.targetUniform};
 }
 
 Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform> TextLayerStyleAnimator::uniforms(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
-    const Animation& animation = _state->animations[animatorDataHandleId(handle)];
+    const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
     return {animation.sourceUniform, animation.targetUniform};
 }
 
 Containers::Pair<Vector4, Vector4> TextLayerStyleAnimator::paddings(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayerStyleAnimator::paddings(): invalid handle" << handle, {});
-    const Animation& animation = _state->animations[animationHandleId(handle)];
+    const Animation& animation = static_cast<const State&>(*_state).animations[animationHandleId(handle)];
     return {animation.sourcePadding, animation.targetPadding};
 }
 
 Containers::Pair<Vector4, Vector4> TextLayerStyleAnimator::paddings(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::TextLayerStyleAnimator::paddings(): invalid handle" << handle, {});
-    const Animation& animation = _state->animations[animatorDataHandleId(handle)];
+    const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
     return {animation.sourcePadding, animation.targetPadding};
 }
 
@@ -345,7 +308,7 @@ Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEdi
 }
 
 Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::cursorUniformsInternal(const UnsignedInt id) const {
-    const Animation& animation = _state->animations[id];
+    const Animation& animation = static_cast<const State&>(*_state).animations[id];
     if(!animation.hasCursorStyle)
         return {};
     return Containers::pair(animation.sourceCursorUniform, animation.targetCursorUniform);
@@ -364,7 +327,7 @@ Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator:
 }
 
 Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::cursorPaddingsInternal(const UnsignedInt id) const {
-    const Animation& animation = _state->animations[id];
+    const Animation& animation = static_cast<const State&>(*_state).animations[id];
     if(!animation.hasCursorStyle)
         return {};
     return Containers::pair(animation.sourceCursorPadding, animation.targetCursorPadding);
@@ -383,7 +346,7 @@ Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEdi
 }
 
 Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> TextLayerStyleAnimator::selectionUniformsInternal(const UnsignedInt id) const {
-    const Animation& animation = _state->animations[id];
+    const Animation& animation = static_cast<const State&>(*_state).animations[id];
     if(!animation.hasSelectionStyle)
         return {};
     return Containers::pair(animation.sourceSelectionUniform, animation.targetSelectionUniform);
@@ -402,7 +365,7 @@ Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator:
 }
 
 Containers::Optional<Containers::Pair<Vector4, Vector4>> TextLayerStyleAnimator::selectionPaddingsInternal(const UnsignedInt id) const {
-    const Animation& animation = _state->animations[id];
+    const Animation& animation = static_cast<const State&>(*_state).animations[id];
     if(!animation.hasSelectionStyle)
         return {};
     return Containers::pair(animation.sourceSelectionPadding, animation.targetSelectionPadding);
@@ -421,7 +384,7 @@ Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUnifo
 }
 
 Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> TextLayerStyleAnimator::selectionTextUniformsInternal(const UnsignedInt id) const {
-    const Animation& animation = _state->animations[id];
+    const Animation& animation = static_cast<const State&>(*_state).animations[id];
     if(!animation.hasSelectionStyle)
         return {};
     return Containers::pair(animation.sourceSelectionTextUniform, animation.targetSelectionTextUniform);
@@ -475,12 +438,12 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
     }
     #endif
 
-    State& state = *_state;
+    State& state = static_cast<State&>(*_state);
 
     /* If there are any running animations, create() had to be called already,
        which ensures the layer is already set */
     CORRADE_INTERNAL_ASSERT(!capacity() || state.layerSharedState);
-    const TextLayer::Shared::State& layerSharedState = *state.layerSharedState;
+    const TextLayer::Shared::State& layerSharedState = static_cast<const TextLayer::Shared::State&>(*state.layerSharedState);
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
 
     TextLayerStyleAnimations animations;
@@ -537,7 +500,7 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
                after. */
             {
                 const Implementation::TextLayerStyle& styleData = layerSharedState.styles[animation.sourceStyle];
-                state.layer->setDynamicStyle(*style,
+                static_cast<TextLayer&>(*state.layer).setDynamicStyle(*style,
                     TextLayerStyleUniform{},
                     styleData.font,
                     styleData.alignment, layerSharedState.styleFeatures.sliceSize(styleData.featureOffset, styleData.featureCount),
@@ -636,40 +599,6 @@ TextLayerStyleAnimations TextLayerStyleAnimator::advance(const Containers::BitAr
     }
 
     return animations;
-}
-
-void TextLayerStyleAnimator::setLayerInstance(TextLayer& instance, const void* sharedState) {
-    /* This is called from TextLayer::assignAnimator(), which should itself
-       prevent the layer from being set more than once */
-    CORRADE_INTERNAL_ASSERT(!_state->layer && sharedState);
-    _state->layer = &instance;
-    _state->layerSharedState = reinterpret_cast<const TextLayer::Shared::State*>(sharedState);
-}
-
-void TextLayerStyleAnimator::doClean(const Containers::BitArrayView animationIdsToRemove) {
-    State& state = *_state;
-    /* If any animations were created, the layer was ensured to be set by
-       create() already. Otherwise it doesn't need to be as the loop below is
-       empty. */
-    CORRADE_INTERNAL_ASSERT(animationIdsToRemove.isEmpty() || state.layer);
-
-    /** @todo some way to iterate set bits */
-    for(std::size_t i = 0; i != animationIdsToRemove.size(); ++i) {
-        if(!animationIdsToRemove[i]) continue;
-
-        /* Recycle the dynamic style if it was allocated already. It might not
-           be if advance() wasn't called for this animation yet or if it was
-           already stopped by the time it reached advance(). */
-        if(state.animations[i].dynamicStyle != ~UnsignedInt{})
-            state.layer->recycleDynamicStyle(state.animations[i].dynamicStyle);
-
-        /* As doClean() is only ever called from within advance() or from
-           cleanData() (i.e., when the data the animation is attached to is
-           removed), there's no need to deal with resetting the style away from
-           the now-recycled dynamic one here -- it was either already done in
-           advance() or there's no point in doing it as the data itself is
-           removed already */
-    }
 }
 
 }}

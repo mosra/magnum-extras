@@ -35,6 +35,7 @@
 
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/Implementation/abstractVisualLayerAnimatorState.h"
 #include "Magnum/Whee/Implementation/baseLayerState.h"
 
 namespace Magnum { namespace Whee {
@@ -79,13 +80,11 @@ struct Animation {
 
 }
 
-struct BaseLayerStyleAnimator::State {
-    BaseLayer* layer = nullptr;
-    const BaseLayer::Shared::State* layerSharedState = nullptr;
+struct BaseLayerStyleAnimator::State: AbstractVisualLayerStyleAnimator::State {
     Containers::Array<Animation> animations;
 };
 
-BaseLayerStyleAnimator::BaseLayerStyleAnimator(AnimatorHandle handle): AbstractStyleAnimator{handle}, _state{InPlaceInit} {}
+BaseLayerStyleAnimator::BaseLayerStyleAnimator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle, Containers::pointer<State>()} {}
 
 BaseLayerStyleAnimator::BaseLayerStyleAnimator(BaseLayerStyleAnimator&&) noexcept = default;
 
@@ -96,7 +95,7 @@ BaseLayerStyleAnimator& BaseLayerStyleAnimator::operator=(BaseLayerStyleAnimator
 AnimationHandle BaseLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
     /* AbstractAnimator::create() DataHandle overload checks the layer
        internally too, but this message is less confusing */
-    CORRADE_ASSERT(_state->layer,
+    CORRADE_ASSERT(static_cast<State&>(*_state).layer,
         "Whee::BaseLayerStyleAnimator::create(): no layer set", {});
     const AnimationHandle handle = AbstractStyleAnimator::create(played, duration, data, repeatCount, flags);
     createInternal(handle, sourceStyle, targetStyle, easing);
@@ -122,10 +121,10 @@ AnimationHandle BaseLayerStyleAnimator::create(const UnsignedInt sourceStyle, co
 }
 
 void BaseLayerStyleAnimator::createInternal(const AnimationHandle handle, const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float)) {
-    State& state = *_state;
+    State& state = static_cast<State&>(*_state);
     /* Layer being set had to be checked in create() already */
     CORRADE_INTERNAL_ASSERT(state.layerSharedState);
-    const BaseLayer::Shared::State& layerSharedState = *state.layerSharedState;
+    const BaseLayer::Shared::State& layerSharedState = static_cast<const BaseLayer::Shared::State&>(*state.layerSharedState);
     CORRADE_ASSERT(layerSharedState.setStyleCalled,
         "Whee::BaseLayerStyleAnimator::create(): no style data was set on the layer", );
     CORRADE_ASSERT(
@@ -136,8 +135,11 @@ void BaseLayerStyleAnimator::createInternal(const AnimationHandle handle, const 
         "Whee::BaseLayerStyleAnimator::create(): easing is null", );
 
     const UnsignedInt id = animationHandleId(handle);
-    if(id >= state.animations.size())
+    if(id >= state.animations.size()) {
         arrayResize(state.animations, NoInit, id + 1);
+        state.targetStyles = stridedArrayView(state.animations).slice(&Animation::targetStyle);
+        state.dynamicStyles = stridedArrayView(state.animations).slice(&Animation::dynamicStyle);
+    }
     Animation& animation = state.animations[id];
     animation.targetStyle = targetStyle;
     animation.dynamicStyle = ~UnsignedInt{};
@@ -167,82 +169,43 @@ void BaseLayerStyleAnimator::remove(const AnimatorDataHandle handle) {
     removeInternal(animatorDataHandleId(handle));
 }
 
-void BaseLayerStyleAnimator::removeInternal(const UnsignedInt id) {
-    /* If it gets here, the removed handle was valid. Thus it was create()d
-       before and so the layer and everything should be set properly. */
-    State& state = *_state;
-    CORRADE_INTERNAL_ASSERT(state.layer);
-
-    /* Recycle the dynamic style if it was allocated already. It might not be
-       if advance() wasn't called for this animation yet or if it was already
-       stopped by the time it reached advance(). */
-    if(state.animations[id].dynamicStyle != ~UnsignedInt{})
-        state.layer->recycleDynamicStyle(state.animations[id].dynamicStyle);
-}
-
-UnsignedInt BaseLayerStyleAnimator::targetStyle(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::BaseLayerStyleAnimator::targetStyle(): invalid handle" << handle, {});
-    return _state->animations[animationHandleId(handle)].targetStyle;
-}
-
-UnsignedInt BaseLayerStyleAnimator::targetStyle(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::BaseLayerStyleAnimator::targetStyle(): invalid handle" << handle, {});
-    return _state->animations[animatorDataHandleId(handle)].targetStyle;
-}
-
-Containers::Optional<UnsignedInt> BaseLayerStyleAnimator::dynamicStyle(const AnimationHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::BaseLayerStyleAnimator::dynamicStyle(): invalid handle" << handle, {});
-    const UnsignedInt style = _state->animations[animationHandleId(handle)].dynamicStyle;
-    return style == ~UnsignedInt{} ? Containers::NullOpt : Containers::optional(style);
-}
-
-Containers::Optional<UnsignedInt> BaseLayerStyleAnimator::dynamicStyle(const AnimatorDataHandle handle) const {
-    CORRADE_ASSERT(isHandleValid(handle),
-        "Whee::BaseLayerStyleAnimator::dynamicStyle(): invalid handle" << handle, {});
-    const UnsignedInt style = _state->animations[animatorDataHandleId(handle)].dynamicStyle;
-    return style == ~UnsignedInt{} ? Containers::NullOpt : Containers::optional(style);
-}
-
 auto BaseLayerStyleAnimator::easing(const AnimationHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::BaseLayerStyleAnimator::easing(): invalid handle" << handle, {});
-    return _state->animations[animationHandleId(handle)].easing;
+    return static_cast<const State&>(*_state).animations[animationHandleId(handle)].easing;
 }
 
 auto BaseLayerStyleAnimator::easing(const AnimatorDataHandle handle) const -> Float(*)(Float) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::BaseLayerStyleAnimator::easing(): invalid handle" << handle, {});
-    return _state->animations[animatorDataHandleId(handle)].easing;
+    return static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)].easing;
 }
 
 Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> BaseLayerStyleAnimator::uniforms(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::BaseLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
-    const Animation& animation = _state->animations[animationHandleId(handle)];
+    const Animation& animation = static_cast<const State&>(*_state).animations[animationHandleId(handle)];
     return {animation.sourceUniform, animation.targetUniform};
 }
 
 Containers::Pair<BaseLayerStyleUniform, BaseLayerStyleUniform> BaseLayerStyleAnimator::uniforms(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::BaseLayerStyleAnimator::uniforms(): invalid handle" << handle, {});
-    const Animation& animation = _state->animations[animatorDataHandleId(handle)];
+    const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
     return {animation.sourceUniform, animation.targetUniform};
 }
 
 Containers::Pair<Vector4, Vector4> BaseLayerStyleAnimator::paddings(const AnimationHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::BaseLayerStyleAnimator::paddings(): invalid handle" << handle, {});
-    const Animation& animation = _state->animations[animationHandleId(handle)];
+    const Animation& animation = static_cast<const State&>(*_state).animations[animationHandleId(handle)];
     return {animation.sourcePadding, animation.targetPadding};
 }
 
 Containers::Pair<Vector4, Vector4> BaseLayerStyleAnimator::paddings(const AnimatorDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Whee::BaseLayerStyleAnimator::paddings(): invalid handle" << handle, {});
-    const Animation& animation = _state->animations[animatorDataHandleId(handle)];
+    const Animation& animation = static_cast<const State&>(*_state).animations[animatorDataHandleId(handle)];
     return {animation.sourcePadding, animation.targetPadding};
 }
 
@@ -254,12 +217,12 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
     CORRADE_ASSERT(dynamicStylePaddings.size() == dynamicStyleUniforms.size(),
         "Whee::BaseLayerStyleAnimator::advance(): expected dynamic style uniform and padding views to have the same size but got" << dynamicStyleUniforms.size() << "and" << dynamicStylePaddings.size(), {});
 
-    State& state = *_state;
+    State& state = static_cast<State&>(*_state);
 
     /* If there are any running animations, create() had to be called
        already, which ensures the layer is already set */
     CORRADE_INTERNAL_ASSERT(!capacity() || state.layerSharedState);
-    const BaseLayer::Shared::State& layerSharedState = *state.layerSharedState;
+    const BaseLayer::Shared::State& layerSharedState = static_cast<const BaseLayer::Shared::State&>(*state.layerSharedState);
     const Containers::StridedArrayView1D<const LayerDataHandle> layerData = this->layerData();
 
     BaseLayerStyleAnimations animations;
@@ -353,40 +316,6 @@ BaseLayerStyleAnimations BaseLayerStyleAnimator::advance(const Containers::BitAr
     }
 
     return animations;
-}
-
-void BaseLayerStyleAnimator::setLayerInstance(BaseLayer& instance, const void* sharedState) {
-    /* This is called from BaseLayer::assignAnimator(), which should itself
-       prevent the layer from being set more than once */
-    CORRADE_INTERNAL_ASSERT(!_state->layer && sharedState);
-    _state->layer = &instance;
-    _state->layerSharedState = reinterpret_cast<const BaseLayer::Shared::State*>(sharedState);
-}
-
-void BaseLayerStyleAnimator::doClean(const Containers::BitArrayView animationIdsToRemove) {
-    State& state = *_state;
-    /* If any animations were created, the layer was ensured to be set by
-       create() already. Otherwise it doesn't need to be as the loop below is
-       empty. */
-    CORRADE_INTERNAL_ASSERT(animationIdsToRemove.isEmpty() || state.layer);
-
-    /** @todo some way to iterate set bits */
-    for(std::size_t i = 0; i != animationIdsToRemove.size(); ++i) {
-        if(!animationIdsToRemove[i]) continue;
-
-        /* Recycle the dynamic style if it was allocated already. It might not
-           be if advance() wasn't called for this animation yet or if it was
-           already stopped by the time it reached advance(). */
-        if(state.animations[i].dynamicStyle != ~UnsignedInt{})
-            state.layer->recycleDynamicStyle(state.animations[i].dynamicStyle);
-
-        /* As doClean() is only ever called from within advance() or from
-           cleanData() (i.e., when the data the animation is attached to is
-           removed), there's no need to deal with resetting the style away from
-           the now-recycled dynamic one here -- it was either already done in
-           advance() or there's no point in doing it as the data itself is
-           removed already */
-    }
 }
 
 }}
