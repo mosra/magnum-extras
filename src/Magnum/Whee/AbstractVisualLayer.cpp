@@ -31,6 +31,7 @@
 #include <Corrade/Utility/Algorithms.h>
 
 #include "Magnum/Whee/AbstractUserInterface.h"
+#include "Magnum/Whee/AbstractVisualLayerAnimator.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
@@ -234,6 +235,15 @@ void AbstractVisualLayer::recycleDynamicStyle(const UnsignedInt id) {
         "Whee::AbstractVisualLayer::recycleDynamicStyle(): style" << id << "not allocated", );
     state.dynamicStylesUsed.reset(id);
     state.dynamicStyleAnimations[id] = AnimationHandle::Null;
+}
+
+AbstractVisualLayer& AbstractVisualLayer::assignAnimator(AbstractVisualLayerStyleAnimator& animator) {
+    CORRADE_ASSERT(_state->shared.dynamicStyleCount,
+        "Whee::AbstractVisualLayer::assignAnimator(): can't animate a layer with zero dynamic styles", *this);
+
+    AbstractLayer::assignAnimator(animator);
+    animator.setLayerInstance(*this, &_state->shared);
+    return *this;
 }
 
 LayerFeatures AbstractVisualLayer::doFeatures() const {

@@ -32,7 +32,7 @@
 
 #include <Magnum/Math/Time.h>
 
-#include "Magnum/Whee/AbstractAnimator.h"
+#include "Magnum/Whee/AbstractVisualLayerAnimator.h"
 
 namespace Magnum { namespace Whee {
 
@@ -115,7 +115,7 @@ CORRADE_ENUMSET_OPERATORS(TextLayerStyleAnimations)
 @brief Text layer style animator
 @m_since_latest
 */
-class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
+class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAnimator {
     public:
         /**
          * @brief Constructor
@@ -306,73 +306,6 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
          * @ref AbstractAnimator::remove(AnimatorDataHandle) instead.
          */
         void remove(AnimatorDataHandle handle);
-
-        /**
-         * @brief Target animation style ID
-         *
-         * Expects that @p handle is valid. The returned value is always less
-         * than @ref TextLayer::Shared::styleCount() of the layer associated
-         * with this animator.
-         * @see @ref dynamicStyle()
-         */
-        UnsignedInt targetStyle(AnimationHandle handle) const;
-
-        /**
-         * @brief Target animation style ID in a concrete enum type
-         *
-         * Expects that @p handle is valid. The returned value is always less
-         * than @ref BaseLayer::Shared::styleCount() of the layer associated
-         * with this animator.
-         * @see @ref dynamicStyle()
-         */
-        template<class StyleIndex> StyleIndex targetStyle(AnimationHandle handle) const {
-            static_assert(std::is_enum<StyleIndex>::value, "expected an enum type");
-            return StyleIndex(targetStyle(handle));
-        }
-
-        /**
-         * @brief Target animation style ID assuming it belongs to this animator
-         *
-         * Like @ref targetStyle(AnimationHandle) const but without checking
-         * that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref animationHandleData()
-         */
-        UnsignedInt targetStyle(AnimatorDataHandle handle) const;
-
-        /**
-         * @brief Target animation style ID in a concrete enum type assuming it belongs to this layer
-         *
-         * Like @ref targetStyle(AnimationHandle) const but without checking
-         * that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref animationHandleData()
-         */
-        template<class StyleIndex> StyleIndex targetStyle(AnimatorDataHandle handle) const {
-            static_assert(std::is_enum<StyleIndex>::value, "expected an enum type");
-            return StyleIndex(targetStyle(handle));
-        }
-
-        /**
-         * @brief Animation dynamic style ID
-         *
-         * Expects that @p handle is valid. If the dynamic style wasn't
-         * allocated yet, either due to the animation not being advanced yet or
-         * due to no free dynamic styles being available, returns
-         * @ref Containers::NullOpt. The
-         * @see @ref targetStyle()
-         */
-        Containers::Optional<UnsignedInt> dynamicStyle(AnimationHandle handle) const;
-
-        /**
-         * @brief Animation dynamic style IDs assuming it belongs to this animator
-         *
-         * Like @ref dynamicStyle(AnimationHandle) const but without checking
-         * that @p handle indeed belongs to this animator. See its
-         * documentation for more information.
-         * @see @ref animationHandleData()
-         */
-        Containers::Optional<UnsignedInt> dynamicStyle(AnimatorDataHandle handle) const;
 
         /**
          * @brief Animation easing function
@@ -588,18 +521,9 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
         TextLayerStyleAnimations advance(Containers::BitArrayView active, const Containers::StridedArrayView1D<const Float>& factors, Containers::BitArrayView remove, Containers::ArrayView<TextLayerStyleUniform> dynamicStyleUniforms, Containers::MutableBitArrayView dynamicStyleCursorStyles, Containers::MutableBitArrayView dynamicStyleSelectionStyles, const Containers::StridedArrayView1D<Vector4>& dynamicStylePaddings, Containers::ArrayView<TextLayerEditingStyleUniform> dynamicEditingStyleUniforms, const Containers::StridedArrayView1D<Vector4>& dynamicEditingStylePaddings, const Containers::StridedArrayView1D<UnsignedInt>& dataStyles);
 
     private:
-        /* Only TextLayer::assignAnimator(), but we don't want to include the
-           whole thing */
-        friend TextLayer;
-
-        /* Called by TextLayer::assignAnimator() to set the actual instance for
-           dynamic style allocation and recycling, and for accessing the input
-           style data (which is a typeless pointer to not need to include the
-           whole TextLayer header). Yeah, it's quite ew. */
-        MAGNUM_WHEE_LOCAL void setLayerInstance(TextLayer& instance, const void* sharedState);
+        struct State;
 
         MAGNUM_WHEE_LOCAL void createInternal(AnimationHandle handle, UnsignedInt sourceStyle, UnsignedInt targetStyle, Float(*easing)(Float));
-        MAGNUM_WHEE_LOCAL void removeInternal(UnsignedInt id);
 
         /* used by foo(AnimationHandle) and foo(AnimatorDataHandle) */
         MAGNUM_WHEE_LOCAL Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> cursorUniformsInternal(UnsignedInt id) const;
@@ -607,11 +531,6 @@ class MAGNUM_WHEE_EXPORT TextLayerStyleAnimator: public AbstractStyleAnimator {
         MAGNUM_WHEE_LOCAL Containers::Optional<Containers::Pair<TextLayerEditingStyleUniform, TextLayerEditingStyleUniform>> selectionUniformsInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL Containers::Optional<Containers::Pair<Vector4, Vector4>> selectionPaddingsInternal(UnsignedInt id) const;
         MAGNUM_WHEE_LOCAL Containers::Optional<Containers::Pair<TextLayerStyleUniform, TextLayerStyleUniform>> selectionTextUniformsInternal(UnsignedInt id) const;
-
-        MAGNUM_WHEE_LOCAL void doClean(Containers::BitArrayView animationIdsToRemove) override;
-
-        struct State;
-        Containers::Pointer<State> _state;
 };
 
 }}

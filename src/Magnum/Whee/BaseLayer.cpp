@@ -231,12 +231,7 @@ BaseLayer& BaseLayer::setBackgroundBlurPassCount(UnsignedInt count) {
 }
 
 BaseLayer& BaseLayer::assignAnimator(BaseLayerStyleAnimator& animator) {
-    CORRADE_ASSERT(static_cast<const Shared::State&>(_state->shared).dynamicStyleCount,
-        "Whee::BaseLayer::assignAnimator(): can't animate a layer with zero dynamic styles", *this);
-
-    AbstractLayer::assignAnimator(animator);
-    animator.setLayerInstance(*this, &_state->shared);
-    return *this;
+    return static_cast<BaseLayer&>(AbstractVisualLayer::assignAnimator(animator));
 }
 
 Containers::ArrayView<const BaseLayerStyleUniform> BaseLayer::dynamicStyleUniforms() const {
