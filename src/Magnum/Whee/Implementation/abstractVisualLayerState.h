@@ -55,6 +55,8 @@ struct AbstractVisualLayer::Shared::State {
        but I feel that having a base with a virtual destructor is less nasty
        and nicer to caches than several loose allocations of non-virtual
        types. */
+    /** @todo switch to a custom (casting) deleter instead once Pointer has
+        that */
     virtual ~State() = default;
 
     /* References the public instance, for use by BaseLayer::shared() and
@@ -92,6 +94,8 @@ struct AbstractVisualLayer::State {
        allocation, but I feel that having a base with a virtual destructor is
        less nasty and nicer to caches than two loose allocations of non-virtual
        types. */
+    /** @todo switch to a custom (casting) deleter instead once Pointer has
+        that */
     virtual ~State() = default;
 
     /* Has bits set for dynamic styles that are used */
