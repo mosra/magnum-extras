@@ -181,8 +181,8 @@ struct TextLayerTest: TestSuite::Tester {
     void styleOutOfRange();
     void glyphOutOfRange();
 
-    /* assignAnimator() and advanceAnimations() tested in
-       TextLayerStyleAnimatorTest */
+    /* assignAnimator(), setDefaultStyleAnimator() and advanceAnimations()
+       tested in TextLayerStyleAnimatorTest */
 
     void updateEmpty();
     void updateCleanDataOrder();

@@ -35,11 +35,14 @@
 
 #include "Magnum/Whee/AbstractUserInterface.h"
 #include "Magnum/Whee/AbstractVisualLayer.h"
+#include "Magnum/Whee/AbstractVisualLayerAnimator.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/NodeFlags.h"
 /* for setStyle(), eventStyleTransition*() */
 #include "Magnum/Whee/Implementation/abstractVisualLayerState.h"
+/* for StyleLayerStyleAnimator */
+#include "Magnum/Whee/Implementation/abstractVisualLayerAnimatorState.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
 
@@ -77,6 +80,8 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
 
     void sharedNeedsUpdateStatePropagatedToLayers();
 };
+
+using namespace Math::Literals;
 
 enum class Enum: UnsignedShort {};
 
@@ -158,9 +163,33 @@ const struct {
 
 const struct {
     const char* name;
+    bool dynamicAnimated;
+} EventStyleTransitionNoOpData[]{
+    {"", false},
+    {"dynamic animated style with target being the same", true},
+};
+
+const struct {
+    const char* name;
     bool update;
     bool templated;
+    bool dynamicAnimated;
 } EventStyleTransitionData[]{
+    {"update before", true, false, false},
+    {"", false, false, false},
+    {"templated, update before", true, true, false},
+    {"templated", false, true, false},
+    {"dynamic animated style with target style being set, update before",
+        true, false, true},
+    {"dynamic animated style with target style being set",
+        false, false, true},
+};
+
+const struct {
+    const char* name;
+    bool update;
+    bool templated;
+} EventStyleTransitionNoHoverData[]{
     {"update before", true, false},
     {"", false, false},
     {"templated, update before", true, true},
@@ -229,9 +258,30 @@ const struct {
 const struct {
     const char* name;
     UnsignedInt dynamicStyleCount;
+    bool dynamicAnimated;
 } EventStyleTransitionOutOfRangeData[]{
-    {"", 0},
-    {"dynamic styles", 5},
+    {"", 0, false},
+    {"dynamic styles", 5, false},
+    {"dynamic animated style with target style being set", 1, true}
+};
+
+const struct {
+    const char* name;
+    bool animator1, animator2;
+    bool animator1SetDefault;
+    bool animation1, animation2;
+    bool dynamicStyleAssociatedAnimation;
+} EventStyleTransitionDynamicStyleData[]{
+    {"",
+        false, false, false, false, false, false},
+    {"with assigned animator but no animation",
+        true, false, true, false, false, false},
+    {"with assigned animator but animation not matching its handle",
+        true, true, true, false, true, true},
+    {"with animation but no assigned animator",
+        true, false, false, true, false, true},
+    {"with assigned animator, animation matching its handle but not associated with the dynamic style",
+        true, false, true, true, false, false},
 };
 
 AbstractVisualLayerTest::AbstractVisualLayerTest() {
@@ -258,13 +308,16 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
 
     addTests({&AbstractVisualLayerTest::dynamicStyleAllocateRecycle,
               &AbstractVisualLayerTest::dynamicStyleAllocateNoDynamicStyles,
-              &AbstractVisualLayerTest::dynamicStyleRecycleInvalid,
+              &AbstractVisualLayerTest::dynamicStyleRecycleInvalid});
 
-              &AbstractVisualLayerTest::eventStyleTransitionNoOp});
+    addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNoOp},
+        Containers::arraySize(EventStyleTransitionNoOpData));
 
-    addInstancedTests({&AbstractVisualLayerTest::eventStyleTransition,
-                       &AbstractVisualLayerTest::eventStyleTransitionNoHover},
+    addInstancedTests({&AbstractVisualLayerTest::eventStyleTransition},
         Containers::arraySize(EventStyleTransitionData));
+
+    addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionNoHover},
+        Containers::arraySize(EventStyleTransitionNoHoverData));
 
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionDisabled},
         Containers::arraySize(EventStyleTransitionDisabledData));
@@ -281,9 +334,10 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
     addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionOutOfRange},
         Containers::arraySize(EventStyleTransitionOutOfRangeData));
 
-    addTests({&AbstractVisualLayerTest::eventStyleTransitionDynamicStyle,
+    addInstancedTests({&AbstractVisualLayerTest::eventStyleTransitionDynamicStyle},
+        Containers::arraySize(EventStyleTransitionDynamicStyleData));
 
-              &AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers});
+    addTests({&AbstractVisualLayerTest::sharedNeedsUpdateStatePropagatedToLayers});
 }
 
 void AbstractVisualLayerTest::sharedConstruct() {
@@ -446,6 +500,12 @@ struct StyleLayerShared: AbstractVisualLayer::Shared {
 struct StyleLayer: AbstractVisualLayer {
     explicit StyleLayer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
 
+    using AbstractVisualLayer::assignAnimator;
+    using AbstractVisualLayer::setDefaultStyleAnimator;
+
+    LayerFeatures doFeatures() const override {
+        return AbstractVisualLayer::doFeatures()|LayerFeature::AnimateStyles;
+    }
     const State& stateData() const { return static_cast<const State&>(*_state); }
 
     /* Just saves the style index and sync's the styles array */
@@ -462,6 +522,27 @@ struct StyleLayer: AbstractVisualLayer {
     }
 
     Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> data;
+};
+
+/* This one is shared by all cases that set up style transition animations */
+struct StyleLayerStyleAnimator: AbstractVisualLayerStyleAnimator {
+    explicit StyleLayerStyleAnimator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle} {}
+
+    /* Just saves the target style index and sync's the style arrays */
+    template<class T> AnimationHandle create(T targetStyle, Nanoseconds played, Nanoseconds duration, DataHandle data, AnimationFlags flags = {}) {
+        AnimationHandle handle = AbstractVisualLayerStyleAnimator::create(played, duration, data, flags);
+        const UnsignedInt id = animationHandleId(handle);
+        if(id >= styles.size()) {
+            arrayAppend(styles, NoInit, id - styles.size() + 1);
+            _state->targetStyles = stridedArrayView(styles).slice(&decltype(styles)::Type::first);
+            _state->dynamicStyles = stridedArrayView(styles).slice(&decltype(styles)::Type::second);
+        }
+        styles[id].first() = UnsignedInt(targetStyle);
+        styles[id].second() = ~UnsignedInt{};
+        return handle;
+    }
+
+    Containers::Array<Containers::Pair<UnsignedInt, UnsignedInt>> styles;
 };
 
 template<class T> void AbstractVisualLayerTest::setStyle() {
@@ -1199,21 +1280,59 @@ StyleIndex styleIndexTransitionToDisabled(StyleIndex index) {
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 }
 
+StyleIndex styleIndexTransitionPassthrough(StyleIndex index) {
+    return index;
+}
+
 void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
-    /* Transition for dynamic styles tested in
-       eventStyleTransitionDynamicStyle() instead */
-    StyleLayerShared shared{StyleCount, 0};
+    auto&& data = EventStyleTransitionNoOpData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* (Non-no-op) transition for dynamic styles tested in
+       eventStyleTransitionDynamicStyle() */
+    StyleLayerShared shared{StyleCount, data.dynamicAnimated ? 1u : 0u};
 
     AbstractUserInterface ui{{100, 100}};
 
     NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f});
-
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
-    /* Deliberately setting a style that isn't the "default" */
-    DataHandle data = layer.create(StyleIndex::GreenPressedHover, node);
+
+    /* In case of the animated dynamic style, create the data with a dynamic
+       style that points to an animation that a target style index. Not using
+       ui.advanceAnimations() as that would require a lot more code in both
+       StyleLayer and StyleLayerStyleAnimator (which itself would need to be
+       tested), allocating the dynamic style with associated animation
+       directly. */
+    DataHandle nodeData;
+    if(data.dynamicAnimated) {
+        Containers::Pointer<StyleLayerStyleAnimator> animator{InPlaceInit, ui.createAnimator()};
+        layer.assignAnimator(*animator);
+        layer.setDefaultStyleAnimator(animator.get());
+
+        AnimationHandle nodeDataAnimation = animator->create(StyleIndex::GreenPressedHover, 0_nsec, 1_nsec, DataHandle::Null);
+        nodeData = layer.create(StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation), node);
+        CORRADE_COMPARE(layer.style(nodeData), StyleCount + 0);
+        CORRADE_COMPARE(animator->targetStyle<StyleIndex>(nodeDataAnimation), StyleIndex::GreenPressedHover);
+        /* The dynamic style isn't backreferenced from the animation, but
+           that's fine, the layer needs only the other direction */
+        CORRADE_COMPARE(animator->dynamicStyle(nodeDataAnimation), Containers::NullOpt);
+
+        ui.setStyleAnimatorInstance(Utility::move(animator));
+    } else nodeData = layer.create(StyleIndex::GreenPressedHover, node);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
+
+    /* In case of a dynamic animated style, the no-op transition happens on the
+       targetStyle() and not on the dynamic style. But since it's no-op, the
+       new style index is the same as targetStyle(), which the animation is
+       eventually going to land on, so nothing is done either and the dynamic
+       style stays assigned.
+
+       Yes, this would behave the same even if given event handler didn't peek
+       into animations associated with dynamic styles at all, but presence of
+       that code is what the other test cases are verifying. */
+    const StyleIndex expectedStyle = data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::GreenPressedHover;
 
     /* Press, release, over, hovered press, hovered release, out should all do
        nothing by default */
@@ -1223,7 +1342,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{{}, Pointer::MouseLeft};
@@ -1231,7 +1350,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerMoveEvent event{{}, {}, {}};
@@ -1239,7 +1358,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{{}, Pointer::MouseLeft};
@@ -1247,7 +1366,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{{}, Pointer::MouseLeft};
@@ -1255,7 +1374,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerMoveEvent event{{}, {}, {}};
@@ -1263,7 +1382,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -1277,7 +1396,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
         FocusEvent blurEvent{{}};
@@ -1285,10 +1404,44 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
 
         ui.clearNodeFlags(node, NodeFlag::Focusable);
+    }
+
+    /* Making a hovered focused node non-focusable should do nothing by
+       default */
+    {
+        ui.addNodeFlags(node, NodeFlag::Focusable);
+
+        PointerMoveEvent moveEvent{{}, {}, {}};
+        FocusEvent focusEvent{{}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, moveEvent));
+        CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        ui.clearNodeFlags(node, NodeFlag::Focusable);
+        ui.update();
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        ui.addNodeFlags(node, NodeFlag::Disabled);
+        ui.update();
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        ui.clearNodeFlags(node, NodeFlag::Disabled);
     }
 
     /* Setting a null toPressedOut transition will do nothing for a press */
@@ -1306,7 +1459,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -1325,7 +1478,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -1344,7 +1497,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -1363,7 +1516,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -1379,7 +1532,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -1395,12 +1548,9 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
-
-    /* toDisabled no-op transition is tested in
-       eventStyleTransitionDisabled() */
 
     /* Marking the node as Focusable for the rest of the test case */
     ui.addNodeFlags(node, NodeFlag::Focusable);
@@ -1420,7 +1570,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -1439,7 +1589,7 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), node);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
@@ -1458,7 +1608,90 @@ void AbstractVisualLayerTest::eventStyleTransitionNoOp() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Make the node hovered and focused again */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToInactiveOut,
+        nullptr,
+        styleIndexTransitionToFocusedOut,
+        nullptr,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    {
+        PointerMoveEvent moveEvent{{}, {}, {}};
+        FocusEvent focusEvent{{}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.0f}, moveEvent));
+        CORRADE_VERIFY(ui.focusEvent(node, focusEvent));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null toInactiveOver will do nothing for a visiblity loss
+       event */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToInactiveOut,
+        nullptr,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionToDisabledDoNotCall>();
+    {
+        ui.clearNodeFlags(node, NodeFlag::Focusable);
+        ui.update();
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+    }
+
+    /* Setting a null toInactiveOut will do nothing for a visibility loss event
+       and null toDisabled nothing in doUpdate() */
+    shared.setStyleTransition<StyleIndex,
+        nullptr,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        nullptr>();
+    {
+        ui.addNodeFlags(node, NodeFlag::Disabled);
+        ui.update();
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
+        CORRADE_COMPARE(layer.state(), LayerStates{});
+
+        ui.clearNodeFlags(node, NodeFlag::Disabled);
+    }
+
+    /* Setting a non-null but passthrough will do nothing in doUpdate() as
+       well */
+    shared.setStyleTransition<StyleIndex,
+        styleIndexTransitionToInactiveOut,
+        styleIndexTransitionToInactiveOver,
+        styleIndexTransitionToFocusedOut,
+        styleIndexTransitionToFocusedOver,
+        styleIndexTransitionToPressedOut,
+        styleIndexTransitionToPressedOver,
+        styleIndexTransitionPassthrough>();
+    {
+        ui.addNodeFlags(node, NodeFlag::Disabled);
+        ui.update();
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), expectedStyle);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 }
@@ -1467,9 +1700,9 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     auto&& data = EventStyleTransitionData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
-    /* Transition for dynamic styles tested in
-       eventStyleTransitionDynamicStyle() instead */
-    StyleLayerShared shared{StyleCount, 0};
+    /* Transition for dynamic styles (that don't have an animation with
+       targetStyle()) tested in eventStyleTransitionDynamicStyle() */
+    StyleLayerShared shared{StyleCount, data.dynamicAnimated ? 1u : 0u};
 
     /* StyleLayerShared uses the *_SHARED_SUBCLASS_IMPLEMENTATION() macro, this
        verifies that all the overrides do what's expected */
@@ -1532,6 +1765,24 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     DataHandle dataBlue = layer.create(StyleIndex::Blue, nodeBlue);
     DataHandle dataWhite = layer.create(StyleIndex::White, nodeWhite);
 
+    /* Animator. It'll be used below to temporarily replace data styles with
+       dynamic ones that point to the correct one in targetStyle(). */
+    StyleLayerStyleAnimator* animator{};
+    if(data.dynamicAnimated) {
+        Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+        layer.assignAnimator(*animatorInstance);
+        layer.setDefaultStyleAnimator(animatorInstance.get());
+        animator = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    }
+    auto moveStyleToDynamic = [&](DataHandle data) {
+        if(layer.dynamicStyleUsedCount() == 1)
+            layer.recycleDynamicStyle(0);
+        /* No need to attach the animation to the data */
+        AnimationHandle animation = animator->create(layer.style(data), 0_nsec, 1_nsec, DataHandle::Null);
+        layer.setStyle(data, StyleCount + *layer.allocateDynamicStyle(animation));
+        CORRADE_COMPARE(layer.style(data), StyleCount + 0);
+    };
+
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
     /* The style could be simply copied to calculatedStyles after an update as
@@ -1544,6 +1795,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     /* Press on the green node. The node isn't registered as hovered, so it's
        a press without a hover. Which usually happens with taps, for example,
        although it's not restricted to a particular Pointer type. */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.0f, 3.0f}, event));
@@ -1569,6 +1822,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Release on the green node. Again, the node isn't registered as hovered,
        so neither the hover stays. */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.5f}, event));
@@ -1590,6 +1845,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Move on the red node makes it hovered */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataRed);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({5.0f, 3.0f}, event));
@@ -1611,6 +1868,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Tap on it makes it hovered & pressed */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataRed);
     {
         PointerEvent event{{}, Pointer::Finger};
         CORRADE_VERIFY(ui.pointerPressEvent({4.5f, 3.5f}, event));
@@ -1633,6 +1892,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Move away makes it only pressed, without hover, as implicit capture is
        in effect */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataRed);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({7.0f, 3.0f}, event));
@@ -1654,6 +1915,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Move back makes it hovered & pressed again */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataRed);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({5.5f, 3.0f}, event));
@@ -1675,6 +1938,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Release makes it only hover again */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataRed);
     {
         PointerEvent event{{}, Pointer::Finger};
         CORRADE_VERIFY(ui.pointerReleaseEvent({5.0f, 2.5f}, event));
@@ -1696,6 +1961,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Move away makes it not hovered anymore */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataRed);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({7.0f, 2.5f}, event));
@@ -1723,6 +1990,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     ui.addNodeFlags(nodeBlue, NodeFlag::Focusable);
 
     /* Focusing the green node makes it focused */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         FocusEvent event{{}};
         CORRADE_VERIFY(ui.focusEvent(nodeGreen, event));
@@ -1744,6 +2013,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Moving onto the green node makes it focused & hovered */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.5f}, event));
@@ -1766,6 +2037,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Pressing on the green node makes it pressed & hovered, as that has a
        priority over focus */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
@@ -1788,6 +2061,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Moving away from the green node makes it only pressed, again with that
        taking precedence over focus */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({100.0f, 100.0f}, event));
@@ -1810,6 +2085,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Moving back to the green node makes it again pressed & hovered, taking
        precedence over focus */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 2.5f}, event));
@@ -1831,6 +2108,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Releasing on the green node makes it focused & hovered */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.0f}, event));
@@ -1852,6 +2131,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Blurring the green node makes it just focused */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         FocusEvent event{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
@@ -1873,6 +2154,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Focusing the green node makes it focused & hovered again */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         FocusEvent event{{}};
         CORRADE_VERIFY(ui.focusEvent(nodeGreen, event));
@@ -1894,6 +2177,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Moving away from the green node makes it only focused */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, event));
@@ -1916,6 +2201,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
 
     /* Pressing on the green node makes it pressed, as that has again a
        priority over focus */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({2.5f, 2.0f}, event));
@@ -1937,6 +2224,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Releasing on the green node makes it again focused */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         PointerEvent event{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({2.5f, 2.0f}, event));
@@ -1958,6 +2247,8 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Blurring the green node makes it inactive again */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataGreen);
     {
         FocusEvent event{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
@@ -1979,7 +2270,11 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Move on and away from the blue is accepted but makes no change to it,
-       thus no update is needed */
+       thus no update is needed. With the dynamic animated style it means the
+       animation is left running, because it eventually arrives at the desired
+       style. */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataBlue);
     {
         PointerMoveEvent event{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({2.0f, 6.0f}, event));
@@ -1987,7 +2282,7 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeBlue);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::Blue);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerMoveEvent event{{}, {}, {}};
@@ -1996,28 +2291,36 @@ void AbstractVisualLayerTest::eventStyleTransition() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), StyleIndex::Blue);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataBlue), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::Blue);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
     /* Press and release on the white is accepted but makes no change to it,
-       thus no update is needed */
+       thus no update is needed. With the dynamic animated style it means the
+       animation is left running, because it eventually arrives at the desired
+       style. */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataWhite);
     {
         PointerEvent event{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerPressEvent({5.0f, 5.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeWhite);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::White);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         PointerEvent event{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerReleaseEvent({5.5f, 4.5f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), StyleIndex::White);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataWhite), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::White);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 
     /* Press and release on the green node again, but with a right click. Such
-       event isn't even accepted and should cause no change either. */
+       event isn't even accepted and should cause no change either.
+
+       Thus also moveStyleToDynamic() isn't called for it in case of dynamic
+       animated styles because the code doesn't even get to query the
+       animation. */
     {
         PointerEvent event{{}, Pointer::MouseRight};
         CORRADE_VERIFY(!ui.pointerPressEvent({2.0f, 3.0f}, event));
@@ -2033,18 +2336,22 @@ void AbstractVisualLayerTest::eventStyleTransition() {
     }
 
     /* Focus and blur on the red node is accepted but makes no changes to it,
-       thus no update is needed */
+       thus no update is needed. With the dynamic animated style it means the
+       animation is left running, because it eventually arrives at the desired
+       style. */
+    if(data.dynamicAnimated)
+        moveStyleToDynamic(dataRed);
     {
         FocusEvent event{{}};
         CORRADE_VERIFY(ui.focusEvent(nodeRed, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeRed);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::Red);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     } {
         FocusEvent event{{}};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), StyleIndex::Red);
+        CORRADE_COMPARE(layer.style<StyleIndex>(dataRed), data.dynamicAnimated ? StyleIndex(StyleCount + 0) : StyleIndex::Red);
         CORRADE_COMPARE(layer.state(), LayerStates{});
     }
 }
@@ -2054,7 +2361,11 @@ void AbstractVisualLayerTest::eventStyleTransitionNoHover() {
     setTestCaseDescription(data.name);
 
     /* Transition for dynamic styles tested in
-       eventStyleTransitionDynamicStyle() instead */
+       eventStyleTransitionDynamicStyle(). Transition for dynamic styles that
+       have an associated animation with targetStyle set not tested here, as
+       that was covered well enough in eventStyleTransition() already, and this
+       is only verifying that the simpler setStyleTransition() overloads with
+       no hover state behave as expected. */
     StyleLayerShared shared{6, 0};
 
     AbstractUserInterface ui{{100, 100}};
@@ -2712,7 +3023,20 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
     NodeHandle node = ui.createNode({1.0f, 1.0f}, {2.0f, 2.0f}, NodeFlag::Focusable);
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
-    layer.create(StyleIndex::Red, node);
+
+    DataHandle nodeData;
+    StyleLayerStyleAnimator* animator{};
+    if(data.dynamicAnimated) {
+        Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+        layer.assignAnimator(*animatorInstance);
+        layer.setDefaultStyleAnimator(animatorInstance.get());
+        animator = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+
+        AnimationHandle nodeDataAnimation = animator->create(StyleIndex::Red, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+        nodeData = layer.create(StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation), node);
+        CORRADE_COMPARE(animator->targetStyle<StyleIndex>(nodeDataAnimation), StyleIndex::Red);
+
+    } else nodeData = layer.create(StyleIndex::Red, node);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -2742,9 +3066,7 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         CORRADE_COMPARE(out.str(), Utility::formatString( "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from {0} to {1} out of range for {1} styles\n", UnsignedByte(StyleIndex::Red), StyleCount));
     }
 
-    /* OOB toPressedOver transition in the press event. Doing a
-       (non-asserting) move before so the hovered node is properly
-       registered. */
+    /* OOB toPressedOver transition in the press event */
     shared.setStyleTransition<StyleIndex,
         styleIndexTransitionToInactiveOut,
         styleIndexTransitionToInactiveOver,
@@ -2754,8 +3076,18 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
         styleIndexTransitionOutOfRange,
         styleIndexTransitionToDisabledDoNotCall>();
     {
+        /* Doing a (non-asserting) move before so the hovered node is properly
+           registered. Which then for dynamic animated styles needs to be
+           followed by an animation that puts it back into the targetStyle. */
         PointerMoveEvent moveEvent{{}, {}, {}};
         ui.pointerMoveEvent({1.5f, 2.0f}, moveEvent);
+        if(data.dynamicAnimated) {
+            layer.recycleDynamicStyle(0);
+            AnimationHandle nodeDataAnimation = animator->create(StyleIndex::RedHover, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+            layer.setStyle(nodeData, StyleCount + *layer.allocateDynamicStyle(nodeDataAnimation));
+            CORRADE_COMPARE(animator->targetStyle<StyleIndex>(nodeDataAnimation), StyleIndex::RedHover);
+        }
+
         PointerEvent event{{}, Pointer::MouseLeft};
 
         std::ostringstream out;
@@ -2896,6 +3228,9 @@ void AbstractVisualLayerTest::eventStyleTransitionOutOfRange() {
 }
 
 void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
+    auto&& data = EventStyleTransitionDynamicStyleData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     StyleLayerShared shared{StyleCount, 1};
 
     AbstractUserInterface ui{{100, 100}};
@@ -2904,10 +3239,43 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
     NodeHandle nodeFocusable = ui.createNode({3.0f, 3.0f}, {2.0f, 2.0f}, NodeFlag::Focusable);
 
     StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
-    DataHandle data = layer.create(StyleIndex::Green, node);
-    DataHandle dataDynamic = layer.create(StyleCount + 0, node);
-    DataHandle dataFocusable = layer.create(StyleIndex::Green, nodeFocusable);
-    DataHandle dataFocusableDynamic = layer.create(StyleCount + 0, nodeFocusable);
+    DataHandle nodeData = layer.create(StyleIndex::Green, node);
+    DataHandle nodeFocusableData = layer.create(StyleIndex::Green, nodeFocusable);
+
+    /* Optionally create animators that are or aren't set as default in the
+       layer */
+    StyleLayerStyleAnimator *animator1{}, *animator2{};
+    if(data.animator1) {
+        Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+        layer.assignAnimator(*animatorInstance);
+        if(data.animator1SetDefault)
+            layer.setDefaultStyleAnimator(animatorInstance.get());
+        animator1 = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    } else CORRADE_INTERNAL_ASSERT(!data.animator1SetDefault && !data.animation1);
+    if(data.animator2) {
+        Containers::Pointer<StyleLayerStyleAnimator> animatorInstance{InPlaceInit, ui.createAnimator()};
+        layer.assignAnimator(*animatorInstance);
+        animator2 = &ui.setStyleAnimatorInstance(Utility::move(animatorInstance));
+    } else CORRADE_INTERNAL_ASSERT(!data.animation2);
+
+    /* And then, if there's an animator, create an animation that has a target
+       (non-dynamic) style assigned. In all cases, there should be something
+       missing or different, so the actual target style doesn't get used and
+       the dynamic style stays untouched by the transitions. */
+    DataHandle nodeDataDynamic;
+    if(data.animation1 || data.animation2) {
+        CORRADE_INTERNAL_ASSERT(data.animation1 != data.animation2);
+
+        AnimationHandle nodeDataDynamicAnimation = (data.animation1 ? animator1 : animator2)->create(StyleIndex::Green, -100_nsec, 1_nsec, DataHandle::Null, AnimationFlag::KeepOncePlayed);
+        nodeDataDynamic = layer.create(StyleCount + *layer.allocateDynamicStyle(data.dynamicStyleAssociatedAnimation ? nodeDataDynamicAnimation : AnimationHandle::Null), node);
+    } else {
+        CORRADE_INTERNAL_ASSERT(!data.dynamicStyleAssociatedAnimation);
+        nodeDataDynamic = layer.create(StyleCount + 0, node);
+    }
+
+    /* This one reuses the same dynamic style, thus there's potentially the
+       same animation with the same target style */
+    DataHandle nodeFocusableDataDynamic = layer.create(StyleCount + 0, nodeFocusable);
 
     ui.update();
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -2931,8 +3299,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressed);
-        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::GreenPressed);
+        CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
 
     /* toPressedOver transition in the press event. Doing a move before so the
        hovered node is properly registered. */
@@ -2945,8 +3313,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenPressedHover);
-        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::GreenPressedHover);
+        CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
 
     /* toInactiveOver transition */
     } {
@@ -2955,8 +3323,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
-        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
 
     /* toInactiveOut transition in the leave event */
     } {
@@ -2965,8 +3333,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
-        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::Green);
+        CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
 
     /* toInactiveOver transition in the enter event */
     } {
@@ -2975,8 +3343,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::GreenHover);
-        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
 
     /* toFocused transition in the focus event */
     } {
@@ -2985,8 +3353,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataFocusable), StyleIndex::GreenFocused);
-        CORRADE_COMPARE(layer.style(dataFocusableDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeFocusableData), StyleIndex::GreenFocused);
+        CORRADE_COMPARE(layer.style(nodeFocusableDataDynamic), StyleCount + 0);
 
     /* toInactive transition in the blur event */
     } {
@@ -2995,8 +3363,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataFocusable), StyleIndex::Green);
-        CORRADE_COMPARE(layer.style(dataFocusableDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeFocusableData), StyleIndex::Green);
+        CORRADE_COMPARE(layer.style(nodeFocusableDataDynamic), StyleCount + 0);
 
     /* toInactiveOver transition in doUpdate(), from a focused hovered node */
     } {
@@ -3008,8 +3376,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataFocusable), StyleIndex::GreenFocusedHover);
-        CORRADE_COMPARE(layer.style(dataFocusableDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeFocusableData), StyleIndex::GreenFocusedHover);
+        CORRADE_COMPARE(layer.style(nodeFocusableDataDynamic), StyleCount + 0);
 
         ui.clearNodeFlags(nodeFocusable, NodeFlag::Focusable);
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
@@ -3018,8 +3386,8 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
-        CORRADE_COMPARE(layer.style<StyleIndex>(dataFocusable), StyleIndex::GreenHover);
-        CORRADE_COMPARE(layer.style(dataFocusableDynamic), StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeFocusableData), StyleIndex::GreenHover);
+        CORRADE_COMPARE(layer.style(nodeFocusableDataDynamic), StyleCount + 0);
 
     /* toInactiveOut transition in doUpdate() */
     } {
@@ -3027,10 +3395,10 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeEnabledUpdate);
 
         ui.update();
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
-        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
-        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(data)]), StyleIndex::Green);
-        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::Green);
+        CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(nodeData)]), StyleIndex::Green);
+        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(nodeDataDynamic)], StyleCount + 0);
 
     /* toDisabled transition in doUpdate() */
     } {
@@ -3039,10 +3407,10 @@ void AbstractVisualLayerTest::eventStyleTransitionDynamicStyle() {
 
         /* Only the calculated style changes, not the public one */
         ui.update();
-        CORRADE_COMPARE(layer.style<StyleIndex>(data), StyleIndex::Green);
-        CORRADE_COMPARE(layer.style(dataDynamic), StyleCount + 0);
-        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(data)]), StyleIndex::GreenDisabled);
-        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(dataDynamic)], StyleCount + 0);
+        CORRADE_COMPARE(layer.style<StyleIndex>(nodeData), StyleIndex::Green);
+        CORRADE_COMPARE(layer.style(nodeDataDynamic), StyleCount + 0);
+        CORRADE_COMPARE(StyleIndex(layer.stateData().calculatedStyles[dataHandleId(nodeData)]), StyleIndex::GreenDisabled);
+        CORRADE_COMPARE(layer.stateData().calculatedStyles[dataHandleId(nodeDataDynamic)], StyleCount + 0);
     }
 }
 

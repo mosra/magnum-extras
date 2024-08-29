@@ -116,6 +116,10 @@ struct AbstractVisualLayer::State {
        correctly updated when the State instance gets moved). */
     Shared::State& shared;
 
+    /* Set by setDefaultStyleAnimator(), gets passed to
+       shared.styleTransitionAnimationOn* functions */
+    AbstractVisualLayerStyleAnimator* styleAnimator = nullptr;
+
     /* Is compared to Shared::styleTransitionToDisabledUpdateStamp in order to
        detect that doUpdate() needs to be called to update to potentially new
        disabled styles. When the two are the same, it's assumed the

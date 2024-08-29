@@ -672,8 +672,33 @@ class MAGNUM_WHEE_EXPORT TextLayer: public AbstractVisualLayer {
          * given @p animator wasn't passed to @ref assignAnimator() on any
          * layer yet. On the other hand, it's possible to associate multiple
          * different animators with the same layer.
+         * @see @ref setDefaultStyleAnimator()
          */
         TextLayer& assignAnimator(TextLayerStyleAnimator& animator);
+
+        /**
+         * @brief Default style animator for this layer
+         *
+         * If a style animator haven't been set, returns @cpp nullptr @ce. If
+         * not @cpp nullptr @ce, the returned animator is guaranteed to be
+         * assigned to this layer, i.e. that
+         * @ref BaseLayerStyleAnimator::layer() is equal to @ref handle().
+         */
+        TextLayerStyleAnimator* defaultStyleAnimator() const;
+
+        /**
+         * @brief Set a default style animator for this layer
+         * @return Reference to self (for method chaining)
+         *
+         * Makes @p animator used in style transitions in response to events.
+         * Expects that @p animator is either @cpp nullptr @ce or is already
+         * assigned to this layer, i.e. that @ref assignAnimator() was called
+         * on this layer with @p animator before. Calling this function again
+         * with a different animator or with @cpp nullptr @ce replaces the
+         * previous one.
+         * @see @ref allocateDynamicStyle()
+         */
+        TextLayer& setDefaultStyleAnimator(TextLayerStyleAnimator* animator);
 
         /**
          * @brief Dynamic style uniforms

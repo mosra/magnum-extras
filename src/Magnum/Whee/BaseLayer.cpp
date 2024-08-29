@@ -234,6 +234,14 @@ BaseLayer& BaseLayer::assignAnimator(BaseLayerStyleAnimator& animator) {
     return static_cast<BaseLayer&>(AbstractVisualLayer::assignAnimator(animator));
 }
 
+BaseLayerStyleAnimator* BaseLayer::defaultStyleAnimator() const {
+    return static_cast<BaseLayerStyleAnimator*>(_state->styleAnimator);
+}
+
+BaseLayer& BaseLayer::setDefaultStyleAnimator(BaseLayerStyleAnimator* const animator) {
+    return static_cast<BaseLayer&>(AbstractVisualLayer::setDefaultStyleAnimator(animator));
+}
+
 Containers::ArrayView<const BaseLayerStyleUniform> BaseLayer::dynamicStyleUniforms() const {
     return static_cast<const State&>(*_state).dynamicStyleUniforms;
 }

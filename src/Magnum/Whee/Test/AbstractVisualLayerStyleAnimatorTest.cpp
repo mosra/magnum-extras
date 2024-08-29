@@ -48,6 +48,8 @@ struct AbstractVisualLayerStyleAnimatorTest: TestSuite::Tester {
 
     void assignAnimator();
     void assignAnimatorInvalid();
+    void setDefaultStyleAnimator();
+    void setDefaultStyleAnimatorInvalid();
 
     /* targetStyle() and dynamicStyle() properties tested in
        BaseLayerStyleAnimatorTest and TextLayerStyleAnimatorTest, as those
@@ -69,6 +71,8 @@ AbstractVisualLayerStyleAnimatorTest::AbstractVisualLayerStyleAnimatorTest() {
 
               &AbstractVisualLayerStyleAnimatorTest::assignAnimator,
               &AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid,
+              &AbstractVisualLayerStyleAnimatorTest::setDefaultStyleAnimator,
+              &AbstractVisualLayerStyleAnimatorTest::setDefaultStyleAnimatorInvalid,
 
               &AbstractVisualLayerStyleAnimatorTest::propertiesInvalid,
 
@@ -159,6 +163,85 @@ void AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid() {
     Error redirectError{&out};
     layer.assignAnimator(animator);
     CORRADE_COMPARE(out.str(), "Whee::AbstractVisualLayer::assignAnimator(): can't animate a layer with zero dynamic styles\n");
+}
+
+void AbstractVisualLayerStyleAnimatorTest::setDefaultStyleAnimator() {
+    struct LayerShared: AbstractVisualLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{2, 1};
+
+    struct Layer: AbstractVisualLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
+
+        using AbstractVisualLayer::assignAnimator;
+        using AbstractVisualLayer::defaultStyleAnimator;
+        using AbstractVisualLayer::setDefaultStyleAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+    } layer{layerHandle(0, 1), shared};
+
+    struct Animator: AbstractVisualLayerStyleAnimator {
+        explicit Animator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle} {}
+    } animator1{animatorHandle(0, 1)},
+      animator2{animatorHandle(2, 3)};
+    layer.assignAnimator(animator1);
+    layer.assignAnimator(animator2);
+    CORRADE_COMPARE(animator1.layer(), layer.handle());
+    CORRADE_COMPARE(animator2.layer(), layer.handle());
+    CORRADE_COMPARE(layer.defaultStyleAnimator(), nullptr);
+
+    layer.setDefaultStyleAnimator(&animator1);
+    CORRADE_COMPARE(layer.defaultStyleAnimator(), &animator1);
+
+    /* Assigning a different animator overwrites the previous one. The previous
+       one is still assigned tho. */
+    layer.setDefaultStyleAnimator(&animator2);
+    CORRADE_COMPARE(layer.defaultStyleAnimator(), &animator2);
+    CORRADE_COMPARE(animator1.layer(), layer.handle());
+
+    /* Setting a null animator resets it, It doesn't unassign them, tho. */
+    layer.setDefaultStyleAnimator(nullptr);
+    CORRADE_COMPARE(layer.defaultStyleAnimator(), nullptr);
+    CORRADE_COMPARE(animator2.layer(), layer.handle());
+}
+
+void AbstractVisualLayerStyleAnimatorTest::setDefaultStyleAnimatorInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerShared: AbstractVisualLayer::Shared {
+        explicit LayerShared(UnsignedInt styleCount, UnsignedInt dynamicStyleCount): AbstractVisualLayer::Shared{styleCount, dynamicStyleCount} {}
+    } shared{2, 1};
+
+    struct Layer: AbstractVisualLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}
+
+        using AbstractVisualLayer::assignAnimator;
+        using AbstractVisualLayer::defaultStyleAnimator;
+        using AbstractVisualLayer::setDefaultStyleAnimator;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::AnimateStyles;
+        }
+    } layer1{layerHandle(0xab, 0x12), shared},
+      layer2{layerHandle(0xcd, 0x34), shared};
+
+    struct Animator: AbstractVisualLayerStyleAnimator {
+        explicit Animator(AnimatorHandle handle): AbstractVisualLayerStyleAnimator{handle} {}
+    } animator1{animatorHandle(0, 1)},
+      animator2{animatorHandle(2, 3)};
+    /* animator1 is unassigned */
+    layer2.assignAnimator(animator2);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer1.setDefaultStyleAnimator(&animator1);
+    layer1.setDefaultStyleAnimator(&animator2);
+    CORRADE_COMPARE_AS(out.str(),
+        "Whee::AbstractVisualLayer::setDefaultStyleAnimator(): animator isn't assigned to any layer\n"
+        "Whee::AbstractVisualLayer::setDefaultStyleAnimator(): expected an animator assigned to Whee::LayerHandle(0xab, 0x12) but got Whee::LayerHandle(0xcd, 0x34)\n",
+        TestSuite::Compare::String);
 }
 
 void AbstractVisualLayerStyleAnimatorTest::propertiesInvalid() {
