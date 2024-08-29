@@ -505,6 +505,14 @@ TextLayer& TextLayer::assignAnimator(TextLayerStyleAnimator& animator) {
     return static_cast<TextLayer&>(AbstractVisualLayer::assignAnimator(animator));
 }
 
+TextLayerStyleAnimator* TextLayer::defaultStyleAnimator() const {
+    return static_cast<TextLayerStyleAnimator*>(_state->styleAnimator);
+}
+
+TextLayer& TextLayer::setDefaultStyleAnimator(TextLayerStyleAnimator* const animator) {
+    return static_cast<TextLayer&>(AbstractVisualLayer::setDefaultStyleAnimator(animator));
+}
+
 Containers::ArrayView<const TextLayerStyleUniform> TextLayer::dynamicStyleUniforms() const {
     return static_cast<const State&>(*_state).dynamicStyleUniforms;
 }

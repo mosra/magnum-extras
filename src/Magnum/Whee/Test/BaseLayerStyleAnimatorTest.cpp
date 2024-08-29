@@ -56,9 +56,10 @@ struct BaseLayerStyleAnimatorTest: TestSuite::Tester {
     void constructMove();
 
     void assignAnimator();
-    /* There's no assert to trigger in assignAnimator() other than what's
-       checked by AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid()
-       already */
+    void setDefaultStyleAnimator();
+    /* There's no assert to trigger in assignAnimator() /
+       setDefaultStyleAnimator() other than what's checked by
+       AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid() already */
 
     template<class T> void createRemove();
     void createRemoveHandleRecycle();
@@ -121,6 +122,7 @@ BaseLayerStyleAnimatorTest::BaseLayerStyleAnimatorTest() {
               &BaseLayerStyleAnimatorTest::constructMove,
 
               &BaseLayerStyleAnimatorTest::assignAnimator,
+              &BaseLayerStyleAnimatorTest::setDefaultStyleAnimator,
 
               &BaseLayerStyleAnimatorTest::createRemove<UnsignedInt>,
               &BaseLayerStyleAnimatorTest::createRemove<Enum>,
@@ -200,6 +202,28 @@ void BaseLayerStyleAnimatorTest::assignAnimator() {
 
     layer.assignAnimator(animator);
     CORRADE_COMPARE(animator.layer(), layer.handle());
+}
+
+void BaseLayerStyleAnimatorTest::setDefaultStyleAnimator() {
+    struct LayerShared: BaseLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } shared{BaseLayer::Shared::Configuration{2}
+        .setDynamicStyleCount(1)
+    };
+
+    struct Layer: BaseLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    BaseLayerStyleAnimator animator{animatorHandle(0, 1)};
+    layer.assignAnimator(animator);
+    CORRADE_COMPARE(animator.layer(), layer.handle());
+    CORRADE_COMPARE(layer.defaultStyleAnimator(), nullptr);
+
+    layer.setDefaultStyleAnimator(&animator);
+    CORRADE_COMPARE(layer.defaultStyleAnimator(), &animator);
 }
 
 template<class T> void BaseLayerStyleAnimatorTest::createRemove() {

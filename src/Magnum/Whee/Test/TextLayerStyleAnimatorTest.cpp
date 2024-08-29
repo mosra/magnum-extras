@@ -63,9 +63,10 @@ struct TextLayerStyleAnimatorTest: TestSuite::Tester {
     void constructMove();
 
     void assignAnimator();
-    /* There's no assert to trigger in assignAnimator() other than what's
-       checked by AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid()
-       already */
+    void setDefaultStyleAnimator();
+    /* There's no assert to trigger in assignAnimator() /
+       setDefaultStyleAnimator() other than what's checked by
+       AbstractVisualLayerStyleAnimatorTest::assignAnimatorInvalid() already */
 
     template<class T> void createRemove();
     void createRemoveHandleRecycle();
@@ -249,6 +250,7 @@ TextLayerStyleAnimatorTest::TextLayerStyleAnimatorTest() {
               &TextLayerStyleAnimatorTest::constructMove,
 
               &TextLayerStyleAnimatorTest::assignAnimator,
+              &TextLayerStyleAnimatorTest::setDefaultStyleAnimator,
 
               &TextLayerStyleAnimatorTest::createRemove<UnsignedInt>,
               &TextLayerStyleAnimatorTest::createRemove<Enum>});
@@ -333,6 +335,29 @@ void TextLayerStyleAnimatorTest::assignAnimator() {
 
     layer.assignAnimator(animator);
     CORRADE_COMPARE(animator.layer(), layer.handle());
+}
+
+void TextLayerStyleAnimatorTest::setDefaultStyleAnimator() {
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(const Configuration& configuration): TextLayer::Shared{configuration} {}
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+        void doSetEditingStyle(const TextLayerCommonEditingStyleUniform&, Containers::ArrayView<const TextLayerEditingStyleUniform>) override {}
+    } shared{TextLayer::Shared::Configuration{2}
+        .setDynamicStyleCount(1)
+    };
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    TextLayerStyleAnimator animator{animatorHandle(0, 1)};
+    layer.assignAnimator(animator);
+    CORRADE_COMPARE(animator.layer(), layer.handle());
+    CORRADE_COMPARE(layer.defaultStyleAnimator(), nullptr);
+
+    layer.setDefaultStyleAnimator(&animator);
+    CORRADE_COMPARE(layer.defaultStyleAnimator(), &animator);
 }
 
 struct EmptyShaper: Text::AbstractShaper {

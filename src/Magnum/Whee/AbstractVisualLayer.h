@@ -250,7 +250,16 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * If the dynamic style is driven by an animation, its handle can be
          * passed to the @p animation argument to retrieve later with
          * @ref dynamicStyleAnimation(). No validation is performed on the
-         * handle, it can be arbitrary.
+         * handle, it can be arbitrary. However, if the @p animation belongs to
+         * an animator that's set with @ref BaseLayer::setDefaultStyleAnimator()
+         * / @ref TextLayer::setDefaultStyleAnimator(), style transitions in
+         * response to events will treat data using given dynamic style as if
+         * they had the style set to
+         * @ref AbstractVisualLayerStyleAnimator::targetStyle(), instead of
+         * leaving them untouched. Which means that for example, if there's an
+         * animation that has a hovered style as the target, and a press
+         * happens, it'll trigger a transition the hovered style to a pressed
+         * one, instead of leaving the dynamic style untouched.
          * @see @ref dynamicStyleUsedCount(), @ref Shared::dynamicStyleCount()
          */
         Containers::Optional<UnsignedInt> allocateDynamicStyle(AnimationHandle animation =
@@ -298,6 +307,8 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
         /* Can't be MAGNUM_WHEE_LOCAL otherwise this can't be called from
            tests */
         AbstractVisualLayer& assignAnimator(AbstractVisualLayerStyleAnimator& animator);
+        AbstractVisualLayerStyleAnimator* defaultStyleAnimator() const;
+        AbstractVisualLayer& setDefaultStyleAnimator(AbstractVisualLayerStyleAnimator* animator);
 
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
@@ -313,6 +324,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
     private:
         MAGNUM_WHEE_LOCAL void setStyleInternal(UnsignedInt id, UnsignedInt style);
         MAGNUM_WHEE_LOCAL void setTransitionedStyleInternal(const AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
+        MAGNUM_WHEE_LOCAL UnsignedInt styleOrAnimationTargetStyle(UnsignedInt style) const;
 
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
