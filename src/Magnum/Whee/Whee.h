@@ -92,6 +92,10 @@ class AbstractStyle;
 class UserInterface;
 class UserInterfaceGL;
 
+class AbstractAnchor;
+template<class> class BasicAnchor;
+typedef BasicAnchor<UserInterface> Anchor;
+
 class AbstractWidget;
 template<class> class BasicWidget;
 typedef BasicWidget<UserInterface> Widget;

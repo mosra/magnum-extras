@@ -29,6 +29,7 @@
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
 #include <Magnum/Math/Vector2.h>
 
+#include "Magnum/Whee/Anchor.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/UserInterface.h"
@@ -41,6 +42,7 @@ struct WidgetTest: TestSuite::Tester {
 
     template<class T> void construct();
     template<class T> void constructInvalid();
+    template<class T> void constructFromAnchor();
     template<class T> void constructCopy();
     template<class T> void constructMove();
 
@@ -57,6 +59,8 @@ WidgetTest::WidgetTest() {
               &WidgetTest::construct<Widget>,
               &WidgetTest::constructInvalid<AbstractWidget>,
               &WidgetTest::constructInvalid<Widget>,
+              &WidgetTest::constructFromAnchor<AbstractWidget>,
+              &WidgetTest::constructFromAnchor<Widget>,
               &WidgetTest::constructCopy<AbstractWidget>,
               &WidgetTest::constructCopy<Widget>,
               &WidgetTest::constructMove<AbstractWidget>,
@@ -73,10 +77,12 @@ WidgetTest::WidgetTest() {
 template<class> struct WidgetTraits;
 template<> struct WidgetTraits<AbstractWidget> {
     typedef AbstractUserInterface UserInterfaceType;
+    typedef AbstractAnchor AnchorType;
     static const char* name() { return "AbstractWidget"; }
 };
 template<> struct WidgetTraits<Widget> {
     typedef UserInterface UserInterfaceType;
+    typedef Anchor AnchorType;
     static const char* name() { return "Widget"; }
 };
 
@@ -118,6 +124,28 @@ template<class T> void WidgetTest::constructInvalid() {
        as well */
     T{ui, nodeHandle(0x12345, 0xabc)}.release();
     CORRADE_COMPARE(out.str(), "Whee::AbstractWidget: invalid handle Whee::NodeHandle(0x12345, 0xabc)\n");
+}
+
+template<class T> void WidgetTest::constructFromAnchor() {
+    setTestCaseTemplateName(WidgetTraits<T>::name());
+
+    struct Interface: WidgetTraits<T>::UserInterfaceType {
+        explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
+    } ui{NoCreate};
+
+    typename WidgetTraits<T>::AnchorType a{ui, ui.createNode({}, {}), LayoutHandle::Null};
+
+    {
+        T widget{a};
+        CORRADE_COMPARE(&widget.ui(), &ui);
+        CORRADE_COMPARE(widget.node(), a.node());
+
+        /* The node becomes owned by the widget */
+        CORRADE_VERIFY(ui.isHandleValid(a.node()));
+    }
+
+    /* And is removed on destruction, making the anchor invalid */
+    CORRADE_VERIFY(!ui.isHandleValid(a.node()));
 }
 
 template<class T> void WidgetTest::constructCopy() {

@@ -70,6 +70,14 @@ class MAGNUM_WHEE_EXPORT AbstractWidget {
          */
         explicit AbstractWidget(AbstractUserInterface& ui, NodeHandle node);
 
+        /**
+         * @brief Construct from a positioning anchor
+         *
+         * The @ref ui() and @ref node() is set to @ref AbstractAnchor::ui()
+         * and @ref AbstractAnchor::node().
+         */
+        explicit AbstractWidget(const AbstractAnchor& anchor);
+
         /** @brief Copying is not allowed */
         AbstractWidget(const AbstractWidget&) = delete;
 
@@ -181,8 +189,18 @@ base class documentation for more information.
 */
 template<class UserInterface> class BasicWidget: public AbstractWidget {
     public:
-        /** @copydoc AbstractWidget::AbstractWidget(AbstractUserInterface&, node) */
+        /** @copydoc AbstractWidget::AbstractWidget(AbstractUserInterface&, NodeHandle) */
         explicit BasicWidget(UserInterface& ui, NodeHandle node): AbstractWidget{ui, node} {}
+
+        /** @copydoc AbstractWidget::AbstractWidget(const AbstractAnchor&) */
+        explicit BasicWidget(const BasicAnchor<UserInterface>& anchor):
+            /* Yes, a reinterpret_cast so we don't need to pull in Anchor.h to
+               know that BasicAnchor is derived from AbstractAnchor in the
+               usual cases where a widget gets created from a const& anchor
+               (i.e. without the widget even needing to have the definition).
+               Back in 2010 doing this caused me to fail a uni assignment, I
+               still stand behind doing it to untangle complex dependencies. */
+            AbstractWidget{reinterpret_cast<const AbstractAnchor&>(anchor)} {}
 
         /** @brief Copying is not allowed */
         BasicWidget(const BasicWidget<UserInterface>&) = delete;
