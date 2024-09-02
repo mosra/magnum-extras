@@ -182,6 +182,7 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
        // TODO er what's the er actual er equation
        .setSize(Vector2{windowSize()}/dpiScaling(), Vector2{windowSize()}, framebufferSize())
        .setStyle(Whee::McssDarkStyle{}
+            .setBaseLayerDynamicStyleCount(10)
             .setTextLayerDynamicStyleCount(2)
             .setBaseLayerFlags(args.isSet("subdivided-quads") ? Whee::BaseLayerSharedFlag::SubdividedQuads : Whee::BaseLayerSharedFlags{}, {}));
 
@@ -247,8 +248,16 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
     _backgroundBlurBaseLayer->assignAnimator(*backgroundBlurStyleAnimator);
     _backgroundBlurStyleAnimator = &_ui.setStyleAnimatorInstance(Utility::move(backgroundBlurStyleAnimator));
 
+    Containers::Pointer<Whee::BaseLayerStyleAnimator> baseStyleAnimator{InPlaceInit, _ui.createAnimator()};
+    _ui.baseLayer()
+        .assignAnimator(*baseStyleAnimator)
+        .setDefaultStyleAnimator(baseStyleAnimator.get());
+    _ui.setStyleAnimatorInstance(Utility::move(baseStyleAnimator));
+
     Containers::Pointer<Whee::TextLayerStyleAnimator> textStyleAnimator{InPlaceInit, _ui.createAnimator()};
-    _ui.textLayer().assignAnimator(*textStyleAnimator);
+    _ui.textLayer()
+        .assignAnimator(*textStyleAnimator)
+        .setDefaultStyleAnimator(textStyleAnimator.get());
     _textStyleAnimator = &_ui.setStyleAnimatorInstance(Utility::move(textStyleAnimator));
 
     _layouter = &_ui.setLayouterInstance(Containers::pointer<Whee::SnapLayouter>(_ui.createLayouter()));
@@ -356,30 +365,30 @@ WheeGallery::WheeGallery(const Arguments& arguments): Platform::Application{argu
             Ui::Snap::Right};
         Ui::Input inputDefault{snap({208, 36}),
             Ui::InputStyle::Default, "Hello! Type in me."};
-        Ui::DataHandle inputDefaultTextHandle = inputDefault.textData();
-        _ui.eventLayer().onFocus(inputDefault, [this, inputDefaultTextHandle]{
-            if(_inputCursorAnimation != Whee::AnimationHandle::Null)
-                return;
-            _inputCursorAnimation = _textStyleAnimator->create(
-                Whee::Implementation::TextStyle::InputDefaultFocused,
-                Whee::Implementation::TextStyle::InputDefaultFocusedBlink,
-                Animation::Easing::bounceIn, now(), 0.5_sec, inputDefaultTextHandle, 0);
-        });
-        // TODO same on visiblity lost!
-        _ui.eventLayer().onBlur(inputDefault, [this, inputDefaultTextHandle]{
-            if(_inputCursorAnimation == Whee::AnimationHandle::Null)
-                return;
-            _textStyleAnimator->stop(_inputCursorAnimation, now());
-            _textStyleAnimator->create(
-                Whee::Implementation::TextStyle::InputDefaultFocusedBlink,
-                Whee::Implementation::TextStyle::InputDefaultFocused,
-                Animation::Easing::bounceOut, now(), 1.0_sec, inputDefaultTextHandle, 1);
-            _textStyleAnimator->create(
-                Whee::Implementation::TextStyle::InputDefaultFocused,
-                Whee::Implementation::TextStyle::InputDefaultFocusedFadeOut,
-                Animation::Easing::smoothstep, now() + 1.0_sec, 0.2_sec, inputDefaultTextHandle, 1);
-            _inputCursorAnimation = Whee::AnimationHandle::Null;
-        });
+        // Ui::DataHandle inputDefaultTextHandle = inputDefault.textData();
+        // _ui.eventLayer().onFocus(inputDefault, [this, inputDefaultTextHandle]{
+        //     if(_inputCursorAnimation != Whee::AnimationHandle::Null)
+        //         return;
+        //     _inputCursorAnimation = _textStyleAnimator->create(
+        //         Whee::Implementation::TextStyle::InputDefaultFocused,
+        //         Whee::Implementation::TextStyle::InputDefaultFocusedBlink,
+        //         Animation::Easing::bounceIn, now(), 0.5_sec, inputDefaultTextHandle, 0);
+        // });
+        // // TODO same on visiblity lost!
+        // _ui.eventLayer().onBlur(inputDefault, [this, inputDefaultTextHandle]{
+        //     if(_inputCursorAnimation == Whee::AnimationHandle::Null)
+        //         return;
+        //     _textStyleAnimator->stop(_inputCursorAnimation, now());
+        //     _textStyleAnimator->create(
+        //         Whee::Implementation::TextStyle::InputDefaultFocusedBlink,
+        //         Whee::Implementation::TextStyle::InputDefaultFocused,
+        //         Animation::Easing::bounceOut, now(), 1.0_sec, inputDefaultTextHandle, 1);
+        //     _textStyleAnimator->create(
+        //         Whee::Implementation::TextStyle::InputDefaultFocused,
+        //         Whee::Implementation::TextStyle::InputDefaultFocusedFadeOut,
+        //         Animation::Easing::smoothstep, now() + 1.0_sec, 0.2_sec, inputDefaultTextHandle, 1);
+        //     _inputCursorAnimation = Whee::AnimationHandle::Null;
+        // });
         // TODO cursor setter on the input ffs
         _ui.textLayer().setCursor(inputDefault.textData(), 11, 7);
 
@@ -510,37 +519,37 @@ void WheeGallery::drawEvent() {
 }
 
 void WheeGallery::mousePressEvent(MouseEvent& event) {
-    _ui.pointerPressEvent(event);
+    _ui.pointerPressEvent(event, now());
 
     if(_ui.state()) redraw();
 }
 
 void WheeGallery::mouseReleaseEvent(MouseEvent& event) {
-    _ui.pointerReleaseEvent(event);
+    _ui.pointerReleaseEvent(event, now());
 
     if(_ui.state()) redraw();
 }
 
 void WheeGallery::mouseMoveEvent(MouseMoveEvent& event) {
-    _ui.pointerMoveEvent(event);
+    _ui.pointerMoveEvent(event, now());
 
     if(_ui.state()) redraw();
 }
 
 void WheeGallery::keyPressEvent(KeyEvent& event) {
-    _ui.keyPressEvent(event);
+    _ui.keyPressEvent(event, now());
 
     if(_ui.state()) redraw();
 }
 
 void WheeGallery::keyReleaseEvent(KeyEvent& event) {
-    _ui.keyReleaseEvent(event);
+    _ui.keyReleaseEvent(event, now());
 
     if(_ui.state()) redraw();
 }
 
 void WheeGallery::textInputEvent(TextInputEvent& event) {
-    _ui.textInputEvent(event);
+    _ui.textInputEvent(event, now());
 
     if(_ui.state()) redraw();
 }

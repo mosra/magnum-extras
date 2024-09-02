@@ -60,6 +60,8 @@ enum class StyleFeature: UnsignedByte {
      */
     BaseLayer = 1 << 0,
 
+    BaseLayerAnimations = 1 << 4, // TODO renumber
+
     /**
      * @ref TextLayer style and fonts. Ensures a @ref TextLayer instance with a
      * compatible @ref TextLayer::Shared state is set up on the
@@ -70,6 +72,8 @@ enum class StyleFeature: UnsignedByte {
      * @see @ref UserInterface::textLayer()
      */
     TextLayer = 1 << 1,
+
+    TextLayerAnimations = 1 << 5, // TODO renumber
 
     /**
      * Additional images such as icons for use with

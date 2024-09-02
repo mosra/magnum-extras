@@ -499,7 +499,9 @@ struct StyleLayerShared: AbstractVisualLayer::Shared {
        typedef is because the macro overrides return Shared&, which if not
        defined here would mean the base class. */
     typedef StyleLayerShared Shared;
-    MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION()
+    // TODO wrong!!
+    // TODO also, test those overloads
+    MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION(AbstractVisualLayerStyleAnimator)
 };
 struct StyleLayer: AbstractVisualLayer {
     explicit StyleLayer(LayerHandle handle, Shared& shared): AbstractVisualLayer{handle, shared} {}

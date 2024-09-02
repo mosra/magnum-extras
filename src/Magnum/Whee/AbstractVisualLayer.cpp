@@ -103,6 +103,16 @@ AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransition(Uns
     return *this;
 }
 
+AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransitionAnimation(bool(*onEnter)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onLeave)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)) {
+    _state->styleTransitionAnimationOnEnter = onEnter;
+    _state->styleTransitionAnimationOnLeave = onLeave;
+    _state->styleTransitionAnimationOnFocus = onFocus;
+    _state->styleTransitionAnimationOnBlur = onBlur;
+    _state->styleTransitionAnimationOnPress = onPress;
+    _state->styleTransitionAnimationOnRelease = onRelease;
+    return *this;
+}
+
 AbstractVisualLayer::State::State(Shared::State& shared): shared(shared), styleTransitionToDisabledUpdateStamp{shared.styleTransitionToDisabledUpdateStamp} {
     dynamicStyleStorage = Containers::ArrayTuple{
         {ValueInit, shared.dynamicStyleCount, dynamicStylesUsed},
@@ -294,8 +304,10 @@ void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::S
 
                 /* If the style is dynamic, maybe it has an animation with a
                    target style index assigned, which we can use as the
-                   (soon-to-be-)current style index to transition from. */
-                const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+                   (soon-to-be-)current style index to transition from. We're
+                   not animating here, so the second return value is
+                   ignored. */
+                const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style).first();
 
                 /** @todo Doing a function call for all data may be a bit
                     horrible, also especially if the code inside is a giant
@@ -336,7 +348,7 @@ void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::S
     }
 }
 
-UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt style) const {
+Containers::Pair<UnsignedInt, AnimatorDataHandle> AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt style) const {
     const State& state = *_state;
     const Shared::State& sharedState = state.shared;
 
@@ -349,11 +361,11 @@ UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt s
            style animator. If it's some other animator, better not touch it at
            all. */
         if(animation != AnimationHandle::Null && state.styleAnimator && animationHandleAnimator(animation) == state.styleAnimator->handle())
-            return state.styleAnimator->targetStyle(animation);
+            return {state.styleAnimator->targetStyle(animation), animationHandleData(animation)};
     }
 
-    /* Otherwise return the original style verbatim */
-    return style;
+    /* Otherwise return the original style verbatim, and no animation */
+    return {style, AnimatorDataHandle::Null};
 }
 
 void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
@@ -371,10 +383,10 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
        to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(style);
 
     /* Transition the style to pressed if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
+    if(currentStyleAnimation.first() < sharedState.styleCount) {
         /* A press can be not hovering if it happened without a preceding move
            event (such as for pointer types that don't support hover like
            touches, or if move events aren't propagated from the
@@ -383,12 +395,15 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
         UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
             sharedState.styleTransitionToPressedOver :
             sharedState.styleTransitionToPressedOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
+        const UnsignedInt nextStyle = transition(currentStyleAnimation.first());
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+            "Whee::AbstractVisualLayer::pointerPressEvent(): style transition from" << currentStyleAnimation.first() << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
+           one that's the animation target), update it. If everything is set up
+           for the transition animation, animate. If not, or if animation
+           wasn't actually made, perform the transition immediately. */
+        // TODO make sure the right functions are used everywhere, in both
+        if(nextStyle != currentStyleAnimation.first() && (!state.styleAnimator || !sharedState.styleTransitionAnimationOnPress || !sharedState.styleTransitionAnimationOnPress(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, event.time(), layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second()))) {
             style = nextStyle;
             setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
@@ -412,10 +427,10 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
        to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(style);
 
     /* Transition the style to released if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
+    if(currentStyleAnimation.first() < sharedState.styleCount) {
         /* A release can be not hovering if it happened without a preceding
            move event (such as for pointer types that don't support hover like
            touches, or if move events aren't propagated from the
@@ -427,12 +442,15 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
             event.isHovering() ?
                 sharedState.styleTransitionToInactiveOver :
                 sharedState.styleTransitionToInactiveOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
+        const UnsignedInt nextStyle = transition(currentStyleAnimation.first());
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+            "Whee::AbstractVisualLayer::pointerReleaseEvent(): style transition from" << currentStyleAnimation.first() << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
+           one that's the animation target), update it. If everything is set up
+           for the transition animation, animate. If not, or if animation
+           wasn't actually made, perform the transition immediately. */
+        // TODO make sure the right functions are used everywhere, in both
+        if(nextStyle != currentStyleAnimation.first() && (!state.styleAnimator || !sharedState.styleTransitionAnimationOnPress || !sharedState.styleTransitionAnimationOnRelease(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, event.time(), layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second()))) {
             style = nextStyle;
             setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
@@ -455,20 +473,23 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
        to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(style);
 
     /* Transition the style to over if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
+    if(currentStyleAnimation.first() < sharedState.styleCount) {
         UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
             sharedState.styleTransitionToPressedOver : event.isFocused() ?
                 sharedState.styleTransitionToFocusedOver :
                 sharedState.styleTransitionToInactiveOver;
-        const UnsignedInt nextStyle = transition(currentStyle);
+        const UnsignedInt nextStyle = transition(currentStyleAnimation.first());
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+            "Whee::AbstractVisualLayer::pointerEnterEvent(): style transition from" << currentStyleAnimation.first() << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
+           one that's the animation target), update it. If everything is set up
+           for the transition animation, animate. If not, or if animation
+           wasn't actually made, perform the transition immediately. */
+        // TODO make sure the right functions are used everywhere, in both
+        if(nextStyle != currentStyleAnimation.first() && (!state.styleAnimator || !sharedState.styleTransitionAnimationOnPress || !sharedState.styleTransitionAnimationOnEnter(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, event.time(), layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second()))) {
             style = nextStyle;
             setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
@@ -484,20 +505,23 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
        to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(style);
 
     /* Transition the style to out if it's not dynamic */
-    if(currentStyle < sharedState.styleCount) {
+    if(currentStyleAnimation.first() < sharedState.styleCount) {
         UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
             sharedState.styleTransitionToPressedOut : event.isFocused() ?
                 sharedState.styleTransitionToFocusedOut :
                 sharedState.styleTransitionToInactiveOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
+        const UnsignedInt nextStyle = transition(currentStyleAnimation.first());
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+            "Whee::AbstractVisualLayer::pointerLeaveEvent(): style transition from" << currentStyleAnimation.first() << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
+           one that's the animation target), update it. If everything is set up
+           for the transition animation, animate. If not, or if animation
+           wasn't actually made, perform the transition immediately. */
+        // TODO make sure the right functions are used everywhere, in both
+        if(nextStyle != currentStyleAnimation.first() && (!state.styleAnimator || !sharedState.styleTransitionAnimationOnPress || !sharedState.styleTransitionAnimationOnLeave(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, event.time(), layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second()))) {
             style = nextStyle;
             setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
@@ -513,20 +537,23 @@ void AbstractVisualLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& eve
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
        to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(style);
 
     /* Transition the style to focused if it's not dynamic and only if it's not
        pressed as well, as pressed style gets a priority. */
-    if(currentStyle < sharedState.styleCount && !event.isPressed()) {
+    if(currentStyleAnimation.first() < sharedState.styleCount && !event.isPressed()) {
         UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
             sharedState.styleTransitionToFocusedOver :
             sharedState.styleTransitionToFocusedOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
+        const UnsignedInt nextStyle = transition(currentStyleAnimation.first());
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Whee::AbstractVisualLayer::focusEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+            "Whee::AbstractVisualLayer::focusEvent(): style transition from" << currentStyleAnimation.first() << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
+           one that's the animation target), update it. If everything is set up
+           for the transition animation, animate. If not, or if animation
+           wasn't actually made, perform the transition immediately. */
+        // TODO make sure the right functions are used everywhere, in both
+        if(nextStyle != currentStyleAnimation.first() && (!state.styleAnimator || !sharedState.styleTransitionAnimationOnPress || !sharedState.styleTransitionAnimationOnFocus(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, event.time(), layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second()))) {
             style = nextStyle;
             setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
@@ -544,20 +571,23 @@ void AbstractVisualLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& even
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
        to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+    const Containers::Pair<UnsignedInt, AnimatorDataHandle> currentStyleAnimation = styleOrAnimationTargetStyle(style);
 
     /* Transition the style to blurred if it's not dynamic and only if it's not
        pressed as well, as pressed style gets a priority. */
-    if(currentStyle < sharedState.styleCount && !event.isPressed()) {
+    if(currentStyleAnimation.first() < sharedState.styleCount && !event.isPressed()) {
         UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
-        const UnsignedInt nextStyle = transition(currentStyle);
+        const UnsignedInt nextStyle = transition(currentStyleAnimation.first());
         CORRADE_ASSERT(nextStyle < sharedState.styleCount,
-            "Whee::AbstractVisualLayer::blurEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
+            "Whee::AbstractVisualLayer::blurEvent(): style transition from" << currentStyleAnimation.first() << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         /* If the transitioned style is different from the current one (or the
-           one that's the animation target), update it */
-        if(nextStyle != currentStyle) {
+           one that's the animation target), update it. If everything is set up
+           for the transition animation, animate. If not, or if animation
+           wasn't actually made, perform the transition immediately. */
+        // TODO make sure the right functions are used everywhere, in both
+        if(nextStyle != currentStyleAnimation.first() && (!state.styleAnimator || !sharedState.styleTransitionAnimationOnPress || !sharedState.styleTransitionAnimationOnBlur(*state.styleAnimator, currentStyleAnimation.first(), nextStyle, event.time(), layerDataHandle(dataId, generations()[dataId]), currentStyleAnimation.second()))) {
             style = nextStyle;
             setNeedsUpdate(LayerState::NeedsDataUpdate);
         }
@@ -574,8 +604,9 @@ void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, Visibi
 
     /* If the style is dynamic, maybe it has an animation with a target style
        index assigned, which we can use as the (soon-to-be-)current style index
-       to transition from. */
-    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style);
+       to transition from. We're not animating here, so the second return value
+       is ignored. */
+    const UnsignedInt currentStyle = styleOrAnimationTargetStyle(style).first();
 
     /* Transition the style to inactive if it's not dynamic and only if it's
        not a formerly focused node that's now pressed, in which case it stays
@@ -589,6 +620,9 @@ void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, Visibi
             "Whee::AbstractVisualLayer::visibilityLostEvent(): style transition from" << currentStyle << "to" << nextStyle << "out of range for" << sharedState.styleCount << "styles", );
         /* If the transitioned style is different from the current one (or the
            one that's the animation target), update it */
+        // TODO should it remove running animations maybe?? or will they just get ignored after overwriting the style
+        // TODO such as a currently focused blinking cursor, if it becomes invisible the animation will still continue running forever! not great
+        // TODO though removing the animation means an update gets triggered means UHHHHHHHHHH
         if(nextStyle != currentStyle) {
             style = nextStyle;
             setNeedsUpdate(LayerState::NeedsDataUpdate);

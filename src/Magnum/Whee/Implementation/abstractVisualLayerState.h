@@ -74,6 +74,14 @@ struct AbstractVisualLayer::Shared::State {
        logic in doUpdate() gets skipped */
     UnsignedInt(*styleTransitionToDisabled)(UnsignedInt) = nullptr;
 
+    // TODO test each with an animation from a different animator being present, should get Null
+    bool(*styleTransitionAnimationOnEnter)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
+    bool(*styleTransitionAnimationOnLeave)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
+    bool(*styleTransitionAnimationOnFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
+    bool(*styleTransitionAnimationOnBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
+    bool(*styleTransitionAnimationOnPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
+    bool(*styleTransitionAnimationOnRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle) = nullptr;
+
     /* Incremented every time the styleTransitionToDisabled pointer is changed.
        There's a corresponding styleTransitionToDisabledUpdateStamp variable in
        AbstractVisualLayer::State that doState() compares to this one,

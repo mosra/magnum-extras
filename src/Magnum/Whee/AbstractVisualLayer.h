@@ -251,9 +251,10 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
          * passed to the @p animation argument to retrieve later with
          * @ref dynamicStyleAnimation(). No validation is performed on the
          * handle, it can be arbitrary. However, if the @p animation belongs to
-         * an animator that's set with @ref setDefaultStyleAnimator(), style
-         * transitions in response to events will treat data using given
-         * dynamic style as if they had the style set to
+         * an animator that's set with @ref BaseLayer::setDefaultStyleAnimator()
+         * / @ref TextLayer::setDefaultStyleAnimator(), style transitions in
+         * response to events will treat data using given dynamic style as if
+         * they had the style set to
          * @ref AbstractVisualLayerStyleAnimator::targetStyle(), instead of
          * leaving them untouched. Which means that for example, if there's an
          * animation that has a hovered style as the target, and a press
@@ -323,7 +324,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer: public AbstractLayer {
     private:
         MAGNUM_WHEE_LOCAL void setStyleInternal(UnsignedInt id, UnsignedInt style);
         MAGNUM_WHEE_LOCAL void setTransitionedStyleInternal(const AbstractUserInterface& ui, LayerDataHandle handle, UnsignedInt style);
-        MAGNUM_WHEE_LOCAL UnsignedInt styleOrAnimationTargetStyle(UnsignedInt style) const;
+        MAGNUM_WHEE_LOCAL Containers::Pair<UnsignedInt, AnimatorDataHandle> styleOrAnimationTargetStyle(UnsignedInt style) const;
 
         /* Can't be MAGNUM_WHEE_LOCAL otherwise deriving from this class in
            tests causes linker errors */
@@ -510,6 +511,170 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
             return setStyleTransition<StyleIndex, toInactive, toInactive, toFocused, toFocused, toPressed, toPressed, toDisabled>();
         }
 
+        /**
+         * @brief Set style transition animation functions
+         * @return Reference to self (for method chaining)
+         *
+         * Each function gets the following arguments, in order:
+         *
+         * -    @p animator --- animator instance that was passed in given
+         *      layer's @ref BaseLayer::setDefaultStyleAnimator() /
+         *      @ref TextLayer::setDefaultStyleAnimator(), its type matching
+         *      the type accepted by that function
+         * -    @p sourceStyle, @p targetStyle --- source and target style
+         *      index to animate between, where @p targetStyle is
+         *      @p sourceStyle transitioned by one of the functions passed to
+         *      @ref setStyleTransition()
+         * -    @p time --- time at which the event happened, meant to be used
+         *      as the animation played time
+         * -    @p data --- data handle belonging to given layer to attach the
+         *      animation to
+         * -    @p currentAnimation --- animation handle if given @p data
+         *      currently has an animated dynamic style belonging to
+         *      @p animator or @ref AnimatorDataHandle::Null if there's no
+         *      dynamic style, the dynamic style doesn't have any associated
+         *      animation or the animation doesn't belong to @p animator
+         *
+         * The function is expected to either create an animation between
+         * @p sourceStyle and @p targetStyle attached to @p data and return
+         * @cpp true @ce, or not create any animation and return
+         * @cpp false @ce, in which case the layer switches the style to
+         * @p targetStyle immediately. If the function returns @cpp true @ce,
+         * the layer assumes that @p data eventually reaches @p targetStyle,
+         * i.e. that @ref AbstractVisualLayerStyleAnimator::targetStyle() of
+         * the created animation is set to it.
+         *
+         * The @p currentAnimation handle can be used to perform a custom
+         * action in case a style transition animation is already running, for
+         * example to blend between them or to simply remove the old animation
+         * to play just the new one.
+         *
+         * The @p onEnter and @p onLeave functions get called when a style
+         * transition happens as a response to point enter and leave. If the
+         * style doesn't handle hover in any way, for example for touch-only
+         * interfaces, you can use @ref setStyleTransitionAnimation() "setStyleTransitionAnimation(bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle))"
+         * instead, which will omit animations on enter and leave.
+         *
+         * The @p onFocus and @p onBlur functions get called when a style
+         * transition happens as a response to a @ref NodeFlag::Focusable node
+         * getting focused and blurred, either through an input event or
+         * programmatically. Similarly as with @ref setStyleTransition(), note
+         * that, to reduce the amount of combinations, a pressed state has a
+         * priority over focused, so these two transitions are picked only when
+         * the focus or blur is happening on a node that isn't pressed.
+         *
+         * The @p onPress and @p onRelease functions get called when a style
+         * transition happens in response to pointer press and release.
+         *
+         * Setting any function to @cpp nullptr @ce is equivalent to supplying
+         * a function that returns @cpp false @ce and doesn't have any side
+         * effect. In particular, doing so means that if a transition happens
+         * while another animation is running, the animation isn't affected in
+         * any way, and may thus eventually cause the @p targetStyle to be
+         * changed to another style.
+         *
+         * In all cases, the functions get called only if
+         * @ref BaseLayer::setDefaultStyleAnimator() /
+         * @ref TextLayer::setDefaultStyleAnimator() was called with a non-null
+         * animator and only if @p sourceStyle and @p targetStyle differ. Right
+         * now, there's no possibility to animate a transition from and to a
+         * disabled state, additionally transitions that happen due to nodes
+         * being no longer visible, no longer focusable or no longer accepting
+         * events can't be animated either.
+         */
+        Shared& setStyleTransitionAnimation(bool(*onEnter)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onLeave)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle));
+
+        /**
+         * @brief Set style transition animation functions
+         * @return Reference to self (for method chaining)
+         *
+         * Like @ref setStyleTransitionAnimation() "setStyleTransitionAnimation(bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle))"
+         * but allows to use a concrete animator type and a concrete enum type
+         * instead of a typeless index. Same as with the type-erased variant,
+         * if any of the function template parameters is @cpp nullptr @ce, it's
+         * equivalent to a function returning @cpp false @ce without any side
+         * effects. Example usage:
+         *
+         * @snippet Whee.cpp AbstractVisualLayer-Shared-setStyleTransitionAnimation
+         */
+        template<
+            /* Subclasses omit this argument, making it concrete, removing from
+               docs to avoid confusion */
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            class Animator,
+            #endif
+        class StyleIndex, bool(*onEnter)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onLeave)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onFocus)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onBlur)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onPress)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onRelease)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle)> Shared& setStyleTransitionAnimation();
+
+        /**
+         * @brief Set style transition animation functions without hover state
+         * @return Reference to self (for method chaining)
+         *
+         * Same as calling @ref setStyleTransitionAnimation() "setStyleTransitionAnimation(bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle))"
+         * with @p onEnter and @p onLeave set to @cpp nullptr @ce. Useful in
+         * case the style doesn't handle hover in any way, for example for
+         * touch-only interfaces.
+         */
+        Shared& setStyleTransitionAnimation(bool(*onFocus)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onBlur)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)) {
+            return setStyleTransitionAnimation(nullptr, nullptr, onFocus, onBlur, onPress, onRelease);
+        }
+
+        /**
+         * @brief Set style transition animation functions without hover state
+         * @return Reference to self (for method chaining)
+         *
+         * Same as calling @ref setStyleTransitionAnimation() with @p onEnter
+         * and @p onLeave set to @cpp nullptr @ce. Useful in case the style
+         * doesn't handle hover in any way, for example for touch-only
+         * interfaces.
+         */
+        template<
+            /* Subclasses omit this argument, making it concrete, removing from
+               docs to avoid confusion */
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            class Animator,
+            #endif
+        class StyleIndex, bool(*onFocus)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onBlur)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onPress)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onRelease)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle)> Shared& setStyleTransitionAnimation() {
+            return setStyleTransitionAnimation<Animator, StyleIndex, nullptr, nullptr, onFocus, onBlur, onPress, onRelease>();
+        }
+
+        /**
+         * @brief Set style transition animation functions without hover state
+         * @return Reference to self (for method chaining)
+         *
+         * Same as calling @ref setStyleTransitionAnimation() "setStyleTransitionAnimation(bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle))"
+         * with @p onEnter, @p onFocus and @p onPress being set to
+         * @p onEnterFocusPress, and @p onLeave, @p onBlur, @p onRelease set to
+         * @p onLeaveBlurRelease. Useful in case there are only two kinds of
+         * animations, for example a more immediate one for the former set of
+         * events and a slower one for the latter.
+         */
+        Shared& setStyleTransitionAnimation(bool(*onEnterFocusPress)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onLeaveBlurRelease)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)) {
+            return setStyleTransitionAnimation(onEnterFocusPress, onLeaveBlurRelease, onEnterFocusPress, onLeaveBlurRelease, onEnterFocusPress, onLeaveBlurRelease);
+        }
+        // TODO drop this, is useless
+
+        /**
+         * @brief Set style transition animation functions without hover state
+         * @return Reference to self (for method chaining)
+         *
+         * Same as calling @ref setStyleTransitionAnimation() with @p onEnter,
+         * @p onFocus and @p onPress being set to @p onEnterFocusPress, and
+         * @p onLeave, @p onBlur, @p onRelease set to @p onLeaveBlurRelease.
+         * Useful in case there are only two kinds of animations, for example a
+         * more immediate one for the former set of events and a slower one for
+         * the latter.
+         */
+        template<
+            /* Subclasses omit this argument, making it concrete, removing from
+               docs to avoid confusion */
+            #ifndef DOXYGEN_GENERATING_OUTPUT
+            class Animator,
+            #endif
+        class StyleIndex, bool(*onEnterFocusPress)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onLeaveBlurRelease)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle)> Shared& setStyleTransitionAnimation() {
+            return setStyleTransitionAnimation<Animator, StyleIndex, onEnterFocusPress, onLeaveBlurRelease, onEnterFocusPress, onLeaveBlurRelease, onEnterFocusPress, onLeaveBlurRelease>();
+        }
+        // TODO drop this, is useless
+
     #ifdef DOXYGEN_GENERATING_OUTPUT
     private:
     #else
@@ -529,7 +694,7 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
 };
 
 #ifndef DOXYGEN_GENERATING_OUTPUT
-#define MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION() \
+#define MAGNUMEXTRAS_WHEE_ABSTRACTVISUALLAYER_SHARED_SUBCLASS_IMPLEMENTATION(Animator) \
     Shared& setStyleTransition(UnsignedInt(*toInactiveOut)(UnsignedInt), UnsignedInt(*toInactiveOver)(UnsignedInt), UnsignedInt(*toFocusedOut)(UnsignedInt), UnsignedInt(*toFocusedOver)(UnsignedInt), UnsignedInt(*toPressedOut)(UnsignedInt), UnsignedInt(*toPressedOver)(UnsignedInt), UnsignedInt(*toDisabled)(UnsignedInt)) { \
         return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition(toInactiveOut, toInactiveOver, toFocusedOut, toFocusedOver, toPressedOut, toPressedOver, toDisabled)); \
     }                                                                       \
@@ -541,6 +706,15 @@ class MAGNUM_WHEE_EXPORT AbstractVisualLayer::Shared {
     }                                                                       \
     template<class StyleIndex, StyleIndex(*toInactive)(StyleIndex), StyleIndex(*toFocused)(StyleIndex), StyleIndex(*toPressed)(StyleIndex), StyleIndex(*toDisabled)(StyleIndex)> Shared& setStyleTransition() { \
         return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransition<StyleIndex, toInactive, toFocused, toPressed, toDisabled>()); \
+    }                                                                       \
+    template<class StyleIndex, bool(*onEnter)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onLeave)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onFocus)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onBlur)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onPress)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onRelease)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle)> Shared& setStyleTransitionAnimation() { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransitionAnimation<Animator, StyleIndex, onEnter, onLeave, onFocus, onBlur, onPress, onRelease>()); \
+    }                                                                       \
+    template<class StyleIndex, bool(*onFocus)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onBlur)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onPress)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onRelease)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle)> Shared& setStyleTransitionAnimation() { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransitionAnimation<Animator, StyleIndex, onFocus, onBlur, onPress, onRelease>()); \
+    }                                                                       \
+    template<class StyleIndex, bool(*onEnterFocusPress)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onLeaveBlurRelease)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle)> Shared& setStyleTransitionAnimation() { \
+        return static_cast<Shared&>(AbstractVisualLayer::Shared::setStyleTransitionAnimation<Animator, StyleIndex, onEnterFocusPress, onLeaveBlurRelease>()); \
     }
 #endif
 
@@ -582,6 +756,46 @@ template<class StyleIndex, StyleIndex(*toInactiveOut)(StyleIndex), StyleIndex(*t
         },
         toDisabled == nullptr ? static_cast<UnsignedInt(*)(UnsignedInt)>(nullptr) : [](UnsignedInt index) {
             return UnsignedInt(toDisabled(StyleIndex(index)));
+        });
+    #if defined(CORRADE_TARGET_GCC) && __GNUC__ < 13
+    #pragma GCC diagnostic pop
+    #endif
+}
+
+template<class Animator, class StyleIndex, bool(*onEnter)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onLeave)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onFocus)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onBlur)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onPress)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle), bool(*onRelease)(Animator&, StyleIndex, StyleIndex, Nanoseconds, LayerDataHandle, AnimatorDataHandle)> AbstractVisualLayer::Shared& AbstractVisualLayer::Shared::setStyleTransitionAnimation() {
+    /* No matter what simplification I do, GCC warns about "implicit conversion
+       to bool", so it's this obvious ugly == here. There could be + for the
+       lambdas to turn them into function pointers to avoid ?: getting
+       confused, but that doesn't work on MSVC 2015 so instead it's the nullptr
+       being cast. */
+    /** @todo revert back to the + once CORRADE_MSVC2015_COMPATIBILITY is
+        dropped */
+    #if defined(CORRADE_TARGET_GCC) && __GNUC__ < 13
+    #pragma GCC diagnostic push
+    /* GCC since at least version 8 warns that function pointers passed here,
+       if not null, will never be null. Well, yes. Fixed in GCC 13.
+        https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94554 */
+    #pragma GCC diagnostic ignored "-Waddress"
+    #endif
+    return setStyleTransitionAnimation(
+        /* decltype() everywhere is to avoid including <Magnum/Math/Time.h> */
+        onEnter == nullptr ? static_cast<bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>(nullptr) : [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, decltype(std::declval<Animator>().time()) time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+            return onEnter(static_cast<Animator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+        },
+        onLeave == nullptr ? static_cast<bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>(nullptr) : [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, decltype(std::declval<Animator>().time()) time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+            return onLeave(static_cast<Animator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+        },
+        onFocus == nullptr ? static_cast<bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>(nullptr) : [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, decltype(std::declval<Animator>().time()) time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+            return onFocus(static_cast<Animator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+        },
+        onBlur == nullptr ? static_cast<bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>(nullptr) : [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, decltype(std::declval<Animator>().time()) time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+            return onBlur(static_cast<Animator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+        },
+        onPress == nullptr ? static_cast<bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>(nullptr) : [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, decltype(std::declval<Animator>().time()) time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+            return onPress(static_cast<Animator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
+        },
+        onRelease == nullptr ? static_cast<bool(*)(AbstractVisualLayerStyleAnimator&, UnsignedInt, UnsignedInt, Nanoseconds, LayerDataHandle, AnimatorDataHandle)>(nullptr) : [](AbstractVisualLayerStyleAnimator& animator, UnsignedInt sourceStyle, UnsignedInt targetStyle, decltype(std::declval<Animator>().time()) time, LayerDataHandle data, AnimatorDataHandle currentAnimation) {
+            return onRelease(static_cast<Animator&>(animator), StyleIndex(sourceStyle), StyleIndex(targetStyle), time, data, currentAnimation);
         });
     #if defined(CORRADE_TARGET_GCC) && __GNUC__ < 13
     #pragma GCC diagnostic pop

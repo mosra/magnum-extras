@@ -33,8 +33,10 @@
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
+#include <Magnum/Animation/Easing.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Range.h>
+#include <Magnum/Math/Time.h>
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractGlyphCache.h>
 #include <Magnum/Text/Alignment.h>
@@ -43,8 +45,11 @@
 #include <Magnum/Trade/ImageData.h>
 
 #include "Magnum/Whee/BaseLayer.h"
+#include "Magnum/Whee/BaseLayerAnimator.h"
 #include "Magnum/Whee/EventLayer.h"
+#include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/TextLayer.h"
+#include "Magnum/Whee/TextLayerAnimator.h"
 #include "Magnum/Whee/UserInterface.h"
 
 #ifdef MAGNUM_BUILD_STATIC
@@ -520,6 +525,66 @@ using Implementation::TextStyleUniform;
 
 namespace {
 
+bool styleTransitionAnimationOnEnterFocusPress(BaseLayerStyleAnimator& animator, BaseStyle, BaseStyle, Nanoseconds, LayerDataHandle, const AnimatorDataHandle previousAnimation) {
+    if(previousAnimation != AnimatorDataHandle::Null)
+        animator.remove(previousAnimation); // TODO not stop, as that switches the style; TEST that somehau!
+    return false;
+}
+
+bool styleTransitionAnimationOnLeaveBlurRelease(BaseLayerStyleAnimator& animator, const BaseStyle sourceStyle, const BaseStyle targetStyle, const Nanoseconds time, const LayerDataHandle data, const AnimatorDataHandle previousAnimation) {
+    if(previousAnimation != AnimatorDataHandle::Null)
+        animator.remove(previousAnimation); // TODO not stop, as that switches the style; TEST that somehau!
+    // !Debug{} << "whooo" << UnsignedInt(from) << UnsignedInt(to) << played;
+    animator.create(sourceStyle, targetStyle, Animation::Easing::smootherstep, time, 0.5_sec, data);
+    // TODO would be nice to have the duration configurable somehau HEH
+    // TODO animator duration scale??
+    return true;
+}
+
+bool styleTransitionAnimationOnEnter(TextLayerStyleAnimator& animator, TextStyle, TextStyle, Nanoseconds, LayerDataHandle, const AnimatorDataHandle previousAnimation) {
+    if(previousAnimation != AnimatorDataHandle::Null)
+        animator.remove(previousAnimation); // TODO not stop, as that switches the style; TEST that somehau!
+    return false;
+}
+
+bool styleTransitionAnimationOnLeave(TextLayerStyleAnimator& animator, const TextStyle sourceStyle, const TextStyle targetStyle, const Nanoseconds time, const LayerDataHandle data, const AnimatorDataHandle previousAnimation) {
+    if(previousAnimation != AnimatorDataHandle::Null)
+        animator.remove(previousAnimation); // TODO not stop, as that switches the style; TEST that somehau!
+    !Debug{} << "eehhh" << UnsignedInt(sourceStyle) << UnsignedInt(targetStyle);
+    // TODO uhhhhhhhhhhhhhhhhhhhhhhhhhhhh this asserts if the styles don't have compatible cursor/selection, WHAT TO DO
+    // animator.create(sourceStyle, targetStyle, Animation::Easing::smootherstep, time, 0.5_sec, data);
+    return false;
+}
+
+bool styleTransitionAnimationOnFocusPress(TextLayerStyleAnimator& animator, TextStyle, const TextStyle targetStyle, const Nanoseconds time, const LayerDataHandle data, const AnimatorDataHandle previousAnimation) {
+    if(previousAnimation != AnimatorDataHandle::Null)
+        animator.remove(previousAnimation); // TODO not stop, as that switches the style; TEST that somehau!
+    !Debug{} << UnsignedInt(targetStyle);
+    if(targetStyle == TextStyle::InputDefaultFocused) {
+        animator.create(TextStyle::InputDefaultFocusedBlink, TextStyle::InputDefaultFocused, Animation::Easing::bounceIn, time, 0.5_sec, data, 0);
+        return true;
+    }
+    return false;
+}
+
+bool styleTransitionAnimationOnBlurRelease(TextLayerStyleAnimator& animator, const TextStyle sourceStyle, const TextStyle targetStyle, const Nanoseconds time, const LayerDataHandle data, const AnimatorDataHandle previousAnimation) {
+    if(previousAnimation != AnimatorDataHandle::Null)
+        animator.remove(previousAnimation); // TODO not stop, as that switches the style; TEST that somehau!
+    !Debug{} << UnsignedInt(targetStyle);
+    // TODO ffs this isn't great, i know that bLAh focus has a priority or whatevz but having to handle a _focus_ animation on release is stupid
+    // TODO ideas?!
+    if(targetStyle == TextStyle::InputDefaultFocused) {
+        animator.create(TextStyle::InputDefaultFocusedBlink, TextStyle::InputDefaultFocused, Animation::Easing::bounceOut, time, 0.5_sec, data, 0);
+        return true;
+    }
+    if(sourceStyle == TextStyle::InputDefaultFocused) {
+        animator.create(TextStyle::InputDefaultFocusedBlink, TextStyle::InputDefaultFocused, Animation::Easing::bounceOut, time, 1.0_sec, data);
+        animator.create(TextStyle::InputDefaultFocused, TextStyle::InputDefaultFocusedFadeOut, Animation::Easing::smoothstep, time + 1.0_sec, 0.2_sec, data);
+        return true;
+    }
+    return false;
+}
+
 /* 1 (true, screen)-pixel radius independently of UI scale */
 constexpr BaseLayerCommonStyleUniform BaseCommonStyleUniformMcssDark{1.0f};
 
@@ -599,7 +664,9 @@ static_assert(Implementation::TextEditingStyleCount == Containers::arraySize(Tex
 
 StyleFeatures McssDarkStyle::doFeatures() const {
     return StyleFeature::BaseLayer|
+           StyleFeature::BaseLayerAnimations|
            StyleFeature::TextLayer|
+           StyleFeature::TextLayerAnimations|
            StyleFeature::TextLayerImages|
            StyleFeature::EventLayer;
 }
@@ -650,6 +717,15 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
                 Implementation::styleTransitionToPressedOut,
                 Implementation::styleTransitionToPressedOver,
                 Implementation::styleTransitionToDisabled>();
+    }
+
+    // TODO something that ensures the animator is there, by the UIGL basically i guess? although it's not really needed per se
+    // TODO ensure that BaseLayerAnimations makes BaseLayer present
+    if(features >= StyleFeature::BaseLayerAnimations) {
+        ui.baseLayer().shared()
+            .setStyleTransitionAnimation<BaseStyle,
+                styleTransitionAnimationOnEnterFocusPress,
+                styleTransitionAnimationOnLeaveBlurRelease>();
     }
 
     /* Icon font. Add also if just the text layer style is applied (where it
@@ -808,6 +884,19 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
 
         /* Reflect the image data update to the actual GPU-side texture */
         glyphCache.flushImage(updated);
+    }
+
+    // TODO something that ensures the animator is there, by the UIGL basically i guess? although it's not really needed per se
+    // TODO ensure that BaseLayerAnimations makes BaseLayer present
+    if(features >= StyleFeature::TextLayerAnimations) {
+        ui.textLayer().shared()
+            .setStyleTransitionAnimation<TextStyle,
+                styleTransitionAnimationOnEnter,
+                styleTransitionAnimationOnLeave,
+                styleTransitionAnimationOnFocusPress,
+                styleTransitionAnimationOnBlurRelease,
+                styleTransitionAnimationOnFocusPress,
+                styleTransitionAnimationOnBlurRelease>();
     }
 
     /* Event layer */
