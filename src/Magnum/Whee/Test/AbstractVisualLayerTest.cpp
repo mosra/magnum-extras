@@ -26,6 +26,7 @@
 #include <sstream> /** @todo remove once Debug is stream-free */
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/BitArrayView.h>
+#include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StridedArrayView.h>
@@ -37,6 +38,7 @@
 #include "Magnum/Whee/AbstractVisualLayer.h"
 #include "Magnum/Whee/AbstractVisualLayerAnimator.h"
 #include "Magnum/Whee/Event.h"
+#include "Magnum/Whee/EventLayer.h"
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/NodeFlags.h"
 /* for setStyle(), eventStyleTransition*() */
@@ -61,6 +63,7 @@ struct AbstractVisualLayerTest: TestSuite::Tester {
 
     template<class T> void setStyle();
     void setTransitionedStyle();
+    void setTransitionedStyleInEvent();
     void invalidHandle();
     void styleOutOfRange();
 
@@ -301,6 +304,7 @@ AbstractVisualLayerTest::AbstractVisualLayerTest() {
         Containers::arraySize(SetStyleData));
 
     addTests({&AbstractVisualLayerTest::setTransitionedStyle,
+              &AbstractVisualLayerTest::setTransitionedStyleInEvent,
               &AbstractVisualLayerTest::invalidHandle});
 
     addInstancedTests({&AbstractVisualLayerTest::styleOutOfRange},
@@ -887,6 +891,289 @@ void AbstractVisualLayerTest::setTransitionedStyle() {
     layer.setTransitionedStyle(ui, data2, PressedOut1);
     CORRADE_COMPARE(layer.style(data1), InactiveOut2);
     CORRADE_COMPARE(layer.style(data2), FocusedOver1);
+}
+
+void AbstractVisualLayerTest::setTransitionedStyleInEvent() {
+    /* Compared to setTransitionedStyle() verifies that calling the function in
+       an event handler works as well, i.e. that the final style corresponds to
+       the actual state.
+
+       In reality, for press and release, the setTransitionedStyle() call will
+       not have an up-to-date information about what's the currently hovered /
+       pressed / focused yet, so the style will not be correct at that point,
+       but it will be immediately followed by another transition that then
+       makes the final result correct. For enter and leave it will do the
+       correct thing already as those events are called only once the info about
+       the current hovered node is updated.
+
+       See comments in each case below for more details. */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Style {
+        InactiveOut,
+        InactiveOver,
+        FocusedOut,
+        FocusedOver,
+        PressedOut,
+        PressedOver,
+    };
+
+    /* Style transition isn't allowed to use dynamic styles so the dynamic
+       count shouldn't affect it */
+    StyleLayerShared shared{12, 0};
+    shared.setStyleTransition(
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut:
+                case InactiveOver:
+                case FocusedOut:
+                case FocusedOver:
+                case PressedOut:
+                case PressedOver:
+                    return InactiveOut;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut:
+                case InactiveOver:
+                case FocusedOut:
+                case FocusedOver:
+                case PressedOut:
+                case PressedOver:
+                    return InactiveOver;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut:
+                case InactiveOver:
+                case FocusedOut:
+                case FocusedOver:
+                case PressedOut:
+                case PressedOver:
+                    return FocusedOut;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut:
+                case InactiveOver:
+                case FocusedOut:
+                case FocusedOver:
+                case PressedOut:
+                case PressedOver:
+                    return FocusedOver;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut:
+                case InactiveOver:
+                case FocusedOut:
+                case FocusedOver:
+                case PressedOut:
+                case PressedOver:
+                    return PressedOut;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt style) -> UnsignedInt {
+            switch(Style(style)) {
+                case InactiveOut:
+                case InactiveOver:
+                case FocusedOut:
+                case FocusedOver:
+                case PressedOut:
+                case PressedOver:
+                    return PressedOver;
+            }
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        },
+        [](UnsignedInt) -> UnsignedInt {
+            CORRADE_FAIL("This shouldn't be called");
+            CORRADE_INTERNAL_ASSERT_UNREACHABLE();
+        });
+    StyleLayer& layer = ui.setLayerInstance(Containers::pointer<StyleLayer>(ui.createLayer(), shared));
+
+    EventLayer& eventLayer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    NodeHandle node = ui.createNode({}, {100, 50});
+    DataHandle data = layer.create(InactiveOut, node);
+
+    /* Nothing is hovered, pressed or focused initially */
+    CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+    CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+
+    /* Setting a transitioned style inside onEnter should pick InactiveOver */
+    {
+        Int called = 0;
+        EventConnection connection = eventLayer.onEnterScoped(node, [&]{
+            layer.setTransitionedStyle(ui, data, FocusedOut);
+            /* At this point, currentHoveredNode() is already updated and thus
+               the style is already transitioned to the final one. This is
+               because pointerEnterEvent() is called after pointerMoveEvent()
+               that updated the hovered node information. */
+            CORRADE_COMPARE(ui.currentHoveredNode(), node);
+            CORRADE_COMPARE(layer.style(data), InactiveOver);
+            ++called;
+        });
+
+        PointerMoveEvent event{{}, {}, {}};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 25}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(layer.style(data), InactiveOver);
+
+    /* Setting a transitioned style inside onLeave should pick InactiveOut */
+    } {
+        Int called = 0;
+        EventConnection connection = eventLayer.onLeaveScoped(node, [&]{
+            layer.setTransitionedStyle(ui, data, FocusedOver);
+            /* At this point, currentHoveredNode() is again already updated and
+               thus the style is already transitioned to the final one. This is
+               because pointerLeaveEvent() is called after pointerMoveEvent()
+               that updated the hovered node information. */
+            CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+            CORRADE_COMPARE(layer.style(data), InactiveOut);
+            ++called;
+        });
+
+        PointerMoveEvent event{{}, {}, {}};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({1000, 1000}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(layer.style(data), InactiveOut);
+
+    /* Setting a transitioned style inside onPress should pick PressedOut */
+    } {
+        Int called = 0;
+        EventConnection connection = eventLayer.onPressScoped(node, [&]{
+            layer.setTransitionedStyle(ui, data, FocusedOver);
+            /* At this point, currentPressedNode() is not updated yet because
+               we don't yet know if the press events will actually be accepted.
+               Which means the transition doesn't take the press into account,
+               and what makes the style correct is a transition that only
+               happens after, once the currentPressedNode() is updated. */
+            CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+            CORRADE_COMPARE(layer.style(data), InactiveOut);
+            ++called;
+        });
+
+        PointerEvent event{{}, Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(layer.style(data), PressedOut);
+
+    /* Setting a transitioned style inside onRelease should pick InactiveOut */
+    } {
+        Int called = 0;
+        EventConnection connection = eventLayer.onReleaseScoped(node, [&]{
+            layer.setTransitionedStyle(ui, data, FocusedOver);
+            /* At this point, currentPressedNode() is not updated yet.
+               Consistently with a press it's done only after all release
+               events are fired. In this case however, it *could* be updated
+               before calling release events, nevertheless it still results in
+               correct behavior as another transition is done right after. */
+            CORRADE_COMPARE(ui.currentPressedNode(), node);
+            CORRADE_COMPARE(layer.style(data), PressedOut);
+            ++called;
+        });
+
+        PointerEvent event{{}, Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({50, 25}, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(layer.style(data), InactiveOut);
+
+    /* Setting a transitioned style inside onTapOrClick should pick
+       InactiveOut */
+    } {
+        Int called = 0;
+        EventConnection connection = eventLayer.onTapOrClickScoped(node, [&]{
+            layer.setTransitionedStyle(ui, data, PressedOver);
+            /* Similarly to a leave event, currentPressedNode() is already
+               updated and thus the style is already transitioned to the final
+               one. This is because tapOrClickEvent() is called after
+               pointerReleaseEvent() and the pressed node information is
+               updated in between the two. */
+            CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+            CORRADE_COMPARE(layer.style(data), InactiveOut);
+            ++called;
+        });
+
+        PointerEvent pressEvent{{}, Pointer::MouseLeft};
+        PointerEvent releaseEvent{{}, Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 25}, pressEvent));
+        CORRADE_VERIFY(ui.pointerReleaseEvent({50, 25}, releaseEvent));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(layer.style(data), InactiveOut);
+    }
+
+    /* Make the node focusable for the rest of the test */
+    ui.setNodeFlags(node, NodeFlag::Focusable);
+
+    /* Setting a transitioned style inside onFocus should pick FocusedOut */
+    {
+        Int called = 0;
+        EventConnection connection = eventLayer.onFocusScoped(node, [&]{
+            layer.setTransitionedStyle(ui, data, PressedOver);
+            /* Similarly as with the press event, currentFocusedNode() isn't
+               updated at this point yet. Again a second transition happens
+               after, making the resulting style correct. */
+            CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+            CORRADE_COMPARE(layer.style(data), InactiveOut);
+            ++called;
+        });
+
+        FocusEvent event{{}};
+        CORRADE_VERIFY(ui.focusEvent(node, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), node);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(layer.style(data), FocusedOut);
+
+    /* Setting a transitioned style inside onBlur should pick InactiveOut */
+    } {
+        Int called = 0;
+        EventConnection connection = eventLayer.onBlurScoped(node, [&]{
+            layer.setTransitionedStyle(ui, data, PressedOver);
+            /* Similarly as with the release event, currentFocusedNode() isn't
+               updated at this point yet. Again it *could* be, nevertheless a
+               second transition happens after, making the resulting style
+               correct. */
+            CORRADE_COMPARE(ui.currentFocusedNode(), node);
+            CORRADE_COMPARE(layer.style(data), FocusedOut);
+            ++called;
+        });
+
+        FocusEvent event{{}};
+        CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, event));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(layer.style(data), InactiveOut);
+    }
 }
 
 void AbstractVisualLayerTest::invalidHandle() {
