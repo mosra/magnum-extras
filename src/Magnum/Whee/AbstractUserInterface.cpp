@@ -3617,6 +3617,8 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     state.currentPressedNode = called;
 
     /* Update the last relative position with this one */
+    /** @todo update this before calling any event functions so the event
+        handlers can rely on this information being up to date if needed */
     state.currentGlobalPointerPosition = globalPositionScaled;
 
     /* If the press happened with a primary pointer, deal with focus. With
@@ -3676,7 +3678,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
        directly. Given that update() was called, it should be either null or
        valid. */
     bool releaseAcceptedByAnyData;
-    bool callTapOrClick;
+    NodeHandle callTapOrClickOnNode = NodeHandle::Null;
     if(state.currentCapturedNode != NodeHandle::Null) {
         CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentCapturedNode));
 
@@ -3699,7 +3701,8 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
            active area), and the node release was called on is the same as node
            the press was called on (because, e.g., something could disable and re-enable capture in the middle of a move, changing the captured
            node to something else, or the captured node ) */
-        callTapOrClick = insideCapturedNode && releaseAcceptedByAnyData && state.currentPressedNode == state.currentCapturedNode;
+        if(insideCapturedNode && releaseAcceptedByAnyData && state.currentPressedNode == state.currentCapturedNode)
+            callTapOrClickOnNode = state.currentPressedNode;
 
     /* Otherwise the usual hit testing etc. */
     } else {
@@ -3716,25 +3719,33 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
            area of the originally pressed node and the node the release was
            called on the same node as the original press (i.e.., it didn't
            happen on some child node inside of the originally pressed node) */
-        callTapOrClick = releaseAcceptedByAnyData && state.currentPressedNode != NodeHandle::Null && state.currentPressedNode == calledNode;
+        if(releaseAcceptedByAnyData && state.currentPressedNode != NodeHandle::Null && state.currentPressedNode == calledNode)
+            callTapOrClickOnNode = state.currentPressedNode;
     }
+
+    /* After a release, there should be no pressed node anymore. Do it before
+       calling the pointerTapOrClickEvent() so if anything accesses the
+       currentPressedNode() from there, it's not stale. */
+    state.currentPressedNode = NodeHandle::Null;
 
     /* Emit a TapOrClick event if needed. Reusing the same event instance, just
        resetting the accept status. Both the accept and the capture status is
        subsequently ignored. */
-    if(callTapOrClick) {
-        CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentPressedNode));
+    if(callTapOrClickOnNode != NodeHandle::Null) {
+        CORRADE_INTERNAL_ASSERT(isHandleValid(callTapOrClickOnNode));
 
         event._accepted = false;
-        callEventOnNode<PointerEvent, &AbstractLayer::pointerTapOrClickEvent>(globalPositionScaled, nodeHandleId(state.currentPressedNode), event);
+        callEventOnNode<PointerEvent, &AbstractLayer::pointerTapOrClickEvent>(globalPositionScaled, nodeHandleId(callTapOrClickOnNode), event);
     }
 
-    /* After a release, there should be no pressed node anymore, and neither a
-       captured node */
-    state.currentPressedNode = NodeHandle::Null;
+    /* After a release and a tap or click, there should be no captured node
+       anymore either. Not resetting it before tap or click as there it still
+       should be set if event._captured is set. */
     state.currentCapturedNode = NodeHandle::Null;
 
     /* Update the last relative position with this one */
+    /** @todo update this before calling any event functions so the event
+        handlers can rely on this information being up to date if needed */
     state.currentGlobalPointerPosition = globalPositionScaled;
 
     return releaseAcceptedByAnyData;
@@ -3915,6 +3926,8 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         state.currentPressedNode = NodeHandle::Null;
 
     /* Update the last relative position with this one */
+    /** @todo update this before calling any event functions so the event
+        handlers can rely on this information being up to date if needed */
     state.currentGlobalPointerPosition = globalPositionScaled;
 
     return moveAcceptedByAnyData;
