@@ -3734,6 +3734,12 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
     if(callTapOrClickOnNode != NodeHandle::Null) {
         CORRADE_INTERNAL_ASSERT(isHandleValid(callTapOrClickOnNode));
 
+        /** @todo Given that the tap or click event doesn't need to be
+            accepted, setting this to false means the function may return true
+            but the original event isAccepted() is still false -- do
+            `event._accepted = releaseAcceptedByAnyData` before returning?
+            Not doing so may cause the same event class to be accidentally used
+            multiple times, is that a problem? */
         event._accepted = false;
         callEventOnNode<PointerEvent, &AbstractLayer::pointerTapOrClickEvent>(globalPositionScaled, nodeHandleId(callTapOrClickOnNode), event);
     }
@@ -3863,6 +3869,12 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
        Leave events should not be able to affect it. Both the accept and the
        capture status is subsequently ignored. */
     if(callLeaveOnNode != NodeHandle::Null) {
+        /** @todo Given that the enter / leave events don't need to be
+            accepted, setting this to false means the function may return true
+            but the original event isAccepted() is still false -- do
+            `event._accepted = moveAcceptedByAnyData` before returning? Not
+            doing so may cause the same event class to be accidentally used
+            multiple times, is that a problem? */
         event._accepted = false;
 
         /* Leave events are by definition never hovering the node they are
@@ -3888,6 +3900,12 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
        relative position reset. The accept status is subsequently ignored, the
        capture isn't. */
     if(callEnterOnNode != NodeHandle::Null) {
+        /** @todo Given that the enter / leave events don't need to be
+            accepted, setting this to false means the function may return true
+            but the original event isAccepted() is still false -- do
+            `event._accepted = moveAcceptedByAnyData` before returning? Not
+            doing so may cause the same event class to be accidentally used
+            multiple times, is that a problem? */
         event._accepted = false;
 
         /* Enter events are by definition always hovering the node they are
