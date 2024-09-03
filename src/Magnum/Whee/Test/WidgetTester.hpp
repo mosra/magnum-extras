@@ -148,10 +148,10 @@ struct TestTextLayerShared: TextLayer::Shared {
                         advances[i] = {12.0f, 0.0f};
                     }
                 }
-                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>&) const override {
-                    /** @todo implement when it actually does get called for
-                        cursor / selection */
-                    CORRADE_FAIL("This shouldn't be called.");
+                void doGlyphClustersInto(const Containers::StridedArrayView1D<UnsignedInt>& clusters) const override {
+                    for(std::size_t i = 0; i != clusters.size(); ++i) {
+                        clusters[i] = i;
+                    }
                 }
 
                 private:

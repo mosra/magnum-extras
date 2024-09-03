@@ -49,6 +49,7 @@ corrade_add_test(WheeButtonTest ButtonTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventTest EventTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeEventLayerTest EventLayerTest.cpp LIBRARIES MagnumWheeTestLib)
 corrade_add_test(WheeHandleTest HandleTest.cpp LIBRARIES MagnumWhee)
+corrade_add_test(WheeInputTest InputTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeLabelTest LabelTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeNodeFlagsTest NodeFlagsTest.cpp LIBRARIES MagnumWhee)
 corrade_add_test(WheeSnapLayouterTest SnapLayouterTest.cpp LIBRARIES MagnumWheeTestLib)
@@ -318,6 +319,7 @@ if(MAGNUM_BUILD_GL_TESTS)
             StyleTestFiles/mcss-dark-button-text-icon.png
             StyleTestFiles/mcss-dark-button-text.png
             StyleTestFiles/mcss-dark-button-icon.png
+            StyleTestFiles/mcss-dark-input.png
             StyleTestFiles/mcss-dark-label-text.png
             StyleTestFiles/mcss-dark-label-icon.png)
     target_include_directories(WheeStyleGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

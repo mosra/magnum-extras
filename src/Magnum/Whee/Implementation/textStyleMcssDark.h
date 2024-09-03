@@ -23,13 +23,17 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-/* TextStyleUniform enum name, TextStyle enum name suffix, font handle,
-   alignment, padding. Put into a dedicated file to be able to put as much as
-   possible into constexpr arrays without losing the correspondence between
-   TextStyle and the actual items. Matching order tested in StyleTest, see all
-   #includes of this file in Style.cpp for actual uses. */
+/* _c() is TextStyleUniform enum name, TextStyle enum name suffix, font handle,
+   alignment, padding. _e() is for editing styles with cursor & selection
+   TextEditingStyle enum name as third and fourth argument, _s() then for
+   selection-only styles with just cursor TextEditingStyle as third argument.
 
-#ifdef _c
+   Put into a dedicated file to be able to put as much as possible into
+   constexpr arrays without losing the correspondence between TextStyle and the
+   actual items. Matching order tested in StyleTest, see all #includes of this
+   file in Style.cpp for actual uses. */
+
+#if defined(_c) && defined(_s) && defined(_e)
 _c(Button,IconOnly,                 iconFont, MiddleCenter, { 6.0f, 8.0f,   6.0f, 8.0f})
 _c(Button,TextOnly,                 mainFont, MiddleCenter, { 6.0f, 8.0f,   6.0f, 8.0f})
 /* Assuming a 24x24 icon, a zero-size text and 6-pixel padding between, the
@@ -101,4 +105,54 @@ _c(LabelDim,Icon,                   iconFont, MiddleCenter, { 0.0f, 8.0f,   0.0f
 _c(LabelDim,Text,                   mainFont, MiddleCenter, { 0.0f, 8.0f,   0.0f, 8.0f})
 _c(LabelDimDisabled,Icon,           iconFont, MiddleCenter, { 0.0f, 8.0f,   0.0f, 8.0f})
 _c(LabelDimDisabled,Text,           mainFont, MiddleCenter, { 0.0f, 8.0f,   0.0f, 8.0f})
+
+_s(InputDefault,InactiveOut,                            InputSelectionDefault,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputDefault,InactiveOver,   InputCursorDefault,     InputSelectionDefault,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputDefault,Focused,        InputCursorFocusedDefault,InputSelectionDefault,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputDefault,Pressed,        InputCursorFocusedDefault,InputSelectionDefault,
+                                    mainFont, MiddleLeft,   {10.0f, 9.0f,   6.0f, 7.0f})
+_c(InputDefaultDisabled,,           mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+
+_s(InputSuccess,InactiveOut,                            InputSelectionSuccess,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputSuccess,InactiveOver,   InputCursorSuccess,     InputSelectionSuccess,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputSuccess,Focused,        InputCursorFocusedSuccess,InputSelectionSuccess,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputSuccess,Pressed,        InputCursorFocusedSuccess,InputSelectionSuccess,
+                                    mainFont, MiddleLeft,   {10.0f, 9.0f,   6.0f, 7.0f})
+_c(InputSuccessDisabled,,           mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+
+_s(InputWarning,InactiveOut,                            InputSelectionWarning,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputWarning,InactiveOver,   InputCursorWarning,     InputSelectionWarning,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputWarning,Focused,        InputCursorFocusedWarning,InputSelectionWarning,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputWarning,Pressed,        InputCursorFocusedWarning,InputSelectionWarning,
+                                    mainFont, MiddleLeft,   {10.0f, 9.0f,   6.0f, 7.0f})
+_c(InputWarningDisabled,,           mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+
+_s(InputDanger,InactiveOut,                             InputSelectionDanger,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputDanger,InactiveOver,    InputCursorDanger,      InputSelectionDanger,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputDanger,Focused,         InputCursorFocusedDanger,InputSelectionDanger,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputDanger,Pressed,         InputCursorFocusedDanger,InputSelectionDanger,
+                                    mainFont, MiddleLeft,   {10.0f, 9.0f,   6.0f, 7.0f})
+_c(InputDangerDisabled,,            mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+
+_s(InputFlat,InactiveOut,                               InputSelectionFlat,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputFlat,InactiveOver,      InputCursorFlat,        InputSelectionFlat,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputFlat,Focused,           InputCursorFocusedFlat, InputSelectionFlat,
+                                    mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
+_e(InputFlat,Pressed,           InputCursorFocusedFlat, InputSelectionFlat,
+                                    mainFont, MiddleLeft,   {10.0f, 9.0f,   6.0f, 7.0f})
+_c(InputFlatDisabled,,              mainFont, MiddleLeft,   {10.0f, 8.0f,   6.0f, 8.0f})
 #endif

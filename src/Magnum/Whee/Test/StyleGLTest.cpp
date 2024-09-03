@@ -46,6 +46,7 @@
 #include "Magnum/Whee/Button.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/Input.h"
 #include "Magnum/Whee/Label.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
@@ -88,22 +89,22 @@ const struct {
     const char* name;
     const char* filename;
     Int styleCount;
-    bool hoveredPressed, disabled;
+    bool hoveredPressed, focused, disabled;
     NodeHandle(*create)(UserInterface& ui, Int style, Int counter);
 } RenderData[]{
     {"button text + icon, stateless", "button-text-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return button({ui, {96, 36}}, ButtonStyle(style), counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!").node();
         }},
     {"button text + icon", "button-text-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             return Button{{ui, {96, 36}}, ButtonStyle(style), counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!"}.release();
         }},
     {"button text + icon, setters", "button-text-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {96, 36}}, ButtonStyle(style), Icon::No, "Hey"};
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
@@ -111,7 +112,7 @@ const struct {
             return button.release();
         }},
     {"button text + icon, setters on empty", "button-text-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {96, 36}}, ButtonStyle(style), Icon::None, ""};
             button.setIcon(counter % 2 ? Icon::No : Icon::Yes);
@@ -119,7 +120,7 @@ const struct {
             return button.release();
         }},
     {"button text + icon, setters on empty, different order", "button-text-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {96, 36}}, ButtonStyle(style), Icon::None, ""};
             button.setText(counter % 2 ? "Bye" : "Hello!");
@@ -127,14 +128,14 @@ const struct {
             return button.release();
         }},
     {"button text + icon, setStyle()", "button-text-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {96, 36}}, ButtonStyle(style == 0 ? 1 : 0), counter % 2 ? Icon::No : Icon::Yes, counter % 2 ? "Bye" : "Hello!"};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"button text + icon, setStyle() on empty, setters", "button-text-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {96, 36}}, ButtonStyle(style == 0 ? 1 : 0), Icon::None, ""};
             button.setStyle(ButtonStyle(style));
@@ -143,38 +144,38 @@ const struct {
             return button.release();
         }},
     {"button text, stateless", "button-text.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             return button({ui, {64, 36}}, ButtonStyle(style), counter % 2 ? "Bye" : "Hello!").node();
         }},
     {"button text", "button-text.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             return Button{{ui, {64, 36}}, ButtonStyle(style), counter % 2 ? "Bye" : "Hello!"}.release();
         }},
     {"button text, setters", "button-text.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {64, 36}}, ButtonStyle(style), "Hey"};
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"button text, setters on empty", "button-text.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {64, 36}}, ButtonStyle(style), ""};
             button.setText(counter % 2 ? "Bye" : "Hello!");
             return button.release();
         }},
     {"button text, setStyle()", "button-text.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {64, 36}}, ButtonStyle(style == 0 ? 1 : 0), counter % 2 ? "Bye" : "Hello!"};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"button text, setStyle() on empty, setters", "button-text.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {64, 36}}, ButtonStyle(style == 0 ? 1 : 0), ""};
             button.setStyle(ButtonStyle(style));
@@ -182,39 +183,39 @@ const struct {
             return button.release();
         }},
     {"button icon, stateless", "button-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return button({ui, {48, 36}}, ButtonStyle(style), counter % 2 ? Icon::Yes : Icon::No).node();
         }},
     {"button icon", "button-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             return Button{{ui, {48, 36}}, ButtonStyle(style), counter % 2 ? Icon::Yes : Icon::No}.release();
         }},
     {"button icon, setters", "button-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {48, 36}}, ButtonStyle(style), Icon::Yes};
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
         }},
     {"button icon, setters on empty", "button-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {48, 36}}, ButtonStyle(style), Icon::None};
             button.setIcon(counter % 2 ? Icon::Yes : Icon::No);
             return button.release();
         }},
     {"button icon, setStyle()", "button-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {48, 36}}, ButtonStyle(style == 0 ? 1 : 0), counter % 2 ? Icon::Yes : Icon::No};
             button.setStyle(ButtonStyle(style));
             return button.release();
         }},
     {"button icon, setStyle() on empty, setters", "button-icon.png",
-        8, true, true,
+        8, true, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Button button{{ui, {48, 36}}, ButtonStyle(style == 0 ? 1 : 0), Icon::None};
             button.setStyle(ButtonStyle(style));
@@ -222,38 +223,38 @@ const struct {
             return button.release();
         }},
     {"label text, stateless", "label-text.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             return label({ui, {52, 36}}, LabelStyle(style), counter % 3 ? "Bye" : "Hello!").node();
         }},
     {"label text", "label-text.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             return Label{{ui, {52, 36}}, LabelStyle(style), counter % 3 ? "Bye" : "Hello!"}.release();
         }},
     {"label text, setters", "label-text.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Label label{{ui, {52, 36}}, LabelStyle(style), "Hey"};
             label.setText(counter % 3 ? "Bye" : "Hello!");
             return label.release();
         }},
     {"label text, setters from empty", "label-text.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Label label{{ui, {52, 36}}, LabelStyle(style), ""};
             label.setText(counter % 3 ? "Bye" : "Hello!");
             return label.release();
         }},
     {"label text, setStyle()", "label-text.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Label label{{ui, {52, 36}}, LabelStyle(style == 0 ? 1 : 0), counter % 3 ? "Bye" : "Hello!"};
             label.setStyle(LabelStyle(style));
             return label.release();
         }},
     {"label text, setStyle() on empty, setters", "label-text.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Label label{{ui, {52, 36}}, LabelStyle(style == 0 ? 1 : 0), ""};
             label.setStyle(LabelStyle(style));
@@ -261,44 +262,70 @@ const struct {
             return label.release();
         }},
     {"label icon, stateless", "label-icon.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             /** @todo differently wide icons to test alignment */
             return label({ui, {48, 36}}, LabelStyle(style), counter % 3 ? Icon::Yes : Icon::No).node();
         }},
     {"label icon", "label-icon.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             return Label{{ui, {48, 36}}, LabelStyle(style), counter % 3 ? Icon::Yes : Icon::No}.release();
         }},
     {"label icon, setters", "label-icon.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Label label{{ui, {48, 36}}, LabelStyle(style), Icon::Yes};
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.release();
         }},
     {"label icon, setters on empty", "label-icon.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Label label{{ui, {48, 36}}, LabelStyle(style), Icon::None};
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.release();
         }},
     {"label icon, setStyle()", "label-icon.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Label label{{ui, {48, 36}}, LabelStyle(style == 0 ? 1 : 0), counter % 3 ? Icon::Yes : Icon::No};
             label.setStyle(LabelStyle(style));
             return label.release();
         }},
     {"label icon, setStyle() on empty, setters", "label-icon.png",
-        7, false, true,
+        7, false, false, true,
         [](UserInterface& ui, Int style, Int counter) {
             Label label{{ui, {48, 36}}, LabelStyle(style == 0 ? 1 : 0), Icon::None};
             label.setStyle(LabelStyle(style));
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.release();
+        }},
+    {"input", "input.png",
+        5, true, true, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Input input{{ui, {64, 36}}, InputStyle(style), counter % 2 ? "Edit..." : "Type?"};
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
+        }},
+    {"input, setters", "input.png",
+        5, true, true, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Input input{{ui, {64, 36}}, InputStyle(style), ""};
+            input.setText(counter % 2 ? "Edit..." : "Type?");
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
+        }},
+    {"input, setStyle()", "input.png",
+        5, true, true, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            Input input{{ui, {64, 36}}, InputStyle(style == 0 ? 1 : 0), counter % 2 ? "Edit..." : "Type?"};
+            input.setStyle(InputStyle(style));
+            /** @todo use a cursor setting API once it exists */
+            ui.textLayer().setCursor(input.textData(), counter % 2 ? 2 : 5, counter % 2 ? 5 : 2);
+            return input.release();
         }},
 };
 
@@ -360,8 +387,13 @@ void StyleGLTest::render() {
        / ... node, we have to have several instances in order to render
        multiple widgets in a hovered state at once. Yes, it's nasty, in a way.
        Initially the UI is set to a larger size, the actual size is set later
-       once we know how much the widgets span. */
-    const std::size_t stateCount = 1 + (data.hoveredPressed ? 3 : 0) + (data.disabled ? 1 : 0);
+       once we know how much the widgets span.
+
+       The focusable widgets currently ignore hover if pressed or focused.
+       Which means it's the same count of extra styles (hovered, focused,
+       pressed) like when handling just hover + press (hovered, pressed,
+       hovered + pressed). */
+    const std::size_t stateCount = 1 + (data.hoveredPressed ? (data.focused ? 3 : 3) : 0) + (data.disabled ? 1 : 0);
     Containers::Array<UserInterfaceGL> uis{DirectInit, data.styleCount*stateCount, NoCreate};
     for(UserInterfaceGL& ui: uis) ui
         .setSize({1024, 1024})
@@ -385,7 +417,36 @@ void StyleGLTest::render() {
             ui.setNodeOffset(node, padding + (padding + size)*Vector2{Vector2i{0, style}});
         }
 
-        if(data.hoveredPressed) {
+        if(data.focused) {
+            {
+                UserInterfaceGL& ui = uis[style*stateCount + 1];
+                NodeHandle hover = data.create(ui, style, counter++);
+                ui.setNodeOffset(hover, padding + (padding + size)*Vector2{Vector2i{1, style}});
+
+                PointerMoveEvent move{{}, {}, {}};
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(hover) + ui.nodeSize(hover)*0.5f, move));
+            } {
+                UserInterfaceGL& ui = uis[style*stateCount + 2];
+                NodeHandle pressed = data.create(ui, style, counter++);
+                ui.setNodeOffset(pressed, padding + (padding + size)*Vector2{Vector2i{2, style}});
+
+                /* The node should become focused as well */
+                PointerEvent press{{}, Pointer::MouseLeft};
+                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(pressed) + ui.nodeSize(pressed)*0.5f, press));
+                CORRADE_COMPARE(ui.currentFocusedNode(), pressed);
+            } {
+
+                UserInterfaceGL& ui = uis[style*stateCount + 3];
+                NodeHandle focused = data.create(ui, style, counter++);
+                ui.setNodeOffset(focused, padding + (padding + size)*Vector2{Vector2i{3, style}});
+
+                /* The node should become focused without a press */
+                FocusEvent focus{{}};
+                CORRADE_VERIFY(ui.focusEvent(focused, focus));
+                CORRADE_COMPARE(ui.currentFocusedNode(), focused);
+            }
+
+        } else if(data.hoveredPressed) {
             {
                 UserInterfaceGL& ui = uis[style*stateCount + 1];
                 NodeHandle hover = data.create(ui, style, counter++);
@@ -454,14 +515,37 @@ void StyleGLTest::render() {
         Utility::Path::join({WHEE_TEST_DIR, "StyleTestFiles", Containers::StringView{styleData.filePrefix} + data.filename}),
         DebugTools::CompareImageToFile{_importerManager});
 
+    /* Verify that hovering the pressed and focused widgets doesn't have any
+       difference in visuals */
+    if(data.focused) {
+        /* Focused + pressed widget, should have no difference when hovered */
+        for(Int style = 0; style != data.styleCount; ++style) {
+            UserInterfaceGL& ui = uis[style*stateCount + 2];
+            /* We don't record the node handles, but each UI should have just
+               one so this artificial one should be correct */
+            NodeHandle node = nodeHandle(0, 1);
+            CORRADE_VERIFY(ui.isHandleValid(node));
+
+            PointerMoveEvent moveOver{{}, {}, {}};
+            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
+        }
+
+        /* Focused widget, should have no difference when hovered */
+        for(Int style = 0; style != data.styleCount; ++style) {
+            UserInterfaceGL& ui = uis[style*stateCount + 3];
+            NodeHandle node = nodeHandle(0, 1);
+            CORRADE_VERIFY(ui.isHandleValid(node));
+
+            PointerMoveEvent moveOver{{}, {}, {}};
+            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
+        }
+
     /* Verify that roundtrip state changes result in the same visuals as
        originally */
-    if(data.hoveredPressed) {
+    } else if(data.hoveredPressed) {
         /* Pointer enter and leave on the inactive widget */
         for(Int style = 0; style != data.styleCount; ++style) {
             UserInterfaceGL& ui = uis[style*stateCount];
-            /* We don't record the node handles, but each UI should have just
-               one so this artificial one should be correct */
             NodeHandle node = nodeHandle(0, 1);
             CORRADE_VERIFY(ui.isHandleValid(node));
 
@@ -491,38 +575,73 @@ void StyleGLTest::render() {
             CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
         }
 
-        /* Pointer leave and enter on the pressed + hovered widget */
-        for(Int style = 0; style != data.styleCount; ++style) {
-            UserInterfaceGL& ui = uis[style*stateCount + 2];
-            NodeHandle node = nodeHandle(0, 1);
-            CORRADE_VERIFY(ui.isHandleValid(node));
+        if(data.focused) {
+            /* Release and press again on the focused + pressed widget */
+            for(Int style = 0; style != data.styleCount; ++style) {
+                UserInterfaceGL& ui = uis[style*stateCount + 2];
+                NodeHandle node = nodeHandle(0, 1);
+                CORRADE_VERIFY(ui.isHandleValid(node));
 
-            /* Move out, making the node pressed but not hovered, i.e. looking
-               the same as in the fourth column. As the node is captured, the
-               event is accepted always. */
-            PointerMoveEvent moveOut{{}, {}, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
+                /* Release, making the node focused but not pressed, i.e.
+                   looking the same as in the fourth column. */
+                PointerEvent release{{}, Pointer::Pen};
+                CORRADE_VERIFY(ui.pointerReleaseEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, release));
 
-            /* Move over again */
-            PointerMoveEvent moveOver{{}, {}, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
-        }
+                /* Press again */
+                PointerEvent press{{}, Pointer::Pen};
+                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, press));
+            }
 
-        /* Pointer enter and leave on the pressed widget */
-        for(Int style = 0; style != data.styleCount; ++style) {
-            UserInterfaceGL& ui = uis[style*stateCount + 3];
-            NodeHandle node = nodeHandle(0, 1);
-            CORRADE_VERIFY(ui.isHandleValid(node));
+            /* Press and release again on the focused widget */
+            for(Int style = 0; style != data.styleCount; ++style) {
+                UserInterfaceGL& ui = uis[style*stateCount + 2];
+                NodeHandle node = nodeHandle(0, 1);
+                CORRADE_VERIFY(ui.isHandleValid(node));
 
-            /* Move over, making the node pressed + hovered, i.e. looking the
-               same as in the third column */
-            PointerMoveEvent moveOver{{}, {}, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
+                /* Press, making the node focused and pressed, i.e.  looking
+                   the same as in the third column. */
+                PointerEvent press{{}, Pointer::Pen};
+                CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, press));
 
-            /* Move out again. As the node is captured, the event is accepted
-               always. */
-            PointerMoveEvent moveOut{{}, {}, {}};
-            CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
+                /* Release again */
+                PointerEvent release{{}, Pointer::Pen};
+                CORRADE_VERIFY(ui.pointerReleaseEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, release));
+            }
+
+        } else {
+            /* Pointer leave and enter on the pressed + hovered widget */
+            for(Int style = 0; style != data.styleCount; ++style) {
+                UserInterfaceGL& ui = uis[style*stateCount + 2];
+                NodeHandle node = nodeHandle(0, 1);
+                CORRADE_VERIFY(ui.isHandleValid(node));
+
+                /* Move out, making the node pressed but not hovered, i.e. looking
+                   the same as in the fourth column. As the node is captured, the
+                   event is accepted always. */
+                PointerMoveEvent moveOut{{}, {}, {}};
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
+
+                /* Move over again */
+                PointerMoveEvent moveOver{{}, {}, {}};
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
+            }
+
+            /* Pointer enter and leave on the pressed widget */
+            for(Int style = 0; style != data.styleCount; ++style) {
+                UserInterfaceGL& ui = uis[style*stateCount + 3];
+                NodeHandle node = nodeHandle(0, 1);
+                CORRADE_VERIFY(ui.isHandleValid(node));
+
+                /* Move over, making the node pressed + hovered, i.e. looking the
+                   same as in the third column */
+                PointerMoveEvent moveOver{{}, {}, {}};
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
+
+                /* Move out again. As the node is captured, the event is accepted
+                   always. */
+                PointerMoveEvent moveOut{{}, {}, {}};
+                CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
+            }
         }
 
         framebuffer.clearColor(0, 0x00000000_rgbaf);

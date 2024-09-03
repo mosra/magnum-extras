@@ -57,6 +57,7 @@ struct StyleTest: TestSuite::Tester {
     void baseMcssDark();
     void textMcssDark();
     void textUniformsMcssDark();
+    void textEditingMcssDark();
 
     void apply();
     void applyTextLayerCannotOpenFont();
@@ -99,7 +100,8 @@ StyleTest::StyleTest() {
 
               &StyleTest::baseMcssDark,
               &StyleTest::textMcssDark,
-              &StyleTest::textUniformsMcssDark});
+              &StyleTest::textUniformsMcssDark,
+              &StyleTest::textEditingMcssDark});
 
     addInstancedTests({&StyleTest::apply},
         Containers::arraySize(ApplyData));
@@ -114,6 +116,7 @@ StyleTest::StyleTest() {
 using Implementation::BaseStyle;
 using Implementation::TextStyle;
 using Implementation::TextStyleUniform;
+using Implementation::TextEditingStyle;
 
 void StyleTest::debugIcon() {
     std::ostringstream out;
@@ -162,8 +165,12 @@ void StyleTest::baseMcssDark() {
 void StyleTest::textMcssDark() {
     const TextStyle styles[]{
         #define _c(style, suffix, ...) TextStyle::style ## suffix,
+        #define _s _c
+        #define _e _c
         #include "Magnum/Whee/Implementation/textStyleMcssDark.h"
         #undef _c
+        #undef _s
+        #undef _e
     };
 
     /* Verify that the harcoded TextStyleCount matches the actual number of
@@ -189,8 +196,12 @@ void StyleTest::textMcssDark() {
                     CORRADE_COMPARE_AS(UnsignedInt(TextStyleUniform::style), Implementation::TextStyleUniformCount, \
                         TestSuite::Compare::Less); \
                     break;
+            #define _s _c
+            #define _e _c
             #include "Magnum/Whee/Implementation/textStyleMcssDark.h"
             #undef _c
+            #undef _s
+            #undef _e
         }
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic pop
@@ -227,6 +238,48 @@ void StyleTest::textUniformsMcssDark() {
                     CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextStyleUniform::style)); \
                     break;
             #include "Magnum/Whee/Implementation/textStyleUniformsMcssDark.h"
+            #undef _c
+        }
+        #ifdef CORRADE_TARGET_GCC
+        #pragma GCC diagnostic pop
+        #endif
+    }
+}
+
+void StyleTest::textEditingMcssDark() {
+    const TextEditingStyle styleUniforms[]{
+        #define _c(style, ...) TextEditingStyle::style,
+        #define _s _c
+        #include "Magnum/Whee/Implementation/textEditingStyleMcssDark.h"
+        #undef _s
+        #undef _c
+    };
+
+    /* Verify that the harcoded BaseStyleCount matches the actual number of
+       entries in the mapping. The same should be a static_assert() in
+       Style.cpp already, here it's just a sanity check. */
+    CORRADE_COMPARE(Implementation::TextEditingStyleCount, Containers::arraySize(styleUniforms));
+    CORRADE_COMPARE(Implementation::TextEditingStyleUniformCount, Containers::arraySize(styleUniforms));
+
+    /* This checks that:
+        - the mapping contains entries for all enum values (otherwise -Wswitch
+          would trigger)
+        - none of the values are duplicated (otherwise it'd be a syntax error)
+        - and the position of the value in the mapping corresponds to the
+          enum value (by checking against the styles[] above) */
+    for(UnsignedInt i = 0; i != Implementation::TextEditingStyleCount; ++i) {
+        #ifdef CORRADE_TARGET_GCC
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic error "-Wswitch"
+        #endif
+        switch(TextEditingStyle(i)) {
+            #define _c(style, ...) \
+                case TextEditingStyle::style: \
+                    CORRADE_COMPARE(UnsignedInt(styleUniforms[i]), UnsignedInt(TextEditingStyle::style)); \
+                    break;
+            #define _s _c
+            #include "Magnum/Whee/Implementation/textEditingStyleMcssDark.h"
+            #undef _s
             #undef _c
         }
         #ifdef CORRADE_TARGET_GCC
@@ -282,7 +335,9 @@ void StyleTest::apply() {
     } glyphCache{PixelFormat::R8Unorm, {512, 256}};
 
     struct TestTextLayerShared: TextLayer::Shared {
-        explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -351,7 +406,9 @@ void StyleTest::applyTextLayerCannotOpenFont() {
     } glyphCache{PixelFormat::R8Unorm, {512, 256}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -397,7 +454,9 @@ void StyleTest::applyTextLayerImagesCannotOpen() {
     } glyphCache{PixelFormat::R8Unorm, {512, 256}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -444,7 +503,9 @@ void StyleTest::applyTextLayerImagesCannotFit() {
     glyphCache.atlas().add({{500, 200}}, offset);
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -491,7 +552,9 @@ void StyleTest::applyTextLayerImagesUnexpectedFormat() {
     } glyphCache{PixelFormat::R8Unorm, {512, 256}};
 
     struct LayerShared: TextLayer::Shared {
-        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 
@@ -535,7 +598,9 @@ void StyleTest::applyTextLayerTwice() {
     } glyphCache{PixelFormat::R8Unorm, {512, 256}};
 
     struct TestTextLayerShared: TextLayer::Shared {
-        explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}} {}
+        explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
+            .setEditingStyleCount(Implementation::TextEditingStyleCount)
+        } {}
 
         using TextLayer::Shared::setGlyphCache;
 

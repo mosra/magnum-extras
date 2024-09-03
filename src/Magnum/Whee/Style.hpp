@@ -89,6 +89,31 @@ enum class BaseStyle: UnsignedShort {
     ButtonFlatPressedOut,
     ButtonFlatPressedOver,
     ButtonFlatDisabled,
+
+    InputDefaultInactiveOut,
+    InputDefaultInactiveOver,
+    InputDefaultFocused,
+    InputDefaultDisabled,
+
+    InputSuccessInactiveOut,
+    InputSuccessInactiveOver,
+    InputSuccessFocused,
+    InputSuccessDisabled,
+
+    InputWarningInactiveOut,
+    InputWarningInactiveOver,
+    InputWarningFocused,
+    InputWarningDisabled,
+
+    InputDangerInactiveOut,
+    InputDangerInactiveOver,
+    InputDangerFocused,
+    InputDangerDisabled,
+
+    InputFlatInactiveOut,
+    InputFlatInactiveOver,
+    InputFlatFocused,
+    InputFlatDisabled,
 };
 
 MAGNUM_WHEE_EXPORT BaseStyle styleTransitionToInactiveOut(BaseStyle index);
@@ -123,6 +148,19 @@ enum class TextStyleUniform: UnsignedInt {
     LabelInfoDisabled,
     LabelDim,
     LabelDimDisabled,
+
+    InputDefault,
+    InputDefaultDisabled,
+    InputSuccess,
+    InputSuccessDisabled,
+    InputWarning,
+    InputWarningDisabled,
+    InputDanger,
+    InputDangerDisabled,
+    InputFlat,
+    InputFlatDisabled,
+
+    InputSelection,
 };
 
 enum class TextStyle: UnsignedShort {
@@ -188,6 +226,58 @@ enum class TextStyle: UnsignedShort {
     LabelDimText,
     LabelDimDisabledIcon,
     LabelDimDisabledText,
+
+    InputDefaultInactiveOut,
+    InputDefaultInactiveOver,
+    InputDefaultFocused,
+    InputDefaultPressed,
+    InputDefaultDisabled,
+
+    InputSuccessInactiveOut,
+    InputSuccessInactiveOver,
+    InputSuccessFocused,
+    InputSuccessPressed,
+    InputSuccessDisabled,
+
+    InputWarningInactiveOut,
+    InputWarningInactiveOver,
+    InputWarningFocused,
+    InputWarningPressed,
+    InputWarningDisabled,
+
+    InputDangerInactiveOut,
+    InputDangerInactiveOver,
+    InputDangerFocused,
+    InputDangerPressed,
+    InputDangerDisabled,
+
+    InputFlatInactiveOut,
+    InputFlatInactiveOver,
+    InputFlatFocused,
+    InputFlatPressed,
+    InputFlatDisabled,
+};
+
+enum class TextEditingStyle: UnsignedShort {
+    InputCursorDefault,
+    InputCursorFocusedDefault,
+    InputSelectionDefault,
+
+    InputCursorSuccess,
+    InputCursorFocusedSuccess,
+    InputSelectionSuccess,
+
+    InputCursorWarning,
+    InputCursorFocusedWarning,
+    InputSelectionWarning,
+
+    InputCursorDanger,
+    InputCursorFocusedDanger,
+    InputSelectionDanger,
+
+    InputCursorFlat,
+    InputCursorFocusedFlat,
+    InputSelectionFlat,
 };
 
 MAGNUM_WHEE_EXPORT TextStyle styleTransitionToInactiveOut(TextStyle index);

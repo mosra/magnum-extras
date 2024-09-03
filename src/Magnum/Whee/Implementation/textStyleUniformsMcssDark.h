@@ -60,4 +60,20 @@ _c(LabelInfo,                   0x2f83cc_rgbf)
 _c(LabelInfoDisabled,           0x2f83ccff_rgbaf*0.3f)
 _c(LabelDim,                    0x747474_rgbf)
 _c(LabelDimDisabled,            0x747474ff_rgbaf*0.3f)
+
+/* Input text is always the same regardless of hover, --*-link-active-color.
+   Disabled again 30% opacity. */
+_c(InputDefault,                0xdcdcdc_rgbf)
+_c(InputDefaultDisabled,        0xdcdcdcff_rgbaf*0.3f)
+_c(InputSuccess,                0xacecbe_rgbf)
+_c(InputSuccessDisabled,        0xacecbeff_rgbaf*0.3f)
+_c(InputWarning,                0xe9ecae_rgbf)
+_c(InputWarningDisabled,        0xe9ecaeff_rgbaf*0.3f)
+_c(InputDanger,                 0xff9391_rgbf)
+_c(InputDangerDisabled,         0xff9391ff_rgbaf*0.3f)
+/* Flat input text is --link-active-color */
+_c(InputFlat,                   0xa5c9ea_rgbf)
+_c(InputFlatDisabled,           0xa5c9eaff_rgbaf*0.3f)
+/* Selection is --button-background-color, same as with button text */
+_c(InputSelection,              0x22272e_rgbf)
 #endif
