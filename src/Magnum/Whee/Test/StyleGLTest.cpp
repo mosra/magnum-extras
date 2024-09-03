@@ -46,6 +46,7 @@
 #include "Magnum/Whee/Button.h"
 #include "Magnum/Whee/Event.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/Input.h"
 #include "Magnum/Whee/Label.h"
 #include "Magnum/Whee/NodeFlags.h"
 #include "Magnum/Whee/RendererGL.h"
@@ -299,6 +300,11 @@ const struct {
             label.setStyle(LabelStyle(style));
             label.setIcon(counter % 3 ? Icon::Yes : Icon::No);
             return label.release();
+        }},
+    {"input", "input.png",
+        1, true, true,
+        [](UserInterface& ui, Int style, Int counter) {
+            return Input{{ui, {64, 36}}, InputStyle(style), counter % 3 ? "Edit." : "Type?"}.release();
         }},
 };
 

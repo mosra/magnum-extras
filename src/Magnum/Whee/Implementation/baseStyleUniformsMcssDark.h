@@ -79,4 +79,52 @@ _c(ButtonFlatInactiveOver,      {}, {}, 0xd0d9f7_rgbf, 1.5f, 4.0f, 2.5f)
 _c(ButtonFlatPressedOut,        {}, {}, 0x8fa5ec_rgbf, 1.5f, 4.0f, 2.5f)
 _c(ButtonFlatPressedOver,       {}, {}, 0xd0d9f7_rgbf, 1.5f, 4.0f, 2.5f)
 _c(ButtonFlatDisabled,          {}, {}, {}, 0.0f, 4.0f, 0.0f)
+
+/* Color, outline color, (left, top, right, bottom) outline width, corner
+   radius, inner corner radius (top left, bottom left, top right, bottom
+   right) */
+_c(InputDefaultInactiveOut,     0x34424dff_rgbaf*0.8f, 0xdcdcdcff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputDefaultInactiveOver,    0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputDefaultFocused,         0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputDefaultDisabled,        0x34424dff_rgbaf*0.3f, 0xdcdcdcff_rgbaf*0.3f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+
+_c(InputSuccessInactiveOut,     0x34424dff_rgbaf*0.8f, 0xdcdcdcff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputSuccessInactiveOver,    0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputSuccessFocused,         0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputSuccessDisabled,        0x34424dff_rgbaf*0.3f, 0xdcdcdcff_rgbaf*0.3f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+
+_c(InputWarningInactiveOut,     0x34424dff_rgbaf*0.8f, 0xdcdcdcff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputWarningInactiveOver,    0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputWarningFocused,         0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputWarningDisabled,        0x34424dff_rgbaf*0.3f, 0xdcdcdcff_rgbaf*0.3f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+
+_c(InputDangerInactiveOut,      0x34424dff_rgbaf*0.8f, 0xdcdcdcff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputDangerInactiveOver,     0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputDangerFocused,          0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputDangerDisabled,         0x34424dff_rgbaf*0.3f, 0xdcdcdcff_rgbaf*0.3f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+
+_c(InputFlatInactiveOut,        0x34424dff_rgbaf*0.8f, 0xdcdcdcff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputFlatInactiveOver,       0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
+_c(InputFlatFocused,            0x34424dff_rgbaf*0.8f, 0xa5c9eaff_rgbaf*0.8f,
+    {4.0f, 1.0f, 1.0f, 1.0f}, Vector4{4.0f}, {1.0f, 1.0f, 3.0f, 3.0f})
+_c(InputFlatDisabled,           0x34424dff_rgbaf*0.3f, 0xdcdcdcff_rgbaf*0.3f,
+    {4.0f, 0.0f, 0.0f, 0.0f}, Vector4{4.0f}, {})
 #endif
