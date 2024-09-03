@@ -109,11 +109,20 @@ using namespace Math::Literals;
 const struct {
     const char* name;
     const char* filename;
+    bool singleGlyph;
     TextLayerStyleUniform styleUniform;
 } RenderData[]{
-    {"default", "default.png",
+    {"default", "default.png", false,
         TextLayerStyleUniform{}},
-    {"colored", "colored.png",
+    /* Should be centered according to its bounding box, not according to the
+       font metrics -- thus a lot higher than the g in Maggi in the above */
+    {"default single glyph", "default-glyph.png", true,
+        TextLayerStyleUniform{}},
+    {"colored", "colored.png", false,
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf)},
+    /* Again, should be centered according to its bounding box */
+    {"colored single glyph", "colored-glyph.png", true,
         TextLayerStyleUniform{}
             .setColor(0x3bd267_rgbf)},
     /** @todo test at least toggling kerning once StbTrueTypeFont supports
@@ -477,7 +486,10 @@ void TextLayerGLTest::render() {
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     /* Using a text that has glyphs both above and below line and doesn't need
        too many glyphs */
-    ui.layer<TextLayerGL>(layer).create(1, "Maggi", {}, node);
+    if(data.singleGlyph)
+        ui.layer<TextLayerGL>(layer).createGlyph(1, _font->glyphId('g'), {}, node);
+    else
+        ui.layer<TextLayerGL>(layer).create(1, "Maggi", {}, node);
 
     ui.draw();
 

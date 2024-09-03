@@ -44,7 +44,8 @@ namespace Implementation {
 
 struct TextLayerFont {
     Containers::Pointer<Text::AbstractFont> fontStorage;
-    Containers::Reference<Text::AbstractFont> font;
+    /* Is null for instance-less fonts */
+    Text::AbstractFont* font;
     /* The instance is cached to use for subsequent shaping operations. To keep
        things simple, every Font item has its own even though they might come
        from the same AbstractFont originally. */

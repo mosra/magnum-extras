@@ -169,7 +169,9 @@ if(MAGNUM_BUILD_GL_TESTS)
             TextLayerTestFiles/clipping-disabled.png
             TextLayerTestFiles/clipping-enabled.png
             TextLayerTestFiles/colored.png
+            TextLayerTestFiles/colored-glyph.png
             TextLayerTestFiles/default.png
+            TextLayerTestFiles/default-glyph.png
             TextLayerTestFiles/draw-order.png)
     target_include_directories(WheeTextLayerGLTest PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
     if(MAGNUM_BUILD_STATIC)

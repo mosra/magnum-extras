@@ -45,8 +45,8 @@
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/TextProperties.h"
-/* for createRemoveSetText(), updateCleanDataOrder(), updateAlignment() and
-   updatePadding() */
+/* for createRemoveSetText(), updateCleanDataOrder(), updateAlignment(),
+   updateAlignmentGlyph(), updatePadding() and updatePaddingGlyph() */
 #include "Magnum/Whee/Implementation/textLayerState.h"
 
 namespace Magnum { namespace Whee { namespace Test { namespace {
@@ -84,7 +84,9 @@ struct TextLayerTest: TestSuite::Tester {
     void sharedAddFontNoCache();
     void sharedAddFontNotFoundInCache();
     void sharedAddFontNoHandlesLeft();
+    void sharedAddInstancelessFontHasInstance();
     void sharedFontInvalidHandle();
+    void sharedFontNoInstance();
 
     void sharedSetStyle();
     void sharedSetStyleImplicitPadding();
@@ -99,7 +101,7 @@ struct TextLayerTest: TestSuite::Tester {
     void constructMove();
 
     /* remove() and setText() tested here as well */
-    template<class T> void createRemoveSetText();
+    template<class StyleIndex, class GlyphIndex> void createRemoveSet();
     void createRemoveHandleRecycle();
     void createSetTextTextProperties();
     void createNoSharedGlyphCache();
@@ -110,12 +112,16 @@ struct TextLayerTest: TestSuite::Tester {
     void invalidHandle();
     void invalidFontHandle();
     void noSharedStyleFonts();
+    void noFontInstance();
     void styleOutOfRange();
+    void glyphOutOfRange();
 
     void updateEmpty();
     void updateCleanDataOrder();
     void updateAlignment();
+    void updateAlignmentGlyph();
     void updatePadding();
+    void updatePaddingGlyph();
     void updateNoStyleSet();
 };
 
@@ -130,7 +136,7 @@ const struct {
     NodeHandle node;
     LayerStates state;
     bool layerDataHandleOverloads, customFont, noStyle;
-} CreateRemoveSetTextData[]{
+} CreateRemoveSetData[]{
     {"create",
         NodeHandle::Null, LayerStates{},
         false, false, false},
@@ -157,34 +163,47 @@ const struct {
     /* Node offset is {50.5, 20.5}, size {200.8, 100.4}; bounding box {9, 11},
        ascent 7, descent -4 */
     Vector2 offset;
+    /* Glyph ounding box is {6, 8}, offset {-4, -6} */
+    Vector2 offsetGlyph;
 } UpdateAlignmentPaddingData[]{
     {"line left", Text::Alignment::LineLeft,
-        {50.5f, 70.7f}},
+        /* 20.5 + 100.4/2 = 70.7 */
+        {50.5f, 70.7f},
+        {50.5f, 76.7f}},
     {"line right", Text::Alignment::LineRight,
-        {50.5f + 200.8f - 9.0f, 70.7f}},
+        {50.5f + 200.8f - 9.0f, 70.7f},
+        {50.5f + 200.8f - 6.0f, 76.7f}},
     {"top center", Text::Alignment::TopCenter,
-        {50.5f + 100.4f - 4.5f, 20.5f + 7.0f}},
+        {50.5f + 100.4f - 4.5f, 20.5f + 7.0f},
+        {50.5f + 100.4f - 3.0f, 20.5f + 8.0f}},
     {"top center, interal", Text::Alignment::TopCenterIntegral,
         /* Only the offset inside the node and the bounding box is rounded,
            not the node offset itself; not the Y coordinate either */
-        {50.5f + 100.0f - 5.0f, 20.5f + 7.0f}},
+        {50.5f + 100.0f - 5.0f, 20.5f + 7.0f},
+        /* No change for the glyph as the glyph cache has integer sizes */
+        {50.5f + 100.0f - 3.0f, 20.5f + 8.0f}},
     {"bottom left", Text::Alignment::BottomLeft,
-        {50.5f, 120.9f - 4.0f}},
+        {50.5f, 120.9f - 4.0f},
+        {50.5f, 120.9f}},
     {"middle right", Text::Alignment::MiddleRight,
-        {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f}},
+        {50.5f + 200.8f - 9.0f, 20.5f + 50.2f - 5.5f + 7.0f},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
     {"middle right, integral", Text::Alignment::MiddleRightIntegral,
         /* Only the offset inside the node and the bounding box is rounded,
            not the node offset itself; not the X coordinate either. Note that
            the Y rounding is in the other direction compared to X because of Y
            flip. */
-        {50.5f + 200.8f - 9.0f, 20.5f + 50.0f - 5.0f + 7.0f}},
+        {50.5f + 200.8f - 9.0f, 20.5f + 50.0f - 5.0f + 7.0f},
+        {50.5f + 200.8f - 6.0f, 20.5f + 50.0f - 4.0f + 8.0f}},
     {"middle center", Text::Alignment::MiddleCenter,
-        {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f}},
+        {50.5f + 100.4f - 4.5f, 20.5f + 50.2f - 5.5f + 7.0f},
+        {50.5f + 100.4f - 3.0f, 20.5f + 50.2f - 4.0f + 8.0f}},
     {"middle center, integral", Text::Alignment::MiddleCenterIntegral,
         /* Only the offset inside the node and the bounding box is rounded,
            not the node offset itself. Note that the Y rounding is in the other
            direction compared to X because of Y flip. */
-        {50.5f + 100.0f - 5.0f, 20.5f + 50.0f - 5.0f + 7.0f}},
+        {50.5f + 100.0f - 5.0f, 20.5f + 50.0f - 5.0f + 7.0f},
+        {50.5f + 100.0f - 3.0f, 20.5f + 50.0f - 4.0f + 8.0f}},
 };
 
 const struct {
@@ -241,7 +260,9 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::sharedAddFontNoCache,
               &TextLayerTest::sharedAddFontNotFoundInCache,
               &TextLayerTest::sharedAddFontNoHandlesLeft,
+              &TextLayerTest::sharedAddInstancelessFontHasInstance,
               &TextLayerTest::sharedFontInvalidHandle,
+              &TextLayerTest::sharedFontNoInstance,
 
               &TextLayerTest::sharedSetStyle,
               &TextLayerTest::sharedSetStyleImplicitPadding,
@@ -255,9 +276,12 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::constructCopy,
               &TextLayerTest::constructMove});
 
-    addInstancedTests<TextLayerTest>({&TextLayerTest::createRemoveSetText<UnsignedInt>,
-                                      &TextLayerTest::createRemoveSetText<Enum>},
-        Containers::arraySize(CreateRemoveSetTextData));
+    addInstancedTests<TextLayerTest>({
+        &TextLayerTest::createRemoveSet<UnsignedInt, UnsignedInt>,
+        &TextLayerTest::createRemoveSet<UnsignedInt, Enum>,
+        &TextLayerTest::createRemoveSet<Enum, UnsignedInt>,
+        &TextLayerTest::createRemoveSet<Enum, Enum>},
+        Containers::arraySize(CreateRemoveSetData));
 
     addTests({&TextLayerTest::createRemoveHandleRecycle,
               &TextLayerTest::createSetTextTextProperties,
@@ -269,7 +293,9 @@ TextLayerTest::TextLayerTest() {
               &TextLayerTest::invalidHandle,
               &TextLayerTest::invalidFontHandle,
               &TextLayerTest::noSharedStyleFonts,
+              &TextLayerTest::noFontInstance,
               &TextLayerTest::styleOutOfRange,
+              &TextLayerTest::glyphOutOfRange,
 
               &TextLayerTest::updateEmpty});
 
@@ -277,7 +303,9 @@ TextLayerTest::TextLayerTest() {
         Containers::arraySize(UpdateCleanDataOrderData));
 
     addInstancedTests({&TextLayerTest::updateAlignment,
-                       &TextLayerTest::updatePadding},
+                       &TextLayerTest::updateAlignmentGlyph,
+                       &TextLayerTest::updatePadding,
+                       &TextLayerTest::updatePaddingGlyph},
         Containers::arraySize(UpdateAlignmentPaddingData));
 
     addTests({&TextLayerTest::updateNoStyleSet});
@@ -619,20 +647,40 @@ void TextLayerTest::sharedAddFont() {
     CORRADE_COMPARE(shared.fontCount(), 1);
     CORRADE_VERIFY(shared.isHandleValid(first));
     CORRADE_COMPARE(shared.glyphCacheFontId(first), firstFontId);
+    CORRADE_VERIFY(shared.hasFontInstance(first));
     CORRADE_COMPARE(&shared.font(first), &font1);
     /* Const overload */
     CORRADE_COMPARE(&const_cast<const Shared&>(shared).font(first), &font1);
 
-    /* Second font */
-    UnsignedInt secondFontId = cache.addFont(56, &font2);
-    FontHandle second = shared.addFont(font2, 6.0f);
+    /* Second font, instanceless */
+    UnsignedInt secondFontId = cache.addFont(223);
+    FontHandle second = shared.addInstancelessFont(secondFontId, 0.5f);
     CORRADE_COMPARE(second, Whee::fontHandle(1, 1));
     CORRADE_COMPARE(shared.fontCount(), 2);
     CORRADE_VERIFY(shared.isHandleValid(second));
     CORRADE_COMPARE(shared.glyphCacheFontId(second), secondFontId);
-    CORRADE_COMPARE(&shared.font(second), &font2);
+    CORRADE_VERIFY(!shared.hasFontInstance(second));
+
+    /* Third font */
+    UnsignedInt thirdFontId = cache.addFont(56, &font2);
+    FontHandle third = shared.addFont(font2, 6.0f);
+    CORRADE_COMPARE(third, Whee::fontHandle(2, 1));
+    CORRADE_COMPARE(shared.fontCount(), 3);
+    CORRADE_VERIFY(shared.isHandleValid(third));
+    CORRADE_COMPARE(shared.glyphCacheFontId(third), thirdFontId);
+    CORRADE_VERIFY(shared.hasFontInstance(third));
+    CORRADE_COMPARE(&shared.font(third), &font2);
     /* Const overload */
-    CORRADE_COMPARE(&const_cast<const Shared&>(shared).font(second), &font2);
+    CORRADE_COMPARE(&const_cast<const Shared&>(shared).font(third), &font2);
+
+    /* Fourth font, instanceless */
+    UnsignedInt fourthFontId = cache.addFont(117);
+    FontHandle fourth = shared.addInstancelessFont(fourthFontId, 2.0f);
+    CORRADE_COMPARE(fourth, Whee::fontHandle(3, 1));
+    CORRADE_COMPARE(shared.fontCount(), 4);
+    CORRADE_VERIFY(shared.isHandleValid(fourth));
+    CORRADE_COMPARE(shared.glyphCacheFontId(second), secondFontId);
+    CORRADE_VERIFY(!shared.hasFontInstance(second));
 }
 
 void TextLayerTest::sharedAddFontTakeOwnership() {
@@ -750,7 +798,10 @@ void TextLayerTest::sharedAddFontNoCache() {
     std::ostringstream out;
     Error redirectError{&out};
     shared.addFont(font, 1.0f);
-    CORRADE_COMPARE(out.str(), "Whee::TextLayer::Shared::addFont(): no glyph cache set\n");
+    shared.addInstancelessFont(0, 0.5f);
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::Shared::addFont(): no glyph cache set\n"
+        "Whee::TextLayer::Shared::addInstancelessFont(): no glyph cache set\n");
 }
 
 void TextLayerTest::sharedAddFontNotFoundInCache() {
@@ -791,7 +842,10 @@ void TextLayerTest::sharedAddFontNotFoundInCache() {
     std::ostringstream out;
     Error redirectError{&out};
     shared.addFont(font, 1.0f);
-    CORRADE_COMPARE(out.str(), "Whee::TextLayer::Shared::addFont(): font not found among 2 fonts in set glyph cache\n");
+    shared.addInstancelessFont(2, 1.0f);
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::Shared::addFont(): font not found among 2 fonts in set glyph cache\n"
+        "Whee::TextLayer::Shared::addInstancelessFont(): index 2 out of range for 2 fonts in set glyph cache\n");
 }
 
 void TextLayerTest::sharedAddFontNoHandlesLeft() {
@@ -816,6 +870,8 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
     } cache{PixelFormat::R8Unorm, {32, 32, 2}};
     cache.addFont(67, &font);
 
+    UnsignedInt glyphCacheInstanceLessFontId = cache.addFont(223);
+
     struct Shared: TextLayer::Shared {
         explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
 
@@ -835,10 +891,54 @@ void TextLayerTest::sharedAddFontNoHandlesLeft() {
     std::ostringstream out;
     Error redirectError{&out};
     shared.addFont(font, 1.0f);
+    shared.addInstancelessFont(glyphCacheInstanceLessFontId, 1.0f);
     /* Number is hardcoded in the expected message but not elsewhere in order
        to give a heads-up when modifying the handle ID bit count */
     CORRADE_COMPARE(out.str(),
-        "Whee::TextLayer::Shared::addFont(): can only have at most 32768 fonts\n");
+        "Whee::TextLayer::Shared::addFont(): can only have at most 32768 fonts\n"
+        "Whee::TextLayer::Shared::addInstancelessFont(): can only have at most 32768 fonts\n");
+}
+
+void TextLayerTest::sharedAddInstancelessFontHasInstance() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return false; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+
+    /* Add a font without an instance to check it's looking at the correct
+       one */
+    cache.addFont(223);
+    UnsignedInt glyphCacheFontId = cache.addFont(67, &font);
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
+    shared.setGlyphCache(cache);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    shared.addInstancelessFont(glyphCacheFontId, 1.0f);
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::Shared::addInstancelessFont(): glyph cache font 1 has an instance set\n");
 }
 
 void TextLayerTest::sharedFontInvalidHandle() {
@@ -880,6 +980,8 @@ void TextLayerTest::sharedFontInvalidHandle() {
     Error redirectError{&out};
     shared.glyphCacheFontId(FontHandle(0x12ab));
     shared.glyphCacheFontId(FontHandle::Null);
+    shared.hasFontInstance(FontHandle(0x12ab));
+    shared.hasFontInstance(FontHandle::Null);
     shared.font(FontHandle(0x12ab));
     shared.font(FontHandle::Null);
     /* Const overload */
@@ -888,10 +990,58 @@ void TextLayerTest::sharedFontInvalidHandle() {
     CORRADE_COMPARE(out.str(),
         "Whee::TextLayer::Shared::glyphCacheFontId(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
         "Whee::TextLayer::Shared::glyphCacheFontId(): invalid handle Whee::FontHandle::Null\n"
+        "Whee::TextLayer::Shared::hasFontInstance(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
+        "Whee::TextLayer::Shared::hasFontInstance(): invalid handle Whee::FontHandle::Null\n"
         "Whee::TextLayer::Shared::font(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
         "Whee::TextLayer::Shared::font(): invalid handle Whee::FontHandle::Null\n"
         "Whee::TextLayer::Shared::font(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
         "Whee::TextLayer::Shared::font(): invalid handle Whee::FontHandle::Null\n");
+}
+
+void TextLayerTest::sharedFontNoInstance() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractFont {
+        Text::FontFeatures doFeatures() const override { return {}; }
+        bool doIsOpened() const override { return true; }
+        void doClose() override {}
+
+        void doGlyphIdsInto(const Containers::StridedArrayView1D<const char32_t>&, const Containers::StridedArrayView1D<UnsignedInt>&) override {}
+        Vector2 doGlyphSize(UnsignedInt) override { return {}; }
+        Vector2 doGlyphAdvance(UnsignedInt) override { return {}; }
+        Containers::Pointer<Text::AbstractShaper> doCreateShaper() override { return {}; }
+    } font;
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    cache.addFont(67, &font);
+
+    UnsignedInt glyphCacheInstanceLessFontId = cache.addFont(233);
+
+    struct Shared: TextLayer::Shared {
+        explicit Shared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{3, 5};
+    shared.setGlyphCache(cache);
+
+    /* Need to add at least one font with an instance because the assertion
+       returns the first font as a fallback */
+    shared.addFont(font, 13.0f);
+
+    FontHandle instanceless = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.3f);
+    CORRADE_VERIFY(!shared.hasFontInstance(instanceless));
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    shared.font(instanceless);
+    CORRADE_COMPARE(out.str(), "Whee::TextLayer::Shared::font(): Whee::FontHandle(0x1, 0x1) is an instance-less font\n");
 }
 
 void TextLayerTest::sharedSetStyle() {
@@ -1452,10 +1602,13 @@ struct OneGlyphShaper: Text::AbstractShaper {
     }
 };
 
-template<class T> void TextLayerTest::createRemoveSetText() {
-    auto&& data = CreateRemoveSetTextData[testCaseInstanceId()];
+template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet() {
+    auto&& data = CreateRemoveSetData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
-    setTestCaseTemplateName(std::is_same<T, Enum>::value ? "Enum" : "UnsignedInt");
+    setTestCaseTemplateName({
+        std::is_same<StyleIndex, Enum>::value ? "Enum" : "UnsignedInt",
+        std::is_same<GlyphIndex, Enum>::value ? "Enum" : "UnsignedInt"
+    });
 
     struct: Text::AbstractFont {
         Text::FontFeatures doFeatures() const override { return {}; }
@@ -1501,17 +1654,18 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     /* Default padding is 1, resetting to 0 for simplicity */
     } cache{PixelFormat::R8Unorm, {32, 32, 15}, {}};
 
-    /* Sizes, layers and offsets in the glyph cache are only used in
-       doUpdate() so they can be arbitrary. Here it uses just the glyph ID
-       mapping. */
+    /* Glyph rectangle sizes in the glyph cache are only used for single-glyph
+       data, text uses just the glyph ID mapping. Sizes, layers and offsets are
+       only used in doUpdate() so they can be arbitrary. */
+    cache.setInvalidGlyph({4, -2}, 7, {{16, 8}, {32, 32}});
     {
         UnsignedInt fontId = cache.addFont(threeGlyphFont.glyphCount(), &threeGlyphFont);
         cache.addGlyph(fontId, 97, {3000, 1000}, 13, {{7, 23}, {18, 30}});
         /* Glyph 22 deliberately omitted */
-        cache.addGlyph(fontId, 13, {2000, 2000}, 6, {{30, 2}, {32, 26}});
+        cache.addGlyph(fontId, 13, {2, -4}, 6, {{8, 16}, {32, 32}});
     } {
         UnsignedInt fontId = cache.addFont(oneGlyphFont.glyphCount(), &oneGlyphFont);
-        cache.addGlyph(fontId, 66, {1000, 3000}, 9, {{7, 8}, {9, 10}});
+        cache.addGlyph(fontId, 66, {2, -1}, 9, {{7, 8}, {15, 20}});
     }
 
     struct LayerShared: TextLayer::Shared {
@@ -1553,7 +1707,7 @@ template<class T> void TextLayerTest::createRemoveSetText() {
 
     /* Default color */
     DataHandle first = layer.create(
-        T(1),
+        StyleIndex(1),
         "hello",
         TextProperties{}
             .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null),
@@ -1564,9 +1718,22 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
+    /* Single (invalid) glyph */
+    DataHandle firstGlyph = layer.createGlyph(
+        StyleIndex(1),
+        GlyphIndex(22),
+        TextProperties{}
+            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null),
+        data.node);
+    CORRADE_COMPARE(layer.node(firstGlyph), data.node);
+    CORRADE_COMPARE(layer.style(firstGlyph), 1);
+    CORRADE_COMPARE(layer.color(firstGlyph), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.padding(firstGlyph), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), data.state);
+
     /* Custom color, testing also the getter overloads and templates */
     DataHandle second = layer.create(
-        T(2),
+        StyleIndex(2),
         "ahoy",
         TextProperties{}
             .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null),
@@ -1575,24 +1742,38 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     CORRADE_COMPARE(layer.node(second), data.node);
     if(data.layerDataHandleOverloads) {
         CORRADE_COMPARE(layer.style(dataHandleData(second)), 2);
-        /* Can't use T, as the function restricts to enum types which would
-           fail for T == UnsignedInt */
+        /* Can't use StyleIndex, as the function restricts to enum types which
+           would fail for StyleIndex == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(second)), Enum(2));
         CORRADE_COMPARE(layer.color(dataHandleData(second)), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.padding(dataHandleData(second)), Vector4{0.0f});
     } else {
         CORRADE_COMPARE(layer.style(second), 2);
-        /* Can't use T, as the function restricts to enum types which would
-           fail for T == UnsignedInt */
+        /* Can't use StyleIndex, as the function restricts to enum types which
+           would fail for StyleIndex == UnsignedInt */
         CORRADE_COMPARE(layer.template style<Enum>(second), Enum(2));
         CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
         CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     }
     CORRADE_COMPARE(layer.state(), data.state);
 
+    /* Single glyph with custom color */
+    DataHandle secondGlyph = layer.createGlyph(
+        StyleIndex(2),
+        GlyphIndex(66),
+        TextProperties{}
+            .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null),
+        0xff3366_rgbf,
+        data.node);
+    CORRADE_COMPARE(layer.node(secondGlyph), data.node);
+    CORRADE_COMPARE(layer.style(secondGlyph), 2);
+    CORRADE_COMPARE(layer.color(secondGlyph), 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.padding(secondGlyph), Vector4{0.0f});
+    CORRADE_COMPARE(layer.state(), data.state);
+
     /* Empty text */
     DataHandle third = layer.create(
-        T(1),
+        StyleIndex(1),
         "",
         TextProperties{}
             .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null),
@@ -1604,7 +1785,7 @@ template<class T> void TextLayerTest::createRemoveSetText() {
     CORRADE_COMPARE(layer.state(), data.state);
 
     DataHandle fourth = layer.create(
-        T(0),
+        StyleIndex(0),
         "hi",
         TextProperties{}
             .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null),
@@ -1617,25 +1798,29 @@ template<class T> void TextLayerTest::createRemoveSetText() {
 
     /* There should be four glyph runs, assigned to the four data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 1u, 2u, 3u
+        0u, 1u, 2u, 3u, 4u, 5u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        /* The second text is using the OneGlyphShaper, so it's just one glyph;
-           third is empty */
-        0u, 5u, 6u, 6u
+        /* The second and third data is a singly glyph, `second` text is using
+           the OneGlyphShaper, so it's just one glyph; `third` is empty */
+        0u, 5u, 6u, 7u, 8u, 8u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
-        /* The second text is using the OneGlyphShaper, so it's just one glyph;
-           third is empty */
-        5u, 1u, 0u, 2u
+        /* The second and third data is a singly glyph, `second` text is using
+           the OneGlyphShaper, so it's just one glyph; `third` is empty */
+        5u, 1u, 1u, 1u, 0u, 2u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
-        0u, 1u, 2u, 3u
+        0u, 1u, 2u, 3u, 4u, 5u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphData).slice(&Implementation::TextLayerGlyphData::glyphId), Containers::arrayView({
         /* Glyphs 22, 13, 97, 22, 13; glyph 22 isn't in the cache */
         0u, 2u, 1u, 0u, 2u,
+        /* Single (invalid) glyph 22 */
+        0u,
         /* Glyph 66 */
+        3u,
+        /* Single glyph 66 */
         3u,
         /* Nothing for third text */
         /* Glyphs 22, 13 */
@@ -1648,8 +1833,14 @@ template<class T> void TextLayerTest::createRemoveSetText() {
         {-1.5f,  0.5f},
         { 1.0f,  1.0f},
         { 4.0f,  1.5f},
+        /* Single (invalid) glyph 22. Its size is {16, 24} and offset {4, -2},
+           scaled to 0.5, aligned to MiddleCenter */
+        {-6.0f, -5.0f},
         /* "ahoy", single glyph */
         { 0.5f, -1.5f},
+        /* Single glyph 66. Its size is {8, 12} and offset {2, -1},
+           scaled to 2.0, aligned to MiddleCenter */
+        {-12.0f, -10.0f},
         /* Third text is empty */
         /* "hi", aligned to MiddleCenter */
         {-1.25f, -0.5f},
@@ -1664,56 +1855,72 @@ template<class T> void TextLayerTest::createRemoveSetText() {
         layer.remove(fourth);
     CORRADE_COMPARE(layer.state(), data.state);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 1u, 2u, 3u
+        0u, 1u, 2u, 3u, 4u, 5u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        0u, 5u, 6u, 0xffffffffu
+        0u, 5u, 6u, 7u, 8u, 0xffffffffu
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
-        5u, 1u, 0u, 2u
+        5u, 1u, 1u, 1u, 0u, 2u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
-        0u, 1u, 2u, 3u
+        0u, 1u, 2u, 3u, 4u, 5u
     }), TestSuite::Compare::Container);
 
     /* Modifying a text creates a new run at the end, marks the original run as
        unused and marks the layer as needing an update. It's possible to switch
-       to a different font, in this case from the one-glyph font to the
-       three-glyph one. */
-    if(data.layerDataHandleOverloads) layer.setText(
-        dataHandleData(second),
-        "hey",
-        TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
-    else layer.setText(
-        second,
-        "hey",
-        TextProperties{}
-            .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+       to a different font, and between a single-glyph and text data as well.
+       In this case the `second` text from the one-glyph font becomes a single
+       glyph, and `secondGlyph` glyph from the one-glyph font becomes a text,
+       and they optionally switch to the three-glyph font as well. */
+    if(data.layerDataHandleOverloads) {
+        layer.setText(dataHandleData(secondGlyph), "hey",
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+        layer.setGlyph(dataHandleData(second),
+            data.customFont ? GlyphIndex(13) : GlyphIndex(66),
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+    } else {
+        layer.setText(secondGlyph, "hey",
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+        layer.setGlyph(second,
+            data.customFont ? GlyphIndex(13) : GlyphIndex(66),
+            TextProperties{}
+                .setFont(data.customFont ? threeGlyphFontHandle : FontHandle::Null));
+    }
+
     CORRADE_COMPARE(layer.state(), data.state|LayerState::NeedsUpdate);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 4u, 2u, 3u
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        0u, 0xffffffffu, 6u, 0xffffffffu, 8u
+        0u, 1u, 7u, 6u, 4u, 5u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
-        5u, 1u, 0u, 2u, data.customFont ? 3u : 1u
+        5u, 1u, 1u, 1u, 0u, 2u, data.customFont ? 3u : 1u, 1u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
-        0u, 1u, 2u, 3u, 1u
+        0u, 1u, 2u, 3u, 4u, 5u, 3u, 2u
     }), TestSuite::Compare::Container);
     if(data.customFont) {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
+            0u, 5u, 0xffffffffu, 0xffffffffu, 8u, 0xffffffffu, 10u, 13u
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphData).slice(&Implementation::TextLayerGlyphData::glyphId), Containers::arrayView({
             /* Glyphs 22, 13, 97, 22, 13; glyph 22 isn't in the cache */
             0u, 2u, 1u, 0u, 2u,
+            /* Single (invalid) glyph 22 */
+            0u,
             /* Now-unused "ahoy" text */
+            3u,
+            /* Now-unused single glyph 66 */
             3u,
             /* Nothing for third text */
             /* Glyphs 22, 13 */
             0u, 2u,
             /* Glyphs 22, 13, 97; glyph 22 isn't in the cache */
             0u, 2u, 1u,
+            /* Glyph 13 */
+            2u
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphData).slice(&Implementation::TextLayerGlyphData::position), Containers::arrayView<Vector2>({
             /* "hello", aligned to MiddleCenter */
@@ -1722,8 +1929,12 @@ template<class T> void TextLayerTest::createRemoveSetText() {
             {-1.5f,  0.5f},
             { 1.0f,  1.0f},
             { 4.0f,  1.5f},
+            /* Single (invalid) glyph 22 */
+            {-6.0f, -5.0f},
             /* Now-unused "ahoy" text */
             { 0.5f, -1.5f},
+            /* Now-unused single glyph 66 */
+            {-12.0f, -10.0f},
             /* Third text is empty */
             /* "hi", aligned to MiddleCenter */
             {-1.25f, -0.5f},
@@ -1732,17 +1943,29 @@ template<class T> void TextLayerTest::createRemoveSetText() {
             {-2.25f, -0.5f},
             {-0.75f,  0.0f},
             { 1.25f,  0.5f},
+            /* Single glyph 13. Its size is {24, 16} and offset {2, -4},
+               scaled to 0.5, aligned to MiddleCenter */
+            {-7.0f, -2.0f}
         }), TestSuite::Compare::Container);
     } else {
+        CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
+            0u, 5u, 0xffffffffu, 0xffffffffu, 8u, 0xffffffffu, 10u, 11u
+        }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphData).slice(&Implementation::TextLayerGlyphData::glyphId), Containers::arrayView({
             /* Glyphs 22, 13, 97, 22, 13; glyph 22 isn't in the cache */
             0u, 2u, 1u, 0u, 2u,
+            /* Single (invalid) glyph 22 */
+            0u,
             /* Now-unused "ahoy" text */
+            3u,
+            /* Now-unused single glyph 66 */
             3u,
             /* Nothing for third text */
             /* Glyphs 22, 13 */
             0u, 2u,
             /* Glyph 66 */
+            3u,
+            /* Single glyph 66 */
             3u,
         }), TestSuite::Compare::Container);
         CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphData).slice(&Implementation::TextLayerGlyphData::position), Containers::arrayView<Vector2>({
@@ -1752,14 +1975,20 @@ template<class T> void TextLayerTest::createRemoveSetText() {
             {-1.5f,  0.5f},
             { 1.0f,  1.0f},
             { 4.0f,  1.5f},
+            /* Single (invalid) glyph 22 */
+            {-6.0f, -5.0f},
             /* Now-unused "ahoy" text */
             { 0.5f, -1.5f},
+            /* Now-unused single glyph 66 */
+            {-12.0f, -10.0f},
             /* Third text is empty */
             /* "hi", aligned to MiddleCenter */
             {-1.25f, -0.5f},
             { 0.25f,  0.0f},
             /* "hey", aligned to MiddleCenter */
             { 0.5f, -1.5f},
+            /* Single glyph 66 again, aligned to MiddleCenter */
+            {-12.0f, -10.0f},
         }), TestSuite::Compare::Container);
     }
 }
@@ -1806,8 +2035,9 @@ void TextLayerTest::createRemoveHandleRecycle() {
 
     DataHandle first = layer.create(0, "hello", {});
     DataHandle second = layer.create(0, "again", {});
+    layer.setPadding(first, Vector4{15.0f});
     layer.setPadding(second, Vector4{5.0f});
-    CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
+    CORRADE_COMPARE(layer.padding(first), Vector4{15.0f});
     CORRADE_COMPARE(layer.padding(second), Vector4{5.0f});
 
     /* Data that reuses a previous slot should have the padding cleared */
@@ -1815,6 +2045,12 @@ void TextLayerTest::createRemoveHandleRecycle() {
     DataHandle second2 = layer.create(0, "yes", {});
     CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
     CORRADE_COMPARE(layer.padding(second2), Vector4{0.0f});
+
+    /* Same for a glyph */
+    layer.remove(first);
+    DataHandle first2 = layer.createGlyph(0, 0, {});
+    CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
+    CORRADE_COMPARE(layer.padding(first2), Vector4{0.0f});
 }
 
 void TextLayerTest::createSetTextTextProperties() {
@@ -1937,6 +2173,14 @@ void TextLayerTest::createSetTextTextProperties() {
     CORRADE_COMPARE(font.setLanguageCalled, 2);
     CORRADE_COMPARE(font.setDirectionCalled, 2);
     CORRADE_COMPARE(font.shapeCalled, 2);
+
+    /* createGlyph() doesn't call shape() at all */
+    DataHandle glyph = layer.createGlyph(0, 0, {});
+    layer.setGlyph(glyph, 0, {});
+    CORRADE_COMPARE(font.setScriptCalled, 2);
+    CORRADE_COMPARE(font.setLanguageCalled, 2);
+    CORRADE_COMPARE(font.setDirectionCalled, 2);
+    CORRADE_COMPARE(font.shapeCalled, 2);
 }
 
 void TextLayerTest::createNoSharedGlyphCache() {
@@ -1955,7 +2199,10 @@ void TextLayerTest::createNoSharedGlyphCache() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.create(2, "", {});
-    CORRADE_COMPARE(out.str(), "Whee::TextLayer::create(): no glyph cache was set\n");
+    layer.createGlyph(1, 0, {});
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::create(): no glyph cache was set\n"
+        "Whee::TextLayer::createGlyph(): no glyph cache was set\n");
 }
 
 void TextLayerTest::setColor() {
@@ -2002,6 +2249,7 @@ void TextLayerTest::setColor() {
        always */
     layer.create(0, "", {});
 
+    /* There's nothing that would work differently for createGlyph() */
     DataHandle data = layer.create(0, "", {}, 0xff3366_rgbf);
     CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -2061,6 +2309,7 @@ void TextLayerTest::setPadding() {
        always */
     layer.create(0, "", {});
 
+    /* There's nothing that would work differently for createGlyph() */
     DataHandle data = layer.create(0, "", {});
     CORRADE_COMPARE(layer.padding(data), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), LayerStates{});
@@ -2105,6 +2354,8 @@ void TextLayerTest::invalidHandle() {
     Error redirectError{&out};
     layer.setText(DataHandle::Null, "", {});
     layer.setText(LayerDataHandle::Null, "", {});
+    layer.setGlyph(DataHandle::Null, 0, {});
+    layer.setGlyph(LayerDataHandle::Null, 0, {});
     layer.color(DataHandle::Null);
     layer.color(LayerDataHandle::Null);
     layer.setColor(DataHandle::Null, {});
@@ -2116,6 +2367,8 @@ void TextLayerTest::invalidHandle() {
     CORRADE_COMPARE_AS(out.str(),
         "Whee::TextLayer::setText(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::setText(): invalid handle Whee::LayerDataHandle::Null\n"
+        "Whee::TextLayer::setGlyph(): invalid handle Whee::DataHandle::Null\n"
+        "Whee::TextLayer::setGlyph(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::color(): invalid handle Whee::DataHandle::Null\n"
         "Whee::TextLayer::color(): invalid handle Whee::LayerDataHandle::Null\n"
         "Whee::TextLayer::setColor(): invalid handle Whee::DataHandle::Null\n"
@@ -2174,10 +2427,14 @@ void TextLayerTest::invalidFontHandle() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.create(0, "", FontHandle(0x12ab));
+    layer.createGlyph(0, 0, FontHandle(0x12ab));
     layer.setText(data, "", FontHandle(0x12ab));
+    layer.setGlyph(data, 0, FontHandle(0x12ab));
     CORRADE_COMPARE(out.str(),
         "Whee::TextLayer::create(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
-        "Whee::TextLayer::setText(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n");
+        "Whee::TextLayer::createGlyph(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
+        "Whee::TextLayer::setText(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n"
+        "Whee::TextLayer::setGlyph(): invalid handle Whee::FontHandle(0x12ab, 0x0)\n");
 }
 
 void TextLayerTest::noSharedStyleFonts() {
@@ -2222,10 +2479,60 @@ void TextLayerTest::noSharedStyleFonts() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.create(0, "", {});
+    layer.createGlyph(0, 0, {});
     layer.setText(data, "", {});
+    layer.setGlyph(data, 0, {});
     CORRADE_COMPARE(out.str(),
         "Whee::TextLayer::create(): no style data was set and no custom font was supplied\n"
-        "Whee::TextLayer::setText(): no style data was set and no custom font was supplied\n");
+        "Whee::TextLayer::createGlyph(): no style data was set and no custom font was supplied\n"
+        "Whee::TextLayer::setText(): no style data was set and no custom font was supplied\n"
+        "Whee::TextLayer::setGlyph(): no style data was set and no custom font was supplied\n");
+}
+
+void TextLayerTest::noFontInstance() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+    UnsignedInt glyphCacheInstanceLessFontId = cache.addFont(233);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
+    shared.setGlyphCache(cache);
+
+    FontHandle fontHandle1 = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.1f);
+    FontHandle fontHandle2 = shared.addInstancelessFont(glyphCacheInstanceLessFontId, 0.1f);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {fontHandle1},
+        {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.createGlyph(0, 0, {});
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.create(0, "", {});
+    layer.create(0, "", fontHandle2);
+    layer.setText(data, "", {});
+    layer.setText(data, "", fontHandle2);
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::create(): Whee::FontHandle(0x0, 0x1) is an instance-less font\n"
+        "Whee::TextLayer::create(): Whee::FontHandle(0x1, 0x1) is an instance-less font\n"
+        "Whee::TextLayer::setText(): Whee::FontHandle(0x0, 0x1) is an instance-less font\n"
+        "Whee::TextLayer::setText(): Whee::FontHandle(0x1, 0x1) is an instance-less font\n");
 }
 
 void TextLayerTest::styleOutOfRange() {
@@ -2271,8 +2578,55 @@ void TextLayerTest::styleOutOfRange() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.create(3, "", TextProperties{}.setFont(fontHandle));
-    /* All overloads delegate to the same one, no need to check all */
-    CORRADE_COMPARE(out.str(), "Whee::TextLayer::create(): style 3 out of range for 3 styles\n");
+    layer.createGlyph(3, 0, TextProperties{}.setFont(fontHandle));
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::create(): style 3 out of range for 3 styles\n"
+        "Whee::TextLayer::createGlyph(): style 3 out of range for 3 styles\n");
+}
+
+void TextLayerTest::glyphOutOfRange() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    } cache{PixelFormat::R8Unorm, {32, 32, 2}};
+
+    /* Add one more font to verify it's checking the right one */
+    cache.addFont(57);
+    UnsignedInt glyphCacheFontId = cache.addFont(56);
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{2, 3};
+    shared.setGlyphCache(cache);
+
+    FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 1.0f);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}, TextLayerStyleUniform{}},
+        {0, 1, 0},
+        {fontHandle, fontHandle, fontHandle},
+        {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+    } layer{layerHandle(0, 1), shared};
+
+    DataHandle data = layer.createGlyph(2, 55, {});
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.createGlyph(2, 56, {});
+    layer.setGlyph(data, 56, {});
+    CORRADE_COMPARE(out.str(),
+        "Whee::TextLayer::createGlyph(): glyph 56 out of range for 56 glyphs in glyph cache font 1\n"
+        "Whee::TextLayer::setGlyph(): glyph 56 out of range for 56 glyphs in glyph cache font 1\n");
 }
 
 void TextLayerTest::updateEmpty() {
@@ -2395,7 +2749,7 @@ void TextLayerTest::updateCleanDataOrder() {
         using TextLayer::Shared::setGlyphCache;
 
         void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
-    } shared{3, 4};
+    } shared{3, 5};
     shared.setGlyphCache(cache);
 
     /* The three-glyph font is scaled to 0.5, the one-glyph to 2.0 */
@@ -2403,9 +2757,9 @@ void TextLayerTest::updateCleanDataOrder() {
     FontHandle oneGlyphFontHandle = shared.addFont(oneGlyphFont, 4.0f);
     shared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}, TextLayerStyleUniform{}, TextLayerStyleUniform{}},
-        {1, 2, 0, 1},
-        {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
-        {{}, {}, data.paddingFromStyle, {}});
+        {1, 2, 0, 1, 1},
+        {oneGlyphFontHandle, oneGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle, threeGlyphFontHandle},
+        {{}, {}, data.paddingFromStyle, {}, data.paddingFromStyle});
 
     struct Layer: TextLayer {
         explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
@@ -2419,22 +2773,25 @@ void TextLayerTest::updateCleanDataOrder() {
     NodeHandle node6 = nodeHandle(6, 0);
     NodeHandle node15 = nodeHandle(15, 0);
 
-    /* Create 10 data handles. Only three get filled and actually used. */
+    /* Create 10 data handles. Only four get filled and actually used. */
     layer.create(0, "", {});                            /* 0, quad 0 */
     layer.create(0, "", {});                            /* 1, quad 1 */
     layer.create(0, "", {});                            /* 2, quad 2 */
     DataHandle data3 = layer.create(2, "hello", {}, 0xff3366_rgbf, node6);
                                                         /* 3, quad 3 to 7 */
     layer.create(0, "", {});                            /* 4, quad 8 */
-    layer.create(0, "", {});                            /* 5, quad 9 */
+    DataHandle data5 = layer.createGlyph(4, 13, {}, 0xcceeff_rgbf, node6);
+                                                        /* 5, quad 9 */
     layer.create(0, "", {});                            /* 6, quad 10 */
     DataHandle data7 = layer.create(1, "ahoy", {}, 0x112233_rgbf, node15);
                                                         /* 7, quad 11 */
     layer.create(0, "", {});                            /* 8, quad 12 */
     layer.create(3, "hi", {}, 0x663399_rgbf, node15);   /* 9, quad 13 to 14 */
 
-    if(!data.paddingFromData.isZero())
+    if(!data.paddingFromData.isZero()) {
         layer.setPadding(data3, data.paddingFromData);
+        layer.setPadding(data5, data.paddingFromData);
+    }
 
     /* There should be 10 glyph runs, assigned to the 10 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
@@ -2470,14 +2827,16 @@ void TextLayerTest::updateCleanDataOrder() {
     }
 
     /* Just the filled subset is getting updated */
-    UnsignedInt dataIds[]{9, 7, 3};
+    UnsignedInt dataIds[]{9, 5, 7, 3};
     layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
 
-    /* The indices should be filled just for the three items */
+    /* The indices should be filled just for the four items */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
         /* Text 9, "hi", quads 13 to 14 */
         13*4 + 0, 13*4 + 1, 13*4 + 2, 13*4 + 2, 13*4 + 1, 13*4 + 3,
         14*4 + 0, 14*4 + 1, 14*4 + 2, 14*4 + 2, 14*4 + 1, 14*4 + 3,
+        /* Glyph 5, quad 9 */
+         9*4 + 0,  9*4 + 1,  9*4 + 2,  9*4 + 2,  9*4 + 1,  9*4 + 3,
         /* Text 7, "ahoy", quad 11 */
         11*4 + 0, 11*4 + 1, 11*4 + 2, 11*4 + 2, 11*4 + 1, 11*4 + 3,
         /* Text 3, "hello", quads 3 to 7 */
@@ -2499,6 +2858,12 @@ void TextLayerTest::updateCleanDataOrder() {
     }
     for(std::size_t i = 0; i != 1*4; ++i) {
         CORRADE_ITERATION(i);
+        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff_rgbf);
+        /* Created with style 4, which is mapped to uniform 1 */
+        CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].styleUniform, 1);
+    }
+    for(std::size_t i = 0; i != 1*4; ++i) {
+        CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x112233_rgbf);
         /* Created with style 1, which is mapped to uniform 2 */
         CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].styleUniform, 2);
@@ -2513,10 +2878,10 @@ void TextLayerTest::updateCleanDataOrder() {
     Containers::StridedArrayView1D<const Vector2> positions = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position);
     Containers::StridedArrayView1D<const Vector3> textureCoordinates = stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::textureCoordinates);
 
-    /* Text 3 is attached to node 6, which has a center of {6.0, 9.5}. Shaped
-       positions should match what's in create() however as the coordinate
-       system has Y up, the glyph positions have Y flipped compared in
-       comparison to create():
+    /* Text 3 and glyph 5 are attached to node 6, which has a center of
+       {6.0, 9.5}. Shaped positions should match what's in create() however as
+       the coordinate system has Y up, the glyph positions have Y flipped
+       compared in comparison to create():
 
         2--3
         |  |
@@ -2551,6 +2916,13 @@ void TextLayerTest::updateCleanDataOrder() {
         {6.0f + 4.0f + 2.0f + 8.0f, 9.5f - 1.5f + 4.0f - 0.0f},
         {6.0f + 4.0f + 2.0f + 0.0f, 9.5f - 1.5f + 4.0f - 8.0f},
         {6.0f + 4.0f + 2.0f + 8.0f, 9.5f - 1.5f + 4.0f - 8.0f},
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(positions.sliceSize(9*4, 1*4), Containers::arrayView<Vector2>({
+        /* Glyph 13 again, centered */
+        {6.0f - 4.0f        + 0.0f, 9.5f + 4.0f        - 0.0f},
+        {6.0f - 4.0f        + 8.0f, 9.5f + 4.0f        - 0.0f},
+        {6.0f - 4.0f        + 0.0f, 9.5f + 4.0f        - 8.0f},
+        {6.0f - 4.0f        + 8.0f, 9.5f + 4.0f        - 8.0f},
     }), TestSuite::Compare::Container);
 
     /* Text 7 and 9 are both attached to node 15, which has a center of
@@ -2594,8 +2966,8 @@ void TextLayerTest::updateCleanDataOrder() {
         }), TestSuite::Compare::Container);
     }
 
-    /* Glyph 13, at quad 4, 7, 14 */
-    for(std::size_t i: {4, 7, 14}) {
+    /* Glyph 13, at quad 4, 7, 9, 14 */
+    for(std::size_t i: {4, 7, 9, 14}) {
         CORRADE_COMPARE_AS(textureCoordinates.sliceSize(i*4, 4), Containers::arrayView<Vector3>({
             {0.5f, 0.5f, 0.0f},
             {1.0f, 0.5f, 0.0f},
@@ -2620,10 +2992,10 @@ void TextLayerTest::updateCleanDataOrder() {
         {1.0f, 0.5f, 2.0f},
     }), TestSuite::Compare::Container);
 
-    /* For drawing data 9, 7, 3 it needs to draw the first 2 quads in the
-       index buffer, then next 1 quad, then next 5 */
+    /* For drawing data 9, 5, 7, 3 it needs to draw the first 2 quads in the
+       index buffer, then next 1 quad, then next 1, then next 5 */
     CORRADE_COMPARE_AS(layer.stateData().indexDrawOffsets, Containers::arrayView({
-        0u, 2u*6, 3u*6, 8u*6
+        0u, 2u*6, 3u*6, 4u*6, 9u*6
     }), TestSuite::Compare::Container);
 
     /* Removing a node with cleanNodes() marks the corresponding run as unused,
@@ -2641,7 +3013,7 @@ void TextLayerTest::updateCleanDataOrder() {
         0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        0u, 1u, 2u, 0xffffffffu, 8u, 9u, 10u, 11u, 12u, 13u
+        0u, 1u, 2u, 0xffffffffu, 8u, 0xffffffffu, 10u, 11u, 12u, 13u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
         1u, 1u, 1u, 5u, 1u, 1u, 1u, 1u, 1u, 2u
@@ -2655,106 +3027,7 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* There should be just 9 glyph runs, assigned to the remaining 9 data */
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 1u, 2u, 3u /* free data */, 3u, 4u, 5u, 6u, 7u, 8u
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
-        1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 2u
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
-        0u, 1u, 2u, 4u, 5u, 6u, 7u, 8u, 9u
-    }), TestSuite::Compare::Container);
-
-    /* Indices for remaining 3 visible glyphs */
-    CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
-        /* Text 9, "hi", quads 8 to 9 */
-        8*4 + 0, 8*4 + 1, 8*4 + 2, 8*4 + 2, 8*4 + 1, 8*4 + 3,
-        9*4 + 0, 9*4 + 1, 9*4 + 2, 9*4 + 2, 9*4 + 1, 9*4 + 3,
-        /* Text 7, "ahoy", quad 6 */
-        6*4 + 0, 6*4 + 1, 6*4 + 2, 6*4 + 2, 6*4 + 1, 6*4 + 3,
-        /* Text 3, "hello", is removed now */
-    }), TestSuite::Compare::Container);
-
-    /* Vertices for all remaining 10 glyphs */
-    CORRADE_COMPARE(layer.stateData().vertices.size(), 10*4);
-    for(std::size_t i = 0; i != 1*4; ++i) {
-        CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].color, 0x112233_rgbf);
-        /* Created with style 1, which is mapped to uniform 2 */
-        CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].styleUniform, 2);
-    }
-    for(std::size_t i = 0; i != 2*4; ++i) {
-        CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[8*4 + i].color, 0x663399_rgbf);
-        /* Created with style 3, which is mapped to uniform 1 */
-        CORRADE_COMPARE(layer.stateData().vertices[8*4 + i].styleUniform, 1);
-    }
-
-    /* Text 7 and 9, now quads 6 and 8 to 9 */
-    CORRADE_COMPARE_AS(positions.sliceSize(6*4, 1*4), Containers::arrayView<Vector2>({
-        {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 0.0f},
-        {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 0.0f},
-        {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 32.f},
-        {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 32.f},
-    }), TestSuite::Compare::Container);
-    CORRADE_COMPARE_AS(positions.sliceSize(8*4, 2*4), Containers::arrayView<Vector2>({
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-        {13.f - 1.25f,              6.5f + 0.5f},
-
-        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 0.0f},
-        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 8.0f},
-        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 8.0f},
-    }), TestSuite::Compare::Container);
-
-    /* Glyph 22, now only at quad 8 */
-    CORRADE_COMPARE_AS(textureCoordinates.sliceSize(8*4, 4), Containers::arrayView<Vector3>({
-        {},
-        {},
-        {},
-        {},
-    }), TestSuite::Compare::Container);
-
-    /* Glyph 13, now only at quad 9 */
-    CORRADE_COMPARE_AS(textureCoordinates.sliceSize(9*4, 4), Containers::arrayView<Vector3>({
-        {0.5f, 0.5f, 0.0f},
-        {1.0f, 0.5f, 0.0f},
-        {0.5f, 1.0f, 0.0f},
-        {1.0f, 1.0f, 0.0f},
-    }), TestSuite::Compare::Container);
-
-    /* Glyph 66, now at quad 6 */
-    CORRADE_COMPARE_AS(textureCoordinates.sliceSize(6*4, 4), Containers::arrayView<Vector3>({
-        {0.0f, 0.5f, 1.0f},
-        {0.5f, 0.5f, 1.0f},
-        {0.0f, 1.0f, 1.0f},
-        {0.5f, 1.0f, 1.0f},
-    }), TestSuite::Compare::Container);
-
-    /* For drawing data 9 and 7 it needs to draw the first 2 quads in the
-       index buffer, then next 1 quad */
-    CORRADE_COMPARE_AS(layer.stateData().indexDrawOffsets, Containers::arrayView({
-        0u, 2u*6, 3u*6
-    }), TestSuite::Compare::Container);
-
-    /* Removing a text marks the corresponding run as unused, the next update()
-       then recompacts it */
-    layer.remove(data7);
-    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
-        0u, 1u, 2u, 3u, 4u, 5u, 0xffffffffu, 7u, 8u
-    }), TestSuite::Compare::Container);
-
-    UnsignedInt dataIdsPostRemoval[]{9};
-    layer.update(dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, {}, {});
-
-    /* There should be just 8 glyph runs, assigned to the remaining 8 data */
-    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
-        0u, 1u, 2u, 3u /* free data */, 3u, 4u, 5u, 6u /* free data */, 6u, 7u
+        0u, 1u, 2u, 3u /* free data */, 3u, 5u /* free data */, 4u, 5u, 6u, 7u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
         0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u
@@ -2763,20 +3036,28 @@ void TextLayerTest::updateCleanDataOrder() {
         1u, 1u, 1u, 1u, 1u, 1u, 1u, 2u
     }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
-        0u, 1u, 2u, 4u, 5u, 6u, 8u, 9u
+        0u, 1u, 2u, 4u, 6u, 7u, 8u, 9u
     }), TestSuite::Compare::Container);
 
-    /* Indices for remaining 2 visible glyphs */
+    /* Indices for remaining 3 visible glyphs */
     CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
         /* Text 9, "hi", quads 7 to 8 */
         7*4 + 0, 7*4 + 1, 7*4 + 2, 7*4 + 2, 7*4 + 1, 7*4 + 3,
         8*4 + 0, 8*4 + 1, 8*4 + 2, 8*4 + 2, 8*4 + 1, 8*4 + 3,
-        /* Text 7, "ahoy", is removed now */
-        /* Text 3, "hello", is removed now */
+        /* Text 7, "ahoy", quad 5 */
+        5*4 + 0, 5*4 + 1, 5*4 + 2, 5*4 + 2, 5*4 + 1, 5*4 + 3,
+        /* Text 3, "hello" is removed now */
+        /* Glyph 5 is removed now */
     }), TestSuite::Compare::Container);
 
     /* Vertices for all remaining 9 glyphs */
     CORRADE_COMPARE(layer.stateData().vertices.size(), 9*4);
+    for(std::size_t i = 0; i != 1*4; ++i) {
+        CORRADE_ITERATION(i);
+        CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].color, 0x112233_rgbf);
+        /* Created with style 1, which is mapped to uniform 2 */
+        CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].styleUniform, 2);
+    }
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
         CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].color, 0x663399_rgbf);
@@ -2784,7 +3065,13 @@ void TextLayerTest::updateCleanDataOrder() {
         CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].styleUniform, 1);
     }
 
-    /* Text 9, now quad 7 to 8 */
+    /* Text 7 and 9, now quads 5 and 7 to 8 */
+    CORRADE_COMPARE_AS(positions.sliceSize(5*4, 1*4), Containers::arrayView<Vector2>({
+        {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 0.0f},
+        {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 0.0f},
+        {13.f + 0.5f        + 0.0f, 6.5f + 1.5f        - 32.f},
+        {13.f + 0.5f        + 32.f, 6.5f + 1.5f        - 32.f},
+    }), TestSuite::Compare::Container);
     CORRADE_COMPARE_AS(positions.sliceSize(7*4, 2*4), Containers::arrayView<Vector2>({
         {13.f - 1.25f,              6.5f + 0.5f},
         {13.f - 1.25f,              6.5f + 0.5f},
@@ -2807,6 +3094,93 @@ void TextLayerTest::updateCleanDataOrder() {
 
     /* Glyph 13, now only at quad 8 */
     CORRADE_COMPARE_AS(textureCoordinates.sliceSize(8*4, 4), Containers::arrayView<Vector3>({
+        {0.5f, 0.5f, 0.0f},
+        {1.0f, 0.5f, 0.0f},
+        {0.5f, 1.0f, 0.0f},
+        {1.0f, 1.0f, 0.0f},
+    }), TestSuite::Compare::Container);
+
+    /* Glyph 66, now at quad 5 */
+    CORRADE_COMPARE_AS(textureCoordinates.sliceSize(5*4, 4), Containers::arrayView<Vector3>({
+        {0.0f, 0.5f, 1.0f},
+        {0.5f, 0.5f, 1.0f},
+        {0.0f, 1.0f, 1.0f},
+        {0.5f, 1.0f, 1.0f},
+    }), TestSuite::Compare::Container);
+
+    /* For drawing data 9 and 7 it needs to draw the first 2 quads in the
+       index buffer, then next 1 quad */
+    CORRADE_COMPARE_AS(layer.stateData().indexDrawOffsets, Containers::arrayView({
+        0u, 2u*6, 3u*6
+    }), TestSuite::Compare::Container);
+
+    /* Removing a text marks the corresponding run as unused, the next update()
+       then recompacts it */
+    layer.remove(data7);
+    CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
+        0u, 1u, 2u, 3u, 4u, 0xffffffffu, 6u, 7u
+    }), TestSuite::Compare::Container);
+
+    UnsignedInt dataIdsPostRemoval[]{9};
+    layer.update(dataIdsPostRemoval, {}, {}, nodeOffsets, nodeSizes, {}, {});
+
+    /* There should be just 7 glyph runs, assigned to the remaining 7 data */
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().data).slice(&Implementation::TextLayerData::glyphRun), Containers::arrayView({
+        0u, 1u, 2u, 3u /* free data */, 3u, 5u /* free data */, 4u, 5u /* free data */, 5u, 6u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphOffset), Containers::arrayView({
+        0u, 1u, 2u, 3u, 4u, 5u, 6u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::glyphCount), Containers::arrayView({
+        1u, 1u, 1u, 1u, 1u, 1u, 2u
+    }), TestSuite::Compare::Container);
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().glyphRuns).slice(&Implementation::TextLayerGlyphRun::data), Containers::arrayView({
+        0u, 1u, 2u, 4u, 6u, 8u, 9u
+    }), TestSuite::Compare::Container);
+
+    /* Indices for remaining 2 visible glyphs */
+    CORRADE_COMPARE_AS(layer.stateData().indices, Containers::arrayView<UnsignedInt>({
+        /* Text 9, "hi", quads 6 to 7 */
+        6*4 + 0, 6*4 + 1, 6*4 + 2, 6*4 + 2, 6*4 + 1, 6*4 + 3,
+        7*4 + 0, 7*4 + 1, 7*4 + 2, 7*4 + 2, 7*4 + 1, 7*4 + 3,
+        /* Text 7, "ahoy", is removed now */
+        /* Text 3, "hello", is removed now */
+        /* Glyph 5 is removed now */
+    }), TestSuite::Compare::Container);
+
+    /* Vertices for all remaining 8 glyphs */
+    CORRADE_COMPARE(layer.stateData().vertices.size(), 8*4);
+    for(std::size_t i = 0; i != 2*4; ++i) {
+        CORRADE_ITERATION(i);
+        CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].color, 0x663399_rgbf);
+        /* Created with style 3, which is mapped to uniform 1 */
+        CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].styleUniform, 1);
+    }
+
+    /* Text 9, now quad 6 to 7 */
+    CORRADE_COMPARE_AS(positions.sliceSize(6*4, 2*4), Containers::arrayView<Vector2>({
+        {13.f - 1.25f,              6.5f + 0.5f},
+        {13.f - 1.25f,              6.5f + 0.5f},
+        {13.f - 1.25f,              6.5f + 0.5f},
+        {13.f - 1.25f,              6.5f + 0.5f},
+
+        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 0.0f},
+        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 0.0f},
+        {13.f + 0.25f + 2.f + 0.0f, 6.5f - 0.0f + 4.0f - 8.0f},
+        {13.f + 0.25f + 2.f + 8.0f, 6.5f - 0.0f + 4.0f - 8.0f},
+    }), TestSuite::Compare::Container);
+
+    /* Glyph 22, now only at quad 6 */
+    CORRADE_COMPARE_AS(textureCoordinates.sliceSize(6*4, 4), Containers::arrayView<Vector3>({
+        {},
+        {},
+        {},
+        {},
+    }), TestSuite::Compare::Container);
+
+    /* Glyph 13, now only at quad 7 */
+    CORRADE_COMPARE_AS(textureCoordinates.sliceSize(7*4, 4), Containers::arrayView<Vector3>({
         {0.5f, 0.5f, 0.0f},
         {1.0f, 0.5f, 0.0f},
         {0.5f, 1.0f, 0.0f},
@@ -2937,6 +3311,75 @@ void TextLayerTest::updateAlignment() {
     }), TestSuite::Compare::Container);
 }
 
+void TextLayerTest::updateAlignmentGlyph() {
+    auto&& data = UpdateAlignmentPaddingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* A trivial glyph cache. Goes both above and below the line to verify
+       vertical alignment. */
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    /* Default padding is 1, resetting to 0 for simplicity */
+    } cache{PixelFormat::R8Unorm, {32, 32}, {}};
+
+    UnsignedInt glyphCacheFontId = cache.addFont(18);
+    cache.addGlyph(glyphCacheFontId, 17, {-2, -3}, {{}, {3, 4}});
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
+    shared.setGlyphCache(cache);
+
+    /* Font scaled 2x, so all metrics coming from the the cache should be
+       scaled 2x */
+    FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 2.0f);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {fontHandle},
+        {});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+
+        const State& stateData() const {
+            return static_cast<const State&>(*_state);
+        }
+    } layer{layerHandle(0, 1), shared};
+
+    NodeHandle node3 = nodeHandle(3, 0);
+
+    /* Size x2, so the bounding box is 6x8 */
+    layer.createGlyph(
+        0,
+        17,
+        TextProperties{}.setAlignment(data.alignment),
+        node3);
+
+    Vector2 nodeOffsets[4];
+    Vector2 nodeSizes[4];
+    nodeOffsets[3] = {50.5f, 20.5f};
+    nodeSizes[3] = {200.8f, 100.4f};
+    UnsignedInt dataIds[]{0};
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+
+    /* 2--3
+       |  |
+       0--1 */
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
+        Vector2{0.0f, 0.0f} + data.offsetGlyph,
+        Vector2{6.0f, 0.0f} + data.offsetGlyph,
+        Vector2{0.0f, -8.0f} + data.offsetGlyph,
+        Vector2{6.0f, -8.0f} + data.offsetGlyph
+    }), TestSuite::Compare::Container);
+}
+
 void TextLayerTest::updatePadding() {
     auto&& data = UpdateAlignmentPaddingData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -3056,6 +3499,76 @@ void TextLayerTest::updatePadding() {
         Vector2{8.0f, 0.0f} + data.offset,
         Vector2{6.0f, -4.0f} + data.offset,
         Vector2{8.0f, -4.0f} + data.offset,
+    }), TestSuite::Compare::Container);
+}
+
+void TextLayerTest::updatePaddingGlyph() {
+    auto&& data = UpdateAlignmentPaddingData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* Same as updateAlignmentGlyph(), except that the node offset & size is
+       different and only matches the original if padding is applied
+       correctly from both the data and the style */
+
+    /* A trivial glyph cache. Goes both above and below the line to verify
+       vertical alignment. */
+    struct: Text::AbstractGlyphCache {
+        using Text::AbstractGlyphCache::AbstractGlyphCache;
+
+        Text::GlyphCacheFeatures doFeatures() const override { return {}; }
+        void doSetImage(const Vector2i&, const ImageView2D&) override {}
+    /* Default padding is 1, resetting to 0 for simplicity */
+    } cache{PixelFormat::R8Unorm, {32, 32}, {}};
+
+    UnsignedInt glyphCacheFontId = cache.addFont(18);
+    cache.addGlyph(glyphCacheFontId, 17, {-2, -3}, {{}, {3, 4}});
+
+    struct LayerShared: TextLayer::Shared {
+        explicit LayerShared(UnsignedInt styleUniformCount, UnsignedInt styleCount): TextLayer::Shared{styleUniformCount, styleCount} {}
+
+        using TextLayer::Shared::setGlyphCache;
+
+        void doSetStyle(const TextLayerCommonStyleUniform&, Containers::ArrayView<const TextLayerStyleUniform>) override {}
+    } shared{1, 1};
+    shared.setGlyphCache(cache);
+
+    /* Font scaled 2x, so all metrics coming from the the cache should be
+       scaled 2x */
+    FontHandle fontHandle = shared.addInstancelessFont(glyphCacheFontId, 2.0f);
+    shared.setStyle(TextLayerCommonStyleUniform{},
+        {TextLayerStyleUniform{}},
+        {fontHandle},
+        {{10.0f, 5.0f, 20.0f, 10.0f}});
+
+    struct Layer: TextLayer {
+        explicit Layer(LayerHandle handle, Shared& shared): TextLayer{handle, shared} {}
+
+        const State& stateData() const {
+            return static_cast<const State&>(*_state);
+        }
+    } layer{layerHandle(0, 1), shared};
+
+    NodeHandle node3 = nodeHandle(3, 0);
+
+    /* Size x2, so the bounding box is 6x8 */
+    DataHandle node3Data = layer.createGlyph(0, 17, data.alignment, node3);
+    layer.setPadding(node3Data, {20.0f, 5.0f, 50.0f, 30.0f});
+
+    Vector2 nodeOffsets[4];
+    Vector2 nodeSizes[4];
+    nodeOffsets[3] = {20.5f, 10.5f};
+    nodeSizes[3] = {300.8f, 150.4f};
+    UnsignedInt dataIds[]{0};
+    layer.update(dataIds, {}, {}, nodeOffsets, nodeSizes, {}, {});
+
+    /* 2--3
+       |  |
+       0--1 */
+    CORRADE_COMPARE_AS(stridedArrayView(layer.stateData().vertices).slice(&Implementation::TextLayerVertex::position), Containers::arrayView<Vector2>({
+        Vector2{0.0f, 0.0f} + data.offsetGlyph,
+        Vector2{6.0f, 0.0f} + data.offsetGlyph,
+        Vector2{0.0f, -8.0f} + data.offsetGlyph,
+        Vector2{6.0f, -8.0f} + data.offsetGlyph
     }), TestSuite::Compare::Container);
 }
 
