@@ -32,6 +32,10 @@ if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED GL)
 endif()
 
+if(MAGNUM_TARGET_GLES2)
+    message(FATAL_ERROR "Magnum::Ui doesn't support OpenGL ES 2.0 or WebGL 1.0 builds. Switch to ES 3 or WebGL 2 if you want to use it.")
+endif()
+
 if(MAGNUM_BUILD_STATIC)
     set(MAGNUM_UI_BUILD_STATIC 1)
 endif()
