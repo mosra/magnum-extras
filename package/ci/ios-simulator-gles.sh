@@ -30,7 +30,7 @@ cmake .. \
     -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCORRADE_BUILD_STATIC=ON \
     -DCORRADE_TESTSUITE_TARGET_XCTEST=ON \
-    -DCORRADE_WITH_INTERCONNECT=$TARGET_GLES3 \
+    -DCORRADE_WITH_INTERCONNECT=OFF \
     -G Xcode
 set -o pipefail && cmake --build . --config Release --target install -j$XCODE_JOBS | xcbeautify
 cd ../..
