@@ -63,17 +63,13 @@ class MAGNUM_UI_EXPORT Input: public Widget {
         /**
          * @brief Constructor
          * @param anchor            Positioning anchor
-         * @param style             Input style
          * @param text              Pre-filled input text
          * @param textProperties    Text shaping and layouting properties
+         * @param style             Input style
          */
-        #ifdef DOXYGEN_GENERATING_OUTPUT
-        explicit Input(const Anchor& anchor, InputStyle style, Containers::StringView text, const TextProperties& textProperties = {});
-        #else
-        /* To avoid having to include TextProperties.h */
-        explicit Input(const Anchor& anchor, InputStyle style, Containers::StringView text, const TextProperties& textProperties);
-        explicit Input(const Anchor& anchor, InputStyle style, Containers::StringView text);
-        #endif
+        explicit Input(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, InputStyle style = InputStyle::Default);
+        /** @overload */
+        explicit Input(const Anchor& anchor, Containers::StringView text, InputStyle style = InputStyle::Default);
 
         /** @brief Style */
         InputStyle style() const { return _style; }

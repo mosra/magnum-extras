@@ -181,7 +181,7 @@ struct ButtonData {
     LayerDataHandle icon;
 };
 
-ButtonData buttonInternal(UserInterface& ui, const NodeHandle node, const ButtonStyle style, const Icon icon, const Containers::StringView text, const TextProperties& properties) {
+ButtonData buttonInternal(UserInterface& ui, const NodeHandle node, const Icon icon, const Containers::StringView text, const TextProperties& properties, const ButtonStyle style) {
     ButtonData out{};
 
     out.background = dataHandleData(ui.baseLayer().create(baseLayerStyle(style), node));
@@ -199,20 +199,20 @@ ButtonData buttonInternal(UserInterface& ui, const NodeHandle node, const Button
 
 }
 
-Button::Button(const Anchor& anchor, const ButtonStyle style, const Icon icon, const Containers::StringView text, const TextProperties& textProperties): Widget{anchor}, _style{style}, _icon{icon} {
-    ButtonData data = buttonInternal(ui(), node(), style, icon, text, textProperties);
+Button::Button(const Anchor& anchor, const Icon icon, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style): Widget{anchor}, _style{style}, _icon{icon} {
+    ButtonData data = buttonInternal(ui(), node(), icon, text, textProperties, style);
     _backgroundData = data.background;
     _textData = data.text;
     _iconData = data.icon;
 }
 
-Button::Button(const Anchor& anchor, const ButtonStyle style, const Icon icon, const Containers::StringView text): Button{anchor, style, icon, text, {}} {}
+Button::Button(const Anchor& anchor, const Icon icon, const Containers::StringView text, const ButtonStyle style): Button{anchor, icon, text, {}, style} {}
 
-Button::Button(const Anchor& anchor, const ButtonStyle style, const Icon icon): Button{anchor, style, icon, {}, {}} {}
+Button::Button(const Anchor& anchor, const Icon icon, const ButtonStyle style): Button{anchor, icon, {}, {}, style} {}
 
-Button::Button(const Anchor& anchor, const ButtonStyle style, const Containers::StringView text, const TextProperties& textProperties): Button{anchor, style, Icon::None, text, textProperties} {}
+Button::Button(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style): Button{anchor, Icon::None, text, textProperties, style} {}
 
-Button::Button(const Anchor& anchor, const ButtonStyle style, const Containers::StringView text): Button{anchor, style, text, {}} {}
+Button::Button(const Anchor& anchor, const Containers::StringView text, const ButtonStyle style): Button{anchor, text, {}, style} {}
 
 void Button::setStyle(const ButtonStyle style) {
     _style = style;
@@ -280,25 +280,25 @@ DataHandle Button::textData() const {
         dataHandle(ui().textLayer().handle(), _textData);
 }
 
-Anchor button(const Anchor& anchor, const ButtonStyle style, const Icon icon, const Containers::StringView text, const TextProperties& textProperties) {
-    buttonInternal(anchor.ui(), anchor.node(), style, icon, text, textProperties);
+Anchor button(const Anchor& anchor, const Icon icon, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style) {
+    buttonInternal(anchor.ui(), anchor.node(), icon, text, textProperties, style);
     return anchor;
 }
 
-Anchor button(const Anchor& anchor, const ButtonStyle style, const Icon icon, const Containers::StringView text) {
-    return button(anchor, style, icon, text, {});
+Anchor button(const Anchor& anchor, const Icon icon, const Containers::StringView text, const ButtonStyle style) {
+    return button(anchor, icon, text, {}, style);
 }
 
-Anchor button(const Anchor& anchor, const ButtonStyle style, const Icon icon) {
-    return button(anchor, style, icon, {}, {});
+Anchor button(const Anchor& anchor, const Icon icon, const ButtonStyle style) {
+    return button(anchor, icon, {}, {}, style);
 }
 
-Anchor button(const Anchor& anchor, const ButtonStyle style, const Containers::StringView text, const TextProperties& textProperties) {
-    return button(anchor, style, Icon::None, text, textProperties);
+Anchor button(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const ButtonStyle style) {
+    return button(anchor, Icon::None, text, textProperties, style);
 }
 
-Anchor button(const Anchor& anchor, const ButtonStyle style, const Containers::StringView text) {
-    return button(anchor, style, text, {});
+Anchor button(const Anchor& anchor, const Containers::StringView text, const ButtonStyle style) {
+    return button(anchor, text, {}, style);
 }
 
 }}

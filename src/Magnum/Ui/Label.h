@@ -65,35 +65,31 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         /**
          * @brief Construct an icon label
          * @param anchor            Positioning anchor
-         * @param style             Label style
          * @param icon              Label icon. Passing @ref Icon::None makes
          *      the label empty.
+         * @param style             Label style
          *
          * The label can be subsequently converted to a text label using
          * @ref setText().
-         * @see @ref label(const Anchor&, LabelStyle, Icon)
+         * @see @ref label(const Anchor&, Icon, LabelStyle)
          */
-        explicit Label(const Anchor& anchor, LabelStyle style, Icon icon);
+        explicit Label(const Anchor& anchor, Icon icon, LabelStyle style = LabelStyle::Default);
 
         /**
          * @brief Construct a text label
          * @param anchor            Positioning anchor
-         * @param style             Label style
          * @param text              Label text. Passing an empty string makes
          *      the label empty.
          * @param textProperties    Text shaping and layouting properties
+         * @param style             Label style
          *
          * The label can be subsequently converted to an icon label using
          * @ref setIcon().
-         * @see @ref label(const Anchor&, LabelStyle, Containers::StringView, const TextProperties&)
+         * @see @ref label(const Anchor&, Containers::StringView, const TextProperties&, LabelStyle)
          */
-        #ifdef DOXYGEN_GENERATING_OUTPUT
-        explicit Label(const Anchor& anchor, LabelStyle style, Containers::StringView text, const TextProperties& textProperties = {});
-        #else
-        /* To avoid having to include TextProperties.h */
-        explicit Label(const Anchor& anchor, LabelStyle style, Containers::StringView text, const TextProperties& textProperties);
-        explicit Label(const Anchor& anchor, LabelStyle style, Containers::StringView text);
-        #endif
+        explicit Label(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
+        /** @overload */
+        explicit Label(const Anchor& anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 
         /** @brief Style */
         LabelStyle style() const { return _style; }
@@ -158,43 +154,39 @@ class MAGNUM_UI_EXPORT Label: public Widget {
 /**
 @brief Stateless icon label widget
 @param anchor           Positioning anchor
-@param style            Label style
 @param icon             Label icon. Passing @ref Icon::None makes the label
     empty.
+@param style            Label style
 @return The @p anchor verbatim
 @m_since_latest
 
-Compared to @ref Label::Label(const Anchor&, LabelStyle, Icon)
+Compared to @ref Label::Label(const Anchor&, Icon, LabelStyle)
 this creates a stateless label that doesn't have any class instance that would
 need to be kept in scope and eventually destructed, making it more lightweight.
 As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
-MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, LabelStyle style, Icon icon);
+MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Icon icon, LabelStyle style = LabelStyle::Default);
 
 /**
 @brief Stateless text label widget
 @param anchor           Positioning anchor
-@param style            Label style
 @param text             Label text. Passing an empty string makes the label
     empty.
 @param textProperties   Text shaping and layouting properties
+@param style            Label style
 @return The @p anchor verbatim
 @m_since_latest
 
-Compared to @ref Label::Label(const Anchor&, LabelStyle, Containers::StringView, const TextProperties&)
+Compared to @ref Label::Label(const Anchor&, Containers::StringView, const TextProperties&, LabelStyle)
 this creates a stateless label that doesn't have any class instance that would
 need to be kept in scope and eventually destructed, making it more lightweight.
 As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
-#ifdef DOXYGEN_GENERATING_OUTPUT
-MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, LabelStyle style, Containers::StringView text, const TextProperties& textProperties = {});
-#else
-/* To avoid having to include TextProperties.h */
-MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, LabelStyle style, Containers::StringView text, const TextProperties& textProperties);
-MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, LabelStyle style, Containers::StringView text);
-#endif
+MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, LabelStyle style = LabelStyle::Default);
+/** @overload */
+MAGNUM_UI_EXPORT Anchor label(const Anchor& anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 
 }}
 

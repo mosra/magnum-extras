@@ -66,57 +66,49 @@ class MAGNUM_UI_EXPORT Button: public Widget {
         /**
          * @brief Construct an icon button
          * @param anchor            Positioning anchor
-         * @param style             Button style
          * @param icon              Button icon. Passing @ref Icon::None makes
          *      the button empty.
+         * @param style             Button style
          *
          * The button can be subsequently converted to text-only or icon + text
          * using @ref setIcon() and @ref setText().
-         * @see @ref button(const Anchor&, ButtonStyle, Icon)
+         * @see @ref button(const Anchor&, Icon, ButtonStyle)
          */
-        explicit Button(const Anchor& anchor, ButtonStyle style, Icon icon);
+        explicit Button(const Anchor& anchor, Icon icon, ButtonStyle style = ButtonStyle::Default);
 
         /**
          * @brief Construct a text button
          * @param anchor            Positioning anchor
-         * @param style             Button style
          * @param text              Button text. Passing an empty string makes
          *      the button empty.
          * @param textProperties    Text shaping and layouting properties
+         * @param style             Button style
          *
          * The button can be subsequently converted to icon-only or icon + text
          * using @ref setIcon() and @ref setText().
-         * @see @ref button(const Anchor&, ButtonStyle, Containers::StringView, const TextProperties&)
+         * @see @ref button(const Anchor&, Containers::StringView, const TextProperties&, ButtonStyle)
          */
-        #ifdef DOXYGEN_GENERATING_OUTPUT
-        explicit Button(const Anchor& anchor, ButtonStyle style, Containers::StringView text, const TextProperties& textProperties = {});
-        #else
-        /* To avoid having to include TextProperties.h */
-        explicit Button(const Anchor& anchor, ButtonStyle style, Containers::StringView text, const TextProperties& textProperties);
-        explicit Button(const Anchor& anchor, ButtonStyle style, Containers::StringView text);
-        #endif
+        explicit Button(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
+        /** @overload */
+        explicit Button(const Anchor& anchor, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
         /**
          * @brief Construct an icon + text button
          * @param anchor            Positioning anchor
-         * @param style             Button style
          * @param icon              Button icon. Passing @ref Icon::None
          *      creates the button without an icon.
          * @param text              Button text. Passing an empty string
          *      creates the button without a text.
          * @param textProperties    Text shaping and layouting properties
+         * @param style             Button style
          *
          * The button can be subsequently converted to icon-only or text-only
          * using @ref setIcon() and @ref setText().
-         * @see @ref button(const Anchor&, ButtonStyle, Icon, Containers::StringView, const TextProperties&)
+         * @see @ref button(const Anchor&, Icon, Containers::StringView, const TextProperties&, ButtonStyle)
          */
-        #ifdef DOXYGEN_GENERATING_OUTPUT
-        explicit Button(const Anchor& anchor, ButtonStyle style, Icon icon, Containers::StringView text, const TextProperties& textProperties = {});
-        #else
-        /* To avoid having to include TextProperties.h */
-        explicit Button(const Anchor& anchor, ButtonStyle style, Icon icon, Containers::StringView text, const TextProperties& textProperties);
-        explicit Button(const Anchor& anchor, ButtonStyle style, Icon icon, Containers::StringView text);
-        #endif
+        explicit Button(const Anchor& anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
+        /** @overload */
+        explicit Button(const Anchor& anchor, Icon icon, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
         /** @brief Style */
         ButtonStyle style() const { return _style; }
@@ -190,69 +182,61 @@ class MAGNUM_UI_EXPORT Button: public Widget {
 /**
 @brief Stateless icon button widget
 @param anchor           Positioning anchor
-@param style            Button style
 @param icon             Button icon. Passing @ref Icon::None makes the button
     empty.
+@param style            Button style
 @return The @p anchor verbatim
 @m_since_latest
 
-Compared to @ref Button::Button(const Anchor&, ButtonStyle, Icon)
+Compared to @ref Button::Button(const Anchor&, Icon, ButtonStyle)
 this creates a stateless button that doesn't have any class instance that would
 need to be kept in scope and eventually destructed, making it more lightweight.
 As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
-MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, ButtonStyle style, Icon icon);
+MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Icon icon, ButtonStyle style = ButtonStyle::Default);
 
 /**
 @brief Stateless text button widget
 @param anchor           Positioning anchor
-@param style            Button style
 @param text             Button text. Passing an empty string makes the button
     empty.
+@param style            Button style
 @param textProperties   Text shaping and layouting properties
 @return The @p anchor verbatim
 @m_since_latest
 
-Compared to @ref Button::Button(const Anchor&, ButtonStyle, Containers::StringView, const TextProperties&)
+Compared to @ref Button::Button(const Anchor&, Containers::StringView, const TextProperties&, ButtonStyle)
 this creates a stateless button that doesn't have any class instance that would
 need to be kept in scope and eventually destructed, making it more lightweight.
 As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
-#ifdef DOXYGEN_GENERATING_OUTPUT
-MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, ButtonStyle style, Containers::StringView text, const TextProperties& textProperties = {});
-#else
-/* To avoid having to include TextProperties.h */
-MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, ButtonStyle style, Containers::StringView text, const TextProperties& textProperties);
-MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, ButtonStyle style, Containers::StringView text);
-#endif
+MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
+/** @overload */
+MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
 /**
 @brief Stateless icon + text button widget
 @param anchor           Positioning anchor
-@param style            Button style
 @param icon             Button icon. Passing @ref Icon::None creates the button
     without an icon.
 @param text             Button text. Passing an empty string creates the button
     without a text.
 @param textProperties   Text shaping and layouting properties
+@param style            Button style
 @return The @p anchor verbatim
 @m_since_latest
 
-Compared to @ref Button::Button(const Anchor&, ButtonStyle, Icon, Containers::StringView, const TextProperties&)
+Compared to @ref Button::Button(const Anchor&, Icon, Containers::StringView, const TextProperties&, ButtonStyle)
 this creates a stateless button that doesn't have any class instance that would
 need to be kept in scope and eventually destructed, making it more lightweight.
 As a consequence it can't have its style, icon or text subsequently changed and
 is removed only when the node or its parent get removed.
 */
-#ifdef DOXYGEN_GENERATING_OUTPUT
-MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, ButtonStyle style, Icon icon, Containers::StringView text, const TextProperties& textProperties = {});
-#else
-/* To avoid having to include TextProperties.h */
-MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, ButtonStyle style, Icon icon, Containers::StringView text, const TextProperties& textProperties);
-MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, ButtonStyle style, Icon icon, Containers::StringView text);
-#endif
+MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Icon icon, Containers::StringView text, const TextProperties& textProperties, ButtonStyle style = ButtonStyle::Default);
+/** @overload */
+MAGNUM_UI_EXPORT Anchor button(const Anchor& anchor, Icon icon, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
 }}
 

@@ -160,123 +160,123 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         /* Buttons */
         Ui::NodeHandle buttons = Ui::label(
             Ui::snap(_ui, Ui::Snap::Top|Ui::Snap::Left|Ui::Snap::Inside, root, LabelSize),
-            Ui::LabelStyle::Dim, "Buttons", Text::Alignment::MiddleLeft);
+            "Buttons", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
 
         Ui::SnapLayout snap{_ui,
             Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, buttons,
             Ui::Snap::Right};
         Ui::NodeHandle buttonDefault = Ui::button(snap({80, WidgetHeight}),
-            Ui::ButtonStyle::Default, "Default");
+            "Default", Ui::ButtonStyle::Default);
         Ui::button(snap({80, WidgetHeight}),
-            Ui::ButtonStyle::Primary, "Primary");
+            "Primary", Ui::ButtonStyle::Primary);
         Ui::button(snap({96, WidgetHeight}),
-            Ui::ButtonStyle::Success, Ui::Icon::Yes, "Success");
+            Ui::Icon::Yes, "Success", Ui::ButtonStyle::Success);
         Ui::button(snap({96, WidgetHeight}),
-            Ui::ButtonStyle::Warning, Ui::Icon::No, "Warning");
+            Ui::Icon::No, "Warning", Ui::ButtonStyle::Warning);
         Ui::button(snap({96, WidgetHeight}),
-            Ui::ButtonStyle::Danger, Ui::Icon::No, "Danger");
+            Ui::Icon::No, "Danger", Ui::ButtonStyle::Danger);
         Ui::button(snap({80, WidgetHeight}),
-            Ui::ButtonStyle::Info, "Info");
+            "Info", Ui::ButtonStyle::Info);
         Ui::button(snap({80, WidgetHeight}),
-            Ui::ButtonStyle::Dim, "Dim");
+            "Dim", Ui::ButtonStyle::Dim);
         Ui::button(snap({80, WidgetHeight}),
-            Ui::ButtonStyle::Flat, Ui::Icon::Yes, "Flat");
+            Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
 
         snap = Ui::SnapLayout{_ui,
             Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, buttonDefault,
             Ui::Snap::Right};
         Ui::NodeHandle buttonDefaultDisabled = Ui::button(
             snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::ButtonStyle::Default, "Default");
+            "Default", Ui::ButtonStyle::Default);
         Ui::button(snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::ButtonStyle::Primary, "Primary");
+            "Primary", Ui::ButtonStyle::Primary);
         Ui::button(snap({96, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::ButtonStyle::Success, Ui::Icon::Yes, "Success");
+            Ui::Icon::Yes, "Success", Ui::ButtonStyle::Success);
         Ui::button(snap({96, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::ButtonStyle::Warning, Ui::Icon::No, "Warning");
+            Ui::Icon::No, "Warning", Ui::ButtonStyle::Warning);
         Ui::button(snap({96, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::ButtonStyle::Danger, Ui::Icon::No, "Danger");
+            Ui::Icon::No, "Danger", Ui::ButtonStyle::Danger);
         Ui::button(snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::ButtonStyle::Info, "Info");
+            "Info", Ui::ButtonStyle::Info);
         Ui::button(snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::ButtonStyle::Dim, "Dim");
+            "Dim", Ui::ButtonStyle::Dim);
         Ui::button(snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::ButtonStyle::Flat, Ui::Icon::Yes, "Flat");
+            Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
 
         /* Labels */
         Ui::NodeHandle labels = Ui::label(
             Ui::snap(_ui, Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, buttonDefaultDisabled, {0, 8}, LabelSize),
-            Ui::LabelStyle::Dim, "Labels", Text::Alignment::MiddleLeft);
+            "Labels", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
 
         snap = Ui::SnapLayout{_ui,
             Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, labels,
             Ui::Snap::Right};
         Ui::NodeHandle labelDefault = Ui::label(snap(LabelSize),
-            Ui::LabelStyle::Default, "Default");
+            "Default", Ui::LabelStyle::Default);
         Ui::label(snap(LabelSize),
-            Ui::LabelStyle::Primary, "Primary");
+            "Primary", Ui::LabelStyle::Primary);
         Ui::label(snap(LabelSize),
-            Ui::LabelStyle::Success, "Success");
+            "Success", Ui::LabelStyle::Success);
         Ui::label(snap(LabelSize),
-            Ui::LabelStyle::Warning, "Warning");
+            "Warning", Ui::LabelStyle::Warning);
         Ui::label(snap(LabelSize),
-            Ui::LabelStyle::Danger, "Danger");
+            "Danger", Ui::LabelStyle::Danger);
         Ui::label(snap(LabelSize),
-            Ui::LabelStyle::Info, "Info");
+            "Info", Ui::LabelStyle::Info);
         Ui::label(snap(LabelSize),
-            Ui::LabelStyle::Dim, "Dim");
+            "Dim", Ui::LabelStyle::Dim);
 
         snap = Ui::SnapLayout{_ui,
             Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, labelDefault,
             Ui::Snap::Right};
         Ui::NodeHandle labelDefaultDisabled = Ui::label(
             snap(LabelSize, Ui::NodeFlag::Disabled),
-            Ui::LabelStyle::Default, "Default");
+            "Default", Ui::LabelStyle::Default);
         Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
-            Ui::LabelStyle::Primary, "Primary");
+            "Primary", Ui::LabelStyle::Primary);
         Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
-            Ui::LabelStyle::Success, "Success");
+            "Success", Ui::LabelStyle::Success);
         Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
-            Ui::LabelStyle::Warning, "Warning");
+            "Warning", Ui::LabelStyle::Warning);
         Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
-            Ui::LabelStyle::Danger, "Danger");
+            "Danger", Ui::LabelStyle::Danger);
         Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
-            Ui::LabelStyle::Info, "Info");
+            "Info", Ui::LabelStyle::Info);
         Ui::label(snap(LabelSize, Ui::NodeFlag::Disabled),
-            Ui::LabelStyle::Dim, "Dim");
+            "Dim", Ui::LabelStyle::Dim);
 
         /* Inputs */
         Ui::NodeHandle inputs = Ui::label(
             Ui::snap(_ui, Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, labelDefaultDisabled, {0, 8}, LabelSize),
-            Ui::LabelStyle::Dim, "Inputs", Text::Alignment::MiddleLeft);
+            "Inputs", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
 
         snap = Ui::SnapLayout{_ui,
             Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, inputs,
             Ui::Snap::Right};
         Ui::Input inputDefault{snap({128, WidgetHeight}),
-            Ui::InputStyle::Default, "Default"};
+            "Default", Ui::InputStyle::Default};
         Ui::Input inputSuccess{snap({128, WidgetHeight}),
-            Ui::InputStyle::Success, "Success"};
+            "Success", Ui::InputStyle::Success};
         Ui::Input inputWarning{snap({128, WidgetHeight}),
-            Ui::InputStyle::Warning, "Warning"};
+            "Warning", Ui::InputStyle::Warning};
         Ui::Input inputDanger{snap({128, WidgetHeight}),
-            Ui::InputStyle::Danger, "Danger"};
+            "Danger", Ui::InputStyle::Danger};
         Ui::Input inputFlat{snap({128, WidgetHeight}),
-            Ui::InputStyle::Flat, "Flat"};
+            "Flat", Ui::InputStyle::Flat};
 
         snap = Ui::SnapLayout{_ui,
             Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, inputDefault,
             Ui::Snap::Right};
         Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::InputStyle::Default, "Default"}.release();
+            "Default", Ui::InputStyle::Default}.release();
         Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::InputStyle::Success, "Succes"}.release();
+            "Succes", Ui::InputStyle::Success}.release();
         Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::InputStyle::Warning, "Warning"}.release();
+            "Warning", Ui::InputStyle::Warning}.release();
         Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::InputStyle::Danger, "Danger"}.release();
+            "Danger", Ui::InputStyle::Danger}.release();
         Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
-            Ui::InputStyle::Flat, "Flat"}.release();
+            "Flat", Ui::InputStyle::Flat}.release();
 
         /** @todo provide some APIs on the Input directly */
         _ui.textLayer().setCursor(inputDefault.textData(), 7, 2);

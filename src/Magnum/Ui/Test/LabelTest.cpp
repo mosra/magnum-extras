@@ -107,8 +107,8 @@ void LabelTest::debugStyle() {
 
 void LabelTest::constructEmpty() {
     {
-        NodeHandle node1 = label({ui, rootNode, {32, 16}}, LabelStyle::Success, Icon::None);
-        NodeHandle node2 = label({ui, rootNode, {32, 16}}, LabelStyle::Success, "");
+        NodeHandle node1 = label({ui, rootNode, {32, 16}}, Icon::None, LabelStyle::Success);
+        NodeHandle node2 = label({ui, rootNode, {32, 16}}, "", LabelStyle::Success);
         CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
         CORRADE_COMPARE(ui.nodeParent(node2), rootNode);
         CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
@@ -119,8 +119,8 @@ void LabelTest::constructEmpty() {
         CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
         CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
     } {
-        Label label1{{ui, rootNode, {32, 16}}, LabelStyle::Success, Icon::None};
-        Label label2{{ui, rootNode, {32, 16}}, LabelStyle::Success, ""};
+        Label label1{{ui, rootNode, {32, 16}}, Icon::None, LabelStyle::Success};
+        Label label2{{ui, rootNode, {32, 16}}, "", LabelStyle::Success};
         CORRADE_COMPARE(ui.nodeParent(label1), rootNode);
         CORRADE_COMPARE(ui.nodeParent(label2), rootNode);
         CORRADE_COMPARE(ui.nodeSize(label1), (Vector2{32, 16}));
@@ -137,7 +137,7 @@ void LabelTest::constructEmpty() {
 
 void LabelTest::constructIcon() {
     {
-        NodeHandle node = label({ui, rootNode, {32, 16}}, LabelStyle::Success, Icon::Yes);
+        NodeHandle node = label({ui, rootNode, {32, 16}}, Icon::Yes, LabelStyle::Success);
         CORRADE_COMPARE(ui.nodeParent(node), rootNode);
         CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
@@ -146,7 +146,7 @@ void LabelTest::constructIcon() {
         CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
         CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     } {
-        Label label{{ui, rootNode, {32, 16}}, LabelStyle::Success, Icon::Yes};
+        Label label{{ui, rootNode, {32, 16}}, Icon::Yes, LabelStyle::Success};
         CORRADE_COMPARE(ui.nodeParent(label), rootNode);
         CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
 
@@ -160,7 +160,7 @@ void LabelTest::constructIcon() {
 
 void LabelTest::constructText() {
     {
-        NodeHandle node1 = label({ui, rootNode, {32, 16}}, LabelStyle::Danger, "hello!");
+        NodeHandle node1 = label({ui, rootNode, {32, 16}}, "hello!", LabelStyle::Danger);
         CORRADE_COMPARE(ui.nodeParent(node1), rootNode);
         CORRADE_COMPARE(ui.nodeOffset(node1), Vector2{});
         CORRADE_COMPARE(ui.nodeSize(node1), (Vector2{32, 16}));
@@ -170,7 +170,7 @@ void LabelTest::constructText() {
         CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
         CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     } {
-        Label label{{ui, rootNode, {32, 16}}, LabelStyle::Danger, "hello!"};
+        Label label{{ui, rootNode, {32, 16}}, "hello!", LabelStyle::Danger};
         CORRADE_COMPARE(ui.nodeParent(label), rootNode);
         CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
         CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
@@ -185,8 +185,9 @@ void LabelTest::constructText() {
 
 void LabelTest::constructTextTextProperties() {
     {
-        NodeHandle node = label({ui, rootNode, {32, 16}}, LabelStyle::Danger, "hello!",
-            TextProperties{}.setScript(Text::Script::Braille));
+        NodeHandle node = label({ui, rootNode, {32, 16}}, "hello!",
+            TextProperties{}.setScript(Text::Script::Braille),
+            LabelStyle::Danger);
         CORRADE_COMPARE(ui.nodeParent(node), rootNode);
         CORRADE_COMPARE(ui.nodeOffset(node), Vector2{});
         CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
@@ -197,8 +198,9 @@ void LabelTest::constructTextTextProperties() {
         CORRADE_COMPARE(ui.baseLayer().usedCount(), 0);
         CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
     } {
-        Label label{{ui, rootNode, {32, 16}}, LabelStyle::Danger, "hello!",
-            TextProperties{}.setScript(Text::Script::Braille)};
+        Label label{{ui, rootNode, {32, 16}}, "hello!",
+            TextProperties{}.setScript(Text::Script::Braille),
+            LabelStyle::Danger};
         CORRADE_COMPARE(ui.nodeParent(label), rootNode);
         CORRADE_COMPARE(ui.nodeOffset(label), Vector2{});
         CORRADE_COMPARE(ui.nodeSize(label), (Vector2{32, 16}));
@@ -217,8 +219,8 @@ void LabelTest::setStyle() {
     setTestCaseDescription(data.name);
 
     Label label = data.text ?
-        Label{{ui, rootNode, {32, 16}}, LabelStyle::Dim, data.text} :
-        Label{{ui, rootNode, {32, 16}}, LabelStyle::Dim, data.icon};
+        Label{{ui, rootNode, {32, 16}}, data.text, LabelStyle::Dim} :
+        Label{{ui, rootNode, {32, 16}}, data.icon, LabelStyle::Dim};
     CORRADE_COMPARE(label.style(), LabelStyle::Dim);
 
     UnsignedInt previousStyle;
@@ -237,7 +239,7 @@ void LabelTest::setStyle() {
 }
 
 void LabelTest::setIcon() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, Icon::No};
+    Label label{{ui, rootNode, {16, 32}}, Icon::No, LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::No);
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
 
@@ -251,7 +253,7 @@ void LabelTest::setIcon() {
 }
 
 void LabelTest::setIconFromText() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, "hello"};
+    Label label{{ui, rootNode, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::None);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
 
@@ -265,7 +267,7 @@ void LabelTest::setIconFromText() {
 }
 
 void LabelTest::setIconEmpty() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, Icon::No};
+    Label label{{ui, rootNode, {16, 32}}, Icon::No, LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::No);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
@@ -278,7 +280,7 @@ void LabelTest::setIconEmpty() {
 }
 
 void LabelTest::setIconEmptyFromText() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, "hello"};
+    Label label{{ui, rootNode, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::None);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
@@ -291,7 +293,7 @@ void LabelTest::setIconEmptyFromText() {
 }
 
 void LabelTest::setText() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, "hello"};
+    Label label{{ui, rootNode, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 5);
 
     label.setText("wonderful!!");
@@ -299,7 +301,7 @@ void LabelTest::setText() {
 }
 
 void LabelTest::setTextTextProperties() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, "hello"};
+    Label label{{ui, rootNode, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 5);
 
     label.setText("wonderful!!",
@@ -309,7 +311,7 @@ void LabelTest::setTextTextProperties() {
 }
 
 void LabelTest::setTextFromIcon() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, Icon::No};
+    Label label{{ui, rootNode, {16, 32}}, Icon::No, LabelStyle::Default};
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
@@ -323,7 +325,7 @@ void LabelTest::setTextFromIcon() {
 }
 
 void LabelTest::setTextEmpty() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, "hello"};
+    Label label{{ui, rootNode, {16, 32}}, "hello", LabelStyle::Default};
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);
 
@@ -335,7 +337,7 @@ void LabelTest::setTextEmpty() {
 }
 
 void LabelTest::setTextEmptyFromIcon() {
-    Label label{{ui, rootNode, {16, 32}}, LabelStyle::Default, Icon::No};
+    Label label{{ui, rootNode, {16, 32}}, Icon::No, LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::No);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().usedCount(), 1);

@@ -96,14 +96,14 @@ TextStyle textLayerStyle(const InputStyle style) {
 
 }
 
-Input::Input(const Anchor& anchor, const InputStyle style, const Containers::StringView text, const TextProperties& textProperties): Widget{anchor}, _style{style} {
+Input::Input(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const InputStyle style): Widget{anchor}, _style{style} {
     ui().addNodeFlags(node(), NodeFlag::Focusable);
 
     _backgroundData = dataHandleData(ui().baseLayer().create(baseLayerStyle(style), node()));
     _textData = dataHandleData(ui().textLayer().create(textLayerStyle(style), text, textProperties, TextDataFlag::Editable, node()));
 }
 
-Input::Input(const Anchor& anchor, const InputStyle style, const Containers::StringView text): Input{anchor, style, text, {}} {}
+Input::Input(const Anchor& anchor, const Containers::StringView text, const InputStyle style): Input{anchor, text, {}, style} {}
 
 void Input::setStyle(const InputStyle style) {
     _style = style;

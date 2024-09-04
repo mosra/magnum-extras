@@ -95,17 +95,17 @@ TextStyle textLayerStyleText(const LabelStyle style) {
 
 }
 
-Label::Label(const Anchor& anchor, const LabelStyle style, const Icon icon): Widget{anchor}, _style{style}, _icon{icon} {
+Label::Label(const Anchor& anchor, const Icon icon, const LabelStyle style): Widget{anchor}, _style{style}, _icon{icon} {
     _data = icon == Icon::None ? LayerDataHandle::Null :
         dataHandleData(ui().textLayer().createGlyph(textLayerStyleIcon(style), icon, {}, node()));
 }
 
-Label::Label(const Anchor& anchor, const LabelStyle style, const Containers::StringView text, const TextProperties& textProperties): Widget{anchor}, _style{style}, _icon{Icon::None} {
+Label::Label(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style): Widget{anchor}, _style{style}, _icon{Icon::None} {
     _data = !text ? LayerDataHandle::Null :
         dataHandleData(ui().textLayer().create(textLayerStyleText(style), text, textProperties, node()));
 }
 
-Label::Label(const Anchor& anchor, const LabelStyle style, const Containers::StringView text): Label{anchor, style, text, {}} {}
+Label::Label(const Anchor& anchor, const Containers::StringView text, const LabelStyle style): Label{anchor, text, {}, style} {}
 
 void Label::setStyle(const LabelStyle style) {
     _style = style;
@@ -152,17 +152,17 @@ DataHandle Label::data() const {
         dataHandle(ui().textLayer().handle(), _data);
 }
 
-Anchor label(const Anchor& anchor, const LabelStyle style, const Containers::StringView text, const TextProperties& textProperties) {
+Anchor label(const Anchor& anchor, const Containers::StringView text, const TextProperties& textProperties, const LabelStyle style) {
     if(text)
         anchor.ui().textLayer().create(textLayerStyleText(style), text, textProperties, anchor.node());
     return anchor;
 }
 
-Anchor label(const Anchor& anchor, const LabelStyle style, const Containers::StringView text) {
-    return label(anchor, style, text, {});
+Anchor label(const Anchor& anchor, const Containers::StringView text, const LabelStyle style) {
+    return label(anchor, text, {}, style);
 }
 
-Anchor label(const Anchor& anchor, const LabelStyle style, const Icon icon) {
+Anchor label(const Anchor& anchor, const Icon icon, const LabelStyle style) {
     if(icon != Icon::None)
         anchor.ui().textLayer().createGlyph(textLayerStyleIcon(style), icon, {}, anchor.node());
     return anchor;
