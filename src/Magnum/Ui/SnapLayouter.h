@@ -42,16 +42,17 @@ namespace Magnum { namespace Ui {
 See particular values for detailed documentation.
 
 Specifying neither @ref Snap::Left nor @ref Snap::Right will result in
-horizontal centering. Specifying both @ref Snap::Left and @ref Snap::Right will
-cause the node width to match width of the target node or the user interface.
-In both cases it's as if @ref Snap::InsideX was specified as well, taking
-horizontal @ref SnapLayouter::padding() into account.
+horizontal centering. Specifying both @ref Snap::Left and @ref Snap::Right (or
+the @ref Snap::FillX alias) will cause the node width to match width of the
+target node or the user interface. In both cases it's as if @ref Snap::InsideX
+was specified as well, taking horizontal @ref SnapLayouter::padding() into
+account.
 
 Specifying neither @ref Snap::Top nor @ref Snap::Bottom will result in verical
-centering. Specifying both @ref Snap::Top and @ref Snap::Bottom will cause the
-node height to match height the target node or user interface. In both cases
-it's as if @ref Snap::InsideY was specified as well, taking vertical
-@ref SnapLayouter::padding() into account.
+centering. Specifying both @ref Snap::Top and @ref Snap::Bottom (or the
+@ref Snap::FillX alias) will cause the node height to match height the target
+node or user interface. In both cases it's as if @ref Snap::InsideY was
+specified as well, taking vertical @ref SnapLayouter::padding() into account.
 
 Specifying @ref Snap::NoSpaceX and/or @ref Snap::NoSpaceY will ignore
 horizontal and/or vertical @ref SnapLayouter::padding() and
@@ -98,6 +99,50 @@ enum class Snap: UnsignedByte {
      * @ref SnapLayouter::padding() into account.
      */
     Bottom = 1 << 3,
+
+    /**
+     * Alias to specifying both @ref Snap::Top and @ref Snap::Left.
+     * @m_since_latest
+     */
+    TopLeft = Top|Left,
+
+    /**
+     * Alias to specifying both @ref Snap::Bottom and @ref Snap::Left.
+     * @m_since_latest
+     */
+    BottomLeft = Bottom|Left,
+
+    /**
+     * Alias to specifying both @ref Snap::Top and @ref Snap::Right.
+     * @m_since_latest
+     */
+    TopRight = Top|Right,
+
+    /**
+     * Alias to specifying both @ref Snap::Bottom and @ref Snap::Right.
+     * @m_since_latest
+     */
+    BottomRight = Bottom|Right,
+
+    /**
+     * Alias to specifying both @ref Snap::Left and @ref Snap::Right.
+     * @m_since_latest
+     */
+    FillX = Left|Right,
+
+    /**
+     * Alias to specifying both @ref Snap::Top and @ref Snap::Bottom.
+     * @m_since_latest
+     */
+    FillY = Top|Bottom,
+
+    /**
+     * Alias to specifying both @ref Snap::FillX and @ref Snap::FillY, or all
+     * of @ref Snap::Left, @ref Snap::Right, @ref Snap::Top and
+     * @ref Snap::Bottom.
+     * @m_since_latest
+     */
+    Fill = FillX|FillY,
 
     /**
      * When combined with either @ref Snap::Left or @ref Snap::Right, snaps

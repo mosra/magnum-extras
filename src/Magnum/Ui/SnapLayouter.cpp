@@ -53,6 +53,13 @@ Debug& operator<<(Debug& debug, const Snap value) {
         _c(Left)
         _c(Bottom)
         _c(Right)
+        _c(TopLeft)
+        _c(BottomLeft)
+        _c(TopRight)
+        _c(BottomRight)
+        _c(FillX)
+        _c(FillY)
+        _c(Fill)
         _c(InsideX)
         _c(InsideY)
         _c(Inside)
@@ -68,6 +75,17 @@ Debug& operator<<(Debug& debug, const Snap value) {
 
 Debug& operator<<(Debug& debug, const Snaps value) {
     return Containers::enumSetDebugOutput(debug, value, debug.immediateFlags() >= Debug::Flag::Packed ? "{}" : "Ui::Snaps{}", {
+        /* Combination of FillX and FillY, has to be first */
+        Snap::Fill,
+        /* Combinations of Left, Right and Top, Bottom, has to be first */
+        Snap::FillX,
+        Snap::FillY,
+        /* Combinations of Top, Left, Bottom, Right, have to be first, but
+           below Fill as that makes more sense in the output */
+        Snap::TopLeft,
+        Snap::BottomLeft,
+        Snap::TopRight,
+        Snap::BottomRight,
         Snap::Top,
         Snap::Left,
         Snap::Bottom,

@@ -278,21 +278,54 @@ void SnapLayouterTest::debugSnapPacked() {
 void SnapLayouterTest::debugSnaps() {
     std::ostringstream out;
     /* There isn't any bit free to test how the remains get printed */
-    Debug{&out} << (Snap::Left|Snap::Right) << Snaps{};
-    CORRADE_COMPARE(out.str(), "Ui::Snap::Left|Ui::Snap::Right Ui::Snaps{}\n");
+    Debug{&out} << (Snap::Left|Snap::InsideX) << Snaps{};
+    CORRADE_COMPARE(out.str(), "Ui::Snap::Left|Ui::Snap::InsideX Ui::Snaps{}\n");
 }
 
 void SnapLayouterTest::debugSnapsPacked() {
     std::ostringstream out;
     /* There isn't any bit free to test how the remains get printed. Last is
        not packed, ones before should not make any flags persistent. */
-    Debug{&out} << Debug::packed << (Snap::Left|Snap::Right) << Debug::packed << Snaps{} << (Snap::InsideX|Snap::NoSpaceY);
-    CORRADE_COMPARE(out.str(), "Left|Right {} Ui::Snap::InsideX|Ui::Snap::NoSpaceY\n");
+    Debug{&out} << Debug::packed << (Snap::Left|Snap::NoSpaceY) << Debug::packed << Snaps{} << (Snap::InsideX|Snap::NoSpaceY);
+    CORRADE_COMPARE(out.str(), "Left|NoSpaceY {} Ui::Snap::InsideX|Ui::Snap::NoSpaceY\n");
 }
 
 void SnapLayouterTest::debugSnapsSupersets() {
-    /* Inside is InsideX and InsideY combined */
+    /* Fill is all FillX and FillY combined */
     {
+        std::ostringstream out;
+        Debug{&out} << (Snap::Fill|Snap::FillX|Snap::FillY);
+        CORRADE_COMPARE(out.str(), "Ui::Snap::Fill\n");
+
+    /* FillX and FillY is edges combined */
+    } {
+        std::ostringstream out;
+        Debug{&out}
+            << (Snap::FillX|Snap::Left|Snap::Right)
+            << (Snap::FillY|Snap::Top|Snap::Bottom);
+        CORRADE_COMPARE(out.str(), "Ui::Snap::FillX Ui::Snap::FillY\n");
+
+    /* Corners are edges combined */
+    } {
+        std::ostringstream out;
+        Debug{&out}
+            << (Snap::TopLeft|Snap::Top|Snap::Left)
+            << (Snap::BottomLeft|Snap::Bottom|Snap::Left)
+            << (Snap::TopRight|Snap::Top|Snap::Right)
+            << (Snap::BottomRight|Snap::Bottom|Snap::Right);
+        CORRADE_COMPARE(out.str(), "Ui::Snap::TopLeft Ui::Snap::BottomLeft Ui::Snap::TopRight Ui::Snap::BottomRight\n");
+
+    /* Combining corners + edges picks up the fill first, not corners */
+    } {
+        std::ostringstream out;
+        Debug{&out}
+            /* Both in each pair do the same */
+            << (Snap::TopLeft|Snap::Right) << (Snap::FillX|Snap::Top)
+            << (Snap::BottomRight|Snap::Top) << (Snap::FillY|Snap::Right);
+        CORRADE_COMPARE(out.str(), "Ui::Snap::FillX|Ui::Snap::Top Ui::Snap::FillX|Ui::Snap::Top Ui::Snap::FillY|Ui::Snap::Right Ui::Snap::FillY|Ui::Snap::Right\n");
+
+    /* Inside is InsideX and InsideY combined */
+    } {
         std::ostringstream out;
         Debug{&out} << (Snap::InsideX|Snap::InsideY);
         CORRADE_COMPARE(out.str(), "Ui::Snap::Inside\n");
@@ -948,7 +981,7 @@ void SnapLayouterTest::layoutInvalid() {
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractSnapLayout: invalid target handle Ui::NodeHandle::Null\n"
         "Ui::AbstractSnapLayout: invalid target handle Ui::NodeHandle(0x12345, 0xabc)\n"
-        "Ui::AbstractSnapLayout: target cannot be a root node for Ui::Snap::Bottom|Ui::Snap::Right|Ui::Snap::InsideY\n"
+        "Ui::AbstractSnapLayout: target cannot be a root node for Ui::Snap::BottomRight|Ui::Snap::InsideY\n"
         "Ui::snap(): invalid target handle Ui::NodeHandle(0x12345, 0xabc)\n",
         TestSuite::Compare::String);
 }
