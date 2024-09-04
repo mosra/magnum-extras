@@ -27,33 +27,13 @@
  * @brief Namespace @ref Magnum (part of @ref building-extras "Magnum Extras library")
  */
 
-/** @dir Magnum/Whee
- * @brief Namespace @ref Magnum::Whee
- */
-/** @namespace Magnum::Whee
-@brief UI library
-@m_since_latest
-
-@todoc merge these namespace docs back to @ref Magnum::Ui
-
-@m_class{m-block m-success}
-
-@thirdparty Documentation of this library makes use of the
-    [Cappadocia Balloon Inflating](https://commons.wikimedia.org/w/index.php?curid=12696932)
-    photo by By Benh LIEU SONG, licensed under
-    @m_class{m-label m-success} **CC BY-SA 3.0**
-    ([license text](https://creativecommons.org/licenses/by-sa/3.0/deed.en),
-    [choosealicense.com](https://choosealicense.com/licenses/cc-by-sa-4.0/)).
-    Attribution is required for public use.
-*/
-
 /** @dir Magnum/Ui
  * @brief Namespace @ref Magnum::Ui
  */
 /** @namespace Magnum::Ui
 @brief UI library
 
-Widgets for efficient and simple user interfaces.
+Efficient, styleable and extensible user interfaces.
 
 This library is built if `MAGNUM_WITH_UI` is enabled when building Magnum
 Extras. To use this library with CMake, put
@@ -89,5 +69,11 @@ Additional apps are built separately. See the
     [choosealicense.com](https://choosealicense.com/licenses/ofl-1.1/)).
     Attribution is required for public use.
 
-@experimental
+@thirdparty Documentation of this library makes use of the
+    [Cappadocia Balloon Inflating](https://commons.wikimedia.org/w/index.php?curid=12696932)
+    photo by By Benh LIEU SONG, licensed under
+    @m_class{m-label m-success} **CC BY-SA 3.0**
+    ([license text](https://creativecommons.org/licenses/by-sa/3.0/deed.en),
+    [choosealicense.com](https://choosealicense.com/licenses/cc-by-sa-4.0/)).
+    Attribution is required for public use.
 */

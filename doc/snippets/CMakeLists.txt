@@ -39,28 +39,28 @@ set_directory_properties(PROPERTIES
 find_package(Magnum COMPONENTS Sdl2Application)
 
 if(MAGNUM_WITH_UI)
-    add_library(snippets-Whee STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
-        Whee.cpp)
-    target_link_libraries(snippets-Whee PRIVATE MagnumWhee)
+    add_library(snippets-Ui STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
+        Ui.cpp)
+    target_link_libraries(snippets-Ui PRIVATE MagnumUi)
     if(CORRADE_TESTSUITE_TEST_TARGET)
-        add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Whee)
+        add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Ui)
     endif()
 
     if(MAGNUM_TARGET_GL)
-        add_library(snippets-Whee-gl STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
-            Whee-gl.cpp)
-        target_link_libraries(snippets-Whee-gl PRIVATE MagnumWhee)
+        add_library(snippets-Ui-gl STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
+            Ui-gl.cpp)
+        target_link_libraries(snippets-Ui-gl PRIVATE MagnumUi)
         if(CORRADE_TESTSUITE_TEST_TARGET)
-            add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Whee-gl)
+            add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Ui-gl)
         endif()
     endif()
 
     if(Magnum_Sdl2Application_FOUND)
-        add_library(snippets-Whee-sdl2 STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
-            Whee-sdl2.cpp)
-        target_link_libraries(snippets-Whee-sdl2 PRIVATE MagnumWhee Magnum::Sdl2Application)
+        add_library(snippets-Ui-sdl2 STATIC ${EXCLUDE_FROM_ALL_IF_TEST_TARGET}
+            Ui-sdl2.cpp)
+        target_link_libraries(snippets-Ui-sdl2 PRIVATE MagnumUi Magnum::Sdl2Application)
         if(CORRADE_TESTSUITE_TEST_TARGET)
-            add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Whee-sdl2)
+            add_dependencies(${CORRADE_TESTSUITE_TEST_TARGET} snippets-Ui-sdl2)
         endif()
     endif()
 endif()

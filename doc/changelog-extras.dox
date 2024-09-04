@@ -98,7 +98,8 @@ namespace Magnum {
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
--   The old UI library that was living in the @ref Ui namespace is removed
+-   The old UI library that was living in the @ref Ui namespace is removed and
+    replaced by a completely new implementation
 
 @subsection changelog-extras-latest-documentation Documentation
 

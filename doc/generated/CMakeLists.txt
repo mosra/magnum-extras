@@ -30,7 +30,7 @@ project(MagnumExtrasDocumentationImageGenerator CXX)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/../../modules/" ${CMAKE_MODULE_PATH})
 
 find_package(Magnum REQUIRED GL Trade)
-find_package(MagnumExtras REQUIRED Whee)
+find_package(MagnumExtras REQUIRED Ui)
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 
@@ -44,9 +44,9 @@ else()
     message(FATAL_ERROR "No windowless application available on this platform")
 endif()
 
-add_executable(whee-baselayer-flags whee-baselayer-flags.cpp)
-target_link_libraries(whee-baselayer-flags PRIVATE
+add_executable(ui-baselayer-flags ui-baselayer-flags.cpp)
+target_link_libraries(ui-baselayer-flags PRIVATE
     Magnum::GL
     Magnum::Trade
     Magnum::WindowlessApplication
-    MagnumExtras::Whee)
+    MagnumExtras::Ui)
