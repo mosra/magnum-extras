@@ -28,15 +28,15 @@ digraph "Magnum Extras dependency order" {
     ranksep=0.5
     node [style=filled shape=rect margin="0.03,0.03"]
 
-    CorradeInterconnect [style=solid label="Corrade\nInterconnect" class="m-info"]
     MagnumGL [style=solid label="Magnum\nGL" class="m-info"]
     MagnumText [style=solid label="Magnum\nText" class="m-info"]
+    MagnumTrade [style=solid label="Magnum\nTrade" class="m-info"]
 
-    {rank=same CorradeInterconnect MagnumGL MagnumText}
+    {rank=same MagnumGL MagnumText MagnumTrade}
 
     MagnumUi [label="Magnum\nUi" class="m-info"]
 
-    MagnumUi -> CorradeInterconnect
     MagnumUi -> MagnumGL
     MagnumUi -> MagnumText
+    MagnumUi -> MagnumTrade
 }

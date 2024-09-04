@@ -68,10 +68,6 @@
 # Corrade library dependencies
 set(_MAGNUMEXTRAS_CORRADE_DEPENDENCIES )
 foreach(_component ${MagnumExtras_FIND_COMPONENTS})
-    if(_component STREQUAL Ui)
-        set(_MAGNUMEXTRAS_${_component}_CORRADE_DEPENDENCIES Interconnect)
-    endif()
-
     list(APPEND _MAGNUMEXTRAS_CORRADE_DEPENDENCIES ${_MAGNUMEXTRAS_${_component}_CORRADE_DEPENDENCIES})
 endforeach()
 find_package(Corrade REQUIRED ${_MAGNUMEXTRAS_CORRADE_DEPENDENCIES})
