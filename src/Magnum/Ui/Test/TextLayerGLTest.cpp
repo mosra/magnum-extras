@@ -1225,15 +1225,28 @@ void TextLayerGLTest::renderEdgeSmoothness() {
     TextLayerGL::Shared layerShared{TextLayer::Shared::Configuration{1}
         .setEditingStyleCount(2)};
     layerShared.setGlyphCache(_fontGlyphCache);
+    /* Verifying the ArrayView overload with implicit uniform mapping as that's
+       not tested anywhere else */
+    TextLayerStyleUniform uniforms[]{
+        TextLayerStyleUniform{}
+            .setColor(0x3bd267_rgbf),
+    };
+    FontHandle fonts[]{
+        layerShared.addFont(*_font, 32.0f*data.scale),
+    };
+    Text::Alignment alignment[]{
+        Text::Alignment::MiddleCenter,
+    };
+    Int cursorStyles[]{0};
+    Int selectionStyles[]{1};
     layerShared.setStyle(
         TextLayerCommonStyleUniform{},
-        {TextLayerStyleUniform{}
-            .setColor(0x3bd267_rgbf)},
-        {layerShared.addFont(*_font, 32.0f*data.scale)},
-        {Text::Alignment::MiddleCenter},
+        uniforms,
+        fonts,
+        alignment,
         {}, {}, {},
-        {0},
-        {1},
+        cursorStyles,
+        selectionStyles,
         {});
     layerShared.setEditingStyle(
         TextLayerCommonEditingStyleUniform{}

@@ -1439,11 +1439,14 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderChangeStyle() {
     BaseLayerGL::Shared layerShared{BaseLayer::Shared::Configuration{2}
         .addFlags(flag)
     };
-    layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
+    /* Verifying the ArrayView overload with implicit uniform mapping as that's
+       not tested anywhere else */
+    BaseLayerStyleUniform uniforms[]{
         BaseLayerStyleUniform{},
         BaseLayerStyleUniform{}
             .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
-    }, {});
+    };
+    layerShared.setStyle(BaseLayerCommonStyleUniform{}, uniforms, {});
 
     LayerHandle layer = ui.createLayer();
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
