@@ -50,8 +50,8 @@ Containers::Pair<Vector2, Vector2> snap(Snaps snap, const Vector2& referenceOffs
        inside in this direction and snapping outside in the opposite direction
        (that means also no center or fill in the opposite direction) */
     const BitVector2 ignoreSpace{UnsignedByte(
-        ((snap & Snap::NoSpaceX) || (snapInside[0] && !snapInside[1] && (!(snap & Snap::Bottom) != !(snap & Snap::Top))) ? 1 : 0)|
-        ((snap & Snap::NoSpaceY) || (snapInside[1] && !snapInside[0] && (!(snap & Snap::Left) != !(snap & Snap::Right))) ? 2 : 0)
+        ((snap & Snap::NoPadX) || (snapInside[0] && !snapInside[1] && (!(snap & Snap::Bottom) != !(snap & Snap::Top))) ? 1 : 0)|
+        ((snap & Snap::NoPadY) || (snapInside[1] && !snapInside[0] && (!(snap & Snap::Left) != !(snap & Snap::Right))) ? 2 : 0)
     )};
 
     const Vector2 referencePaddedMin = referenceOffset - Math::lerp(

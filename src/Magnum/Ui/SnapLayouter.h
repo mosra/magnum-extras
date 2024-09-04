@@ -54,9 +54,8 @@ centering. Specifying both @ref Snap::Top and @ref Snap::Bottom (or the
 node or user interface. In both cases it's as if @ref Snap::InsideY was
 specified as well, taking vertical @ref SnapLayouter::padding() into account.
 
-Specifying @ref Snap::NoSpaceX and/or @ref Snap::NoSpaceY will ignore
-horizontal and/or vertical @ref SnapLayouter::padding() and
-@ref SnapLayouter::margin().
+Specifying @ref Snap::NoPadX and/or @ref Snap::NoPadY will ignore horizontal
+and/or vertical @ref SnapLayouter::padding() and @ref SnapLayouter::margin().
 @see @ref Snaps, @ref SnapLayouter, @ref SnapLayout
 */
 enum class Snap: UnsignedByte {
@@ -171,20 +170,22 @@ enum class Snap: UnsignedByte {
     /**
      * Ignore horizontal @ref SnapLayouter::padding() and
      * @ref SnapLayouter::margin().
+     * @m_since_latest
      */
-    NoSpaceX = 1 << 6,
+    NoPadX = 1 << 6,
 
     /**
      * Ignore vertical @ref SnapLayouter::padding() and
      * @ref SnapLayouter::margin().
-     */
-    NoSpaceY = 1 << 7,
-
-    /**
-     * Alias to specifying both @ref Snap::NoSpaceX and @ref Snap::NoSpaceY.
      * @m_since_latest
      */
-    NoSpace = NoSpaceX|NoSpaceY
+    NoPadY = 1 << 7,
+
+    /**
+     * Alias to specifying both @ref Snap::NoPadX and @ref Snap::NoPadY.
+     * @m_since_latest
+     */
+    NoPad = NoPadX | NoPadY
 };
 
 /**

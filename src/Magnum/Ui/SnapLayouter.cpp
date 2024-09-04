@@ -63,9 +63,9 @@ Debug& operator<<(Debug& debug, const Snap value) {
         _c(InsideX)
         _c(InsideY)
         _c(Inside)
-        _c(NoSpaceX)
-        _c(NoSpaceY)
-        _c(NoSpace)
+        _c(NoPadX)
+        _c(NoPadY)
+        _c(NoPad)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -94,10 +94,10 @@ Debug& operator<<(Debug& debug, const Snaps value) {
         Snap::Inside,
         Snap::InsideX,
         Snap::InsideY,
-        /* Combination of NoSpaceX and NoSpaceY, has to be first */
-        Snap::NoSpace,
-        Snap::NoSpaceX,
-        Snap::NoSpaceY,
+        /* Combination of NoPadX and NoPadY, has to be first */
+        Snap::NoPad,
+        Snap::NoPadX,
+        Snap::NoPadY,
     });
 }
 

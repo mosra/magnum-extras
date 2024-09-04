@@ -118,63 +118,63 @@ const struct {
                  G  S                                */
     {Snap::Top|Snap::Left|Snap::InsideX,
         {100.0f, 167.0f}, Size},                            /* A */
-    {Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::InsideX,
+    {Snap::Top|Snap::Left|Snap::NoPadX |Snap::InsideX,
         {100.0f, 167.0f}, Size},                            /* A again */
     {Snap::Top|Snap::Left|Snap::InsideY,
         {73.0f, 200.0f}, Size},                             /* B */
-    {Snap::Top|Snap::Left|Snap::NoSpaceY|Snap::InsideY,
+    {Snap::Top|Snap::Left|Snap::NoPadY |Snap::InsideY,
         {73.0f, 200.0f}, Size},                             /* B again */
     {Snap::Top|Snap::Left|Snap::InsideX|Snap::InsideY,
         {110.0f, 205.0f}, Size},                            /* C */
-    {Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::InsideY,
+    {Snap::Top|Snap::Left|Snap::NoPadX |Snap::InsideY,
         {80.0f, 200.0f}, Size},                             /* D */
-    {Snap::Top|Snap::Left|Snap::NoSpaceY|Snap::InsideX,
+    {Snap::Top|Snap::Left|Snap::NoPadY |Snap::InsideX,
         {100.0f, 170.0f}, Size},                            /* E */
-    {Snap::Top|Snap::Left|Snap::NoSpaceX|Snap::NoSpaceY|Snap::InsideX|Snap::InsideY,
+    {Snap::Top|Snap::Left|Snap::NoPadX |Snap::NoPadY |Snap::InsideX|Snap::InsideY,
         {100.0f, 200.0f}, Size},                            /* F */
     {Snap::Bottom|Snap::Right|Snap::InsideX,
         {480.0f, 503.0f}, Size},                            /* G */
-    {Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::InsideX,
+    {Snap::Bottom|Snap::Right|Snap::NoPadX |Snap::InsideX,
         {480.0f, 503.0f}, Size},                            /* G again */
     {Snap::Bottom|Snap::Right|Snap::InsideY,
         {507.0f, 470.0f}, Size},                            /* H */
-    {Snap::Bottom|Snap::Right|Snap::NoSpaceY|Snap::InsideY,
+    {Snap::Bottom|Snap::Right|Snap::NoPadY |Snap::InsideY,
         {507.0f, 470.0f}, Size},                            /* H again */
     {Snap::Bottom|Snap::Right|Snap::InsideX|Snap::InsideY,
         {465.0f, 445.0f}, Size},                            /* I */
-    {Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::InsideY,
+    {Snap::Bottom|Snap::Right|Snap::NoPadX |Snap::InsideY,
         {500.0f, 470.0f}, Size},                            /* J */
-    {Snap::Bottom|Snap::Right|Snap::NoSpaceY|Snap::InsideX,
+    {Snap::Bottom|Snap::Right|Snap::NoPadY |Snap::InsideX,
         {480.0f, 500.0f}, Size},                            /* K */
-    {Snap::Bottom|Snap::Right|Snap::NoSpaceX|Snap::NoSpaceY|Snap::InsideX|Snap::InsideY,
+    {Snap::Bottom|Snap::Right|Snap::NoPadX |Snap::NoPadY |Snap::InsideX|Snap::InsideY,
         {480.0f, 470.0f}, Size},                            /* L */
     {Snap::Top,
         {290.0f, 167.0f}, Size},                            /* M */
-    {Snap::Top|Snap::NoSpaceX,
+    {Snap::Top|Snap::NoPadX,
         {290.0f, 167.0f}, Size},                            /* M */
     {Snap::Top|Snap::InsideY,
         {287.5f, 205.0f}, Size},                            /* N */
-    {Snap::Top|Snap::InsideY|Snap::NoSpaceX,
+    {Snap::Top|Snap::InsideY|Snap::NoPadX,
         {290.0f, 205.0f}, Size},                            /* N, no space X */
     {Snap::Left,
         {73.0f, 335.0f}, Size},                             /* O */
-    {Snap::Left|Snap::NoSpaceY,
+    {Snap::Left|Snap::NoPadY,
         {73.0f, 335.0f}, Size},                             /* O again */
     {Snap::Left|Snap::InsideX,
         {110.0f, 325.0f}, Size},                            /* P */
-    {Snap::Left|Snap::InsideX|Snap::NoSpaceY,
+    {Snap::Left|Snap::InsideX|Snap::NoPadY,
         {110.0f, 335.0f}, Size},                            /* P, no space Y */
     {Snap::Top|Snap::Left,
         {73.0f, 167.0f}, Size},                             /* Q */
-    {Snap::Top|Snap::Left|Snap::NoSpaceX,
+    {Snap::Top|Snap::Left|Snap::NoPadX,
         {80.0f, 167.0f}, Size},                             /* R */
     {Snap::Bottom|Snap::Right,
         {507.0f, 503.0f}, Size},                            /* S */
-    {Snap::Bottom|Snap::Right|Snap::NoSpaceY,
+    {Snap::Bottom|Snap::Right|Snap::NoPadY,
         {507.0f, 500.0f}, Size},                            /* T */
     {{},
         {287.5f, 325.0f}, Size},                            /* U */
-    {Snap::NoSpaceX|Snap::NoSpaceY,
+    {Snap::NoPadX |Snap::NoPadY,
         {290.0f, 335.0f}, Size},                            /* U, no space XY */
 
     /*     100   500
@@ -190,17 +190,17 @@ const struct {
         {100.0f, 503.0f}, {400.0f, Size.y()}},              /* aaa */
     {Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY,
         {110.0f, 445.0f}, {375.0f, Size.y()}},              /* bbb */
-    {Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY|Snap::NoSpaceX,
+    {Snap::Bottom|Snap::Left|Snap::Right|Snap::InsideY|Snap::NoPadX,
         {100.0f, 445.0f}, {400.0f, Size.y()}},              /* cbc */
     {Snap::Top|Snap::Bottom|Snap::Right,
         {507.0f, 200.0f}, {Size.x(), 300.0f}},              /* ddd */
     {Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX,
         {465.0f, 205.0f}, {Size.x(), 270.0f}},              /* eee */
-    {Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX|Snap::NoSpaceY,
+    {Snap::Top|Snap::Bottom|Snap::Right|Snap::InsideX|Snap::NoPadY,
         {465.0f, 200.0f}, {Size.x(), 300.0f}},              /* fef */
     {Snap::Top|Snap::Bottom|Snap::Left|Snap::Right,
         {110.0f, 205.0f}, {375.0f, 270.0f}},                /* ggg */
-    {Snap::Top|Snap::Bottom|Snap::Left|Snap::Right|Snap::NoSpaceX|Snap::NoSpaceY,
+    {Snap::Top|Snap::Bottom|Snap::Left|Snap::Right|Snap::NoPadX |Snap::NoPadY,
         {100.0f, 200.0f}, {400.0f, 300.0f}}                 /* hgh */
 };
 
@@ -286,8 +286,8 @@ void SnapLayouterTest::debugSnapsPacked() {
     std::ostringstream out;
     /* There isn't any bit free to test how the remains get printed. Last is
        not packed, ones before should not make any flags persistent. */
-    Debug{&out} << Debug::packed << (Snap::Left|Snap::NoSpaceY) << Debug::packed << Snaps{} << (Snap::InsideX|Snap::NoSpaceY);
-    CORRADE_COMPARE(out.str(), "Left|NoSpaceY {} Ui::Snap::InsideX|Ui::Snap::NoSpaceY\n");
+    Debug{&out} << Debug::packed << (Snap::Left|Snap::NoPadY) << Debug::packed << Snaps{} << (Snap::InsideX|Snap::NoPadY);
+    CORRADE_COMPARE(out.str(), "Left|NoPadY {} Ui::Snap::InsideX|Ui::Snap::NoPadY\n");
 }
 
 void SnapLayouterTest::debugSnapsSupersets() {
@@ -330,11 +330,11 @@ void SnapLayouterTest::debugSnapsSupersets() {
         Debug{&out} << (Snap::InsideX|Snap::InsideY);
         CORRADE_COMPARE(out.str(), "Ui::Snap::Inside\n");
 
-    /* NoSpace is NoSpaceX and NoSpaceY combined */
+    /* NoPad is NoPadX and NoPadY combined */
     } {
         std::ostringstream out;
-        Debug{&out} << (Snap::NoSpaceX|Snap::NoSpaceY);
-        CORRADE_COMPARE(out.str(), "Ui::Snap::NoSpace\n");
+        Debug{&out} << (Snap::NoPadX |Snap::NoPadY);
+        CORRADE_COMPARE(out.str(), "Ui::Snap::NoPad\n");
     }
 }
 
@@ -628,12 +628,12 @@ template<class T> void SnapLayouterTest::layoutConstructOutside() {
     /* The target is a sibling in this case */
     SnapLayouter layouter{layouterHandle(0, 1)};
     T layout{ui, layouter,
-        Snap::Bottom|Snap::NoSpaceY, sub,
+        Snap::Bottom|Snap::NoPadY, sub,
         Snap::Top|Snap::Left|Snap::Right};
     CORRADE_COMPARE(&layout.ui(), &ui);
     CORRADE_COMPARE(&layout.layouter(), &layouter);
     CORRADE_COMPARE(layout.parent(), node);
-    CORRADE_COMPARE(layout.snapFirst(), Snap::Bottom|Snap::NoSpaceY);
+    CORRADE_COMPARE(layout.snapFirst(), Snap::Bottom|Snap::NoPadY);
     CORRADE_COMPARE(layout.targetFirst(), sub);
     CORRADE_COMPARE(layout.snapNext(), Snap::Top|Snap::Left|Snap::Right);
     CORRADE_COMPARE(layout.targetNext(), NodeHandle::Null);
@@ -711,7 +711,7 @@ template<class T> void SnapLayouterTest::addRemove() {
     NodeHandle child = ui.createNode(node, {}, {});
 
     /* Snapping inside the node, thus it is also a parent */
-    T snap1{ui, layouter, Snap::Left|Snap::InsideX, child, Snap::Right|Snap::NoSpaceX};
+    T snap1{ui, layouter, Snap::Left|Snap::InsideX, child, Snap::Right|Snap::NoPadX};
     CORRADE_COMPARE(snap1.parent(), child);
     CORRADE_COMPARE(snap1.targetFirst(), child);
     CORRADE_COMPARE(snap1.targetNext(), NodeHandle::Null);
@@ -738,7 +738,7 @@ template<class T> void SnapLayouterTest::addRemove() {
     CORRADE_COMPARE(ui.nodeSize(anchor2), (Vector2{5.0f, 6.0f}));
     CORRADE_COMPARE(ui.nodeFlags(anchor2), NodeFlag::NoEvents);
     CORRADE_COMPARE(anchor2, layoutHandle(layouter.handle(), 1, 1));
-    CORRADE_COMPARE(layouter.snap(anchor2), Snap::Right|Snap::NoSpaceX);
+    CORRADE_COMPARE(layouter.snap(anchor2), Snap::Right|Snap::NoPadX);
     CORRADE_COMPARE(layouter.target(anchor2), anchor1);
     CORRADE_COMPARE(snap1.targetNext(), anchor2);
 
@@ -751,7 +751,7 @@ template<class T> void SnapLayouterTest::addRemove() {
     CORRADE_COMPARE(ui.nodeSize(anchor3), (Vector2{9.0f, 10.0f}));
     CORRADE_COMPARE(ui.nodeFlags(anchor3), NodeFlags{});
     CORRADE_COMPARE(anchor3, layoutHandle(layouter.handle(), 2, 1));
-    CORRADE_COMPARE(layouter.snap(anchor3), Snap::Right|Snap::NoSpaceX);
+    CORRADE_COMPARE(layouter.snap(anchor3), Snap::Right|Snap::NoPadX);
     CORRADE_COMPARE(layouter.target(anchor3), anchor2);
     CORRADE_COMPARE(snap1.targetNext(), anchor3);
 
@@ -851,8 +851,8 @@ template<class T> void SnapLayouterTest::addRemove() {
 
     /* Snapping a single layout to the UI itself with offset omitted, again a
        variant with the null parent explicit and implicit */
-    typename SnapLayoutTraits<T>::AnchorType anchor10a = Ui::snap(ui, layouter, Snap::Bottom|Snap::NoSpace, NodeHandle::Null, {27.0f, 28.0f}, NodeFlag::Focusable);
-    typename SnapLayoutTraits<T>::AnchorType anchor10b = Ui::snap(ui, layouter, Snap::Bottom|Snap::NoSpace, {27.0f, 28.0f}, NodeFlag::Focusable);
+    typename SnapLayoutTraits<T>::AnchorType anchor10a = Ui::snap(ui, layouter, Snap::Bottom|Snap::NoPad, NodeHandle::Null, {27.0f, 28.0f}, NodeFlag::Focusable);
+    typename SnapLayoutTraits<T>::AnchorType anchor10b = Ui::snap(ui, layouter, Snap::Bottom|Snap::NoPad, {27.0f, 28.0f}, NodeFlag::Focusable);
     CORRADE_COMPARE(&anchor10a.ui(), &ui);
     CORRADE_COMPARE(&anchor10b.ui(), &ui);
     CORRADE_COMPARE(anchor10a, nodeHandle(12, 1));
@@ -867,8 +867,8 @@ template<class T> void SnapLayouterTest::addRemove() {
     CORRADE_COMPARE(ui.nodeFlags(anchor10b), NodeFlag::Focusable);
     CORRADE_COMPARE(anchor10a, layoutHandle(layouter.handle(), 10, 1));
     CORRADE_COMPARE(anchor10b, layoutHandle(layouter.handle(), 11, 1));
-    CORRADE_COMPARE(layouter.snap(anchor10a), Snap::Bottom|Snap::NoSpace);
-    CORRADE_COMPARE(layouter.snap(anchor10b), Snap::Bottom|Snap::NoSpace);
+    CORRADE_COMPARE(layouter.snap(anchor10a), Snap::Bottom|Snap::NoPad);
+    CORRADE_COMPARE(layouter.snap(anchor10b), Snap::Bottom|Snap::NoPad);
     CORRADE_COMPARE(layouter.target(anchor10a), NodeHandle::Null);
     CORRADE_COMPARE(layouter.target(anchor10b), NodeHandle::Null);
 
@@ -929,7 +929,7 @@ void SnapLayouterTest::addDefaultLayouter() {
     CORRADE_COMPARE(ui.snapLayouter().target(anchor3), NodeHandle::Null);
 
     /* With implicit null parent and offset omitted */
-    Anchor anchor4 = Ui::snap(ui, Snap::Bottom|Snap::NoSpace, {27.0f, 28.0f}, NodeFlag::Focusable);
+    Anchor anchor4 = Ui::snap(ui, Snap::Bottom|Snap::NoPad, {27.0f, 28.0f}, NodeFlag::Focusable);
     CORRADE_COMPARE(&anchor4.ui(), &ui);
     CORRADE_COMPARE(anchor4, nodeHandle(5, 1));
     CORRADE_COMPARE(ui.nodeParent(anchor4), NodeHandle::Null);
@@ -937,7 +937,7 @@ void SnapLayouterTest::addDefaultLayouter() {
     CORRADE_COMPARE(ui.nodeSize(anchor4), (Vector2{27.0f, 28.0f}));
     CORRADE_COMPARE(ui.nodeFlags(anchor4), NodeFlag::Focusable);
     CORRADE_COMPARE(anchor4, layoutHandle(ui.snapLayouter().handle(), 3, 1));
-    CORRADE_COMPARE(ui.snapLayouter().snap(anchor4), Snap::Bottom|Snap::NoSpace);
+    CORRADE_COMPARE(ui.snapLayouter().snap(anchor4), Snap::Bottom|Snap::NoPad);
     CORRADE_COMPARE(ui.snapLayouter().target(anchor4), NodeHandle::Null);
 }
 
@@ -950,7 +950,7 @@ void SnapLayouterTest::addRemoveHandleRecycle() {
     NodeHandle node = ui.createNode({}, {});
     NodeHandle child = ui.createNode(node, {}, {});
     /*LayoutHandle first =*/ Ui::snap(ui, layouter, Snap::Bottom|Snap::Inside, node, {0.0f, 1.0f});
-    LayoutHandle second = Ui::snap(ui, layouter, Snap::Right|Snap::NoSpaceX, child, {2.0f, 3.0f});
+    LayoutHandle second = Ui::snap(ui, layouter, Snap::Right|Snap::NoPadX, child, {2.0f, 3.0f});
 
     /* Layout that reuses a previous slot should have the snap and target
        cleared even if having them empty / null */
@@ -1076,12 +1076,12 @@ void SnapLayouterTest::updateDataOrder() {
        in addition to having its own offset preserved */
     NodeHandle nodeRoot = ui.createNode({10.0f, 40.0f}, {100.0f, 200.0f});
     NodeHandle nodeChild = ui.createNode(nodeRoot, {30.0f, 20.0f}, {50.0f, 150.0f});
-    AbstractAnchor layout2 = Ui::snap(ui, layouter, Snap::Left|Snap::Right|Snap::Top|Snap::NoSpaceY, nodeChild, {0.3f, -0.2f}, {0.0f, 25.0f});
+    AbstractAnchor layout2 = Ui::snap(ui, layouter, Snap::Left|Snap::Right|Snap::Top|Snap::NoPadY, nodeChild, {0.3f, -0.2f}, {0.0f, 25.0f});
     CORRADE_COMPARE(ui.nodeParent(layout2), nodeRoot);
 
     /* A layout snapped inside of a (non-layouted) node, not inheriting its
        offset but having its own offset preserved */
-    AbstractAnchor layout3 = Ui::snap(ui, layouter, Snap::Top|Snap::Bottom|Snap::Right|Snap::Inside|Snap::NoSpaceX, nodeRoot, {0.9f, 0.6f}, {10.0f, 0.0f});
+    AbstractAnchor layout3 = Ui::snap(ui, layouter, Snap::Top|Snap::Bottom|Snap::Right|Snap::Inside|Snap::NoPadX, nodeRoot, {0.9f, 0.6f}, {10.0f, 0.0f});
     CORRADE_COMPARE(ui.nodeParent(layout3), nodeRoot);
 
     /* A layout relative to layouted node with an offset, should inerit that
