@@ -23,10 +23,11 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <unordered_map>
+#include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StringIterable.h>
 #include <Corrade/Containers/StringStlHash.h>
-#include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/PluginManager/PluginMetadata.h>
 #include <Corrade/Utility/Arguments.h>
@@ -42,13 +43,20 @@
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/Platform/Screen.h>
 #include <Magnum/Platform/ScreenedApplication.h>
+#include <Magnum/Text/AbstractFont.h> /** @todo remove once extra glyph cache fill is done better */
+#include <Magnum/Text/AbstractGlyphCache.h> /** @todo remove once extra glyph cache fill is done better */
 #include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/Anchor.h"
+#include "Magnum/Ui/Application.h"
 #include "Magnum/Ui/Button.h"
+#include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Label.h"
-#include "Magnum/Ui/Plane.h"
-#include "Magnum/Ui/UserInterface.h"
+#include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/SnapLayouter.h"
+#include "Magnum/Ui/Style.h"
+#include "Magnum/Ui/TextLayer.h" /** @todo remove once extra glyph cache fill is done better */
+#include "Magnum/Ui/UserInterfaceGL.h"
 
 #ifdef CORRADE_IS_DEBUG_BUILD
 #include <Corrade/Utility/Tweakable.h>
@@ -59,7 +67,10 @@
 #include <Corrade/Containers/Pair.h>
 #include <Magnum/Text/Alignment.h>
 
-#include "Magnum/Ui/Modal.h"
+#include "Magnum/Ui/BaseLayer.h"
+#include "Magnum/Ui/Handle.h"
+#include "Magnum/Ui/Style.hpp"
+#include "Magnum/Ui/TextProperties.h"
 #endif
 
 #include "AbstractPlayer.h"
@@ -67,6 +78,9 @@
 namespace Magnum { namespace Player {
 
 using namespace Containers::Literals;
+#ifdef CORRADE_TARGET_EMSCRIPTEN
+using namespace Math::Literals;
+#endif
 
 namespace {
 
@@ -77,87 +91,35 @@ constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 #endif
 
-#ifdef CORRADE_TARGET_EMSCRIPTEN
-struct ImportErrorUiPlane: Ui::Plane, Interconnect::Receiver {
-    explicit ImportErrorUiPlane(Ui::UserInterface& ui):
-        Ui::Plane{ui, {{}, {440, 200}}, 1, 5, 256},
-        what{*this, {Ui::Snap::Top, Range2D::fromSize(Vector2::yAxis(-15.0f), LabelSize)}, "", Text::Alignment::LineCenter, 64, Ui::Style::Danger},
-        close{*this, {Ui::Snap::Bottom, ButtonSize}, "Oh well", Ui::Style::Danger}
-    {
-        Ui::Modal{*this, {Ui::Snap::Left|Ui::Snap::Right|Ui::Snap::Bottom|Ui::Snap::Top|Ui::Snap::NoSpaceX|Ui::Snap::NoSpaceY}, Ui::Style::Danger};
-
-        Ui::Label{*this, {Ui::Snap::Top, Range2D::fromSize(Vector2::yAxis(-60.0f), LabelSize)}, "Try with another file or check the browser\nconsole for details. Bug reports welcome.", Text::Alignment::LineCenter, Ui::Style::Dim};
-    }
-
-    Ui::Label what;
-    Ui::Button close;
-};
-#endif
-
-struct OverlayUiPlane: Ui::Plane {
-    explicit OverlayUiPlane(Ui::UserInterface& ui):
-        Ui::Plane{ui, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right, 1, 50, 640},
-        controls{*this, {Ui::Snap::Top|Ui::Snap::Right, ButtonSize}, "Controls", Ui::Style::Success}
-        #ifdef CORRADE_TARGET_EMSCRIPTEN
-        ,
-        fullsize{*this, {Ui::Snap::Bottom, controls, ButtonSize}, "Full size"},
-        dropHintBackground{*this, {{}, {540, 140}}, Ui::Style::Info},
-        dropHint{*this, {{}, {Vector2::yAxis(30.0f), {}}}, "Drag&drop a file and everything it references here to play it.", Text::Alignment::LineCenter, Ui::Style::Info},
-        disclaimer{*this, {{}, {Vector2::yAxis(-10.0f), {}}}, "All data are processed and viewed locally in your\nweb browser. Nothing is uploaded to the server.", Text::Alignment::LineCenter, Ui::Style::Dim}
-        #endif
-    {
-        #ifdef CORRADE_TARGET_EMSCRIPTEN
-        /* Hide everything on Emscripten as there is a welcome screen shown
-           first */
-        Ui::Widget::hide({
-            controls,
-            fullsize});
-        #endif
-    }
-
-    Ui::Button controls;
-    #ifdef CORRADE_TARGET_EMSCRIPTEN
-    Ui::Button fullsize;
-    Ui::Modal dropHintBackground;
-    Ui::Label dropHint, disclaimer;
-    #endif
-};
-
-struct Overlay: public AbstractUiScreen, public Interconnect::Receiver {
+struct Overlay: public Platform::Screen {
     public:
-        explicit Overlay(Platform::ScreenedApplication& application, bool& drawUi);
+        explicit Overlay(Platform::ScreenedApplication& application);
 
         /* Directly accessed from Player */
-        Containers::Optional<Ui::UserInterface> ui;
-        Containers::Optional<OverlayUiPlane> overlayUiPlane;
+        Ui::UserInterfaceGL ui;
+        Ui::NodeHandle window, controls;
         #ifdef CORRADE_TARGET_EMSCRIPTEN
-        Containers::Optional<ImportErrorUiPlane> importErrorUiPlane;
+        Ui::Button fullSize{NoCreate, ui};
+        Ui::NodeHandle dropHint, error;
+        Ui::Label errorMessage{NoCreate, ui};
         #endif
 
     private:
         void drawEvent() override;
         void viewportEvent(ViewportEvent& event) override;
-
         void keyPressEvent(KeyEvent& event) override;
         void mousePressEvent(MouseEvent& event) override;
         void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
 
-        void setControlsVisible(bool visible) override;
-
-        void initializeUi();
-
         #ifdef CORRADE_TARGET_EMSCRIPTEN
-        void toggleFullsize();
-
         bool _isFullsize = false;
         #endif
-        bool& _drawUi;
 };
 
 }
 
-class Player: public Platform::ScreenedApplication, public Interconnect::Receiver {
+class Player: public Platform::ScreenedApplication {
     public:
         explicit Player(const Arguments& arguments);
 
@@ -165,8 +127,6 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         /* Need to be public to be called from C (which is called from JS) */
         void loadFile(const std::size_t totalCount, const char* filename, Containers::Array<char> data);
         #endif
-
-        bool controlsVisible() const { return _controlsVisible; }
 
         /* Accessed from Overlay */
         void toggleControls();
@@ -198,14 +158,6 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         #endif
         Int _id{-1};
         #endif
-        bool _controlsVisible =
-            #ifndef CORRADE_TARGET_EMSCRIPTEN
-            true
-            #else
-            false
-            #endif
-            ;
-        bool _drawUi = true;
 
         DebugTools::FrameProfilerGL::Values _profilerValues;
         #ifdef CORRADE_IS_DEBUG_BUILD
@@ -214,13 +166,115 @@ class Player: public Platform::ScreenedApplication, public Interconnect::Receive
         Trade::ImporterFlags _importerFlags;
 };
 
-bool AbstractUiScreen::controlsVisible() const {
-    return application<Player>().controlsVisible();
-}
+Overlay::Overlay(Platform::ScreenedApplication& application):
+    Platform::Screen{application, PropagatedEvent::Draw|PropagatedEvent::Input},
+    ui{Vector2(application.windowSize())/application.dpiScaling(),
+        Vector2{application.windowSize()},
+        application.framebufferSize(),
+        Ui::McssDarkStyle{}
+            #ifdef CORRADE_TARGET_EMSCRIPTEN
+            /* For the info / error popups and popup background */
+            /** @todo remove once there's a builtin thing for dialogs */
+            .setBaseLayerDynamicStyleCount(3)
+            #endif
+    },
+    window{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {})},
+    controls{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, window, {}
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        /* By default a drop hint is shown on Emscripten and controls are
+           hidden */
+        , Ui::NodeFlag::Hidden
+        #endif
+    )}
+{
+    Ui::NodeHandle hideControls = Ui::button(
+        Ui::snap(ui, Ui::Snap::TopRight|Ui::Snap::Inside, controls, ButtonSize),
+        "Controls"_s, Ui::ButtonStyle::Success);
+    Ui::NodeHandle showControls = Ui::button(
+        Ui::snap(ui, Ui::Snap::TopRight|Ui::Snap::Inside, window, ButtonSize, Ui::NodeFlag::Hidden),
+        "Controls"_s, Ui::ButtonStyle::Flat);
+    ui.eventLayer().onTapOrClick(hideControls, [this, showControls]{
+        CORRADE_INTERNAL_ASSERT(!(ui.nodeFlags(controls) >= Ui::NodeFlag::Hidden));
+        ui.addNodeFlags(controls, Ui::NodeFlag::Hidden);
+        ui.clearNodeFlags(showControls, Ui::NodeFlag::Hidden);
+    });
+    ui.eventLayer().onTapOrClick(showControls, [this, showControls]{
+        CORRADE_INTERNAL_ASSERT(ui.nodeFlags(controls) >= Ui::NodeFlag::Hidden);
+        ui.clearNodeFlags(controls, Ui::NodeFlag::Hidden);
+        ui.addNodeFlags(showControls, Ui::NodeFlag::Hidden);
+    });
 
-Overlay::Overlay(Platform::ScreenedApplication& application, bool& drawUi): AbstractUiScreen{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
-    ui.emplace(Vector2(application.windowSize())/application.dpiScaling(), application.windowSize(), application.framebufferSize(), Ui::mcssDarkStyleConfiguration(), "«»");
-    initializeUi();
+    CORRADE_INTERNAL_ASSERT(ui.textLayer().shared().font(Ui::fontHandle(1, 1)).fillGlyphCache(ui.textLayer().shared().glyphCache(), "«»"));
+
+    #ifdef CORRADE_TARGET_EMSCRIPTEN
+    fullSize = Ui::Button{
+        Ui::snap(ui, Ui::Snap::Bottom, hideControls, ButtonSize),
+        "Full size"};
+    ui.eventLayer().onTapOrClick(fullSize, [this]{
+        /* Can't be inside the branch because then this cursed message happens:
+            Fatal: Unexpected arg0 type (select) in call to: emscripten_asm_const_int */
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
+        EM_ASM_({Module['setFullsize']($0)}, !_isFullsize);
+        #pragma GCC diagnostic pop
+
+        if(_isFullsize) {
+            _isFullsize = false;
+            fullSize.setStyle(Ui::ButtonStyle::Default);
+        } else {
+            _isFullsize = true;
+            fullSize.setStyle(Ui::ButtonStyle::Success);
+        }
+
+        /* This function needs to be called instead of doing it all in JS in
+           order to correctly propagate canvas size change */
+        this->application().setContainerCssClass(_isFullsize ? "fullsize" : "");
+    });
+    /** @todo clean up once there's a builtin thing for dialogs */
+    /* Abusing styles for creating modal dialog backgrounds */
+    ui.baseLayer().setDynamicStyle(0, Ui::BaseLayerStyleUniform{}
+        .setColor(0x00000099_rgbaf), {}); /* m.css dim */
+    ui.baseLayer().setDynamicStyle(1, Ui::BaseLayerStyleUniform{}
+        .setColor(0x2a4f70ff_rgbaf*0.8f) /* m.css info */
+        .setCornerRadius(4.0f), {});
+    ui.baseLayer().setDynamicStyle(2, Ui::BaseLayerStyleUniform{}
+        .setColor(0x702b2aff_rgbaf*0.8f) /* m.css danger */
+        .setCornerRadius(4.0f), {});
+    /* Drop hint dialog. Shown initially, hidden once there's something loaded */
+    dropHint = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {});
+    {
+        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 0, dropHint);
+        Ui::NodeHandle dialog = Ui::snap(ui, {}, dropHint, {540, 140});
+        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 1, dialog);
+        Ui::DataHandle hint = ui.textLayer().create(Ui::Implementation::TextStyle::LabelInfoText, "Drag&drop a file and everything it references here to play it.", {}, dialog);
+        ui.textLayer().setPadding(hint, {0.0f, -30.0f, 0.0f, 30.0f});
+        /** @todo clean this up once multi-line text is possible */
+        Ui::DataHandle disclaimer1 = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "All data are processed and viewed locally in your", {}, dialog);
+        ui.textLayer().setPadding(disclaimer1, {0.0f, 10.0f, 0.0f, -10.0f});
+        Ui::DataHandle disclaimer2 = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "web browser. Nothing is uploaded to the server.", {}, dialog);
+        ui.textLayer().setPadding(disclaimer2, {0.0f, 10.0f + ui.textLayer().size(disclaimer1).y(), 0.0f, -10.0f - ui.textLayer().size(disclaimer1).y()});
+    }
+    /* Error dialog. Hidden initially, shown if there's a loading error. */
+    error = Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, {}, Ui::NodeFlag::Hidden);
+    {
+        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 0, error);
+        Ui::NodeHandle dialog = Ui::snap(ui, {}, error, {440, 200});
+        ui.baseLayer().create(ui.baseLayer().shared().styleCount() + 2, dialog);
+        errorMessage = Ui::Label{
+            Ui::snap(ui, Ui::Snap::Top|Ui::Snap::Inside, dialog, {0.0f, 15.0f}, LabelSize), "No recognizable file dropped.", Ui::LabelStyle::Danger};
+        /** @todo clean this up once multi-line text is possible */
+        Ui::DataHandle details1 = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "Try with another file or check the browser", {}, dialog);
+        ui.textLayer().setPadding(details1, {0.0f, -10.0f, 0.0f, 10.0f});
+        Ui::DataHandle details2 = ui.textLayer().create(Ui::Implementation::TextStyle::LabelDimText, "console for details. Bug reports welcome.", {}, dialog);
+        ui.textLayer().setPadding(details2, {0.0f, -10.0f + ui.textLayer().size(details1).y(), 0.0f, 10.0f - ui.textLayer().size(details1).y()});
+
+        Ui::NodeHandle close = Ui::button(
+            Ui::snap(ui, Ui::Snap::Bottom|Ui::Snap::Inside, dialog, ButtonSize), "Oh well", Ui::ButtonStyle::Danger);
+        ui.eventLayer().onTapOrClick(close, [this]{
+            ui.clearNodeOrder(error);
+        });
+    }
+    #endif
 }
 
 void Overlay::drawEvent() {
@@ -230,37 +284,17 @@ void Overlay::drawEvent() {
 
     /* Draw the UI. Disable the depth buffer and enable premultiplied alpha
        blending. */
-    if(_drawUi) {
-        GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
-        GL::Renderer::enable(GL::Renderer::Feature::Blending);
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-        ui->draw();
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
-        GL::Renderer::disable(GL::Renderer::Feature::Blending);
-        GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
-    }
+    GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
+    GL::Renderer::enable(GL::Renderer::Feature::Blending);
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    ui.draw();
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
+    GL::Renderer::disable(GL::Renderer::Feature::Blending);
+    GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
 }
 
 void Overlay::viewportEvent(ViewportEvent& event) {
-    #ifdef CORRADE_TARGET_EMSCRIPTEN
-    importErrorUiPlane = Containers::NullOpt;
-    #endif
-    overlayUiPlane = Containers::NullOpt;
-    ui->relayout(Vector2(event.windowSize())/event.dpiScaling(), event.windowSize(), event.framebufferSize());
-    initializeUi();
-
-    { /** @todo this should be done only if we display some data */
-        #ifdef CORRADE_TARGET_EMSCRIPTEN
-        Ui::Widget::hide({
-            overlayUiPlane->dropHintBackground,
-            overlayUiPlane->dropHint,
-            overlayUiPlane->disclaimer});
-        overlayUiPlane->controls.show();
-        if(_isFullsize) overlayUiPlane->fullsize.setStyle(Ui::Style::Success);
-        #endif
-    }
-
-    setControlsVisible(application<Player>().controlsVisible());
+    ui.setSize(Vector2(event.windowSize())/event.dpiScaling(), Vector2{event.windowSize()}, event.framebufferSize());
 }
 
 void Overlay::keyPressEvent(KeyEvent& event) {
@@ -271,7 +305,9 @@ void Overlay::keyPressEvent(KeyEvent& event) {
     #endif
     /* Toggle UI drawing (useful for screenshots) */
     if(event.key() == KeyEvent::Key::Esc) {
-        _drawUi ^= true;
+        ui.nodeFlags(window) >= Ui::NodeFlag::Hidden ?
+            ui.clearNodeFlags(window, Ui::NodeFlag::Hidden) :
+            ui.addNodeFlags(window, Ui::NodeFlag::Hidden);
     } else return;
 
     redraw();
@@ -279,74 +315,28 @@ void Overlay::keyPressEvent(KeyEvent& event) {
 }
 
 void Overlay::mousePressEvent(MouseEvent& event) {
-    if(_drawUi && ui->handlePressEvent(event.position())) {
+    ui.pointerPressEvent(event);
+
+    if(ui.state())
         redraw();
-        event.setAccepted();
-        return;
-    }
 }
 
 void Overlay::mouseReleaseEvent(MouseEvent& event) {
-    if(_drawUi && ui->handleReleaseEvent(event.position())) {
+    ui.pointerReleaseEvent(event);
+
+    if(ui.state())
         redraw();
-        event.setAccepted();
-        return;
-    }
 }
 
 void Overlay::mouseMoveEvent(MouseMoveEvent& event) {
-    if(_drawUi && ui->handleMoveEvent(event.position())) {
+    ui.pointerMoveEvent(event);
+
+    if(ui.state())
         redraw();
-        event.setAccepted();
-        return;
-    }
 
-    /** @todo ugh this will break the moving again */
+    /** @todo ugh this will break the moving again, ugh actually what's this
+        todo about? */
 }
-
-void Overlay::initializeUi() {
-    overlayUiPlane.emplace(*ui);
-    #ifdef CORRADE_TARGET_EMSCRIPTEN
-    importErrorUiPlane.emplace(*ui);
-    #endif
-    Interconnect::connect(overlayUiPlane->controls, &Ui::Button::tapped, application<Player>(), &Player::toggleControls);
-    #ifdef CORRADE_TARGET_EMSCRIPTEN
-    Interconnect::connect(overlayUiPlane->fullsize, &Ui::Button::tapped, *this, &Overlay::toggleFullsize);
-    Interconnect::connect(importErrorUiPlane->close, &Ui::Button::tapped, *importErrorUiPlane, &Ui::Plane::hide);
-    #endif
-}
-
-void Overlay::setControlsVisible(bool visible) {
-    overlayUiPlane->controls.setStyle(visible ? Ui::Style::Success : Ui::Style::Flat);
-
-    #ifdef CORRADE_TARGET_EMSCRIPTEN
-    overlayUiPlane->fullsize.setVisible(visible);
-    #endif
-}
-
-#ifdef CORRADE_TARGET_EMSCRIPTEN
-void Overlay::toggleFullsize() {
-    /* Can't be inside the branch because then this cursed message happens:
-        Fatal: Unexpected arg0 type (select) in call to: emscripten_asm_const_int
-    */
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wdollar-in-identifier-extension"
-    EM_ASM_({Module['setFullsize']($0)}, !_isFullsize);
-    #pragma GCC diagnostic pop
-
-    if(_isFullsize) {
-        _isFullsize = false;
-        overlayUiPlane->fullsize.setStyle(Ui::Style::Default);
-    } else {
-        _isFullsize = true;
-        overlayUiPlane->fullsize.setStyle(Ui::Style::Success);
-    }
-
-    /* This function needs to be called instead of doing it all in JS in order
-       to correctly propagate canvas size change */
-    application().setContainerCssClass(_isFullsize ? "fullsize" : "");
-}
-#endif
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 Player* app;
@@ -501,7 +491,7 @@ PrimitiveClipRatio.)")
     }
 
     /* Set up the screens */
-    _overlay.emplace(*this, _drawUi);
+    _overlay.emplace(*this);
 
     #ifndef CORRADE_TARGET_EMSCRIPTEN
     _file = args.value("file");
@@ -570,9 +560,9 @@ PrimitiveClipRatio.)")
            or a scene */
         /** @todo ugh the importer should have an API for that */
         if(args.value("importer") != "AnySceneImporter" && !importer->objectCount() && !importer->meshCount() && importer->image2DCount() >= 1)
-            _player = createImagePlayer(*this, *_overlay->ui, _drawUi);
+            _player = createImagePlayer(*this, _overlay->ui, _overlay->controls);
         else
-            _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
+            _player = createScenePlayer(*this, _overlay->ui, _overlay->controls, _profilerValues);
         _player->load(_file, *importer, _id);
         _importer = args.value("importer");
     } else if(args.value("importer") == "AnySceneImporter") {
@@ -584,7 +574,7 @@ PrimitiveClipRatio.)")
                 Error{} << "No 2D images found in the file";
                 std::exit(3);
             }
-            _player = createImagePlayer(*this, *_overlay->ui, _drawUi);
+            _player = createImagePlayer(*this, _overlay->ui, _overlay->controls);
             _player->load(_file, *imageImporter, _id);
             _importer = "AnyImageImporter";
         } else std::exit(2);
@@ -595,7 +585,7 @@ PrimitiveClipRatio.)")
     importer->addFlags(_importerFlags);
     Utility::Resource rs{"data"};
     importer->openData(rs.getRaw("artwork/default.glb"));
-    _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
+    _player = createScenePlayer(*this, _overlay->ui, _overlay->controls, _profilerValues);
     _player->load({}, *importer, -1);
     #endif
 
@@ -622,10 +612,7 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     _droppedFiles.emplace(filename, Utility::move(data));
 
     /* If the error is displayed, hide it */
-    /** @todo make it just _importErrorUiPlane->hide() once the bug with a
-            no-op hiding is fixed */
-    if(_overlay->ui->activePlane() == &*_overlay->importErrorUiPlane)
-        _overlay->importErrorUiPlane->hide();
+    _overlay->ui.clearNodeOrder(_overlay->error);
 
     Debug{} << "Dropped file" << _droppedFiles.size() << Debug::nospace << "/" << Debug::nospace << totalCount << filename;
 
@@ -644,8 +631,8 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
            normalizedExtension.hasSuffix(".stl"_s))
         {
             if(topLevelFile) {
-                _overlay->importErrorUiPlane->what.setText("More than one glTF / FBX / OBJ / PLY / STL file dropped.");
-                _overlay->importErrorUiPlane->activate();
+                _overlay->errorMessage.setText("More than one glTF / FBX / OBJ / PLY / STL file dropped.");
+                _overlay->ui.setNodeOrder(_overlay->error, Ui::NodeHandle::Null);
                 _droppedFiles.clear();
                 redraw();
                 return;
@@ -684,25 +671,25 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
 
         /* Load file */
         if(!importer->openFile(topLevelFile)) {
-            _overlay->importErrorUiPlane->what.setText("File import failed :(");
-            _overlay->importErrorUiPlane->activate();
+            _overlay->errorMessage.setText("File import failed :(");
+            _overlay->ui.setNodeOrder(_overlay->error, Ui::NodeHandle::Null);
             _droppedFiles.clear();
             redraw();
             return;
         }
 
-        _player = createScenePlayer(*this, *_overlay->ui, _profilerValues, _drawUi);
+        _player = createScenePlayer(*this, _overlay->ui, _overlay->controls, _profilerValues);
         _player->load(topLevelFile, *importer, -1);
 
     /* If there's just one non-recognized file, try to load it as an image instead */
     } else if(_droppedFiles.size() == 1) {
         Containers::Pointer<Trade::AbstractImporter> imageImporter = _manager.loadAndInstantiate("AnyImageImporter");
         if(imageImporter->openData(_droppedFiles.begin()->second) && imageImporter->image2DCount()) {
-            _player = createImagePlayer(*this, *_overlay->ui, _drawUi);
+            _player = createImagePlayer(*this, _overlay->ui, _overlay->controls);
             _player->load(_droppedFiles.begin()->first, *imageImporter, -1);
         } else {
-            _overlay->importErrorUiPlane->what.setText("No recognizable file dropped.");
-            _overlay->importErrorUiPlane->activate();
+            _overlay->errorMessage.setText("No recognizable file dropped.");
+            _overlay->ui.setNodeOrder(_overlay->error, Ui::NodeHandle::Null);
             _droppedFiles.clear();
             redraw();
             return;
@@ -710,8 +697,8 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
 
     /* Otherwise it's doomed */
     } else {
-        _overlay->importErrorUiPlane->what.setText("No recognizable file dropped.");
-        _overlay->importErrorUiPlane->activate();
+        _overlay->errorMessage.setText("No recognizable file dropped.");
+        _overlay->ui.setNodeOrder(_overlay->error, Ui::NodeHandle::Null);
         _droppedFiles.clear();
         redraw();
         return;
@@ -720,13 +707,8 @@ void Player::loadFile(std::size_t totalCount, const char* filename, Containers::
     /* Clear all loaded files, not needed anymore */
     _droppedFiles.clear();
 
-    Ui::Widget::hide({
-        _overlay->overlayUiPlane->dropHintBackground,
-        _overlay->overlayUiPlane->dropHint,
-        _overlay->overlayUiPlane->disclaimer});
-    _overlay->overlayUiPlane->controls.show();
-    _controlsVisible = false;
-    toggleControls();
+    _overlay->ui.clearNodeOrder(_overlay->dropHint);
+    _overlay->ui.clearNodeFlags(_overlay->controls, Ui::NodeFlag::Hidden);
 
     redraw();
 }
@@ -752,12 +734,6 @@ void Player::tickEvent() {
     _tweakable.update();
 }
 #endif
-
-void Player::toggleControls() {
-    _controlsVisible ^= true;
-    for(Platform::Screen& screen: screens())
-        static_cast<AbstractUiScreen&>(screen).setControlsVisible(_controlsVisible);
-}
 
 }}
 

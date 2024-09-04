@@ -25,25 +25,28 @@
 
 #include <sstream>
 #include <Corrade/Containers/Optional.h>
-#include <Corrade/Containers/Pair.h>
 #include <Corrade/Containers/StringStl.h> /** @todo drop once Debug is stream-free */
 #include <Corrade/Utility/Format.h>
+#include <Corrade/Utility/FormatStl.h> /** @todo drop once Debug is stream-free */
 #include <Corrade/Utility/Path.h>
 #include <Magnum/PixelFormat.h>
+#include <Magnum/Math/Matrix3.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/Primitives/Square.h>
 #include <Magnum/Shaders/FlatGL.h>
+#include <Magnum/Text/Alignment.h>
 #include <Magnum/Trade/AbstractImporter.h>
 #include <Magnum/Trade/ImageData.h>
 #include <Magnum/Trade/MeshData.h>
 
-#include "Magnum/Text/Alignment.h"
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Label.h"
-#include "Magnum/Ui/Plane.h"
+#include "Magnum/Ui/SnapLayouter.h"
+#include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterface.h"
 
 #include "AbstractPlayer.h"
@@ -56,42 +59,33 @@ namespace {
 constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 LabelSize{72.0f, LabelHeight};
 
-struct BaseUiPlane: Ui::Plane {
-    explicit BaseUiPlane(Ui::UserInterface& ui):
-        Ui::Plane{ui, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right, 1, 50, 640},
-        imageInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim} {}
-
-    Ui::Label imageInfo;
-};
-
 class ImagePlayer: public AbstractPlayer {
     public:
-        explicit ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi);
+        explicit ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls);
 
     private:
         void drawEvent() override;
         void viewportEvent(ViewportEvent& event) override;
-
         void keyPressEvent(KeyEvent& event) override;
-        void mousePressEvent(MouseEvent& event) override;
-        void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
         void load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) override;
-        void setControlsVisible(bool visible) override;
 
-        void initializeUi();
         Vector2 unproject(const Vector2i& windowPosition) const;
         Vector2 unprojectRelative(const Vector2i& relativeWindowPosition) const;
 
         Shaders::FlatGL2D _coloredShader;
 
         /* UI */
-        bool& _drawUi;
-        Containers::Optional<Ui::UserInterface> _ui;
-        Containers::Optional<BaseUiPlane> _baseUiPlane;
-        Containers::String _imageInfo;
+        /* Owning base node for all UI stuff here, child of the `controls` node
+           from constructor. Gets removed when the screen is destructed, taking
+           with itself everything parented to it, so when another screen is
+           created again, there are no stale nodes left around. */
+        /** @todo none of this actually needs to be recreated, and neither the
+            shaders etc., rethink the whole thing */
+        Ui::Widget _screen;
+        Ui::Label _imageInfo;
 
         GL::Texture2D _texture{NoCreate};
         GL::Mesh _square;
@@ -102,14 +96,11 @@ class ImagePlayer: public AbstractPlayer {
         Matrix3 _projection;
 };
 
-ImagePlayer::ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
-    /* Setup the UI, steal font etc. from the existing one to avoid having
-       everything built twice */
-    /** @todo this is extremely bad, there should be just one global UI (or
-        not?) */
-    _ui.emplace(Vector2(application.windowSize())/application.dpiScaling(), application.windowSize(), application.framebufferSize(), uiToStealFontFrom.font(), uiToStealFontFrom.glyphCache(), Ui::mcssDarkStyleConfiguration());
-    initializeUi();
-
+ImagePlayer::ImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls):
+    AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input},
+    _screen{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, controls, {})},
+    _imageInfo{Ui::snap(ui, Ui::Snap::TopLeft|Ui::Snap::Inside, _screen, LabelSize), {}, Ui::LabelStyle::Dim}
+{
     /* Prepare the square mesh and initial projection equal to framebuffer size */
     _square = MeshTools::compile(Primitives::squareSolid(Primitives::SquareFlag::TextureCoordinates));
     _projection = Matrix3::projection(Vector2{application.framebufferSize()});
@@ -133,26 +124,11 @@ void ImagePlayer::drawEvent() {
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
     _shader.draw(_square);
 
-    /* Draw the UI, this time with premultiplied alpha blending */
-    if(_drawUi) {
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-        _ui->draw();
-
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
-    }
-
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 }
 
 void ImagePlayer::viewportEvent(ViewportEvent& event) {
-    _baseUiPlane = Containers::NullOpt;
-    _ui->relayout(Vector2(event.windowSize())/event.dpiScaling(), event.windowSize(), event.framebufferSize());
-    initializeUi();
-
-    setControlsVisible(controlsVisible());
-    /** @todo drop the ArrayView cast once the Ui library is STL-free */
-    _baseUiPlane->imageInfo.setText(Containers::ArrayView<const char>{_imageInfo});
     _projection = Matrix3::projection(Vector2{event.framebufferSize()});
 }
 
@@ -166,22 +142,6 @@ void ImagePlayer::keyPressEvent(KeyEvent& event) {
 
     event.setAccepted();
     redraw();
-}
-
-void ImagePlayer::mousePressEvent(MouseEvent& event) {
-    if(_drawUi && _ui->handlePressEvent(event.position())) {
-        redraw();
-        event.setAccepted();
-        return;
-    }
-}
-
-void ImagePlayer::mouseReleaseEvent(MouseEvent& event) {
-    if(_drawUi && _ui->handleReleaseEvent(event.position())) {
-        redraw();
-        event.setAccepted();
-        return;
-    }
 }
 
 Vector2 ImagePlayer::unproject(const Vector2i& windowPosition) const {
@@ -198,12 +158,6 @@ Vector2 ImagePlayer::unprojectRelative(const Vector2i& relativeWindowPosition) c
 }
 
 void ImagePlayer::mouseMoveEvent(MouseMoveEvent& event) {
-    if(_drawUi && _ui->handleMoveEvent(event.position())) {
-        redraw();
-        event.setAccepted();
-        return;
-    }
-
     if(!(event.buttons() & MouseMoveEvent::Button::Left)) return;
 
     const Vector2 delta = unprojectRelative(event.relativePosition());
@@ -265,27 +219,20 @@ void ImagePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
     else
         Debug{&out, Debug::Flag::NoNewlineAtTheEnd} << image->compressedFormat();
 
-    const Containers::StringView basename = Utility::Path::split(filename).second();
-    /** @todo drop the ArrayView cast once the Ui library is STL-free */
-    _baseUiPlane->imageInfo.setText(Containers::ArrayView<const char>{_imageInfo = Utility::format(
+    _imageInfo.setText(Utility::format(
         "{}: {}x{}, {}",
-        basename.prefix(Math::min(std::size_t{32}, basename.size())),
+        Utility::Path::split(filename).second(),
         image->size().x(), image->size().y(),
-        Containers::StringView{out.str()})});
-}
-
-void ImagePlayer::setControlsVisible(bool visible) {
-    _baseUiPlane->imageInfo.setVisible(visible);
-}
-
-void ImagePlayer::initializeUi() {
-    _baseUiPlane.emplace(*_ui);
+        out.str()),
+        /** @todo ugh, having to specify this every time is NASTY, what to do
+            besides supplying extra style variants? */
+        Text::Alignment::MiddleLeft);
 }
 
 }
 
-Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi) {
-    return Containers::Pointer<ImagePlayer>{InPlaceInit, application, uiToStealFontFrom, drawUi};
+Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls) {
+    return Containers::Pointer<ImagePlayer>{InPlaceInit, application, ui, controls};
 }
 
 }}

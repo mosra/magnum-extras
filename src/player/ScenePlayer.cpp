@@ -24,15 +24,16 @@
 */
 
 #include <algorithm> /* std::sort() */
+#include <unordered_map>
 #include <Corrade/Containers/Array.h>
 #include <Corrade/Containers/BitArray.h>
+#include <Corrade/Containers/Function.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/Pair.h>
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Containers/StridedArrayView.h>
 #include <Corrade/Containers/Triple.h>
-#include <Corrade/Interconnect/Receiver.h>
 #include <Corrade/PluginManager/Manager.h>
 #include <Corrade/Utility/Arguments.h>
 #include <Corrade/Utility/ConfigurationGroup.h>
@@ -89,8 +90,11 @@
 
 #include "Magnum/Ui/Anchor.h"
 #include "Magnum/Ui/Button.h"
+#include "Magnum/Ui/EventLayer.h"
 #include "Magnum/Ui/Label.h"
-#include "Magnum/Ui/Plane.h"
+#include "Magnum/Ui/NodeFlags.h"
+#include "Magnum/Ui/SnapLayouter.h"
+#include "Magnum/Ui/TextProperties.h"
 #include "Magnum/Ui/UserInterface.h"
 
 #ifdef CORRADE_TARGET_EMSCRIPTEN
@@ -156,73 +160,12 @@ DepthReinterpretShader::DepthReinterpretShader() {
 #endif
 
 constexpr const Float WidgetHeight{36.0f};
-constexpr const Float PaddingY{10.0f}; /* same as in mcssDarkStyleConfiguration() */
+constexpr const Float PaddingY{10.0f}; /* same as in Ui::McssDarkStyle() */
 constexpr const Vector2 ButtonSize{112.0f, WidgetHeight};
 constexpr const Float LabelHeight{36.0f};
 constexpr const Vector2 ControlSize{56.0f, WidgetHeight};
 constexpr const Vector2 HalfControlSize{28.0f, WidgetHeight};
 constexpr const Vector2 LabelSize{72.0f, LabelHeight};
-
-struct BaseUiPlane: Ui::Plane {
-    explicit BaseUiPlane(Ui::UserInterface& ui):
-        Ui::Plane{ui, Ui::Snap::Top|Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::Right, 1, 50, 640},
-        shadeless{*this, {Ui::Snap::Top|Ui::Snap::Right,
-            Range2D::fromSize(-Vector2::yAxis(WidgetHeight + PaddingY)
-                #ifdef CORRADE_TARGET_EMSCRIPTEN
-                *2.0f /* on Emscripten there's the fullscreen button as well */
-                #endif
-            , ButtonSize)}, "Shadeless", Ui::Style::Default},
-        objectVisualization{*this, {Ui::Snap::Bottom, shadeless, ButtonSize},
-            "Object centers"},
-        meshVisualization{*this, {Ui::Snap::Bottom, shadeless, ButtonSize}, "Wireframe", 16},
-        backward{*this, {Ui::Snap::Bottom|Ui::Snap::Left, HalfControlSize}, "«"},
-        play{*this, {Ui::Snap::Right, backward, ControlSize}, "Play", Ui::Style::Success},
-        pause{*this, {Ui::Snap::Right, backward, ControlSize}, "Pause", Ui::Style::Warning},
-        stop{*this, {Ui::Snap::Right, play, ControlSize}, "Stop", Ui::Style::Danger},
-        forward{*this, {Ui::Snap::Right, stop, HalfControlSize}, "»"},
-        modelInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim},
-        objectInfo{*this, {Ui::Snap::Top|Ui::Snap::Left, LabelSize}, "", Text::Alignment::LineLeft, 128, Ui::Style::Dim},
-        animationProgress{*this, {Ui::Snap::Right, forward, LabelSize}, "", Text::Alignment::LineLeft, 17}
-    {
-        /* Implicitly hide all animation controls, they get shown if there is
-           an actual animation being played */
-        Ui::Widget::hide({
-            backward,
-            play,
-            pause,
-            stop,
-            forward,
-            animationProgress
-        });
-
-        /* Hide everything that gets shown only on selection */
-        Ui::Widget::hide({
-            meshVisualization,
-            objectInfo
-        });
-
-        #ifdef CORRADE_TARGET_EMSCRIPTEN
-        /* Hide everything on Emscripten as there is a welcome screen shown
-           first */
-        Ui::Widget::hide({
-            shadeless,
-            objectVisualization,
-            modelInfo});
-        #endif
-    }
-
-    Ui::Button shadeless;
-    Ui::Button objectVisualization, meshVisualization;
-    Ui::Button
-        backward,
-        play,
-        pause,
-        stop,
-        forward;
-    Ui::Label modelInfo,
-        objectInfo,
-        animationProgress;
-};
 
 struct MeshInfo {
     Containers::Optional<GL::Mesh> mesh;
@@ -286,10 +229,6 @@ struct Data {
     Containers::Array<Matrix4> skinJointMatrices;
 
     Int elapsedTimeAnimationDestination = -1; /* So it gets updated with 0 as well */
-
-    /* UI is recreated on window resize and we need to repopulate the info */
-    /** @todo remove once the UI has relayouting */
-    Containers::String modelInfo, objectInfo;
 };
 
 enum class Visualization: UnsignedByte {
@@ -311,9 +250,9 @@ enum class Visualization: UnsignedByte {
     End
 };
 
-class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
+class ScenePlayer: public AbstractPlayer {
     public:
-        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::FrameProfilerGL::Values profilerValues, bool& drawUi);
+        explicit ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls, const DebugTools::FrameProfilerGL::Values profilerValues);
 
     private:
         void drawEvent() override;
@@ -321,23 +260,14 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
 
         void keyPressEvent(KeyEvent& event) override;
         void mousePressEvent(MouseEvent& event) override;
-        void mouseReleaseEvent(MouseEvent& event) override;
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
 
         void load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) override;
-        void setControlsVisible(bool visible) override;
 
-        void initializeUi();
-
-        void toggleShadeless();
-
-        void cycleObjectVisualization();
-        void cycleMeshVisualization();
         Shaders::MeshVisualizerGL3D::Flags setupVisualization(std::size_t meshId);
 
-        void play();
-        void pause();
+        void playPause();
         void stop();
         void backward();
         void forward();
@@ -373,10 +303,27 @@ class ScenePlayer: public AbstractPlayer, public Interconnect::Receiver {
         /* Data loading */
         Containers::Optional<Data> _data;
 
-        /* UI */
-        bool& _drawUi;
-        Containers::Optional<Ui::UserInterface> _ui;
-        Containers::Optional<BaseUiPlane> _baseUiPlane;
+        /* UI. What's just a NodeHandle only needs to be hidden / disabled,
+           don't need a whole widget for that. */
+        Ui::UserInterface& _ui;
+        /* Owning base node for all UI stuff here, child of the `controls` node
+           from constructor. Gets removed when the screen is destructed, taking
+           with itself everything parented to it, so when another screen is
+           created again, there are no stale nodes left around. */
+        /** @todo none of this actually needs to be recreated, and neither the
+            shaders etc., rethink the whole thing */
+        Ui::Widget _screen;
+        Ui::Label _modelInfo,
+            _objectInfo;
+        Ui::Button _toggleShadeless,
+            _toggleObjectVisualization,
+            _cycleMeshVisualization;
+        Ui::NodeHandle _animationControls,
+            _animationBackward;
+        Ui::Button _animationPlayPause;
+        Ui::NodeHandle _animationStop,
+            _animationForward;
+        Ui::Label _animationProgress;
         const std::pair<Float, Int> _elapsedTimeAnimationData[2] {
             {0.0f, 0},
             {1.0f, 10}
@@ -526,7 +473,33 @@ class JointDrawable: public SceneGraph::Drawable3D {
         Matrix4& _jointMatrix;
 };
 
-ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, DebugTools::FrameProfilerGL::Values profilerValues, bool& drawUi): AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input}, _drawUi(drawUi) {
+ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls, DebugTools::FrameProfilerGL::Values profilerValues):
+    AbstractPlayer{application, PropagatedEvent::Draw|PropagatedEvent::Input},
+    _ui(ui),
+    _screen{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, controls, {})},
+    _modelInfo{Ui::snap(ui, Ui::Snap::TopLeft|Ui::Snap::Inside, _screen, LabelSize),
+        {}, Text::Alignment::LineLeft, Ui::LabelStyle::Dim},
+    _objectInfo{Ui::snap(ui, Ui::Snap::TopLeft|Ui::Snap::Inside, _screen, LabelSize, Ui::NodeFlag::Hidden),
+        {}, Text::Alignment::LineLeft, Ui::LabelStyle::Dim},
+    _toggleShadeless{Ui::snap(ui, Ui::Snap::TopRight|Ui::Snap::Inside, _screen, {0.0f,
+        /* There's also the fullscreen toggle on Emscripten */
+        /** @todo clean this up once there's a layouter that can snap relative
+            to a non-sibling / non-parent node */
+        #ifdef CORRADE_TARGET_EMSCRIPTEN
+        2*(ButtonSize.y() + PaddingY)
+        #else
+        ButtonSize.y() + PaddingY
+        #endif
+    }, ButtonSize), "Shadeless"_s},
+    _toggleObjectVisualization{Ui::snap(ui, Ui::Snap::Bottom, _toggleShadeless, ButtonSize), "Object centers"_s},
+    _cycleMeshVisualization{Ui::snap(ui, Ui::Snap::Bottom, _toggleShadeless, ButtonSize, Ui::NodeFlag::Hidden), "Wireframe"_s},
+    _animationControls{Ui::snap(ui, Ui::Snap::Fill|Ui::Snap::NoPad, _screen, {}, Ui::NodeFlag::Hidden)},
+    _animationBackward{Ui::button(Ui::snap(ui, Ui::Snap::BottomLeft|Ui::Snap::Inside, _animationControls, HalfControlSize), "«"_s)},
+    _animationPlayPause{Ui::snap(ui, Ui::Snap::Right, _animationBackward, ControlSize), "Pause"_s, Ui::ButtonStyle::Warning},
+    _animationStop{Ui::button(Ui::snap(ui, Ui::Snap::Right, _animationPlayPause, ControlSize), "Stop"_s, Ui::ButtonStyle::Danger)},
+    _animationForward{Ui::button(Ui::snap(ui, Ui::Snap::Right, _animationStop, HalfControlSize), "»"_s)},
+    _animationProgress{Ui::snap(ui, Ui::Snap::Right, _animationForward, LabelSize), {}}
+{
     /* Color maps */
     _colorMapTexture
         .setMinificationFilter(SamplerFilter::Linear, SamplerMipmap::Linear)
@@ -563,12 +536,34 @@ ScenePlayer::ScenePlayer(Platform::ScreenedApplication& application, Ui::UserInt
         _lightOuterCircleMesh = MeshTools::compile(circle);
     }
 
-    /* Setup the UI, steal font etc. from the existing one to avoid having
-       everything built twice */
-    /** @todo this is extremely bad, there should be just one global UI (or
-        not?) */
-    _ui.emplace(Vector2(application.windowSize())/application.dpiScaling(), application.windowSize(), application.framebufferSize(), uiToStealFontFrom.font(), uiToStealFontFrom.glyphCache(), Ui::mcssDarkStyleConfiguration());
-    initializeUi();
+    /* Connect visualization controls */
+    ui.eventLayer().onTapOrClick(_toggleShadeless, [this]{
+        _shadeless ^= true;
+        _toggleShadeless.setStyle(_shadeless ?
+            Ui::ButtonStyle::Success :
+            Ui::ButtonStyle::Default);
+    });
+    ui.eventLayer().onTapOrClick(_toggleObjectVisualization, [this]{
+        _data->visualizeObjects ^= true;
+        _toggleObjectVisualization.setStyle(_data->visualizeObjects ?
+            Ui::ButtonStyle::Success :
+            Ui::ButtonStyle::Default);
+    });
+    ui.eventLayer().onTapOrClick(_cycleMeshVisualization, [this]{
+        CORRADE_INTERNAL_ASSERT(_data->selectedObject);
+
+        /* Advance through the options */
+        _visualization = Visualization(UnsignedByte(_visualization) + 1);
+
+        Shaders::MeshVisualizerGL3D::Flags flags = setupVisualization( _data->selectedObject->meshId())|(_data->selectedObject->jointCount() ? Shaders::MeshVisualizerGL3D::Flag::DynamicPerVertexJointCount : Shaders::MeshVisualizerGL3D::Flags{});
+        _data->selectedObject->setShader(meshVisualizerShader(flags));
+    });
+
+    /* Connect animation controls */
+    ui.eventLayer().onTapOrClick(_animationPlayPause, {*this, &ScenePlayer::playPause});
+    ui.eventLayer().onTapOrClick(_animationStop, {*this, &ScenePlayer::stop});
+    ui.eventLayer().onTapOrClick(_animationBackward, {*this, &ScenePlayer::backward});
+    ui.eventLayer().onTapOrClick(_animationForward, {*this, &ScenePlayer::forward});
 
     /* Set up offscreen rendering for object ID retrieval */
     _selectionDepth.setStorage(GL::RenderbufferFormat::DepthComponent24, application.framebufferSize());
@@ -754,89 +749,6 @@ Shaders::MeshVisualizerGL3D& ScenePlayer::meshVisualizerShader(Shaders::MeshVisu
     return found->second;
 }
 
-void ScenePlayer::initializeUi() {
-    _baseUiPlane.emplace(*_ui);
-
-    if(_shadeless) _baseUiPlane->shadeless.setStyle(Ui::Style::Success);
-    if(_data) {
-        if(_data->visualizeObjects)
-            _baseUiPlane->objectVisualization.setStyle(Ui::Style::Success);
-        if(_data->selectedObject)
-            setupVisualization(_data->selectedObject->meshId());
-    }
-
-    Interconnect::connect(_baseUiPlane->shadeless, &Ui::Button::tapped, *this, &ScenePlayer::toggleShadeless);
-    Interconnect::connect(_baseUiPlane->objectVisualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleObjectVisualization);
-    Interconnect::connect(_baseUiPlane->meshVisualization, &Ui::Button::tapped, *this, &ScenePlayer::cycleMeshVisualization);
-    Interconnect::connect(_baseUiPlane->play, &Ui::Button::tapped, *this, &ScenePlayer::play);
-    Interconnect::connect(_baseUiPlane->pause, &Ui::Button::tapped, *this, &ScenePlayer::pause);
-    Interconnect::connect(_baseUiPlane->stop, &Ui::Button::tapped, *this, &ScenePlayer::stop);
-    Interconnect::connect(_baseUiPlane->backward, &Ui::Button::tapped, *this, &ScenePlayer::backward);
-    Interconnect::connect(_baseUiPlane->forward, &Ui::Button::tapped, *this, &ScenePlayer::forward);
-}
-
-void ScenePlayer::setControlsVisible(bool visible) {
-    if(visible) {
-        if(_data) {
-            if(!_data->player.isEmpty()) {
-                if(_data->player.state() == Animation::State::Playing) {
-                    _baseUiPlane->play.hide();
-                    _baseUiPlane->pause.show();
-                } else {
-                    _baseUiPlane->play.show();
-                    _baseUiPlane->pause.hide();
-                }
-                Ui::Widget::show({
-                    _baseUiPlane->backward,
-                    _baseUiPlane->stop,
-                    _baseUiPlane->forward,
-                    _baseUiPlane->animationProgress});
-            }
-
-            _baseUiPlane->shadeless.show();
-
-            Ui::Widget::setVisible(_data->selectedObject, {
-                _baseUiPlane->meshVisualization,
-                _baseUiPlane->objectInfo});
-            Ui::Widget::setVisible(!_data->selectedObject, {
-                _baseUiPlane->objectVisualization,
-                _baseUiPlane->modelInfo});
-        }
-
-    } else {
-        Ui::Widget::hide({
-            _baseUiPlane->shadeless,
-            _baseUiPlane->backward,
-            _baseUiPlane->play,
-            _baseUiPlane->pause,
-            _baseUiPlane->stop,
-            _baseUiPlane->forward,
-            _baseUiPlane->modelInfo,
-            _baseUiPlane->objectVisualization,
-            _baseUiPlane->meshVisualization,
-            _baseUiPlane->objectInfo,
-            _baseUiPlane->animationProgress});
-    }
-}
-
-void ScenePlayer::toggleShadeless() {
-    /* _shadeless is used by the drawables to set up the shaders differently */
-    _baseUiPlane->shadeless.setStyle((_shadeless ^= true) ? Ui::Style::Success : Ui::Style::Default);
-}
-
-void ScenePlayer::cycleObjectVisualization() {
-    _baseUiPlane->objectVisualization.setStyle((_data->visualizeObjects ^= true) ? Ui::Style::Success : Ui::Style::Default);
-}
-
-void ScenePlayer::cycleMeshVisualization() {
-    CORRADE_INTERNAL_ASSERT(_data->selectedObject);
-
-    /* Advance through the options */
-    _visualization = Visualization(UnsignedByte(_visualization) + 1);
-
-    _data->selectedObject->setShader(meshVisualizerShader(setupVisualization( _data->selectedObject->meshId())|(_data->selectedObject->jointCount() ? Shaders::MeshVisualizerGL3D::Flag::DynamicPerVertexJointCount : Shaders::MeshVisualizerGL3D::Flags{})));
-}
-
 Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t meshId) {
     const MeshInfo& info = _data->meshes[meshId];
 
@@ -857,12 +769,12 @@ Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t m
         _visualization = Visualization::Begin;
 
     if(_visualization == Visualization::Wireframe) {
-        _baseUiPlane->meshVisualization.setText("Wireframe");
+        _cycleMeshVisualization.setText("Wireframe"_s);
         return Shaders::MeshVisualizerGL3D::Flag::Wireframe;
     }
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframeTbn) {
-        _baseUiPlane->meshVisualization.setText("Wire + TBN");
+        _cycleMeshVisualization.setText("Wire + TBN"_s);
         Shaders::MeshVisualizerGL3D::Flags flags =
             Shaders::MeshVisualizerGL3D::Flag::Wireframe|
             Shaders::MeshVisualizerGL3D::Flag::TangentDirection|
@@ -876,35 +788,35 @@ Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t m
     #endif
 
     if(_visualization == Visualization::WireframeObjectId) {
-        _baseUiPlane->meshVisualization.setText("Wire + Object ID");
+        _cycleMeshVisualization.setText("Wire + Object ID"_s);
         return Shaders::MeshVisualizerGL3D::Flag::Wireframe|Shaders::MeshVisualizerGL3D::Flag::InstancedObjectId;
     }
 
     if(_visualization == Visualization::WireframeVertexId) {
-        _baseUiPlane->meshVisualization.setText("Wire + Vertex ID");
+        _cycleMeshVisualization.setText("Wire + Vertex ID"_s);
         return Shaders::MeshVisualizerGL3D::Flag::Wireframe|Shaders::MeshVisualizerGL3D::Flag::VertexId;
     }
 
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::WireframePrimitiveId) {
-        _baseUiPlane->meshVisualization.setText("Wire + Prim ID");
+        _cycleMeshVisualization.setText("Wire + Prim ID"_s);
         return Shaders::MeshVisualizerGL3D::Flag::Wireframe|Shaders::MeshVisualizerGL3D::Flag::PrimitiveId;
     }
     #endif
 
     if(_visualization == Visualization::ObjectId) {
-        _baseUiPlane->meshVisualization.setText("Object ID");
+        _cycleMeshVisualization.setText("Object ID"_s);
         return Shaders::MeshVisualizerGL3D::Flag::InstancedObjectId;
     }
 
     if(_visualization == Visualization::VertexId) {
-        _baseUiPlane->meshVisualization.setText("Vertex ID");
+        _cycleMeshVisualization.setText("Vertex ID"_s);
         return Shaders::MeshVisualizerGL3D::Flag::VertexId;
     }
 
     #ifndef MAGNUM_TARGET_GLES
     if(_visualization == Visualization::PrimitiveId) {
-        _baseUiPlane->meshVisualization.setText("Primitive ID");
+        _cycleMeshVisualization.setText("Primitive ID"_s);
         return Shaders::MeshVisualizerGL3D::Flag::PrimitiveId;
     }
     #endif
@@ -912,24 +824,22 @@ Shaders::MeshVisualizerGL3D::Flags ScenePlayer::setupVisualization(std::size_t m
     CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 }
 
-void ScenePlayer::play() {
+void ScenePlayer::playPause() {
     if(!_data) return;
 
-    _baseUiPlane->play.hide();
-    _baseUiPlane->pause.show();
-    Ui::Widget::enable({
-        _baseUiPlane->backward,
-        _baseUiPlane->stop,
-        _baseUiPlane->forward});
-    _data->player.play(std::chrono::system_clock::now().time_since_epoch());
-}
+    if(_data->player.state() == Animation::State::Playing) {
+        _data->player.pause(std::chrono::system_clock::now().time_since_epoch());
+        _animationPlayPause.setText("Play"_s);
+        _animationPlayPause.setStyle(Ui::ButtonStyle::Success);
+    } else {
+        _data->player.play(std::chrono::system_clock::now().time_since_epoch());
+        _animationPlayPause.setText("Pause"_s);
+        _animationPlayPause.setStyle(Ui::ButtonStyle::Warning);
+    }
 
-void ScenePlayer::pause() {
-    if(!_data) return;
-
-    _baseUiPlane->play.show();
-    _baseUiPlane->pause.hide();
-    _data->player.pause(std::chrono::system_clock::now().time_since_epoch());
+    _ui.clearNodeFlags(_animationBackward, Ui::NodeFlag::Disabled);
+    _ui.clearNodeFlags(_animationStop, Ui::NodeFlag::Disabled);
+    _ui.clearNodeFlags(_animationForward, Ui::NodeFlag::Disabled);
 }
 
 void ScenePlayer::stop() {
@@ -937,12 +847,12 @@ void ScenePlayer::stop() {
 
     _data->player.stop();
 
-    _baseUiPlane->play.show();
-    _baseUiPlane->pause.hide();
-    Ui::Widget::disable({
-        _baseUiPlane->backward,
-        _baseUiPlane->stop,
-        _baseUiPlane->forward});
+    _animationPlayPause.setText("Play"_s);
+    _animationPlayPause.setStyle(Ui::ButtonStyle::Success);
+
+    _ui.addNodeFlags(_animationBackward, Ui::NodeFlag::Disabled);
+    _ui.addNodeFlags(_animationStop, Ui::NodeFlag::Disabled);
+    _ui.addNodeFlags(_animationForward, Ui::NodeFlag::Disabled);
 }
 
 void ScenePlayer::backward() {
@@ -954,15 +864,17 @@ void ScenePlayer::forward() {
 }
 
 void ScenePlayer::updateAnimationTime(Int deciseconds) {
-    if(_baseUiPlane->animationProgress.flags() & Ui::WidgetFlag::Hidden)
+    if(_ui.nodeFlags(_animationProgress) >= Ui::NodeFlag::Hidden)
         return;
 
     const Int duration = _data->player.duration().size()*10;
-    /** @todo drop the ArrayView cast once the Ui library is STL-free */
-    _baseUiPlane->animationProgress.setText(Containers::ArrayView<const char>{Utility::format(
+    _animationProgress.setText(Utility::format(
         "{:.2}:{:.2}.{:.1} / {:.2}:{:.2}.{:.1}",
         deciseconds/600, deciseconds/10%60, deciseconds%10,
-        duration/600, duration/10%60, duration%10)});
+        duration/600, duration/10%60, duration%10),
+        /** @todo ugh, having to specify this every time is NASTY, what to do
+            besides supplying extra style variants? */
+        Text::Alignment::MiddleLeft);
 }
 
 void ScenePlayer::updateLightColorBrightness() {
@@ -1577,18 +1489,19 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
     }
 
     /* Populate the model info */
-    const Containers::StringView basename = Utility::Path::split(filename).second();
-    /** @todo drop the ArrayView cast once the Ui library is STL-free */
-    _baseUiPlane->modelInfo.setText(Containers::ArrayView<const char>{_data->modelInfo = Utility::format(
+    _modelInfo.setText(Containers::ArrayView<const char>{Utility::format(
         "{}: {} objs, {} cams, {} meshes, {} mats, {}/{} texs, {} anims",
-        basename.prefix(Math::min(std::size_t{32}, basename.size())),
+        Utility::Path::split(filename).second(),
         importer.objectCount(),
         importer.cameraCount(),
         importer.meshCount(),
         importer.materialCount(),
         importer.textureCount(),
         importer.image2DCount(),
-        importer.animationCount())});
+        importer.animationCount())},
+        /** @todo ugh, having to specify this every time is NASTY, what to do
+            besides supplying extra style variants? */
+        Text::Alignment::MiddleLeft);
 
     if(!_data->player.isEmpty()) {
         /* Animate the elapsed time -- trigger update every 1/10th a second */
@@ -1604,7 +1517,8 @@ void ScenePlayer::load(Containers::StringView filename, Trade::AbstractImporter&
        show the controls. Otherwise just play it once and without controls. */
     if(filename) {
         _data->player.setPlayCount(0);
-        setControlsVisible(true);
+        if(!_data->player.isEmpty())
+            _ui.clearNodeFlags(_animationControls, Ui::NodeFlag::Hidden);
     }
 }
 
@@ -1834,18 +1748,6 @@ void ScenePlayer::drawEvent() {
     _profiler.endFrame();
     _profiler.printStatistics(_profilerOut, 10);
 
-    /* Draw the UI. Disable the depth buffer and enable premultiplied alpha
-       blending. */
-    if(_drawUi) {
-        GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
-        GL::Renderer::enable(GL::Renderer::Feature::Blending);
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-        _ui->draw();
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::Zero);
-        GL::Renderer::disable(GL::Renderer::Feature::Blending);
-        GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
-    }
-
     /* Schedule a redraw only if profiling is enabled or the player is playing
        to avoid hogging the CPU */
     if(_profiler.isEnabled() || (_data && _data->player.state() == Animation::State::Playing))
@@ -1859,21 +1761,8 @@ void ScenePlayer::drawEvent() {
 }
 
 void ScenePlayer::viewportEvent(ViewportEvent& event) {
-    _baseUiPlane = Containers::NullOpt;
-    _ui->relayout(Vector2(event.windowSize())/event.dpiScaling(), event.windowSize(), event.framebufferSize());
-    initializeUi();
-
-    if(_data) {
-        /* Refresh proper state of all controls -- keep hidden if hidden, show
-           if shown, animation state only when there's an animation */
-        setControlsVisible(controlsVisible());
-
+    if(_data)
         _data->camera->setViewport(event.framebufferSize());
-        /** @todo drop the ArrayView casts once the Ui library is STL-free */
-        _baseUiPlane->modelInfo.setText(Containers::ArrayView<const char>{_data->modelInfo});
-        _baseUiPlane->objectInfo.setText(Containers::ArrayView<const char>{_data->objectInfo.prefix(Math::min(_data->objectInfo.size(), std::size_t{128}) /** @todo fix in the Ui library */)});
-        updateAnimationTime(_data->elapsedTimeAnimationDestination);
-    }
 
     for(auto& i: _meshVisualizerShaders)
         i.second.setViewportSize(Vector2{event.framebufferSize()});
@@ -1995,7 +1884,7 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
 
     /* Pause/seek the animation */
     } else if(event.key() == KeyEvent::Key::Space) {
-        _data->player.state() == Animation::State::Paused ? play() : pause();
+        playPause();
     } else if(event.key() == KeyEvent::Key::Left) {
         backward();
     } else if(event.key() == KeyEvent::Key::Right) {
@@ -2021,12 +1910,6 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
 }
 
 void ScenePlayer::mousePressEvent(MouseEvent& event) {
-    if(_drawUi && _ui->handlePressEvent(event.position())) {
-        redraw();
-        event.setAccepted();
-        return;
-    }
-
     /* RMB to select */
     if(event.button() == MouseEvent::Button::Right && _data) {
         _selectionFramebuffer.bind(); /** @todo mapForDraw() should bind implicitly */
@@ -2098,14 +1981,17 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             #endif
 
         /* Show either global or object-specific widgets */
-        Ui::Widget::setVisible(selectedId < _data->objects.size(), {
-            _baseUiPlane->objectInfo,
-            _baseUiPlane->meshVisualization
-        });
-        Ui::Widget::setVisible(selectedId >= _data->objects.size(), {
-            _baseUiPlane->modelInfo,
-            _baseUiPlane->objectVisualization
-        });
+        if(selectedId < _data->objects.size()) {
+            _ui.clearNodeFlags(_objectInfo, Ui::NodeFlag::Hidden);
+            _ui.clearNodeFlags(_cycleMeshVisualization, Ui::NodeFlag::Hidden);
+            _ui.addNodeFlags(_modelInfo, Ui::NodeFlag::Hidden);
+            _ui.addNodeFlags(_toggleObjectVisualization, Ui::NodeFlag::Hidden);
+        } else {
+            _ui.addNodeFlags(_objectInfo, Ui::NodeFlag::Hidden);
+            _ui.addNodeFlags(_cycleMeshVisualization, Ui::NodeFlag::Hidden);
+            _ui.clearNodeFlags(_modelInfo, Ui::NodeFlag::Hidden);
+            _ui.clearNodeFlags(_toggleObjectVisualization, Ui::NodeFlag::Hidden);
+        }
 
         /* If nothing is selected, the global info is shown */
         if(selectedId >= _data->objects.size()) {
@@ -2122,6 +2008,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             const ObjectInfo& objectInfo = _data->objects[selectedId];
 
             /* A mesh is selected */
+            Containers::String objectInfoString;
             if(objectInfo.meshId != 0xffffffffu) {
                 CORRADE_INTERNAL_ASSERT(_data->meshes[objectInfo.meshId].mesh);
                 MeshInfo& meshInfo = _data->meshes[objectInfo.meshId];
@@ -2139,7 +2026,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                     _shadeless, _data->selectedObjectDrawables};
 
                 /* Show mesh info */
-                _data->objectInfo = Utility::format(
+                objectInfoString = Utility::format(
                     /** @todo wait, what about non-indexed? */
                     "{}: mesh {}, indexed, {} attribs, {} verts, {} prims, {:.1f} kB",
                     objectInfo.name,
@@ -2154,7 +2041,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
                 CORRADE_INTERNAL_ASSERT(_data->lights[_data->objects[selectedId].lightId].light);
                 LightInfo& lightInfo = _data->lights[_data->objects[selectedId].lightId];
 
-                _data->objectInfo = Utility::format(
+                objectInfoString = Utility::format(
                     "{}: {} {}, range {}, intensity {}",
                     objectInfo.name,
                     lightInfo.type,
@@ -2165,15 +2052,17 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
             /* Something else is selected from object visualization, display
                just generic info */
             } else {
-                _data->objectInfo = Utility::format(
+                objectInfoString = Utility::format(
                     "{}: {}, {} children",
                     objectInfo.name,
                     objectInfo.type,
                     objectInfo.childCount);
             }
 
-            /** @todo drop the ArrayView cast once the Ui library is STL-free */
-            _baseUiPlane->objectInfo.setText(Containers::ArrayView<const char>{_data->objectInfo.prefix(Math::min(_data->objectInfo.size(), std::size_t{128}) /** @todo fix in the Ui library */)});
+            _objectInfo.setText(objectInfoString,
+                /** @todo ugh, having to specify this every time is NASTY, what
+                    to do besides supplying extra style variants? */
+                Text::Alignment::MiddleLeft);
         }
 
         event.setAccepted();
@@ -2194,14 +2083,6 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
     }
 }
 
-void ScenePlayer::mouseReleaseEvent(MouseEvent& event) {
-    if(_drawUi && _ui->handleReleaseEvent(event.position())) {
-        redraw();
-        event.setAccepted();
-        return;
-    }
-}
-
 void ScenePlayer::mouseMoveEvent(MouseMoveEvent& event) {
     /* In some cases (when focusing a window by a click) the browser reports a
        move event with pressed buttons *before* the corresponding press event.
@@ -2213,12 +2094,6 @@ void ScenePlayer::mouseMoveEvent(MouseMoveEvent& event) {
     if(_lastPosition == Vector2i{-1}) _lastPosition = event.position();
     const Vector2i delta = event.position() - _lastPosition;
     _lastPosition = event.position();
-
-    if(_drawUi && _ui->handleMoveEvent(event.position())) {
-        redraw();
-        event.setAccepted();
-        return;
-    }
 
     /* Due to compatibility reasons, scroll is also reported as a press event,
        so filter that out */
@@ -2282,8 +2157,8 @@ void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
 
 }
 
-Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::FrameProfilerGL::Values profilerValues, bool& drawUi) {
-    return Containers::Pointer<ScenePlayer>{InPlaceInit, application, uiToStealFontFrom, profilerValues, drawUi};
+Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls, const DebugTools::FrameProfilerGL::Values profilerValues) {
+    return Containers::Pointer<ScenePlayer>{InPlaceInit, application, ui, controls, profilerValues};
 }
 
 }}

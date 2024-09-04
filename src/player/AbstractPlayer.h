@@ -25,8 +25,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <Corrade/PluginManager/PluginManager.h>
-#include <Corrade/Utility/Utility.h>
 #include <Magnum/DebugTools/FrameProfiler.h>
 #ifdef CORRADE_TARGET_EMSCRIPTEN
 #include <Magnum/Platform/EmscriptenApplication.h>
@@ -41,21 +39,9 @@ namespace Magnum { namespace Player {
 
 class Player;
 
-class AbstractUiScreen: public Platform::Screen {
+class AbstractPlayer: public Platform::Screen {
     public:
-        AbstractUiScreen(Platform::ScreenedApplication& application, PropagatedEvents events): Platform::Screen{application, events} {}
-
-        bool controlsVisible() const;
-
-    private:
-        friend Player;
-
-        virtual void setControlsVisible(bool visible) = 0;
-};
-
-class AbstractPlayer: public AbstractUiScreen {
-    public:
-        explicit AbstractPlayer(Platform::ScreenedApplication& application, PropagatedEvents events): AbstractUiScreen{application, events} {}
+        explicit AbstractPlayer(Platform::ScreenedApplication& application, PropagatedEvents events): Platform::Screen{application, events} {}
 
     private:
         friend Player;
@@ -64,8 +50,8 @@ class AbstractPlayer: public AbstractUiScreen {
 };
 
 /* Extreme PIMPL. */
-Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, const DebugTools::FrameProfilerGL::Values profilerValues, bool& drawUi);
-Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& uiToStealFontFrom, bool& drawUi);
+Containers::Pointer<AbstractPlayer> createScenePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls, const DebugTools::FrameProfilerGL::Values profilerValues);
+Containers::Pointer<AbstractPlayer> createImagePlayer(Platform::ScreenedApplication& application, Ui::UserInterface& ui, Ui::NodeHandle controls);
 
 }}
 
