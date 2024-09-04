@@ -495,6 +495,14 @@ template<class UserInterface> class BasicSnapLayout: public AbstractSnapLayout {
         /** @copydoc AbstractSnapLayout::AbstractSnapLayout(AbstractUserInterface&, SnapLayouter&, Snaps, NodeHandle, Snaps) */
         explicit BasicSnapLayout(UserInterface& ui, SnapLayouter& layouter, Snaps snapFirst, NodeHandle target, Snaps snapNext): AbstractSnapLayout{ui, layouter, snapFirst, target, snapNext} {}
 
+        /**
+         * @brief Construct using the default @ref SnapLayouter
+         *
+         * Delegates to @ref BasicSnapLayout(UserInterface&, SnapLayouter&, Snaps, NodeHandle, Snaps)
+         * with the instance coming from @ref UserInterface::snapLayouter().
+         */
+        explicit BasicSnapLayout(UserInterface& ui, Snaps snapFirst, NodeHandle target, Snaps snapNext): BasicSnapLayout{ui, ui.snapLayouter(), snapFirst, target, snapNext} {}
+
         /** @brief Copying is not allowed */
         BasicSnapLayout(const BasicSnapLayout&) = delete;
 
@@ -565,6 +573,15 @@ MAGNUM_WHEE_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& 
 MAGNUM_WHEE_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& size, NodeFlags flags = {});
 
 /**
+@brief Create a node layouted with the default @ref SnapLayouter
+@m_since_latest
+
+Delegates into @ref snap(UserInterface&, SnapLayouter&, Snaps, NodeHandle, const Vector2&, NodeFlags)
+with the instance coming from @ref UserInterface::snapLayouter().
+*/
+MAGNUM_WHEE_EXPORT Anchor snap(UserInterface& ui, Snaps snap, NodeHandle target, const Vector2& size, NodeFlags flags = {});
+
+/**
 @brief Create a node layouted with @ref SnapLayouter with custom offset
 @m_since_latest
 
@@ -574,6 +591,15 @@ the @p offset is added to the offset calculated by the layout.
 MAGNUM_WHEE_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 /** @overload */
 MAGNUM_WHEE_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, NodeHandle target, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
+
+/**
+@brief Create a node layouted with the default @ref SnapLayouter with custom offset
+@m_since_latest
+
+Delegates into @ref snap(UserInterface&, SnapLayouter&, Snaps, NodeHandle, const Vector2&, const Vector2&, NodeFlags)
+with the instance coming from @ref UserInterface::snapLayouter().
+*/
+MAGNUM_WHEE_EXPORT Anchor snap(UserInterface& ui, Snaps snap, NodeHandle target, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
 /**
 @brief Create a root node layouted with @ref SnapLayouter
@@ -587,6 +613,15 @@ MAGNUM_WHEE_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& 
 MAGNUM_WHEE_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& size, NodeFlags flags = {});
 
 /**
+@brief Create a root node layouted with the default @ref SnapLayouter
+@m_since_latest
+
+Delegates into @ref snap(UserInterface&, SnapLayouter&, Snaps, const Vector2&, NodeFlags)
+with the instance coming from @ref UserInterface::snapLayouter().
+*/
+MAGNUM_WHEE_EXPORT Anchor snap(UserInterface& ui, Snaps snap, const Vector2& size, NodeFlags flags = {});
+
+/**
 @brief Create a root node layouted with @ref SnapLayouter with custom offset
 @m_since_latest
 
@@ -596,6 +631,15 @@ the @p offset is added to the offset calculated by the layout.
 MAGNUM_WHEE_EXPORT AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 /** @overload */
 MAGNUM_WHEE_EXPORT Anchor snap(UserInterface& ui, SnapLayouter& layouter, Snaps snap, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
+
+/**
+@brief Create a root node layouted with the default @ref SnapLayouter with custom offset
+@m_since_latest
+
+Delegates into @ref snap(UserInterface&, SnapLayouter&, Snaps, const Vector2&, const Vector2&, NodeFlags)
+with the instance coming from @ref UserInterface::snapLayouter().
+*/
+MAGNUM_WHEE_EXPORT Anchor snap(UserInterface& ui, Snaps snap, const Vector2& offset, const Vector2& size, NodeFlags flags = {});
 
 }}
 

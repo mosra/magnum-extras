@@ -64,11 +64,13 @@ struct SnapLayouterTest: TestSuite::Tester {
 
     template<class T> void layoutConstructInside();
     template<class T> void layoutConstructOutside();
+    void layoutConstructDefaultLayouter();
     template<class T> void layoutConstructCopy();
     template<class T> void layoutConstructMove();
 
     template<class T> void addRemove();
     void addRemoveHandleRecycle();
+    void addDefaultLayouter();
     void layoutInvalid();
 
     void setSize();
@@ -236,6 +238,7 @@ SnapLayouterTest::SnapLayouterTest() {
 
               &SnapLayouterTest::layoutConstructInside<AbstractSnapLayout>,
               &SnapLayouterTest::layoutConstructInside<SnapLayout>,
+              &SnapLayouterTest::layoutConstructDefaultLayouter,
               &SnapLayouterTest::layoutConstructOutside<AbstractSnapLayout>,
               &SnapLayouterTest::layoutConstructOutside<SnapLayout>,
               &SnapLayouterTest::layoutConstructCopy<AbstractSnapLayout>,
@@ -246,6 +249,7 @@ SnapLayouterTest::SnapLayouterTest() {
               &SnapLayouterTest::addRemove<AbstractSnapLayout>,
               &SnapLayouterTest::addRemove<SnapLayout>,
               &SnapLayouterTest::addRemoveHandleRecycle,
+              &SnapLayouterTest::addDefaultLayouter,
               &SnapLayouterTest::layoutInvalid,
 
               &SnapLayouterTest::setSize,
@@ -602,6 +606,26 @@ template<class T> void SnapLayouterTest::layoutConstructOutside() {
     CORRADE_COMPARE(layout.targetNext(), NodeHandle::Null);
 }
 
+void SnapLayouterTest::layoutConstructDefaultLayouter() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+    NodeHandle node = ui.createNode({}, {});
+
+    /* The target is also a parent in this case */
+    SnapLayout layout{ui,
+        Snap::Bottom|Snap::InsideY, node,
+        Snap::Top|Snap::Left|Snap::Right};
+    CORRADE_COMPARE(&layout.ui(), &ui);
+    CORRADE_COMPARE(&layout.layouter(), &ui.snapLayouter());
+    CORRADE_COMPARE(layout.parent(), node);
+    CORRADE_COMPARE(layout.snapFirst(), Snap::Bottom|Snap::InsideY);
+    CORRADE_COMPARE(layout.targetFirst(), node);
+    CORRADE_COMPARE(layout.snapNext(), Snap::Top|Snap::Left|Snap::Right);
+    CORRADE_COMPARE(layout.targetNext(), NodeHandle::Null);
+}
+
 template<class T> void SnapLayouterTest::layoutConstructCopy() {
     setTestCaseTemplateName(SnapLayoutTraits<T>::name());
 
@@ -821,6 +845,67 @@ template<class T> void SnapLayouterTest::addRemove() {
     layouter.remove(layoutHandleData(anchor9b));
     CORRADE_VERIFY(!layouter.isHandleValid(anchor6));
     CORRADE_VERIFY(!layouter.isHandleValid(anchor9b));
+}
+
+void SnapLayouterTest::addDefaultLayouter() {
+    /* Subset of addRemove() testing just the snap() overloads that take the
+       implicit layouter instance */
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    NodeHandle node = ui.createNode({}, {});
+    NodeHandle child = ui.createNode(node, {}, {});
+
+    /* Full signature */
+    Anchor anchor1 = Whee::snap(ui, Snap::Bottom|Snap::InsideY, child, {13.0f, 14.0f}, {15.0f, 16.0f}, NodeFlag::NoEvents|NodeFlag::Clip);
+    CORRADE_COMPARE(&anchor1.ui(), &ui);
+    CORRADE_COMPARE(anchor1, nodeHandle(2, 1));
+    CORRADE_COMPARE(ui.nodeParent(anchor1), child);
+    CORRADE_COMPARE(ui.nodeOffset(anchor1), (Vector2{13.0f, 14.0f}));
+    CORRADE_COMPARE(ui.nodeSize(anchor1), (Vector2{15.0f, 16.0f}));
+    CORRADE_COMPARE(ui.nodeFlags(anchor1), NodeFlag::NoEvents|NodeFlag::Clip);
+    CORRADE_COMPARE(anchor1, layoutHandle(ui.snapLayouter().handle(), 0, 1));
+    CORRADE_COMPARE(ui.snapLayouter().snap(anchor1), Snap::Bottom|Snap::InsideY);
+    CORRADE_COMPARE(ui.snapLayouter().target(anchor1), child);
+
+    /* With offset omitted */
+    Anchor anchor2 = Whee::snap(ui, Snap::Right|Snap::InsideY, child, {17.0f, 18.0f}, NodeFlag::Hidden);
+    CORRADE_COMPARE(&anchor2.ui(), &ui);
+    CORRADE_COMPARE(anchor2, nodeHandle(3, 1));
+    CORRADE_COMPARE(ui.nodeParent(anchor2), node);
+    CORRADE_COMPARE(ui.nodeOffset(anchor2), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(anchor2), (Vector2{17.0f, 18.0f}));
+    CORRADE_COMPARE(ui.nodeFlags(anchor2), NodeFlag::Hidden);
+    CORRADE_COMPARE(anchor2, layoutHandle(ui.snapLayouter().handle(), 1, 1));
+    CORRADE_COMPARE(ui.snapLayouter().snap(anchor2), Snap::Right|Snap::InsideY);
+    CORRADE_COMPARE(ui.snapLayouter().target(anchor2), child);
+
+    /* With implicit null parent */
+    Anchor anchor3 = Whee::snap(ui, Snap::Left|Snap::Bottom, {23.0f, 24.0f}, {25.0f, 26.0f}, NodeFlag::Clip);
+    CORRADE_COMPARE(&anchor3.ui(), &ui);
+    CORRADE_COMPARE(anchor3, nodeHandle(4, 1));
+    CORRADE_COMPARE(ui.nodeParent(anchor3), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOffset(anchor3), (Vector2{23.0f, 24.0f}));
+    CORRADE_COMPARE(ui.nodeSize(anchor3), (Vector2{25.0f, 26.0f}));
+    CORRADE_COMPARE(ui.nodeFlags(anchor3), NodeFlag::Clip);
+    CORRADE_COMPARE(anchor3, layoutHandle(ui.snapLayouter().handle(), 2, 1));
+    CORRADE_COMPARE(ui.snapLayouter().snap(anchor3), Snap::Left|Snap::Bottom);
+    CORRADE_COMPARE(ui.snapLayouter().target(anchor3), NodeHandle::Null);
+
+    /* With implicit null parent and offset omitted */
+    Anchor anchor4 = Whee::snap(ui, Snap::Bottom|Snap::NoSpace, {27.0f, 28.0f}, NodeFlag::Focusable);
+    CORRADE_COMPARE(&anchor4.ui(), &ui);
+    CORRADE_COMPARE(anchor4, nodeHandle(5, 1));
+    CORRADE_COMPARE(ui.nodeParent(anchor4), NodeHandle::Null);
+    CORRADE_COMPARE(ui.nodeOffset(anchor4), Vector2{});
+    CORRADE_COMPARE(ui.nodeSize(anchor4), (Vector2{27.0f, 28.0f}));
+    CORRADE_COMPARE(ui.nodeFlags(anchor4), NodeFlag::Focusable);
+    CORRADE_COMPARE(anchor4, layoutHandle(ui.snapLayouter().handle(), 3, 1));
+    CORRADE_COMPARE(ui.snapLayouter().snap(anchor4), Snap::Bottom|Snap::NoSpace);
+    CORRADE_COMPARE(ui.snapLayouter().target(anchor4), NodeHandle::Null);
 }
 
 void SnapLayouterTest::addRemoveHandleRecycle() {

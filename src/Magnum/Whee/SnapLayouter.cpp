@@ -36,7 +36,7 @@
 #include "Magnum/Whee/Handle.h"
 #include "Magnum/Whee/Implementation/orderNodesBreadthFirstInto.h"
 #include "Magnum/Whee/Implementation/snapLayouter.h"
-#include "Magnum/Whee/AbstractUserInterface.h"
+#include "Magnum/Whee/UserInterface.h"
 
 namespace Magnum { namespace Whee {
 
@@ -344,24 +344,35 @@ AbstractAnchor snap(AbstractUserInterface& ui, SnapLayouter& layouter, const Sna
 }
 
 Anchor snap(UserInterface& ui, SnapLayouter& layouter, const Snaps snap, const NodeHandle target, const Vector2& offset, const Vector2& size, const NodeFlags flags) {
-    /* Yes, again a reinterpret_cast like in BasicWidget so we don't need to
-       pull in UserInterface.h to know that UserInterface is derived from
-       AbstractUserInterface. The concrete implementation isn't needed for
-       anything here, it's just to be passed through to the concrete Anchor
-       return type. */
-    return Anchor{ui, Whee::snap(reinterpret_cast<AbstractUserInterface&>(ui), layouter, snap, target, offset, size, flags)};
+    return Anchor{ui, Whee::snap(static_cast<AbstractUserInterface&>(ui), layouter, snap, target, offset, size, flags)};
+}
+
+Anchor snap(UserInterface& ui, const Snaps snap, const NodeHandle target, const Vector2& offset, const Vector2& size, const NodeFlags flags) {
+    return Whee::snap(ui, ui.snapLayouter(), snap, target, offset, size, flags);
 }
 
 Anchor snap(UserInterface& ui, SnapLayouter& layouter, const Snaps snap, const NodeHandle target, const Vector2& size, const NodeFlags flags) {
     return Whee::snap(ui, layouter, snap, target, {}, size, flags);
 }
 
+Anchor snap(UserInterface& ui, const Snaps snap, const NodeHandle target, const Vector2& size, const NodeFlags flags) {
+    return Whee::snap(ui, ui.snapLayouter(), snap, target, {}, size, flags);
+}
+
 Anchor snap(UserInterface& ui, SnapLayouter& layouter, const Snaps snap, const Vector2& offset, const Vector2& size, const NodeFlags flags) {
     return Whee::snap(ui, layouter, snap, NodeHandle::Null, offset, size, flags);
 }
 
+Anchor snap(UserInterface& ui, const Snaps snap, const Vector2& offset, const Vector2& size, const NodeFlags flags) {
+    return Whee::snap(ui, ui.snapLayouter(), snap, NodeHandle::Null, offset, size, flags);
+}
+
 Anchor snap(UserInterface& ui, SnapLayouter& layouter, const Snaps snap, const Vector2& size, const NodeFlags flags) {
     return Whee::snap(ui, layouter, snap, {}, size, flags);
+}
+
+Anchor snap(UserInterface& ui, const Snaps snap, const Vector2& size, const NodeFlags flags) {
+    return Whee::snap(ui, ui.snapLayouter(), snap, {}, size, flags);
 }
 
 }}
