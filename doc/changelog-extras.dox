@@ -98,11 +98,7 @@ namespace Magnum {
 
 @subsection changelog-extras-latest-compatibility Potential compatibility breakages, removed APIs
 
--   Removed @ref Ui::UserInterface constructors taking a font without a
-    corresponding glyph cache instance that were deprecated in 2018.10, use
-    either @ref Ui::UserInterface::UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&)
-    or @ref Ui::UserInterface::UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
-    instead.
+-   The old UI library that was living in the @ref Ui namespace is removed
 
 @subsection changelog-extras-latest-documentation Documentation
 
@@ -142,8 +138,8 @@ Released 2020-06-27, tagged as
 @subsection changelog-extras-2020-06-compatibility Potential compatibility breakages, removed APIs
 
 -   Removed `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum
-    set deprecated in 2018.02, use @ref Ui::PlaneFlag and @ref Ui::PlaneFlags
-    instead
+    set deprecated in 2018.02, use @cpp Ui::PlaneFlag @ce and
+    @cpp Ui::PlaneFlags @ce instead
 
 @section changelog-extras-2019-10 2019.10
 
@@ -222,36 +218,36 @@ Released 2018-10-23, tagged as
     inspecting animated scene files (see
     [mosra/magnum-extras#6](https://github.com/mosra/magnum-extras/pull/6))
 -   Rudimentary support for user interface relayouting using
-    @ref Ui::UserInterface::relayout()
+    @cpp Ui::UserInterface::relayout() @ce
 
 @subsection changelog-extras-2018-10-changes Changes and improvements
 
--   @ref Ui::UserInterface can now take an explicit framebuffer size parameter
-    for more flexibility when rendering on HiDPI screens or in VR.
--   @ref Ui::UserInterface can now take an external font plugin mananger to
+-   @cpp Ui::UserInterface @ce can now take an explicit framebuffer size
+    parameter for more flexibility when rendering on HiDPI screens or in VR.
+-   @cpp Ui::UserInterface @ce can now take an external font plugin mananger to
     work better together with code that does text rendering on its own
--   It's now possible to change style of a @ref Ui::Modal as well
+-   It's now possible to change style of a @cpp Ui::Modal @ce as well
 
 @subsection changelog-extras-2018-10-buildsystem Build system
 
 -   There's now a PPA for Ubuntu packages. See @ref building-extras-packages-deb
     for more information. See also [mosra/magnum-extras#5](https://github.com/mosra/magnum-extras/pull/5).
--   Provide a better error when trying to build the @ref Ui library on OpenGL
-    ES 2.0 / WebGL 1.0 --- before it failed somewhere deep with no clear
+-   Provide a better error when trying to build the @cpp Ui @ce library on
+    OpenGL ES 2.0 / WebGL 1.0 --- before it failed somewhere deep with no clear
     relation to requiring ES3 features (see
     [mosra/magnum-extras#4](https://github.com/mosra/magnum-extras/issues/4))
 
 @subsection changelog-extras-2018-10-bugfixes Bug fixes
 
--   @ref Ui::Button::setStyle() was mistakenly not returning a reference to
+-   @cpp Ui::Button::setStyle() @ce was mistakenly not returning a reference to
     self, breaking method chaining
 
 @subsection changelog-extras-2018-10-deprecated Deprecated APIs
 
--   @ref Ui::UserInterface constructors taking a font without a corresponding
+-   @cpp Ui::UserInterface @ce constructors taking a font without a corresponding
     glyph cache instance are deprecated, use either
-    @ref Ui::UserInterface::UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&)
-    or @ref Ui::UserInterface::UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&)
+    @cpp Ui::UserInterface::UserInterface(const Vector2&, const Vector2i&, const StyleConfiguration&, const std::string&) @ce
+    or @cpp Ui::UserInterface::UserInterface(const Vector2&, const Vector2i&, Text::AbstractFont&, Text::GlyphCache&, const StyleConfiguration&) @ce
     instead.
 
 @section changelog-extras-2018-04 2018.04
@@ -271,7 +267,7 @@ Released 2018-05-01, tagged as
 
 -   Fixed the Debian package after introducing `SOVERSION` to all libraries
     (see [mosra/magnum#237](https://github.com/mosra/magnum/issues/237))
--   By mistake it was not possible to control static build of the @ref Ui
+-   By mistake it was not possible to control static build of the @cpp Ui @ce
     library independently on the core Magnum libraries
 -   Homebrew macOS packages were updated to install the stable version by
     default
@@ -293,7 +289,7 @@ for a high-level overview.
 -   iOS support
 -   WebAssembly support when building for Emscripten
 -   WebGL 2.0 support
--   New experimental @ref Ui library
+-   New experimental @cpp Ui @ce library
 
 @subsection changelog-extras-2018-02-buildsystem Build system
 
@@ -308,7 +304,7 @@ for a high-level overview.
 @subsection changelog-extras-2018-02-deprecated Deprecated APIs
 
 -   `Ui::AbstractPlane::Flag` enum and `Ui::AbstractPlane::Flags` enum set are
-    deprecated, use @ref Ui::PlaneFlag and @ref Ui::PlaneFlags instead
+    deprecated, use @cpp Ui::PlaneFlag @ce and @cpp Ui::PlaneFlags @ce instead
 
 @subsection changelog-extras-2018-02-documentation Documentation
 
