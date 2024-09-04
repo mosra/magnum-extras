@@ -42,6 +42,7 @@
 
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/EventLayer.h"
+#include "Magnum/Whee/SnapLayouter.h"
 #include "Magnum/Whee/Style.h"
 #include "Magnum/Whee/Style.hpp"
 #include "Magnum/Whee/TextLayer.h"
@@ -89,6 +90,8 @@ const struct {
         StyleFeature::TextLayerImages, 2, 1.0f, 16.0f*2},
     {"event layer",
         StyleFeature::EventLayer, {}, 1.0f, 0.0f},
+    {"snap layouter",
+        StyleFeature::SnapLayouter, {}, 1.0f, 0.0f},
     {"everything",
         StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, {}, 1.0f, 16.0f*2},
     {"text layer + text layer images, 0.625x DPI scaling",
@@ -352,6 +355,7 @@ void StyleTest::apply() {
     ui.setTextLayerInstance(Containers::pointer<TestTextLayer>(ui.createLayer(), textLayerShared));
 
     ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     McssDarkStyle style;
 
@@ -381,6 +385,10 @@ void StyleTest::apply() {
     }
     if(data.features >= StyleFeature::EventLayer) {
         /* Nothing to check here */
+    }
+    if(data.features >= StyleFeature::SnapLayouter) {
+        /* No need to check everything */
+        CORRADE_COMPARE(ui.snapLayouter().margin(), (Vector2{12.0f, 10.0f}));
     }
 }
 

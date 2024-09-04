@@ -44,6 +44,7 @@
 
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/EventLayer.h"
+#include "Magnum/Whee/SnapLayouter.h"
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/UserInterface.h"
 
@@ -607,7 +608,8 @@ StyleFeatures McssDarkStyle::doFeatures() const {
     return StyleFeature::BaseLayer|
            StyleFeature::TextLayer|
            StyleFeature::TextLayerImages|
-           StyleFeature::EventLayer;
+           StyleFeature::EventLayer|
+           StyleFeature::SnapLayouter;
 }
 
 UnsignedInt McssDarkStyle::doBaseLayerStyleUniformCount() const {
@@ -821,6 +823,16 @@ bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, Plu
         /* Right now nothing to set here. It's present in features() mainly in
            order to make UserInterface implicitly add this layer for use by the
            application. */
+    }
+
+    /* Snap layouter */
+    if(features >= StyleFeature::SnapLayouter) {
+        ui.snapLayouter()
+            /* Compared to m.css, which has both and margin and padding 1rem
+               (= 16px, matching font size), the spacing is slightly reduced
+               here. */
+            .setMargin({12.0f, 10.0f})
+            .setPadding({16.0f, 12.0f});
     }
 
     return true;
