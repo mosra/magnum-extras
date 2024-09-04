@@ -43,6 +43,7 @@ struct InputTest: WidgetTester {
 
     void construct();
     void constructTextProperties();
+    void constructNoCreate();
 
     void setStyle();
     void setStyleWhileActive();
@@ -59,6 +60,7 @@ InputTest::InputTest() {
     addTests<InputTest>({
         &InputTest::construct,
         &InputTest::constructTextProperties,
+        &InputTest::constructNoCreate,
 
         &InputTest::setStyle,
         &InputTest::setStyleWhileActive,
@@ -106,6 +108,13 @@ void InputTest::constructTextProperties() {
     CORRADE_VERIFY(ui.isHandleValid(input.textData()));
     /* Multiplied by 6 because of the Braille script */
     CORRADE_COMPARE(ui.textLayer().glyphCount(input.textData()), 5*6);
+}
+
+void InputTest::constructNoCreate() {
+    Input input{NoCreate, ui};
+    CORRADE_COMPARE(input.node(), NodeHandle::Null);
+    CORRADE_COMPARE(input.backgroundData(), DataHandle::Null);
+    CORRADE_COMPARE(input.textData(), DataHandle::Null);
 }
 
 void InputTest::setStyle() {

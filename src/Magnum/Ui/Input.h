@@ -71,6 +71,14 @@ class MAGNUM_UI_EXPORT Input: public Widget {
         /** @overload */
         explicit Input(const Anchor& anchor, Containers::StringView text, InputStyle style = InputStyle::Default);
 
+        /**
+         * @brief Construct with no underlying node
+         *
+         * The instance is equivalent to a moved-out state, i.e. not usable
+         * for anything. Move another instance over it to make it useful.
+         */
+        explicit Input(NoCreateT, UserInterface& ui): Widget{NoCreate, ui}, _style{}, _backgroundData{}, _textData{} {}
+
         /** @brief Style */
         InputStyle style() const { return _style; }
 

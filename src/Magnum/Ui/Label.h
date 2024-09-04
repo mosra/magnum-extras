@@ -91,6 +91,14 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         /** @overload */
         explicit Label(const Anchor& anchor, Containers::StringView text, LabelStyle style = LabelStyle::Default);
 
+        /**
+         * @brief Construct with no underlying node
+         *
+         * The instance is equivalent to a moved-out state, i.e. not usable
+         * for anything. Move another instance over it to make it useful.
+         */
+        explicit Label(NoCreateT, UserInterface& ui): Widget{NoCreate, ui}, _style{}, _icon{}, _data{} {}
+
         /** @brief Style */
         LabelStyle style() const { return _style; }
 

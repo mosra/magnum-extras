@@ -46,6 +46,7 @@ struct ButtonTest: WidgetTester {
     void constructTextOnlyTextProperties();
     void constructIconText();
     void constructIconTextTextProperties();
+    void constructNoCreate();
 
     void setStyle();
     void setStyleWhileActive();
@@ -82,7 +83,8 @@ ButtonTest::ButtonTest() {
         &ButtonTest::constructTextOnly,
         &ButtonTest::constructTextOnlyTextProperties,
         &ButtonTest::constructIconText,
-        &ButtonTest::constructIconTextTextProperties
+        &ButtonTest::constructIconTextTextProperties,
+        &ButtonTest::constructNoCreate,
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
 
@@ -338,6 +340,14 @@ void ButtonTest::constructIconTextTextProperties() {
         /* Multiplied by 6 because of the Braille script */
         CORRADE_COMPARE(ui.textLayer().glyphCount(button.textData()), 4*6);
     }
+}
+
+void ButtonTest::constructNoCreate() {
+    Button button{NoCreate, ui};
+    CORRADE_COMPARE(button.node(), NodeHandle::Null);
+    CORRADE_COMPARE(button.backgroundData(), DataHandle::Null);
+    CORRADE_COMPARE(button.iconData(), DataHandle::Null);
+    CORRADE_COMPARE(button.textData(), DataHandle::Null);
 }
 
 void ButtonTest::setStyle() {

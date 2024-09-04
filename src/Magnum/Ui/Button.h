@@ -110,6 +110,14 @@ class MAGNUM_UI_EXPORT Button: public Widget {
         /** @overload */
         explicit Button(const Anchor& anchor, Icon icon, Containers::StringView text, ButtonStyle style = ButtonStyle::Default);
 
+        /**
+         * @brief Construct with no underlying node
+         *
+         * The instance is equivalent to a moved-out state, i.e. not usable
+         * for anything. Move another instance over it to make it useful.
+         */
+        explicit Button(NoCreateT, UserInterface& ui): Widget{NoCreate, ui}, _style{}, _icon{}, _backgroundData{}, _iconData{}, _textData{} {}
+
         /** @brief Style */
         ButtonStyle style() const { return _style; }
 

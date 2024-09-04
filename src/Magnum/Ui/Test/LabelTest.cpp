@@ -43,6 +43,7 @@ struct LabelTest: WidgetTester {
     void constructIcon();
     void constructText();
     void constructTextTextProperties();
+    void constructNoCreate();
 
     void setStyle();
 
@@ -75,7 +76,8 @@ LabelTest::LabelTest() {
         &LabelTest::constructEmpty,
         &LabelTest::constructIcon,
         &LabelTest::constructText,
-        &LabelTest::constructTextTextProperties
+        &LabelTest::constructTextTextProperties,
+        &LabelTest::constructNoCreate
     }, &WidgetTester::setup,
        &WidgetTester::teardown);
 
@@ -212,6 +214,12 @@ void LabelTest::constructTextTextProperties() {
         /* Multiplied by 6 because of the Braille script */
         CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 6*6);
     }
+}
+
+void LabelTest::constructNoCreate() {
+    Label label{NoCreate, ui};
+    CORRADE_COMPARE(label.node(), NodeHandle::Null);
+    CORRADE_COMPARE(label.data(), DataHandle::Null);
 }
 
 void LabelTest::setStyle() {

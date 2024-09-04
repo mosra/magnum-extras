@@ -264,8 +264,10 @@ void Button::setText(const Containers::StringView text) {
 }
 
 DataHandle Button::backgroundData() const {
-    /* The background is implicitly from the base layer */
-    return dataHandle(ui().baseLayer().handle(), _backgroundData);
+    /* The background is implicitly from the base layer. It can be null only
+       for a NoCreate'd instance, otherwise not. */
+    return _backgroundData == LayerDataHandle::Null ? DataHandle::Null :
+        dataHandle(ui().baseLayer().handle(), _backgroundData);
 }
 
 DataHandle Button::iconData() const {

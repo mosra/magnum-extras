@@ -33,6 +33,7 @@
 #include <Corrade/Containers/Reference.h>
 #include <Corrade/Utility/Move.h>
 
+#include "Magnum/Tags.h"
 #include "Magnum/Ui/Ui.h"
 #include "Magnum/Ui/visibility.h"
 
@@ -69,6 +70,14 @@ class MAGNUM_UI_EXPORT AbstractWidget {
          * @see @ref AbstractUserInterface::isHandleValid(NodeHandle) const
          */
         explicit AbstractWidget(AbstractUserInterface& ui, NodeHandle node);
+
+        /**
+         * @brief Construct with no underlying node
+         *
+         * The instance is equivalent to a moved-out state, i.e. not usable
+         * for anything. Move another instance over it to make it useful.
+         */
+        explicit AbstractWidget(NoCreateT, AbstractUserInterface& ui): _ui{ui}, _node{} {}
 
         /**
          * @brief Construct from a positioning anchor
@@ -201,6 +210,9 @@ template<class UserInterface> class BasicWidget: public AbstractWidget {
                Back in 2010 doing this caused me to fail a uni assignment, I
                still stand behind doing it to untangle complex dependencies. */
             AbstractWidget{reinterpret_cast<const AbstractAnchor&>(anchor)} {}
+
+        /** @copydoc AbstractWidget::AbstractWidget(NoCreateT, AbstractUserInterface&) */
+        explicit BasicWidget(NoCreateT, UserInterface& ui): AbstractWidget{NoCreate, ui} {}
 
         /** @brief Copying is not allowed */
         BasicWidget(const BasicWidget<UserInterface>&) = delete;

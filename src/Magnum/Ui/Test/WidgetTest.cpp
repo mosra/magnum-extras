@@ -43,6 +43,7 @@ struct WidgetTest: TestSuite::Tester {
     template<class T> void construct();
     template<class T> void constructInvalid();
     template<class T> void constructFromAnchor();
+    template<class T> void constructNoCreate();
     template<class T> void constructCopy();
     template<class T> void constructMove();
 
@@ -61,6 +62,8 @@ WidgetTest::WidgetTest() {
               &WidgetTest::constructInvalid<Widget>,
               &WidgetTest::constructFromAnchor<AbstractWidget>,
               &WidgetTest::constructFromAnchor<Widget>,
+              &WidgetTest::constructNoCreate<AbstractWidget>,
+              &WidgetTest::constructNoCreate<Widget>,
               &WidgetTest::constructCopy<AbstractWidget>,
               &WidgetTest::constructCopy<Widget>,
               &WidgetTest::constructMove<AbstractWidget>,
@@ -146,6 +149,18 @@ template<class T> void WidgetTest::constructFromAnchor() {
 
     /* And is removed on destruction, making the anchor invalid */
     CORRADE_VERIFY(!ui.isHandleValid(a.node()));
+}
+
+template<class T> void WidgetTest::constructNoCreate() {
+    setTestCaseTemplateName(WidgetTraits<T>::name());
+
+    struct Interface: WidgetTraits<T>::UserInterfaceType {
+        explicit Interface(NoCreateT): WidgetTraits<T>::UserInterfaceType{NoCreate} {}
+    } ui{NoCreate};
+
+    T widget{NoCreate, ui};
+    CORRADE_COMPARE(&widget.ui(), &ui);
+    CORRADE_COMPARE(widget.node(), NodeHandle::Null);
 }
 
 template<class T> void WidgetTest::constructCopy() {
