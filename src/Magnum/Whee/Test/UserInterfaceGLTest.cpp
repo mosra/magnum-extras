@@ -37,6 +37,7 @@
 #include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/EventLayer.h"
 #include "Magnum/Whee/RendererGL.h"
+#include "Magnum/Whee/SnapLayouter.h"
 #include "Magnum/Whee/TextLayerGL.h"
 #include "Magnum/Whee/UserInterfaceGL.h"
 
@@ -67,6 +68,7 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
     void setStyleTextLayerArrayGlyphCache();
     void setStyleTextLayerImagesTextLayerNotPresentNotApplied();
     void setStyleEventLayerAlreadyPresent();
+    void setStyleSnapLayouterAlreadyPresent();
 
     private:
         PluginManager::Manager<Trade::AbstractImporter> _importerManager;
@@ -109,65 +111,73 @@ const struct {
     StyleFeatures expectedFeatures;
     StyleFeatures supportedFeatures;
     bool succeed;
-    UnsignedInt expectedLayerCount;
+    UnsignedInt expectedLayerCount, expectedLayouterCount;
     Containers::Array<StyleFeatures> features;
 } SetStyleData[]{
-    {"base layer only", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, {InPlaceInit, {
+    {"base layer only", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, 0, {InPlaceInit, {
         StyleFeature::BaseLayer
     }}},
-    {"base layer only, everything supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer, true, 1, {InPlaceInit, {
+    {"base layer only, everything supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, {InPlaceInit, {
         StyleFeature::BaseLayer
     }}},
-    {"text layer only", StyleFeature::TextLayer, StyleFeature::TextLayer, true, 1, {InPlaceInit, {
+    {"text layer only", StyleFeature::TextLayer, StyleFeature::TextLayer, true, 1, 0, {InPlaceInit, {
         StyleFeature::TextLayer
     }}},
-    {"text layer only, everything supported", StyleFeature::TextLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer, true, 1, {InPlaceInit, {
+    {"text layer only, everything supported", StyleFeature::TextLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, {InPlaceInit, {
         StyleFeature::TextLayer
     }}},
-    {"text layer + images only", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::TextLayer|StyleFeature::TextLayerImages, true, 1, {InPlaceInit, {
+    {"text layer + images only", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::TextLayer|StyleFeature::TextLayerImages, true, 1, 0, {InPlaceInit, {
         StyleFeature::TextLayer|StyleFeature::TextLayerImages
     }}},
-    {"text layer + images, applied gradually", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::TextLayer|StyleFeature::TextLayerImages, true, 1, {InPlaceInit, {
+    {"text layer + images, applied gradually", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::TextLayer|StyleFeature::TextLayerImages, true, 1, 0, {InPlaceInit, {
         StyleFeature::TextLayer,
         StyleFeature::TextLayerImages
     }}},
-    {"text layer + images only, everything supported", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, true, 1, {InPlaceInit, {
+    {"text layer + images only, everything supported", StyleFeature::TextLayer|StyleFeature::TextLayerImages, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, {InPlaceInit, {
         StyleFeature::TextLayer|StyleFeature::TextLayerImages
     }}},
-    {"event layer only", StyleFeature::EventLayer, StyleFeature::EventLayer, true, 1, {InPlaceInit, {
+    {"event layer only", StyleFeature::EventLayer, StyleFeature::EventLayer, true, 1, 0, {InPlaceInit, {
         StyleFeature::EventLayer
     }}},
-    {"event layer only, everything supported", StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer, true, 1, {InPlaceInit, {
+    {"event layer only, everything supported", StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 1, 0, {InPlaceInit, {
         StyleFeature::EventLayer
     }}},
-    {"everything except base layer", StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, true, 2, {InPlaceInit, {
+    {"snap layouter only", StyleFeature::SnapLayouter, StyleFeature::SnapLayouter, true, 0, 1, {InPlaceInit, {
+        StyleFeature::SnapLayouter
+    }}},
+    {"snap layouter only, everything supported", StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 0, 1, {InPlaceInit, {
+        StyleFeature::SnapLayouter
+    }}},
+    {"everything except base layer", StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 2, 1, {InPlaceInit, {
         ~StyleFeature::BaseLayer
     }}},
-    {"everything except base layer, applied gradually", StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, true, 2, {InPlaceInit, {
+    {"everything except base layer, applied gradually", StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 2, 1, {InPlaceInit, {
         StyleFeature::TextLayer,
         StyleFeature::TextLayerImages,
+        StyleFeature::SnapLayouter,
         StyleFeature::EventLayer,
     }}},
-    {"everything except base layer, everything supported", StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, true, 2, {InPlaceInit, {
+    {"everything except base layer, everything supported", StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 2, 1, {InPlaceInit, {
         ~StyleFeature::BaseLayer
     }}},
-    {"everything", StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, true, 3, {InPlaceInit, {
+    {"everything", StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 3, 1, {InPlaceInit, {
         ~StyleFeatures{}
     }}},
-    {"everything, applied gradually", StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, true, 3, {InPlaceInit, {
+    {"everything, applied gradually", StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 3, 1, {InPlaceInit, {
         StyleFeature::TextLayer,
         StyleFeature::TextLayerImages,
         StyleFeature::EventLayer,
+        StyleFeature::SnapLayouter,
         StyleFeature::BaseLayer,
     }}},
-    {"application failed", StyleFeature::BaseLayer|StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::EventLayer, false, 2, {InPlaceInit, {
-        StyleFeature::BaseLayer|StyleFeature::EventLayer
+    {"application failed", StyleFeature::BaseLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, false, 2, 1, {InPlaceInit, {
+        StyleFeature::BaseLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter
     }}},
-    {"everything, implicitly", StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, true, 3, {}},
-    {"everything, implicitly, application failed", StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer, false, 3, {}},
-    {"everything, implicitly, only unknown layer supported", StyleFeatures{0x10}, StyleFeatures{0x10}, true, 0, {}},
-    {"everything, implicitly, only base layer supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, {}},
-    {"everything, implicitly, everything except text layer supported", StyleFeature::BaseLayer|StyleFeature::EventLayer, StyleFeature::BaseLayer|StyleFeature::EventLayer, true, 2, {}},
+    {"everything, implicitly", StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 3, 1, {}},
+    {"everything, implicitly, application failed", StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter, false, 3, 1, {}},
+    {"everything, implicitly, only unknown feature supported", StyleFeatures{0x40}, StyleFeatures{0x40}, true, 0, 0, {}},
+    {"everything, implicitly, only base layer supported", StyleFeature::BaseLayer, StyleFeature::BaseLayer, true, 1, 0, {}},
+    {"everything, implicitly, everything except text layer supported", StyleFeature::BaseLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, StyleFeature::BaseLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter, true, 2, 1, {}},
 };
 
 UserInterfaceGLTest::UserInterfaceGLTest() {
@@ -196,7 +206,8 @@ UserInterfaceGLTest::UserInterfaceGLTest() {
               &UserInterfaceGLTest::setStyleTextLayerAlreadyPresent,
               &UserInterfaceGLTest::setStyleTextLayerArrayGlyphCache,
               &UserInterfaceGLTest::setStyleTextLayerImagesTextLayerNotPresentNotApplied,
-              &UserInterfaceGLTest::setStyleEventLayerAlreadyPresent});
+              &UserInterfaceGLTest::setStyleEventLayerAlreadyPresent,
+              &UserInterfaceGLTest::setStyleSnapLayouterAlreadyPresent});
 }
 
 void UserInterfaceGLTest::construct() {
@@ -505,6 +516,7 @@ void UserInterfaceGLTest::setStyle() {
     else for(StyleFeatures features: data.features)
         CORRADE_COMPARE(ui.trySetStyle(style, features, features >= StyleFeature::TextLayerImages ? &_importerManager : nullptr, features >= StyleFeature::TextLayer ? &_fontManager : nullptr), data.succeed);
     CORRADE_COMPARE(ui.layerUsedCount(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui.layouterUsedCount(), data.expectedLayouterCount);
     CORRADE_COMPARE(applyCalled, data.features.isEmpty() ? 1 : data.features.size());
     CORRADE_COMPARE(actualFeatures, data.expectedFeatures);
 
@@ -537,6 +549,10 @@ void UserInterfaceGLTest::setStyle() {
 
     if(data.expectedFeatures & StyleFeature::EventLayer) {
         CORRADE_VERIFY(ui.hasEventLayer());
+    }
+
+    if(data.expectedFeatures & StyleFeature::SnapLayouter) {
+        CORRADE_VERIFY(ui.hasSnapLayouter());
     }
 }
 
@@ -738,6 +754,28 @@ void UserInterfaceGLTest::setStyleEventLayerAlreadyPresent() {
     Error redirectError{&out};
     ui.trySetStyle(style, &_importerManager, &_fontManager);
     CORRADE_COMPARE(out.str(), "Whee::UserInterfaceGL::trySetStyle(): event layer already present\n");
+}
+
+void UserInterfaceGLTest::setStyleSnapLayouterAlreadyPresent() {
+    UserInterfaceGL ui{NoCreate};
+    ui.setSize({200, 300})
+      .setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeature::SnapLayouter; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.trySetStyle(style, &_importerManager, &_fontManager);
+    CORRADE_COMPARE(out.str(), "Whee::UserInterfaceGL::trySetStyle(): snap layouter already present\n");
 }
 
 }}}}

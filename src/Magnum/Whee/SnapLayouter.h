@@ -170,7 +170,9 @@ CORRADE_ENUMSET_OPERATORS(Snaps)
 The actual layout creation is done through the @ref AbstractSnapLayout helper,
 or its derived @ref BasicSnapLayout template and the @ref SnapLayout typedef
 restricting it to a concrete user interface instance.
-@see @ref Snap, @ref Snaps
+@see @ref Snap, @ref Snaps, @ref UserInterface::snapLayouter(),
+    @ref UserInterface::setSnapLayouterInstance(),
+    @ref StyleFeature::SnapLayouter
 */
 class MAGNUM_WHEE_EXPORT SnapLayouter: public AbstractLayouter {
     public:

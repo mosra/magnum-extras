@@ -34,6 +34,7 @@
 
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/EventLayer.h"
+#include "Magnum/Whee/SnapLayouter.h"
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/Implementation/userInterfaceState.h"
 
@@ -79,6 +80,16 @@ UserInterface& UserInterface::setEventLayerInstance(Containers::Pointer<EventLay
     return *this;
 }
 
+UserInterface& UserInterface::setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance) {
+    CORRADE_ASSERT(instance,
+        "Whee::UserInterface::setSnapLayouterInstance(): instance is null", *this);
+    CORRADE_ASSERT(!_state->snapLayouter,
+        "Whee::UserInterface::setSnapLayouterInstance(): instance already set", *this);
+    _state->snapLayouter = instance.get();
+    setLayouterInstance(Utility::move(instance));
+    return *this;
+}
+
 bool UserInterface::hasBaseLayer() const {
     return _state->baseLayer;
 }
@@ -119,6 +130,20 @@ const EventLayer& UserInterface::eventLayer() const {
 
 EventLayer& UserInterface::eventLayer() {
     return const_cast<EventLayer&>(const_cast<const UserInterface&>(*this).eventLayer());
+}
+
+bool UserInterface::hasSnapLayouter() const {
+    return _state->snapLayouter;
+}
+
+const SnapLayouter& UserInterface::snapLayouter() const {
+    CORRADE_ASSERT(_state->snapLayouter,
+        "Whee::UserInterface::snapLayouter(): no instance set", *_state->snapLayouter);
+    return *_state->snapLayouter;
+}
+
+SnapLayouter& UserInterface::snapLayouter() {
+    return const_cast<SnapLayouter&>(const_cast<const UserInterface&>(*this).snapLayouter());
 }
 
 UserInterface& UserInterface::advanceAnimations(const Nanoseconds time) {

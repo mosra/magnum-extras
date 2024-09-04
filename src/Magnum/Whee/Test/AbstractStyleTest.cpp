@@ -36,6 +36,7 @@
 #include "Magnum/Whee/AbstractStyle.h"
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/EventLayer.h"
+#include "Magnum/Whee/SnapLayouter.h"
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/UserInterface.h"
 
@@ -86,6 +87,7 @@ struct AbstractStyleTest: TestSuite::Tester {
     void applyTextLayerImagesTextLayerNotPresent();
     void applyTextLayerImagesNoImporterManager();
     void applyEventLayerNotPresent();
+    void applySnapLayouterNotPresent();
 
     private:
         PluginManager::Manager<Trade::AbstractImporter> _importerManager;
@@ -94,25 +96,27 @@ struct AbstractStyleTest: TestSuite::Tester {
 
 const struct {
     const char* name;
-    bool baseLayerPresent, textLayerPresent, eventLayerPresent;
+    bool baseLayerPresent, textLayerPresent, eventLayerPresent, snapLayouterPresent;
     StyleFeatures features;
     bool succeed;
 } ApplyData[]{
-    {"base layer only", true, false, false,
+    {"base layer only", true, false, false, false,
         StyleFeature::BaseLayer, true},
-    {"text layer only", false, true, false,
+    {"text layer only", false, true, false, false,
         StyleFeature::TextLayer, true},
-    {"text layer images only", false, true, false,
+    {"text layer images only", false, true, false, false,
         StyleFeature::TextLayerImages, true},
-    {"text layer + text layer images", false, true, false,
+    {"text layer + text layer images", false, true, false, false,
         StyleFeature::TextLayer|StyleFeature::TextLayerImages, true},
-    {"event layer only", false, false, true,
+    {"event layer only", false, false, true, false,
         StyleFeature::EventLayer, true},
-    {"everything except base layer", false, true, true,
+    {"snap layouter only", false, false, false, true,
+        StyleFeature::SnapLayouter, true},
+    {"everything except base layer", false, true, true, true,
         ~StyleFeature::BaseLayer, true},
-    {"everything", true, true, true,
+    {"everything", true, true, true, true,
         ~StyleFeatures{}, true},
-    {"application failed", true, false, false,
+    {"application failed", true, false, false, false,
         StyleFeature::BaseLayer, false}
 };
 
@@ -160,7 +164,8 @@ AbstractStyleTest::AbstractStyleTest() {
               &AbstractStyleTest::applyTextLayerNoFontManager,
               &AbstractStyleTest::applyTextLayerImagesTextLayerNotPresent,
               &AbstractStyleTest::applyTextLayerImagesNoImporterManager,
-              &AbstractStyleTest::applyEventLayerNotPresent});
+              &AbstractStyleTest::applyEventLayerNotPresent,
+              &AbstractStyleTest::applySnapLayouterNotPresent});
 }
 
 void AbstractStyleTest::debugFeature() {
@@ -581,8 +586,8 @@ void AbstractStyleTest::textLayerGlyphCacheSizeNoTextFeature() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    style.textLayerGlyphCacheSize(StyleFeature::BaseLayer|StyleFeature(0x10));
-    CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Whee::StyleFeature::TextLayer but got Whee::StyleFeature::BaseLayer|Whee::StyleFeature(0x10)\n");
+    style.textLayerGlyphCacheSize(StyleFeature::BaseLayer|StyleFeature(0x40));
+    CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::textLayerGlyphCacheSize(): expected a superset of Whee::StyleFeature::TextLayer but got Whee::StyleFeature::BaseLayer|Whee::StyleFeature(0x40)\n");
 }
 
 void AbstractStyleTest::textLayerGlyphCacheSizeFeaturesNotSupported() {
@@ -732,13 +737,15 @@ void AbstractStyleTest::apply() {
         ui.setTextLayerInstance(Containers::pointer<LayerText>(ui.createLayer(), sharedText));
     if(data.eventLayerPresent)
         ui.setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+    if(data.snapLayouterPresent)
+        ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
 
     Int applyCalled = 0;
     struct Style: AbstractStyle {
         Style(Int& applyCalled, StyleFeatures expectedFeatures, bool succeed): _applyCalled(applyCalled), _expectedFeatures{expectedFeatures}, _succeed{succeed} {}
 
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer;
+            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::TextLayerImages|StyleFeature::EventLayer|StyleFeature::SnapLayouter;
         }
         UnsignedInt doBaseLayerStyleUniformCount() const override { return 3; }
         UnsignedInt doBaseLayerStyleCount() const override { return 5; }
@@ -1371,6 +1378,43 @@ void AbstractStyleTest::applyEventLayerNotPresent() {
     Error redirectError{&out};
     style.apply(ui, StyleFeature::EventLayer, nullptr, nullptr);
     CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): event layer not present in the user interface\n");
+}
+
+void AbstractStyleTest::applySnapLayouterNotPresent() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct LayerSharedBase: BaseLayer::Shared {
+        explicit LayerSharedBase(const Configuration& configuration): BaseLayer::Shared{configuration} {}
+
+        void doSetStyle(const BaseLayerCommonStyleUniform&, Containers::ArrayView<const BaseLayerStyleUniform>) override {}
+    } sharedBase{BaseLayer::Shared::Configuration{3, 5}};
+
+    struct LayerBase: BaseLayer {
+        explicit LayerBase(LayerHandle handle, LayerSharedBase& shared): BaseLayer{handle, shared} {}
+    };
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSize({200, 300})
+      .setBaseLayerInstance(Containers::pointer<LayerBase>(ui.createLayer(), sharedBase))
+      .setEventLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    struct: AbstractStyle {
+        StyleFeatures doFeatures() const override { return StyleFeature::SnapLayouter; }
+        bool doApply(UserInterface&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
+            CORRADE_FAIL("This shouldn't get called.");
+            return {};
+        }
+    } style;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    style.apply(ui, StyleFeature::SnapLayouter, nullptr, nullptr);
+    CORRADE_COMPARE(out.str(), "Whee::AbstractStyle::apply(): snap layouter not present in the user interface\n");
 }
 
 }}}}

@@ -89,6 +89,15 @@ enum class StyleFeature: UnsignedByte {
      * @see @ref UserInterface::eventLayer()
      */
     EventLayer = 1 << 3,
+
+    /**
+     * @ref SnapLayouter style. Ensures a @ref SnapLayouter instance is set up
+     * on the @ref UserInterface, the style implementation then calls
+     * @relativeref{SnapLayouter,setPadding()} and
+     * @relativeref{SnapLayouter,setMargin()} on it.
+     * @see @ref UserInterface::snapLayouter()
+     */
+    SnapLayouter = 1 << 4
 };
 
 /** @debugoperatorenum{StyleFeature} */
@@ -106,7 +115,8 @@ typedef Containers::EnumSet<StyleFeature
     , UnsignedInt(StyleFeature::BaseLayer)|
       UnsignedInt(StyleFeature::TextLayer)|
       UnsignedInt(StyleFeature::TextLayerImages)|
-      UnsignedInt(StyleFeature::EventLayer)
+      UnsignedInt(StyleFeature::EventLayer)|
+      UnsignedInt(StyleFeature::SnapLayouter)
     #endif
     > StyleFeatures;
 

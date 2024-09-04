@@ -46,6 +46,7 @@ Debug& operator<<(Debug& debug, const StyleFeature value) {
         _c(TextLayer)
         _c(TextLayerImages)
         _c(EventLayer)
+        _c(SnapLayouter)
         #undef _c
         /* LCOV_EXCL_STOP */
     }
@@ -59,6 +60,7 @@ Debug& operator<<(Debug& debug, const StyleFeatures value) {
         StyleFeature::TextLayer,
         StyleFeature::TextLayerImages,
         StyleFeature::EventLayer,
+        StyleFeature::SnapLayouter,
     });
 }
 
@@ -280,6 +282,10 @@ bool AbstractStyle::apply(UserInterface& ui, const StyleFeatures features, Plugi
     if(features >= StyleFeature::EventLayer) {
         CORRADE_ASSERT(ui.hasEventLayer(),
             "Whee::AbstractStyle::apply(): event layer not present in the user interface", {});
+    }
+    if(features >= StyleFeature::SnapLayouter) {
+        CORRADE_ASSERT(ui.hasSnapLayouter(),
+            "Whee::AbstractStyle::apply(): snap layouter not present in the user interface", {});
     }
     #endif
 

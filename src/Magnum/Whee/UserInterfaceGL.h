@@ -287,6 +287,9 @@ class MAGNUM_WHEE_EXPORT UserInterfaceGL: public UserInterface {
         UserInterfaceGL& setEventLayerInstance(Containers::Pointer<EventLayer>&& instance) {
             return static_cast<UserInterfaceGL&>(UserInterface::setEventLayerInstance(Utility::move(instance)));
         }
+        UserInterfaceGL& setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance) {
+            return static_cast<UserInterfaceGL&>(UserInterface::setSnapLayouterInstance(Utility::move(instance)));
+        }
         UserInterfaceGL& clean() {
             return static_cast<UserInterfaceGL&>(UserInterface::clean());
         }

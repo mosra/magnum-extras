@@ -35,6 +35,7 @@
 #include "Magnum/Whee/BaseLayerGL.h"
 #include "Magnum/Whee/EventLayer.h"
 #include "Magnum/Whee/RendererGL.h"
+#include "Magnum/Whee/SnapLayouter.h"
 #include "Magnum/Whee/TextLayerGL.h"
 #include "Magnum/Whee/Implementation/userInterfaceState.h"
 
@@ -177,6 +178,11 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         CORRADE_ASSERT(!state.eventLayer,
             "Whee::UserInterfaceGL::trySetStyle(): event layer already present", {});
         setEventLayerInstance(Containers::pointer<EventLayer>(createLayer()));
+    }
+    if(features >= StyleFeature::SnapLayouter) {
+        CORRADE_ASSERT(!state.snapLayouter,
+            "Whee::UserInterfaceGL::trySetStyle(): snap layouter already present", {});
+        setSnapLayouterInstance(Containers::pointer<SnapLayouter>(createLayouter()));
     }
 
     return style.apply(*this, features, _state->importerManager, _state->fontManager);

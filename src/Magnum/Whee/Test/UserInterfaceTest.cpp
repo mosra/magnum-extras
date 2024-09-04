@@ -31,6 +31,7 @@
 #include "Magnum/Whee/BaseLayer.h"
 #include "Magnum/Whee/EventLayer.h"
 #include "Magnum/Whee/Handle.h"
+#include "Magnum/Whee/SnapLayouter.h"
 #include "Magnum/Whee/TextLayer.h"
 #include "Magnum/Whee/UserInterface.h"
 
@@ -55,6 +56,10 @@ struct UserInterfaceTest: TestSuite::Tester {
     void setEventLayerInstance();
     void setEventLayerInstanceInvalid();
     void eventLayerInvalid();
+
+    void setSnapLayouterInstance();
+    void setSnapLayouterInstanceInvalid();
+    void snapLayouterInvalid();
 };
 
 UserInterfaceTest::UserInterfaceTest() {
@@ -73,7 +78,11 @@ UserInterfaceTest::UserInterfaceTest() {
 
               &UserInterfaceTest::setEventLayerInstance,
               &UserInterfaceTest::setEventLayerInstanceInvalid,
-              &UserInterfaceTest::eventLayerInvalid});
+              &UserInterfaceTest::eventLayerInvalid,
+
+              &UserInterfaceTest::setSnapLayouterInstance,
+              &UserInterfaceTest::setSnapLayouterInstanceInvalid,
+              &UserInterfaceTest::snapLayouterInvalid});
 }
 
 void UserInterfaceTest::construct() {
@@ -89,6 +98,7 @@ void UserInterfaceTest::construct() {
     CORRADE_VERIFY(!ui.hasBaseLayer());
     CORRADE_VERIFY(!ui.hasTextLayer());
     CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_VERIFY(!ui.hasSnapLayouter());
 }
 
 void UserInterfaceTest::constructNoCreate() {
@@ -334,6 +344,55 @@ void UserInterfaceTest::eventLayerInvalid() {
     Error redirectError{&out};
     ui.eventLayer();
     CORRADE_COMPARE(out.str(), "Whee::UserInterface::eventLayer(): no instance set\n");
+}
+
+void UserInterfaceTest::setSnapLayouterInstance() {
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    CORRADE_COMPARE(ui.layouterCapacity(), 0);
+    CORRADE_COMPARE(ui.layouterUsedCount(), 0);
+    CORRADE_VERIFY(!ui.hasSnapLayouter());
+
+    LayouterHandle handle = ui.createLayouter();
+    Containers::Pointer<SnapLayouter> layouter{InPlaceInit, handle};
+    SnapLayouter* pointer = layouter.get();
+    ui.setSnapLayouterInstance(Utility::move(layouter));
+    CORRADE_COMPARE(ui.layouterCapacity(), 1);
+    CORRADE_COMPARE(ui.layouterUsedCount(), 1);
+    CORRADE_VERIFY(ui.hasSnapLayouter());
+    CORRADE_COMPARE(&ui.layouter(handle), pointer);
+    CORRADE_COMPARE(&ui.snapLayouter(), pointer);
+}
+
+void UserInterfaceTest::setSnapLayouterInstanceInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.setSnapLayouterInstance(nullptr);
+    ui.setSnapLayouterInstance(Containers::pointer<SnapLayouter>(ui.createLayouter()));
+    CORRADE_COMPARE(out.str(),
+        "Whee::UserInterface::setSnapLayouterInstance(): instance is null\n"
+        "Whee::UserInterface::setSnapLayouterInstance(): instance already set\n");
+}
+
+void UserInterfaceTest::snapLayouterInvalid() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct Interface: UserInterface {
+        explicit Interface(NoCreateT): UserInterface{NoCreate} {}
+    } ui{NoCreate};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    ui.snapLayouter();
+    CORRADE_COMPARE(out.str(), "Whee::UserInterface::snapLayouter(): no instance set\n");
 }
 
 }}}}

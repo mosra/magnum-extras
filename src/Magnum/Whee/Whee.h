@@ -90,7 +90,7 @@ class TextProperties;
 class RendererGL;
 
 enum class StyleFeature: UnsignedByte;
-typedef Containers::EnumSet<StyleFeature, 15> StyleFeatures;
+typedef Containers::EnumSet<StyleFeature, 31> StyleFeatures;
 class AbstractStyle;
 
 enum class Icon: UnsignedInt;

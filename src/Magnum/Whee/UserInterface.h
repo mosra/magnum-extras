@@ -158,6 +158,37 @@ class MAGNUM_WHEE_EXPORT UserInterface: public AbstractUserInterface {
          */
         UserInterface& setEventLayerInstance(Containers::Pointer<EventLayer>&& instance);
 
+        /**
+         * @brief Whether a snap layouter instance has been set
+         *
+         * @see @ref snapLayouter(), @ref setSnapLayouterInstance()
+         */
+        bool hasSnapLayouter() const;
+
+        /**
+         * @brief Snap layouter instance
+         *
+         * Expects that an instance has been set, either by
+         * @ref setSnapLayouterInstance() or transitively by
+         * @ref UserInterfaceGL::setStyle() or a @ref UserInterfaceGL
+         * constructor taking a style instance.
+         * @see @ref StyleFeature::SnapLayouter
+         */
+        SnapLayouter& snapLayouter();
+        const SnapLayouter& snapLayouter() const; /**< @overload */
+
+        /**
+         * @brief Set a snap layouter instance
+         * @return Reference to self (for method chaining)
+         *
+         * Expects that the instance hasn't been set yet, either by this
+         * function or transitively either by @ref UserInterfaceGL::setStyle()
+         * or a @ref UserInterfaceGL constructor taking a style instance. The
+         * instance is subsequently available through @ref snapLayouter().
+         * @see @ref hasSnapLayouter(), @ref StyleFeature::SnapLayouter
+         */
+        UserInterface& setSnapLayouterInstance(Containers::Pointer<SnapLayouter>&& instance);
+
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT
         UserInterface& setSize(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize) {
