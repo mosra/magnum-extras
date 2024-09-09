@@ -83,46 +83,53 @@ const struct {
     const char* filename;
     UnsignedInt radius;
     Float limit;
-    bool flippedX, flippedY;
+    bool flippedX, flippedY, transparent;
     Float maxThreshold, meanThreshold;
 } RenderData[]{
     /* This should result in exactly the same image... */
     {"radius 0", "blur-input.png",
-        0, 0.0f, false, false,
+        0, 0.0f, false, false, false,
         0.0f, 0.0f},
     /* ... and axis flipping should not add any weird errors to it either */
     {"radius 0, flipped on X", "blur-input.png",
-        0, 0.0f, true, false,
+        0, 0.0f, true, false, false,
         0.0f, 0.0f},
     {"radius 0, flipped on Y", "blur-input.png",
-        0, 0.0f, false, true,
+        0, 0.0f, false, true, false,
         0.0f, 0.0f},
     {"radius 0, flipped on XY", "blur-input.png",
-        0, 0.0f, true, true,
+        0, 0.0f, true, true, false,
+        0.0f, 0.0f},
+    {"radius 0, transparent", "blur-input.png",
+        0, 0.0f, true, true, true,
         0.0f, 0.0f},
     /* This results in 4 discrete taps, so 2 interpolated taps with the first
        tap taking the center pixel twice. Shouldn't cause the image to get any
        brighter. */
     {"radius 3, limit 0", "blur-3.png",
-        7, 0.0f, false, false,
+        7, 0.0f, false, false, false,
         /* NVidia has slight differences */
         0.75f, 0.044f},
     {"radius 3, limit 0, flipped on X", "blur-3.png",
-        7, 0.0f, true, false,
+        7, 0.0f, true, false, false,
         /* NVidia has slight differences */
         0.75f, 0.044f},
     {"radius 3, limit 0, flipped on Y", "blur-3.png",
-        7, 0.0f, false, true,
+        7, 0.0f, false, true, false,
         /* NVidia has slight differences */
         0.75f, 0.044f},
     {"radius 3, limit 0, flipped on XY", "blur-3.png",
-        7, 0.0f, true, true,
+        7, 0.0f, true, true, false,
+        /* NVidia has slight differences */
+        0.75f, 0.044f},
+    {"radius 3, limit 0, transparent", "blur-3.png",
+        7, 0.0f, false, false, true,
         /* NVidia has slight differences */
         0.75f, 0.044f},
     /* This results in 17 discrete taps, so 9 interpolated taps with the first
        tap being (non-interpolated) center pixel */
     {"radius 16, limit 0", "blur-16.png",
-        16, 0.0f, false, false,
+        16, 0.0f, false, false, false,
         /* NVidia has slight differences */
         0.75f, 0.043f},
     /* Same sequence as for "radius 16" above, but with the ends clipped away
@@ -130,12 +137,12 @@ const struct {
        factor to the difference). The result is almost the same, just with 8
        taps instead of 16 needed. */
     {"radius 16, limit 0.5/255", "blur-16.png",
-        16, 0.5f/255.0f, false, false,
+        16, 0.5f/255.0f, false, false, false,
         /* NVidia has slight differences */
         2.25f, 1.304f},
     /* Max possible radius value, verify it still compiles & runs correctly */
     {"radius 31, limit 0", "blur-31.png",
-        31, 0.0f, false, false,
+        31, 0.0f, false, false, false,
         /* NVidia has slight differences */
         0.5f, 0.044f},
 };
@@ -482,6 +489,13 @@ void BlurShaderGLTest::render() {
     if(data.flippedX)
         Utility::flipInPlace<1>(image->mutablePixels());
 
+    /* Make the image transparent if desired -- the blur should ignore that and
+       always produce a result with alpha set to 1.0 */
+    if(data.transparent)
+        for(Containers::StridedArrayView1D<Color4ub> row: image->mutablePixels<Color4ub>())
+            for(Color4ub& pixel: row)
+                pixel.a() = 0;
+
     GL::Texture2D input;
     input
         .setMinificationFilter(GL::SamplerFilter::Linear)
@@ -719,7 +733,7 @@ void BlurShaderGLTest::benchmark() {
         .setMagnificationFilter(GL::SamplerFilter::Linear)
         .setWrapping(GL::SamplerWrapping::ClampToEdge)
         .setStorage(1, GL::TextureFormat::RGBA8, BenchmarkSize)
-        .setSubImage(0, {}, ImageView2D{PixelFormat::RGBA8Unorm, BenchmarkSize, Containers::Array<Color4ub>{DirectInit, std::size_t(BenchmarkSize.product()), 0xff336699_rgba}});
+        .setSubImage(0, {}, ImageView2D{PixelFormat::RGBA8Unorm, BenchmarkSize, Containers::Array<Color4ub>{DirectInit, std::size_t(BenchmarkSize.product()), 0x336699ff_rgba}});
 
     BlurShaderGL shader{data.radius, data.limit};
     /* Internally this divides {2, -2}, resulting in an identity to match other
@@ -755,7 +769,7 @@ void BlurShaderGLTest::benchmark() {
         Math::unpack<Color4>(
             out.pixels<Color4ub>()[std::size_t(BenchmarkSize.y()/2)]
                                   [std::size_t(BenchmarkSize.x()/2)]),
-        0xff336699_rgbaf,
+        0x336699ff_rgbaf,
         TestSuite::Compare::around(Color4{data.delta, data.delta}));
 }
 

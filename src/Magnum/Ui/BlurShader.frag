@@ -41,9 +41,9 @@ out lowp vec4 fragmentColor;
 
 void main() {
     #ifdef FIRST_TAP_AT_CENTER
-    fragmentColor = texture(textureData, textureCoordinates)*weights[0];
+    fragmentColor.rgb = texture(textureData, textureCoordinates).rgb*weights[0];
     #else
-    fragmentColor = vec4(0.0);
+    fragmentColor.rgb = vec3(0.0);
     #endif
 
     #if !defined(FIRST_TAP_AT_CENTER) || COUNT > 1
@@ -55,8 +55,10 @@ void main() {
         #endif
         ; i < COUNT; ++i)
     {
-        fragmentColor += texture(textureData, textureCoordinates + offsets[i]*direction)*weights[i];
-        fragmentColor += texture(textureData, textureCoordinates - offsets[i]*direction)*weights[i];
+        fragmentColor.rgb += texture(textureData, textureCoordinates + offsets[i]*direction).rgb*weights[i];
+        fragmentColor.rgb += texture(textureData, textureCoordinates - offsets[i]*direction).rgb*weights[i];
     }
     #endif
+
+    fragmentColor.a = 1.0;
 }
