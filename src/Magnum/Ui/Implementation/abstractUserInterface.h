@@ -828,7 +828,7 @@ Containers::Pair<UnsignedInt, UnsignedInt> orderVisibleNodeDataInto(const Contai
            `dataToUpdateNodeIds` arrays, and a corresponding clip rect range as
            well. If there's no data to be drawn, put zeros there. */
         if(layerFeatures >= LayerFeature::Draw) {
-            if(const UnsignedInt size = offset - previousOffset) {
+            if(offset - previousOffset) {
                 dataToDrawOffsets[drawOffset] = previousOffset;
                 dataToDrawSizes[drawOffset] = offset - previousOffset;
                 dataToDrawClipRectOffsets[drawOffset] = previousClipRectOutputOffset;
