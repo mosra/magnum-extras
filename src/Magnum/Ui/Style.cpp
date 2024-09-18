@@ -639,7 +639,7 @@ UnsignedInt McssDarkStyle::doTextLayerEditingStyleCount() const {
 Vector3i McssDarkStyle::doTextLayerGlyphCacheSize(StyleFeatures) const {
     /* 256x256 is enough only for DPI scale of 1, adding some extra space */
     /** @todo Make this dependent on DPI scale */
-    return {512, 256, 1};
+    return {512, 512, 1};
 }
 
 bool McssDarkStyle::doApply(UserInterface& ui, const StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>* importerManager, PluginManager::Manager<Text::AbstractFont>* fontManager) const {

@@ -335,7 +335,7 @@ void StyleTest::apply() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 256}};
+    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
         explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
@@ -411,7 +411,7 @@ void StyleTest::applyTextLayerCannotOpenFont() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 256}};
+    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
@@ -459,7 +459,7 @@ void StyleTest::applyTextLayerImagesCannotOpen() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 256}};
+    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
@@ -503,12 +503,12 @@ void StyleTest::applyTextLayerImagesCannotFit() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 256}};
+    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     /* Add a monster image to the atlas which in turn should make it impossible
        to put anything else there */
     Vector2i offset[1];
-    glyphCache.atlas().add({{500, 200}}, offset);
+    glyphCache.atlas().add({{500, 500}}, offset);
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
@@ -557,7 +557,7 @@ void StyleTest::applyTextLayerImagesUnexpectedFormat() {
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 256}};
+    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct LayerShared: TextLayer::Shared {
         explicit LayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
@@ -594,16 +594,16 @@ void StyleTest::applyTextLayerTwice() {
     struct Interface: UserInterface {
         explicit Interface(NoCreateT): UserInterface{NoCreate} {}
     } ui{NoCreate};
-    /* Window size isn't used for anything, use a 1.5x DPI scaling to have the
+    /* Window size isn't used for anything, use a 2x DPI scaling to have the
        glyph cache fully filled */
-    ui.setSize({200, 300}, {1, 1}, {300, 450});
+    ui.setSize({200, 300}, {1, 1}, {400, 600});
 
     struct: Text::AbstractGlyphCache {
         using Text::AbstractGlyphCache::AbstractGlyphCache;
 
         Text::GlyphCacheFeatures doFeatures() const override { return {}; }
         void doSetImage(const Vector2i&, const ImageView2D&) override {}
-    } glyphCache{PixelFormat::R8Unorm, {512, 256}};
+    } glyphCache{PixelFormat::R8Unorm, {512, 512}};
 
     struct TestTextLayerShared: TextLayer::Shared {
         explicit TestTextLayerShared(): TextLayer::Shared{Configuration{Implementation::TextStyleUniformCount, Implementation::TextStyleCount}
