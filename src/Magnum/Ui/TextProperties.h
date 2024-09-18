@@ -142,8 +142,9 @@ class MAGNUM_UI_EXPORT TextProperties {
          * @brief Set alignment
          * @return Reference to self (for method chaining)
          *
-         * Default is @ref Containers::NullOpt, i.e. an alignment specified by
-         * the style is used. If not @ref Containers::NullOpt, expects that the
+         * Default is @relativeref{Corrade,Containers::NullOpt}, i.e. an
+         * alignment specified by the style is used. If not
+         * @relativeref{Corrade,Containers::NullOpt}, expects that the
          * @p alignment isn't `*GlyphBounds` as the implementation can only
          * align based on font metrics and cursor position, not actual glyph
          * bounds.

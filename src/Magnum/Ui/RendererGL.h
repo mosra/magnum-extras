@@ -193,13 +193,13 @@ class MAGNUM_UI_EXPORT RendererGL: public AbstractRenderer {
 CORRADE_ENUMSET_OPERATORS(RendererGL::Flags)
 
 /**
-@debugoperatorclassenum{RendererGL,Flag}
+@debugoperatorclassenum{RendererGL,RendererGL::Flag}
 @m_since_latest
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererGL::Flag value);
 
 /**
-@debugoperatorclassenum{RendererGL,Flags}
+@debugoperatorclassenum{RendererGL,RendererGL::Flags}
 @m_since_latest
 */
 MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, RendererGL::Flags value);

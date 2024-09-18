@@ -742,9 +742,9 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Expects that @p animation is valid and that the animator supports
          * @ref AnimatorFeature::DataAttachment. The @p data is expected to be
          * either @ref DataHandle::Null or with the layer part matching
-         * @ref layer(). Other than that it can be anything but if it's not
-         * @ref DataHandle::Null and not valid the animation will be scheduled
-         * for deletion during the next @ref cleanData() call. If the
+         * @ref layer() const. Other than that it can be anything but if it's
+         * not @ref DataHandle::Null and not valid the animation will be
+         * scheduled for deletion during the next @ref cleanData() call. If the
          * @p animation is already attached to some data, this will overwrite
          * the previous attachment --- i.e., it's not possible to have the same
          * animation attached to multiple data. The inverse, attaching multiple
@@ -772,7 +772,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @brief Attach an animation to a data assuming the data belongs to a layer registered with this animator
          *
          * Like @ref attach(AnimationHandle, DataHandle) but without checking
-         * that @p data is indeed coming from @ref layer(). See its
+         * that @p data is indeed coming from @ref layer() const. See its
          * documentation for more information. Calling this function with
          * @ref LayerDataHandle::Null is equivalent to calling
          * @ref attach(AnimationHandle, DataHandle) with @ref DataHandle::Null.
@@ -784,7 +784,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          *
          * Like @ref attach(AnimationHandle, DataHandle) but without checking
          * that @p animation indeed belongs to this animator and that
-         * that @p data is indeed coming from @ref layer(). See its
+         * that @p data is indeed coming from @ref layer() const. See its
          * documentation for more information. Calling this function with
          * @ref LayerDataHandle::Null is equivalent to calling
          * @ref attach(AnimationHandle, DataHandle) with @ref DataHandle::Null.
@@ -797,7 +797,7 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * Expects that @p handle is valid and that the animator supports
          * @ref AnimatorFeature::DataAttachment. If the animation isn't
          * attached to any data, returns @ref DataHandle::Null, otherwise the
-         * layer portion of the handle is always equal to @ref layer().
+         * layer portion of the handle is always equal to @ref layer() const.
          *
          * The returned handle may be invalid if either the animation got
          * attached to an invalid data in the first place or the data was
@@ -825,8 +825,8 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * of the returned view is the same as @ref capacity(). Items that are
          * @ref LayerDataHandle::Null are either animations with no data
          * attachments or corresponding to animations that are freed. Use
-         * @ref dataHandle(LayerHandle, LayerDataHandle) with @ref layer() to
-         * convert given handle to a @ref DataHandle if needed.
+         * @ref dataHandle(LayerHandle, LayerDataHandle) with @ref layer() const
+         * to convert given handle to a @ref DataHandle if needed.
          */
         Containers::StridedArrayView1D<const LayerDataHandle> layerData() const;
 
@@ -1030,8 +1030,8 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @ref AbstractUserInterface state update to misbehave. Expects that
          * the animator supports @ref AnimatorFeature::DataAttachment, assumes
          * that @p dataHandleGenerations contains handle generation counters
-         * for all data in layer matching @ref layer(), where the index is
-         * implicitly the handle ID. They're used to decide about data
+         * for all data in layer matching @ref layer() const, where the index
+         * is implicitly the handle ID. They're used to decide about data
          * attachment validity, animations with invalid data attachments are
          * then removed. Delegates to @ref clean() and subsequently
          * @ref doClean(), see their documentation for more information.
@@ -1169,10 +1169,10 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @return New animation handle
          *
          * Expects that the animator supports
-         * @ref AnimatorFeature::DataAttachment, that @ref layer() isn't
+         * @ref AnimatorFeature::DataAttachment, that @ref layer() const isn't
          * @ref LayerHandle::Null and that @p data is either
-         * @ref DataHandle::Null or the layer part of it matches @ref layer().
-         * Apart from that behaves the same as
+         * @ref DataHandle::Null or the layer part of it matches
+         * @ref layer() const. Apart from that behaves the same as
          * @ref create(Nanoseconds, Nanoseconds, UnsignedInt, AnimationFlags),
          * see its documentation for more information. If @p data is not
          * @ref DataHandle::Null, directly attaches the created animation to
@@ -1193,9 +1193,9 @@ class MAGNUM_UI_EXPORT AbstractAnimator {
          * @brief Create an animation attached to a data assuming the data belongs to the layer the animator is registered with
          *
          * Compared to @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
-         * also requires that @ref layer() isn't @ref LayerHandle::Null but
-         * then assumes the @p data is coming from a layer with a handle equal
-         * to @ref layer(). Calling this function with
+         * also requires that @ref layer() const isn't @ref LayerHandle::Null
+         * but then assumes the @p data is coming from a layer with a handle
+         * equal to @ref layer() const. Calling this function with
          * @ref LayerDataHandle::Null is equivalent to calling
          * @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags)
          * with @ref DataHandle::Null.
@@ -1365,7 +1365,7 @@ class MAGNUM_UI_EXPORT AbstractGenericAnimator: public AbstractAnimator {
          * Expects that the animator supports
          * @ref AnimatorFeature::DataAttachment and that this function hasn't
          * been called yet. Saves @ref AbstractLayer::handle() of @p layer into
-         * @ref layer(), making it possible to call
+         * @ref layer() const, making it possible to call
          * @ref create(Nanoseconds, Nanoseconds, DataHandle, UnsignedInt, AnimationFlags),
          * @ref create(Nanoseconds, Nanoseconds, LayerDataHandle, UnsignedInt, AnimationFlags),
          * @ref attach(AnimationHandle, DataHandle),

@@ -2018,22 +2018,22 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * belonging to layers that support @ref LayerFeature::Event.
          *
          * Otherwise, if @ref currentGlobalPointerPosition() is not
-         * @ref Containers::NullOpt, finds the front-most node under it and
-         * calls @ref AbstractLayer::keyPressEvent() on all data attached to it
-         * belonging to layers that support @ref LayerFeature::Event. If no
-         * data accept the event, continues to other nodes under the position
-         * in a front-to-back order and then to parent nodes. For each such
-         * node, the event is always called on all attached data, regardless of
-         * the accept status. For each call the event contains the
-         * @ref currentGlobalPointerPosition() made relative to the node to
-         * which given data is attached.
+         * @relativeref{Corrade,Containers::NullOpt}, finds the front-most node
+         * under it and calls @ref AbstractLayer::keyPressEvent() on all data
+         * attached to it belonging to layers that support
+         * @ref LayerFeature::Event. If no data accept the event, continues to
+         * other nodes under the position in a front-to-back order and then to
+         * parent nodes. For each such node, the event is always called on all
+         * attached data, regardless of the accept status. For each call the
+         * event contains the @ref currentGlobalPointerPosition() made relative
+         * to the node to which given data is attached.
          *
          * Returns @cpp true @ce if the event was accepted by at least one
          * data; @cpp false @ce if it wasn't, if @ref currentFocusedNode() is
          * @ref NodeHandle::Null and there either wasn't any visible event
          * handling node at given position or @ref currentGlobalPointerPosition()
-         * is @ref Containers::NullOpt, and thus the event should be propagated
-         * further.
+         * is @relativeref{Corrade,Containers::NullOpt}, and thus the event
+         * should be propagated further.
          *
          * Expects that the event is not accepted yet.
          * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
@@ -2064,22 +2064,22 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * belonging to layers that support @ref LayerFeature::Event.
          *
          * Otherwise, if @ref currentGlobalPointerPosition() is not
-         * @ref Containers::NullOpt, finds the front-most node under it and
-         * calls @ref AbstractLayer::keyReleaseEvent() on all data attached to
-         * it belonging to layers that support @ref LayerFeature::Event. If no
-         * data accept the event, continues to other nodes under the position
-         * in a front-to-back order and then to parent nodes. For each such
-         * node, the event is always called on all attached data, regardless of
-         * the accept status. For each call the event contains the
-         * @ref currentGlobalPointerPosition() made relative to the node to
-         * which given data is attached.
+         * @relativeref{Corrade,Containers::NullOpt}, finds the front-most node
+         * under it and calls @ref AbstractLayer::keyReleaseEvent() on all data
+         * attached to it belonging to layers that support
+         * @ref LayerFeature::Event. If no data accept the event, continues to
+         * other nodes under the position in a front-to-back order and then to
+         * parent nodes. For each such node, the event is always called on all
+         * attached data, regardless of the accept status. For each call the
+         * event contains the @ref currentGlobalPointerPosition() made relative
+         * to the node to which given data is attached.
          *
          * Returns @cpp true @ce if the event was accepted by at least one
          * data; @cpp false @ce if it wasn't, if @ref currentFocusedNode() is
          * @ref NodeHandle::Null and there either wasn't any visible event
          * handling node at given position or @ref currentGlobalPointerPosition()
-         * is @ref Containers::NullOpt, and thus the event should be propagated
-         * further.
+         * is @relativeref{Corrade,Containers::NullOpt}, and thus the event
+         * should be propagated further.
          *
          * Expects that the event is not accepted yet.
          * @see @ref KeyEvent::isAccepted(), @ref KeyEvent::setAccepted()
@@ -2228,7 +2228,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Returns a position passed to the last @ref pointerPressEvent(),
          * @ref pointerReleaseEvent() or @ref pointerMoveEvent(), scaled to
          * match @ref size() instead of @ref windowSize(). If no pointer event
-         * happened yet, returns @ref Containers::NullOpt.
+         * happened yet, returns @relativeref{Corrade,Containers::NullOpt}.
          */
         Containers::Optional<Vector2> currentGlobalPointerPosition() const;
 

@@ -219,7 +219,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * @brief Constructor
          * @param time      Time at which the event happened
          * @param type      Pointer type that changed in this event or
-         *      @ref Containers::NullOpt
+         *      @relativeref{Corrade,Containers::NullOpt}
          * @param types     Pointer types pressed in this event
          *
          * The @p time may get used for UI animations. A default-constructed
@@ -245,11 +245,11 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * @brief Pointer type that changed in this event
          *
          * If no pointer changed in this event (i.e., all pointers that were
-         * pressed before are still pressed), returns @ref Containers::NullOpt.
-         * Use @ref types() to check what all pointers are pressed in this
-         * event. If @ref type() is not empty and @ref types() contain
-         * @ref type(), it means given pointer type was pressed, if they don't,
-         * it means it was released.
+         * pressed before are still pressed), returns
+         * @relativeref{Corrade,Containers::NullOpt}. Use @ref types() to check
+         * what all pointers are pressed in this event. If @ref type() is not
+         * empty and @ref types() contain @ref type(), it means given pointer
+         * type was pressed, if they don't, it means it was released.
          */
         Containers::Optional<Pointer> type() const;
 
@@ -754,9 +754,10 @@ class MAGNUM_UI_EXPORT KeyEvent {
          *
          * If the event was called on a
          * @ref AbstractUserInterface::currentFocusedNode(), returns
-         * @ref Containers::NullOpt. Otherwise the node was picked based on
-         * pointer position from a preceding pointer press, release or move
-         * event, and the function returns a position relative to that node.
+         * @relativeref{Corrade,Containers::NullOpt}. Otherwise the node was
+         * picked based on pointer position from a preceding pointer press,
+         * release or move event, and the function returns a position relative
+         * to that node.
          * @see @ref isFocused()
          */
         Containers::Optional<Vector2> position() const;

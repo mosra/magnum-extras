@@ -371,7 +371,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. The uniforms are queried from
          * @ref TextLayer::Shared based on style IDs passed to @ref create().
          * If given animated style doesn't have an associated cursor style,
-         * returns @ref Containers::NullOpt.
+         * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref cursorPaddings(), @ref selectionUniforms(),
          *      @ref selectionTextUniforms(), @ref uniforms()
          */
@@ -393,7 +393,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. The paddings are queried from
          * @ref TextLayer::Shared based on style IDs passed to @ref create().
          * If given animated style doesn't have an associated cursor style,
-         * returns @ref Containers::NullOpt.
+         * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref cursorUniforms(), @ref selectionPaddings(),
          *      @ref paddings()
          */
@@ -415,7 +415,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. The uniforms are queried from
          * @ref TextLayer::Shared based on style IDs passed to @ref create().
          * If given animated style doesn't have an associated selection style,
-         * returns @ref Containers::NullOpt.
+         * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref selectionTextUniforms(), @ref selectionPaddings(),
          *      @ref cursorUniforms(), @ref uniforms()
          */
@@ -437,7 +437,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. The paddings are queried from
          * @ref TextLayer::Shared based on style IDs passed to @ref create().
          * If given animated style doesn't have an associated selection style,
-         * returns @ref Containers::NullOpt.
+         * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref selectionUniforms(), @ref selectionTextUniforms(),
          *      @ref cursorPaddings(), @ref paddings()
          */
@@ -459,7 +459,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. The uniforms are queried from
          * @ref TextLayer::Shared based on style IDs passed to @ref create().
          * If given animated style doesn't have an associated selection style,
-         * returns @ref Containers::NullOpt.
+         * returns @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref selectionUniforms(), @ref selectionPaddings(),
          *      @ref cursorUniforms(), @ref uniforms()
          */

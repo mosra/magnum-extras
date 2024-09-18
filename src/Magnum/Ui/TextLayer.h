@@ -1015,8 +1015,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *      left, top, right, bottom
          * @param selectionUniform  Style uniform for the editing selection
          * @param selectionTextUniform  Style uniform applied to selected
-         *      portions of the text or @ref Containers::NullOpt if @p uniform
-         *      should be used for the selection as well
+         *      portions of the text or @relativeref{Corrade,Containers::NullOpt}
+         *      if @p uniform should be used for the selection as well
          * @param selectionPadding  Padding around the editing selection in
          *      order left, top, right, bottom
          *
@@ -1106,8 +1106,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          *      right, bottom
          * @param selectionUniform  Style uniform for the editing selection
          * @param selectionTextUniform  Style uniform applied to selected
-         *      portions of the text or @ref Containers::NullOpt if @p uniform
-         *      should be used for the selection as well
+         *      portions of the text or @relativeref{Corrade,Containers::NullOpt}
+         *      if @p uniform should be used for the selection as well
          * @param selectionPadding  Padding around the editing selection in
          *      order left, top, right, bottom
          *

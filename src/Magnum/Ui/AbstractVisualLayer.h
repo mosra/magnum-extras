@@ -228,7 +228,8 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          *
          * Always at most @ref Shared::dynamicStyleCount(). If equal to
          * @ref Shared::dynamicStyleCount(), a call to
-         * @ref allocateDynamicStyle() will return @ref Containers::NullOpt.
+         * @ref allocateDynamicStyle() will return
+         * @relativeref{Corrade,Containers::NullOpt}.
          */
         UnsignedInt dynamicStyleUsedCount() const;
 
@@ -245,7 +246,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayer: public AbstractLayer {
          * When not used anymore, the index should be passed to
          * @ref recycleDynamicStyle() to make it available for allocation
          * again. If there are no free dynamic styles left, returns
-         * @ref Containers::NullOpt.
+         * @relativeref{Corrade,Containers::NullOpt}.
          *
          * If the dynamic style is driven by an animation, its handle can be
          * passed to the @p animation argument to retrieve later with
