@@ -41,7 +41,7 @@
 #include <Magnum/GL/Shader.h>
 #include <Magnum/GL/Texture.h>
 #include <Magnum/GL/Version.h>
-#include <Magnum/Text/GlyphCache.h>
+#include <Magnum/Text/GlyphCacheGL.h>
 
 #include "Magnum/Ui/Implementation/textLayerState.h"
 
@@ -253,7 +253,7 @@ struct TextLayerGL::Shared::State: TextLayer::Shared::State {
        setGlyphCache(GlyphCache&&) if it got called instead of
        setGlyphCache(GlyphCache&). The actual used glyph cache pointer is in
        the base state struct. */
-    Containers::Optional<Text::GlyphCache> glyphCacheStorage;
+    Containers::Optional<Text::GlyphCacheGL> glyphCacheStorage;
     TextShaderGL shader;
     /* Used only if editingStyleCount is non-zero */
     TextEditingShaderGL editingShader{NoCreate};
@@ -285,12 +285,12 @@ TextLayerGL::Shared::Shared(const Configuration& configuration): TextLayer::Shar
 
 TextLayerGL::Shared::Shared(NoCreateT) noexcept: TextLayer::Shared{NoCreate} {}
 
-TextLayerGL::Shared& TextLayerGL::Shared::setGlyphCache(Text::GlyphCache& cache) {
+TextLayerGL::Shared& TextLayerGL::Shared::setGlyphCache(Text::GlyphCacheGL& cache) {
     TextLayer::Shared::setGlyphCache(cache);
     return *this;
 }
 
-TextLayerGL::Shared& TextLayerGL::Shared::setGlyphCache(Text::GlyphCache&& cache) {
+TextLayerGL::Shared& TextLayerGL::Shared::setGlyphCache(Text::GlyphCacheGL&& cache) {
     auto& state = static_cast<State&>(*_state);
     state.glyphCacheStorage = Utility::move(cache);
     return setGlyphCache(*state.glyphCacheStorage);
@@ -488,7 +488,7 @@ void TextLayerGL::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>
     CORRADE_ASSERT(sharedState.setStyleCalled,
         "Ui::TextLayerGL::draw(): no style data was set", );
 
-    sharedState.shader.bindGlyphTexture(static_cast<Text::GlyphCache&>(*sharedState.glyphCache).texture());
+    sharedState.shader.bindGlyphTexture(static_cast<Text::GlyphCacheGL&>(*sharedState.glyphCache).texture());
 
     /* If there are dynamic styles, bind the layer-specific buffer that
        contains them, otherwise bind the shared buffer */

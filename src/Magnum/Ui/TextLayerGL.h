@@ -131,21 +131,21 @@ class MAGNUM_UI_EXPORT TextLayerGL::Shared: public TextLayer::Shared {
          * @return Reference to self (for method chaining)
          *
          * Has to be called before any @ref addFont(), is expected to be called
-         * exactly once. Use the @ref setGlyphCache(Text::GlyphCache&&)
+         * exactly once. Use the @ref setGlyphCache(Text::GlyphCacheGL&&)
          * overload to make the shared state take over the glyph cache
          * instance.
          */
-        Shared& setGlyphCache(Text::GlyphCache& cache);
+        Shared& setGlyphCache(Text::GlyphCacheGL& cache);
 
         /**
          * @brief Set a glyph cache instance and take over its ownership
          * @return Reference to self (for method chaining)
          *
-         * Like @ref setGlyphCache(Text::GlyphCache&), but the shared state
+         * Like @ref setGlyphCache(Text::GlyphCacheGL&), but the shared state
          * takes over the glyph cache ownership. You can access the instance
          * using @ref glyphCache() later.
          */
-        Shared& setGlyphCache(Text::GlyphCache&& cache);
+        Shared& setGlyphCache(Text::GlyphCacheGL&& cache);
 
         /* Overloads to remove a WTF factor from method chaining order */
         #ifndef DOXYGEN_GENERATING_OUTPUT

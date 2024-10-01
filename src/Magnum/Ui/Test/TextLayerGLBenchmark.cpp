@@ -36,7 +36,7 @@
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
 #include <Magnum/Text/Alignment.h>
-#include <Magnum/Text/GlyphCache.h>
+#include <Magnum/Text/GlyphCacheGL.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/TextLayerGL.h"
@@ -155,7 +155,7 @@ void TextLayerGLBenchmark::fragment() {
     /* If not drawing the cursor, add a single all-white glyph spanning the
        whole cache. Default padding is 1, reset it back to 0 to make this
        work. */
-    Text::GlyphCache cache{{32, 32}, {}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {32, 32}, {}};
     UnsignedInt fontId = cache.addFont(font.glyphCount(), &font);
     if(!data.drawCursor) {
         cache.addGlyph(fontId, 0, {-16, -16}, {{}, {32, 32}});

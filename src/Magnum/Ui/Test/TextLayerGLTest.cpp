@@ -44,7 +44,7 @@
 #include <Magnum/Text/AbstractFont.h>
 #include <Magnum/Text/AbstractShaper.h>
 #include <Magnum/Text/Alignment.h>
-#include <Magnum/Text/GlyphCache.h>
+#include <Magnum/Text/GlyphCacheGL.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
@@ -107,7 +107,7 @@ struct TextLayerGLTest: GL::OpenGLTester {
            is done just once for all tests that need it; thus also the font has
            to be shared among all */
         Containers::Pointer<Text::AbstractFont> _font;
-        Text::GlyphCache _fontGlyphCache{{64, 64}};
+        Text::GlyphCacheGL _fontGlyphCache{PixelFormat::R8Unorm, {64, 64}};
 };
 
 using namespace Math::Literals;
@@ -928,7 +928,7 @@ void TextLayerGLTest::sharedConstructMove() {
 }
 
 void TextLayerGLTest::sharedSetGlyphCache() {
-    Text::GlyphCache cache{{32, 32}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {32, 32}};
     CORRADE_VERIFY(cache.texture().id());
 
     {
@@ -942,7 +942,7 @@ void TextLayerGLTest::sharedSetGlyphCache() {
 }
 
 void TextLayerGLTest::sharedSetGlyphCacheTakeOwnership() {
-    Text::GlyphCache cache{{32, 32}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {32, 32}};
     CORRADE_VERIFY(cache.texture().id());
 
     {
@@ -2060,7 +2060,7 @@ void TextLayerGLTest::drawOrder() {
 
     /* A full-white glyph cache, containing just one 7x16 glyph. Default
        padding is 1, resetting to 0 to make this work. */
-    Text::GlyphCache cache{{8, 16}, {}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 16}, {}};
     for(auto row: cache.image().pixels<UnsignedByte>()[0])
         for(UnsignedByte& pixel: row)
             pixel = 255;
@@ -2246,7 +2246,7 @@ void TextLayerGLTest::drawClipping() {
 
     /* A full-white glyph cache, containing just one 7x160 glyph. Default
        padding is 1, resetting to 0 to make this work. */
-    Text::GlyphCache cache{{8, 160}, {}};
+    Text::GlyphCacheGL cache{PixelFormat::R8Unorm, {8, 160}, {}};
     for(auto row: cache.image().pixels<UnsignedByte>()[0])
         for(UnsignedByte& pixel: row)
             pixel = 255;

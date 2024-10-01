@@ -28,8 +28,7 @@
 #include <Corrade/Utility/Assert.h>
 #include <Magnum/Math/Time.h>
 #include <Magnum/Math/Vector2.h>
-#include <Magnum/GL/TextureFormat.h>
-#include <Magnum/Text/GlyphCache.h>
+#include <Magnum/Text/GlyphCacheGL.h>
 
 #include "Magnum/Ui/AbstractStyle.h"
 #include "Magnum/Ui/BaseLayerGL.h"
@@ -153,7 +152,7 @@ bool UserInterfaceGL::trySetStyle(const AbstractStyle& style, const StyleFeature
         /** @todo clean up once an array glyph cache exists */
         CORRADE_ASSERT(glyphCacheSize.z() == 1,
             "Ui::UserInterfaceGL::trySetStyle(): only 2D glyph cache is supported at the moment, got a size of" << Debug::packed << style.textLayerGlyphCacheSize(features), {});
-        state.textLayerShared.setGlyphCache(Text::GlyphCache{GL::textureFormat(style.textLayerGlyphCacheFormat()), glyphCacheSize.xy(), style.textLayerGlyphCachePadding()});
+        state.textLayerShared.setGlyphCache(Text::GlyphCacheGL{style.textLayerGlyphCacheFormat(), glyphCacheSize.xy(), style.textLayerGlyphCachePadding()});
     }
     if(features >= StyleFeature::TextLayerImages) {
         /* If features contain StyleFeature::TextLayer, state.textLayer was
