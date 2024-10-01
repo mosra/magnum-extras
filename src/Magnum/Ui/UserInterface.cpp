@@ -25,12 +25,8 @@
 
 #include "UserInterface.h"
 
-#include <Corrade/Utility/Algorithms.h>
-#include <Corrade/Utility/Resource.h>
-#include <Magnum/Text/AbstractFont.h>
-#include <Magnum/Text/GlyphCache.h>
+#include <Corrade/Utility/Assert.h>
 #include <Magnum/Math/Time.h>
-#include <Magnum/Math/Vector2.h>
 
 #include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/EventLayer.h"
