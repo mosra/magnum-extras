@@ -77,10 +77,46 @@ struct UserInterfaceGLTest: GL::OpenGLTester {
 
 const struct {
     const char* name;
+    Containers::Optional<StyleFeatures> styleFeatures;
+    UnsignedInt expectedLayerCount;
+    StyleFeatures expectedStyleFeatures;
+} ConstructData[]{
+    {"",
+        {}, 3,
+        StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature(0x80)},
+    {"style features",
+        StyleFeature::BaseLayer|StyleFeature::EventLayer, 2,
+        StyleFeature::BaseLayer|StyleFeature::EventLayer},
+    {"style features, nothing",
+        StyleFeatures{0x80}, 0,
+        StyleFeatures{0x80}},
+};
+
+const struct {
+    const char* name;
     bool tryCreate;
+    Containers::Optional<StyleFeatures> styleFeatures;
+    UnsignedInt expectedLayerCount;
+    StyleFeatures expectedStyleFeatures;
 } CreateData[]{
-    {"", false},
-    {"try", true},
+    {"",
+        false, {}, 3,
+        StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature(0x80)},
+    {"style features",
+        false, StyleFeature::BaseLayer|StyleFeature::EventLayer, 2,
+        StyleFeature::BaseLayer|StyleFeature::EventLayer},
+    {"style features, nothing",
+        false, StyleFeatures{0x80}, 0,
+        StyleFeatures{0x80}},
+    {"try",
+        true, {}, 3,
+        StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature(0x80)},
+    {"try, style features",
+        true, StyleFeature::BaseLayer|StyleFeature::EventLayer, 2,
+        StyleFeature::BaseLayer|StyleFeature::EventLayer},
+    {"try, style features, nothing",
+        false, StyleFeatures{0x80}, 0,
+        StyleFeatures{0x80}},
 };
 
 const struct {
@@ -181,9 +217,11 @@ const struct {
 };
 
 UserInterfaceGLTest::UserInterfaceGLTest() {
-    addTests({&UserInterfaceGLTest::construct,
-              &UserInterfaceGLTest::constructSingleSize,
-              &UserInterfaceGLTest::constructCopy,
+    addInstancedTests({&UserInterfaceGLTest::construct,
+                       &UserInterfaceGLTest::constructSingleSize},
+        Containers::arraySize(ConstructData));
+
+    addTests({&UserInterfaceGLTest::constructCopy,
               &UserInterfaceGLTest::constructMove});
 
     addInstancedTests({&UserInterfaceGLTest::create,
@@ -211,74 +249,104 @@ UserInterfaceGLTest::UserInterfaceGLTest() {
 }
 
 void UserInterfaceGLTest::construct() {
+    auto&& data = ConstructData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     Int applyCalled = 0;
     struct Style: AbstractStyle {
-        explicit Style(Int& applyCalled): applyCalled(applyCalled) {}
-        StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
+        explicit Style(Int& applyCalled, StyleFeatures expectedFeatures): applyCalled(applyCalled), expectedFeatures{expectedFeatures} {}
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature(0x80);
+        }
+        UnsignedInt doBaseLayerStyleCount() const override { return 1; }
+        UnsignedInt doTextLayerStyleCount() const override { return 1; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override {
+            return Vector3i{1};
+        }
         bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_COMPARE(features, StyleFeatures{0x10});
+            CORRADE_COMPARE(features, expectedFeatures);
             ++applyCalled;
             return true;
         }
 
         Int& applyCalled;
-    } style{applyCalled};
+        StyleFeatures expectedFeatures;
+    } style{applyCalled, data.expectedStyleFeatures};
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    UserInterfaceGL ui{{100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, &_importerManager, &_fontManager};
-    CORRADE_COMPARE(ui.size(), (Vector2{100.0f, 150.0f}));
-    CORRADE_COMPARE(ui.windowSize(), (Vector2{50.0f, 75.0f}));
-    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
-    CORRADE_COMPARE(ui.layerCapacity(), 0);
-    CORRADE_COMPARE(ui.layerUsedCount(), 0);
-    CORRADE_VERIFY(!ui.hasBaseLayer());
-    CORRADE_VERIFY(!ui.hasTextLayer());
-    CORRADE_VERIFY(!ui.hasEventLayer());
+    Containers::Optional<UserInterfaceGL> ui;
+    if(data.styleFeatures)
+        ui.emplace(Vector2{100.0f, 150.0f}, Vector2{50.0f, 75.0f}, Vector2i{200, 300}, style, *data.styleFeatures, &_importerManager, &_fontManager);
+    else
+        ui.emplace(Vector2{100.0f, 150.0f}, Vector2{50.0f, 75.0f}, Vector2i{200, 300}, style, &_importerManager, &_fontManager);
+    CORRADE_COMPARE(ui->size(), (Vector2{100.0f, 150.0f}));
+    CORRADE_COMPARE(ui->windowSize(), (Vector2{50.0f, 75.0f}));
+    CORRADE_COMPARE(ui->framebufferSize(), (Vector2i{200, 300}));
+    CORRADE_COMPARE(ui->layerCapacity(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui->layerUsedCount(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui->hasBaseLayer(), data.expectedStyleFeatures >= StyleFeature::BaseLayer);
+    CORRADE_COMPARE(ui->hasTextLayer(), data.expectedStyleFeatures >= StyleFeature::TextLayer);
+    CORRADE_COMPARE(ui->hasEventLayer(), data.expectedStyleFeatures >= StyleFeature::EventLayer);
     CORRADE_COMPARE(applyCalled, 1);
 
     /* The renderer instance is set implicitly first time a style is */
-    CORRADE_VERIFY(ui.hasRenderer());
-    CORRADE_COMPARE(ui.renderer().currentTargetState(), RendererTargetState::Initial);
+    CORRADE_VERIFY(ui->hasRenderer());
+    CORRADE_COMPARE(ui->renderer().currentTargetState(), RendererTargetState::Initial);
     /* const overload */
-    const UserInterfaceGL& cui = ui;
+    const UserInterfaceGL& cui = *ui;
     CORRADE_COMPARE(cui.renderer().currentTargetState(), RendererTargetState::Initial);
 }
 
 void UserInterfaceGLTest::constructSingleSize() {
+    auto&& data = ConstructData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
     Int applyCalled = 0;
     struct Style: AbstractStyle {
-        explicit Style(Int& applyCalled): applyCalled(applyCalled) {}
-        StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
+        explicit Style(Int& applyCalled, StyleFeatures expectedFeatures): applyCalled(applyCalled), expectedFeatures{expectedFeatures} {}
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature(0x80);
+        }
+        UnsignedInt doBaseLayerStyleCount() const override { return 1; }
+        UnsignedInt doTextLayerStyleCount() const override { return 1; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override {
+            return Vector3i{1};
+        }
         bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_COMPARE(features, StyleFeatures{0x10});
+            CORRADE_COMPARE(features, expectedFeatures);
             ++applyCalled;
             return true;
         }
 
         Int& applyCalled;
-    } style{applyCalled};
+        StyleFeatures expectedFeatures;
+    } style{applyCalled, data.expectedStyleFeatures};
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
-    UserInterfaceGL ui{{200, 300}, style, &_importerManager, &_fontManager};
-    CORRADE_COMPARE(ui.size(), (Vector2{200.0f, 300.0f}));
-    CORRADE_COMPARE(ui.windowSize(), (Vector2{200.0f, 300.0f}));
-    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
-    CORRADE_COMPARE(ui.layerCapacity(), 0);
-    CORRADE_COMPARE(ui.layerUsedCount(), 0);
-    CORRADE_VERIFY(!ui.hasBaseLayer());
-    CORRADE_VERIFY(!ui.hasTextLayer());
-    CORRADE_VERIFY(!ui.hasEventLayer());
+    Containers::Optional<UserInterfaceGL> ui;
+    if(data.styleFeatures)
+        ui.emplace(Vector2i{200, 300}, style, *data.styleFeatures, &_importerManager, &_fontManager);
+    else
+        ui.emplace(Vector2i{200, 300}, style, &_importerManager, &_fontManager);
+    CORRADE_COMPARE(ui->size(), (Vector2{200.0f, 300.0f}));
+    CORRADE_COMPARE(ui->windowSize(), (Vector2{200.0f, 300.0f}));
+    CORRADE_COMPARE(ui->framebufferSize(), (Vector2i{200, 300}));
+    CORRADE_COMPARE(ui->layerCapacity(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui->layerUsedCount(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui->hasBaseLayer(), data.expectedStyleFeatures >= StyleFeature::BaseLayer);
+    CORRADE_COMPARE(ui->hasTextLayer(), data.expectedStyleFeatures >= StyleFeature::TextLayer);
+    CORRADE_COMPARE(ui->hasEventLayer(), data.expectedStyleFeatures >= StyleFeature::EventLayer);
     CORRADE_COMPARE(applyCalled, 1);
 
     /* The renderer instance is set implicitly first time a style is */
-    CORRADE_VERIFY(ui.hasRenderer());
-    CORRADE_COMPARE(ui.renderer().currentTargetState(), RendererTargetState::Initial);
+    CORRADE_VERIFY(ui->hasRenderer());
+    CORRADE_COMPARE(ui->renderer().currentTargetState(), RendererTargetState::Initial);
     /* const overload */
-    const UserInterfaceGL& cui = ui;
+    const UserInterfaceGL& cui = *ui;
     CORRADE_COMPARE(cui.renderer().currentTargetState(), RendererTargetState::Initial);
 }
 
@@ -315,33 +383,48 @@ void UserInterfaceGLTest::create() {
 
     Int applyCalled = 0;
     struct Style: AbstractStyle {
-        explicit Style(Int& applyCalled): applyCalled(applyCalled) {}
-        StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
+        explicit Style(Int& applyCalled, StyleFeatures expectedFeatures): applyCalled(applyCalled), expectedFeatures{expectedFeatures} {}
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature(0x80);
+        }
+        UnsignedInt doBaseLayerStyleCount() const override { return 1; }
+        UnsignedInt doTextLayerStyleCount() const override { return 1; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override {
+            return Vector3i{1};
+        }
         bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_COMPARE(features, StyleFeatures{0x10});
+            CORRADE_COMPARE(features, expectedFeatures);
             ++applyCalled;
             return true;
         }
 
         Int& applyCalled;
-    } style{applyCalled};
+        StyleFeatures expectedFeatures;
+    } style{applyCalled, data.expectedStyleFeatures};
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
     UserInterfaceGL ui{NoCreate};
-    if(data.tryCreate)
-        CORRADE_VERIFY(ui.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, &_importerManager, &_fontManager));
-    else
-        ui.create({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, &_importerManager, &_fontManager);
+    if(data.tryCreate) {
+        if(data.styleFeatures)
+            CORRADE_VERIFY(ui.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, *data.styleFeatures, &_importerManager, &_fontManager));
+        else
+            CORRADE_VERIFY(ui.tryCreate({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, &_importerManager, &_fontManager));
+    } else {
+        if(data.styleFeatures)
+            ui.create({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, *data.styleFeatures, &_importerManager, &_fontManager);
+        else
+            ui.create({100.0f, 150.0f}, {50.0f, 75.0f}, {200, 300}, style, &_importerManager, &_fontManager);
+    }
     CORRADE_COMPARE(ui.size(), (Vector2{100.0f, 150.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{50.0f, 75.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
-    CORRADE_COMPARE(ui.layerCapacity(), 0);
-    CORRADE_COMPARE(ui.layerUsedCount(), 0);
-    CORRADE_VERIFY(!ui.hasBaseLayer());
-    CORRADE_VERIFY(!ui.hasTextLayer());
-    CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_COMPARE(ui.layerCapacity(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui.layerUsedCount(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui.hasBaseLayer(), data.expectedStyleFeatures >= StyleFeature::BaseLayer);
+    CORRADE_COMPARE(ui.hasTextLayer(), data.expectedStyleFeatures >= StyleFeature::TextLayer);
+    CORRADE_COMPARE(ui.hasEventLayer(), data.expectedStyleFeatures >= StyleFeature::EventLayer);
     CORRADE_COMPARE(applyCalled, 1);
 
     /* The renderer instance is set implicitly first time a style is */
@@ -358,33 +441,48 @@ void UserInterfaceGLTest::createSingleSize() {
 
     Int applyCalled = 0;
     struct Style: AbstractStyle {
-        explicit Style(Int& applyCalled): applyCalled(applyCalled) {}
-        StyleFeatures doFeatures() const override { return StyleFeatures{0x10}; }
+        explicit Style(Int& applyCalled, StyleFeatures expectedFeatures): applyCalled(applyCalled), expectedFeatures{expectedFeatures} {}
+        StyleFeatures doFeatures() const override {
+            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature(0x80);
+        }
+        UnsignedInt doBaseLayerStyleCount() const override { return 1; }
+        UnsignedInt doTextLayerStyleCount() const override { return 1; }
+        Vector3i doTextLayerGlyphCacheSize(StyleFeatures) const override {
+            return Vector3i{1};
+        }
         bool doApply(UserInterface&, StyleFeatures features, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*) const override {
-            CORRADE_COMPARE(features, StyleFeatures{0x10});
+            CORRADE_COMPARE(features, expectedFeatures);
             ++applyCalled;
             return true;
         }
 
         Int& applyCalled;
-    } style{applyCalled};
+        StyleFeatures expectedFeatures;
+    } style{applyCalled, data.expectedStyleFeatures};
 
     /* Capture correct function name */
     CORRADE_VERIFY(true);
 
     UserInterfaceGL ui{NoCreate};
-    if(data.tryCreate)
-        CORRADE_VERIFY(ui.tryCreate({200, 300}, style, &_importerManager, &_fontManager));
-    else
-        ui.create({200, 300}, style, &_importerManager, &_fontManager);
+    if(data.tryCreate) {
+        if(data.styleFeatures)
+            CORRADE_VERIFY(ui.tryCreate({200, 300}, style, *data.styleFeatures, &_importerManager, &_fontManager));
+        else
+            CORRADE_VERIFY(ui.tryCreate({200, 300}, style, &_importerManager, &_fontManager));
+    } else {
+        if(data.styleFeatures)
+            ui.create({200, 300}, style, *data.styleFeatures, &_importerManager, &_fontManager);
+        else
+            ui.create({200, 300}, style, &_importerManager, &_fontManager);
+    }
     CORRADE_COMPARE(ui.size(), (Vector2{200.0f, 300.0f}));
     CORRADE_COMPARE(ui.windowSize(), (Vector2{200.0f, 300.0f}));
     CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{200, 300}));
-    CORRADE_COMPARE(ui.layerCapacity(), 0);
-    CORRADE_COMPARE(ui.layerUsedCount(), 0);
-    CORRADE_VERIFY(!ui.hasBaseLayer());
-    CORRADE_VERIFY(!ui.hasTextLayer());
-    CORRADE_VERIFY(!ui.hasEventLayer());
+    CORRADE_COMPARE(ui.layerCapacity(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui.layerUsedCount(), data.expectedLayerCount);
+    CORRADE_COMPARE(ui.hasBaseLayer(), data.expectedStyleFeatures >= StyleFeature::BaseLayer);
+    CORRADE_COMPARE(ui.hasTextLayer(), data.expectedStyleFeatures >= StyleFeature::TextLayer);
+    CORRADE_COMPARE(ui.hasEventLayer(), data.expectedStyleFeatures >= StyleFeature::EventLayer);
     CORRADE_COMPARE(applyCalled, 1);
 
     /* The renderer instance is set implicitly first time a style is */
