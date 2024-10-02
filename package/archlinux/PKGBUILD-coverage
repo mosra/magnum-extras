@@ -45,8 +45,8 @@ check() {
     mkdir coverage
     # Keep in sync with package/ci/appveyor-lcov.sh, appveyor-desktop.bat and
     # circleci.yml, please
-    # TODO figure out a way to avoid adding --ignore-errors mismatch
-    lcov --ignore-errors mismatch --directory . --capture --output-file coverage.info
+    # TODO figure out a way to avoid adding --ignore-errors mismatch etc
+    lcov --ignore-errors mismatch,inconsistent --directory . --capture --output-file coverage.info
     lcov --extract coverage.info "*/src/Magnum/*" --output-file coverage.info
     lcov --remove coverage.info "*/Test/*" --output-file coverage.info
     lcov --remove coverage.info "*/build-coverage/src/Magnum/*" --output-file coverage.info
