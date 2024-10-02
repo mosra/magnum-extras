@@ -80,7 +80,7 @@ const struct {
     bool tryCreate;
 } CreateData[]{
     {"", false},
-    {"try", false},
+    {"try", true},
 };
 
 const struct {
