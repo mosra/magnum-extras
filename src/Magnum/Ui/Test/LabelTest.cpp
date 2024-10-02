@@ -49,12 +49,14 @@ struct LabelTest: WidgetTester {
 
     void setIcon();
     void setIconFromText();
+    void setIconFromEmpty();
     void setIconEmpty();
     void setIconEmptyFromText();
 
     void setText();
     void setTextTextProperties();
     void setTextFromIcon();
+    void setTextFromEmpty();
     void setTextEmpty();
     void setTextEmptyFromIcon();
 };
@@ -89,12 +91,14 @@ LabelTest::LabelTest() {
     addTests<LabelTest>({
         &LabelTest::setIcon,
         &LabelTest::setIconFromText,
+        &LabelTest::setIconFromEmpty,
         &LabelTest::setIconEmpty,
         &LabelTest::setIconEmptyFromText,
 
         &LabelTest::setText,
         &LabelTest::setTextTextProperties,
         &LabelTest::setTextFromIcon,
+        &LabelTest::setTextFromEmpty,
         &LabelTest::setTextEmpty,
         &LabelTest::setTextEmptyFromIcon
     }, &WidgetTester::setup,
@@ -274,6 +278,18 @@ void LabelTest::setIconFromText() {
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
 }
 
+void LabelTest::setIconFromEmpty() {
+    Label label{{ui, rootNode, {16, 32}}, Icon::None, LabelStyle::Danger};
+    CORRADE_COMPARE(label.icon(), Icon::None);
+    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
+
+    label.setIcon(Icon::Yes);
+    CORRADE_COMPARE(label.icon(), Icon::Yes);
+    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 1);
+}
+
 void LabelTest::setIconEmpty() {
     Label label{{ui, rootNode, {16, 32}}, Icon::No, LabelStyle::Default};
     CORRADE_COMPARE(label.icon(), Icon::No);
@@ -328,6 +344,17 @@ void LabelTest::setTextFromIcon() {
     label.setText("wonderful!!");
     CORRADE_COMPARE(label.icon(), Icon::None);
     CORRADE_COMPARE(label.data(), previousData);
+    CORRADE_VERIFY(ui.isHandleValid(label.data()));
+    CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 11);
+}
+
+void LabelTest::setTextFromEmpty() {
+    Label label{{ui, rootNode, {16, 32}}, ""};
+    CORRADE_COMPARE(label.data(), DataHandle::Null);
+    CORRADE_COMPARE(ui.textLayer().usedCount(), 0);
+
+    label.setText("wonderful!!");
+    CORRADE_COMPARE(label.icon(), Icon::None);
     CORRADE_VERIFY(ui.isHandleValid(label.data()));
     CORRADE_COMPARE(ui.textLayer().glyphCount(label.data()), 11);
 }
