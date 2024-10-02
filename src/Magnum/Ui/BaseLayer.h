@@ -78,7 +78,7 @@ struct BaseLayerCommonStyleUniform {
      * @brief Set the @ref smoothness and @ref innerOutlineSmoothness fields
      * @return Reference to self (for method chaining)
      */
-    BaseLayerCommonStyleUniform& setSmoothness(Float smoothness, Float innerOutlineSmoothness) {
+    CORRADE_CONSTEXPR14 BaseLayerCommonStyleUniform& setSmoothness(Float smoothness, Float innerOutlineSmoothness) {
         this->smoothness = smoothness;
         this->innerOutlineSmoothness = innerOutlineSmoothness;
         return *this;
@@ -88,7 +88,7 @@ struct BaseLayerCommonStyleUniform {
      * @brief Set the @ref smoothness and @ref innerOutlineSmoothness fields to the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerCommonStyleUniform& setSmoothness(Float smoothness) {
+    CORRADE_CONSTEXPR14 BaseLayerCommonStyleUniform& setSmoothness(Float smoothness) {
         this->smoothness = smoothness;
         this->innerOutlineSmoothness = smoothness;
         return *this;
@@ -98,7 +98,7 @@ struct BaseLayerCommonStyleUniform {
      * @brief Set the @ref backgroundBlurAlpha field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerCommonStyleUniform& setBackgroundBlurAlpha(Float alpha) {
+    CORRADE_CONSTEXPR14 BaseLayerCommonStyleUniform& setBackgroundBlurAlpha(Float alpha) {
         this->backgroundBlurAlpha = alpha;
         return *this;
     }
@@ -257,7 +257,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref topColor and @ref bottomColor fields
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setColor(const Color4& top, const Color4& bottom) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setColor(const Color4& top, const Color4& bottom) {
         topColor = top;
         bottomColor = bottom;
         return *this;
@@ -267,7 +267,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref topColor and @ref bottomColor fields to the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setColor(const Color4& color) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setColor(const Color4& color) {
         topColor = color;
         bottomColor = color;
         return *this;
@@ -277,7 +277,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref outlineColor field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setOutlineColor(const Color4& color) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setOutlineColor(const Color4& color) {
         outlineColor = color;
         return *this;
     }
@@ -286,7 +286,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref outlineWidth field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setOutlineWidth(const Vector4& width) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setOutlineWidth(const Vector4& width) {
         outlineWidth = width;
         return *this;
     }
@@ -295,7 +295,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref outlineWidth field with all edges having the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setOutlineWidth(Float width) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setOutlineWidth(Float width) {
         outlineWidth = Vector4{width};
         return *this;
     }
@@ -304,7 +304,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref cornerRadius field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setCornerRadius(const Vector4& radius) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setCornerRadius(const Vector4& radius) {
         cornerRadius = radius;
         return *this;
     }
@@ -313,7 +313,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref cornerRadius field with all corners having the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setCornerRadius(Float radius) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setCornerRadius(Float radius) {
         cornerRadius = Vector4{radius};
         return *this;
     }
@@ -322,7 +322,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref innerOutlineCornerRadius field
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setInnerOutlineCornerRadius(const Vector4& radius) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setInnerOutlineCornerRadius(const Vector4& radius) {
         innerOutlineCornerRadius = radius;
         return *this;
     }
@@ -331,7 +331,7 @@ struct BaseLayerStyleUniform {
      * @brief Set the @ref innerOutlineCornerRadius field with all corners having the same value
      * @return Reference to self (for method chaining)
      */
-    BaseLayerStyleUniform& setInnerOutlineCornerRadius(Float radius) {
+    CORRADE_CONSTEXPR14 BaseLayerStyleUniform& setInnerOutlineCornerRadius(Float radius) {
         innerOutlineCornerRadius = Vector4{radius};
         return *this;
     }

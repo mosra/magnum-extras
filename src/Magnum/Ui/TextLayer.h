@@ -115,7 +115,7 @@ struct TextLayerStyleUniform {
      * @brief Set the @ref color field
      * @return Reference to self (for method chaining)
      */
-    TextLayerStyleUniform& setColor(const Color4& color) {
+    CORRADE_CONSTEXPR14 TextLayerStyleUniform& setColor(const Color4& color) {
         this->color = color;
         return *this;
     }

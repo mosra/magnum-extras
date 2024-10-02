@@ -151,6 +151,22 @@ if(Magnum_EmscriptenApplication_FOUND)
             "$<TARGET_FILE_DIR:UiEmscriptenApplicationTest>/UiEmscriptenApplicationTest.html")
 endif()
 
+# Build these only if there's no explicit -std= passed in the flags
+if(NOT CMAKE_CXX_FLAGS MATCHES "-std=")
+    # Copied verbatim from src/Corrade/Test/CMakeLists.txt, please keep in sync
+    if((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0") OR
+       (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "3.4") OR
+       (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0.1") OR
+       (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "19.10"))
+        corrade_add_test(UiBaseLayerCpp14Test BaseLayerCpp14Test.cpp LIBRARIES MagnumUi)
+        corrade_add_test(UiTextLayerCpp14Test TextLayerCpp14Test.cpp LIBRARIES MagnumUi)
+        set_target_properties(
+            UiBaseLayerCpp14Test
+            UiTextLayerCpp14Test
+            PROPERTIES CORRADE_CXX_STANDARD 14)
+   endif()
+endif()
+
 if(MAGNUM_TARGET_GL)
     find_package(Magnum REQUIRED DebugTools)
 
