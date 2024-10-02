@@ -829,12 +829,14 @@ void ScenePlayer::playPause() {
 
     if(_data->player.state() == Animation::State::Playing) {
         _data->player.pause(std::chrono::system_clock::now().time_since_epoch());
-        _animationPlayPause.setText("Play"_s);
-        _animationPlayPause.setStyle(Ui::ButtonStyle::Success);
+        _animationPlayPause
+            .setText("Play"_s)
+            .setStyle(Ui::ButtonStyle::Success);
     } else {
         _data->player.play(std::chrono::system_clock::now().time_since_epoch());
-        _animationPlayPause.setText("Pause"_s);
-        _animationPlayPause.setStyle(Ui::ButtonStyle::Warning);
+        _animationPlayPause
+            .setText("Pause"_s)
+            .setStyle(Ui::ButtonStyle::Warning);
     }
 
     _ui.clearNodeFlags(_animationBackward, Ui::NodeFlag::Disabled);
@@ -847,8 +849,9 @@ void ScenePlayer::stop() {
 
     _data->player.stop();
 
-    _animationPlayPause.setText("Play"_s);
-    _animationPlayPause.setStyle(Ui::ButtonStyle::Success);
+    _animationPlayPause
+        .setText("Play"_s)
+        .setStyle(Ui::ButtonStyle::Success);
 
     _ui.addNodeFlags(_animationBackward, Ui::NodeFlag::Disabled);
     _ui.addNodeFlags(_animationStop, Ui::NodeFlag::Disabled);

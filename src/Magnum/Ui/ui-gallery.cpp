@@ -159,12 +159,11 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
     {
         /* Buttons */
         Ui::NodeHandle buttons = Ui::label(
-            Ui::snap(_ui, Ui::Snap::Top|Ui::Snap::Left|Ui::Snap::Inside, root, LabelSize),
+            Ui::snap(_ui, Ui::Snap::TopLeft|Ui::Snap::Inside, root, LabelSize),
             "Buttons", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
 
         Ui::SnapLayout snap{_ui,
-            Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, buttons,
-            Ui::Snap::Right};
+            Ui::Snap::BottomLeft|Ui::Snap::InsideX, buttons, Ui::Snap::Right};
         Ui::NodeHandle buttonDefault = Ui::button(snap({80, WidgetHeight}),
             "Default", Ui::ButtonStyle::Default);
         Ui::button(snap({80, WidgetHeight}),
@@ -183,8 +182,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             Ui::Icon::Yes, "Flat", Ui::ButtonStyle::Flat);
 
         snap = Ui::SnapLayout{_ui,
-            Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, buttonDefault,
-            Ui::Snap::Right};
+            Ui::Snap::BottomLeft|Ui::Snap::InsideX, buttonDefault, Ui::Snap::Right};
         Ui::NodeHandle buttonDefaultDisabled = Ui::button(
             snap({80, WidgetHeight}, Ui::NodeFlag::Disabled),
             "Default", Ui::ButtonStyle::Default);
@@ -205,12 +203,11 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
 
         /* Labels */
         Ui::NodeHandle labels = Ui::label(
-            Ui::snap(_ui, Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, buttonDefaultDisabled, {0, 8}, LabelSize),
+            Ui::snap(_ui, Ui::Snap::BottomLeft|Ui::Snap::InsideX, buttonDefaultDisabled, {0, 8}, LabelSize),
             "Labels", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
 
         snap = Ui::SnapLayout{_ui,
-            Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, labels,
-            Ui::Snap::Right};
+            Ui::Snap::BottomLeft|Ui::Snap::InsideX, labels, Ui::Snap::Right};
         Ui::NodeHandle labelDefault = Ui::label(snap(LabelSize),
             "Default", Ui::LabelStyle::Default);
         Ui::label(snap(LabelSize),
@@ -227,8 +224,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             "Dim", Ui::LabelStyle::Dim);
 
         snap = Ui::SnapLayout{_ui,
-            Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, labelDefault,
-            Ui::Snap::Right};
+            Ui::Snap::BottomLeft|Ui::Snap::InsideX, labelDefault, Ui::Snap::Right};
         Ui::NodeHandle labelDefaultDisabled = Ui::label(
             snap(LabelSize, Ui::NodeFlag::Disabled),
             "Default", Ui::LabelStyle::Default);
@@ -247,11 +243,11 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
 
         /* Inputs */
         Ui::NodeHandle inputs = Ui::label(
-            Ui::snap(_ui, Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, labelDefaultDisabled, {0, 8}, LabelSize),
+            Ui::snap(_ui, Ui::Snap::BottomLeft|Ui::Snap::InsideX, labelDefaultDisabled, {0, 8}, LabelSize),
             "Inputs", Text::Alignment::MiddleLeft, Ui::LabelStyle::Dim);
 
         snap = Ui::SnapLayout{_ui,
-            Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, inputs,
+            Ui::Snap::BottomLeft|Ui::Snap::InsideX, inputs,
             Ui::Snap::Right};
         Ui::Input inputDefault{snap({128, WidgetHeight}),
             "Default", Ui::InputStyle::Default};
@@ -265,7 +261,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
             "Flat", Ui::InputStyle::Flat};
 
         snap = Ui::SnapLayout{_ui,
-            Ui::Snap::Bottom|Ui::Snap::Left|Ui::Snap::InsideX, inputDefault,
+            Ui::Snap::BottomLeft|Ui::Snap::InsideX, inputDefault,
             Ui::Snap::Right};
         Ui::Input{snap({128, WidgetHeight}, Ui::NodeFlag::Disabled),
             "Default", Ui::InputStyle::Default}.release();
