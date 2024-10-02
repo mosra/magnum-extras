@@ -109,7 +109,7 @@ class MAGNUM_UI_EXPORT AbstractVisualLayerStyleAnimator: public AbstractStyleAni
          * Expects that @p handle is valid. If the dynamic style wasn't
          * allocated yet, either due to the animation not being advanced yet or
          * due to no free dynamic styles being available, returns
-         * @relativeref{Corrade,Containers::NullOpt}. The
+         * @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref targetStyle()
          */
         Containers::Optional<UnsignedInt> dynamicStyle(AnimationHandle handle) const;
