@@ -68,18 +68,20 @@ bool AbstractWidget::isHidden() const {
     return _ui->nodeFlags(_node) >= NodeFlag::Hidden;
 }
 
-void AbstractWidget::setHidden(const bool hidden) {
+AbstractWidget& AbstractWidget::setHidden(const bool hidden) {
     hidden ? _ui->addNodeFlags(_node, NodeFlag::Hidden) :
              _ui->clearNodeFlags(_node, NodeFlag::Hidden);
+    return *this;
 }
 
 bool AbstractWidget::isDisabled() const {
     return _ui->nodeFlags(_node) >= NodeFlag::Disabled;
 }
 
-void AbstractWidget::setDisabled(const bool disabled) {
+AbstractWidget& AbstractWidget::setDisabled(const bool disabled) {
     disabled ? _ui->addNodeFlags(_node, NodeFlag::Disabled) :
                _ui->clearNodeFlags(_node, NodeFlag::Disabled);
+    return *this;
 }
 
 NodeHandle AbstractWidget::release() {

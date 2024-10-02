@@ -105,11 +105,12 @@ Input::Input(const Anchor& anchor, const Containers::StringView text, const Text
 
 Input::Input(const Anchor& anchor, const Containers::StringView text, const InputStyle style): Input{anchor, text, {}, style} {}
 
-void Input::setStyle(const InputStyle style) {
+Input& Input::setStyle(const InputStyle style) {
     _style = style;
     ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseLayerStyle(style));
     ui().textLayer().setTransitionedStyle(ui(), _textData, textLayerStyle(style));
     /** @todo re-set the text if font / alignment ... changed */
+    return *this;
 }
 
 DataHandle Input::backgroundData() const {
@@ -130,12 +131,13 @@ Containers::StringView Input::text() const {
     return ui().textLayer().text(_textData);
 }
 
-void Input::setText(const Containers::StringView text, const TextProperties& textProperties) {
+Input& Input::setText(const Containers::StringView text, const TextProperties& textProperties) {
     ui().textLayer().setText(_textData, text, textProperties);
+    return *this;
 }
 
-void Input::setText(const Containers::StringView text) {
-    setText(text, {});
+Input& Input::setText(const Containers::StringView text) {
+    return setText(text, {});
 }
 
 }}

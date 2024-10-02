@@ -107,13 +107,14 @@ Label::Label(const Anchor& anchor, const Containers::StringView text, const Text
 
 Label::Label(const Anchor& anchor, const Containers::StringView text, const LabelStyle style): Label{anchor, text, {}, style} {}
 
-void Label::setStyle(const LabelStyle style) {
+Label& Label::setStyle(const LabelStyle style) {
     _style = style;
     if(_data != LayerDataHandle::Null)
         ui().textLayer().setStyle(_data, (_icon == Icon::None ? textLayerStyleText : textLayerStyleIcon)(style));
+    return *this;
 }
 
-void Label::setIcon(const Icon icon) {
+Label& Label::setIcon(const Icon icon) {
     TextLayer& textLayer = ui().textLayer();
 
     _icon = icon;
@@ -125,9 +126,11 @@ void Label::setIcon(const Icon icon) {
         textLayer.remove(_data);
         _data = LayerDataHandle::Null;
     }
+
+    return *this;
 }
 
-void Label::setText(const Containers::StringView text, const TextProperties& textProperties) {
+Label& Label::setText(const Containers::StringView text, const TextProperties& textProperties) {
     TextLayer& textLayer = ui().textLayer();
 
     _icon = Icon::None;
@@ -140,10 +143,12 @@ void Label::setText(const Containers::StringView text, const TextProperties& tex
         textLayer.remove(_data);
         _data = LayerDataHandle::Null;
     }
+
+    return *this;
 }
 
-void Label::setText(const Containers::StringView text) {
-    setText(text, {});
+Label& Label::setText(const Containers::StringView text) {
+    return setText(text, {});
 }
 
 DataHandle Label::data() const {

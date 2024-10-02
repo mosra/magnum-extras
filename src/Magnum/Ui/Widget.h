@@ -144,12 +144,13 @@ class MAGNUM_UI_EXPORT AbstractWidget {
 
         /**
          * @brief Set the widget hidden
+         * @return Reference to self (for method chaining)
          *
          * Equivalent to adding or clearing @ref NodeFlag::Hidden on
          * @ref node() with @ref AbstractUserInterface::addNodeFlags() or
          * @relativeref{AbstractUserInterface,clearNodeFlags()}.
          */
-        void setHidden(bool hidden);
+        AbstractWidget& setHidden(bool hidden);
 
         /**
          * @brief Whether the widget is disabled
@@ -163,12 +164,13 @@ class MAGNUM_UI_EXPORT AbstractWidget {
 
         /**
          * @brief Set the widget disabled
+         * @return Reference to self (for method chaining)
          *
          * Equivalent to adding or clearing @ref NodeFlag::Disabled on
          * @ref node() with @ref AbstractUserInterface::addNodeFlags() or
          * @relativeref{AbstractUserInterface,clearNodeFlags()}.
          */
-        void setDisabled(bool disabled);
+        AbstractWidget& setDisabled(bool disabled);
 
         /**
          * @brief Release the widget node
@@ -187,6 +189,16 @@ class MAGNUM_UI_EXPORT AbstractWidget {
         Containers::Reference<AbstractUserInterface> _ui;
         NodeHandle _node;
 };
+
+#ifndef DOXYGEN_GENERATING_OUTPUT
+#define _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(T)                        \
+    T& setHidden(bool hidden) {                                             \
+        return static_cast<T&>(AbstractWidget::setHidden(hidden));          \
+    }                                                                       \
+    T& setDisabled(bool disabled) {                                         \
+        return static_cast<T&>(AbstractWidget::setDisabled(disabled));      \
+    }
+#endif
 
 /**
 @brief Templated abstract base for stateful widgets
@@ -230,6 +242,10 @@ template<class UserInterface> class BasicWidget: public AbstractWidget {
         UserInterface& ui() const {
             return static_cast<UserInterface&>(AbstractWidget::ui());
         }
+
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(BasicWidget<UserInterface>)
+        #endif
 };
 
 /**

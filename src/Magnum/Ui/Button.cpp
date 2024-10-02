@@ -214,7 +214,7 @@ Button::Button(const Anchor& anchor, const Containers::StringView text, const Te
 
 Button::Button(const Anchor& anchor, const Containers::StringView text, const ButtonStyle style): Button{anchor, text, {}, style} {}
 
-void Button::setStyle(const ButtonStyle style) {
+Button& Button::setStyle(const ButtonStyle style) {
     _style = style;
     ui().baseLayer().setTransitionedStyle(ui(), _backgroundData, baseLayerStyle(style));
     if(_textData != LayerDataHandle::Null)
@@ -223,9 +223,10 @@ void Button::setStyle(const ButtonStyle style) {
     if(_iconData != LayerDataHandle::Null)
         ui().textLayer().setTransitionedStyle(ui(), _iconData,
             (_textData == LayerDataHandle::Null ? textLayerStyleIconOnly : textLayerStyleIcon)(style));
+    return *this;
 }
 
-void Button::setIcon(const Icon icon) {
+Button& Button::setIcon(const Icon icon) {
     TextLayer& textLayer = ui().textLayer();
 
     _icon = icon;
@@ -240,9 +241,10 @@ void Button::setIcon(const Icon icon) {
     }
 
     alignIconText(textLayer, _style, _iconData, _textData);
+    return *this;
 }
 
-void Button::setText(const Containers::StringView text, const TextProperties& textProperties) {
+Button& Button::setText(const Containers::StringView text, const TextProperties& textProperties) {
     TextLayer& textLayer = ui().textLayer();
 
     if(text) {
@@ -257,10 +259,11 @@ void Button::setText(const Containers::StringView text, const TextProperties& te
     }
 
     alignIconText(textLayer, _style, _iconData, _textData);
+    return *this;
 }
 
-void Button::setText(const Containers::StringView text) {
-    setText(text, {});
+Button& Button::setText(const Containers::StringView text) {
+    return setText(text, {});
 }
 
 DataHandle Button::backgroundData() const {

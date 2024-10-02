@@ -104,13 +104,14 @@ class MAGNUM_UI_EXPORT Label: public Widget {
 
         /**
          * @brief Set style
+         * @return Reference to self (for method chaining)
          *
          * Note that calling this function doesn't change the font if the new
          * style uses a different one, you have to call @ref setText()
          * afterwards to make it pick it up.
          * @see @ref setIcon(), @ref setText()
          */
-        void setStyle(LabelStyle style);
+        Label& setStyle(LabelStyle style);
 
         /**
          * @brief Icon
@@ -122,26 +123,28 @@ class MAGNUM_UI_EXPORT Label: public Widget {
 
         /**
          * @brief Set icon
+         * @return Reference to self (for method chaining)
          *
          * If the label had a text before, it's replaced with the icon. Passing
          * @ref Icon::None makes the label empty.
          * @see @ref setText(), @ref setStyle()
          */
-        void setIcon(Icon icon);
+        Label& setIcon(Icon icon);
 
         /**
          * @brief Set text
+         * @return Reference to self (for method chaining)
          *
          * If the label had an icon before, it's replaced with a text. Passing
          * an empty @p text makes the label empty.
          * @see @ref setIcon(), @ref setStyle()
          */
         #ifdef DOXYGEN_GENERATING_OUTPUT
-        void setText(Containers::StringView text, const TextProperties& textProperties = {});
+        Label& setText(Containers::StringView text, const TextProperties& textProperties = {});
         #else
         /* To avoid having to include TextProperties.h */
-        void setText(Containers::StringView text, const TextProperties& textProperties);
-        void setText(Containers::StringView text);
+        Label& setText(Containers::StringView text, const TextProperties& textProperties);
+        Label& setText(Containers::StringView text);
         #endif
 
         /**
@@ -151,6 +154,10 @@ class MAGNUM_UI_EXPORT Label: public Widget {
          * directly.
          */
         DataHandle data() const;
+
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Label)
+        #endif
 
     private:
         LabelStyle _style;

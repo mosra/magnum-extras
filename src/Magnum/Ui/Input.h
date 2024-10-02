@@ -84,13 +84,14 @@ class MAGNUM_UI_EXPORT Input: public Widget {
 
         /**
          * @brief Set style
+         * @return Reference to self (for method chaining)
          *
          * Note that calling this function doesn't change the font if the new
          * style uses a different one, you have to call @ref setText()
          * afterwards to make it pick it up.
          * @see @ref setText()
          */
-        void setStyle(InputStyle style);
+        Input& setStyle(InputStyle style);
 
         /**
          * @brief Text
@@ -102,15 +103,16 @@ class MAGNUM_UI_EXPORT Input: public Widget {
 
         /**
          * @brief Set text
+         * @return Reference to self (for method chaining)
          *
          * @see @ref setStyle()
          */
         #ifdef DOXYGEN_GENERATING_OUTPUT
-        void setText(Containers::StringView text, const TextProperties& textProperties = {});
+        Input& setText(Containers::StringView text, const TextProperties& textProperties = {});
         #else
         /* To avoid having to include TextProperties.h */
-        void setText(Containers::StringView text, const TextProperties& textProperties);
-        void setText(Containers::StringView text);
+        Input& setText(Containers::StringView text, const TextProperties& textProperties);
+        Input& setText(Containers::StringView text);
         #endif
 
         /**
@@ -128,6 +130,10 @@ class MAGNUM_UI_EXPORT Input: public Widget {
          * directly.
          */
         DataHandle textData() const;
+
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Input)
+        #endif
 
     private:
         InputStyle _style;

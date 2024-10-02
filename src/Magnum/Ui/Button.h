@@ -123,37 +123,40 @@ class MAGNUM_UI_EXPORT Button: public Widget {
 
         /**
          * @brief Set style
+         * @return Reference to self (for method chaining)
          *
          * Note that calling this function doesn't change the font if the new
          * style uses a different one, you have to call @ref setText()
          * afterwards to make it pick it up.
          * @see @ref setIcon(), @ref setText()
          */
-        void setStyle(ButtonStyle style);
+        Button& setStyle(ButtonStyle style);
 
         /** @brief Icon */
         Icon icon() const { return _icon; }
 
         /**
          * @brief Set icon
+         * @return Reference to self (for method chaining)
          *
          * Passing @ref Icon::None removes the icon.
          * @see @ref setText(), @ref setStyle()
          */
-        void setIcon(Icon icon);
+        Button& setIcon(Icon icon);
 
         /**
          * @brief Set text
+         * @return Reference to self (for method chaining)
          *
          * Passing an empty @p text removes the text.
          * @see @ref setIcon(), @ref setStyle()
          */
         #ifdef DOXYGEN_GENERATING_OUTPUT
-        void setText(Containers::StringView text, const TextProperties& textProperties = {});
+        Button& setText(Containers::StringView text, const TextProperties& textProperties = {});
         #else
         /* To avoid having to include TextProperties.h */
-        void setText(Containers::StringView text, const TextProperties& textProperties);
-        void setText(Containers::StringView text);
+        Button& setText(Containers::StringView text, const TextProperties& textProperties);
+        Button& setText(Containers::StringView text);
         #endif
 
         /**
@@ -179,6 +182,10 @@ class MAGNUM_UI_EXPORT Button: public Widget {
          * directly.
          */
         DataHandle textData() const;
+
+        #ifndef DOXYGEN_GENERATING_OUTPUT
+        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Button)
+        #endif
 
     private:
         ButtonStyle _style;
