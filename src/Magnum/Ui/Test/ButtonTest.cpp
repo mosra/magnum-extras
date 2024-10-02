@@ -313,7 +313,7 @@ void ButtonTest::constructIconTextTextProperties() {
     {
         NodeHandle node = button({ui, rootNode, {32, 16}}, Icon::No, "bye!",
             TextProperties{}.setScript(Text::Script::Braille),
-            ButtonStyle::Dim);
+            ButtonStyle::Warning);
         CORRADE_COMPARE(ui.nodeParent(node), rootNode);
         CORRADE_COMPARE(ui.nodeSize(node), (Vector2{32, 16}));
 
@@ -325,11 +325,11 @@ void ButtonTest::constructIconTextTextProperties() {
     } {
         Button button{{ui, rootNode, {32, 16}}, Icon::No, "bye!",
             TextProperties{}.setScript(Text::Script::Braille),
-            ButtonStyle::Dim};
+            ButtonStyle::Warning};
         CORRADE_COMPARE(ui.nodeParent(button), rootNode);
         CORRADE_COMPARE(ui.nodeSize(button), (Vector2{32, 16}));
 
-        CORRADE_COMPARE(button.style(), ButtonStyle::Dim);
+        CORRADE_COMPARE(button.style(), ButtonStyle::Warning);
         CORRADE_COMPARE(button.icon(), Icon::No);
 
         CORRADE_VERIFY(ui.isHandleValid(button.backgroundData()));
