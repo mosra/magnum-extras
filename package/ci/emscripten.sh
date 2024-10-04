@@ -3,23 +3,9 @@ set -ev
 
 git submodule update --init
 
+# Crosscompile Corrade
 git clone --depth 1 https://github.com/mosra/corrade.git
 cd corrade
-
-# Build native corrade-rc
-mkdir build && cd build || exit /b
-cmake .. \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=$HOME/deps-native \
-    -DCORRADE_WITH_INTERCONNECT=OFF \
-    -DCORRADE_WITH_PLUGINMANAGER=OFF \
-    -DCORRADE_WITH_TESTSUITE=OFF \
-    -DCORRADE_WITH_UTILITY=OFF \
-    -G Ninja
-ninja install
-cd ..
-
-# Crosscompile Corrade
 mkdir build-emscripten && cd build-emscripten
 cmake .. \
     -DCMAKE_TOOLCHAIN_FILE="../../toolchains/generic/Emscripten-wasm.cmake" \
@@ -27,7 +13,6 @@ cmake .. \
     -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG -O1" \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
-    -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DCORRADE_WITH_INTERCONNECT=OFF \
     -G Ninja
 ninja install
@@ -44,7 +29,6 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
-    -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DMAGNUM_WITH_AUDIO=OFF \
     -DMAGNUM_WITH_DEBUGTOOLS=$TARGET_GLES3 \
     -DMAGNUM_WITH_MATERIALTOOLS=OFF \
@@ -77,7 +61,6 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
-    -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DMAGNUM_WITH_STBTRUETYPEFONT=$TARGET_GLES3 \
     -DMAGNUM_WITH_STBIMAGEIMPORTER=$TARGET_GLES3 \
     -DMAGNUM_WITH_GLTFIMPORTER=$TARGET_GLES3 \
@@ -94,7 +77,6 @@ cmake .. \
     -DCMAKE_EXE_LINKER_FLAGS_RELEASE="-O1" \
     -DCMAKE_INSTALL_PREFIX=$HOME/deps \
     -DCMAKE_FIND_ROOT_PATH=$HOME/deps \
-    -DCORRADE_RC_EXECUTABLE=$HOME/deps-native/bin/corrade-rc \
     -DMAGNUM_WITH_PLAYER=$TARGET_GLES3 \
     -DMAGNUM_WITH_UI=$TARGET_GLES3 \
     -DMAGNUM_WITH_UI_GALLERY=$TARGET_GLES3 \
