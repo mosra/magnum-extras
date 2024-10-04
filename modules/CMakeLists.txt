@@ -28,4 +28,17 @@ set(MagnumExtras_MODULES
     FindMagnumExtras.cmake
     MagnumExtrasConfig.cmake)
 
+# IMPORTANT: When adding a new module here, be sure to update the
+# find_path(_MAGNUMEXTRAS_DEPENDENCY_MODULE_DIR ...) list in
+# FindMagnumExtras.cmake to avoid breakages when the directory contains only
+# that new module.
+set(MagnumExtras_DEPENDENCY_MODULES )
+# No dependency Find modules so far
+
 install(FILES ${MagnumExtras_MODULES} DESTINATION ${MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR})
+if(MagnumExtras_DEPENDENCY_MODULES)
+    install(FILES ${MagnumExtras_DEPENDENCY_MODULES} DESTINATION ${MAGNUMEXTRAS_CMAKE_MODULE_INSTALL_DIR}/dependencies)
+endif()
+
+# Magnum Extras dependency module dir for superprojects
+set(_MAGNUMEXTRAS_DEPENDENCY_MODULE_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE INTERNAL "")

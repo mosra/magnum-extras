@@ -114,9 +114,5 @@ build is linked to debug libraries, `Release` build to release libraries).
 
 See also @ref cmake "Magnum usage with CMake" for more information.
 
-@section cmake-extras-modules Other CMake modules
-
-See @ref cmake-modules "relevant section for the main Magnum project".
-
 */
 }
