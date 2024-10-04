@@ -187,6 +187,15 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
             mark_as_advanced(_MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR)
         endif()
 
+        # Decide if the library was found. If not, skip the rest, which
+        # populates the target properties and finds additional dependencies.
+        if((_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS AND _MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR AND (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG OR MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)) OR (_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS AND MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE))
+            set(MagnumExtras_${_component}_FOUND TRUE)
+        else()
+            set(MagnumExtras_${_component}_FOUND FALSE)
+            continue()
+        endif()
+
         # Link to core Magnum library, add inter-library dependencies
         if(_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS)
             foreach(_dependency ${_MAGNUMEXTRAS_${_component}_CORRADE_DEPENDENCIES})
@@ -205,13 +214,6 @@ foreach(_component ${MagnumExtras_FIND_COMPONENTS})
                 set_property(TARGET MagnumExtras::${_component} APPEND PROPERTY
                     INTERFACE_LINK_LIBRARIES MagnumExtras::${_dependency})
             endforeach()
-        endif()
-
-        # Decide if the library was found
-        if((_component IN_LIST _MAGNUMEXTRAS_LIBRARY_COMPONENTS AND _MAGNUMEXTRAS_${_COMPONENT}_INCLUDE_DIR AND (MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_DEBUG OR MAGNUMEXTRAS_${_COMPONENT}_LIBRARY_RELEASE)) OR (_component IN_LIST _MAGNUMEXTRAS_EXECUTABLE_COMPONENTS AND MAGNUMEXTRAS_${_COMPONENT}_EXECUTABLE))
-            set(MagnumExtras_${_component}_FOUND TRUE)
-        else()
-            set(MagnumExtras_${_component}_FOUND FALSE)
         endif()
     endif()
 endforeach()
