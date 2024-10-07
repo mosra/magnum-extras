@@ -271,7 +271,7 @@ void BaseLayer::setDynamicStyle(const UnsignedInt id, const BaseLayerStyleUnifor
     }
 }
 
-DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const Vector4& outlineWidth, const NodeHandle node) {
+DataHandle BaseLayer::create(const UnsignedInt style, const NodeHandle node) {
     State& state = static_cast<State&>(*_state);
     #ifndef CORRADE_NO_ASSERT
     auto& sharedState = static_cast<Shared::State&>(state.shared);
@@ -288,19 +288,9 @@ DataHandle BaseLayer::create(const UnsignedInt style, const Color3& color, const
     }
 
     Implementation::BaseLayerData& data = state.data[id];
-    data.outlineWidth = outlineWidth;
-    /** @todo is there a way to have create() with all possible per-data
-        options that doesn't make it ambiguous / impossible to extend further?
-        adding a padding argument would make it kind of clash with
-        outlineWidth because the type is the same and there's no clear ordering
-        between the two, furthermore later adding also cornerRadius and
-        possibly innerOutlineCornerRadius would make it even more error-prone
-        to use, and annoying as well as it won't really be possible to specify
-        just a subset without getting ambiguous ... OTOH in Python this would
-        be simple and desirable to do with keyword-only arguments that all have
-        a default */
     data.padding = {};
-    data.color = color;
+    data.outlineWidth = {};
+    data.color = Color3{1.0f};
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     data.textureCoordinateOffset = {};

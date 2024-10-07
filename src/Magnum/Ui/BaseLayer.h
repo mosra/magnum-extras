@@ -543,11 +543,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          *
          * Expects that @p style is less than @ref Shared::totalStyleCount().
          * All styling is driven from the @ref BaseLayerStyleUniform at index
-         * @p style. Use @ref create(UnsignedInt, const Color3&, NodeHandle) or
-         * @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
-         * for creating a quad with a custom color and outline width. This
-         * function is equivalent to calling them with @cpp 0xffffff_srgbf @ce
-         * for the base color and a zero vector for the outline width.
+         * @p style.
+         * @see @ref setColor(), @ref setOutlineWidth(), @ref setPadding(),
+         *      @ref setTextureCoordinates()
          */
         DataHandle create(UnsignedInt style, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -555,9 +553,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
-        ) {
-            return create(style, Color3{1.0f}, node);
-        }
+        );
 
         /**
          * @brief Create a quad with a style index in a concrete enum type
@@ -577,135 +573,6 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
             #endif
         ) {
             return create(UnsignedInt(style), node);
-        }
-
-        /**
-         * @brief Create a quad with a custom base color
-         * @param style         Style index
-         * @param color         Custom base color
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p style is less than @ref Shared::totalStyleCount().
-         * Styling is driven from the @ref BaseLayerStyleUniform at index
-         * @p style, in addition @ref BaseLayerStyleUniform::topColor and
-         * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
-         * @p color. Use @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
-         * for creating a quad with a custom color and outline width. This
-         * function is equivalent to calling it with a zero vector for the
-         * outline width.
-         * @see @ref create(UnsignedInt, NodeHandle)
-         */
-        DataHandle create(UnsignedInt style, const Color3& color, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return create(style, color, {}, node);
-        }
-
-        /**
-         * @brief Create a quad with a style index in a concrete enum type and with a custom base color
-         *
-         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, const Color3&, NodeHandle).
-         */
-        template<class StyleIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
-            #endif
-        > DataHandle create(StyleIndex style, const Color3& color, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return create(UnsignedInt(style), color, node);
-        }
-
-        /**
-         * @brief Create a quad with a custom base color and outline width
-         * @param style         Style index
-         * @param color         Custom base color
-         * @param outlineWidth  Custom outline width in order left, top, right,
-         *      bottom
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @p style is less than @ref Shared::totalStyleCount().
-         * Styling is driven from the @ref BaseLayerStyleUniform at index
-         * @p style, in addition @ref BaseLayerStyleUniform::topColor and
-         * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
-         * @p color and @p outlineWidth is added to
-         * @ref BaseLayerStyleUniform::outlineWidth.
-         * @see @ref create(UnsignedInt, NodeHandle),
-         *      @ref create(UnsignedInt, const Color3&, NodeHandle)
-         */
-        DataHandle create(UnsignedInt style, const Color3& color, const Vector4& outlineWidth, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        );
-
-        /**
-         * @brief Create a quad with a style index in a concrete enum type and with a custom base color and outline width
-         *
-         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle).
-         */
-        template<class StyleIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
-            #endif
-        > DataHandle create(StyleIndex style, const Color3& color, const Vector4& outlineWidth, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return create(UnsignedInt(style), color, outlineWidth, node);
-        }
-
-        /**
-         * @brief Create a quad with a custom base color and outline width with all edges having the same value
-         *
-         * See @ref create(UnsignedInt, const Color3&, const Vector4&, NodeHandle)
-         * for more information.
-         */
-        DataHandle create(UnsignedInt style, const Color3& color, Float outlineWidth, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return create(style, color, Vector4{outlineWidth}, node);
-        }
-
-        /**
-         * @brief Create a quad with a style index in a concrete enum type and a custom base color and outline width with all edges having the same value
-         *
-         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, const Color3&, Float, NodeHandle).
-         */
-        template<class StyleIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
-            #endif
-        > DataHandle create(StyleIndex style, const Color3& color, Float outlineWidth, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return create(UnsignedInt(style), color, outlineWidth, node);
         }
 
         /**
@@ -748,9 +615,8 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid.
          * @ref BaseLayerStyleUniform::topColor and
          * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
-         * @p color. By default, unless specified in @ref create() already, the
-         * custom color is @cpp 0xffffff_srgbf @ce, i.e. not affecting the
-         * style in any way.
+         * @p color. By default, the custom color is @cpp 0xffffff_srgbf @ce,
+         * i.e. not affecting the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
@@ -803,10 +669,9 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * @brief Set quad custom outline width with all edges having the same value
          *
          * Expects that @p handle is valid. The @p width is added to
-         * @ref BaseLayerStyleUniform::outlineWidth. By default, unless
-         * specified in @ref create() already, the custom outline width is
-         * zero, i.e. not affecting the style in any way. Has no visual effect
-         * if @ref BaseLayerSharedFlag::NoOutline is enabled.
+         * @ref BaseLayerStyleUniform::outlineWidth. By default, the custom
+         * outline width is zero, i.e. not affecting the style in any way. Has
+         * no visual effect if @ref BaseLayerSharedFlag::NoOutline is enabled.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.

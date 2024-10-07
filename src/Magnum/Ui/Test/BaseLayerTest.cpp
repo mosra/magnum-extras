@@ -1675,7 +1675,6 @@ template<class T> void BaseLayerTest::createRemove() {
         explicit Layer(LayerHandle handle, Shared& shared): BaseLayer{handle, shared} {}
     } layer{layerHandle(0, 1), shared};
 
-    /* Default color and outline width */
     DataHandle first = layer.create(T(17), data.node);
     CORRADE_COMPARE(layer.node(first), data.node);
     CORRADE_COMPARE(layer.style(first), 17);
@@ -1684,52 +1683,43 @@ template<class T> void BaseLayerTest::createRemove() {
     CORRADE_COMPARE(layer.padding(first), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
-    /* Default outline width */
-    DataHandle second = layer.create(T(23), 0xff3366_rgbf, data.node);
-    CORRADE_COMPARE(layer.node(second), data.node);
+    /* Default null node */
+    DataHandle second = layer.create(T(23));
+    CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
     CORRADE_COMPARE(layer.style(second), 23);
-    CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.color(second), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.outlineWidth(second), Vector4{0.0f});
     CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
-    /* Single-value outline width */
-    DataHandle third = layer.create(T(19), 0xff3366_rgbf, 4.0f, data.node);
+    /* Testing also the getter overloads and templates */
+    DataHandle third = layer.create(T(37), data.node);
     CORRADE_COMPARE(layer.node(third), data.node);
-    CORRADE_COMPARE(layer.style(third), 19);
-    CORRADE_COMPARE(layer.color(third), 0xff3366_rgbf);
-    CORRADE_COMPARE(layer.outlineWidth(third), Vector4{4.0f});
-    CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
-    CORRADE_COMPARE(layer.state(), data.state);
-
-    /* Everything explicit, testing also the getter overloads and templates */
-    DataHandle fourth = layer.create(T(37), 0xff3366_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, data.node);
-    CORRADE_COMPARE(layer.node(fourth), data.node);
     if(data.layerDataHandleOverloads) {
-        CORRADE_COMPARE(layer.style(dataHandleData(fourth)), 37);
+        CORRADE_COMPARE(layer.style(dataHandleData(third)), 37);
         /* Can't use T, as the function restricts to enum types which would
            fail for T == UnsignedInt */
-        CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(fourth)), Enum(37));
-        CORRADE_COMPARE(layer.color(dataHandleData(fourth)), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(dataHandleData(fourth)), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
-        CORRADE_COMPARE(layer.padding(dataHandleData(fourth)), Vector4{0.0f});
+        CORRADE_COMPARE(layer.template style<Enum>(dataHandleData(third)), Enum(37));
+        CORRADE_COMPARE(layer.color(dataHandleData(third)), 0xffffff_rgbf);
+        CORRADE_COMPARE(layer.outlineWidth(dataHandleData(third)), (Vector4{0.0f}));
+        CORRADE_COMPARE(layer.padding(dataHandleData(third)), Vector4{0.0f});
     } else {
-        CORRADE_COMPARE(layer.style(fourth), 37);
+        CORRADE_COMPARE(layer.style(third), 37);
         /* Can't use T, as the function restricts to enum types which would
             fail for T == UnsignedInt */
-        CORRADE_COMPARE(layer.template style<Enum>(fourth), Enum(37));
-        CORRADE_COMPARE(layer.color(fourth), 0xff3366_rgbf);
-        CORRADE_COMPARE(layer.outlineWidth(fourth), (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
-        CORRADE_COMPARE(layer.padding(fourth), Vector4{0.0f});
+        CORRADE_COMPARE(layer.template style<Enum>(third), Enum(37));
+        CORRADE_COMPARE(layer.color(third), 0xffffff_rgbf);
+        CORRADE_COMPARE(layer.outlineWidth(third), (Vector4{0.0f}));
+        CORRADE_COMPARE(layer.padding(third), Vector4{0.0f});
     }
     CORRADE_COMPARE(layer.state(), data.state);
 
     /* Removing a quad just delegates to the base implementation, nothing
        else needs to be cleaned up */
     data.layerDataHandleOverloads ?
-        layer.remove(dataHandleData(third)) :
-        layer.remove(third);
-    CORRADE_VERIFY(!layer.isHandleValid(third));
+        layer.remove(dataHandleData(second)) :
+        layer.remove(second);
+    CORRADE_VERIFY(!layer.isHandleValid(second));
 }
 
 void BaseLayerTest::createRemoveHandleRecycle() {
@@ -1781,8 +1771,8 @@ void BaseLayerTest::setColor() {
        always */
     layer.create(1);
 
-    DataHandle data = layer.create(2, 0xff3366_rgbf);
-    CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
+    DataHandle data = layer.create(2);
+    CORRADE_COMPARE(layer.color(data), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -1800,7 +1790,7 @@ void BaseLayerTest::setColor() {
 
     /* Testing also the other overload */
     layer.setColor(dataHandleData(data), 0x112233_rgbf);
-    CORRADE_COMPARE(layer.color(data), 0x112233_rgbf);
+    CORRADE_COMPARE(layer.color(dataHandleData(data)), 0x112233_rgbf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
@@ -1830,8 +1820,8 @@ void BaseLayerTest::setOutlineWidth() {
        always */
     layer.create(2);
 
-    DataHandle data = layer.create(1, 0xff3366_rgbf, {3.0f, 1.0f, 2.0f, 4.0f});
-    CORRADE_COMPARE(layer.outlineWidth(data), (Vector4{3.0f, 1.0f, 2.0f, 4.0f}));
+    DataHandle data = layer.create(1);
+    CORRADE_COMPARE(layer.outlineWidth(data), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -1849,7 +1839,7 @@ void BaseLayerTest::setOutlineWidth() {
 
     /* Testing also the other overload */
     layer.setOutlineWidth(dataHandleData(data), {1.0f, 2.0f, 3.0f, 4.0f});
-    CORRADE_COMPARE(layer.outlineWidth(data), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
+    CORRADE_COMPARE(layer.outlineWidth(dataHandleData(data)), (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -1867,7 +1857,7 @@ void BaseLayerTest::setOutlineWidth() {
 
     /* Testing also the other overload */
     layer.setOutlineWidth(dataHandleData(data), 3.0f);
-    CORRADE_COMPARE(layer.outlineWidth(data), Vector4{3.0f});
+    CORRADE_COMPARE(layer.outlineWidth(dataHandleData(data)), Vector4{3.0f});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
@@ -1897,7 +1887,7 @@ void BaseLayerTest::setPadding() {
        always */
     layer.create(2);
 
-    DataHandle data = layer.create(1, 0xff3366_rgbf);
+    DataHandle data = layer.create(1);
     CORRADE_COMPARE(layer.padding(data), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
@@ -2204,13 +2194,20 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(0);                                                    /* 2 */
     /* Node 6 is disabled, so style 4 should get transitioned to 2 if not
        dynamic */
-    DataHandle data3 = layer.create(4, 0xff3366_rgbf, {1.0f, 2.0f, 3.0f, 4.0f}, node6);
+    DataHandle data3 = layer.create(4, node6);
     layer.create(0);                                                    /* 4 */
     layer.create(0);                                                    /* 5 */
     layer.create(0);                                                    /* 6 */
-    DataHandle data7 = layer.create(1, 0x112233_rgbf, Vector4{2.0f}, node15);
+    DataHandle data7 = layer.create(1, node15);
     layer.create(0);                                                    /* 8 */
-    layer.create(3, 0x663399_rgbf, {3.0f, 2.0f, 1.0f, 4.0f}, node15);   /* 9 */
+    DataHandle data9 = layer.create(3, node15);
+
+    layer.setColor(data3, 0xff3366_rgbf);
+    layer.setOutlineWidth(data3, {1.0f, 2.0f, 3.0f, 4.0f});
+    layer.setColor(data7, 0x112233_rgbf);
+    layer.setOutlineWidth(data7, 2.0f);
+    layer.setColor(data9, 0x663399_rgbf);
+    layer.setOutlineWidth(data9, {3.0f, 2.0f, 1.0f, 4.0f});
 
     if(!data.paddingFromData.isZero())
         layer.setPadding(data3, data.paddingFromData);

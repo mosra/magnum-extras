@@ -1154,7 +1154,7 @@ DataHandle TextLayer::createInternal(const NodeHandle node) {
     return handle;
 }
 
-DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const Color3& color, const TextDataFlags flags, const NodeHandle node) {
+DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringView text, const TextProperties& properties, const TextDataFlags flags, const NodeHandle node) {
     State& state = static_cast<State&>(*_state);
     #ifndef CORRADE_NO_ASSERT
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
@@ -1178,19 +1178,16 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
         #endif
         id, style, text, properties, flags);
     Implementation::TextLayerData& data = state.data[id];
-    /** @todo is there a way to have create() with all possible per-data
-        options that doesn't make it ambiguous / impossible to extend further?
-        like, having both color and padding optional is ambiguous, etc. */
     data.padding = {};
     /* glyphRun, textRun and flags is filled by shapeTextInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
-    data.color = color;
+    data.color = Color3{1.0f};
 
     return handle;
 }
 
-DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt glyph, const TextProperties& properties, const Color3& color, const NodeHandle node) {
+DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt glyph, const TextProperties& properties, const NodeHandle node) {
     State& state = static_cast<State&>(*_state);
     #ifndef CORRADE_NO_ASSERT
     Shared::State& sharedState = static_cast<Shared::State&>(state.shared);
@@ -1211,14 +1208,11 @@ DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt gly
         #endif
         id, style, glyph, properties);
     Implementation::TextLayerData& data = state.data[id];
-    /** @todo is there a way to have createGlyph() with all possible per-data
-        options that doesn't make it ambiguous / impossible to extend further?
-        like, having both color and padding optional is ambiguous, etc. */
     data.padding = {};
     /* glyphRun, textRun and flags is filled by shapeGlyphInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
-    data.color = color;
+    data.color = Color3{1.0f};
 
     return handle;
 }

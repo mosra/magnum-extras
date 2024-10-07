@@ -250,18 +250,15 @@ const struct {
 const struct {
     const char* name;
     const char* filename;
-    bool setLater;
     bool partialUpdate;
     BaseLayerSharedFlags flags;
 } RenderCustomColorOutlineWidthData[]{
     {"", "outline-same.png",
-        false, false, {}},
-    {"set later", "outline-same.png",
-        true, false, {}},
-    {"set later, partial update", "outline-same.png",
-        true, true, {}},
+        false, {}},
+    {"partial update", "outline-same.png",
+        true, {}},
     {"no outline", "default.png",
-        false, false, BaseLayerSharedFlag::NoOutline}
+        false, BaseLayerSharedFlag::NoOutline}
 };
 
 const struct {
@@ -1260,21 +1257,17 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData = data.setLater ?
-        ui.layer<BaseLayerGL>(layer).create(0, node) :
-        ui.layer<BaseLayerGL>(layer).create(0, 0x336699_rgbf, node);
+    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    if(data.setLater) {
-        ui.layer<BaseLayerGL>(layer).setColor(nodeData, 0x336699_rgbf);
-        CORRADE_COMPARE_AS(ui.state(),
-            UserInterfaceState::NeedsDataUpdate,
-            TestSuite::Compare::GreaterOrEqual);
-    }
+    ui.layer<BaseLayerGL>(layer).setColor(nodeData, 0x336699_rgbf);
+    CORRADE_COMPARE_AS(ui.state(),
+        UserInterfaceState::NeedsDataUpdate,
+        TestSuite::Compare::GreaterOrEqual);
 
     ui.draw();
 
@@ -1324,23 +1317,17 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomOutlineWidt
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    DataHandle nodeData;
-    if(data.setLater)
-        nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
-    else
-        nodeData = ui.layer<BaseLayerGL>(layer).create(0, 0xffffff_rgbf, {-8.0f, 6.0f, 4.0f, 8.0f}, node);
+    DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
 
     if(data.partialUpdate) {
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    if(data.setLater) {
-        ui.layer<BaseLayerGL>(layer).setOutlineWidth(nodeData, {-8.0f, 6.0f, 4.0f, 8.0f});
-        CORRADE_COMPARE_AS(ui.state(),
-            UserInterfaceState::NeedsDataUpdate,
-            TestSuite::Compare::GreaterOrEqual);
-    }
+    ui.layer<BaseLayerGL>(layer).setOutlineWidth(nodeData, {-8.0f, 6.0f, 4.0f, 8.0f});
+    CORRADE_COMPARE_AS(ui.state(),
+        UserInterfaceState::NeedsDataUpdate,
+        TestSuite::Compare::GreaterOrEqual);
 
     ui.draw();
 
@@ -2490,9 +2477,12 @@ void BaseLayerGLTest::drawClipping() {
     /* Child of leftTop2, but should only be clipped against leftTop, not
        leftTop2 */
     NodeHandle leftTop21 = ui.createNode(leftTop2, {140.0f, -400.0f}, {80.0f, 2400.0f});
-    layer.create(0, 0xffffff_rgbf, {20.0f, 200.0f, 20.0f, 000.0f}, leftTop1);
-    layer.create(1, 0xffffff_rgbf, {20.0f, 000.0f, 20.0f, 200.0f}, leftTop2);
-    layer.create(2, 0xffffff_rgbf, {00.0f, 000.0f, 00.0f, 400.0f}, leftTop21);
+    DataHandle leftTop1Data = layer.create(0, leftTop1);
+    layer.setOutlineWidth(leftTop1Data, {20.0f, 200.0f, 20.0f, 000.0f});
+    DataHandle leftTop2Data = layer.create(1, leftTop2);
+    layer.setOutlineWidth(leftTop2Data, {20.0f, 000.0f, 20.0f, 200.0f});
+    DataHandle leftTop21Data = layer.create(2, leftTop21);
+    layer.setOutlineWidth(leftTop21Data, {00.0f, 000.0f, 00.0f, 400.0f});
 
     NodeHandle rightBottom = ui.createNode(parent, {380.0f, 3800.0f}, {200.0f, 2000.0f});
     NodeHandle rightBottom1 = ui.createNode(rightBottom, {-40.0f, -400.0f}, {140.0f, 2800.0f});
@@ -2500,10 +2490,13 @@ void BaseLayerGLTest::drawClipping() {
        even passed to draw() */
     NodeHandle rightBottom11 = ui.createNode(rightBottom1, {-300.0f, 2000.0f}, {80.0f, 800.0f});
     /* Data added to the clip node should get clipped as well */
-    DataHandle rightBottomData = layer.create(0, 0xffffff_rgbf, {40.0f, 400.0f, 40.0f, 400.0f}, rightBottom);
+    DataHandle rightBottomData = layer.create(0, rightBottom);
+    layer.setOutlineWidth(rightBottomData, {40.0f, 400.0f, 40.0f, 400.0f});
     layer.setPadding(rightBottomData, {-40.0f, -400.0f, -40.0f, -400.0f});
-    layer.create(2, 0xffffff_rgbf, {40.0f, 400.0f, 00.0f, 400.0f}, rightBottom1);
-    layer.create(1, 0xffffff_rgbf, {10.0f, 100.0f, 10.0f, 100.0f}, rightBottom11);
+    DataHandle rightBottom1Data = layer.create(2, rightBottom1);
+    layer.setOutlineWidth(rightBottom1Data, {40.0f, 400.0f, 00.0f, 400.0f});
+    DataHandle rightBottom11Data = layer.create(1, rightBottom11);
+    layer.setOutlineWidth(rightBottom11Data, {10.0f, 100.0f, 10.0f, 100.0f});
 
     if(data.flipOrder) {
         CORRADE_COMPARE(ui.nodeOrderNext(rightBottom), NodeHandle::Null);

@@ -5550,7 +5550,6 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             data.customAlignment ? Text::Alignment::MiddleCenter : Text::Alignment::BottomRight, {}, {});
     } else CORRADE_INTERNAL_ASSERT(data.dynamicStyleCount == 0);
 
-    /* Default color */
     DataHandle first = data.flags ?
         layer.create(
             StyleIndex(1),
@@ -5598,8 +5597,8 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
     CORRADE_COMPARE(layer.padding(firstGlyph), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
-    /* Custom color, testing also the getter overloads and templates; having a
-       non-default alignment */
+    /* Default null node, testing also the getter overloads and templates;
+       having a non-default alignment */
     DataHandle second = data.flags ?
         layer.create(
             StyleIndex(2),
@@ -5607,18 +5606,14 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             TextProperties{}
                 .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
                 .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
-            0xff3366_rgbf,
-            *data.flags,
-            data.node) :
+            *data.flags) :
         layer.create(
             StyleIndex(2),
             "ahoy",
             TextProperties{}
                 .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
-                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
-            0xff3366_rgbf,
-            data.node);
-    CORRADE_COMPARE(layer.node(second), data.node);
+                .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt));
+    CORRADE_COMPARE(layer.node(second), NodeHandle::Null);
     if(data.layerDataHandleOverloads) {
         CORRADE_COMPARE(layer.style(dataHandleData(second)), 2);
         /* Can't use StyleIndex, as the function restricts to enum types which
@@ -5632,7 +5627,7 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             /* textProperties() tested in createSetTextTextPropertiesEditable() */
             CORRADE_COMPARE(layer.text(dataHandleData(second)), "ahoy");
         }
-        CORRADE_COMPARE(layer.color(dataHandleData(second)), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.color(dataHandleData(second)), 0xffffff_rgbf);
         CORRADE_COMPARE(layer.padding(dataHandleData(second)), Vector4{0.0f});
     } else {
         CORRADE_COMPARE(layer.style(second), 2);
@@ -5647,12 +5642,12 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
             /* textProperties() tested in createSetTextTextPropertiesEditable() */
             CORRADE_COMPARE(layer.text(second), "ahoy");
         }
-        CORRADE_COMPARE(layer.color(second), 0xff3366_rgbf);
+        CORRADE_COMPARE(layer.color(second), 0xffffff_rgbf);
         CORRADE_COMPARE(layer.padding(second), Vector4{0.0f});
     }
     CORRADE_COMPARE(layer.state(), data.state);
 
-    /* Single glyph with custom color; again createGlyph() takes no
+    /* Single glyph with default node; again createGlyph() takes no
        TextDataFlags */
     DataHandle secondGlyph = layer.createGlyph(
         StyleIndex(2),
@@ -5660,14 +5655,13 @@ template<class StyleIndex, class GlyphIndex> void TextLayerTest::createRemoveSet
         TextProperties{}
             .setFont(data.customFont ? oneGlyphFontHandle : FontHandle::Null)
             .setAlignment(data.customAlignment ? Containers::optional(Text::Alignment::BottomRight) : Containers::NullOpt),
-        0xff3366_rgbf,
         data.node);
     CORRADE_COMPARE(layer.node(secondGlyph), data.node);
     CORRADE_COMPARE(layer.style(secondGlyph), 2);
     CORRADE_COMPARE(layer.flags(secondGlyph), TextDataFlags{});
     CORRADE_COMPARE(layer.glyphCount(secondGlyph), 1);
     CORRADE_COMPARE(layer.size(secondGlyph), (Vector2{16.0f, 24.0f}));
-    CORRADE_COMPARE(layer.color(secondGlyph), 0xff3366_rgbf);
+    CORRADE_COMPARE(layer.color(secondGlyph), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.padding(secondGlyph), Vector4{0.0f});
     CORRADE_COMPARE(layer.state(), data.state);
 
@@ -7266,14 +7260,12 @@ void TextLayerTest::createSetTextTextPropertiesEditableInvalid() {
     std::ostringstream out;
     Error redirectError{&out};
     layer.create(0, "hello", data.properties, TextDataFlag::Editable);
-    layer.create(0, "hello", data.properties, 0xff3366_rgbf, TextDataFlag::Editable);
     /* Should assert also if trying to pass features to a text that already has
        the flag set */
     layer.setText(editable, "hey", data.properties);
     /* Or if passing features that didn't have the flag but now does */
     layer.setText(nonEditable, "hey", data.properties, TextDataFlag::Editable);
     CORRADE_COMPARE_AS(out.str(), Utility::formatString(
-        "Ui::TextLayer::create(): {0}\n"
         "Ui::TextLayer::create(): {0}\n"
         "Ui::TextLayer::setText(): {0}\n"
         "Ui::TextLayer::setText(): {0}\n",
@@ -7395,8 +7387,8 @@ void TextLayerTest::setColor() {
     layer.create(0, "", {});
 
     /* There's nothing that would work differently for createGlyph() */
-    DataHandle data = layer.create(0, "", {}, 0xff3366_rgbf);
-    CORRADE_COMPARE(layer.color(data), 0xff3366_rgbf);
+    DataHandle data = layer.create(0, "", {});
+    CORRADE_COMPARE(layer.color(data), 0xffffff_rgbf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -7414,7 +7406,7 @@ void TextLayerTest::setColor() {
 
     /* Testing also the other overload */
     layer.setColor(dataHandleData(data), 0x112233_rgbf);
-    CORRADE_COMPARE(layer.color(data), 0x112233_rgbf);
+    CORRADE_COMPARE(layer.color(dataHandleData(data)), 0x112233_rgbf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
@@ -8241,15 +8233,15 @@ void TextLayerTest::updateCleanDataOrder() {
     /* Node 6 is disabled, so style 5 should get transitioned to 2 if not
        dynamic */
     DataHandle data3 = layer.create(5, "hello",         /* 3, quad 3 to 7 */
-        {}, 0xff3366_rgbf, data.flags, node6);
+        {}, data.flags, node6);
     layer.create(0, "", {});                            /* 4, quad 8 */
     /* Node 6 is disabled, but style 4 has no disabled transition so this stays
        the same */
     DataHandle data5 = layer.createGlyph(4, 13,         /* 5, quad 9 */
-        Text::Alignment::TopCenter, 0xcceeff_rgbf, node6);
+        Text::Alignment::TopCenter, node6);
     layer.create(0, "", {});                            /* 6, quad 10 */
     DataHandle data7 = layer.create(1, "ahoy",          /* 7, quad 11 */
-        Text::Alignment::BottomRight, 0x112233_rgbf, data.flags, node15);
+        Text::Alignment::BottomRight, data.flags, node15);
     layer.create(0, "", {});                            /* 8, quad 12 */
     DataHandle data9 = layer.create(3, "hi",            /* 9, quad 13 to 14 */
         TextProperties{}
@@ -8257,7 +8249,7 @@ void TextLayerTest::updateCleanDataOrder() {
             .setAlignment(Text::Alignment::LineEnd)
             /* Swaps horizontal padding of the cursor */
             .setShapeDirection(Text::ShapeDirection::RightToLeft),
-        0x663399_rgbf, data.flags, node15);
+        data.flags, node15);
     /* Node 6 is disabled, but style 3 has no disabled transition so this stays
        the same */
     layer.create(3, "",                                 /* 10, no quad */
@@ -8266,6 +8258,11 @@ void TextLayerTest::updateCleanDataOrder() {
             /* Should behave the same as Unspecified */
             .setShapeDirection(Text::ShapeDirection::LeftToRight),
         data.flags, node6);
+
+    layer.setColor(data3, 0xff3366_rgbf);
+    layer.setColor(data5, 0xcceeff_rgbf);
+    layer.setColor(data7, 0x112233_rgbf);
+    layer.setColor(data9, 0x663399_rgbf);
 
     if(!data.paddingFromData.isZero()) {
         layer.setPadding(data3, data.paddingFromData);

@@ -393,15 +393,12 @@ const struct {
 const struct {
     const char* name;
     bool editable;
-    bool setLater;
     bool partialUpdate;
 } RenderCustomColorData[]{
-    {"", false, false, false},
-    {"set later", false, true, false},
-    {"set later, partial update", false, true, true},
-    {"editable, ", true, false, false},
-    {"editable, set later", true, true, false},
-    {"editable, set later, partial update", true, true, true},
+    {"", false, false},
+    {"partial update", false, true},
+    {"editable", true, false},
+    {"editable, partial update", true, true},
 };
 
 const struct {
@@ -1436,9 +1433,7 @@ void TextLayerGLTest::renderCustomColor() {
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
     TextDataFlags flags = data.editable ? TextDataFlag::Editable : TextDataFlags{};
-    DataHandle nodeData = data.setLater ?
-        ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, flags, node) :
-        ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, 0x336699_rgbf, flags, node);
+    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, flags, node);
     if(data.editable)
         ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
 
@@ -1447,12 +1442,10 @@ void TextLayerGLTest::renderCustomColor() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    if(data.setLater) {
-        ui.layer<TextLayerGL>(layer).setColor(nodeData, 0x336699_rgbf);
-        CORRADE_COMPARE_AS(ui.state(),
-            UserInterfaceState::NeedsDataUpdate,
-            TestSuite::Compare::GreaterOrEqual);
-    }
+    ui.layer<TextLayerGL>(layer).setColor(nodeData, 0x336699_rgbf);
+    CORRADE_COMPARE_AS(ui.state(),
+        UserInterfaceState::NeedsDataUpdate,
+        TestSuite::Compare::GreaterOrEqual);
 
     ui.draw();
 

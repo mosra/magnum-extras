@@ -1152,12 +1152,9 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * text, the @p properties are expected to have empty
          * @ref TextProperties::features() --- only the features supplied by
          * the style are used for editable text.
-         *
-         * Use @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, TextDataFlags, NodeHandle)
-         * for creating a text with a custom color. This function is equivalent
-         * to calling it with @cpp 0xffffff_srgbf @ce.
          * @see @ref Shared::hasFontInstance(), @ref setText(),
-         *      @ref setCursor(), @ref updateText(), @ref editText()
+         *      @ref setColor(), @ref setPadding(), @ref setCursor(),
+         *      @ref updateText(), @ref editText()
          */
         DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, TextDataFlags flags = {}, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1165,9 +1162,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
-        ) {
-            return create(style, text, properties, Color3{1.0f}, flags, node);
-        }
+        );
 
         /** @overload */
         DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, NodeHandle node) {
@@ -1204,83 +1199,6 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         }
 
         /**
-         * @brief Create a text with a custom color
-         * @param style         Style index
-         * @param text          Text to render
-         * @param properties    Text properties
-         * @param flags         Flags
-         * @param color         Custom color
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @ref Shared::setStyle() has been called, @p style is
-         * less than @ref Shared::totalStyleCount() and
-         * @ref TextProperties::font() is either @ref FontHandle::Null or
-         * valid. Styling is driven from the @ref TextLayerStyleUniform at
-         * index @p style. If @ref TextProperties::font() is not null it's
-         * used, otherwise the default @ref FontHandle assigned to given style
-         * is used and is expected to not be null. In addition
-         * @ref TextLayerStyleUniform::color is multiplied with @p color. The
-         * @ref FontHandle, whether coming from the @p style or from
-         * @p properties, is expected to have a font instance. Instance-less
-         * fonts can be only used to create single glyphs (such as various
-         * icons or images) with @ref createGlyph().
-         *
-         * If @p flags contain @ref TextDataFlag::Editable, the @p text and
-         * @p properties are remembered and subsequently accessible through
-         * @ref text() and @ref textProperties(), @ref cursor() position and
-         * selection are both set to @p text size. Currently, for editable
-         * text, the @p properties are expected to have empty
-         * @ref TextProperties::features() --- only the features supplied by
-         * the style are used for editable text.
-         *
-         * @see @ref create(UnsignedInt, Containers::StringView, const TextProperties&, TextDataFlags, NodeHandle),
-         *      @ref Shared::hasFontInstance(), @ref setText(),
-         *      @ref setCursor(), @ref updateText(), @ref editText()
-         */
-        DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, const Color3& color, TextDataFlags flags = {}, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        );
-
-        /** @overload */
-        DataHandle create(UnsignedInt style, Containers::StringView text, const TextProperties& properties, const Color3& color, NodeHandle node) {
-            return create(style, text, properties, color, TextDataFlags{}, node);
-        }
-
-        /**
-         * @brief Create a text with a style index in a concrete enum type and a custom color
-         *
-         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref create(UnsignedInt, Containers::StringView, const TextProperties&, const Color3&, TextDataFlags, NodeHandle).
-         */
-        template<class StyleIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
-            #endif
-        > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, const Color3& color, TextDataFlags flags = {}, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return create(UnsignedInt(style), text, properties, color, flags, node);
-        }
-
-        /** @overload */
-        template<class StyleIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
-            #endif
-        > DataHandle create(StyleIndex style, Containers::StringView text, const TextProperties& properties, const Color3& color, NodeHandle node) {
-            return create(style, text, properties, color, TextDataFlags{}, node);
-        }
-
-        /**
          * @brief Create a single glyph
          * @param style         Style index
          * @param glyph         Glyph ID to render
@@ -1296,9 +1214,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * used, otherwise the default @ref FontHandle assigned to given style
          * is used and is expected to not be null. The @p glyph is expected to
          * be less than @ref Text::AbstractGlyphCache::fontGlyphCount() for
-         * given font. Use @ref createGlyph(UnsignedInt, UnsignedInt, const TextProperties&, const Color3&, NodeHandle)
-         * for creating a glyph with a custom color. This function is
-         * equivalent to calling it with @cpp 0xffffff_srgbf @ce.
+         * given font.
          *
          * Compared to @ref create(), the glyph is aligned according to
          * @ref TextProperties::alignment() based on its bounding rectangle
@@ -1311,7 +1227,8 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * @relativeref{TextProperties,language()} and
          * @relativeref{TextProperties,features()} properties aren't used in
          * any way.
-         * @see @ref Shared::glyphCacheFontId(), @ref setGlyph()
+         * @see @ref Shared::glyphCacheFontId(), @ref setGlyph(),
+         *      @ref setColor(), @ref setPadding()
          */
         DataHandle createGlyph(UnsignedInt style, UnsignedInt glyph, const TextProperties& properties, NodeHandle node =
             #ifdef DOXYGEN_GENERATING_OUTPUT
@@ -1319,9 +1236,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             #else
             NodeHandle{} /* To not have to include Handle.h */
             #endif
-        ) {
-            return createGlyph(style, glyph, properties, Color3{1.0f}, node);
-        }
+        );
 
         /**
          * @brief Create a single glyph with a style index in a concrete enum type
@@ -1381,105 +1296,6 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
             #endif
         ) {
             return createGlyph(UnsignedInt(style), UnsignedInt(glyph), properties, node);
-        }
-
-        /**
-         * @brief Create a single glyph with a custom color
-         * @param style         Style index
-         * @param glyph         Glyph to render
-         * @param properties    Text properties
-         * @param color         Custom color
-         * @param node          Node to attach to
-         * @return New data handle
-         *
-         * Expects that @ref Shared::setStyle() has been called, @p style is
-         * less than @ref Shared::totalStyleCount() and
-         * @ref TextProperties::font() is either @ref FontHandle::Null or
-         * valid. Styling is driven from the @ref TextLayerStyleUniform at
-         * index @p style. If @ref TextProperties::font() is not null it's
-         * used, otherwise the default @ref FontHandle assigned to given style
-         * is used and is expected to not be null. In addition
-         * @ref TextLayerStyleUniform::color is multiplied with @p color. The
-         * @p glyphId is expected to be less than
-         * @ref Text::AbstractGlyphCache::fontGlyphCount() for given font.
-         *
-         * Compared to @ref create(), the glyph is aligned according to
-         * @ref TextProperties::alignment() based on its bounding rectangle
-         * coming from the glyph cache, not based on font metrics. The
-         * @ref TextProperties::script(),
-         * @relativeref{TextProperties,language()},
-         * @relativeref{TextProperties,shapeDirection()},
-         * @relativeref{TextProperties,layoutDirection()} and
-         * @relativeref{TextProperties,features()} properties aren't used in
-         * any way.
-         * @see @ref Shared::glyphCacheFontId(), @ref setGlyph()
-         */
-        DataHandle createGlyph(UnsignedInt style, UnsignedInt glyph, const TextProperties& properties, const Color3& color, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        );
-
-        /**
-         * @brief Create a single glyph with a style index in a concrete enum type and a custom color
-         *
-         * Casts @p style to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref createGlyph(UnsignedInt, UnsignedInt, const TextProperties&, const Color3&, NodeHandle).
-         */
-        template<class StyleIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value>::type
-            #endif
-        > DataHandle createGlyph(StyleIndex style, UnsignedInt glyph, const TextProperties& properties, const Color3& color, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return createGlyph(UnsignedInt(style), glyph, properties, color, node);
-        }
-
-        /**
-         * @brief Create a single glyph with a glyph ID in a concrete enum type and a custom color
-         *
-         * Casts @p glyph to @relativeref{Magnum,UnsignedInt} and delegates to
-         * @ref createGlyph(UnsignedInt, UnsignedInt, const TextProperties&, const Color3&, NodeHandle).
-         */
-        template<class GlyphIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<GlyphIndex>::value>::type
-            #endif
-        > DataHandle createGlyph(UnsignedInt style, GlyphIndex glyph, const TextProperties& properties, const Color3& color, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return createGlyph(style, UnsignedInt(glyph), properties, color, node);
-        }
-
-        /**
-         * @brief Create a single glyph with a style index and glyph ID in a concrete enum type and a custom color
-         *
-         * Casts @p style and @p glyph to @relativeref{Magnum,UnsignedInt} and
-         * delegates to @ref createGlyph(UnsignedInt, UnsignedInt, const TextProperties&, const Color3&, NodeHandle).
-         */
-        template<class StyleIndex, class GlyphIndex
-            #ifndef DOXYGEN_GENERATING_OUTPUT
-            , class = typename std::enable_if<std::is_enum<StyleIndex>::value && std::is_enum<GlyphIndex>::value>::type
-            #endif
-        > DataHandle createGlyph(StyleIndex style, GlyphIndex glyph, const TextProperties& properties, const Color3& color, NodeHandle node =
-            #ifdef DOXYGEN_GENERATING_OUTPUT
-            NodeHandle::Null
-            #else
-            NodeHandle{} /* To not have to include Handle.h */
-            #endif
-        ) {
-            return createGlyph(UnsignedInt(style), UnsignedInt(glyph), properties, color, node);
         }
 
         /**
@@ -1940,8 +1756,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * is multiplied with @p color. Applies to style override for selected
          * text as well, but not to
          * @ref TextLayerEditingStyleUniform::backgroundColor for cursor and
-         * selection rectangles. By default, unless specified in @ref create()
-         * / @ref createGlyph() already, the custom color is
+         * selection rectangles. By default, the custom color is
          * @cpp 0xffffff_srgbf @ce, i.e. not affecting the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
