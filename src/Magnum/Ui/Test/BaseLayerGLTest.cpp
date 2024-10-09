@@ -149,7 +149,7 @@ const struct {
     {"gradient", "gradient.png", {},
         BaseLayerCommonStyleUniform{},
         BaseLayerStyleUniform{}
-            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)},
+            .setColor(0xeeddaa_rgbf, 0x77442299_rgbaf)},
     /* Interaction of the gradient with outline width and smoothness radius
        tested in renderGradientOutlineEdgeSmoothness() */
     {"rounded corners, all same, default smoothness", "rounded-corners-same-hard.png", {},
@@ -1250,7 +1250,8 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     };
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
-            .setColor(0xeeddaa_rgbf/0x336699_rgbf, 0x774422_rgbf/0x336699_rgbf)
+            .setColor(0xeeddaaff_rgbaf/0x336699ff_rgbaf,
+                      0x77442299_rgbaf/0x336699ff_rgbaf)
     }, {});
 
     LayerHandle layer = ui.createLayer();
@@ -1432,7 +1433,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderChangeStyle() {
     BaseLayerStyleUniform uniforms[]{
         BaseLayerStyleUniform{},
         BaseLayerStyleUniform{}
-            .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
+            .setColor(0xeeddaa_rgbf, 0x77442299_rgbaf)
     };
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, uniforms, {});
 
@@ -1679,8 +1680,8 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderGradientOutlineEd
         {BaseLayerStyleUniform{}
             .setOutlineWidth(8.0f*data.scale)
             .setOutlineColor(0x00000000_rgbaf)
-            .setColor(Math::lerp(0x774422_rgbf, 0xeeddaa_rgbf, 56.0f/48.0f),
-                      Math::lerp(0xeeddaa_rgbf, 0x774422_rgbf, 56.0f/48.0f))},
+            .setColor(Math::lerp(0x77442299_rgbaf, 0xeeddaaff_rgbaf, 56.0f/48.0f),
+                      Math::lerp(0xeeddaaff_rgbaf, 0x77442299_rgbaf, 56.0f/48.0f))},
         {Vector4{-8.0f}*data.scale});
 
     BaseLayer& layer = ui.setLayerInstance(Containers::pointer<BaseLayerGL>(ui.createLayer(), layerShared));
@@ -2541,7 +2542,7 @@ void BaseLayerGLTest::eventStyleTransition() {
         .setStyle(BaseLayerCommonStyleUniform{}, {
             BaseLayerStyleUniform{},        /* default */
             BaseLayerStyleUniform{}         /* gradient */
-                .setColor(0xeeddaa_rgbf, 0x774422_rgbf)
+                .setColor(0xeeddaa_rgbf, 0x77442299_rgbaf)
         }, {})
         .setStyleTransition(
             [](UnsignedInt) -> UnsignedInt {
@@ -2568,6 +2569,8 @@ void BaseLayerGLTest::eventStyleTransition() {
 
     MAGNUM_VERIFY_NO_GL_ERROR();
     Image2D before = _framebuffer.read({{}, RenderSize}, {PixelFormat::RGBA8Unorm});
+
+    _framebuffer.clear(GL::FramebufferClear::Color);
 
     PointerEvent event{{}, Pointer::MouseLeft};
     CORRADE_VERIFY(ui.pointerPressEvent({64.0f, 24.0f}, event));
