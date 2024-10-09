@@ -68,7 +68,7 @@ class TextShaderGL: public GL::AbstractShaderProgram {
     public:
         typedef GL::Attribute<0, Vector2> Position;
         typedef GL::Attribute<1, Vector3> TextureCoordinates;
-        typedef GL::Attribute<2, Vector3> Color3;
+        typedef GL::Attribute<2, Vector4> Color4;
         typedef GL::Attribute<3, UnsignedInt> Style;
 
         explicit TextShaderGL(UnsignedInt styleCount);
@@ -360,7 +360,7 @@ TextLayerGL::TextLayerGL(const LayerHandle handle, Shared& sharedState): TextLay
     state.mesh.addVertexBuffer(state.vertexBuffer, 0,
         TextShaderGL::Position{},
         TextShaderGL::TextureCoordinates{},
-        TextShaderGL::Color3{},
+        TextShaderGL::Color4{},
         TextShaderGL::Style{});
     state.mesh.setIndexBuffer(state.indexBuffer, 0, GL::MeshIndexType::UnsignedInt);
 

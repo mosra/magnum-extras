@@ -1409,10 +1409,10 @@ void TextLayerGLTest::renderCustomColor() {
     FontHandle fontHandle = layerShared.addFont(*_font, 32.0f);
     layerShared.setStyle(TextLayerCommonStyleUniform{},
         {TextLayerStyleUniform{}
-            .setColor(0x3bd267_rgbf/0x336699_rgbf),
+            .setColor(0x3bd267ff_rgbaf/0x336699aa_rgbaf),
          TextLayerStyleUniform{}
             /* This may become an issue with lowp, let's hope it won't */
-            .setColor(0x1f1f1f_rgbf/0x336699_rgbf)},
+            .setColor(0x1f1f1fff_rgbaf/0x336699aa_rgbaf)},
         {0},
         {fontHandle},
         {Text::Alignment::MiddleCenter},
@@ -1442,7 +1442,7 @@ void TextLayerGLTest::renderCustomColor() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<TextLayerGL>(layer).setColor(nodeData, 0x336699_rgbf);
+    ui.layer<TextLayerGL>(layer).setColor(nodeData, 0x336699aa_rgbaf);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);

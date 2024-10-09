@@ -93,7 +93,7 @@ class BaseShaderGL: public GL::AbstractShaderProgram {
         typedef GL::Attribute<1, Vector3> SubdividedQuadCenterDistanceYTextureScale;
         /* Only if SubdividedQuads are set */
         typedef GL::Attribute<2, Vector2> SubdividedQuadOutlineWidth;
-        typedef GL::Attribute<3, Vector3> Color3;
+        typedef GL::Attribute<3, Vector4> Color4;
         typedef GL::Attribute<4, UnsignedInt> Style;
         typedef GL::Attribute<5, Vector3> TextureCoordinates;
 
@@ -426,7 +426,7 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLa
                 BaseShaderGL::Position{},
                 BaseShaderGL::CenterDistance{},
                 BaseShaderGL::OutlineWidth{},
-                BaseShaderGL::Color3{},
+                BaseShaderGL::Color4{},
                 BaseShaderGL::Style{},
                 BaseShaderGL::TextureCoordinates{});
         } else {
@@ -434,7 +434,7 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLa
                 BaseShaderGL::Position{},
                 BaseShaderGL::CenterDistance{},
                 BaseShaderGL::OutlineWidth{},
-                BaseShaderGL::Color3{},
+                BaseShaderGL::Color4{},
                 BaseShaderGL::Style{});
         }
     } else {
@@ -442,7 +442,7 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLa
             state.mesh.addVertexBuffer(state.vertexBuffer, 0,
                 BaseShaderGL::Position{},
                 BaseShaderGL::SubdividedQuadOutlineWidth{},
-                BaseShaderGL::Color3{},
+                BaseShaderGL::Color4{},
                 BaseShaderGL::Style{},
                 BaseShaderGL::SubdividedQuadCenterDistanceYTextureScale{},
                 BaseShaderGL::TextureCoordinates{});
@@ -450,7 +450,7 @@ BaseLayerGL::BaseLayerGL(const LayerHandle handle, Shared& sharedState_): BaseLa
             state.mesh.addVertexBuffer(state.vertexBuffer, 0,
                 BaseShaderGL::Position{},
                 BaseShaderGL::SubdividedQuadOutlineWidth{},
-                BaseShaderGL::Color3{},
+                BaseShaderGL::Color4{},
                 BaseShaderGL::Style{},
                 BaseShaderGL::SubdividedQuadCenterDistanceY{});
         }

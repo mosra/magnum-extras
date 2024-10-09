@@ -1182,7 +1182,7 @@ DataHandle TextLayer::create(const UnsignedInt style, const Containers::StringVi
     /* glyphRun, textRun and flags is filled by shapeTextInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
-    data.color = Color3{1.0f};
+    data.color = Color4{1.0f};
 
     return handle;
 }
@@ -1212,7 +1212,7 @@ DataHandle TextLayer::createGlyph(const UnsignedInt style, const UnsignedInt gly
     /* glyphRun, textRun and flags is filled by shapeGlyphInternal() */
     data.style = style;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
-    data.color = Color3{1.0f};
+    data.color = Color4{1.0f};
 
     return handle;
 }
@@ -1783,31 +1783,31 @@ void TextLayer::setGlyphInternal(const UnsignedInt id, const UnsignedInt glyph, 
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }
 
-Color3 TextLayer::color(const DataHandle handle) const {
+Color4 TextLayer::color(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::color(): invalid handle" << handle, {});
     return static_cast<const State&>(*_state).data[dataHandleId(handle)].color;
 }
 
-Color3 TextLayer::color(const LayerDataHandle handle) const {
+Color4 TextLayer::color(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::color(): invalid handle" << handle, {});
     return static_cast<const State&>(*_state).data[layerDataHandleId(handle)].color;
 }
 
-void TextLayer::setColor(const DataHandle handle, const Color3& color) {
+void TextLayer::setColor(const DataHandle handle, const Color4& color) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::setColor(): invalid handle" << handle, );
     setColorInternal(dataHandleId(handle), color);
 }
 
-void TextLayer::setColor(const LayerDataHandle handle, const Color3& color) {
+void TextLayer::setColor(const LayerDataHandle handle, const Color4& color) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::TextLayer::setColor(): invalid handle" << handle, );
     setColorInternal(layerDataHandleId(handle), color);
 }
 
-void TextLayer::setColorInternal(const UnsignedInt id, const Color3& color) {
+void TextLayer::setColorInternal(const UnsignedInt id, const Color4& color) {
     static_cast<State&>(*_state).data[id].color = color;
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }

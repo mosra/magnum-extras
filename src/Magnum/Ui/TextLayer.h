@@ -1739,7 +1739,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */
-        Color3 color(DataHandle handle) const;
+        Color4 color(DataHandle handle) const;
 
         /**
          * @brief Text custom base color assuming it belongs to this layer
@@ -1747,7 +1747,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(LayerDataHandle) const
          */
-        Color3 color(LayerDataHandle handle) const;
+        Color4 color(LayerDataHandle handle) const;
 
         /**
          * @brief Set text custom base color
@@ -1757,22 +1757,22 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
          * text as well, but not to
          * @ref TextLayerEditingStyleUniform::backgroundColor for cursor and
          * selection rectangles. By default, the custom color is
-         * @cpp 0xffffff_srgbf @ce, i.e. not affecting the style in any way.
+         * @cpp 0xffffffff_srgbaf @ce, i.e. not affecting the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
          * @see @ref isHandleValid(DataHandle) const
          */
-        void setColor(DataHandle handle, const Color3& color);
+        void setColor(DataHandle handle, const Color4& color);
 
         /**
          * @brief Set text custom base color assuming it belongs to this layer
          *
-         * Like @ref setColor(DataHandle, const Color3&) but without checking
+         * Like @ref setColor(DataHandle, const Color4&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
          * for more information.
          */
-        void setColor(LayerDataHandle handle, const Color3& color);
+        void setColor(LayerDataHandle handle, const Color4& color);
 
         /**
          * @brief Text custom padding
@@ -1895,7 +1895,7 @@ class MAGNUM_UI_EXPORT TextLayer: public AbstractVisualLayer {
         MAGNUM_UI_LOCAL void updateTextInternal(UnsignedInt id, UnsignedInt removeOffset, UnsignedInt removeSize, UnsignedInt insertOffset, Containers::StringView text, UnsignedInt cursor, UnsignedInt selection);
         MAGNUM_UI_LOCAL void editTextInternal(UnsignedInt id, TextEdit edit, Containers::StringView text);
         MAGNUM_UI_LOCAL void setGlyphInternal(UnsignedInt id, UnsignedInt glyph, const TextProperties& properties);
-        MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);
+        MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);
         MAGNUM_UI_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
 
         /* Can't be MAGNUM_UI_LOCAL otherwise deriving from this class in

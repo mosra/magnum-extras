@@ -93,7 +93,7 @@ namespace Implementation {
 struct BaseLayerData {
     Vector4 padding;
     Vector4 outlineWidth; /* left, top, right, bottom */
-    Color3 color;
+    Color4 color;
     /* calculatedStyle is filled by AbstractVisualLayer::doUpdate() */
     UnsignedInt style, calculatedStyle;
     Vector3 textureCoordinateOffset;
@@ -104,7 +104,7 @@ struct BaseLayerVertex {
     Vector2 position;
     Vector2 centerDistance;
     Vector4 outlineWidth;
-    Color3 color;
+    Color4 color;
     UnsignedInt styleUniform;
 };
 
@@ -118,7 +118,7 @@ struct BaseLayerTexturedVertex {
 struct BaseLayerSubdividedVertex {
     Vector2 position;
     Vector2 outlineWidth;
-    Color3 color;
+    Color4 color;
     UnsignedInt styleUniform;
     /* Used for interpolating/extrapolating the vertical gradient when
        expanding the quads */

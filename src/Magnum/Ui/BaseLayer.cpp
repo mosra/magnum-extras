@@ -298,31 +298,31 @@ DataHandle BaseLayer::create(const UnsignedInt style, const NodeHandle node) {
     return handle;
 }
 
-Color3 BaseLayer::color(const DataHandle handle) const {
+Color4 BaseLayer::color(const DataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::BaseLayer::color(): invalid handle" << handle, {});
     return static_cast<const State&>(*_state).data[dataHandleId(handle)].color;
 }
 
-Color3 BaseLayer::color(const LayerDataHandle handle) const {
+Color4 BaseLayer::color(const LayerDataHandle handle) const {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::BaseLayer::color(): invalid handle" << handle, {});
     return static_cast<const State&>(*_state).data[layerDataHandleId(handle)].color;
 }
 
-void BaseLayer::setColor(const DataHandle handle, const Color3& color) {
+void BaseLayer::setColor(const DataHandle handle, const Color4& color) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::BaseLayer::setColor(): invalid handle" << handle, );
     setColorInternal(dataHandleId(handle), color);
 }
 
-void BaseLayer::setColor(const LayerDataHandle handle, const Color3& color) {
+void BaseLayer::setColor(const LayerDataHandle handle, const Color4& color) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::BaseLayer::setColor(): invalid handle" << handle, );
     setColorInternal(layerDataHandleId(handle), color);
 }
 
-void BaseLayer::setColorInternal(const UnsignedInt id, const Color3& color) {
+void BaseLayer::setColorInternal(const UnsignedInt id, const Color4& color) {
     static_cast<State&>(*_state).data[id].color = color;
     setNeedsUpdate(LayerState::NeedsDataUpdate);
 }

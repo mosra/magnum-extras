@@ -599,7 +599,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(DataHandle) const
          */
-        Color3 color(DataHandle handle) const;
+        Color4 color(DataHandle handle) const;
 
         /**
          * @brief Quad custom base color assuming it belongs to this layer
@@ -607,7 +607,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid.
          * @see @ref isHandleValid(LayerDataHandle) const
          */
-        Color3 color(LayerDataHandle handle) const;
+        Color4 color(LayerDataHandle handle) const;
 
         /**
          * @brief Set quad custom base color
@@ -615,23 +615,23 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
          * Expects that @p handle is valid.
          * @ref BaseLayerStyleUniform::topColor and
          * @relativeref{BaseLayerStyleUniform,bottomColor} is multiplied with
-         * @p color. By default, the custom color is @cpp 0xffffff_srgbf @ce,
+         * @p color. By default, the custom color is @cpp 0xffffffff_srgbaf @ce,
          * i.e. not affecting the style in any way.
          *
          * Calling this function causes @ref LayerState::NeedsDataUpdate to be
          * set.
          * @see @ref isHandleValid(DataHandle) const
          */
-        void setColor(DataHandle handle, const Color3& color);
+        void setColor(DataHandle handle, const Color4& color);
 
         /**
          * @brief Set quad custom base color assuming it belongs to this layer
          *
-         * Like @ref setColor(DataHandle, const Color3&) but without checking
+         * Like @ref setColor(DataHandle, const Color4&) but without checking
          * that @p handle indeed belongs to this layer. See its documentation
          * for more information.
          */
-        void setColor(LayerDataHandle handle, const Color3& color);
+        void setColor(LayerDataHandle handle, const Color4& color);
 
         /**
          * @brief Quad custom outline width
@@ -856,7 +856,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override;
 
     private:
-        MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color3& color);
+        MAGNUM_UI_LOCAL void setColorInternal(UnsignedInt id, const Color4& color);
         MAGNUM_UI_LOCAL void setOutlineWidthInternal(UnsignedInt id, const Vector4& width);
         MAGNUM_UI_LOCAL void setPaddingInternal(UnsignedInt id, const Vector4& padding);
         MAGNUM_UI_LOCAL Vector3 textureCoordinateOffsetInternal(UnsignedInt id) const;

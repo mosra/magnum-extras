@@ -7388,7 +7388,7 @@ void TextLayerTest::setColor() {
 
     /* There's nothing that would work differently for createGlyph() */
     DataHandle data = layer.create(0, "", {});
-    CORRADE_COMPARE(layer.color(data), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.color(data), 0xffffffff_rgbaf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -7396,8 +7396,8 @@ void TextLayerTest::setColor() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a color marks the layer as dirty */
-    layer.setColor(data, 0xaabbcc_rgbf);
-    CORRADE_COMPARE(layer.color(data), 0xaabbcc_rgbf);
+    layer.setColor(data, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(layer.color(data), 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -7405,8 +7405,8 @@ void TextLayerTest::setColor() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
-    layer.setColor(dataHandleData(data), 0x112233_rgbf);
-    CORRADE_COMPARE(layer.color(dataHandleData(data)), 0x112233_rgbf);
+    layer.setColor(dataHandleData(data), 0x11223344_rgbaf);
+    CORRADE_COMPARE(layer.color(dataHandleData(data)), 0x11223344_rgbaf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
@@ -8259,9 +8259,9 @@ void TextLayerTest::updateCleanDataOrder() {
             .setShapeDirection(Text::ShapeDirection::LeftToRight),
         data.flags, node6);
 
-    layer.setColor(data3, 0xff3366_rgbf);
-    layer.setColor(data5, 0xcceeff_rgbf);
-    layer.setColor(data7, 0x112233_rgbf);
+    layer.setColor(data3, 0xff336699_rgbaf);
+    layer.setColor(data5, 0xcceeff00_rgbaf);
+    layer.setColor(data7, 0x11223344_rgbaf);
     layer.setColor(data9, 0x663399_rgbf);
 
     if(!data.paddingFromData.isZero()) {
@@ -8407,7 +8407,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* (Possibly editable) text 3, quads 3 to 7 */
         for(std::size_t i = 0; i != 5*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff3366_rgbf);
+            CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff336699_rgbaf);
         }
         /* Created with style 5, which if not dynamic is transitioned to 2 as
            the node is disabled, which is mapped to uniform 0. If dynamic, it's
@@ -8436,7 +8436,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* Glyph 5, quad 9 */
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff_rgbf);
+            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff00_rgbaf);
             /* Created with style 4, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
                thus 6. */
@@ -8449,7 +8449,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* (Possibly editable) text 7, quad 11 */
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x112233_rgbf);
+            CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x11223344_rgbaf);
             /* Created with style 1, which is mapped to uniform 2. The
                selection doesn't override the text uniform, so it's always the
                same. */
@@ -8856,7 +8856,7 @@ void TextLayerTest::updateCleanDataOrder() {
     /* (Possibly editable) text 7, quad 5 */
     for(std::size_t i = 0; i != 1*4; ++i) {
         CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].color, 0x112233_rgbf);
+        CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].color, 0x11223344_rgbaf);
         /* Created with style 1, which is mapped to uniform 2. The selection
            doesn't override the text uniform, so it's always the same. */
         CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].styleUniform, 2);

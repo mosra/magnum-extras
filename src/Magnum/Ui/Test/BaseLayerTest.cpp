@@ -1772,7 +1772,7 @@ void BaseLayerTest::setColor() {
     layer.create(1);
 
     DataHandle data = layer.create(2);
-    CORRADE_COMPARE(layer.color(data), 0xffffff_rgbf);
+    CORRADE_COMPARE(layer.color(data), 0xffffffff_rgbaf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -1780,8 +1780,8 @@ void BaseLayerTest::setColor() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Setting a color marks the layer as dirty */
-    layer.setColor(data, 0xaabbc_rgbf);
-    CORRADE_COMPARE(layer.color(data), 0xaabbc_rgbf);
+    layer.setColor(data, 0xaabbccdd_rgbaf);
+    CORRADE_COMPARE(layer.color(data), 0xaabbccdd_rgbaf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
@@ -1789,8 +1789,8 @@ void BaseLayerTest::setColor() {
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Testing also the other overload */
-    layer.setColor(dataHandleData(data), 0x112233_rgbf);
-    CORRADE_COMPARE(layer.color(dataHandleData(data)), 0x112233_rgbf);
+    layer.setColor(dataHandleData(data), 0x11223344_rgbaf);
+    CORRADE_COMPARE(layer.color(dataHandleData(data)), 0x11223344_rgbaf);
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 }
 
@@ -2202,9 +2202,9 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(0);                                                    /* 8 */
     DataHandle data9 = layer.create(3, node15);
 
-    layer.setColor(data3, 0xff3366_rgbf);
+    layer.setColor(data3, 0xff336699_rgbaf);
     layer.setOutlineWidth(data3, {1.0f, 2.0f, 3.0f, 4.0f});
-    layer.setColor(data7, 0x112233_rgbf);
+    layer.setColor(data7, 0x11223344_rgbaf);
     layer.setOutlineWidth(data7, 2.0f);
     layer.setColor(data9, 0x663399_rgbf);
     layer.setOutlineWidth(data9, {3.0f, 2.0f, 1.0f, 4.0f});
@@ -2316,7 +2316,7 @@ void BaseLayerTest::updateDataOrder() {
             CORRADE_ITERATION(i);
 
             /* Quad 3 */
-            CORRADE_COMPARE(vertices[3*4 + i].color, 0xff3366_rgbf);
+            CORRADE_COMPARE(vertices[3*4 + i].color, 0xff336699_rgbaf);
             CORRADE_COMPARE(vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
             /* Created with style 4, which if not dynamic is transitioned to 2
                as the node is disabled, which is mapped to uniform 0. If
@@ -2329,7 +2329,7 @@ void BaseLayerTest::updateDataOrder() {
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
             /* Quad 7 */
-            CORRADE_COMPARE(vertices[7*4 + i].color, 0x112233_rgbf);
+            CORRADE_COMPARE(vertices[7*4 + i].color, 0x11223344_rgbaf);
             CORRADE_COMPARE(vertices[7*4 + i].outlineWidth, Vector4{2.0f});
             /* Created with style 1, which is mapped to uniform 2 */
             CORRADE_COMPARE(vertices[7*4 + i].styleUniform, 2);
@@ -2485,7 +2485,7 @@ void BaseLayerTest::updateDataOrder() {
             CORRADE_ITERATION(i);
 
             /* Quad 3 */
-            CORRADE_COMPARE(vertices[3*16 + i].color, 0xff3366_rgbf);
+            CORRADE_COMPARE(vertices[3*16 + i].color, 0xff336699_rgbaf);
             /* Created with style 4, which if not dynamic is transitioned to 2
                as the node is disabled, which is mapped to uniform 0. If
                dynamic, it's implicitly `uniformCount + (id - styleCount)`,
@@ -2497,7 +2497,7 @@ void BaseLayerTest::updateDataOrder() {
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
             /* Quad 7 */
-            CORRADE_COMPARE(vertices[7*16 + i].color, 0x112233_rgbf);
+            CORRADE_COMPARE(vertices[7*16 + i].color, 0x11223344_rgbaf);
             /* Created with style 1, which is mapped to uniform 2 */
             CORRADE_COMPARE(vertices[7*16 + i].styleUniform, 2);
 
