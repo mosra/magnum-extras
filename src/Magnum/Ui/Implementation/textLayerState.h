@@ -224,13 +224,13 @@ struct TextLayerData {
     Text::ShapeDirection usedDirection;
     TextDataFlags flags;
     /* 1 byte free */
-    Color3 color;
+    Color4 color;
 };
 
 struct TextLayerVertex {
     Vector2 position;
     Vector3 textureCoordinates;
-    Color3 color;
+    Color4 color;
     UnsignedInt styleUniform;
 };
 

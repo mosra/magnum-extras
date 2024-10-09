@@ -1250,8 +1250,8 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     };
     layerShared.setStyle(BaseLayerCommonStyleUniform{}, {
         BaseLayerStyleUniform{}
-            .setColor(0xeeddaaff_rgbaf/0x336699ff_rgbaf,
-                      0x77442299_rgbaf/0x336699ff_rgbaf)
+            .setColor(0xeeddaaff_rgbaf/0x336699aa_rgbaf,
+                      0x77442299_rgbaf/0x336699aa_rgbaf)
     }, {});
 
     LayerHandle layer = ui.createLayer();
@@ -1265,7 +1265,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<BaseLayerGL>(layer).setColor(nodeData, 0x336699_rgbf);
+    ui.layer<BaseLayerGL>(layer).setColor(nodeData, 0x336699aa_rgbaf);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
