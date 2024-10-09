@@ -128,7 +128,7 @@ struct TextLayerStyleUniform {
     /**
      * @brief Color
      *
-     * Default value is @cpp 0xffffffff_srgbf @ce.
+     * Default value is @cpp 0xffffffff_srgbaf @ce.
      */
     Color4 color;
 };
@@ -250,7 +250,7 @@ struct TextLayerEditingStyleUniform {
     /**
      * @brief Selection background color
      *
-     * Default value is @cpp 0xffffffff_srgbf @ce. The selection text color is
+     * Default value is @cpp 0xffffffff_srgbaf @ce. The selection text color is
      * applied directly to individual glyphs and is thus supplied separately in
      * @ref TextLayer::Shared::setEditingStyle().
      */

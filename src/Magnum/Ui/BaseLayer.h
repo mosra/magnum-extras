@@ -344,21 +344,21 @@ struct BaseLayerStyleUniform {
     /**
      * @brief Top gradient color
      *
-     * Default value is @cpp 0xffffffff_srgbf @ce.
+     * Default value is @cpp 0xffffffff_srgbaf @ce.
      */
     Color4 topColor;
 
     /**
      * @brief Bottom gradient color
      *
-     * Default value is @cpp 0xffffffff_srgbf @ce.
+     * Default value is @cpp 0xffffffff_srgbaf @ce.
      */
     Color4 bottomColor;
 
     /**
      * @brief Outline color
      *
-     * Default value is @cpp 0xffffffff_srgbf @ce. Visible only if
+     * Default value is @cpp 0xffffffff_srgbaf @ce. Visible only if
      * @ref outlineWidth is non-zero on at least one side or if the difference
      * between @ref cornerRadius and @ref innerOutlineCornerRadius makes it
      * show. Not used if @ref BaseLayerSharedFlag::NoOutline is enabled.
