@@ -133,7 +133,7 @@ class MAGNUM_UI_EXPORT Input: public Widget {
         DataHandle textData() const;
 
         #ifndef DOXYGEN_GENERATING_OUTPUT
-        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Input)
+        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Input) /* LCOV_EXCL_LINE */
         #endif
 
     private:

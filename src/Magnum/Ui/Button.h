@@ -185,7 +185,7 @@ class MAGNUM_UI_EXPORT Button: public Widget {
         DataHandle textData() const;
 
         #ifndef DOXYGEN_GENERATING_OUTPUT
-        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Button)
+        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Button) /* LCOV_EXCL_LINE */
         #endif
 
     private:

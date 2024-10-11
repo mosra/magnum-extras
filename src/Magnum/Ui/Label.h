@@ -157,7 +157,7 @@ class MAGNUM_UI_EXPORT Label: public Widget {
         DataHandle data() const;
 
         #ifndef DOXYGEN_GENERATING_OUTPUT
-        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Label)
+        _MAGNUM_UI_WIDGET_SUBCLASS_IMPLEMENTATION(Label) /* LCOV_EXCL_LINE */
         #endif
 
     private:
