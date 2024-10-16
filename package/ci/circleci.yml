@@ -540,6 +540,7 @@ workflows:
         - linux-nondeprecated
     - macos-gl:
         requires:
+        - linux-arm64
         - linux-gl
         - linux-nondeprecated
     - macos-gles3:
@@ -572,4 +573,3 @@ workflows:
     #     requires:
     #     - macos-gles3
     #     - macos-static
-    #     - linux-arm64
