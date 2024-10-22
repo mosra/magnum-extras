@@ -519,15 +519,22 @@ template<class Event> struct KeyEventConverter<Event,
 };
 
 template<class Event> struct TextInputEventConverter<Event,
-    /* Unfortunately TextInputEvent doesn't have any nested type, this doesn't
-       work on MSVC and neither does sizeof(std::declval<Event>().text()), so
-       for now I'm leaving this specialization unrestricted. Needs a real fix
-       this once a different TextInputEventConverter needs to be added for an
-       incompatible type. */
-    #ifndef CORRADE_TARGET_MSVC
+    /* Clang (16, but probably others too) is only able to match this with the
+       >=. Without it, it can only match if the size is 1, which was only the
+       case with the now-deprecated MouseEvent::Button. I suppose the boolean
+       conversion in SFINAE contexts has some funny "optimization" that doesn't
+       take the higher bits into account or some such. */
+    #ifdef CORRADE_TARGET_CLANG
     typename std::enable_if<sizeof(&Event::text) >= 0>::type
-    #else
+    /* MSVC cannot match the above and TextInputEvent doesn't have any nested
+       type. Fortunately this seems to be fixed in MSVC 2022 17.10+. Compared
+       to PointerEvent we don't need to avoid any conflict here so just enable
+       it always. */
+    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
     void
+    /* GCC is fine */
+    #else
+    typename std::enable_if<sizeof(&Event::text)>::type
     #endif
 > {
     static bool trigger(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
