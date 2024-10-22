@@ -260,9 +260,9 @@ class ScenePlayer: public AbstractPlayer {
         void viewportEvent(ViewportEvent& event) override;
 
         void keyPressEvent(KeyEvent& event) override;
-        void mousePressEvent(MouseEvent& event) override;
-        void mouseMoveEvent(MouseMoveEvent& event) override;
-        void mouseScrollEvent(MouseScrollEvent& event) override;
+        void pointerPressEvent(PointerEvent& event) override;
+        void pointerMoveEvent(PointerMoveEvent& event) override;
+        void scrollEvent(ScrollEvent& event) override;
 
         void load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) override;
 
@@ -275,8 +275,8 @@ class ScenePlayer: public AbstractPlayer {
         void updateAnimationTime(Int deciseconds);
         void updateLightColorBrightness();
 
-        Float depthAt(const Vector2i& windowPosition);
-        Vector3 unproject(const Vector2i& windowPosition, Float depth) const;
+        Float depthAt(const Vector2& windowPosition);
+        Vector3 unproject(const Vector2& windowPosition, Float depth) const;
 
         Shaders::FlatGL3D& flatShader(Shaders::FlatGL3D::Flags flags);
         Shaders::PhongGL& phongShader(Shaders::PhongGL::Flags flags);
@@ -337,7 +337,7 @@ class ScenePlayer: public AbstractPlayer {
 
         /* Mouse interaction */
         Float _lastDepth;
-        Vector2i _lastPosition{-1};
+        Vector2 _lastPosition{Constants::nan()};
         Vector3 _rotationPoint, _translationPoint;
         #ifdef MAGNUM_TARGET_WEBGL
         GL::Framebuffer _depthResolveFramebuffer{NoCreate};
@@ -1799,11 +1799,11 @@ void ScenePlayer::viewportEvent(ViewportEvent& event) {
     #endif
 }
 
-Float ScenePlayer::depthAt(const Vector2i& windowPosition) {
+Float ScenePlayer::depthAt(const Vector2& windowPosition) {
     /* First scale the position from being relative to window size to being
        relative to framebuffer size as those two can be different on HiDPI
        systems */
-    const Vector2i position = windowPosition*Vector2{application().framebufferSize()}/Vector2{application().windowSize()};
+    const Vector2i position = windowPosition*application().framebufferSize()/Vector2{application().windowSize()};
     const Vector2i fbPosition{position.x(), GL::defaultFramebuffer.viewport().sizeY() - position.y() - 1};
     const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1}).padded(Vector2i{2});
 
@@ -1843,12 +1843,12 @@ Float ScenePlayer::depthAt(const Vector2i& windowPosition) {
     #endif
 }
 
-Vector3 ScenePlayer::unproject(const Vector2i& windowPosition, Float depth) const {
+Vector3 ScenePlayer::unproject(const Vector2& windowPosition, Float depth) const {
     /* We have to take window size, not framebuffer size, since the position is
        in window coordinates and the two can be different on HiDPI systems */
     const Vector2i viewSize = application().windowSize();
-    const Vector2i viewPosition{windowPosition.x(), viewSize.y() - windowPosition.y() - 1};
-    const Vector3 in{2*Vector2{viewPosition}/Vector2{viewSize} - Vector2{1.0f}, depth*2.0f - 1.0f};
+    const Vector2 viewPosition{windowPosition.x(), viewSize.y() - windowPosition.y() - 1};
+    const Vector3 in{2.0f*viewPosition/Vector2{viewSize} - Vector2{1.0f}, depth*2.0f - 1.0f};
 
     return _data->camera->projectionMatrix().inverted().transformPoint(in);
 }
@@ -1857,28 +1857,28 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
     if(!_data) return;
 
     /* Reset the transformation to the original view */
-    if(event.key() == KeyEvent::Key::NumZero) {
+    if(event.key() == Key::NumZero) {
         (*_data->cameraObject)
             .resetTransformation()
             .translate(Vector3::zAxis(5.0f));
 
     /* Axis-aligned view */
-    } else if(event.key() == KeyEvent::Key::NumOne ||
-              event.key() == KeyEvent::Key::NumThree ||
-              event.key() == KeyEvent::Key::NumSeven)
+    } else if(event.key() == Key::NumOne ||
+              event.key() == Key::NumThree ||
+              event.key() == Key::NumSeven)
     {
         /* Start with current camera translation with the rotation inverted */
         const Vector3 viewTranslation = _data->cameraObject->rotation().inverted().transformVector(_data->cameraObject->translation());
 
         /* Front/back */
-        const Float multiplier = event.modifiers() & KeyEvent::Modifier::Ctrl ? -1.0f : 1.0f;
+        const Float multiplier = event.modifiers() & Modifier::Ctrl ? -1.0f : 1.0f;
 
         Quaternion rotation{NoInit};
-        if(event.key() == KeyEvent::Key::NumSeven) /* Top/bottom */
+        if(event.key() == Key::NumSeven) /* Top/bottom */
             rotation = Quaternion::rotation(-90.0_degf*multiplier, Vector3::xAxis());
-        else if(event.key() == KeyEvent::Key::NumOne) /* Front/back */
+        else if(event.key() == Key::NumOne) /* Front/back */
             rotation = Quaternion::rotation(90.0_degf - 90.0_degf*multiplier, Vector3::yAxis());
-        else if(event.key() == KeyEvent::Key::NumThree) /* Right/left */
+        else if(event.key() == Key::NumThree) /* Right/left */
             rotation = Quaternion::rotation(90.0_degf*multiplier, Vector3::yAxis());
         else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
@@ -1887,24 +1887,24 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
             .setTranslation(rotation.transformVector(viewTranslation));
 
     /* Pause/seek the animation */
-    } else if(event.key() == KeyEvent::Key::Space) {
+    } else if(event.key() == Key::Space) {
         playPause();
-    } else if(event.key() == KeyEvent::Key::Left) {
+    } else if(event.key() == Key::Left) {
         backward();
-    } else if(event.key() == KeyEvent::Key::Right) {
+    } else if(event.key() == Key::Right) {
         forward();
 
     /* Adjust brightness */
-    } else if(event.key() == KeyEvent::Key::NumAdd ||
-              event.key() == KeyEvent::Key::NumSubtract ||
-              event.key() == KeyEvent::Key::Plus ||
-              event.key() == KeyEvent::Key::Minus) {
-        _brightness *= (event.key() == KeyEvent::Key::NumAdd ||
-                        event.key() == KeyEvent::Key::Plus) ? 1.1f : 1/1.1f;
+    } else if(event.key() == Key::NumAdd ||
+              event.key() == Key::NumSubtract ||
+              event.key() == Key::Plus ||
+              event.key() == Key::Minus) {
+        _brightness *= (event.key() == Key::NumAdd ||
+                        event.key() == Key::Plus) ? 1.1f : 1/1.1f;
         updateLightColorBrightness();
 
     /* Toggle profiling */
-    } else if(event.key() == KeyEvent::Key::P) {
+    } else if(event.key() == Key::P) {
         _profiler.isEnabled() ? _profiler.disable() : _profiler.enable();
 
     } else return;
@@ -1913,9 +1913,14 @@ void ScenePlayer::keyPressEvent(KeyEvent& event) {
     redraw();
 }
 
-void ScenePlayer::mousePressEvent(MouseEvent& event) {
+void ScenePlayer::pointerPressEvent(PointerEvent& event) {
+    if(!event.isPrimary())
+        return;
+
     /* RMB to select */
-    if(event.button() == MouseEvent::Button::Right && _data) {
+    /** @todo what should be the touch behavior? some long press? or give up
+        and use LMB? */
+    if(event.pointer() == Pointer::MouseRight && _data) {
         _selectionFramebuffer.bind(); /** @todo mapForDraw() should bind implicitly */
         _selectionFramebuffer.mapForDraw({
                 {Shaders::GenericGL3D::ColorOutput, GL::Framebuffer::DrawAttachment::None},
@@ -1970,7 +1975,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
         /* First scale the position from being relative to window size to being
            relative to framebuffer size as those two can be different on HiDPI
            systems */
-        const Vector2i position = event.position()*Vector2{application().framebufferSize()}/Vector2{application().windowSize()};
+        const Vector2i position = event.position()*application().framebufferSize()/Vector2{application().windowSize()};
         const Vector2i fbPosition{position.x(), _selectionFramebuffer.viewport().sizeY() - position.y() - 1};
         const Range2Di area = Range2Di::fromSize(fbPosition, Vector2i{1});
 
@@ -2087,7 +2092,7 @@ void ScenePlayer::mousePressEvent(MouseEvent& event) {
     }
 }
 
-void ScenePlayer::mouseMoveEvent(MouseMoveEvent& event) {
+void ScenePlayer::pointerMoveEvent(PointerMoveEvent& event) {
     /* In some cases (when focusing a window by a click) the browser reports a
        move event with pressed buttons *before* the corresponding press event.
        To avoid jumpy behavior in that case, make sure the last position is
@@ -2095,15 +2100,19 @@ void ScenePlayer::mouseMoveEvent(MouseMoveEvent& event) {
        as well -- if the user grabs over a button, it should ignore the
        movement while the mouse is over the button but then shouldn't jump when
        the mouse leaves the button again. */
-    if(_lastPosition == Vector2i{-1}) _lastPosition = event.position();
-    const Vector2i delta = event.position() - _lastPosition;
+    if(Math::isNan(_lastPosition).all())
+        _lastPosition = event.position();
+    const Vector2 delta = event.position() - _lastPosition;
     _lastPosition = event.position();
 
-    if(!(event.buttons() & (MouseMoveEvent::Button::Left|
-                            MouseMoveEvent::Button::Middle)) || !_data) return;
+    if(!event.isPrimary() ||
+       !(event.pointers() & (Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::Finger)) ||
+       !_data)
+        return;
 
     /* Translate */
-    if(event.modifiers() & MouseMoveEvent::Modifier::Shift) {
+    /** @todo use a two-finger gesture for this? */
+    if(event.modifiers() & Modifier::Shift) {
         const Vector3 p = unproject(event.position(), _lastDepth);
 
         _data->cameraObject->translateLocal(
@@ -2125,12 +2134,12 @@ void ScenePlayer::mouseMoveEvent(MouseMoveEvent& event) {
     redraw();
 }
 
-void ScenePlayer::mouseScrollEvent(MouseScrollEvent& event) {
+void ScenePlayer::scrollEvent(ScrollEvent& event) {
     if(!_data || !event.offset().y()) return;
 
     #ifndef MAGNUM_TARGET_GLES
     /* Adjust TBN visualization length with Ctrl-scroll if it's currently shown */
-    if((event.modifiers() & MouseScrollEvent::Modifier::Ctrl) && _data->selectedObject && (_data->selectedObject->shader().flags() & Shaders::MeshVisualizerGL3D::Flag::NormalDirection)) {
+    if((event.modifiers() & Modifier::Ctrl) && _data->selectedObject && (_data->selectedObject->shader().flags() & Shaders::MeshVisualizerGL3D::Flag::NormalDirection)) {
         _lineLength = Math::max(_lineLength *= (1.0f + event.offset().y()*0.1f), 0.0f);
         _data->selectedObject->shader().setLineLength(_lineLength);
         event.setAccepted();

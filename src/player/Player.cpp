@@ -109,9 +109,9 @@ struct Overlay: public Platform::Screen {
         void drawEvent() override;
         void viewportEvent(ViewportEvent& event) override;
         void keyPressEvent(KeyEvent& event) override;
-        void mousePressEvent(MouseEvent& event) override;
-        void mouseReleaseEvent(MouseEvent& event) override;
-        void mouseMoveEvent(MouseMoveEvent& event) override;
+        void pointerPressEvent(PointerEvent& event) override;
+        void pointerReleaseEvent(PointerEvent& event) override;
+        void pointerMoveEvent(PointerMoveEvent& event) override;
 
         #ifdef CORRADE_TARGET_EMSCRIPTEN
         bool _isFullsize = false;
@@ -300,12 +300,12 @@ void Overlay::viewportEvent(ViewportEvent& event) {
 
 void Overlay::keyPressEvent(KeyEvent& event) {
     #ifndef CORRADE_TARGET_EMSCRIPTEN
-    if(event.key() == KeyEvent::Key::F5 && !(event.modifiers() & (KeyEvent::Modifier::Shift|KeyEvent::Modifier::Ctrl|KeyEvent::Modifier::Super|KeyEvent::Modifier::Alt|KeyEvent::Modifier::AltGr))) {
+    if(event.key() == Key::F5 && !(event.modifiers() & (Modifier::Shift|Modifier::Ctrl|Modifier::Super|Modifier::Alt|Modifier::AltGr))) {
         application<Player>().reload();
     } else
     #endif
     /* Toggle UI drawing (useful for screenshots) */
-    if(event.key() == KeyEvent::Key::Esc) {
+    if(event.key() == Key::Esc) {
         ui.nodeFlags(window) >= Ui::NodeFlag::Hidden ?
             ui.clearNodeFlags(window, Ui::NodeFlag::Hidden) :
             ui.addNodeFlags(window, Ui::NodeFlag::Hidden);
@@ -315,21 +315,21 @@ void Overlay::keyPressEvent(KeyEvent& event) {
     event.setAccepted();
 }
 
-void Overlay::mousePressEvent(MouseEvent& event) {
+void Overlay::pointerPressEvent(PointerEvent& event) {
     ui.pointerPressEvent(event);
 
     if(ui.state())
         redraw();
 }
 
-void Overlay::mouseReleaseEvent(MouseEvent& event) {
+void Overlay::pointerReleaseEvent(PointerEvent& event) {
     ui.pointerReleaseEvent(event);
 
     if(ui.state())
         redraw();
 }
 
-void Overlay::mouseMoveEvent(MouseMoveEvent& event) {
+void Overlay::pointerMoveEvent(PointerMoveEvent& event) {
     ui.pointerMoveEvent(event);
 
     if(ui.state())

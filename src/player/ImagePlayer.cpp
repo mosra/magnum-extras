@@ -68,13 +68,13 @@ class ImagePlayer: public AbstractPlayer {
         void drawEvent() override;
         void viewportEvent(ViewportEvent& event) override;
         void keyPressEvent(KeyEvent& event) override;
-        void mouseMoveEvent(MouseMoveEvent& event) override;
-        void mouseScrollEvent(MouseScrollEvent& event) override;
+        void pointerMoveEvent(PointerMoveEvent& event) override;
+        void scrollEvent(ScrollEvent& event) override;
 
         void load(Containers::StringView filename, Trade::AbstractImporter& importer, Int id) override;
 
-        Vector2 unproject(const Vector2i& windowPosition) const;
-        Vector2 unprojectRelative(const Vector2i& relativeWindowPosition) const;
+        Vector2 unproject(const Vector2& windowPosition) const;
+        Vector2 unprojectRelative(const Vector2& relativeWindowPosition) const;
 
         Shaders::FlatGL2D _coloredShader;
 
@@ -134,7 +134,7 @@ void ImagePlayer::viewportEvent(ViewportEvent& event) {
 }
 
 void ImagePlayer::keyPressEvent(KeyEvent& event) {
-    if(event.key() == KeyEvent::Key::NumZero) {
+    if(event.key() == Key::NumZero) {
         if((_imageSize > application().framebufferSize()*0.5f).any())
             _transformation = Matrix3::scaling(Vector2{_imageSize}/2.0f);
         else
@@ -145,21 +145,23 @@ void ImagePlayer::keyPressEvent(KeyEvent& event) {
     redraw();
 }
 
-Vector2 ImagePlayer::unproject(const Vector2i& windowPosition) const {
+Vector2 ImagePlayer::unproject(const Vector2& windowPosition) const {
     /* Normalize from window-relative position with origin at top left and Y
        down to framebuffer-relative position with origin at center and Y going
        up */
-    return (Vector2{windowPosition}/Vector2{application().windowSize()} - Vector2{0.5f})*Vector2{application().framebufferSize()}*Vector2::yScale(-1.0f);
+    return (windowPosition/Vector2{application().windowSize()} - Vector2{0.5f})*Vector2{application().framebufferSize()}*Vector2::yScale(-1.0f);
 }
 
-Vector2 ImagePlayer::unprojectRelative(const Vector2i& relativeWindowPosition) const {
+Vector2 ImagePlayer::unprojectRelative(const Vector2& relativeWindowPosition) const {
     /* Only resizing for framebuffer-relative position and Y going up instead
        of down, no origin movements */
-    return Vector2{relativeWindowPosition}*Vector2{application().framebufferSize()}*Vector2::yScale(-1.0f)/Vector2{application().windowSize()};
+    return relativeWindowPosition*Vector2{application().framebufferSize()}*Vector2::yScale(-1.0f)/Vector2{application().windowSize()};
 }
 
-void ImagePlayer::mouseMoveEvent(MouseMoveEvent& event) {
-    if(!(event.buttons() & MouseMoveEvent::Button::Left)) return;
+void ImagePlayer::pointerMoveEvent(PointerMoveEvent& event) {
+    if(!event.isPrimary() ||
+       !(event.pointers() & (Pointer::MouseLeft|Pointer::Finger)))
+        return;
 
     const Vector2 delta = unprojectRelative(event.relativePosition());
     _transformation = Matrix3::translation(delta)*_transformation;
@@ -167,7 +169,7 @@ void ImagePlayer::mouseMoveEvent(MouseMoveEvent& event) {
     redraw();
 }
 
-void ImagePlayer::mouseScrollEvent(MouseScrollEvent& event) {
+void ImagePlayer::scrollEvent(ScrollEvent& event) {
     if(!event.offset().y()) return;
 
     /* Zoom to selection point -- translate that point to origin, scale,
