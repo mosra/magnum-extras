@@ -65,9 +65,9 @@ Ui::AbstractUserInterface ui(
 };
 
 struct MyApplication: Platform::Application {
-    void mousePressEvent(MouseEvent& event) override;
-    void mouseReleaseEvent(MouseEvent& event) override;
-    void mouseMoveEvent(MouseMoveEvent& event) override;
+    void pointerPressEvent(PointerEvent& event) override;
+    void pointerReleaseEvent(PointerEvent& event) override;
+    void pointerMoveEvent(PointerMoveEvent& event) override;
     void keyPressEvent(KeyEvent& event) override;
     void keyReleaseEvent(KeyEvent& event) override;
     void textInputEvent(TextInputEvent& event) override;
@@ -80,7 +80,7 @@ struct MyApplication: Platform::Application {
 
 DOXYGEN_ELLIPSIS()
 
-void MyApplication::mousePressEvent(MouseEvent& event) {
+void MyApplication::pointerPressEvent(PointerEvent& event) {
     if(!_ui.pointerPressEvent(event)) {
         /* Handle an event that wasn't accepted by the UI */
     }
@@ -88,7 +88,7 @@ void MyApplication::mousePressEvent(MouseEvent& event) {
     DOXYGEN_ELLIPSIS()
 }
 
-void MyApplication::mouseReleaseEvent(MouseEvent& event) {
+void MyApplication::pointerReleaseEvent(PointerEvent& event) {
     if(!_ui.pointerReleaseEvent(event)) {
         /* Handle an event that wasn't accepted by the UI */
     }
@@ -96,7 +96,7 @@ void MyApplication::mouseReleaseEvent(MouseEvent& event) {
     DOXYGEN_ELLIPSIS()
 }
 
-void MyApplication::mouseMoveEvent(MouseMoveEvent& event) {
+void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
     if(!_ui.pointerMoveEvent(event)) {
         /* Handle an event that wasn't accepted by the UI */
     }

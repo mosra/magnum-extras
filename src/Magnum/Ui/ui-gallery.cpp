@@ -103,9 +103,9 @@ class UiGallery: public Platform::Application {
     private:
         void viewportEvent(ViewportEvent& event) override;
         void drawEvent() override;
-        void mousePressEvent(MouseEvent& event) override;
-        void mouseReleaseEvent(MouseEvent& event) override;
-        void mouseMoveEvent(MouseMoveEvent& event) override;
+        void pointerPressEvent(PointerEvent& event) override;
+        void pointerReleaseEvent(PointerEvent& event) override;
+        void pointerMoveEvent(PointerMoveEvent& event) override;
         void keyPressEvent(KeyEvent& event) override;
         void keyReleaseEvent(KeyEvent& event) override;
         void textInputEvent(TextInputEvent& event) override;
@@ -325,19 +325,19 @@ void UiGallery::drawEvent() {
     if(_ui.state() || _profiler.isEnabled()) redraw();
 }
 
-void UiGallery::mousePressEvent(MouseEvent& event) {
+void UiGallery::pointerPressEvent(PointerEvent& event) {
     _ui.pointerPressEvent(event);
 
     if(_ui.state()) redraw();
 }
 
-void UiGallery::mouseReleaseEvent(MouseEvent& event) {
+void UiGallery::pointerReleaseEvent(PointerEvent& event) {
     _ui.pointerReleaseEvent(event);
 
     if(_ui.state()) redraw();
 }
 
-void UiGallery::mouseMoveEvent(MouseMoveEvent& event) {
+void UiGallery::pointerMoveEvent(PointerMoveEvent& event) {
     _ui.pointerMoveEvent(event);
 
     if(_ui.state()) redraw();

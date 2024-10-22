@@ -59,9 +59,11 @@ struct ApplicationTest: Platform::Application {
         swapBuffers();
     }
 
-    void mousePressEvent(MouseEvent& event) override {
+    /* Set to 0 to test the deprecated mouse events instead */
+    #if 1
+    void pointerPressEvent(PointerEvent& event) override {
         if(!_ui.pointerPressEvent(event))
-            Debug{} << "pointer press event not accepted";
+            Debug{} << (event.isPrimary() ? "primary" : "secondary") << "pointer press event not accepted";
         if(!event.isAccepted())
             Debug{} << "pointer press event accept not propagated";
 
@@ -70,10 +72,9 @@ struct ApplicationTest: Platform::Application {
             redraw();
         }
     }
-
-    void mouseReleaseEvent(MouseEvent& event) override {
+    void pointerReleaseEvent(PointerEvent& event) override {
         if(!_ui.pointerReleaseEvent(event))
-            Debug{} << "pointer release event not accepted";
+            Debug{} << (event.isPrimary() ? "primary" : "secondary") << "pointer release event not accepted";
         if(!event.isAccepted())
             Debug{} << "pointer release event accept not propagated";
 
@@ -82,10 +83,9 @@ struct ApplicationTest: Platform::Application {
             redraw();
         }
     }
-
-    void mouseMoveEvent(MouseMoveEvent& event) override {
+    void pointerMoveEvent(PointerMoveEvent& event) override {
         if(!_ui.pointerMoveEvent(event))
-            Debug{} << "pointer move event not accepted";
+            Debug{} << (event.isPrimary() ? "primary" : "secondary") << "pointer move event not accepted";
         if(!event.isAccepted())
             Debug{} << "pointer move event accept not propagated";
 
@@ -94,6 +94,43 @@ struct ApplicationTest: Platform::Application {
             redraw();
         }
     }
+    #else
+    CORRADE_IGNORE_DEPRECATED_PUSH
+    void mousePressEvent(MouseEvent& event) override {
+        if(!_ui.pointerPressEvent(event))
+            Debug{} << "mouse press event not accepted";
+        if(!event.isAccepted())
+            Debug{} << "mouse press event accept not propagated";
+
+        if(_ui.state()) {
+            Debug{} << "redraw triggered by" << _ui.state();
+            redraw();
+        }
+    }
+    void mouseReleaseEvent(MouseEvent& event) override {
+        if(!_ui.pointerReleaseEvent(event))
+            Debug{} << "mouse release event not accepted";
+        if(!event.isAccepted())
+            Debug{} << "mouse release event accept not propagated";
+
+        if(_ui.state()) {
+            Debug{} << "redraw triggered by" << _ui.state();
+            redraw();
+        }
+    }
+    void mouseMoveEvent(MouseMoveEvent& event) override {
+        if(!_ui.pointerMoveEvent(event))
+            Debug{} << "mouse move event not accepted";
+        if(!event.isAccepted())
+            Debug{} << "mouse move event accept not propagated";
+
+        if(_ui.state()) {
+            Debug{} << "redraw triggered by" << _ui.state();
+            redraw();
+        }
+    }
+    CORRADE_IGNORE_DEPRECATED_POP
+    #endif
 
     void keyPressEvent(KeyEvent& event) override {
         if(!_ui.keyPressEvent(event))

@@ -47,6 +47,159 @@ and @ref Magnum::Platform::Sdl2Application::MouseMoveEvent "Magnum::Platform::*A
 #ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Ui { namespace Implementation {
 
+/* Not all applications have Finger / Pen pointers or a Touch / Pen pointer
+   event source, so employing a dirty SFINAE trick with an overload that
+   returns false if given enum value is not available. A similar trick is
+   used in ImGuiIntegration. */
+#define MAGNUM_UI_OPTIONAL_POINTER(pointer)                                 \
+    template<class ApplicationPointer> constexpr bool is##pointer##Pointer(ApplicationPointer p, decltype(ApplicationPointer::pointer)* = nullptr) { \
+        return p == ApplicationPointer::pointer;                            \
+    }                                                                       \
+    template<class ApplicationPointers> constexpr bool has##pointer##Pointer(ApplicationPointers p, decltype(ApplicationPointers::Type::pointer)* = nullptr) { \
+        return p >= ApplicationPointers::Type::pointer;                     \
+    }                                                                       \
+    constexpr bool is##pointer##Pointer(...) {                              \
+        return false;                                                       \
+    }                                                                       \
+    constexpr bool has##pointer##Pointer(...) {                             \
+        return false;                                                       \
+    }
+MAGNUM_UI_OPTIONAL_POINTER(Finger)
+MAGNUM_UI_OPTIONAL_POINTER(Pen)
+MAGNUM_UI_OPTIONAL_POINTER(Eraser)
+#undef MAGNUM_UI_OPTIONAL_POINTER
+
+template<class ApplicationPointer> Pointer pointerFor(const ApplicationPointer pointer) {
+    /* Not a switch because this makes it easier to check for the not always
+       available pointer kinds */
+    if(pointer == ApplicationPointer::MouseLeft)
+        return Pointer::MouseLeft;
+    if(pointer == ApplicationPointer::MouseMiddle)
+        return Pointer::MouseMiddle;
+    if(pointer == ApplicationPointer::MouseRight)
+        return Pointer::MouseRight;
+    if(isFingerPointer(pointer))
+        return Pointer::Finger;
+    if(isPenPointer(pointer))
+        return Pointer::Pen;
+    if(isEraserPointer(pointer))
+        return Pointer::Eraser;
+    return {};
+}
+
+template<class ApplicationPointers> Pointers pointersFor(const ApplicationPointers pointers) {
+    typedef typename ApplicationPointers::Type ApplicationPointer;
+
+    Pointers out;
+    if(pointers & ApplicationPointer::MouseLeft)
+        out |= Pointer::MouseLeft;
+    if(pointers & ApplicationPointer::MouseMiddle)
+        out |= Pointer::MouseMiddle;
+    if(pointers & ApplicationPointer::MouseRight)
+        out |= Pointer::MouseRight;
+    if(hasFingerPointer(pointers))
+        out |= Pointer::Finger;
+    if(hasPenPointer(pointers))
+        out |= Pointer::Pen;
+    if(hasEraserPointer(pointers))
+        out |= Pointer::Eraser;
+    return out;
+}
+
+/** @todo remove once the deprecated MouseEvent is gone */
+#if defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+CORRADE_HAS_TYPE(IsPointerEvent, decltype(std::declval<T>().pointer()));
+CORRADE_HAS_TYPE(IsPointerMoveEvent, decltype(std::declval<T>().pointers()));
+#endif
+
+template<class Event> struct PointerEventConverter<Event, typename std::enable_if<
+    /* Clang (16, but probably others too) is only able to match this with the
+       >=. Without it, it can only match if the size is 1, which was only the
+       case with the now-deprecated MouseEvent::Button. I suppose the boolean
+       conversion in SFINAE contexts has some funny "optimization" that doesn't
+       take the higher bits into account or some such. */
+    #ifdef CORRADE_TARGET_CLANG
+    sizeof(&Event::pointer) >= 0
+    /* MSVC cannot match the above and PointerEvent doesn't have any nested
+       type, only the now-deprecated MouseEvent::Button is what works on older
+       MSVC. Fortunately this seems to be fixed in MSVC 2022 17.10+. Would do
+       the same as in TextInputEventConverter but this needs to not conflict
+       with the PointerEventConverter for MouseEvent below. */
+    /** @todo replace with just void once the deprecated MouseEvent is gone */
+    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    IsPointerEvent<Event>::value
+    /* GCC is fine */
+    #else
+    sizeof(&Event::pointer)
+    #endif
+>::type> {
+    static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
+        const Pointer pointer = pointerFor(event.pointer());
+        if(pointer == Pointer{})
+            return false;
+
+        PointerEvent e{time, pointer};
+        if(ui.pointerPressEvent(event.position(), e)) {
+            event.setAccepted();
+            return true;
+        }
+
+        return false;
+    }
+
+    static bool release(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
+        const Pointer pointer = pointerFor(event.pointer());
+        if(pointer == Pointer{})
+            return false;
+
+        PointerEvent e{time, pointer};
+        if(ui.pointerReleaseEvent(event.position(), e)) {
+            event.setAccepted();
+            return true;
+        }
+
+        return false;
+    }
+};
+
+template<class Event> struct PointerMoveEventConverter<Event, typename std::enable_if<
+    /* Clang (16, but probably others too) is only able to match this with the
+       >=. Without it, it can only match if the size is 1, which was only the
+       case with the now-deprecated MouseEvent::Button. I suppose the boolean
+       conversion in SFINAE contexts has some funny "optimization" that doesn't
+       take the higher bits into account or some such. */
+    #ifdef CORRADE_TARGET_CLANG
+    sizeof(&Event::pointers) >= 0
+    /* MSVC cannot match the above and PointerMoveEvent doesn't have any nested
+       type, only the now-deprecated MouseEvent::Button is what works on older
+       MSVC. Fortunately this seems to be fixed in MSVC 2022 17.10+. Would do
+       the same as in TextInputEventConverter but this needs to not conflict
+       with the PointerMoveEventConverter for MouseMoveEvent below. */
+    /** @todo replace with just void once the deprecated MouseEvent is gone */
+    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    IsPointerMoveEvent<Event>::value
+    /* GCC is fine */
+    #else
+    sizeof(&Event::pointers)
+    #endif
+>::type> {
+    static bool move(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
+        const Containers::Optional<Pointer> pointer = event.pointer() ? Containers::optional(pointerFor(*event.pointer())) : Containers::NullOpt;
+        const Pointers pointers = pointersFor(event.pointers());
+
+        PointerMoveEvent e{time, pointer, pointers};
+        if(ui.pointerMoveEvent(event.position(), e)) {
+            event.setAccepted();
+            return true;
+        }
+
+        return false;
+    }
+};
+
+/* These handle the deprecated MouseEvent and MouseMoveEvent classes */
+/** @todo remove once they're gone */
+#ifdef MAGNUM_BUILD_DEPRECATED
 template<class Event> Pointer pointerForButton(typename Event::Button button) {
     switch(button) {
         case Event::Button::Left: return Pointer::MouseLeft;
@@ -79,11 +232,6 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
     #endif
 >::type> {
     static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
-        /** @todo if some other buttons are pressed and this is just one
-            released, translate to a move event instead -- requires the
-            applications to expose a way to query all currently pressed
-            buttons */
-
         const Pointer pointer = pointerForButton<Event>(event.button());
         if(pointer == Pointer{})
             return false;
@@ -98,11 +246,6 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
     }
 
     static bool release(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
-        /** @todo if some other buttons are pressed and this is just one
-            released, translate to a move event instead -- requires the
-            applications to expose a way to query all currently pressed
-            buttons */
-
         const Pointer pointer = pointerForButton<Event>(event.button());
         if(pointer == Pointer{})
             return false;
@@ -138,6 +281,7 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
         return false;
     }
 };
+#endif
 
 /* Not all application classes have the same set of keys, but we want to handle
    even the ones that are available just in a subset. This SFINAE magic lets us
@@ -160,10 +304,10 @@ UI_OPTIONAL_APPLICATION_KEY(World1)
 UI_OPTIONAL_APPLICATION_KEY(World2)
 UI_OPTIONAL_APPLICATION_KEY(AltGr)
 
-template<class Event> Key keyFor(typename Event::Key key) {
+template<class ApplicationKey> Key keyFor(ApplicationKey key) {
     switch(key) {
         /* LCOV_EXCL_START */
-        #define _c(key) case Event::Key::key: return Key::key;
+        #define _c(key) case ApplicationKey::key: return Key::key;
         _c(Backspace)
         _c(Tab)
         _c(Enter)
@@ -275,7 +419,7 @@ template<class Event> Key keyFor(typename Event::Key key) {
         /* LCOV_EXCL_STOP */
 
         /* If the key is unknown, don't propagate the event at all */
-        case Event::Key::Unknown:
+        case ApplicationKey::Unknown:
             return {};
 
         /* Key values that may not be available in all applications. Needs
@@ -284,7 +428,7 @@ template<class Event> Key keyFor(typename Event::Key key) {
            not available in earlier versions. Right now all those are skipped
            because it's unclear what they actually map to. Make sure to add an
            explicit test for each. */
-        #define _s(key) case UiOptionalApplicationKey_ ## key <typename Event::Key>::Value:
+        #define _s(key) case UiOptionalApplicationKey_ ## key <ApplicationKey>::Value:
         #ifdef CORRADE_TARGET_GCC
         #pragma GCC diagnostic push
         #pragma GCC diagnostic ignored "-Wswitch" /* case value not in enum */
@@ -311,35 +455,46 @@ template<class Event> Key keyFor(typename Event::Key key) {
 
 #undef UI_OPTIONAL_APPLICATION_KEY
 
-template<class Event> Modifiers modifiersFor(typename Event::Modifiers modifiers) {
+template<class ApplicationModifiers> Modifiers modifiersFor(ApplicationModifiers modifiers) {
+    typedef typename ApplicationModifiers::Type ApplicationModifier;
+
     Modifiers out;
-    if(modifiers & Event::Modifier::Shift)
+    if(modifiers & ApplicationModifier::Shift)
         out |= Modifier::Shift;
-    if(modifiers & Event::Modifier::Ctrl)
+    if(modifiers & ApplicationModifier::Ctrl)
         out |= Modifier::Ctrl;
-    if(modifiers & Event::Modifier::Alt)
+    if(modifiers & ApplicationModifier::Alt)
         out |= Modifier::Alt;
-    if(modifiers & Event::Modifier::Super)
+    if(modifiers & ApplicationModifier::Super)
         out |= Modifier::Super;
     return out;
 }
 
-template<class Event> struct KeyEventConverter<Event, typename std::enable_if<sizeof(typename Event::Key)
-    /* Without this, Clang (16, but probably others too) is only able to match
-       this if KeyEvent::Key is 8-bit and not 32. I suppose the boolean
+template<class Event> struct KeyEventConverter<Event,
+    /* Clang (16, but probably others too) is only able to match this with the
+       >=. Without it, it can only match if the size is 1, which was only the
+       case with the now-deprecated MouseEvent::Button. I suppose the boolean
        conversion in SFINAE contexts has some funny "optimization" that doesn't
-       take the higher bits into account or some such. Suspiciously enough, the
-       exact same thing seems to be happening on MSVC, with SDL2 at least. */
-    #if defined(CORRADE_TARGET_CLANG) || defined(CORRADE_TARGET_MSVC)
-    >= 0
+       take the higher bits into account or some such. */
+    #ifdef CORRADE_TARGET_CLANG
+    typename std::enable_if<sizeof(&Event::key) >= 0>::type
+    /* MSVC cannot match the above and KeyEvent doesn't have any nested type,
+       only the now-deprecated Key is what works on older MSVC. Fortunately
+       this seems to be fixed in MSVC 2022 17.10+. Compared to PointerEvent we
+       don't need to avoid any conflict here so just enable it always. */
+    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    void
+    /* GCC is fine */
+    #else
+    typename std::enable_if<sizeof(&Event::key)>::type
     #endif
->::type> {
+> {
     static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
-        const Key key = keyFor<Event>(event.key());
+        const Key key = keyFor(event.key());
         if(key == Key{})
             return false;
 
-        KeyEvent e{time, key, modifiersFor<Event>(event.modifiers())};
+        KeyEvent e{time, key, modifiersFor(event.modifiers())};
         if(ui.keyPressEvent(e)) {
             event.setAccepted();
             return true;
@@ -349,11 +504,11 @@ template<class Event> struct KeyEventConverter<Event, typename std::enable_if<si
     }
 
     static bool release(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
-        const Key key = keyFor<Event>(event.key());
+        const Key key = keyFor(event.key());
         if(key == Key{})
             return false;
 
-        KeyEvent e{time, key, modifiersFor<Event>(event.modifiers())};
+        KeyEvent e{time, key, modifiersFor(event.modifiers())};
         if(ui.keyReleaseEvent(e)) {
             event.setAccepted();
             return true;
@@ -364,11 +519,11 @@ template<class Event> struct KeyEventConverter<Event, typename std::enable_if<si
 };
 
 template<class Event> struct TextInputEventConverter<Event,
-    /* Unfortunately TextInputEvent doesn't have any nested type like other
-       event classes, this doesn't work on MSVC and neither does
-       sizeof(std::declval<Event>().text()), so for now I'm leaving this
-       specialization unrestricted. Needs a real fix this once a different
-       TextInputEventConverter needs to be added for an incompatible type. */
+    /* Unfortunately TextInputEvent doesn't have any nested type, this doesn't
+       work on MSVC and neither does sizeof(std::declval<Event>().text()), so
+       for now I'm leaving this specialization unrestricted. Needs a real fix
+       this once a different TextInputEventConverter needs to be added for an
+       incompatible type. */
     #ifndef CORRADE_TARGET_MSVC
     typename std::enable_if<sizeof(&Event::text) >= 0>::type
     #else

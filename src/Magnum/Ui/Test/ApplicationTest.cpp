@@ -42,14 +42,127 @@ struct ApplicationTest: TestSuite::Tester {
        concrete behavior. Tests with actual application classes are in
        Sdl2ApplicationTest.cpp, GlfwApplicationTest.cpp etc. */
 
+    void pointerPressEvent();
+    void pointerReleaseEvent();
+    void pointerMoveEvent();
+    #ifdef MAGNUM_BUILD_DEPRECATED
     void mousePressEvent();
     void mouseReleaseEvent();
     void mouseMoveEvent();
+    #endif
     void keyPressEvent();
     void keyReleaseEvent();
     void textInputEvent();
 };
 
+enum class CustomPointer {
+    MouseLeft = 0x0100,
+    MouseRight = 0x0200,
+    MouseMiddle = 0x0040,
+    Finger = 0x8000,
+    Pen = 0x2000,
+    Eraser = 0x1000,
+    TrackballFire = 0x4000
+};
+
+typedef Containers::EnumSet<CustomPointer> CustomPointers;
+
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+CORRADE_ENUMSET_OPERATORS(CustomPointers)
+#ifdef CORRADE_TARGET_CLANG
+#pragma clang diagnostic pop
+#endif
+
+struct CustomPointerEvent {
+    explicit CustomPointerEvent(const Vector2& position, CustomPointer pointer): _position{position}, _pointer{pointer} {}
+
+    Vector2 position() const { return _position; }
+    CustomPointer pointer() const { return _pointer; }
+    void setAccepted() { accepted = true; }
+
+    bool accepted = false;
+
+    private:
+        Vector2 _position;
+        CustomPointer _pointer;
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    CustomPointer pointer;
+    Containers::Optional<Pointer> expectedPointer;
+    bool accept;
+} PointerPressReleaseEventData[]{
+    {"mouse left", CustomPointer::MouseLeft, Pointer::MouseLeft, true},
+    {"mouse middle", CustomPointer::MouseMiddle, Pointer::MouseMiddle, true},
+    {"mouse right, not accepted", CustomPointer::MouseRight, Pointer::MouseRight, false},
+    {"finger", CustomPointer::Finger, Pointer::Finger, true},
+    {"pen", CustomPointer::Pen, Pointer::Pen, true},
+    {"eraser", CustomPointer::Eraser, Pointer::Eraser, true},
+    {"unknown pointer", CustomPointer::TrackballFire, {}, false},
+};
+
+struct CustomPointerMoveEvent {
+    explicit CustomPointerMoveEvent(const Vector2& position, Containers::Optional<CustomPointer> pointer, CustomPointers pointers): _position{position}, _pointer{pointer}, _pointers{pointers} {}
+
+    Vector2 position() const { return _position; }
+    Containers::Optional<CustomPointer> pointer() const { return _pointer; }
+    CustomPointers pointers() const { return _pointers; }
+    void setAccepted() { accepted = true; }
+
+    bool accepted = false;
+
+    private:
+        Vector2 _position;
+        Containers::Optional<CustomPointer> _pointer;
+        CustomPointers _pointers;
+};
+
+const struct {
+    TestSuite::TestCaseDescriptionSourceLocation name;
+    Containers::Optional<CustomPointer> pointer;
+    CustomPointers pointers;
+    Containers::Optional<Pointer> expectedPointer;
+    Pointers expectedPointers;
+    bool accept;
+} PointerMoveEventData[]{
+    {"mouse left + middle + eraser, not accepted",
+        {},
+        CustomPointer::MouseLeft|CustomPointer::MouseMiddle|CustomPointer::Eraser,
+        {},
+        Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::Eraser, false},
+    {"mouse middle + finger + unknown button",
+        {},
+        CustomPointer::MouseMiddle|CustomPointer::Finger|CustomPointer::TrackballFire,
+        {},
+        Pointer::MouseMiddle|Pointer::Finger, true},
+    {"unknown button alone",
+        {},
+        CustomPointer::TrackballFire,
+        {},
+        {}, true},
+    {"mouse left, right newly pressed",
+        CustomPointer::MouseRight,
+        CustomPointer::MouseLeft|CustomPointer::MouseRight,
+        Pointer::MouseRight,
+        Pointer::MouseLeft|Pointer::MouseRight, true},
+    {"pen + eraser, eraser released",
+        CustomPointer::Eraser,
+        CustomPointer::Pen,
+        Pointer::Eraser,
+        Pointer::Pen, true},
+    {"unknown button released alone",
+        CustomPointer::TrackballFire,
+        {},
+        {},
+        {}, true},
+    {"no buttons", {}, {}, {}, {}, false},
+};
+
+#ifdef MAGNUM_BUILD_DEPRECATED
 struct CustomMouseEvent {
     enum class Button {
         Left = 0x13f7,
@@ -132,6 +245,7 @@ const struct {
         {}, true},
     {"no buttons", {}, {}, false},
 };
+#endif
 
 struct CustomKeyEvent {
     enum class Key {
@@ -356,6 +470,16 @@ const struct {
 };
 
 ApplicationTest::ApplicationTest() {
+    addInstancedTests({&ApplicationTest::pointerPressEvent},
+        Containers::arraySize(PointerPressReleaseEventData));
+
+    addInstancedTests({&ApplicationTest::pointerReleaseEvent},
+        Containers::arraySize(PointerPressReleaseEventData));
+
+    addInstancedTests({&ApplicationTest::pointerMoveEvent},
+        Containers::arraySize(PointerMoveEventData));
+
+    #ifdef MAGNUM_BUILD_DEPRECATED
     addInstancedTests({&ApplicationTest::mousePressEvent},
         Containers::arraySize(MousePressReleaseEventData));
 
@@ -364,6 +488,7 @@ ApplicationTest::ApplicationTest() {
 
     addInstancedTests({&ApplicationTest::mouseMoveEvent},
         Containers::arraySize(MouseMoveEventData));
+    #endif
 
     addInstancedTests({&ApplicationTest::keyPressEvent},
         Containers::arraySize(KeyPressReleaseEventData));
@@ -375,6 +500,212 @@ ApplicationTest::ApplicationTest() {
         Containers::arraySize(TextInputEventData));
 }
 
+void ApplicationTest::pointerPressEvent() {
+    auto&& data = PointerPressReleaseEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The events should internally still be reported relative to the UI size,
+       same as when passed directly. I.e., scaled by {0.1f, 10.0f}; framebuffer
+       size isn't used for anything here. */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, Pointer expectedPointer, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, accept{accept} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
+            CORRADE_COMPARE(event.position(), (Vector2{156.25f, 230.7f}));
+            CORRADE_COMPARE(event.pointer(), expectedPointer);
+            event.setAccepted(accept);
+            ++called;
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerEnterEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+
+        Pointer expectedPointer;
+        bool accept;
+        Int called = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer ? *data.expectedPointer : Pointer{}, data.accept));
+    layer.create(ui.createNode({}, ui.size()));
+
+    CustomPointerEvent e{{1562.5f, 23.07f}, data.pointer};
+    /* Should return true only if it's accepted */
+    CORRADE_COMPARE(ui.pointerPressEvent(e), data.accept);
+    /* Should be called only if there's a pointer type to translate to */
+    CORRADE_COMPARE(layer.called, data.expectedPointer ? 1 : 0);
+    CORRADE_COMPARE(e.accepted, data.accept);
+}
+
+void ApplicationTest::pointerReleaseEvent() {
+    auto&& data = PointerPressReleaseEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The events should internally still be reported relative to the UI size,
+       same as when passed directly. I.e., scaled by {10.0f, 0.1f}; framebuffer
+       size isn't used for anything here. */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 3000.0f}, {666, 777}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, Pointer expectedPointer, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, accept{accept} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent& event) override {
+            CORRADE_COMPARE(event.position(), (Vector2{150.75f, 236.25f}));
+            CORRADE_COMPARE(event.pointer(), expectedPointer);
+            event.setAccepted(accept);
+            ++called;
+        }
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerEnterEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+
+        Pointer expectedPointer;
+        bool accept;
+        Int called = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer ? *data.expectedPointer : Pointer{}, data.accept));
+    layer.create(ui.createNode({}, ui.size()));
+
+    CustomPointerEvent e{{15.075f, 2362.5f}, data.pointer};
+    /* Should return true only if it's accepted */
+    CORRADE_COMPARE(ui.pointerReleaseEvent(e), data.accept);
+    /* Should be called only if there's a pointer type to translate to */
+    CORRADE_COMPARE(layer.called, data.expectedPointer ? 1 : 0);
+    CORRADE_COMPARE(e.accepted, data.accept);
+}
+
+void ApplicationTest::pointerMoveEvent() {
+    auto&& data = PointerMoveEventData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    /* The events should internally still be reported relative to the UI size,
+       same as when passed directly. I.e., scaled by {0.1f, 10.0f}; framebuffer
+       size isn't used for anything here. */
+    AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
+
+    struct Layer: AbstractLayer {
+        explicit Layer(LayerHandle handle, Containers::Optional<Pointer> expectedPointer, Pointers expectedPointers, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, expectedPointers{expectedPointers}, accept{accept} {}
+
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+            CORRADE_COMPARE(event.position(), (Vector2{156.125f, 230.4f}));
+            CORRADE_COMPARE(event.pointer(), expectedPointer);
+            CORRADE_COMPARE(event.pointers(), expectedPointers);
+            event.setAccepted(accept);
+            ++called;
+        }
+        /* Enter / leave events do get called as a consequence of the move
+           event internally, we don't care */
+        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doFocusEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doBlurEvent(UnsignedInt, FocusEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyPressEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doKeyReleaseEvent(UnsignedInt, KeyEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+        void doTextInputEvent(UnsignedInt, TextInputEvent&) override {
+            CORRADE_FAIL("This shouldn't be called.");
+        }
+
+        Containers::Optional<Pointer> expectedPointer;
+        Pointers expectedPointers;
+        bool accept;
+        Int called = 0;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer, data.expectedPointers, data.accept));
+    layer.create(ui.createNode({}, ui.size()));
+
+    CustomPointerMoveEvent e{{1561.25f, 23.04f}, data.pointer, data.pointers};
+    /* Should return true only if it's accepted */
+    CORRADE_COMPARE(ui.pointerMoveEvent(e), data.accept);
+    /* Should be called always */
+    CORRADE_COMPARE(layer.called, 1);
+    CORRADE_COMPARE(e.accepted, data.accept);
+}
+
+#ifdef MAGNUM_BUILD_DEPRECATED
 void ApplicationTest::mousePressEvent() {
     auto&& data = MousePressReleaseEventData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
@@ -578,6 +909,7 @@ void ApplicationTest::mouseMoveEvent() {
     CORRADE_COMPARE(layer.called, 1);
     CORRADE_COMPARE(e.accepted, data.accept);
 }
+#endif
 
 void ApplicationTest::keyPressEvent() {
     auto&& data = KeyPressReleaseEventData[testCaseInstanceId()];
