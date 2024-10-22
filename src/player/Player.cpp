@@ -138,7 +138,7 @@ class Player: public Platform::ScreenedApplication {
     private:
         void globalViewportEvent(ViewportEvent& size) override;
         void globalDrawEvent() override;
-        #ifdef CORRADE_IS_DEBUG_BUILD
+        #if !defined(CORRADE_TARGET_EMSCRIPTEN) && defined(CORRADE_IS_DEBUG_BUILD)
         void tickEvent() override;
         #endif
 
@@ -723,7 +723,7 @@ void Player::globalDrawEvent() {
     swapBuffers();
 }
 
-#ifdef CORRADE_IS_DEBUG_BUILD
+#if !defined(CORRADE_TARGET_EMSCRIPTEN) && defined(CORRADE_IS_DEBUG_BUILD)
 void Player::tickEvent() {
     /* If tweakable is not enabled, call the base tick event implementation,
        which effectively stops it from being called again */
