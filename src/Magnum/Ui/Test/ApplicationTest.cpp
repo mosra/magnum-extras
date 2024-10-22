@@ -394,7 +394,7 @@ void ApplicationTest::mousePressEvent() {
         }
         void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
             CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
-            CORRADE_COMPARE(event.type(), expectedPointer);
+            CORRADE_COMPARE(event.pointer(), expectedPointer);
             event.setAccepted(accept);
             ++called;
         }
@@ -466,7 +466,7 @@ void ApplicationTest::mouseReleaseEvent() {
         }
         void doPointerReleaseEvent(UnsignedInt, PointerEvent& event) override {
             CORRADE_COMPARE(event.position(), (Vector2{150.0f, 236.0f}));
-            CORRADE_COMPARE(event.type(), expectedPointer);
+            CORRADE_COMPARE(event.pointer(), expectedPointer);
             event.setAccepted(accept);
             ++called;
         }
@@ -538,8 +538,8 @@ void ApplicationTest::mouseMoveEvent() {
         }
         void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
             CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
-            CORRADE_COMPARE(event.type(), Containers::NullOpt);
-            CORRADE_COMPARE(event.types(), expectedPointers);
+            CORRADE_COMPARE(event.pointer(), Containers::NullOpt);
+            CORRADE_COMPARE(event.pointers(), expectedPointers);
             event.setAccepted(accept);
             ++called;
         }

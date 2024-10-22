@@ -257,6 +257,7 @@ void EventLayerTest::eventConnectionConstruct() {
 
     EventConnection a = layer.onTapOrClickScoped(NodeHandle::Null, []{});
     CORRADE_COMPARE(&a.layer(), &layer);
+    CORRADE_COMPARE(&const_cast<const EventConnection&>(a).layer(), &layer);
     CORRADE_COMPARE(a.data(), dataHandle(layer.handle(), 0, 1));
     CORRADE_COMPARE(layer.usedCount(), 1);
     CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);

@@ -12675,7 +12675,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(event.time(), 12345_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::MouseLeft);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseLeft);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position());
@@ -12890,7 +12890,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(event.time(), 12345_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::MouseLeft);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseLeft);
             /* The hover state is always false as there was no preceding move
                event that would mark the node as hovered */
             CORRADE_VERIFY(!event.isHovering());
@@ -16077,7 +16077,7 @@ void AbstractUserInterfaceTest::eventTapOrClick() {
         void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event) override {
             /* The time should be propagated to the synthesized event */
             CORRADE_COMPARE(event.time(), 12345_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::MouseLeft);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseLeft);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, TapOrClick|(event.isCaptured() ? Captured : 0), dataHandle(handle(), dataId, 1), event.position());

@@ -113,7 +113,7 @@ void EventTest::debugModifiers() {
 void EventTest::pointer() {
     PointerEvent event{1234567_nsec, Pointer::MouseMiddle};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
-    CORRADE_COMPARE(event.type(), Pointer::MouseMiddle);
+    CORRADE_COMPARE(event.pointer(), Pointer::MouseMiddle);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
     CORRADE_VERIFY(!event.isHovering());
@@ -133,8 +133,8 @@ void EventTest::pointer() {
 void EventTest::pointerMove() {
     PointerMoveEvent event{1234567_nsec, Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
-    CORRADE_COMPARE(event.type(), Pointer::MouseRight);
-    CORRADE_COMPARE(event.types(), Pointer::MouseLeft|Pointer::Finger);
+    CORRADE_COMPARE(event.pointer(), Pointer::MouseRight);
+    CORRADE_COMPARE(event.pointers(), Pointer::MouseLeft|Pointer::Finger);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
@@ -155,8 +155,8 @@ void EventTest::pointerMove() {
 void EventTest::pointerMoveRelativePosition() {
     PointerMoveEvent event{1234567_nsec, Pointer::MouseRight, Pointer::MouseLeft|Pointer::Finger, {3.0f, -6.5f}};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
-    CORRADE_COMPARE(event.type(), Pointer::MouseRight);
-    CORRADE_COMPARE(event.types(), Pointer::MouseLeft|Pointer::Finger);
+    CORRADE_COMPARE(event.pointer(), Pointer::MouseRight);
+    CORRADE_COMPARE(event.pointers(), Pointer::MouseLeft|Pointer::Finger);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
     CORRADE_VERIFY(!event.isCaptured());
@@ -168,7 +168,7 @@ void EventTest::pointerMoveRelativePosition() {
 void EventTest::pointerMoveNoPointer() {
     PointerMoveEvent event{1234567_nsec, {}, Pointer::MouseLeft|Pointer::Finger};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
-    CORRADE_COMPARE(event.type(), Containers::NullOpt);
+    CORRADE_COMPARE(event.pointer(), Containers::NullOpt);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
     CORRADE_VERIFY(!event.isCaptured());
@@ -180,7 +180,7 @@ void EventTest::pointerMoveNoPointer() {
 void EventTest::pointerMoveNoPointerRelativePosition() {
     PointerMoveEvent event{1234567_nsec, {}, Pointer::MouseLeft|Pointer::Finger, {3.0f, -6.5f}};
     CORRADE_COMPARE(event.time(), 1234567_nsec);
-    CORRADE_COMPARE(event.type(), Containers::NullOpt);
+    CORRADE_COMPARE(event.pointer(), Containers::NullOpt);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
     CORRADE_VERIFY(!event.isCaptured());

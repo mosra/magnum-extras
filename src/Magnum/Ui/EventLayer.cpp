@@ -234,7 +234,7 @@ void EventLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
 
 void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
     Data& data = _state->data[dataId];
-    if(data.eventType == Implementation::EventType::Press && (event.type() == Pointer::MouseLeft || event.type() == Pointer::Finger || event.type() == Pointer::Pen)) {
+    if(data.eventType == Implementation::EventType::Press && (event.pointer() == Pointer::MouseLeft || event.pointer() == Pointer::Finger || event.pointer() == Pointer::Pen)) {
         static_cast<Containers::Function<void()>&>(data.slot)();
         event.setAccepted();
         return;
@@ -248,13 +248,13 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
         ((data.eventType == Implementation::EventType::TapOrClick ||
           data.eventType == Implementation::EventType::Drag ||
           data.eventType == Implementation::EventType::Focus) &&
-            (event.type() == Pointer::MouseLeft ||
-             event.type() == Pointer::Finger ||
-             event.type() == Pointer::Pen)) ||
+            (event.pointer() == Pointer::MouseLeft ||
+             event.pointer() == Pointer::Finger ||
+             event.pointer() == Pointer::Pen)) ||
         (data.eventType == Implementation::EventType::MiddleClick &&
-            event.type() == Pointer::MouseMiddle) ||
+            event.pointer() == Pointer::MouseMiddle) ||
         (data.eventType == Implementation::EventType::RightClick &&
-            event.type() == Pointer::MouseRight)
+            event.pointer() == Pointer::MouseRight)
     )
         event.setAccepted();
 }
@@ -262,9 +262,9 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
 void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Release &&
-        (event.type() == Pointer::MouseLeft ||
-         event.type() == Pointer::Finger ||
-         event.type() == Pointer::Pen))
+        (event.pointer() == Pointer::MouseLeft ||
+         event.pointer() == Pointer::Finger ||
+         event.pointer() == Pointer::Pen))
     {
         static_cast<Containers::Function<void()>&>(data.slot)();
         event.setAccepted();
@@ -276,13 +276,13 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
        causing the subsequent tap/click to not get called at all. */
     if(
         (data.eventType == Implementation::EventType::TapOrClick &&
-            (event.type() == Pointer::MouseLeft ||
-             event.type() == Pointer::Finger ||
-             event.type() == Pointer::Pen)) ||
+            (event.pointer() == Pointer::MouseLeft ||
+             event.pointer() == Pointer::Finger ||
+             event.pointer() == Pointer::Pen)) ||
         (data.eventType == Implementation::EventType::MiddleClick &&
-            event.type() == Pointer::MouseMiddle) ||
+            event.pointer() == Pointer::MouseMiddle) ||
         (data.eventType == Implementation::EventType::RightClick &&
-            event.type() == Pointer::MouseRight)
+            event.pointer() == Pointer::MouseRight)
     )
         event.setAccepted();
 }
@@ -290,13 +290,13 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
 void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent& event) {
     Data& data = _state->data[dataId];
     if((data.eventType == Implementation::EventType::TapOrClick &&
-            (event.type() == Pointer::MouseLeft ||
-             event.type() == Pointer::Finger ||
-             event.type() == Pointer::Pen)) ||
+            (event.pointer() == Pointer::MouseLeft ||
+             event.pointer() == Pointer::Finger ||
+             event.pointer() == Pointer::Pen)) ||
        (data.eventType == Implementation::EventType::MiddleClick &&
-            event.type() == Pointer::MouseMiddle) ||
+            event.pointer() == Pointer::MouseMiddle) ||
        (data.eventType == Implementation::EventType::RightClick &&
-            event.type() == Pointer::MouseRight))
+            event.pointer() == Pointer::MouseRight))
     {
         static_cast<Containers::Function<void()>&>(data.slot)();
         event.setAccepted();
@@ -306,7 +306,7 @@ void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent
 void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Drag &&
-        (event.types() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
+        (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
         event.isCaptured())
     {
         static_cast<Containers::Function<void(const Vector2&)>&>(data.slot)(event.relativePosition());

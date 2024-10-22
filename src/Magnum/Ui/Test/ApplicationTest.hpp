@@ -148,33 +148,33 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
             return LayerFeature::Event;
         }
 
-        void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
-            Debug{} << event.type() << "press at" << Debug::packed << event.position();
+        void doPointerPressEvent(UnsignedInt, Ui::PointerEvent& event) override {
+            Debug{} << event.pointer() << "press at" << Debug::packed << event.position();
             event.setAccepted();
         }
 
-        void doPointerReleaseEvent(UnsignedInt, PointerEvent& event) override {
-            Debug{} << event.type() << "release at" << Debug::packed << event.position();
+        void doPointerReleaseEvent(UnsignedInt, Ui::PointerEvent& event) override {
+            Debug{} << event.pointer() << "release at" << Debug::packed << event.position();
             event.setAccepted();
         }
 
-        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
-            Debug{} << event.types() << "move at" << Debug::packed << event.position();
+        void doPointerMoveEvent(UnsignedInt, Ui::PointerMoveEvent& event) override {
+            Debug{} << event.pointers() << "move at" << Debug::packed << event.position();
             event.setAccepted();
         }
 
-        void doPointerEnterEvent(UnsignedInt, PointerMoveEvent& event) override {
-            Debug{} << event.types() << "enter at" << Debug::packed << event.position();
+        void doPointerEnterEvent(UnsignedInt, Ui::PointerMoveEvent& event) override {
+            Debug{} << event.pointers() << "enter at" << Debug::packed << event.position();
             event.setAccepted();
         }
 
-        void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent& event) override {
-            Debug{} << event.types() << "leave at" << Debug::packed << event.position();
+        void doPointerLeaveEvent(UnsignedInt, Ui::PointerMoveEvent& event) override {
+            Debug{} << event.pointers() << "leave at" << Debug::packed << event.position();
             event.setAccepted();
         }
 
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent& event) override {
-            Debug{} << event.type() << "tap or click at" << Debug::packed << event.position();
+        void doPointerTapOrClickEvent(UnsignedInt, Ui::PointerEvent& event) override {
+            Debug{} << event.pointer() << "tap or click at" << Debug::packed << event.position();
             event.setAccepted();
         }
 

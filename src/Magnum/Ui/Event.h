@@ -95,7 +95,7 @@ class PointerEvent {
         /**
          * @brief Constructor
          * @param time      Time at which the event happened
-         * @param type      Pointer type that got pressed or released
+         * @param pointer   Pointer type that got pressed or released
          *
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
@@ -103,13 +103,13 @@ class PointerEvent {
          * and hover properties are set from @ref AbstractUserInterface event
          * handler internals.
          */
-        explicit PointerEvent(Nanoseconds time, Pointer type): _time{time}, _type{type} {}
+        explicit PointerEvent(Nanoseconds time, Pointer pointer): _time{time}, _pointer{pointer} {}
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
 
         /** @brief Pointer type that got pressed or released */
-        Pointer type() const { return _type; }
+        Pointer pointer() const { return _pointer; }
 
         /**
          * @brief Event position
@@ -198,7 +198,7 @@ class PointerEvent {
 
         Nanoseconds _time;
         Vector2 _position;
-        Pointer _type;
+        Pointer _pointer;
         bool _accepted = false;
         bool _captured = false;
         bool _hovering = false;
@@ -219,9 +219,9 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         /**
          * @brief Constructor
          * @param time      Time at which the event happened
-         * @param type      Pointer type that changed in this event or
+         * @param pointer   Pointer type that changed in this event or
          *      @relativeref{Corrade,Containers::NullOpt}
-         * @param types     Pointer types pressed in this event
+         * @param pointers  Pointer types pressed in this event
          *
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
@@ -229,7 +229,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * and hover properties are set from @ref AbstractUserInterface event
          * handler internals.
          */
-        explicit PointerMoveEvent(Nanoseconds time, Containers::Optional<Pointer> type, Pointers types);
+        explicit PointerMoveEvent(Nanoseconds time, Containers::Optional<Pointer> pointer, Pointers pointers);
 
         /**
          * @brief Constructor
@@ -243,24 +243,24 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         Nanoseconds time() const { return _time; }
 
         /**
-         * @brief Pointer type that changed in this event
+         * @brief Pointer type that was added or removed from the set of pressed pointers
          *
-         * If no pointer changed in this event (i.e., all pointers that were
-         * pressed before are still pressed), returns
-         * @relativeref{Corrade,Containers::NullOpt}. Use @ref types() to check
-         * what all pointers are pressed in this event. If @ref type() is not
-         * empty and @ref types() contain @ref type(), it means given pointer
-         * type was pressed, if they don't, it means it was released.
+         * Is non-empty only in case a mouse button was pressed in addition to
+         * an already pressed button, or if one mouse button from multiple
+         * pressed buttons was released. If non-empty and @ref pointers()
+         * don't contain given @ref Pointer value, the button was released, if
+         * it contains given value, the button was pressed.
          */
-        Containers::Optional<Pointer> type() const;
+        Containers::Optional<Pointer> pointer() const;
 
         /**
          * @brief Pointer types pressed in this event
          *
          * Returns an empty set if no pointers are pressed, which happens for
          * example when a mouse is just moved around.
+         * @see @ref pointer()
          */
-        Pointers types() const { return _types; }
+        Pointers pointers() const { return _pointers; }
 
         /**
          * @brief Event position
@@ -361,8 +361,8 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
 
         Nanoseconds _time;
         Vector2 _position, _relativePosition;
-        Pointer _type; /* NullOpt encoded as Pointer{} to avoid an include */
-        Pointers _types;
+        Pointer _pointer; /* NullOpt encoded as Pointer{} to avoid an include */
+        Pointers _pointers;
         bool _accepted = false;
         bool _captured = false;
         bool _hovering = false;

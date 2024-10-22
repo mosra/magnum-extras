@@ -3130,37 +3130,37 @@ void AbstractLayerTest::pointerEvent() {
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
             CORRADE_COMPARE(event.time(), 123_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::MouseLeft);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseLeft);
             called *= 2;
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 2);
             CORRADE_COMPARE(event.time(), 1234_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::MouseRight);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseRight);
             called *= 3;
         }
         void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 3);
             CORRADE_COMPARE(event.time(), 12345_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::Pen);
+            CORRADE_COMPARE(event.pointer(), Pointer::Pen);
             called *= 5;
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 4);
             CORRADE_COMPARE(event.time(), 123456_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::Finger);
+            CORRADE_COMPARE(event.pointer(), Pointer::Finger);
             called *= 7;
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 5);
             CORRADE_COMPARE(event.time(), 1234567_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::Finger);
+            CORRADE_COMPARE(event.pointer(), Pointer::Finger);
             called *= 11;
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 6);
             CORRADE_COMPARE(event.time(), 12345678_nsec);
-            CORRADE_COMPARE(event.type(), Pointer::Finger);
+            CORRADE_COMPARE(event.pointer(), Pointer::Finger);
             called *= 13;
         }
 

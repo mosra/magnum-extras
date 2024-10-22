@@ -62,12 +62,12 @@ Debug& operator<<(Debug& debug, const Pointers value) {
     });
 }
 
-PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const Containers::Optional<Pointer> type, const Pointers types): PointerMoveEvent{time, type, types, {}} {}
+PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const Containers::Optional<Pointer> pointer, const Pointers pointers): PointerMoveEvent{time, pointer, pointers, {}} {}
 
-PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const Containers::Optional<Pointer> type, const Pointers types, const Vector2& relativePosition): _time{time}, _relativePosition{relativePosition}, _type{type ? *type : Pointer{}}, _types{types} {}
+PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const Containers::Optional<Pointer> pointer, const Pointers pointers, const Vector2& relativePosition): _time{time}, _relativePosition{relativePosition}, _pointer{pointer ? *pointer : Pointer{}}, _pointers{pointers} {}
 
-Containers::Optional<Pointer> PointerMoveEvent::type() const {
-    return _type == Pointer{} ? Containers::NullOpt : Containers::optional(_type);
+Containers::Optional<Pointer> PointerMoveEvent::pointer() const {
+    return _pointer == Pointer{} ? Containers::NullOpt : Containers::optional(_pointer);
 }
 
 Debug& operator<<(Debug& debug, const Key value) {

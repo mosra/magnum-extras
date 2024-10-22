@@ -359,9 +359,9 @@ UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt s
 
 void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
     /* Only reacting to pointer types typically used to click/tap on things */
-    if(event.type() != Pointer::MouseLeft &&
-       event.type() != Pointer::Finger &&
-       event.type() != Pointer::Pen)
+    if(event.pointer() != Pointer::MouseLeft &&
+       event.pointer() != Pointer::Finger &&
+       event.pointer() != Pointer::Pen)
         return;
 
     const State& state = *_state;
@@ -400,9 +400,9 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
 
 void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
     /* Only reacting to pointer types typically used to click/tap on things */
-    if(event.type() != Pointer::MouseLeft &&
-       event.type() != Pointer::Finger &&
-       event.type() != Pointer::Pen)
+    if(event.pointer() != Pointer::MouseLeft &&
+       event.pointer() != Pointer::Finger &&
+       event.pointer() != Pointer::Pen)
         return;
 
     const State& state = *_state;
