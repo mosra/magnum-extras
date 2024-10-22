@@ -145,8 +145,8 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
    otherwise. A similar trick is used in AssimpImporter to skip aiTextureType
    values not available in earlier versions. Make sure to add an explicit test
    for each. */
-#define UI_OPTIONAL_APPLICATION_KEY(name)                                 \
-    template<class U> struct UiOptionalApplicationKey_ ## name {          \
+#define UI_OPTIONAL_APPLICATION_KEY(name)                                   \
+    template<class U> struct UiOptionalApplicationKey_ ## name {            \
         template<class T> constexpr static U get(T*, decltype(T::name)* = nullptr) { \
             return T::name;                                                 \
         }                                                                   \
