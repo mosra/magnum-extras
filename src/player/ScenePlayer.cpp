@@ -2099,8 +2099,6 @@ void ScenePlayer::mouseMoveEvent(MouseMoveEvent& event) {
     const Vector2i delta = event.position() - _lastPosition;
     _lastPosition = event.position();
 
-    /* Due to compatibility reasons, scroll is also reported as a press event,
-       so filter that out */
     if(!(event.buttons() & (MouseMoveEvent::Button::Left|
                             MouseMoveEvent::Button::Middle)) || !_data) return;
 
