@@ -103,6 +103,7 @@
 #endif
 
 #ifdef MAGNUM_TARGET_WEBGL
+#include <Corrade/Containers/Iterable.h>
 #include <Corrade/Utility/Resource.h>
 #include <Magnum/GL/Shader.h>
 #include <Magnum/GL/Version.h>
