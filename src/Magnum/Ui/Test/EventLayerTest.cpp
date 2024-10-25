@@ -1503,9 +1503,9 @@ void EventLayerTest::drag() {
     });
 
     /* Should only get fired for a move with mouse left, finger or pen present
-       among types() and only if the event is captured (i.e., the drag not
-       coming from outside of the UI). The type() isn't considered in any way,
-       as it could signalize a newly pressed pointer but also a no longer
+       among pointers() and only if the event is captured (i.e., the drag not
+       coming from outside of the UI). The pointer() isn't considered in any
+       way, as it could signalize a newly pressed pointer but also a no longer
        pressed one; extra pressed pointers are ignored as well. */
     {
         PointerMoveEvent event{{}, {}, {}};
