@@ -3208,10 +3208,11 @@ void AbstractLayerTest::pointerEventNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    std::ostringstream out;
-    Error redirectError{&out};
     PointerEvent event{{}, Pointer::MouseMiddle};
     PointerMoveEvent moveEvent{{}, {}, {}};
+
+    std::ostringstream out;
+    Error redirectError{&out};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerTapOrClickEvent(0, event);
@@ -3268,10 +3269,11 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     layer.create();
     layer.create();
 
-    std::ostringstream out;
-    Error redirectError{&out};
     PointerEvent event{{}, Pointer::MouseMiddle};
     PointerMoveEvent moveEvent{{}, {}, {}};
+
+    std::ostringstream out;
+    Error redirectError{&out};
     layer.pointerPressEvent(2, event);
     layer.pointerReleaseEvent(2, event);
     layer.pointerTapOrClickEvent(2, event);
@@ -3302,12 +3304,13 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
 
     layer.create();
 
-    std::ostringstream out;
-    Error redirectError{&out};
     PointerEvent event{{}, Pointer::MouseMiddle};
     event.setAccepted();
     PointerMoveEvent moveEvent{{}, {}, {}};
     moveEvent.setAccepted();
+
+    std::ostringstream out;
+    Error redirectError{&out};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerTapOrClickEvent(0, event);
@@ -3371,9 +3374,10 @@ void AbstractLayerTest::focusBlurEventNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
+    FocusEvent event{{}};
+
     std::ostringstream out;
     Error redirectError{&out};
-    FocusEvent event{{}};
     layer.focusEvent(0, event);
     layer.blurEvent(0, event);
     CORRADE_COMPARE(out.str(),
@@ -3416,9 +3420,10 @@ void AbstractLayerTest::focusBlurEventOutOfRange() {
     layer.create();
     layer.create();
 
+    FocusEvent event{{}};
+
     std::ostringstream out;
     Error redirectError{&out};
-    FocusEvent event{{}};
     layer.focusEvent(2, event);
     layer.blurEvent(2, event);
     CORRADE_COMPARE(out.str(),
@@ -3440,10 +3445,11 @@ void AbstractLayerTest::focusBlurEventAlreadyAccepted() {
 
     layer.create();
 
-    std::ostringstream out;
-    Error redirectError{&out};
     FocusEvent event{{}};
     event.setAccepted();
+
+    std::ostringstream out;
+    Error redirectError{&out};
     layer.focusEvent(0, event);
     layer.blurEvent(0, event);
     CORRADE_COMPARE(out.str(),
@@ -3502,9 +3508,10 @@ void AbstractLayerTest::keyEventNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
+    KeyEvent event{{}, Key::C, {}};
+
     std::ostringstream out;
     Error redirectError{&out};
-    KeyEvent event{{}, Key::C, {}};
     layer.keyPressEvent(0, event);
     layer.keyReleaseEvent(0, event);
     CORRADE_COMPARE(out.str(),
@@ -3547,9 +3554,10 @@ void AbstractLayerTest::keyEventOutOfRange() {
     layer.create();
     layer.create();
 
+    KeyEvent event{{}, Key::Backquote, {}};
+
     std::ostringstream out;
     Error redirectError{&out};
-    KeyEvent event{{}, Key::Backquote, {}};
     layer.keyPressEvent(2, event);
     layer.keyReleaseEvent(2, event);
     CORRADE_COMPARE(out.str(),
@@ -3571,10 +3579,11 @@ void AbstractLayerTest::keyEventAlreadyAccepted() {
 
     layer.create();
 
-    std::ostringstream out;
-    Error redirectError{&out};
     KeyEvent event{{}, Key::Space, {}};
     event.setAccepted();
+
+    std::ostringstream out;
+    Error redirectError{&out};
     layer.keyPressEvent(0, event);
     layer.keyReleaseEvent(0, event);
     CORRADE_COMPARE(out.str(),
@@ -3624,9 +3633,10 @@ void AbstractLayerTest::textInputEventNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
+    TextInputEvent event{{}, "oh"};
+
     std::ostringstream out;
     Error redirectError{&out};
-    TextInputEvent event{{}, "oh"};
     layer.textInputEvent(0, event);
     CORRADE_COMPARE(out.str(),
         "Ui::AbstractLayer::textInputEvent(): feature not supported\n");
@@ -3666,9 +3676,10 @@ void AbstractLayerTest::textInputEventOutOfRange() {
     layer.create();
     layer.create();
 
+    TextInputEvent event{{}, "ooh"};
+
     std::ostringstream out;
     Error redirectError{&out};
-    TextInputEvent event{{}, "ooh"};
     layer.textInputEvent(2, event);
     CORRADE_COMPARE(out.str(),
         "Ui::AbstractLayer::textInputEvent(): index 2 out of range for 2 data\n");
@@ -3688,10 +3699,11 @@ void AbstractLayerTest::textInputEventAlreadyAccepted() {
 
     layer.create();
 
-    std::ostringstream out;
-    Error redirectError{&out};
     TextInputEvent event{{}, "welp"};
     event.setAccepted();
+
+    std::ostringstream out;
+    Error redirectError{&out};
     layer.textInputEvent(0, event);
     CORRADE_COMPARE(out.str(),
         "Ui::AbstractLayer::textInputEvent(): event already accepted\n");
@@ -3735,9 +3747,10 @@ void AbstractLayerTest::visibilityLostEventNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
+    VisibilityLostEvent event;
+
     std::ostringstream out;
     Error redirectError{&out};
-    VisibilityLostEvent event;
     layer.visibilityLostEvent(0, event);
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractLayer::visibilityLostEvent(): feature not supported\n",
@@ -3778,9 +3791,10 @@ void AbstractLayerTest::visibilityLostEventOutOfRange() {
     layer.create();
     layer.create();
 
+    VisibilityLostEvent event;
+
     std::ostringstream out;
     Error redirectError{&out};
-    VisibilityLostEvent event;
     layer.visibilityLostEvent(2, event);
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractLayer::visibilityLostEvent(): index 2 out of range for 2 data\n",
