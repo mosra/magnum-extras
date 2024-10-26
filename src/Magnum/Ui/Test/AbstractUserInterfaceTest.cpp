@@ -18710,7 +18710,7 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
 
         PointerMoveEvent eventMove2{{}, {}, {}};
         layer.capturePointerMove = {};
-        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove1));
+        CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove2));
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
