@@ -201,8 +201,8 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventCapture();
     void eventCaptureEdges();
     void eventCaptureNotAccepted();
-    void eventCaptureNotCaptured();
-    void eventCaptureChangeCaptureInNotAcceptedEvent();
+    void eventCaptureToggleCapture();
+    void eventCaptureToggleCaptureInNotAcceptedEvent();
     void eventCaptureNodePositionUpdated();
     void eventCaptureNodeBecomesHiddenDisabledNoEvents();
     void eventCaptureNodeRemoved();
@@ -1128,8 +1128,8 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addTests({&AbstractUserInterfaceTest::eventCaptureEdges,
               &AbstractUserInterfaceTest::eventCaptureNotAccepted,
-              &AbstractUserInterfaceTest::eventCaptureNotCaptured,
-              &AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent});
+              &AbstractUserInterfaceTest::eventCaptureToggleCapture,
+              &AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent});
 
     addInstancedTests({&AbstractUserInterfaceTest::eventCaptureNodePositionUpdated},
         Containers::arraySize(EventCaptureUpdateData));
@@ -15021,7 +15021,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
     }
 }
 
-void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
+void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
     /* Event scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
 
@@ -15536,7 +15536,7 @@ void AbstractUserInterfaceTest::eventCaptureNotCaptured() {
     }
 }
 
-void AbstractUserInterfaceTest::eventCaptureChangeCaptureInNotAcceptedEvent() {
+void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
     /* Event scaling doesn't affect these tests */
     AbstractUserInterface ui{{100, 100}};
 
