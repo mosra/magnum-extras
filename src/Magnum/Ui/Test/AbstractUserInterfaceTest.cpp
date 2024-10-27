@@ -188,6 +188,7 @@ struct AbstractUserInterfaceTest: TestSuite::Tester {
     void eventPointerPressNotAccepted();
 
     void eventPointerRelease();
+    void eventPointerReleaseNotAccepted();
 
     void eventPointerMove();
     void eventPointerMoveRelativePositionWithPressRelease();
@@ -1097,9 +1098,12 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
 
     addTests({&AbstractUserInterfaceTest::eventPointerPressNotAccepted});
 
-    addInstancedTests({&AbstractUserInterfaceTest::eventPointerRelease,
+    addInstancedTests({&AbstractUserInterfaceTest::eventPointerRelease},
+        Containers::arraySize(UpdateData));
 
-                       &AbstractUserInterfaceTest::eventPointerMove},
+    addTests({&AbstractUserInterfaceTest::eventPointerReleaseNotAccepted});
+
+    addInstancedTests({&AbstractUserInterfaceTest::eventPointerMove},
         Containers::arraySize(UpdateData));
 
     addInstancedTests({&AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease},
@@ -12885,14 +12889,29 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
        to (0.1, 0.01) */
     AbstractUserInterface ui{{300.0f, 200.0f}, {3000.0f, 20000.0f}, {30, 20}};
 
+    enum Event {
+        Press = 1,
+        Release = 2
+    };
     struct Layer: AbstractLayer {
         using AbstractLayer::AbstractLayer;
         using AbstractLayer::create;
 
         LayerFeatures doFeatures() const override { return LayerFeature::Event; }
 
-        void doPointerPressEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This function shouldn't be called.");
+        void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
+            CORRADE_COMPARE(event.time(), 12345_nsec);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseLeft);
+            /* The hover state is always false as there was no preceding move
+               event that would mark the node as hovered */
+            CORRADE_VERIFY(!event.isHovering());
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Press, dataHandle(handle(), dataId, 1), event.position());
+            /* Capture-specific behavior is tested in eventCapture*() below,
+               here it verifies the behavior without */
+            event.setCaptured(false);
+            event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(event.time(), 12345_nsec);
@@ -12902,12 +12921,11 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
             CORRADE_VERIFY(!event.isHovering());
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
-            arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position());
+            arrayAppend(eventCalls, InPlaceInit, Release, dataHandle(handle(), dataId, 1), event.position());
             event.setAccepted();
         }
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This function shouldn't be called.");
-        }
+        /* doPointerTapOrClickEvent() may get called, but we're not testing
+           that here -- that's what eventTapOrClick() below is for */
         void doPointerMoveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This function shouldn't be called.");
         }
@@ -12918,7 +12936,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
             CORRADE_FAIL("This function shouldn't be called.");
         }
 
-        Containers::Array<Containers::Pair<DataHandle, Vector2>> eventCalls;
+        Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
     NodeHandle node = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f});
@@ -12953,7 +12971,7 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{100.0f, 100.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
         })), TestSuite::Compare::Container);
 
     /* Inside, hit, going through all data attachments. Highest ID gets picked
@@ -12965,13 +12983,145 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
-        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
-            {data3, {10.0f, 5.0f}},
-            {data2, {10.0f, 5.0f}}
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Release, data3, {10.0f, 5.0f}},
+            {Release, data2, {10.0f, 5.0f}}
+        })), TestSuite::Compare::Container);
+
+    /* A release resets the currently pressed node */
+    } {
+        ui.layer<Layer>(layer).eventCalls = {};
+
+        PointerEvent eventPress{12345_nsec, Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({250.0f, 3000.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{25.0f, 30.0f}));
+
+        PointerEvent eventRelease{12345_nsec, Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({200.0f, 2500.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
+
+        CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press, data3, {15.0f, 10.0f}},
+            {Press, data2, {15.0f, 10.0f}},
+            {Release, data3, {10.0f, 5.0f}},
+            {Release, data2, {10.0f, 5.0f}}
         })), TestSuite::Compare::Container);
     }
 
     CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+}
+
+void AbstractUserInterfaceTest::eventPointerReleaseNotAccepted() {
+    /* Event scaling doesn't affect these tests */
+    AbstractUserInterface ui{{100, 100}};
+
+    enum Event {
+        Press = 1,
+        Release = 2,
+        Accepted = 1 << 2,
+    };
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override { return LayerFeature::Event; }
+
+        void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
+            event.setAccepted();
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Press|(event.isAccepted() ? Accepted : 0),
+                dataHandle(handle(), dataId, 1), event.position());
+            /* Capture-specific behavior is tested in eventCapture*() below,
+               here it verifies the behavior without */
+            event.setCaptured(false);
+        }
+        void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
+            if(dataId == 0 || (dataId == 2 && accept2) || (dataId == 1 && accept1))
+                event.setAccepted();
+            /* The data generation is faked here, but it matches as we don't
+               reuse any data */
+            arrayAppend(eventCalls, InPlaceInit, Release|(event.isAccepted() ? Accepted : 0),
+                dataHandle(handle(), dataId, 1), event.position());
+        }
+
+        Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
+        bool accept1 = true,
+            accept2 = true;
+    };
+
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+
+    /* 10 --------     accepts maybe
+       01     -------- accepts maybe
+       00     -------- accepts always */
+    NodeHandle node0 = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
+    NodeHandle node1 = ui.createNode({10.0f, 0.0f}, {20.0f, 20.0f});
+    DataHandle data00 = layer.create(node0);
+    DataHandle data01 = layer.create(node0);
+    DataHandle data10 = layer.create(node1);
+
+    /* Release on node 1 doesn't get accepted and falls back to node 0. It
+       resets the pressed node in this case as well. */
+    {
+        layer.eventCalls = {};
+
+        PointerEvent eventPress{{}, Pointer::MouseLeft};
+        layer.accept2 = true;
+        CORRADE_VERIFY(ui.pointerPressEvent({15.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), node1);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        PointerEvent eventRelease{{}, Pointer::Finger};
+        layer.accept2 = false;
+        CORRADE_VERIFY(ui.pointerReleaseEvent({25.0f, 15.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Accepted, data10, {5.0f, 10.0f}},
+            {Release, data10, {15.0f, 15.0f}}, /* not accepted */
+            {Release|Accepted, data01, {5.0f, 15.0f}},
+            {Release|Accepted, data00, {5.0f, 15.0f}},
+        })), TestSuite::Compare::Container);
+
+    /* Release on node 1 doesn't get accepted and falls back outside of any
+       other node. It resets the pressed node in this case as well. */
+    } {
+        layer.eventCalls = {};
+
+        PointerEvent eventPress{{}, Pointer::MouseLeft};
+        layer.accept2 = true;
+        CORRADE_VERIFY(ui.pointerPressEvent({25.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), node1);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        /* Yes, it's rather unlikely that another press happens without a
+           release first, needing such specific handling, but let's have that
+           covered because if some events get lost it'd be really hard to
+           debug */
+        PointerEvent eventRelease{{}, Pointer::Finger};
+        layer.accept2 = false;
+        CORRADE_VERIFY(!ui.pointerReleaseEvent({15.0f, 15.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+
+        CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
+            {Press|Accepted, data10, {15.0f, 10.0f}},
+            {Release, data10, {5.0f, 15.0f}}, /* not accepted */
+            /* No other node to call release on */
+        })), TestSuite::Compare::Container);
+    }
 }
 
 void AbstractUserInterfaceTest::eventPointerMove() {
