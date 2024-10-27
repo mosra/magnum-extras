@@ -14140,6 +14140,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventPress{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so no
            hovered node either */
@@ -14147,6 +14148,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventRelease{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({320.0f, 1000.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so no
            hovered node either */
@@ -14168,6 +14170,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventPress{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so no
            hovered node either */
@@ -14175,6 +14178,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventRelease{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({500.0f, 1000.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so no
            hovered node either */
@@ -14196,6 +14200,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventPress{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         /* No Enter/Leave events synthesized from Press at the moment, so no
            hovered node either */
@@ -14203,6 +14208,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventRelease{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({300.0f, 1000.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so no
            hovered node either */
@@ -14223,11 +14229,13 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerMoveEvent eventMove1{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1500.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
         PointerEvent eventPress{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14235,11 +14243,13 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerMoveEvent eventMove2{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({350.0f, 1500.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
         PointerEvent eventRelease{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({500.0f, 1000.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14247,6 +14257,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerMoveEvent eventMove3{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({550.0f, 1500.0f}, eventMove3));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
@@ -14301,6 +14312,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         ui.pointerReleaseEvent({10000.0f, 10000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({10000.0f, 10000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14308,6 +14320,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventPress{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14315,11 +14328,13 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerMoveEvent eventMove1{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({550.0f, 1500.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
         PointerMoveEvent eventMove2{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({350.0f, 1000.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         /* We're on the `left` node, but since the pointer is captured on the
            `right` node, there's no hover */
@@ -14327,12 +14342,14 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerMoveEvent eventMove3{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({450.0f, 500.0f}, eventMove3));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         /* Moving back on the `right` node makes it hovered again */
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
         PointerEvent eventRelease{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({500.0f, 1000.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* This isn't affected by the release */
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
@@ -14372,6 +14389,7 @@ void AbstractUserInterfaceTest::eventCapture() {
         ui.pointerReleaseEvent({10000.0f, 10000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({10000.0f, 10000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14379,6 +14397,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventPress1{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({500.0f, 1000.0f}, eventPress1));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14386,6 +14405,7 @@ void AbstractUserInterfaceTest::eventCapture() {
 
         PointerEvent eventPress2{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({300.0f, 1000.0f}, eventPress2));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14825,6 +14845,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = false;
         CORRADE_VERIFY(!ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14832,6 +14853,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14853,6 +14875,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = false;
         CORRADE_VERIFY(!ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14860,6 +14883,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
@@ -14882,6 +14906,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14891,6 +14916,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14900,6 +14926,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = false;
         CORRADE_VERIFY(!ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14916,6 +14943,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14925,6 +14953,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = false;
         CORRADE_VERIFY(!ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14943,6 +14972,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -14952,6 +14982,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = false;
         CORRADE_VERIFY(!ui.pointerMoveEvent({35.0f, 15.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14959,6 +14990,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
@@ -14979,6 +15011,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -14988,6 +15021,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = true;
         ui.layer<Layer>(layer).accept2 = false;
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
@@ -14995,6 +15029,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerPressEvent({50.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
         /* Capture is rightData1 */
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         /* Hover stays from the previous move, rightData2 */
@@ -15004,6 +15039,7 @@ void AbstractUserInterfaceTest::eventCaptureNotAccepted() {
         ui.layer<Layer>(layer).accept1 = false;
         ui.layer<Layer>(layer).accept2 = true;
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), right);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         /* The hovered node should now be rightData1 */
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
@@ -15115,6 +15151,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -15122,6 +15159,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
 
         PointerEvent eventRelease{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -15144,11 +15182,13 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerEvent eventRelease{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -15169,6 +15209,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -15176,6 +15217,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
 
         PointerMoveEvent eventMove{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
@@ -15196,6 +15238,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -15206,11 +15249,13 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
         PointerMoveEvent eventMove{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
@@ -15230,6 +15275,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -15241,6 +15287,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -15252,6 +15299,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerReleaseEvent({50.0f, 10.0f}, eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* No Enter/Leave events synthesized from Release at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -15278,6 +15326,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), left);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -15290,6 +15339,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* The event removed the capture, however it's not looking for a
            now-hovered node as that would mean doing the whole bubbling
@@ -15302,6 +15352,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 15.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), right);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
@@ -15311,6 +15362,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove3));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* Again, as the event removed the capture there's no node to be
            hovered anymore */
@@ -15339,6 +15391,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
@@ -15349,6 +15402,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = Containers::pair(true, 2);
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 15.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
@@ -15371,6 +15425,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -15382,6 +15437,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
@@ -15392,6 +15448,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = Containers::pair(false, 2);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         /* The event removed the capture, however it's not looking for a
            now-hovered node as that would mean doing the whole bubbling
@@ -15421,6 +15478,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
@@ -15430,6 +15488,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = Containers::pair(true, 3);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* The capture isn't changed even though the Leave requested it */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
@@ -15453,6 +15512,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         /** @todo have a pointerCancelEvent() for this */
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -15463,6 +15523,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 10.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), right);
 
@@ -15473,6 +15534,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = Containers::pair(false, 1);
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 15.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* No capture as Enter reset it again */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
@@ -15496,6 +15558,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         /** @todo have a pointerCancelEvent() for this */
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -15507,6 +15570,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove1));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentHoveredNode(), left);
 
@@ -15517,6 +15581,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCapture() {
         ui.layer<Layer>(layer).captureEnter = {};
         ui.layer<Layer>(layer).captureLeave = Containers::pair(true, 1);
         CORRADE_VERIFY(ui.pointerMoveEvent({50.0f, 15.0f}, eventMove2));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         /* On the right node, but captured on the left, so no hover */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
@@ -15609,6 +15674,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.layer<Layer>(layer).capture = Containers::pair(true, 2);
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
         /* Node 2 captures in a non-accepted event, which should be ignored */
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node1);
 
@@ -15628,6 +15694,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -15637,6 +15704,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.layer<Layer>(layer).accept = 1;
         ui.layer<Layer>(layer).capture = Containers::pair(true, 4);
         CORRADE_VERIFY(ui.pointerMoveEvent({30.0f, 10.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* Node 2 captures in a non-accepted event, which should be ignored */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node1);
@@ -15657,6 +15725,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.pointerReleaseEvent({1000.0f, 1000.0f}, eventReleaseReset);
         PointerMoveEvent eventMoveReset{{}, {}, {}};
         ui.pointerMoveEvent({1000.0f, 1000.0f}, eventMoveReset);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
 
@@ -15665,6 +15734,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         /* The press event accepts and captures unconditionally */
         PointerEvent eventPress{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({30.0f, 10.0f}, eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), node2);
         CORRADE_COMPARE(ui.currentCapturedNode(), node2);
         /* No Enter/Leave events synthesized from Press at the moment, so the
            hovered node doesn't get updated until the next move */
@@ -15674,6 +15744,7 @@ void AbstractUserInterfaceTest::eventCaptureToggleCaptureInNotAcceptedEvent() {
         ui.layer<Layer>(layer).accept = 0;
         ui.layer<Layer>(layer).capture = Containers::pair(false, 4);
         CORRADE_VERIFY(!ui.pointerMoveEvent({100.0f, 100.0f}, eventMove));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         /* The capture should be reset even though the move wasn't accepted */
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
