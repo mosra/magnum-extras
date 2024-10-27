@@ -30,8 +30,8 @@
 @brief @ref Magnum::Platform::Sdl2Application "Magnum::Platform::*Application" compatibility for @ref Magnum::Ui::AbstractUserInterface
 @m_since_latest
 
-Including this header allows you to pass @ref Magnum::Platform::Sdl2Application::MouseEvent "Magnum::Platform::*Application::MouseEvent"
-and @ref Magnum::Platform::Sdl2Application::MouseMoveEvent "Magnum::Platform::*Application::MouseMoveEvent" to
+Including this header allows you to pass @ref Magnum::Platform::Sdl2Application::PointerEvent "Magnum::Platform::*Application::PointerEvent"
+and @ref Magnum::Platform::Sdl2Application::PointerMoveEvent "Magnum::Platform::*Application::PointerMoveEvent" to
 @ref Magnum::Ui::AbstractUserInterface::pointerPressEvent(),
 @relativeref{Magnum::Ui::AbstractUserInterface,pointerReleaseEvent()} and
 @relativeref{Magnum::Ui::AbstractUserInterface,pointerMoveEvent()}. See

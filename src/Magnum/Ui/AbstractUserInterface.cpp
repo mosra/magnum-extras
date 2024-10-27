@@ -3742,7 +3742,8 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         /* Call tap or click event if the release happened inside the captured
            node area and was accepted (i.e., it wasn't outside of the *actual*
            active area), and the node release was called on is the same as node
-           the press was called on (because, e.g., something could disable and re-enable capture in the middle of a move, changing the captured
+           the press was called on (because, e.g., something could disable and
+           re-enable capture in the middle of a move, changing the captured
            node to something else, or the captured node ) */
         if(event.isPrimary() && insideCapturedNode && releaseAcceptedByAnyData && state.currentPressedNode == state.currentCapturedNode)
             callTapOrClickOnNode = state.currentPressedNode;
