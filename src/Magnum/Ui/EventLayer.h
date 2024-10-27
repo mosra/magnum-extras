@@ -472,7 +472,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         friend EventConnection;
 
         /* Used internally from all templated create() overloads below */
-        MAGNUM_UI_LOCAL DataHandle create(NodeHandle node, Implementation::EventType eventType, Containers::FunctionData&& slot);
+        MAGNUM_UI_LOCAL DataHandle create(NodeHandle node, Implementation::EventType eventType, Containers::FunctionData&& slot, void(*call)());
         MAGNUM_UI_LOCAL void removeInternal(UnsignedInt id);
 
         MAGNUM_UI_LOCAL LayerFeatures doFeatures() const override;

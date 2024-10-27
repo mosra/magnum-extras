@@ -59,12 +59,14 @@ namespace Implementation {
 namespace {
 
 struct Data {
-    /* If connection.call is nullptr, the data is among the free ones. This is
-       used in the EventLayer::usedNonTrivialConnectionCount() query. */
     Containers::FunctionData slot;
     Implementation::EventType eventType;
     bool hasScopedConnection;
     /* 6+ bytes free */
+    /** @todo ideally this would be inlined directly inside FunctionData.call,
+        somehow -- e.g. an extra template argument to Function that decouples
+        the actual wrapped signature from the call signature */
+    void(*call)();
 };
 
 }
@@ -144,7 +146,7 @@ UnsignedInt EventLayer::usedAllocatedConnectionCount() const {
     return count;
 }
 
-DataHandle EventLayer::create(const NodeHandle node, const Implementation::EventType eventType, Containers::FunctionData&& slot) {
+DataHandle EventLayer::create(const NodeHandle node, const Implementation::EventType eventType, Containers::FunctionData&& slot, void(*call)()) {
     Containers::Array<Data>& data = _state->data;
     const DataHandle handle = AbstractLayer::create(node);
     const UnsignedInt id = dataHandleId(handle);
@@ -157,47 +159,78 @@ DataHandle EventLayer::create(const NodeHandle node, const Implementation::Event
     data[id].eventType = eventType;
     data[id].slot = Utility::move(slot);
     data[id].hasScopedConnection = false;
+    data[id].call = call;
     return handle;
 }
 
 DataHandle EventLayer::onPress(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Press, Utility::move(slot));
+    return create(node, Implementation::EventType::Press, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 DataHandle EventLayer::onRelease(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Release, Utility::move(slot));
+    return create(node, Implementation::EventType::Release, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 DataHandle EventLayer::onTapOrClick(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::TapOrClick, Utility::move(slot));
+    return create(node, Implementation::EventType::TapOrClick, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 DataHandle EventLayer::onMiddleClick(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::MiddleClick, Utility::move(slot));
+    return create(node, Implementation::EventType::MiddleClick, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 DataHandle EventLayer::onRightClick(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::RightClick, Utility::move(slot));
+    return create(node, Implementation::EventType::RightClick, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const PointerEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
-    return create(node, Implementation::EventType::Drag, Utility::move(slot));
+    return create(node, Implementation::EventType::Drag, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const PointerMoveEvent& event) {
+            static_cast<Containers::Function<void(const Vector2&)>&>(slot)(event.relativePosition());
+        }));
 }
 
 DataHandle EventLayer::onEnter(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Enter, Utility::move(slot));
+    return create(node, Implementation::EventType::Enter, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const PointerMoveEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 DataHandle EventLayer::onLeave(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Leave, Utility::move(slot));
+    return create(node, Implementation::EventType::Leave, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const PointerMoveEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 DataHandle EventLayer::onFocus(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Focus, Utility::move(slot));
+    return create(node, Implementation::EventType::Focus, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const FocusEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 DataHandle EventLayer::onBlur(const NodeHandle node, Containers::Function<void()>&& slot) {
-    return create(node, Implementation::EventType::Blur, Utility::move(slot));
+    return create(node, Implementation::EventType::Blur, Utility::move(slot),
+        reinterpret_cast<void(*)()>(+[](Containers::FunctionData& slot, const FocusEvent&) {
+            static_cast<Containers::Function<void()>&>(slot)();
+        }));
 }
 
 void EventLayer::remove(DataHandle handle) {
@@ -238,7 +271,7 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
 
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Press && (event.pointer() == Pointer::MouseLeft || event.pointer() == Pointer::Finger || event.pointer() == Pointer::Pen)) {
-        static_cast<Containers::Function<void()>&>(data.slot)();
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
         return;
     }
@@ -272,7 +305,7 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
          event.pointer() == Pointer::Finger ||
          event.pointer() == Pointer::Pen))
     {
-        static_cast<Containers::Function<void()>&>(data.slot)();
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
         return;
     }
@@ -306,7 +339,7 @@ void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent
        (data.eventType == Implementation::EventType::RightClick &&
             event.pointer() == Pointer::MouseRight))
     {
-        static_cast<Containers::Function<void()>&>(data.slot)();
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
     }
 }
@@ -320,7 +353,7 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
         (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
         event.isCaptured())
     {
-        static_cast<Containers::Function<void(const Vector2&)>&>(data.slot)(event.relativePosition());
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
     }
 
@@ -331,23 +364,23 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
         event.setAccepted();
 }
 
-void EventLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent&) {
+void EventLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
     /* event is guaranteed to be primary by AbstractLayer */
 
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Enter) {
-        static_cast<Containers::Function<void()>&>(data.slot)();
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.slot, event);
         /* Accept status is ignored on enter/leave events, no need to call
            setAccepted() */
     }
 }
 
-void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent&) {
+void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
     /* event is guaranteed to be primary by AbstractLayer */
 
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Leave) {
-        static_cast<Containers::Function<void()>&>(data.slot)();
+        reinterpret_cast<void(*)(Containers::FunctionData&, const PointerMoveEvent&)>(data.call)(data.slot, event);
         /* Accept status is ignored on enter/leave events, no need to call
            setAccepted() */
     }
@@ -356,15 +389,15 @@ void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent&
 void EventLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& event) {
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Focus) {
-        static_cast<Containers::Function<void()>&>(data.slot)();
+        reinterpret_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
     }
 }
 
-void EventLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent&) {
+void EventLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& event) {
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Blur) {
-        static_cast<Containers::Function<void()>&>(data.slot)();
+        reinterpret_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>(data.call)(data.slot, event);
         /* Accept status is ignored on blur events, no need to call
            setAccepted() */
     }
