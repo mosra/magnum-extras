@@ -335,7 +335,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @ref onDragScoped() for a scoped alternative.
          * @ref PointerMoveEvent::isPrimary()
          */
-        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2&)>&& slot);
+        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot);
 
         /**
          * @brief Scoped connection to a drag
@@ -343,7 +343,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * Compared to @ref onDrag() the connection is removed automatically
          * when the returned @ref EventConnection gets destroyed.
          */
-        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2&)>&& slot) {
+        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot) {
             return EventConnection{*this, onDrag(node, Utility::move(slot))};
         }
 
