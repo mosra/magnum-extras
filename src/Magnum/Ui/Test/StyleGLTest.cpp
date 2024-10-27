@@ -424,7 +424,7 @@ void StyleGLTest::render() {
                 NodeHandle hover = data.create(ui, style, counter++);
                 ui.setNodeOffset(hover, padding + (padding + size)*Vector2{Vector2i{1, style}});
 
-                PointerMoveEvent move{{}, {}, {}};
+                PointerMoveEvent move{{}, PointerEventSource::Pen, {}, {}, true, 0};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(hover) + ui.nodeSize(hover)*0.5f, move));
             } {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
@@ -432,7 +432,7 @@ void StyleGLTest::render() {
                 ui.setNodeOffset(pressed, padding + (padding + size)*Vector2{Vector2i{2, style}});
 
                 /* The node should become focused as well */
-                PointerEvent press{{}, Pointer::MouseLeft};
+                PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
                 CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(pressed) + ui.nodeSize(pressed)*0.5f, press));
                 CORRADE_COMPARE(ui.currentFocusedNode(), pressed);
             } {
@@ -453,24 +453,24 @@ void StyleGLTest::render() {
                 NodeHandle hover = data.create(ui, style, counter++);
                 ui.setNodeOffset(hover, padding + (padding + size)*Vector2{Vector2i{1, style}});
 
-                PointerMoveEvent move{{}, {}, {}};
+                PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, {}, true, 0};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(hover) + ui.nodeSize(hover)*0.5f, move));
             } {
                 UserInterfaceGL& ui = uis[style*stateCount + 2];
                 NodeHandle pressedHover = data.create(ui, style, counter++);
                 ui.setNodeOffset(pressedHover, padding + (padding + size)*Vector2{Vector2i{2, style}});
 
-                PointerMoveEvent move{{}, {}, {}};
+                PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, {}, true, 0};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(pressedHover) + ui.nodeSize(pressedHover)*0.5f, move));
 
-                PointerEvent press{{}, Pointer::MouseLeft};
+                PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
                 CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(pressedHover) + ui.nodeSize(pressedHover)*0.5f, press));
             } {
                 UserInterfaceGL& ui = uis[style*stateCount + 3];
                 NodeHandle pressed = data.create(ui, style, counter++);
                 ui.setNodeOffset(pressed, padding + (padding + size)*Vector2{Vector2i{3, style}});
 
-                PointerEvent press{{}, Pointer::MouseLeft};
+                PointerEvent press{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
                 CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(pressed) + ui.nodeSize(pressed)*0.5f, press));
             }
         }
@@ -527,7 +527,7 @@ void StyleGLTest::render() {
             NodeHandle node = nodeHandle(0, 1);
             CORRADE_VERIFY(ui.isHandleValid(node));
 
-            PointerMoveEvent moveOver{{}, {}, {}};
+            PointerMoveEvent moveOver{{}, PointerEventSource::Mouse, {}, {}, true, 0};
             CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
         }
 
@@ -537,7 +537,7 @@ void StyleGLTest::render() {
             NodeHandle node = nodeHandle(0, 1);
             CORRADE_VERIFY(ui.isHandleValid(node));
 
-            PointerMoveEvent moveOver{{}, {}, {}};
+            PointerMoveEvent moveOver{{}, PointerEventSource::Mouse, {}, {}, true, 0};
             CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
         }
 
@@ -552,11 +552,11 @@ void StyleGLTest::render() {
 
             /* Move over, making the node hovered, i.e. looking the same as in
                the second column */
-            PointerMoveEvent moveOver{{}, {}, {}};
+            PointerMoveEvent moveOver{{}, PointerEventSource::Mouse, {}, {}, true, 0};
             CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
 
             /* Move out again */
-            PointerMoveEvent moveOut{{}, {}, {}};
+            PointerMoveEvent moveOut{{}, PointerEventSource::Mouse, {}, {}, true, 0};
             CORRADE_VERIFY(!ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
         }
 
@@ -568,11 +568,11 @@ void StyleGLTest::render() {
 
             /* Move out, making the node inactive, i.e. looking the same as in
                the first column */
-            PointerMoveEvent moveOut{{}, {}, {}};
+            PointerMoveEvent moveOut{{}, PointerEventSource::Mouse, {}, {}, true, 0};
             CORRADE_VERIFY(!ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
 
             /* Move over again */
-            PointerMoveEvent moveOver{{}, {}, {}};
+            PointerMoveEvent moveOver{{}, PointerEventSource::Mouse, {}, {}, true, 0};
             CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
         }
 
@@ -585,11 +585,11 @@ void StyleGLTest::render() {
 
                 /* Release, making the node focused but not pressed, i.e.
                    looking the same as in the fourth column. */
-                PointerEvent release{{}, Pointer::Pen};
+                PointerEvent release{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
                 CORRADE_VERIFY(ui.pointerReleaseEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, release));
 
                 /* Press again */
-                PointerEvent press{{}, Pointer::Pen};
+                PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
                 CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, press));
             }
 
@@ -601,11 +601,11 @@ void StyleGLTest::render() {
 
                 /* Press, making the node focused and pressed, i.e.  looking
                    the same as in the third column. */
-                PointerEvent press{{}, Pointer::Pen};
+                PointerEvent press{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
                 CORRADE_VERIFY(ui.pointerPressEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, press));
 
                 /* Release again */
-                PointerEvent release{{}, Pointer::Pen};
+                PointerEvent release{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
                 CORRADE_VERIFY(ui.pointerReleaseEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, release));
             }
 
@@ -619,11 +619,11 @@ void StyleGLTest::render() {
                 /* Move out, making the node pressed but not hovered, i.e. looking
                    the same as in the fourth column. As the node is captured, the
                    event is accepted always. */
-                PointerMoveEvent moveOut{{}, {}, {}};
+                PointerMoveEvent moveOut{{}, PointerEventSource::Mouse, {}, {}, true, 0};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
 
                 /* Move over again */
-                PointerMoveEvent moveOver{{}, {}, {}};
+                PointerMoveEvent moveOver{{}, PointerEventSource::Mouse, {}, {}, true, 0};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
             }
 
@@ -635,12 +635,12 @@ void StyleGLTest::render() {
 
                 /* Move over, making the node pressed + hovered, i.e. looking the
                    same as in the third column */
-                PointerMoveEvent moveOver{{}, {}, {}};
+                PointerMoveEvent moveOver{{}, PointerEventSource::Mouse, {}, {}, true, 0};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*0.5f, moveOver));
 
                 /* Move out again. As the node is captured, the event is accepted
                    always. */
-                PointerMoveEvent moveOut{{}, {}, {}};
+                PointerMoveEvent moveOut{{}, PointerEventSource::Mouse, {}, {}, true, 0};
                 CORRADE_VERIFY(ui.pointerMoveEvent(ui.nodeOffset(node) + ui.nodeSize(node)*1.5f, moveOut));
             }
         }

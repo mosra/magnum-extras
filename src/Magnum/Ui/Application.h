@@ -51,6 +51,18 @@ namespace Magnum { namespace Ui { namespace Implementation {
    event source, so employing a dirty SFINAE trick with an overload that
    returns false if given enum value is not available. A similar trick is
    used in ImGuiIntegration. */
+
+#define MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE(source)                     \
+    template<class ApplicationPointerEventSource> constexpr bool is##source##PointerEventSource(ApplicationPointerEventSource p, decltype(ApplicationPointerEventSource::source)* = nullptr) { \
+        return p == ApplicationPointerEventSource::source;                  \
+    }                                                                       \
+    constexpr bool is##source##PointerEventSource(...) {                    \
+        return false;                                                       \
+    }
+MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE(Touch)
+MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE(Pen)
+#undef MAGNUM_UI_OPTIONAL_POINTER_EVENT_SOURCE
+
 #define MAGNUM_UI_OPTIONAL_POINTER(pointer)                                 \
     template<class ApplicationPointer> constexpr bool is##pointer##Pointer(ApplicationPointer p, decltype(ApplicationPointer::pointer)* = nullptr) { \
         return p == ApplicationPointer::pointer;                            \
@@ -68,6 +80,18 @@ MAGNUM_UI_OPTIONAL_POINTER(Finger)
 MAGNUM_UI_OPTIONAL_POINTER(Pen)
 MAGNUM_UI_OPTIONAL_POINTER(Eraser)
 #undef MAGNUM_UI_OPTIONAL_POINTER
+
+template<class ApplicationPointerEventSource> PointerEventSource pointerEventSourceFor(const ApplicationPointerEventSource source) {
+    /* Not a switch because this makes it easier to check for the not always
+       available pointer event source kinds */
+    if(source == ApplicationPointerEventSource::Mouse)
+        return PointerEventSource::Mouse;
+    if(isTouchPointerEventSource(source))
+        return PointerEventSource::Touch;
+    if(isPenPointerEventSource(source))
+        return PointerEventSource::Pen;
+    return {};
+}
 
 template<class ApplicationPointer> Pointer pointerFor(const ApplicationPointer pointer) {
     /* Not a switch because this makes it easier to check for the not always
@@ -134,11 +158,12 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
     #endif
 >::type> {
     static bool press(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
+        const PointerEventSource source = pointerEventSourceFor(event.source());
         const Pointer pointer = pointerFor(event.pointer());
-        if(pointer == Pointer{})
+        if(source == PointerEventSource{} || pointer == Pointer{})
             return false;
 
-        PointerEvent e{time, pointer};
+        PointerEvent e{time, source, pointer, event.isPrimary(), event.id()};
         if(ui.pointerPressEvent(event.position(), e)) {
             event.setAccepted();
             return true;
@@ -148,11 +173,12 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
     }
 
     static bool release(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
+        const PointerEventSource source = pointerEventSourceFor(event.source());
         const Pointer pointer = pointerFor(event.pointer());
-        if(pointer == Pointer{})
+        if(source == PointerEventSource{} || pointer == Pointer{})
             return false;
 
-        PointerEvent e{time, pointer};
+        PointerEvent e{time, source, pointer, event.isPrimary(), event.id()};
         if(ui.pointerReleaseEvent(event.position(), e)) {
             event.setAccepted();
             return true;
@@ -184,10 +210,21 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
     #endif
 >::type> {
     static bool move(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
-        const Containers::Optional<Pointer> pointer = event.pointer() ? Containers::optional(pointerFor(*event.pointer())) : Containers::NullOpt;
+        const PointerEventSource source = pointerEventSourceFor(event.source());
         const Pointers pointers = pointersFor(event.pointers());
+        if(source == PointerEventSource{})
+            return false;
 
-        PointerMoveEvent e{time, pointer, pointers};
+        /* If pressed/released pointer translation fails (zero value returned),
+           propagate this as just a plain move */
+        Containers::Optional<Pointer> pointer;
+        if(event.pointer()) {
+            const Pointer translated = pointerFor(*event.pointer());
+            if(translated != Pointer{})
+                pointer = translated;
+        }
+
+        PointerMoveEvent e{time, source, pointer, pointers, event.isPrimary(), event.id()};
         if(ui.pointerMoveEvent(event.position(), e)) {
             event.setAccepted();
             return true;
@@ -236,7 +273,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         if(pointer == Pointer{})
             return false;
 
-        PointerEvent e{time, pointer};
+        PointerEvent e{time, PointerEventSource::Mouse, pointer, true, 0};
         if(ui.pointerPressEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;
@@ -250,7 +287,7 @@ template<class Event> struct PointerEventConverter<Event, typename std::enable_i
         if(pointer == Pointer{})
             return false;
 
-        PointerEvent e{time, pointer};
+        PointerEvent e{time, PointerEventSource::Mouse, pointer, true, 0};
         if(ui.pointerReleaseEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;
@@ -272,7 +309,7 @@ template<class Event> struct PointerMoveEventConverter<Event, typename std::enab
     static bool move(AbstractUserInterface& ui, Event& event, const Nanoseconds time = {}) {
         const Pointers pointers = pointersForButtons<Event>(event.buttons());
 
-        PointerMoveEvent e{time, {}, pointers};
+        PointerMoveEvent e{time, PointerEventSource::Mouse, {}, pointers, true, 0};
         if(ui.pointerMoveEvent(Vector2{event.position()}, e)) {
             event.setAccepted();
             return true;

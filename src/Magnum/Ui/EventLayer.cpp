@@ -233,6 +233,9 @@ void EventLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
 }
 
 void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
+    if(!event.isPrimary())
+        return;
+
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Press && (event.pointer() == Pointer::MouseLeft || event.pointer() == Pointer::Finger || event.pointer() == Pointer::Pen)) {
         static_cast<Containers::Function<void()>&>(data.slot)();
@@ -260,6 +263,9 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
 }
 
 void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
+    if(!event.isPrimary())
+        return;
+
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Release &&
         (event.pointer() == Pointer::MouseLeft ||
@@ -288,6 +294,8 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
 }
 
 void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent& event) {
+    /* event is guaranteed to be primary by AbstractLayer */
+
     Data& data = _state->data[dataId];
     if((data.eventType == Implementation::EventType::TapOrClick &&
             (event.pointer() == Pointer::MouseLeft ||
@@ -304,6 +312,9 @@ void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent
 }
 
 void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    if(!event.isPrimary())
+        return;
+
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Drag &&
         (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
@@ -321,6 +332,8 @@ void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& 
 }
 
 void EventLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent&) {
+    /* event is guaranteed to be primary by AbstractLayer */
+
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Enter) {
         static_cast<Containers::Function<void()>&>(data.slot)();
@@ -330,6 +343,8 @@ void EventLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent&
 }
 
 void EventLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent&) {
+    /* event is guaranteed to be primary by AbstractLayer */
+
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Leave) {
         static_cast<Containers::Function<void()>&>(data.slot)();

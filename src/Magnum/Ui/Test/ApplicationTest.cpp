@@ -45,6 +45,7 @@ struct ApplicationTest: TestSuite::Tester {
     void pointerPressEvent();
     void pointerReleaseEvent();
     void pointerMoveEvent();
+    void pointerPressReleaseMoveEventNoTouchOrPen();
     #ifdef MAGNUM_BUILD_DEPRECATED
     void mousePressEvent();
     void mouseReleaseEvent();
@@ -53,6 +54,13 @@ struct ApplicationTest: TestSuite::Tester {
     void keyPressEvent();
     void keyReleaseEvent();
     void textInputEvent();
+};
+
+enum class CustomPointerEventSource {
+    Mouse = 3785,
+    Touch = 3868762,
+    Pen = -1134,
+    Trackball = 1337
 };
 
 enum class CustomPointer {
@@ -77,89 +85,145 @@ CORRADE_ENUMSET_OPERATORS(CustomPointers)
 #endif
 
 struct CustomPointerEvent {
-    explicit CustomPointerEvent(const Vector2& position, CustomPointer pointer): _position{position}, _pointer{pointer} {}
+    explicit CustomPointerEvent(CustomPointerEventSource source, CustomPointer pointer, bool primary, Long id, const Vector2& position): _source{source}, _pointer{pointer}, _primary{primary}, _id{id}, _position{position} {}
 
-    Vector2 position() const { return _position; }
+    CustomPointerEventSource source() const { return _source; }
     CustomPointer pointer() const { return _pointer; }
+    bool isPrimary() const { return _primary; }
+    Long id() const { return _id; }
+    Vector2 position() const { return _position; }
     void setAccepted() { accepted = true; }
 
     bool accepted = false;
 
     private:
-        Vector2 _position;
+        CustomPointerEventSource _source;
         CustomPointer _pointer;
+        bool _primary;
+        Long _id;
+        Vector2 _position;
 };
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
+    CustomPointerEventSource source;
     CustomPointer pointer;
-    Containers::Optional<Pointer> expectedPointer;
+    bool primary;
+    /* If NullOpt, the event shouldn't even be called */
+    Containers::Optional<PointerEventSource> expectedSource;
+    Pointer expectedPointer;
     bool accept;
 } PointerPressReleaseEventData[]{
-    {"mouse left", CustomPointer::MouseLeft, Pointer::MouseLeft, true},
-    {"mouse middle", CustomPointer::MouseMiddle, Pointer::MouseMiddle, true},
-    {"mouse right, not accepted", CustomPointer::MouseRight, Pointer::MouseRight, false},
-    {"finger", CustomPointer::Finger, Pointer::Finger, true},
-    {"pen", CustomPointer::Pen, Pointer::Pen, true},
-    {"eraser", CustomPointer::Eraser, Pointer::Eraser, true},
-    {"unknown pointer", CustomPointer::TrackballFire, {}, false},
+    {"mouse left",
+        CustomPointerEventSource::Mouse, CustomPointer::MouseLeft, true,
+        PointerEventSource::Mouse, Pointer::MouseLeft, true},
+    {"mouse middle",
+        CustomPointerEventSource::Mouse, CustomPointer::MouseMiddle, true,
+        PointerEventSource::Mouse, Pointer::MouseMiddle, true},
+    {"mouse right, not accepted",
+        CustomPointerEventSource::Mouse, CustomPointer::MouseRight, true,
+        PointerEventSource::Mouse, Pointer::MouseRight, false},
+    {"finger",
+        CustomPointerEventSource::Touch, CustomPointer::Finger, true,
+        PointerEventSource::Touch, Pointer::Finger, true},
+    {"finger, secondary",
+        CustomPointerEventSource::Touch, CustomPointer::Finger, false,
+        PointerEventSource::Touch, Pointer::Finger, true},
+    {"pen",
+        CustomPointerEventSource::Pen, CustomPointer::Pen, true,
+        PointerEventSource::Pen, Pointer::Pen, true},
+    {"eraser",
+        CustomPointerEventSource::Pen, CustomPointer::Eraser, true,
+        PointerEventSource::Pen, Pointer::Eraser, true},
+    {"unknown source",
+        CustomPointerEventSource::Trackball, CustomPointer::MouseLeft, false,
+        {}, Pointer{}, false},
+    {"unknown pointer",
+        CustomPointerEventSource::Mouse, CustomPointer::TrackballFire, false,
+        {}, Pointer{}, false},
 };
 
 struct CustomPointerMoveEvent {
-    explicit CustomPointerMoveEvent(const Vector2& position, Containers::Optional<CustomPointer> pointer, CustomPointers pointers): _position{position}, _pointer{pointer}, _pointers{pointers} {}
+    explicit CustomPointerMoveEvent(CustomPointerEventSource source, Containers::Optional<CustomPointer> pointer, CustomPointers pointers, bool primary, Long id, const Vector2& position): _source{source}, _pointer{pointer}, _pointers{pointers}, _primary{primary}, _id{id}, _position{position} {}
 
-    Vector2 position() const { return _position; }
+    CustomPointerEventSource source() const { return _source; }
     Containers::Optional<CustomPointer> pointer() const { return _pointer; }
     CustomPointers pointers() const { return _pointers; }
+    bool isPrimary() const { return _primary; }
+    Long id() const { return _id; }
+    Vector2 position() const { return _position; }
     void setAccepted() { accepted = true; }
 
     bool accepted = false;
 
     private:
-        Vector2 _position;
+        CustomPointerEventSource _source;
         Containers::Optional<CustomPointer> _pointer;
         CustomPointers _pointers;
+        bool _primary;
+        Long _id;
+        Vector2 _position;
 };
 
 const struct {
     TestSuite::TestCaseDescriptionSourceLocation name;
+    CustomPointerEventSource source;
     Containers::Optional<CustomPointer> pointer;
+    bool primary;
     CustomPointers pointers;
+    /* If NullOpt, the event shouldn't even be called */
+    Containers::Optional<PointerEventSource> expectedSource;
     Containers::Optional<Pointer> expectedPointer;
     Pointers expectedPointers;
     bool accept;
 } PointerMoveEventData[]{
     {"mouse left + middle + eraser, not accepted",
-        {},
+        CustomPointerEventSource::Pen, {}, true,
         CustomPointer::MouseLeft|CustomPointer::MouseMiddle|CustomPointer::Eraser,
-        {},
+        PointerEventSource::Pen, {},
         Pointer::MouseLeft|Pointer::MouseMiddle|Pointer::Eraser, false},
     {"mouse middle + finger + unknown button",
-        {},
+        CustomPointerEventSource::Mouse, {}, true,
         CustomPointer::MouseMiddle|CustomPointer::Finger|CustomPointer::TrackballFire,
-        {},
+        PointerEventSource::Mouse, {},
         Pointer::MouseMiddle|Pointer::Finger, true},
+    {"pen hover event",
+        CustomPointerEventSource::Pen, {}, true,
+        {},
+        PointerEventSource::Pen, {},
+        {}, true},
+    {"secondary touch event, nothing pressed",
+        CustomPointerEventSource::Touch, {}, false,
+        {},
+        PointerEventSource::Touch, {},
+        {}, true},
+    {"mouse left, unknown source",
+        CustomPointerEventSource::Trackball, {}, true,
+        CustomPointer::MouseLeft,
+        /* Not propagated */
+        {}, {},
+        {}, false},
     {"unknown button alone",
-        {},
+        CustomPointerEventSource::Mouse, {}, true,
         CustomPointer::TrackballFire,
-        {},
+        PointerEventSource::Mouse, {},
         {}, true},
     {"mouse left, right newly pressed",
-        CustomPointer::MouseRight,
+        CustomPointerEventSource::Mouse, CustomPointer::MouseRight, true,
         CustomPointer::MouseLeft|CustomPointer::MouseRight,
-        Pointer::MouseRight,
+        PointerEventSource::Mouse, Pointer::MouseRight,
         Pointer::MouseLeft|Pointer::MouseRight, true},
     {"pen + eraser, eraser released",
-        CustomPointer::Eraser,
+        CustomPointerEventSource::Pen, CustomPointer::Eraser, true,
         CustomPointer::Pen,
-        Pointer::Eraser,
+        PointerEventSource::Pen, Pointer::Eraser,
         Pointer::Pen, true},
     {"unknown button released alone",
-        CustomPointer::TrackballFire,
+        CustomPointerEventSource::Mouse, CustomPointer::TrackballFire, true,
         {},
-        {},
+        /* Still propagated, but as a plain move event without any buttons */
+        PointerEventSource::Mouse, {},
         {}, true},
-    {"no buttons", {}, {}, {}, {}, false},
 };
 
 #ifdef MAGNUM_BUILD_DEPRECATED
@@ -479,6 +543,8 @@ ApplicationTest::ApplicationTest() {
     addInstancedTests({&ApplicationTest::pointerMoveEvent},
         Containers::arraySize(PointerMoveEventData));
 
+    addTests({&ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen});
+
     #ifdef MAGNUM_BUILD_DEPRECATED
     addInstancedTests({&ApplicationTest::mousePressEvent},
         Containers::arraySize(MousePressReleaseEventData));
@@ -510,7 +576,7 @@ void ApplicationTest::pointerPressEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, Pointer expectedPointer, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, accept{accept} {}
+        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Pointer expectedPointer, bool expectedPrimary, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPrimary{expectedPrimary}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -518,8 +584,11 @@ void ApplicationTest::pointerPressEvent() {
             return LayerFeature::Event;
         }
         void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
-            CORRADE_COMPARE(event.position(), (Vector2{156.25f, 230.7f}));
+            CORRADE_COMPARE(event.source(), expectedSource);
             CORRADE_COMPARE(event.pointer(), expectedPointer);
+            CORRADE_COMPARE(event.isPrimary(), expectedPrimary);
+            CORRADE_COMPARE(event.id(), 1ll << 36);
+            CORRADE_COMPARE(event.position(), (Vector2{156.25f, 230.7f}));
             event.setAccepted(accept);
             ++called;
         }
@@ -554,18 +623,24 @@ void ApplicationTest::pointerPressEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
+        PointerEventSource expectedSource;
         Pointer expectedPointer;
+        bool expectedPrimary;
         bool accept;
         Int called = 0;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer ? *data.expectedPointer : Pointer{}, data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(),
+        data.expectedSource ? *data.expectedSource : PointerEventSource{},
+        data.expectedPointer,
+        data.primary,
+        data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomPointerEvent e{{1562.5f, 23.07f}, data.pointer};
+    CustomPointerEvent e{data.source, data.pointer, data.primary, 1ll << 36, {1562.5f, 23.07f}};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerPressEvent(e), data.accept);
-    /* Should be called only if there's a pointer type to translate to */
-    CORRADE_COMPARE(layer.called, data.expectedPointer ? 1 : 0);
+    /* Should be called only if there's a source / pointer to translate to */
+    CORRADE_COMPARE(layer.called, data.expectedSource ? 1 : 0);
     CORRADE_COMPARE(e.accepted, data.accept);
 }
 
@@ -579,7 +654,7 @@ void ApplicationTest::pointerReleaseEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {20.0f, 3000.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, Pointer expectedPointer, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, accept{accept} {}
+        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Pointer expectedPointer, bool expectedPrimary, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPrimary{expectedPrimary}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -590,8 +665,11 @@ void ApplicationTest::pointerReleaseEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerReleaseEvent(UnsignedInt, PointerEvent& event) override {
-            CORRADE_COMPARE(event.position(), (Vector2{150.75f, 236.25f}));
+            CORRADE_COMPARE(event.source(), expectedSource);
             CORRADE_COMPARE(event.pointer(), expectedPointer);
+            CORRADE_COMPARE(event.isPrimary(), expectedPrimary);
+            CORRADE_COMPARE(event.id(), 1ll << 47);
+            CORRADE_COMPARE(event.position(), (Vector2{150.75f, 236.25f}));
             event.setAccepted(accept);
             ++called;
         }
@@ -623,18 +701,24 @@ void ApplicationTest::pointerReleaseEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
+        PointerEventSource expectedSource;
         Pointer expectedPointer;
+        bool expectedPrimary;
         bool accept;
         Int called = 0;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer ? *data.expectedPointer : Pointer{}, data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(),
+        data.expectedSource ? *data.expectedSource : PointerEventSource{},
+        data.expectedPointer,
+        data.primary,
+        data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomPointerEvent e{{15.075f, 2362.5f}, data.pointer};
+    CustomPointerEvent e{data.source, data.pointer, data.primary, 1ll << 47, {15.075f, 2362.5f}};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerReleaseEvent(e), data.accept);
-    /* Should be called only if there's a pointer type to translate to */
-    CORRADE_COMPARE(layer.called, data.expectedPointer ? 1 : 0);
+    /* Should be called only if there's a source / pointer to translate to */
+    CORRADE_COMPARE(layer.called, data.expectedSource ? 1 : 0);
     CORRADE_COMPARE(e.accepted, data.accept);
 }
 
@@ -648,7 +732,7 @@ void ApplicationTest::pointerMoveEvent() {
     AbstractUserInterface ui{{200.0f, 300.0f}, {2000.0f, 30.0f}, {666, 777}};
 
     struct Layer: AbstractLayer {
-        explicit Layer(LayerHandle handle, Containers::Optional<Pointer> expectedPointer, Pointers expectedPointers, bool accept): AbstractLayer{handle}, expectedPointer{expectedPointer}, expectedPointers{expectedPointers}, accept{accept} {}
+        explicit Layer(LayerHandle handle, PointerEventSource expectedSource, Containers::Optional<Pointer> expectedPointer, Pointers expectedPointers, bool expectedPrimary, bool accept): AbstractLayer{handle}, expectedSource{expectedSource}, expectedPointer{expectedPointer}, expectedPointers{expectedPointers}, expectedPrimary{expectedPrimary}, accept{accept} {}
 
         using AbstractLayer::create;
 
@@ -662,9 +746,12 @@ void ApplicationTest::pointerMoveEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
-            CORRADE_COMPARE(event.position(), (Vector2{156.125f, 230.4f}));
+            CORRADE_COMPARE(event.source(), expectedSource);
             CORRADE_COMPARE(event.pointer(), expectedPointer);
             CORRADE_COMPARE(event.pointers(), expectedPointers);
+            CORRADE_COMPARE(event.isPrimary(), expectedPrimary);
+            CORRADE_COMPARE(event.id(), 1ll << 55);
+            CORRADE_COMPARE(event.position(), (Vector2{156.125f, 230.4f}));
             event.setAccepted(accept);
             ++called;
         }
@@ -689,20 +776,140 @@ void ApplicationTest::pointerMoveEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
 
+        PointerEventSource expectedSource;
         Containers::Optional<Pointer> expectedPointer;
         Pointers expectedPointers;
+        bool expectedPrimary;
         bool accept;
         Int called = 0;
     };
-    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(), data.expectedPointer, data.expectedPointers, data.accept));
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer(),
+        data.expectedSource ? *data.expectedSource : PointerEventSource{},
+        data.expectedPointer,
+        data.expectedPointers,
+        data.primary,
+        data.accept));
     layer.create(ui.createNode({}, ui.size()));
 
-    CustomPointerMoveEvent e{{1561.25f, 23.04f}, data.pointer, data.pointers};
+    CustomPointerMoveEvent e{data.source, data.pointer, data.pointers, data.primary, 1ll << 55, {1561.25f, 23.04f}};
     /* Should return true only if it's accepted */
     CORRADE_COMPARE(ui.pointerMoveEvent(e), data.accept);
-    /* Should be called always */
-    CORRADE_COMPARE(layer.called, 1);
+    /* Should be called only if there's a source to translate to */
+    CORRADE_COMPARE(layer.called, data.expectedSource ? 1 : 0);
     CORRADE_COMPARE(e.accepted, data.accept);
+}
+
+void ApplicationTest::pointerPressReleaseMoveEventNoTouchOrPen() {
+    /* To verify that it works even with enums that don't have the extra Touch
+       or Pen entries */
+
+    enum class MouseOnlyPointerEventSource {
+        Mouse = 17862
+    };
+    enum class MouseOnlyPointer {
+        MouseLeft = 0x010,
+        MouseMiddle = 0x100,
+        MouseRight = 0x001,
+    };
+
+    typedef Containers::EnumSet<MouseOnlyPointer> MouseOnlyPointers;
+
+    struct MouseOnlyPointerEvent {
+        explicit MouseOnlyPointerEvent(MouseOnlyPointer pointer, Long id, const Vector2& position): _pointer{pointer}, _id{id}, _position{position} {}
+
+        MouseOnlyPointerEventSource source() const {
+            return MouseOnlyPointerEventSource::Mouse;
+        }
+        MouseOnlyPointer pointer() const { return _pointer; }
+        bool isPrimary() const { return true; }
+        Long id() const { return _id; }
+        Vector2 position() const { return _position; }
+        void setAccepted() { accepted = true; }
+
+        bool accepted = false;
+
+        private:
+            MouseOnlyPointer _pointer;
+            Long _id;
+            Vector2 _position;
+    };
+
+    struct MouseOnlyPointerMoveEvent {
+        explicit MouseOnlyPointerMoveEvent(Containers::Optional<MouseOnlyPointer> pointer, MouseOnlyPointers pointers, Long id, const Vector2& position): _pointer{pointer}, _pointers{pointers}, _id{id}, _position{position} {}
+
+        MouseOnlyPointerEventSource source() const {
+            return MouseOnlyPointerEventSource::Mouse;
+        }
+        Containers::Optional<MouseOnlyPointer> pointer() const { return _pointer; }
+        MouseOnlyPointers pointers() const { return _pointers; }
+        bool isPrimary() const { return true; }
+        Long id() const { return _id; }
+        Vector2 position() const { return _position; }
+        void setAccepted() { accepted = true; }
+
+        bool accepted = false;
+
+        private:
+            Containers::Optional<MouseOnlyPointer> _pointer;
+            MouseOnlyPointers _pointers;
+            Long _id;
+            Vector2 _position;
+    };
+
+    AbstractUserInterface ui{{100, 100}};
+
+    struct Layer: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+        void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
+            CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseLeft);
+            CORRADE_COMPARE(event.isPrimary(), true);
+            CORRADE_COMPARE(event.id(), 1ll << 33);
+            CORRADE_COMPARE(event.position(), (Vector2{1.0f, 2.0f}));
+            event.setAccepted();
+            called *= 2;
+        }
+        void doPointerReleaseEvent(UnsignedInt, PointerEvent& event) override {
+            CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseRight);
+            CORRADE_COMPARE(event.isPrimary(), true);
+            CORRADE_COMPARE(event.id(), 1ll << 44);
+            CORRADE_COMPARE(event.position(), (Vector2{3.0f, 4.0f}));
+            event.setAccepted();
+            called *= 3;
+        }
+        void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
+            CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
+            CORRADE_COMPARE(event.pointer(), Pointer::MouseMiddle);
+            CORRADE_COMPARE(event.pointers(), Pointer::MouseRight|Pointer::MouseLeft);
+            CORRADE_COMPARE(event.isPrimary(), true);
+            CORRADE_COMPARE(event.id(), 1ll << 55);
+            CORRADE_COMPARE(event.position(), (Vector2{5.0f, 6.0f}));
+            event.setAccepted();
+            called *= 5;
+        }
+
+        Int called = 1;
+    };
+    Layer& layer = ui.setLayerInstance(Containers::pointer<Layer>(ui.createLayer()));
+    layer.create(ui.createNode({}, ui.size()));
+
+    MouseOnlyPointerEvent press{MouseOnlyPointer::MouseLeft, 1ll << 33, {1.0f, 2.0f}};
+    MouseOnlyPointerEvent release{MouseOnlyPointer::MouseRight, 1ll << 44, {3.0f, 4.0f}};
+    /* Using MouseOnlyPointers{} to not need CORRADE_ENUMSET_OPERATORS() */
+    MouseOnlyPointerMoveEvent move{MouseOnlyPointer::MouseMiddle, MouseOnlyPointers{}|MouseOnlyPointer::MouseRight|MouseOnlyPointer::MouseLeft, 1ll << 55, {5.0f, 6.0f}};
+    CORRADE_VERIFY(ui.pointerPressEvent(press));
+    CORRADE_VERIFY(ui.pointerReleaseEvent(release));
+    CORRADE_VERIFY(ui.pointerMoveEvent(move));
+    CORRADE_COMPARE(layer.called, 2*3*5);
+    CORRADE_VERIFY(press.accepted);
+    CORRADE_VERIFY(release.accepted);
+    CORRADE_VERIFY(move.accepted);
 }
 
 #ifdef MAGNUM_BUILD_DEPRECATED
@@ -724,8 +931,11 @@ void ApplicationTest::mousePressEvent() {
             return LayerFeature::Event;
         }
         void doPointerPressEvent(UnsignedInt, PointerEvent& event) override {
-            CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
+            CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
             CORRADE_COMPARE(event.pointer(), expectedPointer);
+            CORRADE_COMPARE(event.isPrimary(), true);
+            CORRADE_COMPARE(event.id(), 0);
+            CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
             event.setAccepted(accept);
             ++called;
         }
@@ -796,8 +1006,11 @@ void ApplicationTest::mouseReleaseEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerReleaseEvent(UnsignedInt, PointerEvent& event) override {
-            CORRADE_COMPARE(event.position(), (Vector2{150.0f, 236.0f}));
+            CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
             CORRADE_COMPARE(event.pointer(), expectedPointer);
+            CORRADE_COMPARE(event.isPrimary(), true);
+            CORRADE_COMPARE(event.id(), 0);
+            CORRADE_COMPARE(event.position(), (Vector2{150.0f, 236.0f}));
             event.setAccepted(accept);
             ++called;
         }
@@ -868,9 +1081,12 @@ void ApplicationTest::mouseMoveEvent() {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) override {
-            CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
+            CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
             CORRADE_COMPARE(event.pointer(), Containers::NullOpt);
             CORRADE_COMPARE(event.pointers(), expectedPointers);
+            CORRADE_COMPARE(event.isPrimary(), true);
+            CORRADE_COMPARE(event.id(), 0);
+            CORRADE_COMPARE(event.position(), (Vector2{156.0f, 230.0f}));
             event.setAccepted(accept);
             ++called;
         }
@@ -975,7 +1191,7 @@ void ApplicationTest::keyPressEvent() {
 
     /* Have to first submit an event that actually makes a node hovered, to
        have something to call the event on */
-    PointerMoveEvent moveEvent{{}, {}, {}};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
     CORRADE_VERIFY(ui.pointerMoveEvent({1560.0f, 23.0f}, moveEvent));
     CORRADE_VERIFY(ui.currentHoveredNode() != NodeHandle::Null);
 
@@ -1051,7 +1267,7 @@ void ApplicationTest::keyReleaseEvent() {
 
     /* Have to first submit an event that actually makes a node hovered, to
        have something to call the event on */
-    PointerMoveEvent moveEvent{{}, {}, {}};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0, {}};
     CORRADE_VERIFY(ui.pointerMoveEvent({15.0f, 2360.0f}, moveEvent));
     CORRADE_VERIFY(ui.currentHoveredNode() != NodeHandle::Null);
 

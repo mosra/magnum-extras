@@ -183,7 +183,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Connect to a finger / pen tap or left mouse press
          *
-         * The @p slot is called when a @ref Pointer::MouseLeft,
+         * The @p slot is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen press happens on the
          * @p node.
          *
@@ -192,6 +192,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * any of its parents is removed, it's the caller responsibility to
          * ensure it doesn't outlive the state captured in the @p slot. See
          * @ref onPressScoped() for a scoped alternative.
+         * @ref PointerEvent::isPrimary()
          */
         DataHandle onPress(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -208,7 +209,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Connect to a finger / pen tap or left mouse release
          *
-         * The @p slot is called when a @ref Pointer::MouseLeft,
+         * The @p slot is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
          * @p node.
          *
@@ -217,6 +218,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * any of its parents is removed, it's the caller responsibility to
          * ensure it doesn't outlive the state captured in the @p slot. See
          * @ref onReleaseScoped() for a scoped alternative.
+         * @ref PointerEvent::isPrimary()
          */
         DataHandle onRelease(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -233,11 +235,12 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Connect to a finger / pen tap or left mouse click
          *
-         * The @p slot is called when a @ref Pointer::MouseLeft,
+         * The @p slot is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
-         * @p node after a previous pointer press. If event capture is disabled
-         * by any event handler on given node, the slot is called only if the
-         * pointer didn't leave the node area between a press and a release.
+         * @p node after a previous primary pointer press. If event capture is
+         * disabled by any event handler on given node, the slot is called only
+         * if the pointer didn't leave the node area between a press and a
+         * release.
          *
          * Use @ref onRightClick() and @ref onMiddleClick() to handle
          * @ref Pointer::MouseRight and @ref Pointer::MouseMiddle clicks. The
@@ -245,6 +248,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * any of its parents is removed, it's the caller responsibility to
          * ensure it doesn't outlive the state captured in the @p slot. See
          * @ref onTapOrClickScoped() for a scoped alternative.
+         * @ref PointerEvent::isPrimary()
          */
         DataHandle onTapOrClick(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -320,15 +324,16 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @brief Connect to a drag
          *
          * The @p slot, receiving the movement delta, is called when a
-         * @ref Pointer::MouseLeft, @ref Pointer::Finger or @ref Pointer::Pen
-         * move happens on the @p node. If event capture is disabled by any
-         * event handler on given node, the slot is called only as long as the
-         * pointer doesn't leave the node area.
+         * @ref Pointer::MouseLeft, primary @ref Pointer::Finger or
+         * @ref Pointer::Pen move happens on the @p node. If event capture is
+         * disabled by any event handler on given node, the slot is called only
+         * as long as the pointer doesn't leave the node area.
          *
          * The returned @ref DataHandle is automatically removed once @p node
          * or any of its parents is removed, it's the caller responsibility to
          * ensure it doesn't outlive the state captured in the @p slot. See
          * @ref onDragScoped() for a scoped alternative.
+         * @ref PointerMoveEvent::isPrimary()
          */
         DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2&)>&& slot);
 
@@ -345,13 +350,15 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Connect to a pointer enter
          *
-         * The @p slot is called when a pointer moves over the @p node area.
+         * The @p slot is called when a primary pointer moves over the
+         * @p node area.
          *
          * Use @ref onLeave() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
          * parents is removed, it's the caller responsibility to ensure it
          * doesn't outlive the state captured in the @p slot. See
          * @ref onEnterScoped() for a scoped alternative.
+         * @ref PointerMoveEvent::isPrimary()
          */
         DataHandle onEnter(NodeHandle node, Containers::Function<void()>&& slot);
 
@@ -368,13 +375,15 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Connect to a pointer leave
          *
-         * The @p slot is called when a pointer moves out of the @p node area.
+         * The @p slot is called when a primary pointer moves out of the
+         * @p node area.
          *
          * Use @ref onEnter() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
          * parents is removed, it's the caller responsibility to ensure it
          * doesn't outlive the state captured in the @p slot. See
          * @ref onLeaveScoped() for a scoped alternative.
+         * @ref PointerMoveEvent::isPrimary()
          */
         DataHandle onLeave(NodeHandle node, Containers::Function<void()>&& slot);
 

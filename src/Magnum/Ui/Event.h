@@ -41,6 +41,41 @@
 namespace Magnum { namespace Ui {
 
 /**
+@brief Pointer event source
+@m_since_latest
+
+@see @ref Pointer, @ref PointerEvent, @ref PointerMoveEvent
+*/
+enum class PointerEventSource: UnsignedByte {
+    /* Zero value is reserved for an unknown source */
+
+    /**
+     * The event is coming from a mouse
+     * @see @ref Pointer::MouseLeft, @ref Pointer::MouseMiddle,
+     *      @ref Pointer::MouseRight
+     */
+    Mouse = 1,
+
+    /**
+     * The event is coming from a touch contact
+     * @see @ref Pointer::Finger
+     */
+    Touch,
+
+    /**
+     * The event is coming from a pen stylus
+     * @see @ref Pointer::Pen, @ref Pointer::Eraser
+     */
+    Pen
+};
+
+/**
+@debugoperatorenum{PointerEventSource}
+@m_since_latest
+*/
+MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, PointerEventSource value);
+
+/**
 @brief Pointer type
 @m_since_latest
 
@@ -90,26 +125,66 @@ CORRADE_ENUMSET_OPERATORS(Pointers)
     @ref AbstractLayer::pointerReleaseEvent(),
     @ref AbstractLayer::pointerTapOrClickEvent(), @ref FocusEvent
 */
-class PointerEvent {
+class MAGNUM_UI_EXPORT PointerEvent {
     public:
         /**
          * @brief Constructor
          * @param time      Time at which the event happened
+         * @param source    Pointer event source
          * @param pointer   Pointer type that got pressed or released
+         * @param primary   Whether the pointer is primary
+         * @param id        Pointer ID
          *
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
-         * immediately transitioning to a stopped state. The position, capture
-         * and hover properties are set from @ref AbstractUserInterface event
-         * handler internals.
+         * immediately transitioning to a stopped state. The @p pointer is
+         * expected to match @p source, @p primary is expected to be
+         * @cpp true @ce for @ref PointerEventSource::Mouse and
+         * @ref PointerEventSource::Pen. The position, capture and hover
+         * properties are set from @ref AbstractUserInterface event handler
+         * internals.
          */
-        explicit PointerEvent(Nanoseconds time, Pointer pointer): _time{time}, _pointer{pointer} {}
+        explicit PointerEvent(Nanoseconds time, PointerEventSource source, Pointer pointer, bool primary, Long id);
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
 
-        /** @brief Pointer type that got pressed or released */
+        /**
+         * @brief Pointer event source
+         *
+         * @see @ref isPrimary(), @ref id()
+         */
+        PointerEventSource source() const { return _source; }
+
+        /**
+         * @brief Pointer type that got pressed or released
+         *
+         * @see @ref source(), @ref isPrimary(), @ref id()
+         */
         Pointer pointer() const { return _pointer; }
+
+        /**
+         * @brief Whether the pointer is primary
+         *
+         * Used to distinguish among multiple pointers in a multi-touch
+         * scenario. Events coming from @ref PointerEventSource::Mouse and
+         * @ref PointerEventSource::Pen are always primary. See
+         * @ref setCaptured() for details about interaction between primary and
+         * non-primary pointer events and pointer capture.
+         * @see @ref source(), @ref id()
+         */
+        bool isPrimary() const { return _primary; }
+
+        /**
+         * @brief Pointer ID
+         *
+         * Used to distinguish among multiple pointers in a multi-touch
+         * scenario. Events coming from @ref PointerEventSource::Mouse and
+         * @ref PointerEventSource::Pen are always primary, although their ID
+         * can differ.
+         * @see @ref source(), @ref isPrimary()
+         */
+        Long id() const { return _id; }
 
         /**
          * @brief Event position
@@ -130,17 +205,21 @@ class PointerEvent {
         /**
          * @brief Set whether to capture the event on a node
          *
-         * By default, after a pointer press event, a node captures all
-         * following pointer and key events until and including a pointer
-         * release, even if they happen outside of the node area.
+         * By default, after a press event of a primary pointer, a node
+         * captures all following pointer and key events until and including a
+         * release of the primary pointer, even if they happen outside of the
+         * node area. Press and release events of non-primary pointers are sent
+         * to the captured node but don't affect it in any way.
          *
          * If capture is disabled, the events are always sent to the actual
          * node under the pointer. Which means that for example a node can
          * receive a pointer press event without a corresponding release later,
          * or a release alone.
          *
-         * Calling this function only makes sense on a pointer press event, it
-         * has no effect on a pointer release event or a tap or click event.
+         * Calling this function only makes sense on a pointer press event or
+         * a non-primary pointer release event, it has no effect on primary
+         * pointer release event or a tap or click event.
+         * @see @ref isPrimary()
          */
         void setCaptured(bool captured) {
             _captured = captured;
@@ -198,7 +277,10 @@ class PointerEvent {
 
         Nanoseconds _time;
         Vector2 _position;
+        Long _id;
+        PointerEventSource _source;
         Pointer _pointer;
+        bool _primary;
         bool _accepted = false;
         bool _captured = false;
         bool _hovering = false;
@@ -219,17 +301,24 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         /**
          * @brief Constructor
          * @param time      Time at which the event happened
+         * @param source    Pointer event source
          * @param pointer   Pointer type that changed in this event or
          *      @relativeref{Corrade,Containers::NullOpt}
          * @param pointers  Pointer types pressed in this event
+         * @param primary   Whether the pointer is primary
+         * @param id        Pointer ID
          *
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
-         * immediately transitioning to a stopped state. The position, capture
-         * and hover properties are set from @ref AbstractUserInterface event
-         * handler internals.
+         * immediately transitioning to a stopped state. The @p pointer is
+         * expected to match @p source or be
+         * @relativeref{Corrade,Containers::NullOpt}, @p primary is expected to
+         * be @cpp true @ce for @ref PointerEventSource::Mouse and
+         * @ref PointerEventSource::Pen. The position, capture and hover
+         * properties are set from @ref AbstractUserInterface event handler
+         * internals.
          */
-        explicit PointerMoveEvent(Nanoseconds time, Containers::Optional<Pointer> pointer, Pointers pointers);
+        explicit PointerMoveEvent(Nanoseconds time, PointerEventSource source, Containers::Optional<Pointer> pointer, Pointers pointers, bool primary, Long id);
 
         /**
          * @brief Constructor
@@ -237,10 +326,17 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * Meant to be used for testing purposes. The @p relativePosition gets
          * overwritten in @ref AbstractUserInterface event handler internals.
          */
-        explicit PointerMoveEvent(Nanoseconds time, Containers::Optional<Pointer> type, Pointers types, const Vector2& relativePosition);
+        explicit PointerMoveEvent(Nanoseconds time, PointerEventSource source, Containers::Optional<Pointer> type, Pointers types, bool primary, Long id, const Vector2& relativePosition);
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
+
+        /**
+         * @brief Pointer event source
+         *
+         * @see @ref isPrimary(), @ref id()
+         */
+        PointerEventSource source() const { return _source; }
 
         /**
          * @brief Pointer type that was added or removed from the set of pressed pointers
@@ -263,6 +359,29 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         Pointers pointers() const { return _pointers; }
 
         /**
+         * @brief Whether the pointer is primary
+         *
+         * Used to distinguish among multiple pointers in a multi-touch
+         * scenario. Events coming from @ref PointerEventSource::Mouse and
+         * @ref PointerEventSource::Pen are always primary. See
+         * @ref setCaptured() for details about interaction between primary and
+         * non-primary pointer events and pointer capture.
+         * @see @ref source(), @ref id()
+         */
+        bool isPrimary() const { return _primary; }
+
+        /**
+         * @brief Pointer ID
+         *
+         * Used to distinguish among multiple pointers in a multi-touch
+         * scenario. Events coming from @ref PointerEventSource::Mouse and
+         * @ref PointerEventSource::Pen are always primary, although their ID
+         * can differ.
+         * @see @ref source(), @ref isPrimary()
+         */
+        Long id() const { return _id; }
+
+        /**
          * @brief Event position
          *
          * Relative to the containing node.
@@ -272,9 +391,16 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         /**
          * @brief Position relative to previous pointer event
          *
-         * Relative to the previous pointer event. If no pointer event happened
-         * before, is a zero vector. For pointer enter and leave events it's a
-         * zero vector always, as they happen immediately after another event.
+         * Relative to the previous primary pointer event. If no primary
+         * pointer event happened before, is a zero vector. For pointer enter
+         * and leave events it's a zero vector always, as they happen
+         * immediately after another event.
+         *
+         * Non-primary events don't track relative position at the moment and
+         * return a zero vector as well, as it'd mean the implementation would
+         * internally have to track a potentially unbounded number of
+         * independent finger positions.
+         * @see @ref isPrimary()
          */
         Vector2 relativePosition() const { return _relativePosition; }
 
@@ -290,11 +416,11 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         /**
          * @brief Set whether to capture the event on a node
          *
-         * By default, after a pointer press event, a node captures all
-         * following pointer and key events until and including a pointer
-         * release, even if they happen outside of the node area. If capture is
-         * disabled, the events are always sent to the actual node under the
-         * pointer.
+         * By default, after a press event of a primary pointer, a node
+         * captures all following pointer and key events until and including a
+         * release of the primary pointer, even if they happen outside of the
+         * node area. If capture is disabled, the events are always sent to the
+         * actual node under the pointer.
          *
          * The capture can be both disabled and enabled again for all pointer
          * move, enter and leave events, each time it's enabled again it'll
@@ -361,8 +487,11 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
 
         Nanoseconds _time;
         Vector2 _position, _relativePosition;
+        Long _id;
+        PointerEventSource _source;
         Pointer _pointer; /* NullOpt encoded as Pointer{} to avoid an include */
         Pointers _pointers;
+        bool _primary;
         bool _accepted = false;
         bool _captured = false;
         bool _hovering = false;

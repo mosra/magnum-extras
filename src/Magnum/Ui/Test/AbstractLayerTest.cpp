@@ -143,6 +143,7 @@ struct AbstractLayerTest: TestSuite::Tester {
     void pointerEventNotSupported();
     void pointerEventNotImplemented();
     void pointerEventOutOfRange();
+    void pointerEventNotPrimary();
     void pointerEventAlreadyAccepted();
 
     void focusBlurEvent();
@@ -290,6 +291,7 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::pointerEventNotSupported,
               &AbstractLayerTest::pointerEventNotImplemented,
               &AbstractLayerTest::pointerEventOutOfRange,
+              &AbstractLayerTest::pointerEventNotPrimary,
               &AbstractLayerTest::pointerEventAlreadyAccepted,
 
               &AbstractLayerTest::focusBlurEvent,
@@ -3178,22 +3180,22 @@ void AbstractLayerTest::pointerEvent() {
     layer.create();
     layer.create();
     {
-        PointerEvent event{123_nsec, Pointer::MouseLeft};
+        PointerEvent event{123_nsec, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
         layer.pointerPressEvent(1, event);
     } {
-        PointerEvent event{1234_nsec, Pointer::MouseRight};
+        PointerEvent event{1234_nsec, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
         layer.pointerReleaseEvent(2, event);
     } {
-        PointerEvent event{12345_nsec, Pointer::Pen};
+        PointerEvent event{12345_nsec, PointerEventSource::Pen, Pointer::Pen, true, 0};
         layer.pointerTapOrClickEvent(3, event);
     } {
-        PointerMoveEvent event{123456_nsec, Pointer::Finger, {}};
+        PointerMoveEvent event{123456_nsec, PointerEventSource::Touch, Pointer::Finger, {}, true, 0};
         layer.pointerMoveEvent(4, event);
     } {
-        PointerMoveEvent event{1234567_nsec, Pointer::Finger, {}};
+        PointerMoveEvent event{1234567_nsec, PointerEventSource::Touch, Pointer::Finger, {}, true, 0};
         layer.pointerEnterEvent(5, event);
     } {
-        PointerMoveEvent event{12345678_nsec, Pointer::Finger, {}};
+        PointerMoveEvent event{12345678_nsec, PointerEventSource::Touch, Pointer::Finger, {}, true, 0};
         layer.pointerLeaveEvent(6, event);
     }
     CORRADE_COMPARE(layer.called, 2*3*5*7*11*13);
@@ -3208,8 +3210,8 @@ void AbstractLayerTest::pointerEventNotSupported() {
         LayerFeatures doFeatures() const override { return {}; }
     } layer{layerHandle(0, 1)};
 
-    PointerEvent event{{}, Pointer::MouseMiddle};
-    PointerMoveEvent moveEvent{{}, {}, {}};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -3241,8 +3243,8 @@ void AbstractLayerTest::pointerEventNotImplemented() {
 
     layer.create();
 
-    PointerEvent event{{}, Pointer::MouseMiddle};
-    PointerMoveEvent moveEvent{{}, {}, {}};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
     layer.pointerPressEvent(0, event);
     layer.pointerReleaseEvent(0, event);
     layer.pointerTapOrClickEvent(0, event);
@@ -3269,8 +3271,8 @@ void AbstractLayerTest::pointerEventOutOfRange() {
     layer.create();
     layer.create();
 
-    PointerEvent event{{}, Pointer::MouseMiddle};
-    PointerMoveEvent moveEvent{{}, {}, {}};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
 
     std::ostringstream out;
     Error redirectError{&out};
@@ -3290,6 +3292,39 @@ void AbstractLayerTest::pointerEventOutOfRange() {
         TestSuite::Compare::String);
 }
 
+void AbstractLayerTest::pointerEventNotPrimary() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+        using AbstractLayer::create;
+
+        LayerFeatures doFeatures() const override {
+            return LayerFeature::Event;
+        }
+    } layer{layerHandle(0, 1)};
+
+    layer.create();
+
+    PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 0};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Touch, {}, {}, false, 0};
+
+    /* These can be called with non-primary events */
+    layer.pointerPressEvent(0, event);
+    layer.pointerReleaseEvent(0, event);
+    layer.pointerMoveEvent(0, moveEvent);
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.pointerTapOrClickEvent(0, event);
+    layer.pointerEnterEvent(0, moveEvent);
+    layer.pointerLeaveEvent(0, moveEvent);
+    CORRADE_COMPARE(out.str(),
+        "Ui::AbstractLayer::pointerTapOrClickEvent(): event not primary\n"
+        "Ui::AbstractLayer::pointerEnterEvent(): event not primary\n"
+        "Ui::AbstractLayer::pointerLeaveEvent(): event not primary\n");
+}
+
 void AbstractLayerTest::pointerEventAlreadyAccepted() {
     CORRADE_SKIP_IF_NO_ASSERT();
 
@@ -3304,9 +3339,9 @@ void AbstractLayerTest::pointerEventAlreadyAccepted() {
 
     layer.create();
 
-    PointerEvent event{{}, Pointer::MouseMiddle};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
     event.setAccepted();
-    PointerMoveEvent moveEvent{{}, {}, {}};
+    PointerMoveEvent moveEvent{{}, PointerEventSource::Mouse, {}, {}, true, 0};
     moveEvent.setAccepted();
 
     std::ostringstream out;

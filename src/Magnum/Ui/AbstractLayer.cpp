@@ -688,6 +688,8 @@ void AbstractLayer::pointerTapOrClickEvent(const UnsignedInt dataId, PointerEven
     #endif
     CORRADE_ASSERT(dataId < state.data.size(),
         "Ui::AbstractLayer::pointerTapOrClickEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(event.isPrimary(),
+        "Ui::AbstractLayer::pointerTapOrClickEvent(): event not primary", );
     CORRADE_ASSERT(!event.isAccepted(),
         "Ui::AbstractLayer::pointerTapOrClickEvent(): event already accepted", );
     return doPointerTapOrClickEvent(dataId, event);
@@ -718,6 +720,8 @@ void AbstractLayer::pointerEnterEvent(const UnsignedInt dataId, PointerMoveEvent
     #endif
     CORRADE_ASSERT(dataId < state.data.size(),
         "Ui::AbstractLayer::pointerEnterEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(event.isPrimary(),
+        "Ui::AbstractLayer::pointerEnterEvent(): event not primary", );
     CORRADE_ASSERT(!event.isAccepted(),
         "Ui::AbstractLayer::pointerEnterEvent(): event already accepted", );
     /* This isn't triggerable from public code so can be an internal assert,
@@ -736,6 +740,8 @@ void AbstractLayer::pointerLeaveEvent(const UnsignedInt dataId, PointerMoveEvent
     #endif
     CORRADE_ASSERT(dataId < state.data.size(),
         "Ui::AbstractLayer::pointerLeaveEvent(): index" << dataId << "out of range for" << state.data.size() << "data", );
+    CORRADE_ASSERT(event.isPrimary(),
+        "Ui::AbstractLayer::pointerLeaveEvent(): event not primary", );
     CORRADE_ASSERT(!event.isAccepted(),
         "Ui::AbstractLayer::pointerLeaveEvent(): event already accepted", );
     /* This isn't triggerable from public code so can be an internal assert,

@@ -1745,7 +1745,14 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref windowSize(), and is internally scaled to match @ref size()
          * before being set to @ref PointerEvent.
          *
-         * Finds the front-most node under (scaled) @p globalPosition and
+         * If the event is not primary and a node was captured by a previous
+         * @ref pointerPressEvent(), @ref pointerMoveEvent() or a non-primary
+         * @ref pointerReleaseEvent(), calls @ref pointerPressEvent() on all
+         * data attached to that node even if the event happens outside of its
+         * area, with the event position made relative to the node.
+         *
+         * Otherwise, if either the event is primary or no node is captured,
+         * finds the front-most node under (scaled) @p globalPosition and
          * calls @ref AbstractLayer::pointerPressEvent() on all data attached
          * to it belonging to layers that support @ref LayerFeature::Event. If
          * no data accept the event, continues to other nodes under the
@@ -1754,7 +1761,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * regardless of the accept status. For each call the event position is
          * made relative to the node to which given data is attached.
          *
-         * If the press happened with @ref Pointer::MouseLeft,
+         * If the press happened with @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen, the currently focused
          * node is affected as well. If the node the event was accepted on is
          * different from currently focused node (if there's any),
@@ -1762,16 +1769,17 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * that node. Then, if the node has @ref NodeFlag::Focusable set,
          * @ref AbstractLayer::focusEvent() is called on all data attached to
          * it. If any data accept the focus event, the node is treated as
-         * focused and receives all following key events until a
+         * focused and receives all following key events until a primary
          * @ref pointerPressEvent() outside of this node happens or until a
          * different node is made focused using @ref focusEvent(). If the node
          * is not @ref NodeFlag::Focusable or the focus event was not accepted
-         * by any data, the currently focused node is reset. If a press event
-         * happens on a @ref NodeFlag::Focusable node that's already focused,
-         * @ref AbstractLayer::focusEvent() gets called on it again, without
-         * any preceding @ref AbstractLayer::blurEvent(). If that focus event
-         * is not accepted however, the node subsequently receives an
-         * @ref AbstractLayer::blurEvent().
+         * by any data, the currently focused node is reset. If a primary press
+         * event happens on a @ref NodeFlag::Focusable node that's already
+         * focused, @ref AbstractLayer::focusEvent() gets called on it again,
+         * without any preceding @ref AbstractLayer::blurEvent(). If that focus
+         * event is not accepted however, the node subsequently receives an
+         * @ref AbstractLayer::blurEvent(). If the event isn't primary, the
+         * current focused node isn't affected in any way.
          *
          * Returns @cpp true @ce if the press event was accepted by at least
          * one data, @cpp false @ce if it wasn't or there wasn't any visible
@@ -1779,23 +1787,27 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * propagated further. Accept status of the focus and blur events
          * doesn't have any effect on the return value.
          *
-         * The node that accepted the event is remembered and is subsequently
-         * used by @ref pointerReleaseEvent() to emit a
-         * @ref AbstractLayer::pointerTapOrClickEvent(), if the release happens
-         * on it as well. The node that accepted the event also implicitly
-         * captures all further pointer events until and including a
-         * @ref pointerReleaseEvent() even if they happen outside of its area,
-         * unless @ref PointerEvent::setCaptured() is called by the
-         * implementation to disable this behavior. The capture can be also
-         * removed from a later @ref pointerMoveEvent(). Any node that was
-         * already captured when calling this function is ignored.
+         * If the event is primary, the node that accepted the event is
+         * remembered and is subsequently used by @ref pointerReleaseEvent() to
+         * emit a @ref AbstractLayer::pointerTapOrClickEvent(), if a primary
+         * release happens on it as well. The node that accepted the primary
+         * event also implicitly captures all further pointer events until and
+         * including a primary @ref pointerReleaseEvent() even if they happen
+         * outside of its area, unless @ref PointerEvent::setCaptured() is
+         * called by the implementation to disable this behavior. The capture
+         * can be also removed from a later @ref pointerMoveEvent() or a
+         * non-primary @ref pointerReleaseEvent(). Any node that was already
+         * captured when calling this function with a primary event is ignored.
+         * If the event isn't primary, the node isn't rememebered for any
+         * subsequent tap or click event and neither it captures any further
+         * events.
          *
          * If no node accepted the event or there wasn't any visible event
          * handling node at given position, the previously remembered pressed
-         * and captured nodes are reset.
+         * and captured nodes are reset if and only if the event is primary.
          *
          * Expects that the event is not accepted yet.
-         * @see @ref PointerEvent::isAccepted(),
+         * @see @ref PointerEvent::isPrimary(), @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
          *      @ref currentCapturedNode(), @ref currentFocusedNode(),
          *      @ref currentGlobalPointerPosition()
@@ -1823,17 +1835,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref windowSize(), and is internally scaled to match @ref size()
          * before being set to @ref PointerEvent.
          *
-         * If a node was captured by a previous @ref pointerPressEvent() or
-         * @ref pointerMoveEvent(), @ref pointerReleaseEvent() wasn't called
-         * yet and the node wasn't removed since, calls
-         * @ref AbstractLayer::pointerReleaseEvent() on all data attached to
-         * that node even if it happens outside of its area, with the event
-         * position made relative to the node. Returns @cpp true @ce if the
-         * event was accepted by at least one data attached to the captured
-         * node, @cpp false @ce if it wasn't and thus the event should be
-         * propagated further. The capture is implicitly released after
-         * calling this function independently of whether
-         * @ref PointerEvent::setCaptured() was set by the implementation.
+         * If a node was captured by a previous @ref pointerPressEvent(),
+         * @ref pointerMoveEvent() or a non-primary @ref pointerReleaseEvent(),
+         * calls @ref AbstractLayer::pointerReleaseEvent() on all data attached
+         * to that node even if the event happens outside of its area, with the
+         * event position made relative to the node.
          *
          * Otherwise, if a node wasn't captured, finds the front-most node
          * under (scaled) @p globalPosition and calls
@@ -1843,19 +1849,29 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * in a front-to-back order and then to parent nodes. For each such
          * node, the event is always called on all attached data, regardless of
          * the accept status. For each call the event position is made relative
-         * to the node to which given data is attached. Returns @cpp true @ce
-         * if the event was accepted by at least one data, @cpp false @ce if it
-         * wasn't or there wasn't any visible event handling node at given
-         * position and thus the event should be propagated further.
+         * to the node to which given data is attached.
+         *
+         * If the event is primary and a node is captured, the capture is
+         * implicitly released after calling this function independently of
+         * whether @ref PointerEvent::setCaptured() was set by the
+         * implementation. If the event isn't primary, the current captured
+         * node isn't affected by default, but the implementation can both
+         * release the existing capture or make the containing node capture
+         * future events by setting @ref PointerEvent::setCaptured().
+         *
+         * Returns @cpp true @ce if the event was accepted by at least one
+         * data, @cpp false @ce if it wasn't or there wasn't any visible event
+         * handling node at given position and thus the event should be
+         * propagated further.
          *
          * If the node that accepted the event is the same as the node on which
-         * a previous @ref pointerPressEvent() happened and the pointer was
-         * either captured or didn't leave the node area since, calls also
-         * @ref AbstractLayer::pointerTapOrClickEvent() on all data attached to
-         * it.
+         * a previous @ref pointerPressEvent() happened, the event is primary
+         * and the pointer was either captured or didn't leave the node area
+         * since, calls also @ref AbstractLayer::pointerTapOrClickEvent() on
+         * all data attached to it.
          *
          * Expects that the event is not accepted yet.
-         * @see @ref PointerEvent::isAccepted(),
+         * @see @ref PointerEvent::isPrimary(), @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
          *      @ref currentCapturedNode(), @ref currentGlobalPointerPosition()
          */
@@ -1887,23 +1903,26 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * yet and the node wasn't removed since, calls
          * @ref AbstractLayer::pointerMoveEvent() on all data attached to that
          * node even if it happens outside of its area, with the event position
-         * made relative to the node. If the move event happened inside the
-         * node area and is accepted by at least one data, the node is treated
-         * as hovered, otherwise as not hovered. An
+         * made relative to the node. If the move event is primary, happened
+         * inside the node area and is accepted by at least one data, the node
+         * is treated as hovered, otherwise as not hovered. An
          * @ref AbstractLayer::pointerEnterEvent() or
          * @relativeref{AbstractLayer,pointerLeaveEvent()} is then called for
          * all data attached to the captured node if the node hover status
          * changed with the same @p event except for
          * @ref PointerMoveEvent::relativePosition() which is reset to a zero
          * vector. No corresponding leave / enter event is called for any other
-         * node in this case. Returns @cpp true @ce if the move event was
-         * accepted by at least one data attached to the captured node,
-         * @cpp false @ce if it wasn't and thus the event should be propagated
-         * further; accept status of the enter and leave events is ignored. If
-         * the move, enter or leave event implementations called
+         * node in this case. If the move event isn't primary, the current
+         * hovered node isn't affected in any way. Returns @cpp true @ce if the
+         * move event was accepted by at least one data attached to the
+         * captured node, @cpp false @ce if it wasn't and thus the event should
+         * be propagated further; accept status of the enter and leave events
+         * is ignored. If the move, enter or leave event implementations called
          * @ref PointerMoveEvent::setCaptured() resulting in it being
-         * @cpp false @ce regardless of their accept status, the capture is
-         * released after this function, otherwise it stays unchanged.
+         * @cpp false @ce, the capture is released after this function,
+         * otherwise it stays unchanged. For primary events the capture reset
+         * is performed regardless of the event accept status, for non-primary
+         * events only if they're accepted.
          *
          * Otherwise, if a node wasn't captured, finds the front-most node
          * under (scaled) @p globalPosition and calls
@@ -1912,11 +1931,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * no data accept the event, continues to other nodes under the
          * position in a front-to-back order and then to parent nodes. For each
          * such node, the event is always called on all attached data,
-         * regardless of the accept status. The node on which the data accepted
-         * the event is then treated as hovered; if no data accepted the event,
-         * there's no hovered node. For each call the event position is made
-         * relative to the node to which given data is attached. If the
-         * currently hovered node changed, an
+         * regardless of the accept status. If the move event is primary, the
+         * node on which the data accepted the event is then treated as
+         * hovered; if no data accepted the event, there's no hovered node. For
+         * each call the event position is made relative to the node to which
+         * given data is attached. If the currently hovered node changed, an
          * @ref AbstractLayer::pointerLeaveEvent() is then called for all data
          * attached to a previously hovered node if it exists, and then a
          * corresponding @ref AbstractLayer::pointerEnterEvent() is called for
@@ -1925,18 +1944,19 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref PointerMoveEvent::position() which is made relative to the
          * particular node it's called on and
          * @ref PointerMoveEvent::relativePosition() which is reset to a zero
-         * vector. Returns @cpp true @ce if the event was accepted by at least
-         * one data, @cpp false @ce if it wasn't or there wasn't any visible
-         * event handling node at given position and thus the event should be
-         * propagated further; accept status of the enter and leave events is
-         * ignored. If any accepted move event or any enter event called
-         * @ref PointerMoveEvent::setCaptured() resulting in it being
-         * @cpp true @ce, the containing node implicitly captures all further
-         * pointer events until and including a @ref pointerReleaseEvent() even
-         * if they happen outside of its area, or until the capture is released
-         * in a @ref pointerMoveEvent() again. Calling
-         * @ref PointerMoveEvent::setCaptured() in the leave event has no
-         * effect in this case.
+         * vector. If the move event isn't primary, the current hovered node
+         * isn't affected in any way. Returns @cpp true @ce if the event was
+         * accepted by at least one data, @cpp false @ce if it wasn't or there
+         * wasn't any visible event handling node at given position and thus
+         * the event should be propagated further; accept status of the enter
+         * and leave events is ignored. If any accepted move event or any enter
+         * event called @ref PointerMoveEvent::setCaptured() resulting in it
+         * being @cpp true @ce, the containing node implicitly captures all
+         * further pointer events until and including a
+         * @ref pointerReleaseEvent() even if they happen outside of its area,
+         * or until the capture is released in a @ref pointerMoveEvent() again.
+         * Calling @ref PointerMoveEvent::setCaptured() in the leave event has
+         * no effect in this case.
          *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
@@ -2226,10 +2246,13 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Position of last pointer event
          *
-         * Returns a position passed to the last @ref pointerPressEvent(),
-         * @ref pointerReleaseEvent() or @ref pointerMoveEvent(), scaled to
-         * match @ref size() instead of @ref windowSize(). If no pointer event
-         * happened yet, returns @relativeref{Corrade,Containers::NullOpt}.
+         * Returns a position passed to the last primary
+         * @ref pointerPressEvent(), @ref pointerReleaseEvent() or
+         * @ref pointerMoveEvent(), scaled to match @ref size() instead of
+         * @ref windowSize(). If no primary pointer event happened yet, returns
+         * @relativeref{Corrade,Containers::NullOpt}.
+         * @see @ref PointerEvent::isPrimary(),
+         *      @ref PointerMoveEvent::isPrimary()
          */
         Containers::Optional<Vector2> currentGlobalPointerPosition() const;
 

@@ -714,10 +714,11 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
          * with the assumption that the ID points to a valid data and
          * @ref PointerEvent::position() is relative to the node to which the
-         * data is attached. The event is expected to not be accepted yet.
-         * Delegates to @ref doPointerTapOrClickEvent(), see its documentation
-         * for more information.
-         * @see @ref PointerEvent::isAccepted(),
+         * data is attached. The event is expected to be primary and to not be
+         * accepted yet. Delegates to @ref doPointerTapOrClickEvent(), see its
+         * documentation for more information.
+         * @see @ref PointerEvent::isPrimary(),
+         *      @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted()
          */
         void pointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event);
@@ -750,10 +751,11 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref PointerMoveEvent::position() is relative to the node to which
          * the data is attached, and @ref PointerMoveEvent::relativePosition()
          * is a zero vector, given that the event is meant to happen right
-         * after another event. The event is expected to not be accepted yet.
-         * Delegates to @ref doPointerEnterEvent(), see its documentation for
-         * more information.
-         * @see @ref PointerMoveEvent::isAccepted(),
+         * after another event. The event is expected to be primary and to not
+         * be accepted yet. Delegates to @ref doPointerEnterEvent(), see its
+         * documentation for more information.
+         * @see @ref PointerMoveEvent::isPrimary(),
+         *      @ref PointerMoveEvent::isAccepted(),
          *      @ref PointerMoveEvent::setAccepted()
          */
         void pointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event);
@@ -769,10 +771,11 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref PointerMoveEvent::position() is relative to the node to which
          * the data is attached, and @ref PointerMoveEvent::relativePosition()
          * is a zero vector, given that the event is meant to happen right
-         * after another event. The event is expected to not be accepted yet.
-         * Delegates to @ref doPointerLeaveEvent(), see its documentation for
-         * more information.
-         * @see @ref PointerMoveEvent::isAccepted(),
+         * after another event. The event is expected to be primary and to not
+         * be accepted yet. Delegates to @ref doPointerLeaveEvent(), see its
+         * documentation for more information.
+         * @see @ref PointerMoveEvent::isPrimary(),
+         *      @ref PointerMoveEvent::isAccepted(),
          *      @ref PointerMoveEvent::setAccepted()
          */
         void pointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
@@ -1339,11 +1342,14 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *
          * If the implementation handles the event, it's expected to call
          * @ref PointerEvent::setAccepted() on it to prevent it from being
-         * propagated further. To disable implicit pointer event capture, call
-         * @ref PointerEvent::setCaptured().
+         * propagated further. If the event is primary, pointer capture is
+         * implicitly performed on a node that accepts this event. Call
+         * @ref PointerEvent::setCaptured() to disable it or to adjust the
+         * behavior in case of a non-primary event.
          *
          * Default implementation does nothing, i.e. the @p event gets
          * implicitly propagated further.
+         * @see @ref PointerEvent::isPrimary()
          */
         virtual void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event);
 
@@ -1364,9 +1370,10 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *
          * If the implementation handles the event, it's expected to call
          * @ref PointerEvent::setAccepted() on it to prevent
-         * it from being propagated further. Pointer capture is implicitly
-         * released after this event, thus calling
-         * @ref PointerEvent::setCaptured() has no effect.
+         * it from being propagated further. If the event is primary, pointer
+         * capture is implicitly released after, thus calling
+         * @ref PointerEvent::setCaptured() only has an effect for non-primary
+         * events.
          *
          * @m_class{m-note m-info}
          *
@@ -1378,6 +1385,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *
          * Default implementation does nothing, i.e. the @p event gets
          * implicitly propagated further.
+         * @see @ref PointerEvent::isPrimary()
          */
         virtual void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event);
 
@@ -1394,7 +1402,8 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * from @ref AbstractUserInterface::pointerReleaseEvent(). See its
          * documentation for more information about pointer event behavior,
          * especially event capture. It's guaranteed that @ref doUpdate() was
-         * called before this function with up-to-date data for @p dataId.
+         * called before this function with up-to-date data for @p dataId,
+         * the @p event is guaranteed to be always primary.
          *
          * Unlike @ref doPointerReleaseEvent(), the accept status is ignored
          * for this event, as the event isn't propagated anywhere if it's not
@@ -1403,6 +1412,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * thus calling @ref PointerEvent::setCaptured() has no effect either.
          *
          * Default implementation does nothing.
+         * @see @ref PointerEvent::isPrimary()
          */
         virtual void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event);
 
@@ -1430,7 +1440,9 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *
          * Default implementation does nothing, i.e. the @p event gets
          * implicitly propagated further. That also implies the node is never
-         * marked as hovered and enter / leave events are not emitted for it.
+         * marked as hovered for primary events and enter / leave events are
+         * not emitted for it.
+         * @see @ref PointerMoveEvent::isPrimary()
          */
         virtual void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
@@ -1449,7 +1461,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * documentation for more information about relation of pointer
          * enter/leave events to @ref doPointerMoveEvent(). It's guaranteed
          * that @ref doUpdate() was called before this function with up-to-date
-         * data for @p dataId.
+         * data for @p dataId, the @p event is guaranteed to be always primary.
          *
          * Unlike @ref doPointerMoveEvent(), the accept status is ignored for
          * enter and leave events, as the event isn't propagated anywhere if
@@ -1459,6 +1471,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref PointerMoveEvent::setCaptured() here as well.
          *
          * Default implementation does nothing.
+         * @see @ref PointerMoveEvent::isPrimary()
          */
         virtual void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event);
 
@@ -1477,7 +1490,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * documentation for more information about relation of pointer
          * enter/leave events to @ref doPointerMoveEvent(). It's guaranteed
          * that @ref doUpdate() was called before this function with up-to-date
-         * data for @p dataId.
+         * data for @p dataId, the @p event is guaranteed to be always primary.
          *
          * Unlike @ref doPointerMoveEvent(), the accept status is ignored for
          * enter and leave events, as the event isn't propagated anywhere if
@@ -1495,6 +1508,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *      its documentation for details about differences in semantics.
          *
          * Default implementation does nothing.
+         * @see @ref PointerMoveEvent::isPrimary()
          */
         virtual void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event);
 

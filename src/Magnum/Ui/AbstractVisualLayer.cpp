@@ -358,10 +358,11 @@ UnsignedInt AbstractVisualLayer::styleOrAnimationTargetStyle(const UnsignedInt s
 }
 
 void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
-    /* Only reacting to pointer types typically used to click/tap on things */
-    if(event.pointer() != Pointer::MouseLeft &&
-       event.pointer() != Pointer::Finger &&
-       event.pointer() != Pointer::Pen)
+    /* Only reacting to primary pointer types typically used to click/tap on
+       things */
+    if(!event.isPrimary() || (event.pointer() != Pointer::MouseLeft &&
+                              event.pointer() != Pointer::Finger &&
+                              event.pointer() != Pointer::Pen))
         return;
 
     const State& state = *_state;
@@ -399,10 +400,11 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
 }
 
 void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
-    /* Only reacting to pointer types typically used to click/tap on things */
-    if(event.pointer() != Pointer::MouseLeft &&
-       event.pointer() != Pointer::Finger &&
-       event.pointer() != Pointer::Pen)
+    /* Only reacting to primary pointer types typically used to click/tap on
+       things */
+    if(!event.isPrimary() || (event.pointer() != Pointer::MouseLeft &&
+                              event.pointer() != Pointer::Finger &&
+                              event.pointer() != Pointer::Pen))
         return;
 
     const State& state = *_state;
@@ -443,6 +445,10 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
 }
 
 void AbstractVisualLayer::doPointerMoveEvent(UnsignedInt, PointerMoveEvent& event) {
+    /* Only reacting to primary pointer types */
+    if(!event.isPrimary())
+        return;
+
     /* In order to have Enter/Leave emitted as well */
     event.setAccepted();
 }

@@ -2572,7 +2572,7 @@ void BaseLayerGLTest::eventStyleTransition() {
 
     _framebuffer.clear(GL::FramebufferClear::Color);
 
-    PointerEvent event{{}, Pointer::MouseLeft};
+    PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
     CORRADE_VERIFY(ui.pointerPressEvent({64.0f, 24.0f}, event));
     CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataUpdate);
 

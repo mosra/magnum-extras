@@ -28,9 +28,26 @@
 
 #include <Corrade/Containers/EnumSet.hpp>
 #include <Corrade/Containers/Optional.h>
+#include <Corrade/Utility/Assert.h>
 #include <Corrade/Utility/Debug.h>
 
 namespace Magnum { namespace Ui {
+
+Debug& operator<<(Debug& debug, const PointerEventSource value) {
+    debug << "Ui::PointerEventSource" << Debug::nospace;
+
+    switch(value) {
+        /* LCOV_EXCL_START */
+        #define _c(value) case PointerEventSource::value: return debug << "::" #value;
+        _c(Mouse)
+        _c(Touch)
+        _c(Pen)
+        #undef _c
+        /* LCOV_EXCL_STOP */
+    }
+
+    return debug << "(" << Debug::nospace << Debug::hex << UnsignedByte(value) << Debug::nospace << ")";
+}
 
 Debug& operator<<(Debug& debug, const Pointer value) {
     debug << "Ui::Pointer" << Debug::nospace;
@@ -62,9 +79,30 @@ Debug& operator<<(Debug& debug, const Pointers value) {
     });
 }
 
-PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const Containers::Optional<Pointer> pointer, const Pointers pointers): PointerMoveEvent{time, pointer, pointers, {}} {}
+PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource source, const Pointer pointer, const bool primary, const Long id): _time{time}, _id{id}, _source{source}, _pointer{pointer}, _primary{primary} {
+    CORRADE_ASSERT(
+        (source == PointerEventSource::Mouse && (pointer == Pointer::MouseLeft || pointer == Pointer::MouseMiddle || pointer == Pointer::MouseRight)) ||
+        (source == PointerEventSource::Touch && pointer == Pointer::Finger) ||
+        (source == PointerEventSource::Pen && (pointer == Pointer::Pen || pointer == Pointer::Eraser)),
+        "Ui::PointerEvent: invalid combination of" << source << "and" << pointer, );
+    CORRADE_ASSERT(primary || source == PointerEventSource::Touch,
+        "Ui::PointerEvent:" << source << "events are expected to be primary", );
+}
 
-PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const Containers::Optional<Pointer> pointer, const Pointers pointers, const Vector2& relativePosition): _time{time}, _relativePosition{relativePosition}, _pointer{pointer ? *pointer : Pointer{}}, _pointers{pointers} {}
+PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id): PointerMoveEvent{time, source, pointer, pointers, primary, id, {}} {}
+
+PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id, const Vector2& relativePosition): _time{time}, _relativePosition{relativePosition}, _id{id}, _source{source}, _pointer{pointer ? *pointer : Pointer{}}, _pointers{pointers}, _primary{primary} {
+    /* OTOH, pointers can be just anything -- e.g.., it's possible to move a
+       mouse while a finger or a pen is pressed, and such event will have mouse
+       as a source */
+    CORRADE_ASSERT(!pointer ||
+        (source == PointerEventSource::Mouse && (pointer == Pointer::MouseLeft || pointer == Pointer::MouseMiddle || pointer == Pointer::MouseRight)) ||
+        (source == PointerEventSource::Touch && pointer == Pointer::Finger) ||
+        (source == PointerEventSource::Pen && (pointer == Pointer::Pen || pointer == Pointer::Eraser)),
+        "Ui::PointerMoveEvent: invalid combination of" << source << "and" << pointer, );
+    CORRADE_ASSERT(primary || source == PointerEventSource::Touch,
+        "Ui::PointerMoveEvent:" << source << "events are expected to be primary", );
+}
 
 Containers::Optional<Pointer> PointerMoveEvent::pointer() const {
     return _pointer == Pointer{} ? Containers::NullOpt : Containers::optional(_pointer);

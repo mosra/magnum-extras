@@ -3594,48 +3594,88 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
 
     State& state = *_state;
 
-    /* Press event has isCaptured() set always. Can have isHovering() set if
-       it ends up being called on the currently hovered node. */
-    event._captured = true;
-    event._hovering = true;
-
     /* This will be invalid if setSize() wasn't called yet, but callEvent() has
        a call to update() inside which will then assert */
     const Vector2 globalPositionScaled = globalPosition*state.size/state.windowSize;
 
-    const NodeHandle called = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, event);
+    /* If this is a non-primary event and there's a node capturing pointer
+       events, call the event on it directly. Given that update() was called,
+       it should be either null or valid. */
+    bool pressAcceptedByAnyData;
+    NodeHandle primaryPressCalledOnNode = NodeHandle::Null;
+    if(!event.isPrimary() && state.currentCapturedNode != NodeHandle::Null) {
+        CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentCapturedNode));
 
-    /* If the event was accepted by any node and capture is desired, remember
-       the concrete node for it. Otherwise reset the captured node. */
-    if(called != NodeHandle::Null && event._captured)
-        state.currentCapturedNode = called;
-    else
-        state.currentCapturedNode = NodeHandle::Null;
+        const UnsignedInt capturedNodeId = nodeHandleId(state.currentCapturedNode);
+        const Vector2 capturedNodeMin = state.absoluteNodeOffsets[capturedNodeId];
+        const Vector2 capturedNodeMax = capturedNodeMin + state.nodeSizes[capturedNodeId];
+        const bool insideCapturedNode = (globalPositionScaled >= capturedNodeMin).all() && (globalPositionScaled < capturedNodeMax).all();
 
-    /* Remember the node that accepted the event for potential future tap or
-       click event. If no node accepted it, called is null, and the current
-       pressed node gets reset. */
-    state.currentPressedNode = called;
+        /* Called on a captured node, so isCaptured() should be true,
+           isHovering() can be true if it's inside it */
+        event._captured = true;
+        event._hovering = insideCapturedNode;
 
-    /* Update the last relative position with this one */
-    /** @todo update this before calling any event functions so the event
-        handlers can rely on this information being up to date if needed */
-    state.currentGlobalPointerPosition = globalPositionScaled;
+        pressAcceptedByAnyData = callEventOnNode<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, nodeHandleId(state.currentCapturedNode), event);
 
-    /* If the press happened with a primary pointer, deal with focus. With
-       other pointer types nothing gets focused but also they don't blur
-       anything. */
-    if(event.pointer() == Pointer::MouseLeft ||
-       event.pointer() == Pointer::Finger ||
-       event.pointer() == Pointer::Pen)
+        /* If the event was accepted and capture was removed, reset the
+           captured node. Otherwise it stays as it was. */
+        if(pressAcceptedByAnyData && !event._captured)
+            state.currentCapturedNode = NodeHandle::Null;
+
+    /* Otherwise, if this is either a primary event (which changes the capture)
+       or there's no capture, do the usual hit testing etc. */
+    } else {
+        /* A primary press event has isCaptured() set always. Non-primary
+           doesn't by default, but the implementation can enable it. */
+        event._captured = event.isPrimary();
+        /* Can have isHovering() set if it ends up being called on the
+           currently hovered node. */
+        event._hovering = true;
+
+        const NodeHandle calledNode = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, event);
+        pressAcceptedByAnyData = calledNode != NodeHandle::Null;
+        if(event.isPrimary())
+            primaryPressCalledOnNode = calledNode;
+
+        /* If the event was accepted by any node and capture is desired,
+           remember the concrete node for it. Otherwise the event was either
+           not accepted at all (or there wasn't any node to call it on) or the
+           capture was explicitly removed, clear the capture in that case. */
+        if(calledNode != NodeHandle::Null && event._captured)
+            state.currentCapturedNode = calledNode;
+        else
+            state.currentCapturedNode = NodeHandle::Null;
+    }
+
+    /* If the event is primary, it affects current pressed node and current
+       pointer position and focus */
+    if(event.isPrimary()) {
+        /* Remember the node that accepted the event for potential future tap
+           or click event. If no node accepted it, primaryPressCalledOnNode is
+           null, and the current pressed node gets reset. */
+        state.currentPressedNode = primaryPressCalledOnNode;
+
+        /* Update the last relative position with this one */
+        /** @todo update this before calling any event functions so the event
+            handlers can rely on this information being up to date if needed */
+        state.currentGlobalPointerPosition = globalPositionScaled;
+    }
+
+    /* If the press happened with a "default" pointer and a primary event, deal
+       with focus. With other pointer types and secondary events nothing gets
+       focused  but also they don't blur anything. */
+    if(event.isPrimary() && (event.pointer() == Pointer::MouseLeft ||
+                             event.pointer() == Pointer::Finger ||
+                             event.pointer() == Pointer::Pen))
     {
         /* Call a focus event if the press was accepted and on a node that's
            focusable */
         const NodeHandle nodeToFocus =
-            called != NodeHandle::Null &&
-            state.nodes[nodeHandleId(called)].used.flags >= NodeFlag::Focusable &&
-            state.visibleEventNodeMask[nodeHandleId(called)] ?
-                called : NodeHandle::Null;
+            primaryPressCalledOnNode != NodeHandle::Null &&
+            state.nodes[nodeHandleId(primaryPressCalledOnNode)].used.flags >= NodeFlag::Focusable &&
+            state.visibleEventNodeMask[nodeHandleId(primaryPressCalledOnNode)] ?
+                primaryPressCalledOnNode : NodeHandle::Null;
 
         /* If the node to be focused is different from the currently focused
            one, call a blur event on the original, if there's any. */
@@ -3661,7 +3701,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
         } else state.currentFocusedNode = NodeHandle::Null;
     }
 
-    return called != NodeHandle::Null;
+    return pressAcceptedByAnyData;
 }
 
 bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, PointerEvent& event) {
@@ -3679,6 +3719,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
        directly. Given that update() was called, it should be either null or
        valid. */
     bool releaseAcceptedByAnyData;
+    NodeHandle calledNode;
     NodeHandle callTapOrClickOnNode = NodeHandle::Null;
     if(state.currentCapturedNode != NodeHandle::Null) {
         CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentCapturedNode));
@@ -3696,13 +3737,14 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         event._hovering = insideCapturedNode;
 
         releaseAcceptedByAnyData = callEventOnNode<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPositionScaled, nodeHandleId(state.currentCapturedNode), event);
+        calledNode = releaseAcceptedByAnyData ? state.currentCapturedNode : NodeHandle::Null;
 
         /* Call tap or click event if the release happened inside the captured
            node area and was accepted (i.e., it wasn't outside of the *actual*
            active area), and the node release was called on is the same as node
            the press was called on (because, e.g., something could disable and re-enable capture in the middle of a move, changing the captured
            node to something else, or the captured node ) */
-        if(insideCapturedNode && releaseAcceptedByAnyData && state.currentPressedNode == state.currentCapturedNode)
+        if(event.isPrimary() && insideCapturedNode && releaseAcceptedByAnyData && state.currentPressedNode == state.currentCapturedNode)
             callTapOrClickOnNode = state.currentPressedNode;
 
     /* Otherwise the usual hit testing etc. */
@@ -3712,7 +3754,7 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         event._captured = false;
         event._hovering = true;
 
-        const NodeHandle calledNode = callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPositionScaled, event);
+        calledNode = callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPositionScaled, event);
         releaseAcceptedByAnyData = calledNode != NodeHandle::Null;
 
         /* Call tap or click event if the release was accepted (i.e., it wasn't
@@ -3720,14 +3762,16 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
            area of the originally pressed node and the node the release was
            called on the same node as the original press (i.e.., it didn't
            happen on some child node inside of the originally pressed node) */
-        if(releaseAcceptedByAnyData && state.currentPressedNode != NodeHandle::Null && state.currentPressedNode == calledNode)
+        if(event.isPrimary() && releaseAcceptedByAnyData && state.currentPressedNode != NodeHandle::Null && state.currentPressedNode == calledNode)
             callTapOrClickOnNode = state.currentPressedNode;
     }
 
-    /* After a release, there should be no pressed node anymore. Do it before
-       calling the pointerTapOrClickEvent() so if anything accesses the
-       currentPressedNode() from there, it's not stale. */
-    state.currentPressedNode = NodeHandle::Null;
+    /* After a release that's a primary event, there should be no pressed node
+       anymore. Do it before calling the pointerTapOrClickEvent() so if
+       anything accesses the currentPressedNode() from there, it's not
+       stale. */
+    if(event.isPrimary())
+        state.currentPressedNode = NodeHandle::Null;
 
     /* Emit a TapOrClick event if needed. Reusing the same event instance, just
        resetting the accept status. Both the accept and the capture status is
@@ -3745,15 +3789,25 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         callEventOnNode<PointerEvent, &AbstractLayer::pointerTapOrClickEvent>(globalPositionScaled, nodeHandleId(callTapOrClickOnNode), event);
     }
 
-    /* After a release and a tap or click, there should be no captured node
-       anymore either. Not resetting it before tap or click as there it still
-       should be set if event._captured is set. */
-    state.currentCapturedNode = NodeHandle::Null;
-
-    /* Update the last relative position with this one */
+    /* Update the last relative position with this one if it's a primary
+       event */
     /** @todo update this before calling any event functions so the event
         handlers can rely on this information being up to date if needed */
-    state.currentGlobalPointerPosition = globalPositionScaled;
+    if(event.isPrimary())
+        state.currentGlobalPointerPosition = globalPositionScaled;
+
+    /* After a release and a tap or click coming from a primary event, there
+       should be no captured node anymore either. Not resetting it before tap
+       or click as there it still should be set if event._captured is set. */
+    if(event.isPrimary()) {
+        state.currentCapturedNode = NodeHandle::Null;
+
+     /* If the event isn't primary, the event -- if accepted -- is allowed to
+        change the capture state both directions, similarly as in the press
+        event. */
+    } else if(calledNode != NodeHandle::Null) {
+        state.currentCapturedNode = event._captured ? calledNode : NodeHandle::Null;
+    }
 
     return releaseAcceptedByAnyData;
 }
@@ -3771,8 +3825,12 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
 
     /* Fill in position relative to the previous event, if there was any. Since
        the value is event-relative and not node-relative, it doesn't need any
-       further updates in the callEvent() code. */
-    event._relativePosition = state.currentGlobalPointerPosition ?
+       further updates in the callEvent() code.
+
+       This is currently done just for primary events, as the library would
+       need to track the position for an arbitrary number of secondary touches
+       otherwise. */
+    event._relativePosition = event.isPrimary() && state.currentGlobalPointerPosition ?
         globalPositionScaled - *state.currentGlobalPointerPosition : Vector2{};
 
     /* If there's a node capturing pointer events, call the event on it
@@ -3794,10 +3852,13 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         event._captured = true;
         event._hovering = insideNodeArea;
 
-        /* It should be possible to reset the capture in this event
+        /* For a primary event, it should be possible to reset the capture
            independently of whether it's accepted or not (for example if
-           outside of some acceptable bounds for a capture) */
-        moveAcceptedByAnyData = callEventOnNode<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(globalPositionScaled, nodeHandleId(state.currentCapturedNode), event, /*rememberCaptureOnUnaccepted*/ true);
+           outside of some acceptable bounds for a capture). Leave non-primary
+           events without such capability for simplicity. */
+        /** @todo any use case for a non-primary non-accepted event to reset
+            the capture? it should just accept in that case, why not */
+        moveAcceptedByAnyData = callEventOnNode<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(globalPositionScaled, nodeHandleId(state.currentCapturedNode), event, /*rememberCaptureOnUnaccepted*/ event.isPrimary());
         calledNode = state.currentCapturedNode;
 
     /* Otherwise the usual hit testing etc. */
@@ -3815,53 +3876,57 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
     }
 
     /* Decide about currently hovered node and whether to call Enter / Leave.
-       If the move event was called on a captured node ... */
+       Non-primary events don't affect hover and thus never cause Enter / Leave
+       to be called. */
     NodeHandle callLeaveOnNode = NodeHandle::Null;
     NodeHandle callEnterOnNode = NodeHandle::Null;
-    if(state.currentCapturedNode != NodeHandle::Null) {
-        CORRADE_INTERNAL_ASSERT(calledNode == state.currentCapturedNode);
+    if(event.isPrimary()) {
+        /* If the move event was called on a captured node ... */
+        if(state.currentCapturedNode != NodeHandle::Null) {
+            CORRADE_INTERNAL_ASSERT(calledNode == state.currentCapturedNode);
 
-        /* Call Leave if the captured node was previously hovered and the
-           pointer is now outside or was not accepted */
-        if(state.currentHoveredNode == calledNode && (!insideNodeArea || !moveAcceptedByAnyData)) {
-            callLeaveOnNode = calledNode;
-        /* Leave also if some other node was previously hovered */
-        } else if(state.currentHoveredNode != NodeHandle::Null &&
-                  state.currentHoveredNode != calledNode) {
-            CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentHoveredNode));
-            callLeaveOnNode = state.currentHoveredNode;
-        }
+            /* Call Leave if the captured node was previously hovered and the
+               pointer is now outside or was not accepted */
+            if(state.currentHoveredNode == calledNode && (!insideNodeArea || !moveAcceptedByAnyData)) {
+                callLeaveOnNode = calledNode;
+            /* Leave also if some other node was previously hovered */
+            } else if(state.currentHoveredNode != NodeHandle::Null &&
+                      state.currentHoveredNode != calledNode) {
+                CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentHoveredNode));
+                callLeaveOnNode = state.currentHoveredNode;
+            }
 
-        /* Call Enter if the captured node wasn't previously hovered and the
-           pointer is now inside and was accepted. Calls Enter also in case
-           some other node was previously hovered. */
-        if(state.currentHoveredNode != calledNode && (insideNodeArea && moveAcceptedByAnyData)) {
-            callEnterOnNode = calledNode;
-        }
+            /* Call Enter if the captured node wasn't previously hovered and
+               the pointer is now inside and was accepted. Calls Enter also in
+               case some other node was previously hovered. */
+            if(state.currentHoveredNode != calledNode && (insideNodeArea && moveAcceptedByAnyData)) {
+                callEnterOnNode = calledNode;
+            }
 
-        /* The now-hovered node is the captured node if the pointer was inside
-           and the event was accepted */
-        if(insideNodeArea && moveAcceptedByAnyData) {
+            /* The now-hovered node is the captured node if the pointer was
+               inside and the event was accepted */
+            if(insideNodeArea && moveAcceptedByAnyData) {
+                state.currentHoveredNode = calledNode;
+            } else {
+                state.currentHoveredNode = NodeHandle::Null;
+            }
+
+        /* Otherwise, call Enter / Leave event if the move event was called on a
+           node that's different from the previously hovered */
+        } else if(state.currentHoveredNode != calledNode) {
+            /* Leave if the previously hovered node isn't null */
+            if(state.currentHoveredNode != NodeHandle::Null) {
+                CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentHoveredNode));
+                callLeaveOnNode = state.currentHoveredNode;
+            }
+            /* Enter if the current node isn't null */
+            if(calledNode != NodeHandle::Null) {
+                callEnterOnNode = calledNode;
+            }
+
+            /* The now-hovered node is the one that accepted the move event */
             state.currentHoveredNode = calledNode;
-        } else {
-            state.currentHoveredNode = NodeHandle::Null;
         }
-
-    /* Otherwise, call Enter / Leave event if the move event was called on a
-       node that's different from the previously hovered */
-    } else if(state.currentHoveredNode != calledNode) {
-        /* Leave if the previously hovered node isn't null */
-        if(state.currentHoveredNode != NodeHandle::Null) {
-            CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentHoveredNode));
-            callLeaveOnNode = state.currentHoveredNode;
-        }
-        /* Enter if the current node isn't null */
-        if(calledNode != NodeHandle::Null) {
-            callEnterOnNode = calledNode;
-        }
-
-        /* The now-hovered node is the one that accepted the move event */
-        state.currentHoveredNode = calledNode;
     }
 
     /* Emit a Leave event if needed. Reusing the same event instance, just
@@ -3934,20 +3999,25 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         state.currentCapturedNode = NodeHandle::Null;
     }
 
-    /* If pointer capture is not active (either it wasn't at all, or the move
-       reset it), currentPressedNode gets reset if the event happened on a
-       different node, happened outside of a (previously captured) node area or
-       was not accepted by any data (i.e., it's outside of node active area).
-       If pointer capture is active, it's not changed in any way in order to
-       make it possible for the pointer to return to the node area and then
-       perform a release, resulting in a tap or click. */
-    if(state.currentCapturedNode == NodeHandle::Null && (calledNode != state.currentPressedNode || !insideNodeArea || !moveAcceptedByAnyData))
-        state.currentPressedNode = NodeHandle::Null;
+    /* Non-primary events don't affect the current pressed node or current
+       pointer position state */
+    if(event.isPrimary()) {
+        /* If pointer capture is not active (either it wasn't at all, or the
+           move reset it), currentPressedNode gets reset if the event happened
+           on a different node, happened outside of a (previously captured)
+           node area or was not accepted by any data (i.e., it's outside of
+           node active area). If pointer capture is active, it's not changed in
+           any way in order to make it possible for the pointer to return to
+           the node area and then perform a release, resulting in a tap or
+           click. */
+        if(event.isPrimary() && state.currentCapturedNode == NodeHandle::Null && (calledNode != state.currentPressedNode || !insideNodeArea || !moveAcceptedByAnyData))
+            state.currentPressedNode = NodeHandle::Null;
 
-    /* Update the last relative position with this one */
-    /** @todo update this before calling any event functions so the event
-        handlers can rely on this information being up to date if needed */
-    state.currentGlobalPointerPosition = globalPositionScaled;
+        /* Update the last relative position with this one */
+        /** @todo update this before calling any event functions so the event
+            handlers can rely on this information being up to date if needed */
+        state.currentGlobalPointerPosition = globalPositionScaled;
+    }
 
     return moveAcceptedByAnyData;
 }

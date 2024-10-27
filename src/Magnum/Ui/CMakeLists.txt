@@ -46,7 +46,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
 
 set(MagnumUi_SRCS
     Button.cpp
-    Event.cpp
     Handle.cpp
     Input.cpp
     Label.cpp
@@ -65,6 +64,7 @@ set(MagnumUi_GracefulAssert_SRCS
     Anchor.cpp
     BaseLayer.cpp
     BaseLayerAnimator.cpp
+    Event.cpp
     EventLayer.cpp
     SnapLayouter.cpp
     TextLayer.cpp

@@ -9938,7 +9938,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Hover the node */
     {
-        PointerMoveEvent event{{}, {}, {}};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
         CORRADE_VERIFY(ui.pointerMoveEvent({50, 50}, event));
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
@@ -9965,7 +9965,7 @@ void TextLayerTest::keyTextEvent() {
 
     /* Move pointer away, focus the node instead */
     } {
-        PointerMoveEvent move{{}, {}, {}};
+        PointerMoveEvent move{{}, PointerEventSource::Mouse, {}, {}, true, 0};
         FocusEvent focus{{}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({1000, 1000}, move));
         CORRADE_VERIFY(ui.focusEvent(node, focus));
