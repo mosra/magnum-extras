@@ -12679,6 +12679,9 @@ void AbstractUserInterfaceTest::eventPointerPress() {
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, dataHandle(handle(), dataId, 1), event.position());
+            /* Capture-specific behavior is tested in eventCapture*() below,
+               here it verifies the behavior without */
+            event.setCaptured(false);
             event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt, PointerEvent&) override {
@@ -12741,7 +12744,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
         CORRADE_COMPARE_AS(ui.layer<Layer>(layer).eventCalls, (Containers::arrayView<Containers::Pair<DataHandle, Vector2>>({
             {data3, {10.0f, 5.0f}},
@@ -12757,7 +12760,7 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_VERIFY(ui.pointerPressEvent({200.0f, 2500.0f}, event1));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentGlobalPointerPosition(), (Vector2{20.0f, 25.0f}));
 
         PointerEvent event2{12345_nsec, Pointer::MouseLeft};
@@ -12797,6 +12800,9 @@ void AbstractUserInterfaceTest::eventPointerPressNotAccepted() {
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Press|(event.isAccepted() ? Accepted : 0),
                 dataHandle(handle(), dataId, 1), event.position());
+            /* Capture-specific behavior is tested in eventCapture*() below,
+               here it verifies the behavior without */
+            event.setCaptured(false);
         }
 
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
@@ -12824,14 +12830,14 @@ void AbstractUserInterfaceTest::eventPointerPressNotAccepted() {
         CORRADE_VERIFY(ui.pointerPressEvent({15.0f, 10.0f}, eventPress1));
         CORRADE_COMPARE(ui.currentPressedNode(), node1);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), node1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
         PointerEvent eventPress2{{}, Pointer::Finger};
         layer.accept2 = false;
         CORRADE_VERIFY(ui.pointerPressEvent({25.0f, 15.0f}, eventPress2));
         CORRADE_COMPARE(ui.currentPressedNode(), node0);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), node0);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Vector2>>({
             {Press|Accepted, data10, {5.0f, 10.0f}},
@@ -12850,7 +12856,7 @@ void AbstractUserInterfaceTest::eventPointerPressNotAccepted() {
         CORRADE_VERIFY(ui.pointerPressEvent({25.0f, 10.0f}, eventPress1));
         CORRADE_COMPARE(ui.currentPressedNode(), node1);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
-        CORRADE_COMPARE(ui.currentCapturedNode(), node1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
 
         /* Yes, it's rather unlikely that another press happens without a
            release first, needing such specific handling, but let's have that
@@ -13209,6 +13215,9 @@ void AbstractUserInterfaceTest::eventPointerMoveRelativePositionWithPressRelease
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
             arrayAppend(eventCalls, InPlaceInit, Press, Vector4{event.position().x(), event.position().y(), 0.0f, 0.0f});
+            /* Capture-specific behavior is tested in eventCapture*() below,
+               here it verifies the behavior without */
+            event.setCaptured(false);
             if(accept)
                 event.setAccepted();
         }
@@ -16897,6 +16906,9 @@ void AbstractUserInterfaceTest::eventFocus() {
                 (event.isHovering() ? Hovering : 0)|
                 (event.isFocused() ? Focused : 0)|Press,
                 dataHandle(handle(), dataId, 1));
+            /* Capture-specific behavior doesn't affect focus behavior apart
+               from making certain cases harder to test, disable here */
+            event.setCaptured(false);
             event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
@@ -17048,24 +17060,28 @@ void AbstractUserInterfaceTest::eventFocus() {
         PointerMoveEvent move{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({40.0f, 30.0f}, move));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         FocusEvent focus1{12345_nsec};
         CORRADE_VERIFY(ui.focusEvent(nodeFocusable1, focus1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         FocusEvent focus2{12345_nsec};
         CORRADE_VERIFY(ui.focusEvent(nodeFocusable2, focus2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         FocusEvent focus3{12345_nsec};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, focus3));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
@@ -17095,6 +17111,7 @@ void AbstractUserInterfaceTest::eventFocus() {
         PointerEvent press{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({40.0f, 30.0f}, press));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
@@ -17103,18 +17120,21 @@ void AbstractUserInterfaceTest::eventFocus() {
         FocusEvent focus1{12345_nsec};
         CORRADE_VERIFY(ui.focusEvent(nodeFocusable1, focus1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         FocusEvent focus2{12345_nsec};
         CORRADE_VERIFY(ui.focusEvent(nodeFocusable2, focus2));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         FocusEvent focus3{12345_nsec};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, focus3));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
@@ -17131,11 +17151,17 @@ void AbstractUserInterfaceTest::eventFocus() {
 
     /* If the node is just pressed, it gets shown in the focus / blur events */
     } {
-        /* Just to reset the hover */
+        /* Just to reset the hover. A press event alone causes a focus event to
+           happen, so we temporarily make the node non-focusable for it. */
+        ui.clearNodeFlags(nodeFocusable1, NodeFlag::Focusable);
+        /** @todo have a pointerCancelEvent() for this */
         PointerMoveEvent move{{}, {}, {}};
-        /* Returns true because it gets called on a node captured above */
-        CORRADE_VERIFY(ui.pointerMoveEvent({1000.0f, 1000.0f}, move));
+        CORRADE_VERIFY(!ui.pointerMoveEvent({1000.0f, 1000.0f}, move));
+        PointerEvent press{12345_nsec, Pointer::MouseLeft};
+        CORRADE_VERIFY(ui.pointerPressEvent({40.0f, 30.0f}, press));
+        ui.addNodeFlags(nodeFocusable1, NodeFlag::Focusable);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
@@ -17144,18 +17170,21 @@ void AbstractUserInterfaceTest::eventFocus() {
         FocusEvent focus1{12345_nsec};
         CORRADE_VERIFY(ui.focusEvent(nodeFocusable1, focus1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         FocusEvent focus2{12345_nsec};
         CORRADE_VERIFY(ui.focusEvent(nodeFocusable2, focus2));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         FocusEvent focus3{12345_nsec};
         CORRADE_VERIFY(!ui.focusEvent(NodeHandle::Null, focus3));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
@@ -17181,24 +17210,28 @@ void AbstractUserInterfaceTest::eventFocus() {
         PointerEvent press1{12345_nsec, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent release1{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({55.0f, 35.0f}, release1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerMoveEvent moveEnter1{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 35.0f}, moveEnter1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable2);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerMoveEvent moveLeave1{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({1000.0f, 1000.0f}, moveLeave1));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
@@ -17216,6 +17249,7 @@ void AbstractUserInterfaceTest::eventFocus() {
         PointerEvent press2{12345_nsec, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press2));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
@@ -17228,18 +17262,21 @@ void AbstractUserInterfaceTest::eventFocus() {
         PointerEvent release2{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({55.0f, 35.0f}, release2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         PointerMoveEvent moveEnter2{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 35.0f}, moveEnter2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable2);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         PointerMoveEvent moveLeave2{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({1000.0f, 1000.0f}, moveLeave2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
@@ -17260,6 +17297,7 @@ void AbstractUserInterfaceTest::eventFocus() {
         PointerEvent press3{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press3));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
@@ -17268,12 +17306,14 @@ void AbstractUserInterfaceTest::eventFocus() {
         PointerEvent release3{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerReleaseEvent({55.0f, 35.0f}, release3));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         PointerMoveEvent moveEnter3{{}, {}, {}};
         CORRADE_VERIFY(ui.pointerMoveEvent({55.0f, 35.0f}, moveEnter3));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable2);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
@@ -17288,6 +17328,7 @@ void AbstractUserInterfaceTest::eventFocus() {
         PointerMoveEvent moveLeave3{{}, {}, {}};
         CORRADE_VERIFY(!ui.pointerMoveEvent({1000.0f, 1000.0f}, moveLeave3));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
@@ -17929,6 +17970,9 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPress() {
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Press|(event.isHovering() ? Hovering : 0),
                 dataHandle(handle(), dataId, 1));
+            /* Capture-specific behavior doesn't affect focus behavior apart
+               from making certain cases harder to test, disable here */
+            event.setCaptured(false);
             event.setAccepted();
         }
         void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override {
@@ -17982,21 +18026,25 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPress() {
         PointerEvent press1{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({15.0f, 30.0f}, press1));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         PointerEvent press2{{}, Pointer::MouseRight};
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 30.0f}, press2));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         PointerEvent press3{{}, Pointer::MouseMiddle};
         CORRADE_VERIFY(ui.pointerPressEvent({40.0f, 30.0f}, press3));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         PointerEvent press4{{}, Pointer::Eraser};
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press4));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18020,21 +18068,25 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPress() {
         FocusEvent focus{{}};
         CORRADE_VERIFY(ui.focusEvent(nodeFocusable2, focus));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent press1{{}, Pointer::MouseRight};
         CORRADE_VERIFY(ui.pointerPressEvent({35.0f, 30.0f}, press1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent press3{{}, Pointer::MouseMiddle};
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 30.0f}, press3));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent press4{{}, Pointer::Eraser};
         CORRADE_VERIFY(!ui.pointerPressEvent({1000.0f, 1000.0f}, press4));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18057,21 +18109,25 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPress() {
         PointerEvent press1{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerPressEvent({60.0f, 35.0f}, press1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent press2{{}, Pointer::Finger};
         CORRADE_VERIFY(ui.pointerPressEvent({60.0f, 30.0f}, press2));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent release{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerReleaseEvent({60.0f, 35.0f}, release));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent press3{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(!ui.pointerPressEvent({1000.0f, 1000.0f}, press3));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18092,16 +18148,19 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPress() {
         PointerEvent press1{{}, Pointer::Finger};
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent press2{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerPressEvent({35.0f, 25.0f}, press2));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         PointerEvent press3{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({25.0f, 25.0f}, press3));
         CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18131,24 +18190,28 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPress() {
         CORRADE_VERIFY(ui.pointerMoveEvent({35.0f, 25.0f}, move));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         PointerEvent press1{{}, Pointer::MouseLeft};
         CORRADE_VERIFY(ui.pointerPressEvent({45.0f, 25.0f}, press1));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         PointerEvent press2{{}, Pointer::Pen};
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, press2));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent press3{{}, Pointer::Finger};
         CORRADE_VERIFY(ui.pointerPressEvent({25.0f, 25.0f}, press3));
         CORRADE_COMPARE(ui.currentHoveredNode(), nodeFocusable1);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18199,6 +18262,9 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
             arrayAppend(eventCalls, InPlaceInit,
                 (event.isAccepted() ? Accepted : 0)|Press,
                 dataHandle(handle(), dataId, 1));
+            /* Capture-specific behavior doesn't affect focus behavior apart
+               from making certain cases harder to test, disable here */
+            event.setCaptured(false);
         }
         void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override {
             if(acceptFocus)
@@ -18239,6 +18305,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = false;
         CORRADE_VERIFY(ui.pointerPressEvent({45.0f, 35.0f}, event));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18256,6 +18323,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = true;
         CORRADE_VERIFY(ui.pointerPressEvent({40.0f, 30.0f}, event1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         PointerEvent event2{{}, Pointer::Pen};
@@ -18263,6 +18331,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = true;
         CORRADE_VERIFY(!ui.pointerPressEvent({1000.0f, 1000.0f}, event2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18281,6 +18350,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = true;
         CORRADE_VERIFY(ui.pointerPressEvent({40.0f, 30.0f}, event1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         PointerEvent event2{{}, Pointer::Finger};
@@ -18288,6 +18358,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = true;
         CORRADE_VERIFY(!ui.pointerPressEvent({55.0f, 25.0f}, event2));
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18308,6 +18379,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = true;
         CORRADE_VERIFY(ui.pointerPressEvent({40.0f, 30.0f}, event1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable1);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable1);
 
         PointerEvent event2{{}, Pointer::Pen};
@@ -18315,6 +18387,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = false;
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 25.0f}, event2));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
@@ -18335,6 +18408,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = true;
         CORRADE_VERIFY(ui.pointerPressEvent({60.0f, 25.0f}, event1));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), nodeFocusable2);
 
         PointerEvent event2{{}, Pointer::MouseLeft};
@@ -18342,6 +18416,7 @@ void AbstractUserInterfaceTest::eventFocusBlurByPointerPressNotAccepted() {
         layer.acceptFocus = false;
         CORRADE_VERIFY(ui.pointerPressEvent({55.0f, 35.0f}, event2));
         CORRADE_COMPARE(ui.currentPressedNode(), nodeFocusable2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Pair<Int, DataHandle>>({
