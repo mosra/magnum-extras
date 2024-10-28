@@ -78,6 +78,10 @@ struct EventLayerTest: TestSuite::Tester {
     void rightClickPressRelease();
     void rightClickFromUserInterface();
 
+    void drag();
+    void dragPress();
+    void dragFromUserInterface();
+
     void enter();
     void enterMove();
     void leave();
@@ -87,10 +91,6 @@ struct EventLayerTest: TestSuite::Tester {
     void focus();
     void blur();
     void focusBlurFromUserInterface();
-
-    void drag();
-    void dragPress();
-    void dragFromUserInterface();
 
     void remove();
     void removeScoped();
