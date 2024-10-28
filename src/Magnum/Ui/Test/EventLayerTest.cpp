@@ -133,16 +133,22 @@ const struct {
     EventConnection(*functorScoped)(EventLayer&, NodeHandle, Int& output);
     void(*call)(EventLayer& layer, UnsignedInt dataId);
 } ConnectData[]{
-    #define _c(name, ...) #name,                                            \
+    #define _cn(name, function, ...) name,                                  \
         [](EventLayer& layer, NodeHandle node, Int& output) {               \
             ConnectFunctor<__VA_ARGS__> functor{output};                    \
-            return layer.name(node, functor);                               \
+            return layer.function(node, functor);                           \
         },                                                                  \
         [](EventLayer& layer, NodeHandle node, Int& output) {               \
             ConnectFunctor<__VA_ARGS__> functor{output};                    \
-            return layer.name ## Scoped(node, functor);                     \
+            return layer.function ## Scoped(node, functor);                 \
         }
+    #define _c(name, ...) _cn(#name, name, __VA_ARGS__)
     {_c(onPress, ),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+            layer.pointerPressEvent(dataId, event);
+        }},
+    {_cn("onPress with a position", onPress, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
             layer.pointerPressEvent(dataId, event);
@@ -152,7 +158,17 @@ const struct {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
             layer.pointerReleaseEvent(dataId, event);
         }},
+    {_cn("onRelease with a position", onRelease, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+            layer.pointerReleaseEvent(dataId, event);
+        }},
     {_c(onTapOrClick, ),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+            layer.pointerTapOrClickEvent(dataId, event);
+        }},
+    {_cn("onTapOrClick with a position", onTapOrClick, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
             layer.pointerTapOrClickEvent(dataId, event);
@@ -162,12 +178,28 @@ const struct {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
             layer.pointerTapOrClickEvent(dataId, event);
         }},
+    {_cn("onMiddleClick with a position", onMiddleClick, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+            layer.pointerTapOrClickEvent(dataId, event);
+        }},
     {_c(onRightClick, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
             layer.pointerTapOrClickEvent(dataId, event);
         }},
+    {_cn("onRightClick with a position", onRightClick, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
+            layer.pointerTapOrClickEvent(dataId, event);
+        }},
     {_c(onDrag, const Vector2&),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
+            event.setCaptured(true); /* only captured events are considered */
+            layer.pointerMoveEvent(dataId, event);
+        }},
+    {_cn("onDrag with a position", onDrag, const Vector2&, const Vector2&),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::MouseLeft, true, 0};
             event.setCaptured(true); /* only captured events are considered */
@@ -831,13 +863,22 @@ void EventLayerTest::pressReleaseFromUserInterface() {
         ++belowCalled;
     });
 
-    Int pressCalled = 0, releaseCalled = 0;
+    Int pressCalled = 0, pressPositionCalled = 0,
+        releaseCalled = 0, releasePositionCalled = 0;
     NodeHandle node = ui.createNode({25, 50}, {50, 25});
     layer.onPress(node, [&pressCalled]{
         ++pressCalled;
     });
+    layer.onPress(node, [&pressPositionCalled](const Vector2& position){
+        CORRADE_COMPARE(position, (Vector2{25.0f, 20.0f}));
+        ++pressPositionCalled;
+    });
     layer.onRelease(node, [&releaseCalled]{
         ++releaseCalled;
+    });
+    layer.onRelease(node, [&releasePositionCalled](const Vector2& position){
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        ++releasePositionCalled;
     });
 
     /* A press should be accepted but not resulting in the handler being
@@ -848,7 +889,9 @@ void EventLayerTest::pressReleaseFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(pressCalled, 1);
+        CORRADE_COMPARE(pressPositionCalled, 1);
         CORRADE_COMPARE(releaseCalled, 0);
+        CORRADE_COMPARE(releasePositionCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A release should be accepted as well, resulting in the handler being
@@ -859,7 +902,9 @@ void EventLayerTest::pressReleaseFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(pressCalled, 1);
+        CORRADE_COMPARE(pressPositionCalled, 1);
         CORRADE_COMPARE(releaseCalled, 1);
+        CORRADE_COMPARE(releasePositionCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -1060,10 +1105,14 @@ void EventLayerTest::tapOrClickFromUserInterface() {
         ++belowCalled;
     });
 
-    Int called = 0;
+    Int called = 0, positionCalled = 0;
     NodeHandle node = ui.createNode({25, 50}, {50, 25});
     layer.onTapOrClick(node, [&called]{
         ++called;
+    });
+    layer.onTapOrClick(node, [&positionCalled](const Vector2& position){
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        ++positionCalled;
     });
 
     /* A press should be accepted but not resulting in the handler being
@@ -1074,6 +1123,7 @@ void EventLayerTest::tapOrClickFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(positionCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A release should be accepted as well, resulting in the handler being
@@ -1084,6 +1134,7 @@ void EventLayerTest::tapOrClickFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(positionCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -1272,10 +1323,14 @@ void EventLayerTest::middleClickFromUserInterface() {
         ++belowCalled;
     });
 
-    Int called = 0;
+    Int called = 0, positionCalled = 0;
     NodeHandle node = ui.createNode({25, 50}, {50, 25});
     layer.onMiddleClick(node, [&called]{
         ++called;
+    });
+    layer.onMiddleClick(node, [&positionCalled](const Vector2& position){
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        ++positionCalled;
     });
 
     /* A press should be accepted but not resulting in the handler being
@@ -1286,6 +1341,7 @@ void EventLayerTest::middleClickFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(positionCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A release should be accepted as well, resulting in the handler being
@@ -1296,6 +1352,7 @@ void EventLayerTest::middleClickFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(positionCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -1484,10 +1541,14 @@ void EventLayerTest::rightClickFromUserInterface() {
         ++belowCalled;
     });
 
-    Int called = 0;
+    Int called = 0, positionCalled = 0;
     NodeHandle node = ui.createNode({25, 50}, {50, 25});
     layer.onRightClick(node, [&called]{
         ++called;
+    });
+    layer.onRightClick(node, [&positionCalled](const Vector2& position){
+        CORRADE_COMPARE(position, (Vector2{25.0f, 15.0f}));
+        ++positionCalled;
     });
 
     /* A press should be accepted but not resulting in the handler being
@@ -1498,6 +1559,7 @@ void EventLayerTest::rightClickFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(positionCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A release should be accepted as well, resulting in the handler being
@@ -1508,6 +1570,7 @@ void EventLayerTest::rightClickFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(positionCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
@@ -1707,9 +1770,15 @@ void EventLayerTest::dragFromUserInterface() {
 
     NodeHandle node = ui.createNode({25, 50}, {50, 25});
 
-    Int called = 0;
-    layer.onDrag(node, [&called](const Vector2&){
+    Int called = 0, positionCalled = 0;
+    layer.onDrag(node, [&called](const Vector2& relativePosition){
+        CORRADE_COMPARE(relativePosition, (Vector2{-5.0f, -10.0f}));
         ++called;
+    });
+    layer.onDrag(node, [&positionCalled](const Vector2& position, const Vector2& relativePosition){
+        CORRADE_COMPARE(position, (Vector2{20.0f, 5.0f}));
+        CORRADE_COMPARE(relativePosition, (Vector2{-5.0f, -10.0f}));
+        ++positionCalled;
     });
 
     /* A move alone with a button pressed but no captured node shouldn't be
@@ -1722,6 +1791,7 @@ void EventLayerTest::dragFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
         CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(positionCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A press should be accepted but not resulting in the handler being
@@ -1733,6 +1803,7 @@ void EventLayerTest::dragFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(positionCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A move with a node captured but without any pointer pressed should be
@@ -1745,17 +1816,19 @@ void EventLayerTest::dragFromUserInterface() {
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(positionCalled, 0);
         CORRADE_COMPARE(belowCalled, 0);
 
     /* A move with a pointer pressed with a node captured should be treated as
        a drag */
     } {
         PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Pen, true, 0};
-        CORRADE_VERIFY(ui.pointerMoveEvent({45, 60}, event));
+        CORRADE_VERIFY(ui.pointerMoveEvent({45, 55}, event));
         CORRADE_COMPARE(ui.currentHoveredNode(), node);
         CORRADE_COMPARE(ui.currentPressedNode(), node);
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(positionCalled, 1);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }

@@ -183,7 +183,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Connect to a finger / pen tap or left mouse press
          *
-         * The @p slot is called when a @ref Pointer::MouseLeft, primary
+         * The @p slot, optionally receiving a node-relative position of the
+         * press, is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen press happens on the
          * @p node.
          *
@@ -196,6 +197,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          */
         DataHandle onPress(NodeHandle node, Containers::Function<void()>&& slot);
 
+        /** @overload */
+        DataHandle onPress(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse press
          *
@@ -206,10 +210,16 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
             return EventConnection{*this, onPress(node, Utility::move(slot))};
         }
 
+        /** @overload */
+        EventConnection onPressScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
+            return EventConnection{*this, onPress(node, Utility::move(slot))};
+        }
+
         /**
          * @brief Connect to a finger / pen tap or left mouse release
          *
-         * The @p slot is called when a @ref Pointer::MouseLeft, primary
+         * The @p slot, optionally receiving a node-relative position of the
+         * release, is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
          * @p node.
          *
@@ -222,6 +232,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          */
         DataHandle onRelease(NodeHandle node, Containers::Function<void()>&& slot);
 
+        /** @overload */
+        DataHandle onRelease(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse release
          *
@@ -232,10 +245,16 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
             return EventConnection{*this, onRelease(node, Utility::move(slot))};
         }
 
+        /** @overload */
+        EventConnection onReleaseScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
+            return EventConnection{*this, onRelease(node, Utility::move(slot))};
+        }
+
         /**
          * @brief Connect to a finger / pen tap or left mouse click
          *
-         * The @p slot is called when a @ref Pointer::MouseLeft, primary
+         * The @p slot, optionally receiving a node-relative position of the
+         * tap or click, is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
          * @p node after a previous primary pointer press. If event capture is
          * disabled by any event handler on given node, the slot is called only
@@ -252,6 +271,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          */
         DataHandle onTapOrClick(NodeHandle node, Containers::Function<void()>&& slot);
 
+        /** @overload */
+        DataHandle onTapOrClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+
         /**
          * @brief Scoped connection to a finger / pen tap or left mouse click
          *
@@ -262,14 +284,20 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
             return EventConnection{*this, onTapOrClick(node, Utility::move(slot))};
         }
 
+        /** @overload */
+        EventConnection onTapOrClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
+            return EventConnection{*this, onTapOrClick(node, Utility::move(slot))};
+        }
+
         /**
          * @brief Connect to a middle mouse click
          *
-         * The @p slot is called when a @ref Pointer::MouseMiddle release
-         * happens on the @p node after a previous pointer press. If event
-         * capture is disabled by any event handler on given node, the slot is
-         * called only if the pointer didn't leave the node area between a
-         * press and a release.
+         * The @p slot, optionally receiving a node-relative position of the
+         * click, is called when a @ref Pointer::MouseMiddle release happens on
+         * the @p node after a previous pointer press. If event capture is
+         * disabled by any event handler on given node, the slot is called only
+         * if the pointer didn't leave the node area between a press and a
+         * release.
          *
          * Use @ref onTapOrClick() and @ref onRightClick() to handle
          * @ref Pointer::MouseLeft / @ref Pointer::Finger / @ref Pointer::Pen
@@ -281,6 +309,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          */
         DataHandle onMiddleClick(NodeHandle node, Containers::Function<void()>&& slot);
 
+        /** @overload */
+        DataHandle onMiddleClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+
         /**
          * @brief Scoped connection to a middle mouse click
          *
@@ -291,14 +322,20 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
             return EventConnection{*this, onMiddleClick(node, Utility::move(slot))};
         }
 
+        /** @overload */
+        EventConnection onMiddleClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
+            return EventConnection{*this, onMiddleClick(node, Utility::move(slot))};
+        }
+
         /**
          * @brief Connect to a right mouse click
          *
-         * The @p slot is called when a @ref Pointer::MouseRight release
-         * happens on the @p node after a previous pointer press. If event
-         * capture is disabled by any event handler on given node, the slot is
-         * called only if the pointer didn't leave the node area between a
-         * press and a release.
+         * The @p slot, optionally receiving a node-relative position of the
+         * click, is called when a @ref Pointer::MouseRight release happens on
+         * the @p node after a previous pointer press. If event capture is
+         * disabled by any event handler on given node, the slot is called only
+         * if the pointer didn't leave the node area between a press and a
+         * release.
          *
          * Use @ref onTapOrClick() and @ref onRightClick() to handle
          * @ref Pointer::MouseLeft / @ref Pointer::Finger / @ref Pointer::Pen
@@ -310,6 +347,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          */
         DataHandle onRightClick(NodeHandle node, Containers::Function<void()>&& slot);
 
+        /** @overload */
+        DataHandle onRightClick(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot);
+
         /**
          * @brief Scoped connection to a right mouse click
          *
@@ -320,10 +360,16 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
             return EventConnection{*this, onRightClick(node, Utility::move(slot))};
         }
 
+        /** @overload */
+        EventConnection onRightClickScoped(NodeHandle node, Containers::Function<void(const Vector2& position)>&& slot) {
+            return EventConnection{*this, onRightClick(node, Utility::move(slot))};
+        }
+
         /**
          * @brief Connect to a drag
          *
-         * The @p slot, receiving the movement delta, is called when a
+         * The @p slot, receiving the movement delta and optionally also a
+         * node-relative position at which the move happened, is called when a
          * @ref Pointer::MouseLeft, primary @ref Pointer::Finger or
          * @ref Pointer::Pen move happens on the @p node. If event capture is
          * disabled by any event handler on given node, the slot is called only
@@ -337,6 +383,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          */
         DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot);
 
+        /** @overload */
+        DataHandle onDrag(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot);
+
         /**
          * @brief Scoped connection to a drag
          *
@@ -344,6 +393,11 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * when the returned @ref EventConnection gets destroyed.
          */
         EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& relativePosition)>&& slot) {
+            return EventConnection{*this, onDrag(node, Utility::move(slot))};
+        }
+
+        /** @overload */
+        EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot) {
             return EventConnection{*this, onDrag(node, Utility::move(slot))};
         }
 
