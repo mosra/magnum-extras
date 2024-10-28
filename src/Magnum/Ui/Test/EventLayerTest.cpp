@@ -829,6 +829,16 @@ void EventLayerTest::releasePress() {
         layer.pointerTapOrClickEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
 
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
@@ -1078,6 +1088,16 @@ void EventLayerTest::tapOrClickPressRelease() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
 
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
@@ -1296,6 +1316,16 @@ void EventLayerTest::middleClickPressRelease() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
 
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
@@ -1512,6 +1542,16 @@ void EventLayerTest::rightClickPressRelease() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
@@ -1740,6 +1780,16 @@ void EventLayerTest::dragPress() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
 
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
@@ -1961,6 +2011,16 @@ void EventLayerTest::enterMove() {
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
 
     /* Verify that the callback is actually properly registered so this doesn't
        result in false positives */
@@ -2100,6 +2160,16 @@ void EventLayerTest::leaveMove() {
     } {
         PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
         layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
         CORRADE_VERIFY(!event.isAccepted());
         CORRADE_COMPARE(called, 0);
 
