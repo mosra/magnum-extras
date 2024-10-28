@@ -30,6 +30,7 @@
 #include <Corrade/Containers/BitArrayView.h>
 #include <Corrade/Containers/GrowableArray.h>
 #include <Corrade/Containers/Function.h>
+#include <Magnum/Platform/Gesture.h>
 
 #include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/Event.h"
@@ -52,7 +53,8 @@ namespace Implementation {
         TapOrClick,
         MiddleClick,
         RightClick,
-        Drag
+        Drag,
+        Pinch
     };
 }
 
@@ -73,6 +75,9 @@ struct Data {
 
 struct EventLayer::State {
     Containers::Array<Data> data;
+
+    Platform::TwoFingerGesture twoFingerGesture;
+    UnsignedInt twoFingerGestureData = ~UnsignedInt{};
 
     UnsignedInt usedScopedConnectionCount = 0;
 };
@@ -323,6 +328,19 @@ DataHandle EventLayer::onDrag(const NodeHandle node, Containers::Function<void(c
         })));
 }
 
+DataHandle EventLayer::onPinch(const NodeHandle node, Containers::Function<void(const Vector2&, const Vector2&, const Complex&, Float)>&& slot) {
+    return create(node, Implementation::EventType::Pinch, Utility::move(slot),
+        reinterpret_cast<void(*)()>(
+            #ifndef CORRADE_MSVC2015_COMPATIBILITY
+            +
+            #else
+            static_cast<void(*)(Containers::FunctionData&, const Platform::TwoFingerGesture&)>
+            #endif
+        ([](Containers::FunctionData& slot, const Platform::TwoFingerGesture& gesture) {
+            static_cast<Containers::Function<void(const Vector2&, const Vector2&, const Complex&, Float)>&>(slot)(gesture.position(), gesture.relativeTranslation(), gesture.relativeRotation(), gesture.relativeScaling());
+        })));
+}
+
 DataHandle EventLayer::onEnter(const NodeHandle node, Containers::Function<void()>&& slot) {
     return create(node, Implementation::EventType::Enter, Utility::move(slot),
         reinterpret_cast<void(*)()>(
@@ -386,7 +404,8 @@ void EventLayer::remove(LayerDataHandle handle) {
 }
 
 void EventLayer::removeInternal(const UnsignedInt id) {
-    Data& data = _state->data[id];
+    State& state = *_state;
+    Data& data = state.data[id];
 
     /* Set the slot to an empty instance to call any captured state
        destructors */
@@ -397,6 +416,12 @@ void EventLayer::removeInternal(const UnsignedInt id) {
        a subsequent create() that overwrites it */
     if(data.hasScopedConnection)
         --_state->usedScopedConnectionCount;
+
+    /* If data for which a gesture is tracked is removed, reset it */
+    if(data.eventType == Implementation::EventType::Pinch && state.twoFingerGestureData == id) {
+        state.twoFingerGestureData = ~UnsignedInt{};
+        state.twoFingerGesture = Platform::TwoFingerGesture{};
+    }
 }
 
 void EventLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
@@ -408,10 +433,45 @@ void EventLayer::doClean(const Containers::BitArrayView dataIdsToRemove) {
 }
 
 void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& event) {
+    State& state = *_state;
+    Data& data = state.data[dataId];
+
+    /* If there's a pinch, feed the gesture recognition */
+    /** @todo what's the desired behavior when the underlying node position is
+        animated? if the gesture would be recognized globally, only the final
+        calculated position() could be offset appropriately to undo the offset
+        from the animation, but here the inputs themselves will be offset... */
+    if(data.eventType == Implementation::EventType::Pinch) {
+        /* If it was previously happening on some other data, it means that the
+           capture was removed for example due to a primary pointer release.
+           Reset it in that case to prevent stale data from affecting the
+           gesture. Do that only for a touch input tho, I feel it should still
+           be possible to do a pinch gesture while clicking around with a mouse
+           or a pen. */
+        /** @todo this will be broken if there's more than one onPinch()
+            attached to the same node -- needs the events to be fired for all
+            data attached to given node, not for individual data (and
+            remembering the node doesn't work because then it'd record the
+            press / move multiple times instead of just once, being broken even
+            more) */
+        if(dataId != state.twoFingerGestureData && event.source() == PointerEventSource::Touch) {
+            state.twoFingerGestureData = dataId;
+            state.twoFingerGesture = Platform::TwoFingerGesture{};
+        }
+
+        /* If the event is actually used (i.e., it's a finger, etc.), mark the
+           event as accepted so it doesn't fall through, causing some other
+           node to be captured */
+        if(state.twoFingerGesture.pressEvent(event))
+            event.setAccepted();
+
+        return;
+    }
+
+    /* All other cases are only for primary input events */
     if(!event.isPrimary())
         return;
 
-    Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Press &&
         event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))
     {
@@ -438,10 +498,27 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
 }
 
 void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& event) {
+    State& state = *_state;
+    Data& data = state.data[dataId];
+
+    /* If there's a pinch, feed the gesture recognition. Same logic as in
+       doPointerPressEvent(), see above for details. */
+    if(data.eventType == Implementation::EventType::Pinch) {
+        if(dataId != state.twoFingerGestureData && event.source() == PointerEventSource::Touch) {
+            state.twoFingerGestureData = dataId;
+            state.twoFingerGesture = Platform::TwoFingerGesture{};
+        }
+
+        if(state.twoFingerGesture.releaseEvent(event))
+            event.setAccepted();
+
+        return;
+    }
+
+    /* All other cases are only for primary input events */
     if(!event.isPrimary())
         return;
 
-    Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Release &&
         event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))
     {
@@ -481,10 +558,37 @@ void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent
 }
 
 void EventLayer::doPointerMoveEvent(const UnsignedInt dataId, PointerMoveEvent& event) {
+    State& state = *_state;
+    Data& data = state.data[dataId];
+
+    /* If there's a pinch, feed the gesture recognition. Same initial logic as
+       in doPointerPressEvent() and doPointerReleaseEvent(), see above for
+       details... */
+    if(data.eventType == Implementation::EventType::Pinch) {
+        if(dataId != state.twoFingerGestureData && event.source() == PointerEventSource::Touch) {
+            state.twoFingerGestureData = dataId;
+            state.twoFingerGesture = Platform::TwoFingerGesture{};
+        }
+
+        /* ... but afterwards, if this event was actually used and the gesture
+           is recognized, we also call the slot. If the event wasn't used, the
+           gesture could still be recognized, but it'd repeatedly give the same
+           data unrelated to the actual input event, leading to a broken
+           behavior. */
+        if(state.twoFingerGesture.moveEvent(event)) {
+            event.setAccepted();
+
+            if(state.twoFingerGesture)
+                reinterpret_cast<void(*)(Containers::FunctionData&, const Platform::TwoFingerGesture&)>(data.call)(data.slot, state.twoFingerGesture);
+        }
+
+        return;
+    }
+
+    /* All other cases are only for primary input events */
     if(!event.isPrimary())
         return;
 
-    Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Drag &&
         (event.pointers() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) &&
         event.isCaptured())
@@ -536,6 +640,18 @@ void EventLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& event) {
         reinterpret_cast<void(*)(Containers::FunctionData&, const FocusEvent&)>(data.call)(data.slot, event);
         /* Accept status is ignored on blur events, no need to call
            setAccepted() */
+    }
+}
+
+void EventLayer::doVisibilityLostEvent(const UnsignedInt dataId, VisibilityLostEvent&) {
+    State& state = *_state;
+    Data& data = state.data[dataId];
+
+    /* If visibility was lost on data for which a gesture is tracked, reset
+       it */
+    if(data.eventType == Implementation::EventType::Pinch && state.twoFingerGestureData == dataId) {
+        state.twoFingerGestureData = ~UnsignedInt{};
+        state.twoFingerGesture = Platform::TwoFingerGesture{};
     }
 }
 

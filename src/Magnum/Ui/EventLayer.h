@@ -375,9 +375,10 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * from being triggered by drags that originated outside of @p node,
          * it's called only if the move event is captured on given node.
          *
-         * The returned @ref DataHandle is automatically removed once @p node
-         * or any of its parents is removed, it's the caller responsibility to
-         * ensure it doesn't outlive the state captured in the @p slot. See
+         * Use @ref onPinch() to handle two-finger gestures. The returned
+         * @ref DataHandle is automatically removed once @p node or any of its
+         * parents is removed, it's the caller responsibility to ensure it
+         * doesn't outlive the state captured in the @p slot. See
          * @ref onDragScoped() for a scoped alternative.
          * @ref PointerMoveEvent::isPrimary()
          */
@@ -399,6 +400,41 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /** @overload */
         EventConnection onDragScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativePosition)>&& slot) {
             return EventConnection{*this, onDrag(node, Utility::move(slot))};
+        }
+
+        /**
+         * @brief Connect to a two-finger pinch, zoom or pan gesture
+         *
+         * The @p slot is called when two or more @ref Pointer::Finger are
+         * pressed and move over the @p node area. It receives a node-relative
+         * centroid position between the two presses, translation of the
+         * centroid relative to previous state of the two fingers, their
+         * relative rotation and scaling. @ref Platform::TwoFingerGesture is
+         * used internally, see its documentation for more information.
+         *
+         * By default, the gesture is tracked as long as the primary finger is
+         * pressed, even if the fingers are outside of the node area. If
+         * event capture is disabled by any event handler on given node, the
+         * gesture stops being tracked when any of the fingers leave the node
+         * area. The gesture also stops being tracked when given node loses
+         * visibility to events.
+         *
+         * Use @ref onDrag() to handle a regular single-finger, mouse or pen
+         * drag. The returned @ref DataHandle is automatically removed once
+         * @p node or any of its parents is removed, it's the caller
+         * responsibility to ensure it doesn't outlive the state captured in
+         * the @p slot. See @ref onPinchScoped() for a scoped alternative.
+         */
+        DataHandle onPinch(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& slot);
+
+        /**
+         * @brief Scoped connection to a two-finger pinch, zoom or pan gesture
+         *
+         * Compared to @ref onPinch() the connection is removed automatically
+         * when the returned @ref EventConnection gets destroyed.
+         */
+        EventConnection onPinchScoped(NodeHandle node, Containers::Function<void(const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, Float relativeScaling)>&& slot) {
+            return EventConnection{*this, onPinch(node, Utility::move(slot))};
         }
 
         /**
@@ -540,6 +576,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         MAGNUM_UI_LOCAL void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         MAGNUM_UI_LOCAL void doFocusEvent(UnsignedInt dataId, FocusEvent& event) override;
         MAGNUM_UI_LOCAL void doBlurEvent(UnsignedInt dataId, FocusEvent& event) override;
+        MAGNUM_UI_LOCAL void doVisibilityLostEvent(UnsignedInt dataId, VisibilityLostEvent& event) override;
 
         struct State;
         Containers::Pointer<State> _state;

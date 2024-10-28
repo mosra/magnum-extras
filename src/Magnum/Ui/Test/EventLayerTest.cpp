@@ -31,6 +31,7 @@
 #include <Corrade/TestSuite/Tester.h>
 #include <Corrade/TestSuite/Compare/Numeric.h>
 #include <Corrade/Utility/DebugStl.h> /** @todo remove once Debug is stream-free */
+#include <Magnum/Math/Complex.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/EventLayer.h"
@@ -82,6 +83,11 @@ struct EventLayerTest: TestSuite::Tester {
     void dragPress();
     void dragFromUserInterface();
 
+    void pinch();
+    void pinchReset();
+    void pinchPressMoveRelease();
+    void pinchFromUserInterface();
+
     void enter();
     void enterMove();
     void leave();
@@ -96,6 +102,8 @@ struct EventLayerTest: TestSuite::Tester {
     void removeScoped();
     void cleanNodes();
 };
+
+using namespace Math::Literals;
 
 /* Same as ConnectFunctor but also with a non-trivial destructor to test the
    "should not move" behavior in the non-trivial case */
@@ -205,6 +213,17 @@ const struct {
             event.setCaptured(true); /* only captured events are considered */
             layer.pointerMoveEvent(dataId, event);
         }},
+    {_c(onPinch, const Vector2&, const Vector2&, const Complex&, Float),
+        [](EventLayer& layer, UnsignedInt dataId) {
+            /* Is triggered only if at least a primary + secondary finger is
+               pressed and one of them is moved */
+            PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 12};
+            PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 34};
+            PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 34};
+            layer.pointerPressEvent(dataId, primary);
+            layer.pointerPressEvent(dataId, secondary);
+            layer.pointerMoveEvent(dataId, move);
+        }},
     {_c(onEnter, ),
         [](EventLayer& layer, UnsignedInt dataId) {
             PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
@@ -268,6 +287,11 @@ EventLayerTest::EventLayerTest() {
               &EventLayerTest::drag,
               &EventLayerTest::dragPress,
               &EventLayerTest::dragFromUserInterface,
+
+              &EventLayerTest::pinch,
+              &EventLayerTest::pinchReset,
+              &EventLayerTest::pinchPressMoveRelease,
+              &EventLayerTest::pinchFromUserInterface,
 
               &EventLayerTest::enter,
               &EventLayerTest::enterMove,
@@ -1879,6 +1903,601 @@ void EventLayerTest::dragFromUserInterface() {
         CORRADE_COMPARE(ui.currentCapturedNode(), node);
         CORRADE_COMPARE(called, 1);
         CORRADE_COMPARE(positionCalled, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+    }
+}
+
+void EventLayerTest::pinch() {
+    EventLayer layer{layerHandle(0, 1)};
+
+    Int called = 0;
+    DataHandle handle = layer.onPinch(nodeHandle(0, 1), [&called](const Vector2&, const Vector2&, const Complex&, Float){
+        ++called;
+    });
+
+    /* Make the gesture actually recognized first */
+    {
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        layer.pointerPressEvent(dataHandleId(handle), primary);
+        layer.pointerPressEvent(dataHandleId(handle), secondary);
+    }
+
+    /* Should only get fired for a move that originates from one of the
+       registered fingers, not any other arbitrary move where it would
+       repeatedly give back the same data */
+    {
+        /* Secondary with a matching ID */
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, false, 17};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 1);
+    } {
+        /* Primary with a matching ID */
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* Primary, but different ID */
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 37};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* Secondary, but different ID. Passing an event that doesn't actually
+           have the finger pressed currently works as well, it checks just the
+           source. */
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 16};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* Events coming from a mouse are ignored by the gesture recognizer
+           altogether, even if a finger is currently pressed */
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, Pointer::Finger, true, 0};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* Pen also */
+        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, Pointer::Finger, true, 0};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+
+    /* Shouldn't get fired for any other than move events, even though the
+       gesture recognizer is getting fed in press and release as well */
+    } {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.pointerTapOrClickEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, Pointer::MouseLeft, true, 0};
+        layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* ID matches the tracked primary finger so this should feed the
+           gesture recognizer, but it being fed shouldn't trigger a call. Doing
+           as last because this resets the isGesture() bit. */
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* ID matches the tracked secondary finger so again but again. This
+           should set isGesture() back. */
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* ID matches the tracked secondary finger, so again but again. This
+           should reset isGesture() again. */
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_COMPARE(called, 2);
+    }
+}
+
+void EventLayerTest::pinchReset() {
+    EventLayer layer{layerHandle(0, 1)};
+
+    Int firstCalled = 0, secondCalled = 0;
+    DataHandle first = layer.onPinch(nodeHandle(0, 1), [&firstCalled](const Vector2&, const Vector2&, const Complex&, Float) {
+        ++firstCalled;
+    });
+    DataHandle second = layer.onPinch(nodeHandle(0, 1), [&secondCalled](const Vector2&, const Vector2&, const Complex&, Float) {
+        ++secondCalled;
+    });
+
+    /* Make the gesture recognized on the first */
+    {
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerPressEvent(dataHandleId(first), primary);
+        layer.pointerPressEvent(dataHandleId(first), secondary);
+        layer.pointerMoveEvent(dataHandleId(first), move);
+        CORRADE_COMPARE(firstCalled, 1);
+
+    /* A mouse or pen press, move, release or visibility lost on the second
+       should be independent and not result in the gesture being reset */
+    } {
+        /* Matching ID shouldn't cause any problem either */
+        PointerEvent mousePress{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 36};
+        PointerMoveEvent mouseMove{{}, PointerEventSource::Mouse, {}, {}, true, 36};
+        PointerEvent mouseRelease{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 36};
+        PointerEvent penPress{{}, PointerEventSource::Pen, Pointer::Pen, true, 36};
+        PointerMoveEvent penMove{{}, PointerEventSource::Mouse, {}, {}, true, 36};
+        PointerEvent penRelease{{}, PointerEventSource::Pen, Pointer::Pen, true, 36};
+        VisibilityLostEvent visibilityLost;
+        layer.pointerPressEvent(dataHandleId(second), mousePress);
+        layer.pointerMoveEvent(dataHandleId(second), mouseMove);
+        layer.pointerReleaseEvent(dataHandleId(second), mouseRelease);
+        layer.pointerPressEvent(dataHandleId(second), penPress);
+        layer.pointerMoveEvent(dataHandleId(second), penMove);
+        layer.pointerReleaseEvent(dataHandleId(second), penRelease);
+        layer.visibilityLostEvent(dataHandleId(second), visibilityLost);
+        CORRADE_COMPARE(firstCalled, 1);
+
+        /* Gets called on the next move on the first */
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerMoveEvent(dataHandleId(first), move);
+        CORRADE_COMPARE(firstCalled, 2);
+
+    /* A finger press on the second however resets it */
+    } {
+        /* Even a different ID should reset it */
+        PointerEvent fingerPress{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
+        layer.pointerPressEvent(dataHandleId(second), fingerPress);
+        CORRADE_COMPARE(firstCalled, 2);
+
+        /* Slot no longer triggered on the next move on the first */
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerMoveEvent(dataHandleId(first), move1);
+        CORRADE_COMPARE(firstCalled, 2);
+
+        /* The gesture needs to be fully recognized on the first again */
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerPressEvent(dataHandleId(first), primary);
+        layer.pointerPressEvent(dataHandleId(first), secondary);
+        layer.pointerMoveEvent(dataHandleId(first), move2);
+        CORRADE_COMPARE(firstCalled, 3);
+
+    /* A finger move on the second resets it as well */
+    } {
+        /* Even a different ID should reset it */
+        PointerMoveEvent fingerMove{{}, PointerEventSource::Touch, {}, {}, false, 22};
+        layer.pointerMoveEvent(dataHandleId(second), fingerMove);
+        CORRADE_COMPARE(firstCalled, 3);
+
+        /* Slot no longer triggered on the next move on the first */
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerMoveEvent(dataHandleId(first), move1);
+        CORRADE_COMPARE(firstCalled, 3);
+
+        /* The gesture needs to be fully recognized on the first again */
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerPressEvent(dataHandleId(first), primary);
+        layer.pointerPressEvent(dataHandleId(first), secondary);
+        layer.pointerMoveEvent(dataHandleId(first), move2);
+        CORRADE_COMPARE(firstCalled, 4);
+
+    /* And a release also */
+    } {
+        /* Even a different ID should reset it */
+        PointerEvent fingerRelease{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
+        layer.pointerReleaseEvent(dataHandleId(second), fingerRelease);
+        CORRADE_COMPARE(firstCalled, 4);
+
+        /* Slot no longer triggered on the next move on the first */
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerMoveEvent(dataHandleId(first), move1);
+        CORRADE_COMPARE(firstCalled, 4);
+
+        /* The gesture needs to be fully recognized on the first again */
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerPressEvent(dataHandleId(first), primary);
+        layer.pointerPressEvent(dataHandleId(first), secondary);
+        layer.pointerMoveEvent(dataHandleId(first), move2);
+        CORRADE_COMPARE(firstCalled, 5);
+
+    /* Visibility lost event resets as well */
+    } {
+        VisibilityLostEvent lost;
+        layer.visibilityLostEvent(dataHandleId(first), lost);
+        CORRADE_COMPARE(firstCalled, 5);
+
+        /* Slot no longer triggered on the next move on the first */
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerMoveEvent(dataHandleId(first), move1);
+        CORRADE_COMPARE(firstCalled, 5);
+
+        /* The gesture needs to be fully recognized on the first again */
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerPressEvent(dataHandleId(first), primary);
+        layer.pointerPressEvent(dataHandleId(first), secondary);
+        layer.pointerMoveEvent(dataHandleId(first), move2);
+        CORRADE_COMPARE(firstCalled, 6);
+
+    /* If the data is removed and created again with the same ID, it gets reset
+       also. Transitive data removal due to the node being removed is tested in
+       pinchFromUserInterface() below. */
+    /** @todo probably no longer necessary once we attach to a node instead
+        (when events are called in a bulk for the whole node) -- then it gets
+        reset only when the node disappears */
+    } {
+        layer.remove(first);
+
+        DataHandle first2 = layer.onPinch(nodeHandle(0, 1), [&firstCalled](const Vector2&, const Vector2&, const Complex&, Float) {
+            ++firstCalled;
+        });
+        CORRADE_COMPARE(dataHandleId(first2), dataHandleId(first));
+
+        /* Slot no longer triggered on the next move on the first */
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerMoveEvent(dataHandleId(first2), move1);
+        CORRADE_COMPARE(firstCalled, 6);
+
+        /* The gesture needs to be fully recognized on the first again */
+        PointerEvent primary{{}, PointerEventSource::Touch, Pointer::Finger, true, 36};
+        PointerEvent secondary{{}, PointerEventSource::Touch, Pointer::Finger, false, 17};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, Pointer::Finger, true, 36};
+        layer.pointerPressEvent(dataHandleId(first2), primary);
+        layer.pointerPressEvent(dataHandleId(first2), secondary);
+        layer.pointerMoveEvent(dataHandleId(first2), move2);
+        CORRADE_COMPARE(firstCalled, 7);
+    }
+}
+
+void EventLayerTest::pinchPressMoveRelease() {
+    EventLayer layer{layerHandle(0, 1)};
+
+    Int called = 0;
+    DataHandle handle = layer.onPinch(nodeHandle(0, 1), [&called](const Vector2&, const Vector2&, const Complex&, Float) {
+        ++called;
+    });
+
+    /* The press event should get accepted for tracked fingers to prevent it
+       from being propagated further if no other data accepts it. The handler
+       shouldn't get called though. */
+    {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 32};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 16};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        /* Secondary finger press that doesn't match the above isn't used */
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
+        layer.pointerPressEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+
+    /* Similarly for move. Only in case the actual finger matches what's
+       tracked it gets fired. */
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, {}, {}, true, 0};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Pen, {}, {}, true, 0};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 0);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 1);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 16};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* Primary finger move that doesn't match the ID above isn't used */
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 44};
+        layer.pointerMoveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+
+    /* And release */
+    } {
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseLeft, true, 0};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        PointerEvent event{{}, PointerEventSource::Pen, Pointer::Pen, true, 0};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* Secondary finger release that doesn't match the above isn't used */
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 22};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 16};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        /* If the primary finger would be released first, the secondary release
+           wouldn't be used */
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 32};
+        layer.pointerReleaseEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+
+    /* Any other than press, move or release event shouldn't get accepted */
+    } {
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, true, 32};
+        layer.pointerTapOrClickEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32};
+        layer.pointerEnterEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, true, 32};
+        layer.pointerLeaveEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        FocusEvent event{{}};
+        layer.focusEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    } {
+        FocusEvent event{{}};
+        layer.blurEvent(dataHandleId(handle), event);
+        CORRADE_VERIFY(!event.isAccepted());
+        CORRADE_COMPARE(called, 2);
+    }
+}
+
+void EventLayerTest::pinchFromUserInterface() {
+    /* "Integration" test to verify onDrag() behavior with the whole event
+       pipeline in AbstractUserInterface */
+
+    AbstractUserInterface ui{{100, 100}};
+
+    EventLayer& layer = ui.setLayerInstance(Containers::pointer<EventLayer>(ui.createLayer()));
+
+    /* A node below the one that should react to the drag event, accepting
+       presses, moves and releases. Shouldn't get considered at all. */
+    Int belowCalled = 0;
+    NodeHandle nodeBelow = ui.createNode({}, {100, 100});
+    layer.onPress(nodeBelow, [&belowCalled]{
+        ++belowCalled;
+    });
+    layer.onDrag(nodeBelow, [&belowCalled](const Vector2&){
+        ++belowCalled;
+    });
+    layer.onRelease(nodeBelow, [&belowCalled]{
+        ++belowCalled;
+    });
+
+    NodeHandle node = ui.createNode({25, 50}, {50, 25});
+
+    Int called = 0;
+    struct {
+        Vector2 position;
+        Vector2 relativeTranslation;
+        Complex relativeRotation;
+        Float relativeScaling;
+    } expected;
+    DataHandle data = layer.onPinch(node, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, const Float relativeScaling){
+        CORRADE_COMPARE(position, expected.position);
+        CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
+        CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
+        CORRADE_COMPARE(relativeScaling, expected.relativeScaling);
+        ++called;
+    });
+
+    /* Presses for the two tracked fingers should be accepted but not resulting
+       in the handler being called */
+    {
+        PointerEvent event1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
+        PointerEvent event2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, event1));
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, event2));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 0);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A move of one of the two fingers makes the slot called, rotating 180° */
+    } {
+        expected.position = {25.0f, 17.5f};
+        expected.relativeTranslation = {0.0f, -5.0f};
+        expected.relativeRotation = Complex::rotation(180.0_degf);
+        expected.relativeScaling = 1.0f;
+
+        PointerMoveEvent event{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A press of another finger should be ignored, and since there's a
+       capture, it shouldn't fall through either */
+    } {
+        PointerEvent event{{}, PointerEventSource::Touch, Pointer::Finger, false, 1226};
+        CORRADE_VERIFY(!ui.pointerPressEvent({50, 75}, event));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A release of one of the fingers should be accepted. Move of that finger
+       then doesn't get accepted. */
+    } {
+        PointerEvent release{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        CORRADE_VERIFY(ui.pointerReleaseEvent({50, 55}, release));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* A press of another finger from above is accepted now, and a subsequent
+       move of even the primary finger generates another pinch. */
+    } {
+        PointerEvent press{{}, PointerEventSource::Touch, Pointer::Finger, false, 1226};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 65}, press));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 1);
+        CORRADE_COMPARE(belowCalled, 0);
+
+        expected.position = {25.0f, 12.5f};
+        expected.relativeTranslation = {0.0f, -5.0f};
+        expected.relativeRotation = Complex::rotation(180.0_degf);
+        expected.relativeScaling = 1.0f;
+
+        PointerMoveEvent move{{}, PointerEventSource::Touch, {}, {}, true, 633};
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 60}, move));
+        CORRADE_COMPARE(ui.currentHoveredNode(), node);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 2);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* Hiding the node and then showing it again makes the gesture reset. It
+       has to be recognized from scratch to generate a pinch again. */
+    } {
+        ui.addNodeFlags(node, NodeFlag::Hidden);
+        /* Update so it's actually cleared from currentCapturedNode() etc.
+           Without this, it'd be as if the flag wasn't set at all. */
+        ui.update();
+        ui.clearNodeFlags(node, NodeFlag::Hidden);
+
+        /* Move of the primary finger isn't even accepted now because the
+           gesture recognizer doesn't track it as pressed */
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, {}, true, 633};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move1));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 2); /* not called */
+        CORRADE_COMPARE(belowCalled, 0);
+
+        /* Same as the initial state */
+        expected.position = {25.0f, 17.5f};
+        expected.relativeTranslation = {0.0f, -5.0f};
+        expected.relativeRotation = Complex::rotation(180.0_degf);
+        expected.relativeScaling = 1.0f;
+
+        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move2));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node);
+        CORRADE_COMPARE(called, 3);
+        CORRADE_COMPARE(belowCalled, 0);
+
+    /* Removing the node and recreating the data with the same ID makes the
+       gesture reset, again it needs a full re-recognition */
+    } {
+        ui.removeNode(node);
+        /* Update so layer data clean gets actually performed */
+        ui.update();
+
+        NodeHandle node2 = ui.createNode({25, 50}, {50, 25});
+        DataHandle data2 = layer.onPinch(node2, [&called, &expected](const Vector2& position, const Vector2& relativeTranslation, const Complex& relativeRotation, const Float relativeScaling){
+            CORRADE_COMPARE(position, expected.position);
+            CORRADE_COMPARE(relativeTranslation, expected.relativeTranslation);
+            CORRADE_COMPARE(relativeRotation, expected.relativeRotation);
+            CORRADE_COMPARE(relativeScaling, expected.relativeScaling);
+            ++called;
+        });
+        CORRADE_COMPARE(dataHandleId(data2), dataHandleId(data));
+
+        /* Move of the primary finger isn't even accepted now because the
+           gesture recognizer doesn't track it as pressed */
+        PointerMoveEvent move1{{}, PointerEventSource::Touch, {}, {}, true, 633};
+        CORRADE_VERIFY(!ui.pointerMoveEvent({50, 65}, move1));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(called, 3); /* not called */
+        CORRADE_COMPARE(belowCalled, 0);
+
+        /* Same as the initial state again */
+        expected.position = {25.0f, 17.5f};
+        expected.relativeTranslation = {0.0f, -5.0f};
+        expected.relativeRotation = Complex::rotation(180.0_degf);
+        expected.relativeScaling = 1.0f;
+
+        PointerEvent press1{{}, PointerEventSource::Touch, Pointer::Finger, true, 633};
+        PointerEvent press2{{}, PointerEventSource::Touch, Pointer::Finger, false, 3371};
+        PointerMoveEvent move2{{}, PointerEventSource::Touch, {}, {}, false, 3371};
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 70}, press1));
+        CORRADE_VERIFY(ui.pointerPressEvent({50, 75}, press2));
+        CORRADE_VERIFY(ui.pointerMoveEvent({50, 65}, move2));
+        CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentPressedNode(), node2);
+        CORRADE_COMPARE(ui.currentCapturedNode(), node2);
+        CORRADE_COMPARE(called, 4);
         CORRADE_COMPARE(belowCalled, 0);
     }
 }
