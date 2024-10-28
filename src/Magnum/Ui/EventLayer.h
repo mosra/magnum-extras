@@ -371,9 +371,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * The @p slot, receiving the movement delta and optionally also a
          * node-relative position at which the move happened, is called when a
          * @ref Pointer::MouseLeft, primary @ref Pointer::Finger or
-         * @ref Pointer::Pen move happens on the @p node. If event capture is
-         * disabled by any event handler on given node, the slot is called only
-         * as long as the pointer doesn't leave the node area.
+         * @ref Pointer::Pen move happens on the @p node. To prevent the slot
+         * from being triggered by drags that originated outside of @p node,
+         * it's called only if the move event is captured on given node.
          *
          * The returned @ref DataHandle is automatically removed once @p node
          * or any of its parents is removed, it's the caller responsibility to
