@@ -412,7 +412,9 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
         return;
 
     Data& data = _state->data[dataId];
-    if(data.eventType == Implementation::EventType::Press && (event.pointer() == Pointer::MouseLeft || event.pointer() == Pointer::Finger || event.pointer() == Pointer::Pen)) {
+    if(data.eventType == Implementation::EventType::Press &&
+        event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))
+    {
         reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
         return;
@@ -426,9 +428,7 @@ void EventLayer::doPointerPressEvent(const UnsignedInt dataId, PointerEvent& eve
         ((data.eventType == Implementation::EventType::TapOrClick ||
           data.eventType == Implementation::EventType::Drag ||
           data.eventType == Implementation::EventType::Focus) &&
-            (event.pointer() == Pointer::MouseLeft ||
-             event.pointer() == Pointer::Finger ||
-             event.pointer() == Pointer::Pen)) ||
+            event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) ||
         (data.eventType == Implementation::EventType::MiddleClick &&
             event.pointer() == Pointer::MouseMiddle) ||
         (data.eventType == Implementation::EventType::RightClick &&
@@ -443,9 +443,7 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
 
     Data& data = _state->data[dataId];
     if(data.eventType == Implementation::EventType::Release &&
-        (event.pointer() == Pointer::MouseLeft ||
-         event.pointer() == Pointer::Finger ||
-         event.pointer() == Pointer::Pen))
+        event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))
     {
         reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
@@ -457,9 +455,7 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
        causing the subsequent tap/click to not get called at all. */
     if(
         (data.eventType == Implementation::EventType::TapOrClick &&
-            (event.pointer() == Pointer::MouseLeft ||
-             event.pointer() == Pointer::Finger ||
-             event.pointer() == Pointer::Pen)) ||
+            event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) ||
         (data.eventType == Implementation::EventType::MiddleClick &&
             event.pointer() == Pointer::MouseMiddle) ||
         (data.eventType == Implementation::EventType::RightClick &&
@@ -473,9 +469,7 @@ void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent
 
     Data& data = _state->data[dataId];
     if((data.eventType == Implementation::EventType::TapOrClick &&
-            (event.pointer() == Pointer::MouseLeft ||
-             event.pointer() == Pointer::Finger ||
-             event.pointer() == Pointer::Pen)) ||
+            event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) ||
        (data.eventType == Implementation::EventType::MiddleClick &&
             event.pointer() == Pointer::MouseMiddle) ||
        (data.eventType == Implementation::EventType::RightClick &&

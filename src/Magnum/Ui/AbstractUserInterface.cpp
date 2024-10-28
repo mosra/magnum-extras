@@ -3665,10 +3665,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     /* If the press happened with a "default" pointer and a primary event, deal
        with focus. With other pointer types and secondary events nothing gets
        focused  but also they don't blur anything. */
-    if(event.isPrimary() && (event.pointer() == Pointer::MouseLeft ||
-                             event.pointer() == Pointer::Finger ||
-                             event.pointer() == Pointer::Pen))
-    {
+    if(event.isPrimary() && (event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen))) {
         /* Call a focus event if the press was accepted and on a node that's
            focusable */
         const NodeHandle nodeToFocus =

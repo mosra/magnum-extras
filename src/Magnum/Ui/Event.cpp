@@ -81,6 +81,11 @@ Debug& operator<<(Debug& debug, const Pointers value) {
 
 PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource source, const Pointer pointer, const bool primary, const Long id): _time{time}, _id{id}, _source{source}, _pointer{pointer}, _primary{primary} {
     CORRADE_ASSERT(
+        /* *Not* checking `pointer & (MouseLeft|MouseMiddle|MouseRight)` like
+           in other places because that would silently pass through values that
+           are combinations of those individual bits. Here we need to be strict
+           so the remaining code can do just the set operation and be sure what
+           pointer() returns makes sense. */
         (source == PointerEventSource::Mouse && (pointer == Pointer::MouseLeft || pointer == Pointer::MouseMiddle || pointer == Pointer::MouseRight)) ||
         (source == PointerEventSource::Touch && pointer == Pointer::Finger) ||
         (source == PointerEventSource::Pen && (pointer == Pointer::Pen || pointer == Pointer::Eraser)),
@@ -96,6 +101,11 @@ PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSou
        mouse while a finger or a pen is pressed, and such event will have mouse
        as a source */
     CORRADE_ASSERT(!pointer ||
+        /* *Not* checking `pointer & (MouseLeft|MouseMiddle|MouseRight)` like
+           in other places because that would silently pass through values that
+           are combinations of those individual bits. Here we need to be strict
+           so the remaining code can do just the set operation and be sure what
+           pointer() returns makes sense. */
         (source == PointerEventSource::Mouse && (pointer == Pointer::MouseLeft || pointer == Pointer::MouseMiddle || pointer == Pointer::MouseRight)) ||
         (source == PointerEventSource::Touch && pointer == Pointer::Finger) ||
         (source == PointerEventSource::Pen && (pointer == Pointer::Pen || pointer == Pointer::Eraser)),
