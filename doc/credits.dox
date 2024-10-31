@@ -30,8 +30,10 @@ namespace Magnum {
 
 @section credits-contributors-extras Magnum Extras
 
+-   **[\@1b00](https://github.com/1b00)** --- RPM package
 -   **Hans Loeblich** ([\@thehans](https://github.com/thehans)) ---
     improvements to Debian package building experience
+-   **Igal Alkon** ([\@alkavan](https://github.com/alkavan)) --- RPM packages
 -   **John Laxson** ([\@jlaxson](https://github.com/jlaxson)) --- Homebrew
     package improvements
 -   **Jonathan Hale** ([\@Squareys](https://github.com/Squareys)) --- porting

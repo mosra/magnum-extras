@@ -88,6 +88,9 @@ namespace Magnum {
 -   Fixed `FindMagnumExtras.cmake` to correctly find the Magnum Extras include
     directory when it's installed to a different directory than Magnum itself
     (see [mosra/magnum-integration#105](https://github.com/mosra/magnum-integration/issues/105))
+-   Created a RPM package with a helper script for building (see
+    [mosra/magnum-extras#13](https://github.com/mosra/magnum-extras/pull/13)
+    and [mosra/magnum-extras#16](https://github.com/mosra/magnum-extras/pull/16))
 
 @subsection changelog-extras-latest-deprecated Deprecated APIs
 
