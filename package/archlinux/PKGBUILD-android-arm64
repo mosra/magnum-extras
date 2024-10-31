@@ -6,7 +6,7 @@ pkgdesc="Extras for the Magnum C++11/C++14 graphics engine (Android ARM64)"
 arch=('any')
 url="https://magnum.graphics"
 license=('MIT')
-depends=('android-arm64-magnum')
+depends=('android-arm64-magnum', 'android-arm64-magnum-plugins')
 makedepends=('cmake' 'ninja' 'android-ndk' 'corrade')
 options=('!strip' '!buildflags')
 

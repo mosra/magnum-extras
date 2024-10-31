@@ -6,7 +6,7 @@ pkgdesc="Extras for the Magnum C++11/C++14 graphics engine (OpenGL ES 3.0 versio
 arch=('i686' 'x86_64')
 url="https://magnum.graphics"
 license=('MIT')
-depends=('magnum=dev.es3')
+depends=('magnum=dev.es3' 'magnum-plugins=dev.es3')
 makedepends=('cmake' 'ninja')
 options=(!strip)
 provides=('magnum-extras-git')

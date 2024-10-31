@@ -17,5 +17,5 @@ Description: Extras for the Magnum C++11/C++14 graphics engine
 Package: magnum-extras
 Section: libs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, magnum
+Depends: ${shlibs:Depends}, ${misc:Depends}, magnum, magnum-plugins
 Description: Extras for the Magnum C++11/C++14 graphics engine

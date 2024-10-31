@@ -14,6 +14,7 @@ IUSE=""
 
 RDEPEND="
 	dev-libs/magnum
+	dev-libs/magnum-plugins
 "
 DEPEND="${RDEPEND}"
 

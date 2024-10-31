@@ -144,10 +144,11 @@ There are also ArchLinux packages for
 
 The `package/debian/` directory contains all files needed for building Debian
 packages. You need the @ref building-corrade-packages-deb "Corrade" and
-@ref building-packages-deb "Magnum" Debian packages installed and in addition
-also the `dpkg-dev` and `debhelper` packages. Building is easy, just change
-directory to package root, link or copy the `package/debian` directory there
-and run `dpkg-buildpackage`:
+@ref building-packages-deb "Magnum" and
+@ref building-plugins-packages-deb "Magnum Plugins" Debian packages installed
+and in addition also the `dpkg-dev` and `debhelper` packages. Building is easy,
+just change directory to package root, link or copy the `package/debian`
+directory there and run `dpkg-buildpackage`:
 
 @code{.sh}
 git clone https://github.com/mosra/magnum-extras && cd magnum-extras

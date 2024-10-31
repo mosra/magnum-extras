@@ -8,6 +8,7 @@ class MagnumExtras < Formula
 
   depends_on "cmake" => :build
   depends_on "magnum"
+  depends_on "magnum-plugins"
 
   def install
     # 2020.06 has the options unprefixed, current master has them prefixed.
