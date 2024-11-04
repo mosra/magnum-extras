@@ -32,9 +32,9 @@
 
 #include "Magnum/Magnum.h"
 
+#ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Ui {
 
-#ifndef DOXYGEN_GENERATING_OUTPUT
 enum class DataHandle: UnsignedLong;
 enum class LayerHandle: UnsignedShort;
 enum class LayerDataHandle: UnsignedInt;
@@ -125,8 +125,8 @@ class KeyEvent;
 class TextInputEvent;
 
 class VisibilityLostEvent;
-#endif
 
 }}
+#endif
 
 #endif
