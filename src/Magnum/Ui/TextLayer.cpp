@@ -188,7 +188,7 @@ FontHandle TextLayer::Shared::addFont(Text::AbstractFont& font, const Float size
         "Ui::TextLayer::Shared::addFont(): no glyph cache set", {});
     const Containers::Optional<UnsignedInt> glyphCacheFontId = state.glyphCache->findFont(font);
     CORRADE_ASSERT(glyphCacheFontId,
-        "Ui::TextLayer::Shared::addFont(): font not found among" << state.glyphCache->fontCount() << "fonts in set glyph cache", {});
+        "Ui::TextLayer::Shared::addFont(): font not found among" << state.glyphCache->fontCount() << "fonts in associated glyph cache", {});
     CORRADE_ASSERT(state.fonts.size() < 1 << Implementation::FontHandleIdBits,
         "Ui::TextLayer::Shared::addFont(): can only have at most" << (1 << Implementation::FontHandleIdBits) << "fonts", {});
     /** @todo assert that the font is opened? doesn't prevent anybody from
@@ -211,7 +211,7 @@ FontHandle TextLayer::Shared::addInstancelessFont(const UnsignedInt glyphCacheFo
     CORRADE_ASSERT(state.glyphCache,
         "Ui::TextLayer::Shared::addInstancelessFont(): no glyph cache set", {});
     CORRADE_ASSERT(glyphCacheFontId < state.glyphCache->fontCount(),
-        "Ui::TextLayer::Shared::addInstancelessFont(): index" << glyphCacheFontId << "out of range for" << state.glyphCache->fontCount() << "fonts in set glyph cache", {});
+        "Ui::TextLayer::Shared::addInstancelessFont(): index" << glyphCacheFontId << "out of range for" << state.glyphCache->fontCount() << "fonts in associated glyph cache", {});
     CORRADE_ASSERT(!state.glyphCache->fontPointer(glyphCacheFontId),
         "Ui::TextLayer::Shared::addInstancelessFont(): glyph cache font" << glyphCacheFontId << "has an instance set", {});
     CORRADE_ASSERT(state.fonts.size() < 1 << Implementation::FontHandleIdBits,

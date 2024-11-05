@@ -2249,8 +2249,8 @@ void TextLayerTest::sharedAddFontNotFoundInCache() {
     shared.addFont(font, 1.0f);
     shared.addInstancelessFont(2, 1.0f);
     CORRADE_COMPARE(out,
-        "Ui::TextLayer::Shared::addFont(): font not found among 2 fonts in set glyph cache\n"
-        "Ui::TextLayer::Shared::addInstancelessFont(): index 2 out of range for 2 fonts in set glyph cache\n");
+        "Ui::TextLayer::Shared::addFont(): font not found among 2 fonts in associated glyph cache\n"
+        "Ui::TextLayer::Shared::addInstancelessFont(): index 2 out of range for 2 fonts in associated glyph cache\n");
 }
 
 void TextLayerTest::sharedAddFontNoHandlesLeft() {
