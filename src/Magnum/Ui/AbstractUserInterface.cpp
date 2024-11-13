@@ -1672,10 +1672,10 @@ NodeHandle AbstractUserInterface::createNode(const NodeHandle parent, const Vect
     /* Fill the data. In both above cases the generation is already set
        appropriately, either initialized to 1, or incremented when it got
        remove()d (to mark existing handles as invalid) */
+    node->used.parent = parent;
     node->used.flags = flags;
     node->used.offset = offset;
     node->used.size = size;
-    node->used.parent = parent;
     const NodeHandle handle = nodeHandle(node - state.nodes, node->used.generation);
 
     /* If a root node, implicitly mark it as last in the node order, so
