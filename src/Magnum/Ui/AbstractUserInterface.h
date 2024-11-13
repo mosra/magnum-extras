@@ -1265,8 +1265,12 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Set node offset relative to its parent
          *
-         * The value is subsequently used for layout calculation. Expects that
-         * @p handle is valid.
+         * If the node has a layout assigned, the value is subsequently used
+         * for layout calculation and it's up to the particular layouter
+         * implementation how the initial offset value is used. If the node
+         * doesn't have a layout assigned, the offset is used as-is. Expects
+         * that @p handle is valid. Initially, a node has the offset that was
+         * passed to @ref createNode().
          *
          * Calling this function causes
          * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
@@ -1286,8 +1290,12 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Set node size
          *
-         * The value is subsequently used for layout calculation. Expects that
-         * @p handle is valid.
+         * If the node has a layout assigned, the value is subsequently used
+         * for layout calculation and it's up to the particular layouter
+         * implementation how the initial size value is used. If the node
+         * doesn't have a layout assigned, the size is used as-is. Expects that
+         * @p handle is valid. Initially, a node has the size that was passed
+         * to @ref createNode().
          *
          * Calling this function causes
          * @ref UserInterfaceState::NeedsLayoutUpdate to be set.
@@ -1298,7 +1306,9 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Node flags
          *
-         * Expects that @p handle is valid.
+         * The returned value is only flags set directly on the node itself,
+         * without considering flags such as @ref NodeFlag::Disabled that would
+         * be inherited from parents. Expects that @p handle is valid.
          * @see @ref isHandleValid(NodeHandle) const, @ref setNodeFlags(),
          *      @ref addNodeFlags(), @ref clearNodeFlags()
          */
@@ -1307,7 +1317,8 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Set node flags
          *
-         * Expects that @p handle is valid.
+         * Expects that @p handle is valid. Initially, a node has the flags
+         * that were passed to @ref createNode(), which are by default none.
          *
          * If @ref NodeFlag::Hidden was added or cleared by calling this
          * function, it causes @ref UserInterfaceState::NeedsNodeUpdate to be

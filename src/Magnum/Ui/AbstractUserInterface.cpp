@@ -350,8 +350,9 @@ union Node {
 
         /* One byte free */
 
-        /* Offset relative to parent, size of the contents for event handling
-           propagation, layouting and clipping */
+        /* Initial offset and size passed to layouters, if present. Only the
+           final offset and size produced by the whole layouter chain actually
+           ends up being used for event handling propagation and clipping. */
         Vector2 offset{NoInit}, size{NoInit};
     } used;
 

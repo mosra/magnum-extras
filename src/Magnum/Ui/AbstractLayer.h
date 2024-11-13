@@ -141,8 +141,7 @@ enum class LayerState: UnsignedShort {
      * a non-null @ref NodeHandle and after every @ref AbstractLayer::attach()
      * call that attaches data to a different non-null @ref NodeHandle. Is
      * reset next time @ref AbstractLayer::update() is called with this flag
-     * present. Is reset next time @ref AbstractLayer::update() is called with
-     * this flag present. Implied by @ref LayerState::NeedsNodeEnabledUpdate.
+     * present. Implied by @ref LayerState::NeedsNodeOrderUpdate.
      *
      * Gets passed to @ref AbstractLayer::update() when
      * @ref UserInterfaceState::NeedsNodeEnabledUpdate or anything that implies
@@ -619,11 +618,11 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @relativeref{LayerState,NeedsAttachmentUpdate}, and
          * @relativeref{LayerState,NeedsCompositeOffsetSizeUpdate} if the layer
          * advertises @ref LayerFeature::Composite, that the @p clipRectIds and
-         * @p clipRectDataCounts views have the same size, @p nodeOffsets and
-         * @p nodeSizes have the same size, @p clipRectOffsets and
-         * @p clipRectOffset have the same size and @p compositeRectOffsets and
-         * @p compositeRectSizes have the same size. If
-         * @ref LayerFeature::Composite isn't supported,
+         * @p clipRectDataCounts views have the same size, @p nodeOffsets,
+         * @p nodeSizes and @p nodesEnabled have the same size,
+         * @p clipRectOffsets and @p clipRectOffset have the same size and
+         * @p compositeRectOffsets and @p compositeRectSizes have the same
+         * size. If @ref LayerFeature::Composite isn't supported,
          * @p compositeRectOffsets and @p compositeRectSizes are expected to
          * be empty. The @p nodeOffsets, @p nodeSizes and @p nodesEnabled views
          * should be large enough to contain any valid node ID. If the layer
@@ -661,12 +660,12 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * function directly. Expects that the layer supports
          * @ref LayerFeature::Draw, @p offset and @p count fits into @p dataIds
          * size, that the @p clipRectIds and @p clipRectDataCounts views have
-         * the same size, @p nodeOffsets and @p nodeSizes have the same size
-         * and @p clipRectOffsets and @p clipRectOffset have the same size. The
-         * @p nodeOffsets, @p nodeSizes and @p nodesEnabled views should be
-         * large enough to contain any valid node ID. Delegates to
-         * @ref doDraw(), see its documentation for more information about the
-         * arguments.
+         * the same size, @p nodeOffsets, @p nodeSizes and @p nodesEnabled have
+         * the same size and @p clipRectOffsets and @p clipRectOffset have the
+         * same size. The @p nodeOffsets, @p nodeSizes and @p nodesEnabled
+         * views should be large enough to contain any valid node ID. Delegates
+         * to @ref doDraw(), see its documentation for more information about
+         * the arguments.
          * @see @ref features()
          */
         void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
