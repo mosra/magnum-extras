@@ -163,6 +163,18 @@ enum class UserInterfaceState: UnsignedShort {
 
     /**
      * @ref AbstractUserInterface::update() needs to be called to refresh the
+     * the hierarchical opacity information after node opacity was changed. Set
+     * implicitly after every @ref AbstractUserInterface::setNodeOpacity()
+     * call, is reset next time @ref AbstractUserInterface::update() is
+     * called. Implies @ref UserInterfaceState::NeedsDataUpdate. Implied by
+     * @relativeref{UserInterfaceState,NeedsNodeUpdate} and
+     * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
+     * everything that sets those flags.
+     */
+    NeedsNodeOpacityUpdate = NeedsDataUpdate|(1 << 6),
+
+    /**
+     * @ref AbstractUserInterface::update() needs to be called to refresh the
      * visible node hierarchy and data attached to it after nodes were added or
      * removed, made hidden or visible again or the top-level node order
      * changed. Set implicitly after every
@@ -178,7 +190,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @relativeref{UserInterfaceState,NeedsNodeClean}, so it's also set by
      * everything that sets that flag.
      */
-    NeedsNodeUpdate = NeedsLayoutAssignmentUpdate|(1 << 6),
+    NeedsNodeUpdate = NeedsLayoutAssignmentUpdate|NeedsNodeOpacityUpdate|(1 << 7),
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune
@@ -188,7 +200,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @ref AbstractUserInterface::clean() is called. Implied by
      * @ref UserInterfaceState::NeedsNodeClean.
      */
-    NeedsDataClean = 1 << 7,
+    NeedsDataClean = 1 << 8,
 
     /**
      * @ref AbstractUserInterface::clean() needs to be called to prune child
@@ -200,7 +212,7 @@ enum class UserInterfaceState: UnsignedShort {
      * @ref UserInterfaceState::NeedsNodeUpdate and
      * @relativeref{UserInterfaceState,NeedsDataClean}.
      */
-    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 8),
+    NeedsNodeClean = NeedsNodeUpdate|NeedsDataClean|(1 << 9),
 
     /**
      * @ref AbstractUserInterface::advanceAnimations() needs to be called to
@@ -210,7 +222,7 @@ enum class UserInterfaceState: UnsignedShort {
      * animations are @ref AnimationState::Scheduled,
      * @ref AnimationState::Playing or @ref AnimationState::Paused anymore.
      */
-    NeedsAnimationAdvance = 1 << 9,
+    NeedsAnimationAdvance = 1 << 10,
 };
 
 /**
@@ -1302,6 +1314,34 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @see @ref isHandleValid(NodeHandle) const
          */
         void setNodeSize(NodeHandle handle, const Vector2& size);
+
+        /**
+         * @brief Node opacity
+         *
+         * The returned value is only the opacity set on the node itself,
+         * without considering opacity inherited from parents. Expects that
+         * @p handle is valid.
+         * @see @ref isHandleValid(NodeHandle) const
+         */
+        Float nodeOpacity(NodeHandle handle) const;
+
+        /**
+         * @brief Set node opacity
+         *
+         * The value is subsequently multiplied with opacity of all parents and
+         * passed to layers to affect rendering. Opacity of @cpp 1.0f @ce makes
+         * a node opaque and @cpp 0.0f @ce fully transparent, although values
+         * outside of this range are allowed as well. Note that it's up to the
+         * particular layer implementation how the opacity value is actually
+         * used, and if at all --- the layer may for example have additional
+         * options that affect the opacity either way. Expects that @p handle
+         * is valid. Initially, a node has the opacity set to @cpp 1.0f @ce.
+         *
+         * Calling this function causes
+         * @ref UserInterfaceState::NeedsNodeOpacityUpdate to be set.
+         * @see @ref isHandleValid(NodeHandle) const
+         */
+        void setNodeOpacity(NodeHandle handle, Float opacity);
 
         /**
          * @brief Node flags

@@ -153,6 +153,23 @@ enum class LayerState: UnsignedShort {
     /**
      * @ref AbstractLayer::update() (which is called from
      * @ref AbstractUserInterface::update()) needs to be called to recalculate
+     * and reupload node-opacity-related state after node opacities changed.
+     * Transitively set after every @ref AbstractLayer::create() with
+     * a non-null @ref NodeHandle and after every @ref AbstractLayer::attach()
+     * call that attaches data to a different non-null @ref NodeHandle. Is
+     * reset next time @ref AbstractLayer::update() is called with this flag
+     * present. Implied by @ref LayerState::NeedsAttachmentUpdate.
+     *
+     * Gets passed to @ref AbstractLayer::update() when
+     * @ref UserInterfaceState::NeedsNodeOpacityUpdate or anything that implies
+     * it is set on the user interface. Is never returned by
+     * @ref AbstractLayer::state() alone.
+     */
+    NeedsNodeOpacityUpdate = 1 << 1,
+
+    /**
+     * @ref AbstractLayer::update() (which is called from
+     * @ref AbstractUserInterface::update()) needs to be called to recalculate
      * and reupload draw-order-related state such as index buffers after node
      * order changed. Transitively set after every @ref AbstractLayer::create()
      * with a non-null @ref NodeHandle and after every
@@ -171,7 +188,7 @@ enum class LayerState: UnsignedShort {
      * with @ref LayerState::NeedsAttachmentUpdate by
      * @ref AbstractLayer::state(), never alone.
      */
-    NeedsNodeOrderUpdate = NeedsNodeEnabledUpdate|(1 << 1),
+    NeedsNodeOrderUpdate = NeedsNodeEnabledUpdate|(1 << 2),
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -194,7 +211,7 @@ enum class LayerState: UnsignedShort {
      * @ref UserInterfaceState::NeedsLayoutUpdate or anything that implies it
      * is set on the user interface.
      */
-    NeedsNodeOffsetSizeUpdate = NeedsNodeOrderUpdate|(1 << 2),
+    NeedsNodeOffsetSizeUpdate = NeedsNodeOrderUpdate|(1 << 3),
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -204,9 +221,11 @@ enum class LayerState: UnsignedShort {
      * after @ref AbstractLayer::create() with a non-null @ref NodeHandle and
      * after @ref AbstractLayer::remove() for a data that's attached to a node,
      * is reset next time @ref AbstractLayer::update() is called with this flag
-     * present. Implies @ref LayerState::NeedsNodeOrderUpdate, as node
-     * attachment change may cause the set of visible nodes, and thus their
-     * order, to change; often gets set together with
+     * present. Implies @ref LayerState::NeedsNodeOpacityUpdate, as node
+     * attachment change may cause the opacity used by a particular data to
+     * change; and @ref LayerState::NeedsNodeOrderUpdate, as node attachment
+     * change may cause the set of visible nodes, and thus their order, to
+     * change; often gets set together with
      * @ref LayerState::NeedsNodeOffsetSizeUpdate by
      * @ref AbstractLayer::attach() and @ref AbstractLayer::create().
      *
@@ -216,7 +235,7 @@ enum class LayerState: UnsignedShort {
      * independently of @ref UserInterfaceState::NeedsDataAttachmentUpdate
      * being present.
      */
-    NeedsAttachmentUpdate = NeedsNodeOrderUpdate|(1 << 3),
+    NeedsAttachmentUpdate = NeedsNodeOpacityUpdate|NeedsNodeOrderUpdate|(1 << 4),
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -234,7 +253,7 @@ enum class LayerState: UnsignedShort {
      * only if the layer itself has it set, independently of
      * @ref UserInterfaceState::NeedsDataUpdate being present.
      */
-    NeedsDataUpdate = 1 << 4,
+    NeedsDataUpdate = 1 << 5,
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -250,7 +269,7 @@ enum class LayerState: UnsignedShort {
      * only if the layer itself has it set, independently of
      * @ref UserInterfaceState::NeedsDataUpdate being present.
      */
-    NeedsCommonDataUpdate = 1 << 5,
+    NeedsCommonDataUpdate = 1 << 6,
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -266,7 +285,7 @@ enum class LayerState: UnsignedShort {
      * only if the layer itself has it set, independently of
      * @ref UserInterfaceState::NeedsDataUpdate being present.
      */
-    NeedsSharedDataUpdate = 1 << 6,
+    NeedsSharedDataUpdate = 1 << 7,
 
     /**
      * @ref AbstractLayer::update() (which is called from
@@ -287,7 +306,7 @@ enum class LayerState: UnsignedShort {
      * is set on the user interface and the layer advertises
      * @ref LayerFeature::Composite.
      */
-    NeedsCompositeOffsetSizeUpdate = 1 << 7,
+    NeedsCompositeOffsetSizeUpdate = 1 << 8,
 
     /**
      * @ref AbstractLayer::cleanData() (which is called from
@@ -299,7 +318,7 @@ enum class LayerState: UnsignedShort {
      * If set on a layer, causes @ref UserInterfaceState::NeedsDataClean
      * to be set on the user interface.
      */
-    NeedsDataClean = 1 << 8
+    NeedsDataClean = 1 << 9
 };
 
 /**
@@ -612,6 +631,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref LayerState::NeedsNodeOffsetSizeUpdate,
          * @relativeref{LayerState,NeedsNodeOrderUpdate},
          * @relativeref{LayerState,NeedsNodeEnabledUpdate},
+         * @relativeref{LayerState,NeedsNodeOpacityUpdate},
          * @relativeref{LayerState,NeedsDataUpdate},
          * @relativeref{LayerState,NeedsCommonDataUpdate},
          * @relativeref{LayerState,NeedsSharedDataUpdate} and
@@ -619,24 +639,24 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @relativeref{LayerState,NeedsCompositeOffsetSizeUpdate} if the layer
          * advertises @ref LayerFeature::Composite, that the @p clipRectIds and
          * @p clipRectDataCounts views have the same size, @p nodeOffsets,
-         * @p nodeSizes and @p nodesEnabled have the same size,
-         * @p clipRectOffsets and @p clipRectOffset have the same size and
-         * @p compositeRectOffsets and @p compositeRectSizes have the same
+         * @p nodeSizes, @p nodeOpacities and @p nodesEnabled have the same
+         * size, @p clipRectOffsets and @p clipRectOffset have the same size
+         * and @p compositeRectOffsets and @p compositeRectSizes have the same
          * size. If @ref LayerFeature::Composite isn't supported,
          * @p compositeRectOffsets and @p compositeRectSizes are expected to
-         * be empty. The @p nodeOffsets, @p nodeSizes and @p nodesEnabled views
-         * should be large enough to contain any valid node ID. If the layer
-         * advertises @ref LayerFeature::Draw, expects that @ref setSize() was
-         * called at least once before this function. Delegates to
-         * @ref doUpdate(), see its documentation for more information about
-         * the arguments.
+         * be empty. The @p nodeOffsets, @p nodeSizes, @p nodeOpacities and
+         * @p nodesEnabled views should be large enough to contain any valid
+         * node ID. If the layer advertises @ref LayerFeature::Draw, expects
+         * that @ref setSize() was called at least once before this function.
+         * Delegates to @ref doUpdate(), see its documentation for more
+         * information about the arguments.
          *
          * Calling this function resets @ref LayerStates present in @p state,
          * however note that behavior of this function is independent of
          * @ref state() --- it performs the update only based on what's passed
          * in @p state.
          */
-        void update(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes);
+        void update(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes);
 
         /**
          * @brief Composite previously rendered contents
@@ -660,15 +680,16 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * function directly. Expects that the layer supports
          * @ref LayerFeature::Draw, @p offset and @p count fits into @p dataIds
          * size, that the @p clipRectIds and @p clipRectDataCounts views have
-         * the same size, @p nodeOffsets, @p nodeSizes and @p nodesEnabled have
-         * the same size and @p clipRectOffsets and @p clipRectOffset have the
-         * same size. The @p nodeOffsets, @p nodeSizes and @p nodesEnabled
-         * views should be large enough to contain any valid node ID. Delegates
-         * to @ref doDraw(), see its documentation for more information about
-         * the arguments.
+         * the same size, @p nodeOffsets, @p nodeSizes, @p nodeOpacities and
+         * @p nodesEnabled have the same size and @p clipRectOffsets and
+         * @p clipRectOffset have the same size. The @p nodeOffsets,
+         * @p nodeSizes, @p nodeOpacities and @p nodesEnabled views should be
+         * large enough to contain any valid node ID. Delegates to
+         * @ref doDraw(), see its documentation for more information about the
+         * arguments.
          * @see @ref features()
          */
-        void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        void draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Handle a pointer press event
@@ -1148,6 +1169,8 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *      clip rect from @p clipRectIds
          * @param nodeOffsets       Absolute node offsets indexed by node ID
          * @param nodeSizes         Node sizes indexed by node ID
+         * @param nodeOpacities     Absolute node opacities  (i.e., inheriting
+         *      parent node opacities as well) indexed by node ID
          * @param nodesEnabled      Which visible nodes are enabled, i.e. which
          *      don't have @ref NodeFlag::Disabled set on themselves or any
          *      parent node
@@ -1185,16 +1208,17 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * Node handles corresponding to @p dataIds are available in
          * @ref nodes(), node IDs can be then extracted from the handles
          * using @ref nodeHandleId(). The node IDs then index into the
-         * @p nodeOffsets, @p nodeSizes and @p nodesEnabled views. The
-         * @p nodeOffsets, @p nodeSizes and @p nodesEnabled have the same size
-         * and are guaranteed to be large enough to contain any valid node ID.
+         * @p nodeOffsets, @p nodeSizes, @p nodeOpacities and @p nodesEnabled
+         * views. The @p nodeOffsets, @p nodeSizes, @p nodeOpacities and
+         * @p nodesEnabled have the same size and are guaranteed to be large
+         * enough to contain any valid node ID.
          *
          * All @ref nodes() at indices corresponding to @p dataIds are
          * guaranteed to not be @ref NodeHandle::Null at the time this function
-         * is called. The @p nodeOffsets, @p nodeSizes and @p nodesDisabled
-         * arrays may contain random or uninitialized values for nodes
-         * different than those referenced from @p dataIds, such as for nodes
-         * that are not currently visible or freed node handles.
+         * is called. The @p nodeOffsets, @p nodeSizes, @p nodeOpacities and
+         * @p nodesDisabled arrays may contain random or uninitialized values
+         * for nodes different than those referenced from @p dataIds, such as
+         * for nodes that are not currently visible or freed node handles.
          *
          * The node data are meant to be clipped by rects defined in
          * @p clipRectOffsets and @p clipRectSizes. The @p clipRectIds and
@@ -1229,7 +1253,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref doDraw() is called several times with different sub-ranges of
          * the data based on desired draw order.
          */
-        virtual void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes);
+        virtual void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes);
 
         /**
          * @brief Composite previously rendered contents
@@ -1283,6 +1307,8 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          *      passed to @ref doUpdate() earlier.
          * @param nodeSizes         Node sizes. Same as the view passed to
          *      @ref doUpdate() earlier.
+         * @param nodeOpacities     Absolute node opacities. Same as the view
+         *      passed to @ref doUpdate() earlier.
          * @param nodesEnabled      Which visible nodes are enabled, i.e. which
          *      don't have @ref NodeFlag::Disabled set on themselves or any
          *      parent node. Same as the view passed to @ref doUpdate()
@@ -1298,12 +1324,13 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref doUpdate() was called at some point before this function with
          * the exact same views passed to @p dataIds, @p clipRectIds,
          * @p clipRectDataCounts, @p nodeOffsets, @p nodeSizes,
-         * @p nodesEnabled, @p clipRectOffsets and @p clipRectSizes, see its
-         * documentation for their relations and constraints. If
-         * @ref LayerFeature::Composite is supported as well, it's guaranteed
-         * that @ref doComposite() was called before this function and at some
-         * point after @ref doUpdate(), and after drawing contents of all
-         * layers earlier in the top-level node and layer draw order.
+         * @p nodeOpacities, @p nodesEnabled, @p clipRectOffsets and
+         * @p clipRectSizes, see its documentation for their relations and
+         * constraints. If @ref LayerFeature::Composite is supported as well,
+         * it's guaranteed that @ref doComposite() was called before this
+         * function and at some point after @ref doUpdate(), and after drawing
+         * contents of all layers earlier in the top-level node and layer draw
+         * order.
          *
          * Like with @ref doUpdate(), the @p clipRectOffsets and
          * @p clipRectSizes are in the same coordinate system as @p nodeOffsets
@@ -1322,7 +1349,7 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @ref doClean(), this function is never called with an empty
          * @p count.
          */
-        virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
+        virtual void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes);
 
         /**
          * @brief Handle a pointer press event

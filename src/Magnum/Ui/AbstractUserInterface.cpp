@@ -50,6 +50,13 @@
 namespace Magnum { namespace Ui {
 
 Debug& operator<<(Debug& debug, const UserInterfaceState value) {
+    /* Special case coming from the UserInterfaceStates printer. As both are a
+       superset of NeedsDataUpdate, printing just one would result in
+       `UserInterfaceState::NeedsNodeOpacityUpdate|UserInterfaceState(0x2)` in
+       the output. */
+    if(value == UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)))
+        return debug << UserInterfaceState::NeedsDataAttachmentUpdate << Debug::nospace << "|" << Debug::nospace << UserInterfaceState::NeedsNodeOpacityUpdate;
+
     debug << "Ui::UserInterfaceState" << Debug::nospace;
 
     switch(value) {
@@ -61,6 +68,7 @@ Debug& operator<<(Debug& debug, const UserInterfaceState value) {
         _c(NeedsNodeClipUpdate)
         _c(NeedsLayoutUpdate)
         _c(NeedsLayoutAssignmentUpdate)
+        _c(NeedsNodeOpacityUpdate)
         _c(NeedsNodeUpdate)
         _c(NeedsDataClean)
         _c(NeedsNodeClean)
@@ -79,6 +87,14 @@ Debug& operator<<(Debug& debug, const UserInterfaceStates value) {
         UserInterfaceState::NeedsDataClean,
         /* Implied by NeedsNodeClean, has to be after */
         UserInterfaceState::NeedsNodeUpdate,
+        /* Both are a superset of NeedsDataUpdate, meaning printing just one
+           would result in `UserInterfaceState::NeedsNodeOpacityUpdate|
+           UserInterfaceState(0x2)` in the output. So we pass both and let the
+           UserInterfaceState printer deal with that. This is also implied by
+           NeedsNodeUpdate, so has to be after. */
+        UserInterfaceState(UnsignedShort(UserInterfaceState::NeedsDataAttachmentUpdate|UserInterfaceState::NeedsNodeOpacityUpdate)),
+        /* Implied by NeedsNodeUpdate, has to be after */
+        UserInterfaceState::NeedsNodeOpacityUpdate,
         /* Implied by NeedsNodeUpdate, has to be after */
         UserInterfaceState::NeedsLayoutAssignmentUpdate,
         /* Implied by NeedsLayoutAssignmentUpdate, has to be after */
@@ -354,6 +370,10 @@ union Node {
            final offset and size produced by the whole layouter chain actually
            ends up being used for event handling propagation and clipping. */
         Vector2 offset{NoInit}, size{NoInit};
+
+        /* Initial node opacity. The actual value passed to layers is
+           multiplied with opacity of all parents. */
+        Float opacity;
     } used;
 
     /* Used only if the Node is among the free ones */
@@ -543,6 +563,7 @@ struct AbstractUserInterface::State {
     Containers::ArrayView<Vector2> nodeOffsets;
     Containers::ArrayView<Vector2> nodeSizes;
     Containers::ArrayView<Vector2> absoluteNodeOffsets;
+    Containers::ArrayView<Float> absoluteNodeOpacities;
     Containers::MutableBitArrayView visibleNodeMask;
     Containers::MutableBitArrayView visibleEventNodeMask;
     Containers::MutableBitArrayView visibleEnabledNodeMask;
@@ -1676,6 +1697,7 @@ NodeHandle AbstractUserInterface::createNode(const NodeHandle parent, const Vect
     node->used.flags = flags;
     node->used.offset = offset;
     node->used.size = size;
+    node->used.opacity = 1.0f;
     const NodeHandle handle = nodeHandle(node - state.nodes, node->used.generation);
 
     /* If a root node, implicitly mark it as last in the node order, so
@@ -1731,6 +1753,23 @@ void AbstractUserInterface::setNodeSize(const NodeHandle handle, const Vector2& 
 
     /* Mark the UI as needing an update() call to refresh node layout state */
     state.state |= UserInterfaceState::NeedsLayoutUpdate;
+}
+
+Float AbstractUserInterface::nodeOpacity(const NodeHandle handle) const {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::nodeOpacity(): invalid handle" << handle, {});
+    return _state->nodes[nodeHandleId(handle)].used.opacity;
+}
+
+void AbstractUserInterface::setNodeOpacity(const NodeHandle handle, const Float opacity) {
+    CORRADE_ASSERT(isHandleValid(handle),
+        "Ui::AbstractUserInterface::setNodeOpacity(): invalid handle" << handle, );
+    State& state = *_state;
+    state.nodes[nodeHandleId(handle)].used.opacity = opacity;
+
+    /* Mark the UI as needing an update() call to refresh calculated node
+       opacities */
+    state.state |= UserInterfaceState::NeedsNodeOpacityUpdate;
 }
 
 NodeFlags AbstractUserInterface::nodeFlags(const NodeHandle handle) const {
@@ -2644,6 +2683,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
             {NoInit, state.nodes.size(), state.nodeOffsets},
             {NoInit, state.nodes.size(), state.nodeSizes},
             {NoInit, state.nodes.size(), state.absoluteNodeOffsets},
+            {NoInit, state.nodes.size(), state.absoluteNodeOpacities},
             {NoInit, state.nodes.size(), state.visibleNodeMask},
             {NoInit, state.nodes.size(), state.visibleEventNodeMask},
             {NoInit, state.nodes.size(), state.visibleEnabledNodeMask},
@@ -2808,6 +2848,18 @@ AbstractUserInterface& AbstractUserInterface::update() {
             state.absoluteNodeOffsets[id] =
                 node.used.parent == NodeHandle::Null ? nodeOffset :
                     state.absoluteNodeOffsets[nodeHandleId(node.used.parent)] + nodeOffset;
+        }
+    }
+
+    /* If no opacity update is needed, the `state.absoluteNodeOpacities` are
+       all up-to-date */
+    if(states >= UserInterfaceState::NeedsNodeOpacityUpdate) {
+        for(const UnsignedInt id: state.visibleNodeIds) {
+            const Node& node = state.nodes[id];
+            const Float nodeOpacity = node.used.opacity;
+            state.absoluteNodeOpacities[id] =
+                node.used.parent == NodeHandle::Null ? nodeOpacity :
+                    state.absoluteNodeOpacities[nodeHandleId(node.used.parent)]*nodeOpacity;
         }
     }
 
@@ -3228,6 +3280,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
         allLayerStateToUpdate |= LayerState::NeedsNodeOrderUpdate;
     if(states >= UserInterfaceState::NeedsNodeEnabledUpdate)
         allLayerStateToUpdate |= LayerState::NeedsNodeEnabledUpdate;
+    if(states >= UserInterfaceState::NeedsNodeOpacityUpdate)
+        allLayerStateToUpdate |= LayerState::NeedsNodeOpacityUpdate;
     /** @todo state.state doesn't contain anything from the layers, what
         difference would that make? */
     if(states >= UserInterfaceState::NeedsDataAttachmentUpdate)
@@ -3287,6 +3341,7 @@ AbstractUserInterface& AbstractUserInterface::update() {
                     update, not everything */
                 state.absoluteNodeOffsets,
                 state.nodeSizes,
+                state.absoluteNodeOpacities,
                 state.visibleEnabledNodeMask,
                 state.clipRectOffsets.prefix(state.clipRectCount),
                 state.clipRectSizes.prefix(state.clipRectCount),
@@ -3388,6 +3443,7 @@ AbstractUserInterface& AbstractUserInterface::draw() {
             state.dataToDrawClipRectSizes[i],
             state.absoluteNodeOffsets,
             state.nodeSizes,
+            state.absoluteNodeOpacities,
             state.visibleEnabledNodeMask,
             state.clipRectOffsets.prefix(state.clipRectCount),
             state.clipRectSizes.prefix(state.clipRectCount));

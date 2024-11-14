@@ -190,7 +190,10 @@ const struct {
 } UpdateStateFilteringData[]{
     {"NeedsAttachmentUpdate",
         LayerState::NeedsAttachmentUpdate,
-        LayerState::NeedsNodeOrderUpdate},
+        LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate},
+    {"NeedsNodeOpacityUpdate",
+        LayerState::NeedsNodeOpacityUpdate,
+        LayerState::NeedsNodeOpacityUpdate},
     {"NeedsNodeOrderUpdate",
         LayerState::NeedsNodeOrderUpdate,
         LayerState::NeedsNodeOrderUpdate},
@@ -380,8 +383,8 @@ void AbstractLayerTest::debugState() {
 
 void AbstractLayerTest::debugStates() {
     std::ostringstream out;
-    Debug{&out} << (LayerState::NeedsSharedDataUpdate|LayerState(0xbe00)) << LayerStates{};
-    CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState(0xbe00) Ui::LayerStates{}\n");
+    Debug{&out} << (LayerState::NeedsSharedDataUpdate|LayerState(0xb000)) << LayerStates{};
+    CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState(0xb000) Ui::LayerStates{}\n");
 }
 
 void AbstractLayerTest::debugStatesSupersets() {
@@ -408,6 +411,13 @@ void AbstractLayerTest::debugStatesSupersets() {
         std::ostringstream out;
         Debug{&out} << (LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate);
         CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsNodeOrderUpdate\n");
+
+    /* NeedsAttachmentUpdate is a superset of NeedsNodeOpacityUpdate, so only
+       one should be printed */
+    } {
+        std::ostringstream out;
+        Debug{&out} << (LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsAttachmentUpdate);
+        CORRADE_COMPARE(out.str(), "Ui::LayerState::NeedsAttachmentUpdate\n");
     }
 }
 
@@ -821,7 +831,7 @@ void AbstractLayerTest::createAttached() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Passing a non-null handle causes NeedsAttachmentUpdate and everything
@@ -886,7 +896,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     NodeHandle nodeFirst = nodeHandle(2865, 0xcec);
@@ -905,7 +915,7 @@ void AbstractLayerTest::attach() {
     }), TestSuite::Compare::Container);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Calling with the layer-specific handles should work too */
@@ -914,7 +924,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.node(dataHandleData(second)), nodeFirst);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching to a new node should overwrite the previous */
@@ -923,7 +933,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.node(first), nodeThird);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching two data to the same node should work too */
@@ -933,7 +943,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.node(second), nodeThird);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching data to the same node is a no-op, not setting any flags */
@@ -950,7 +960,7 @@ void AbstractLayerTest::attach() {
     CORRADE_COMPARE(layer.node(second), nodeThird);
 
     /* Clear the state flags */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Detaching an already-detached data is a no-op again */
@@ -2057,7 +2067,7 @@ void AbstractLayerTest::update() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             ++called;
             CORRADE_COMPARE(state, LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsCommonDataUpdate);
             CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
@@ -2089,6 +2099,11 @@ void AbstractLayerTest::update() {
                 {0.1f, 0.2f},
                 {0.3f, 0.4f},
                 {0.5f, 0.6f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeOpacities, Containers::arrayView({
+                0.25f,
+                1.0f,
+                0.75f
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodesEnabled, Containers::stridedArrayView({
                 true,
@@ -2145,6 +2160,11 @@ void AbstractLayerTest::update() {
             {0.3f, 0.4f},
             {0.5f, 0.6f}
         }),
+        Containers::arrayView({
+            0.25f,
+            1.0f,
+            0.75f
+        }),
         Containers::BitArrayView{nodesEnabled, 0, 3},
         Containers::arrayView<Vector2>({
             {6.5f, 7.5f},
@@ -2163,7 +2183,7 @@ void AbstractLayerTest::updateComposite() {
 
         LayerFeatures doFeatures() const override { return LayerFeature::Composite; }
 
-        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) override {
             ++called;
             CORRADE_COMPARE(state, LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsCommonDataUpdate);
             CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
@@ -2195,6 +2215,11 @@ void AbstractLayerTest::updateComposite() {
                 {0.1f, 0.2f},
                 {0.3f, 0.4f},
                 {0.5f, 0.6f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeOpacities, Containers::arrayView({
+                0.25f,
+                1.0f,
+                0.75f
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodesEnabled, Containers::stridedArrayView({
                 true,
@@ -2257,6 +2282,11 @@ void AbstractLayerTest::updateComposite() {
             {0.3f, 0.4f},
             {0.5f, 0.6f}
         }),
+        Containers::arrayView({
+            0.25f,
+            1.0f,
+            0.75f
+        }),
         Containers::BitArrayView{nodesEnabled, 0, 3},
         Containers::arrayView<Vector2>({
             {6.5f, 7.5f},
@@ -2281,7 +2311,7 @@ void AbstractLayerTest::updateEmpty() {
 
         LayerFeatures doFeatures() const override { return {}; }
 
-        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             ++called;
         }
 
@@ -2289,7 +2319,7 @@ void AbstractLayerTest::updateEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -2329,6 +2359,11 @@ void AbstractLayerTest::updateNotImplemented() {
             {},
             {},
             {}
+        }),
+        Containers::arrayView({
+            0.0f,
+            0.0f,
+            0.0f
         }),
         Containers::BitArrayView{nodesEnabled, 0, 3},
         Containers::arrayView<Vector2>({
@@ -2383,9 +2418,9 @@ void AbstractLayerTest::updateInvalidState() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    layer.update(LayerState::NeedsCompositeOffsetSizeUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsCompositeOffsetSizeUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerStates{}\n"
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate but got Ui::LayerState::NeedsDataClean\n"
@@ -2406,8 +2441,8 @@ void AbstractLayerTest::updateInvalidStateComposite() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
-    layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataClean, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerStates{}\n"
         "Ui::AbstractLayer::update(): expected a non-empty subset of Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsAttachmentUpdate|Ui::LayerState::NeedsDataUpdate|Ui::LayerState::NeedsCommonDataUpdate|Ui::LayerState::NeedsSharedDataUpdate|Ui::LayerState::NeedsCompositeOffsetSizeUpdate but got Ui::LayerState::NeedsDataClean\n",
@@ -2439,7 +2474,7 @@ void AbstractLayerTest::updateInvalidSizes() {
             0u,
             0u
         }),
-        {}, {}, {},
+        {}, {}, {}, {},
         {}, {},
         {}, {}
     );
@@ -2454,6 +2489,10 @@ void AbstractLayerTest::updateInvalidSizes() {
             {},
             {},
             {}
+        }),
+        Containers::arrayView({
+            0.0f,
+            0.0f
         }),
         Containers::BitArrayView{nodesEnabled, 0, 2},
         {}, {},
@@ -2470,6 +2509,30 @@ void AbstractLayerTest::updateInvalidSizes() {
             {},
             {}
         }),
+        Containers::arrayView({
+            0.0f,
+            0.0f,
+            0.0f
+        }),
+        Containers::BitArrayView{nodesEnabled, 0, 2},
+        {}, {},
+        {}, {}
+    );
+    layer.update(
+        LayerState::NeedsDataUpdate,
+        {}, {}, {},
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        Containers::arrayView({
+            0.0f,
+            0.0f
+        }),
         Containers::BitArrayView{nodesEnabled, 0, 3},
         {}, {},
         {}, {}
@@ -2477,7 +2540,7 @@ void AbstractLayerTest::updateInvalidSizes() {
     layer.update(
         LayerState::NeedsDataUpdate,
         {}, {}, {},
-        {}, {}, {},
+        {}, {}, {}, {},
         Containers::arrayView<Vector2>({
             {},
             {},
@@ -2492,7 +2555,7 @@ void AbstractLayerTest::updateInvalidSizes() {
     layer.update(
         LayerState::NeedsDataUpdate,
         {}, {}, {},
-        {}, {}, {},
+        {}, {}, {}, {},
         {}, {},
         Containers::arrayView<Vector2>({
             {},
@@ -2507,7 +2570,7 @@ void AbstractLayerTest::updateInvalidSizes() {
     layer.update(
         LayerState::NeedsDataUpdate,
         {}, {}, {},
-        {}, {}, {},
+        {}, {}, {}, {},
         {}, {},
         Containers::arrayView<Vector2>({
             {},
@@ -2520,8 +2583,9 @@ void AbstractLayerTest::updateInvalidSizes() {
     );
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractLayer::update(): expected clip rect ID and data count views to have the same size but got 3 and 2\n"
-        "Ui::AbstractLayer::update(): expected node offset, size and enabled views to have the same size but got 2, 3 and 2\n"
-        "Ui::AbstractLayer::update(): expected node offset, size and enabled views to have the same size but got 2, 2 and 3\n"
+        "Ui::AbstractLayer::update(): expected node offset, size, opacity and enabled views to have the same size but got 2, 3, 2 and 2\n"
+        "Ui::AbstractLayer::update(): expected node offset, size, opacity and enabled views to have the same size but got 2, 2, 3 and 2\n"
+        "Ui::AbstractLayer::update(): expected node offset, size, opacity and enabled views to have the same size but got 2, 2, 2 and 3\n"
         "Ui::AbstractLayer::update(): expected clip rect offset and size views to have the same size but got 3 and 2\n"
         "Ui::AbstractLayer::update(): expected composite rect offset and size views to have the same size but got 3 and 2\n"
         "Ui::AbstractLayer::update(): compositing not supported but got 2 composite rects\n",
@@ -2542,11 +2606,11 @@ void AbstractLayerTest::updateNoSizeSet() {
       layer{layerHandle(0, 1), LayerFeature::Draw};
 
     /* It's fine if the layer doesn't support drawing */
-    layerNoDraw.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layerNoDraw.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::update(): user interface size wasn't set\n");
 }
 
@@ -2562,9 +2626,12 @@ void AbstractLayerTest::state() {
 
         LayerFeatures doFeatures() const override { return _features; }
 
-        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doUpdate(LayerStates state, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             /* The doUpdate() should never get the NeedsAttachmentUpdate, only
-               the NeedsNodeOrderUpdate that's a subset of it */
+               the NeedsNodeOpacityUpdate / NeedsNodeOrderUpdate that's a
+               subset of it. It shouldn't get an empty state either, that'd
+               mean there's some bug in the process. */
+            CORRADE_VERIFY(state);
             CORRADE_VERIFY(!(state >= LayerState::NeedsAttachmentUpdate));
         }
 
@@ -2587,7 +2654,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataUpdate);
 
     /* update() then resets it, if passed the same flag */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsNodeOrderUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsNodeOrderUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Creating an attached data sets more state flags */
@@ -2595,7 +2662,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate|data.extraAttachState);
 
     /* update() then resets it, if passed the same flag */
-    layer.update(Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate|data.extraAttachState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|LayerState::NeedsDataUpdate|data.extraAttachState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* No other way to trigger any of these flags */
@@ -2603,11 +2670,11 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate|LayerState::NeedsCommonDataUpdate);
 
     /* update() then resets the subset that was passed */
-    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsSharedDataUpdate);
 
     /* update() again for the remaining */
-    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsSharedDataUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching to a node sets state flags */
@@ -2617,7 +2684,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|data.extraAttachState);
 
     /* update() then resets them */
-    layer.update(Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|data.extraAttachState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(Ui::LayerState::NeedsNodeOffsetSizeUpdate|Ui::LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsAttachmentUpdate|data.extraAttachState, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Detaching sets a state flag as well. Also testing the other overload
@@ -2626,7 +2693,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets it */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
     /* Attaching/detaching an already-attached/detached data does nothing */
@@ -2653,7 +2720,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() then resets one */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean);
 
     /* cleanData() the other */
@@ -2665,7 +2732,7 @@ void AbstractLayerTest::state() {
     CORRADE_COMPARE(layer.state(), LayerState::NeedsDataClean|LayerState::NeedsAttachmentUpdate);
 
     /* update() and cleanData() then resets it */
-    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    layer.update(LayerState::NeedsAttachmentUpdate, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
     layer.cleanData({});
     CORRADE_COMPARE(layer.state(), LayerStates{});
 
@@ -2868,7 +2935,7 @@ void AbstractLayerTest::draw() {
             return LayerFeature::Draw;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
             ++called;
             CORRADE_COMPARE_AS(dataIds, Containers::arrayView({
                 0xabcdeu,
@@ -2904,6 +2971,10 @@ void AbstractLayerTest::draw() {
             CORRADE_COMPARE_AS(nodeSizes, Containers::arrayView<Vector2>({
                 {0.1f, 0.2f},
                 {0.3f, 0.4f}
+            }), TestSuite::Compare::Container);
+            CORRADE_COMPARE_AS(nodeOpacities, Containers::arrayView({
+                0.25f,
+                0.75f
             }), TestSuite::Compare::Container);
             CORRADE_COMPARE_AS(nodesEnabled, Containers::stridedArrayView({
                 false,
@@ -2955,6 +3026,10 @@ void AbstractLayerTest::draw() {
             {0.1f, 0.2f},
             {0.3f, 0.4f}
         }),
+        Containers::arrayView({
+            0.25f,
+            0.75f
+        }),
         Containers::BitArrayView{nodesEnabled, 0, 2},
         Containers::arrayView<Vector2>({
             {6.5f, 7.5f},
@@ -2974,7 +3049,7 @@ void AbstractLayerTest::drawEmpty() {
             return LayerFeature::Draw;
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
             ++called;
         }
 
@@ -2982,7 +3057,7 @@ void AbstractLayerTest::drawEmpty() {
     } layer{layerHandle(0, 1)};
 
     /* It should call the implementation even with empty contents */
-    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(layer.called, 1);
 }
 
@@ -2997,7 +3072,7 @@ void AbstractLayerTest::drawNotSupported() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::draw(): feature not supported\n");
 }
 
@@ -3014,7 +3089,7 @@ void AbstractLayerTest::drawNotImplemented() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Ui::AbstractLayer::draw(): feature advertised but not implemented\n");
 }
 
@@ -3046,7 +3121,7 @@ void AbstractLayerTest::drawInvalidSizes() {
             0u
         }),
         0, 0,
-        {}, {}, {},
+        {}, {}, {}, {},
         {}, {}
     );
     layer.draw(
@@ -3062,6 +3137,10 @@ void AbstractLayerTest::drawInvalidSizes() {
             {},
             {},
             {}
+        }),
+        Containers::arrayView({
+            0.0f,
+            0.0f
         }),
         Containers::BitArrayView{nodesEnabled, 0, 2},
         {}, {}
@@ -3079,6 +3158,31 @@ void AbstractLayerTest::drawInvalidSizes() {
             {},
             {}
         }),
+        Containers::arrayView({
+            0.0f,
+            0.0f,
+            0.0f
+        }),
+        Containers::BitArrayView{nodesEnabled, 0, 2},
+        {}, {}
+    );
+    layer.draw(
+        {},
+        0, 0,
+        {}, {},
+        0, 0,
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        Containers::arrayView<Vector2>({
+            {},
+            {}
+        }),
+        Containers::arrayView({
+            0.0f,
+            0.0f
+        }),
         Containers::BitArrayView{nodesEnabled, 0, 3},
         {}, {}
     );
@@ -3087,7 +3191,7 @@ void AbstractLayerTest::drawInvalidSizes() {
         0, 0,
         {}, {},
         0, 0,
-        {}, {}, {},
+        {}, {}, {}, {},
         Containers::arrayView<Vector2>({
             {},
             {},
@@ -3106,7 +3210,7 @@ void AbstractLayerTest::drawInvalidSizes() {
         3, 0,
         {}, {},
         0, 0,
-        {}, {}, {},
+        {}, {}, {}, {},
         {}, {}
     );
     layer.draw(
@@ -3117,7 +3221,7 @@ void AbstractLayerTest::drawInvalidSizes() {
         2, 1,
         {}, {},
         0, 0,
-        {}, {}, {},
+        {}, {}, {}, {},
         {}, {}
     );
     layer.draw(
@@ -3134,7 +3238,7 @@ void AbstractLayerTest::drawInvalidSizes() {
             0u
         }),
         4, 0,
-        {}, {}, {},
+        {}, {}, {}, {},
         {}, {}
     );
     layer.draw(
@@ -3151,13 +3255,14 @@ void AbstractLayerTest::drawInvalidSizes() {
             0u
         }),
         1, 3,
-        {}, {}, {},
+        {}, {}, {}, {},
         {}, {}
     );
     CORRADE_COMPARE_AS(out.str(),
         "Ui::AbstractLayer::draw(): expected clip rect ID and data count views to have the same size but got 3 and 2\n"
-        "Ui::AbstractLayer::draw(): expected node offset, size and enabled views to have the same size but got 2, 3 and 2\n"
-        "Ui::AbstractLayer::draw(): expected node offset, size and enabled views to have the same size but got 2, 2 and 3\n"
+        "Ui::AbstractLayer::draw(): expected node offset, size, opacity and enabled views to have the same size but got 2, 3, 2 and 2\n"
+        "Ui::AbstractLayer::draw(): expected node offset, size, opacity and enabled views to have the same size but got 2, 2, 3 and 2\n"
+        "Ui::AbstractLayer::draw(): expected node offset, size, opacity and enabled views to have the same size but got 2, 2, 2 and 3\n"
         "Ui::AbstractLayer::draw(): expected clip rect offset and size views to have the same size but got 3 and 2\n"
         "Ui::AbstractLayer::draw(): offset 3 and count 0 out of range for 2 items\n"
         "Ui::AbstractLayer::draw(): offset 2 and count 1 out of range for 2 items\n"

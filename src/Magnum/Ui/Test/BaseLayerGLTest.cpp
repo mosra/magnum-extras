@@ -1050,8 +1050,8 @@ void BaseLayerGLTest::constructDerived() {
             return BaseLayerGL::doComposite(renderer, compositeRectOffsets, compositeRectSizes, offset, count);
         }
 
-        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
-            return BaseLayerGL::doDraw(dataIds, offset, count, clipRectIds, clipRectDataCounts, clipRectOffset, clipRectCount, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+        void doDraw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, std::size_t offset, std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, std::size_t clipRectOffset, std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) override {
+            return BaseLayerGL::doDraw(dataIds, offset, count, clipRectIds, clipRectDataCounts, clipRectOffset, clipRectCount, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, clipRectOffsets, clipRectSizes);
         }
     } layer{layerHandle(137, 0xfe), shared};
     CORRADE_COMPARE(layer.handle(), layerHandle(137, 0xfe));
@@ -1107,7 +1107,7 @@ void BaseLayerGLTest::drawNoSizeSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Ui::BaseLayerGL::draw(): user interface size wasn't set\n");
 }
 
@@ -1125,7 +1125,7 @@ void BaseLayerGLTest::drawNoStyleSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Ui::BaseLayerGL::draw(): no style data was set\n");
 }
 
@@ -1144,7 +1144,7 @@ void BaseLayerGLTest::drawNoTextureSet() {
 
     std::ostringstream out;
     Error redirectError{&out};
-    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {});
+    layer.draw({}, 0, 0, {}, {}, 0, 0, {}, {}, {}, {}, {}, {});
     CORRADE_COMPARE(out.str(), "Ui::BaseLayerGL::draw(): no texture to draw with was set\n");
 }
 

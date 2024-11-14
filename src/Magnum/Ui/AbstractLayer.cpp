@@ -96,6 +96,7 @@ Debug& operator<<(Debug& debug, const LayerState value) {
         /* LCOV_EXCL_START */
         #define _c(value) case LayerState::value: return debug << "::" #value;
         _c(NeedsNodeEnabledUpdate)
+        _c(NeedsNodeOpacityUpdate)
         _c(NeedsNodeOrderUpdate)
         _c(NeedsNodeOffsetSizeUpdate)
         _c(NeedsAttachmentUpdate)
@@ -119,6 +120,8 @@ Debug& operator<<(Debug& debug, const LayerStates value) {
            with that. */
         LayerState(UnsignedShort(LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsAttachmentUpdate)),
         LayerState::NeedsAttachmentUpdate,
+        /* Implied by NeedsAttachmentUpdate, has to be after */
+        LayerState::NeedsNodeOpacityUpdate,
         LayerState::NeedsNodeOffsetSizeUpdate,
         /* Implied by NeedsAttachmentUpdate and NeedsNodeOffsetSizeUpdate, has
            to be after */
@@ -585,9 +588,9 @@ void AbstractLayer::doAdvanceAnimations(Nanoseconds, Containers::MutableBitArray
     CORRADE_ASSERT_UNREACHABLE("Ui::AbstractLayer::advanceAnimations(): style animation advertised but not implemented", );
 }
 
-void AbstractLayer::update(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) {
+void AbstractLayer::update(const LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes) {
     #ifndef CORRADE_NO_ASSERT
-    LayerStates expectedStates = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsAttachmentUpdate;
+    LayerStates expectedStates = LayerState::NeedsNodeOffsetSizeUpdate|LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate|LayerState::NeedsDataUpdate|LayerState::NeedsCommonDataUpdate|LayerState::NeedsSharedDataUpdate|LayerState::NeedsAttachmentUpdate;
     if(features() >= LayerFeature::Composite)
         expectedStates |= LayerState::NeedsCompositeOffsetSizeUpdate;
     #endif
@@ -596,8 +599,9 @@ void AbstractLayer::update(const LayerStates states, const Containers::StridedAr
     CORRADE_ASSERT(clipRectIds.size() == clipRectDataCounts.size(),
         "Ui::AbstractLayer::update(): expected clip rect ID and data count views to have the same size but got" << clipRectIds.size() << "and" << clipRectDataCounts.size(), );
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size() &&
+                   nodeOpacities.size() == nodeSizes.size() &&
                    nodesEnabled.size() == nodeSizes.size(),
-        "Ui::AbstractLayer::update(): expected node offset, size and enabled views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << "and" << nodesEnabled.size(), );
+        "Ui::AbstractLayer::update(): expected node offset, size, opacity and enabled views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeOpacities.size() << "and" << nodesEnabled.size(), );
     CORRADE_ASSERT(clipRectOffsets.size() == clipRectSizes.size(),
         "Ui::AbstractLayer::update(): expected clip rect offset and size views to have the same size but got" << clipRectOffsets.size() << "and" << clipRectSizes.size(), );
     CORRADE_ASSERT(compositeRectOffsets.size() == compositeRectSizes.size(),
@@ -608,12 +612,13 @@ void AbstractLayer::update(const LayerStates states, const Containers::StridedAr
     CORRADE_ASSERT(!(features() >= LayerFeature::Draw) || state.setSizeCalled,
         "Ui::AbstractLayer::update(): user interface size wasn't set", );
     /* Don't pass the NeedsAttachmentUpdate bit to the implementation as it
-       shouldn't need that, just NeedsNodeOrderUpdate that's a subset of it */
-    doUpdate(states & ~(LayerState::NeedsAttachmentUpdate & ~LayerState::NeedsNodeOrderUpdate), dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes, compositeRectOffsets, compositeRectSizes);
+       shouldn't need that, just NeedsNodeOpacityUpdate NeedsNodeOrderUpdate
+       that's a subset of it */
+    doUpdate(states & ~(LayerState::NeedsAttachmentUpdate & ~(LayerState::NeedsNodeOpacityUpdate|LayerState::NeedsNodeOrderUpdate)), dataIds, clipRectIds, clipRectDataCounts, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, clipRectOffsets, clipRectSizes, compositeRectOffsets, compositeRectSizes);
     state.state &= ~states;
 }
 
-void AbstractLayer::doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
+void AbstractLayer::doUpdate(LayerStates, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {}
 
 void AbstractLayer::composite(AbstractRenderer& renderer, const Containers::StridedArrayView1D<const Vector2>& compositeRectOffsets, const Containers::StridedArrayView1D<const Vector2>& compositeRectSizes, const std::size_t offset, const std::size_t count) {
     CORRADE_ASSERT(features() & LayerFeature::Composite,
@@ -629,7 +634,7 @@ void AbstractLayer::doComposite(AbstractRenderer&, const Containers::StridedArra
     CORRADE_ASSERT_UNREACHABLE("Ui::AbstractLayer::composite(): feature advertised but not implemented", );
 }
 
-void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const std::size_t clipRectOffset, const std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
+void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>& dataIds, const std::size_t offset, const std::size_t count, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectIds, const Containers::StridedArrayView1D<const UnsignedInt>& clipRectDataCounts, const std::size_t clipRectOffset, const std::size_t clipRectCount, const Containers::StridedArrayView1D<const Vector2>& nodeOffsets, const Containers::StridedArrayView1D<const Vector2>& nodeSizes, const Containers::StridedArrayView1D<const Float>& nodeOpacities, const Containers::BitArrayView nodesEnabled, const Containers::StridedArrayView1D<const Vector2>& clipRectOffsets, const Containers::StridedArrayView1D<const Vector2>& clipRectSizes) {
     CORRADE_ASSERT(features() & LayerFeature::Draw,
         "Ui::AbstractLayer::draw(): feature not supported", );
     CORRADE_ASSERT(offset + count <= dataIds.size(),
@@ -639,14 +644,15 @@ void AbstractLayer::draw(const Containers::StridedArrayView1D<const UnsignedInt>
     CORRADE_ASSERT(clipRectOffset + clipRectCount <= clipRectIds.size(),
         "Ui::AbstractLayer::draw(): clip rect offset" << clipRectOffset << "and count" << clipRectCount << "out of range for" << clipRectIds.size() << "items", );
     CORRADE_ASSERT(nodeOffsets.size() == nodeSizes.size() &&
+                   nodeOpacities.size() == nodeSizes.size() &&
                    nodesEnabled.size() == nodeSizes.size(),
-        "Ui::AbstractLayer::draw(): expected node offset, size and enabled views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << "and" << nodesEnabled.size(), );
+        "Ui::AbstractLayer::draw(): expected node offset, size, opacity and enabled views to have the same size but got" << nodeOffsets.size() << Debug::nospace << "," << nodeSizes.size() << Debug::nospace << "," << nodeOpacities.size() << "and" << nodesEnabled.size(), );
     CORRADE_ASSERT(clipRectOffsets.size() == clipRectSizes.size(),
         "Ui::AbstractLayer::draw(): expected clip rect offset and size views to have the same size but got" << clipRectOffsets.size() << "and" << clipRectSizes.size(), );
-    doDraw(dataIds, offset, count, clipRectIds, clipRectDataCounts, clipRectOffset, clipRectCount, nodeOffsets, nodeSizes, nodesEnabled, clipRectOffsets, clipRectSizes);
+    doDraw(dataIds, offset, count, clipRectIds, clipRectDataCounts, clipRectOffset, clipRectCount, nodeOffsets, nodeSizes, nodeOpacities, nodesEnabled, clipRectOffsets, clipRectSizes);
 }
 
-void AbstractLayer::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
+void AbstractLayer::doDraw(const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, std::size_t, std::size_t, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) {
     CORRADE_ASSERT_UNREACHABLE("Ui::AbstractLayer::draw(): feature advertised but not implemented", );
 }
 
