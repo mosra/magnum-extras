@@ -120,6 +120,7 @@ struct AbstractLayerTest: TestSuite::Tester {
     void updateComposite();
     void updateEmpty();
     void updateNotImplemented();
+    void updateStateFiltering();
     void updateInvalidState();
     void updateInvalidStateComposite();
     void updateInvalidSizes();
@@ -180,6 +181,19 @@ const struct {
 } StateQuerySetNeedsUpdateData[]{
     {"", {}, {}},
     {"composite layer", LayerFeature::Composite, LayerState::NeedsCompositeOffsetSizeUpdate},
+};
+
+const struct {
+    const char* name;
+    LayerStates state;
+    LayerStates expected;
+} UpdateStateFilteringData[]{
+    {"NeedsAttachmentUpdate",
+        LayerState::NeedsAttachmentUpdate,
+        LayerState::NeedsNodeOrderUpdate},
+    {"NeedsNodeOrderUpdate",
+        LayerState::NeedsNodeOrderUpdate,
+        LayerState::NeedsNodeOrderUpdate},
 };
 
 const struct {
@@ -266,8 +280,12 @@ AbstractLayerTest::AbstractLayerTest() {
               &AbstractLayerTest::update,
               &AbstractLayerTest::updateComposite,
               &AbstractLayerTest::updateEmpty,
-              &AbstractLayerTest::updateNotImplemented,
-              &AbstractLayerTest::updateInvalidState,
+              &AbstractLayerTest::updateNotImplemented});
+
+    addInstancedTests({&AbstractLayerTest::updateStateFiltering},
+        Containers::arraySize(UpdateStateFilteringData));
+
+    addTests({&AbstractLayerTest::updateInvalidState,
               &AbstractLayerTest::updateInvalidStateComposite,
               &AbstractLayerTest::updateInvalidSizes,
               &AbstractLayerTest::updateNoSizeSet});
@@ -2324,6 +2342,34 @@ void AbstractLayerTest::updateNotImplemented() {
 
     /* Shouldn't crash or anything */
     CORRADE_VERIFY(true);
+}
+
+void AbstractLayerTest::updateStateFiltering() {
+    auto&& data = UpdateStateFilteringData[testCaseInstanceId()];
+    setTestCaseDescription(data.name);
+
+    struct: AbstractLayer {
+        using AbstractLayer::AbstractLayer;
+
+        LayerFeatures doFeatures() const override { return {}; }
+
+        void doUpdate(LayerStates states, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Float>&, Containers::BitArrayView, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&, const Containers::StridedArrayView1D<const Vector2>&) override {
+            CORRADE_COMPARE(states, expected);
+            ++called;
+        }
+
+        LayerStates expected;
+        Int called = 0;
+    } layer{layerHandle(0, 1)};
+    layer.expected = data.expected;
+
+    /* Capture correct function name */
+    CORRADE_VERIFY(true);
+
+    /* Unnecessary states should get filtered out, but it shouldn't become
+       empty */
+    layer.update(data.state, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {});
+    CORRADE_COMPARE(layer.called, 1);
 }
 
 void AbstractLayerTest::updateInvalidState() {
