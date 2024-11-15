@@ -164,7 +164,8 @@ class TextEditingShaderGL: public GL::AbstractShaderProgram {
     public:
         typedef GL::Attribute<0, Vector2> Position;
         typedef GL::Attribute<1, Vector2> CenterDistance;
-        typedef GL::Attribute<2, UnsignedInt> Style;
+        typedef GL::Attribute<2, Float> Opacity;
+        typedef GL::Attribute<3, UnsignedInt> Style;
 
         explicit TextEditingShaderGL(NoCreateT): GL::AbstractShaderProgram{NoCreate} {}
         explicit TextEditingShaderGL(UnsignedInt styleCount);
@@ -371,6 +372,7 @@ TextLayerGL::TextLayerGL(const LayerHandle handle, Shared& sharedState): TextLay
         state.editingMesh.addVertexBuffer(state.editingVertexBuffer, 0,
             TextEditingShaderGL::Position{},
             TextEditingShaderGL::CenterDistance{},
+            TextEditingShaderGL::Opacity{},
             TextEditingShaderGL::Style{});
         state.editingMesh.setIndexBuffer(state.editingIndexBuffer, 0, GL::MeshIndexType::UnsignedInt);
     }

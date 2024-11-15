@@ -48,10 +48,12 @@ uniform highp vec3 projection; /* xy = UI size to unit square scaling,
 
 layout(location = 0) in highp vec2 position;
 layout(location = 1) in mediump vec2 centerDistance;
-layout(location = 2) in mediump uint style;
+layout(location = 2) in lowp float opacity;
+layout(location = 3) in mediump uint style;
 
 flat out mediump vec2 halfQuadSize;
 NOPERSPECTIVE out mediump vec2 interpolatedCenterDistance;
+flat out lowp float interpolatedOpacity;
 flat out mediump uint interpolatedStyle;
 
 void main() {
@@ -62,6 +64,7 @@ void main() {
     lowp vec2 smoothnessExpansion = vec2(style_smoothness)*projection.z*sign(centerDistance);
     halfQuadSize = abs(centerDistance);
     interpolatedCenterDistance = centerDistance + smoothnessExpansion;
+    interpolatedOpacity = opacity;
     interpolatedStyle = style;
 
     /* The projection scales from UI size to the 2x2 unit square and Y-flips,

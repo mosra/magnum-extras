@@ -237,6 +237,7 @@ struct TextLayerVertex {
 struct TextLayerEditingVertex {
     Vector2 position;
     Vector2 centerDistance;
+    Float opacity;
     UnsignedInt styleUniform;
 };
 

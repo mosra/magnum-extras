@@ -49,6 +49,7 @@ uniform highp vec3 projection; /* xy = UI size to unit square scaling,
 
 flat in mediump vec2 halfQuadSize;
 NOPERSPECTIVE in mediump vec2 interpolatedCenterDistance;
+flat in lowp float interpolatedOpacity;
 flat in mediump uint interpolatedStyle;
 
 out lowp vec4 fragmentColor;
@@ -71,5 +72,5 @@ void main() {
 
     /* Final color */
     lowp float smoothness = style_smoothness*projection.z;
-    fragmentColor = smoothstep(-smoothness, +smoothness, edgeDistance)*styles[interpolatedStyle].backgroundColor;
+    fragmentColor = smoothstep(-smoothness, +smoothness, edgeDistance)*styles[interpolatedStyle].backgroundColor*interpolatedOpacity;
 }

@@ -1052,6 +1052,15 @@ const struct {
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
         LayerState::NeedsNodeEnabledUpdate, false, true, false},
+    /* Cannot use NeedsNodeOpacityUpdate alone because then AbstractVisualLayer
+       doUpdate() doesn't fill in calculated styles, leading to OOB errors. */
+    /** @todo Which ultimately means this doesn't correctly test that the
+        implementation correctly handles the NeedsNodeOpacityUpdate flag alone
+        -- what can I do differently to test that? */
+    {"node enabled + opacity update only", false, 6, 0, 0, false,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
+        {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
+        LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate, false, true, false},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
     {"shared data update only", false, 6, 0, 0, false,
@@ -8259,6 +8268,7 @@ void TextLayerTest::updateCleanDataOrder() {
             .setShapeDirection(Text::ShapeDirection::LeftToRight),
         data.flags, node6);
 
+    /* These are further multiplied by the node opacities */
     layer.setColor(data3, 0xff336699_rgbaf);
     layer.setColor(data5, 0xcceeff00_rgbaf);
     layer.setColor(data7, 0x11223344_rgbaf);
@@ -8324,8 +8334,10 @@ void TextLayerTest::updateCleanDataOrder() {
     Containers::MutableBitArrayView nodesEnabled{nodesEnabledData, 0, 16};
     nodeOffsets[6] = data.node6Offset;
     nodeSizes[6] = data.node6Size;
+    nodeOpacities[6] = 0.4f;
     nodeOffsets[15] = {3.0f, 4.0f};
     nodeSizes[15] = {20.0f, 5.0f};
+    nodeOpacities[15] = 0.9f;
     nodesEnabled.set(15);
 
     /* An empty update should generate an empty draw list */
@@ -8408,7 +8420,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* (Possibly editable) text 3, quads 3 to 7 */
         for(std::size_t i = 0; i != 5*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff336699_rgbaf);
+            CORRADE_COMPARE(layer.stateData().vertices[3*4 + i].color, 0xff336699_rgbaf*0.4f);
         }
         /* Created with style 5, which if not dynamic is transitioned to 2 as
            the node is disabled, which is mapped to uniform 0. If dynamic, it's
@@ -8437,7 +8449,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* Glyph 5, quad 9 */
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff00_rgbaf);
+            CORRADE_COMPARE(layer.stateData().vertices[9*4 + i].color, 0xcceeff00_rgbaf*0.4f);
             /* Created with style 4, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
                thus 6. */
@@ -8450,7 +8462,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* (Possibly editable) text 7, quad 11 */
         for(std::size_t i = 0; i != 1*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x11223344_rgbaf);
+            CORRADE_COMPARE(layer.stateData().vertices[11*4 + i].color, 0x11223344_rgbaf*0.9f);
             /* Created with style 1, which is mapped to uniform 2. The
                selection doesn't override the text uniform, so it's always the
                same. */
@@ -8459,7 +8471,7 @@ void TextLayerTest::updateCleanDataOrder() {
         /* (Possibly editable) text 9, quads 13 to 14 */
         for(std::size_t i = 0; i != 2*4; ++i) {
             CORRADE_ITERATION(i);
-            CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].color, 0x663399_rgbf);
+            CORRADE_COMPARE(layer.stateData().vertices[13*4 + i].color, 0x663399ff_rgbaf*0.9f);
             /* Created with style 3, which is mapped to uniform 1. There's only
                a cursor, which doesn't override the text uniform, so it's
                always the same. */
@@ -8599,16 +8611,21 @@ void TextLayerTest::updateCleanDataOrder() {
                `editingStyleCount + (dynamicStyleId - styleCount)*2 + 0`,
                selection to
                `editingStyleCount + (dynamicStyleId - styleCount)*2 + 1`. */
+            CORRADE_COMPARE(layer.stateData().editingVertices[0*4 + i].opacity, 0.4f);
             CORRADE_COMPARE(layer.stateData().editingVertices[0*4 + i].styleUniform, data.dynamicStyleCount ? 6 : 2);
+            CORRADE_COMPARE(layer.stateData().editingVertices[1*4 + i].opacity, 0.4f);
             CORRADE_COMPARE(layer.stateData().editingVertices[1*4 + i].styleUniform, data.dynamicStyleCount ? 7 : 0);
 
             /* Text 7 selection (quad 2) has style 1 which maps to uniform 0 */
+            CORRADE_COMPARE(layer.stateData().editingVertices[2*4 + i].opacity, 0.9f);
             CORRADE_COMPARE(layer.stateData().editingVertices[2*4 + i].styleUniform, 0);
 
             /* Text 9 cursor (quad 5) has style 2 which maps to uniform 3 */
+            CORRADE_COMPARE(layer.stateData().editingVertices[5*4 + i].opacity, 0.9f);
             CORRADE_COMPARE(layer.stateData().editingVertices[5*4 + i].styleUniform, 3);
 
             /* Text 10 cursor (quad 7) has style 2 which maps to uniform 3 */
+            CORRADE_COMPARE(layer.stateData().editingVertices[7*4 + i].opacity, 0.4f);
             CORRADE_COMPARE(layer.stateData().editingVertices[7*4 + i].styleUniform, 3);
         }
 
@@ -8857,7 +8874,7 @@ void TextLayerTest::updateCleanDataOrder() {
     /* (Possibly editable) text 7, quad 5 */
     for(std::size_t i = 0; i != 1*4; ++i) {
         CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].color, 0x11223344_rgbaf);
+        CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].color, 0x11223344_rgbaf*0.9f);
         /* Created with style 1, which is mapped to uniform 2. The selection
            doesn't override the text uniform, so it's always the same. */
         CORRADE_COMPARE(layer.stateData().vertices[5*4 + i].styleUniform, 2);
@@ -8865,7 +8882,7 @@ void TextLayerTest::updateCleanDataOrder() {
     /* (Possibly editable) text 9, quads 7 to 8 */
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].color, 0x663399_rgbf);
+        CORRADE_COMPARE(layer.stateData().vertices[7*4 + i].color, 0x663399ff_rgbaf*0.9f);
         /* Created with style 3, which is mapped to uniform 1. There's only a
            cursor, which doesn't override the text uniform, so it's always the
            same. */
@@ -8923,9 +8940,11 @@ void TextLayerTest::updateCleanDataOrder() {
             CORRADE_ITERATION(i);
 
             /* Text 7 selection, now quad 0 */
+            CORRADE_COMPARE(layer.stateData().editingVertices[0*4 + i].opacity, 0.9f);
             CORRADE_COMPARE(layer.stateData().editingVertices[0*4 + i].styleUniform, 0);
 
             /* Text 9 cursor, now quad 3 */
+            CORRADE_COMPARE(layer.stateData().editingVertices[3*4 + i].opacity, 0.9f);
             CORRADE_COMPARE(layer.stateData().editingVertices[3*4 + i].styleUniform, 3);
         }
 
@@ -9061,7 +9080,7 @@ void TextLayerTest::updateCleanDataOrder() {
     /* (Possibly editable) text 9, quads 6 to 7 */
     for(std::size_t i = 0; i != 2*4; ++i) {
         CORRADE_ITERATION(i);
-        CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].color, 0x663399_rgbf);
+        CORRADE_COMPARE(layer.stateData().vertices[6*4 + i].color, 0x663399ff_rgbaf*0.9f);
         /* Created with style 3, which is mapped to uniform 1. There's only a
            cursor, which doesn't override the text uniform, so it's always the
            same. */
@@ -9102,6 +9121,7 @@ void TextLayerTest::updateCleanDataOrder() {
             CORRADE_ITERATION(i);
 
             /* Text 9 cursor, now quad 1 */
+            CORRADE_COMPARE(layer.stateData().editingVertices[1*4 + i].opacity, 0.9f);
             CORRADE_COMPARE(layer.stateData().editingVertices[1*4 + i].styleUniform, 3);
         }
 

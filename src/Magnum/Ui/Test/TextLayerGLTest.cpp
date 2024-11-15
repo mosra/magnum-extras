@@ -394,11 +394,16 @@ const struct {
     const char* name;
     bool editable;
     bool partialUpdate;
+    Float opacity;
 } RenderCustomColorData[]{
-    {"", false, false},
-    {"partial update", false, true},
-    {"editable", true, false},
-    {"editable, partial update", true, true},
+    {"", false, false, 1.0f},
+    {"partial update", false, true, 1.0f},
+    {"node opacity", false, false, 0.75f},
+    {"node opacity, partial update", false, true, 0.75f},
+    {"editable", true, false, 1.0f},
+    {"editable, partial update", true, true, 1.0f},
+    {"editable, node opacity", true, false, 0.75f},
+    {"editable, node opacity, partial update", true, true, 0.75f},
 };
 
 const struct {
@@ -1421,10 +1426,11 @@ void TextLayerGLTest::renderCustomColor() {
         {});
     if(data.editable) layerShared.setEditingStyle(
         TextLayerCommonEditingStyleUniform{},
-        {TextLayerEditingStyleUniform{} /* not affected by the color */
-            .setBackgroundColor(0xcd3431_rgbf),
-         TextLayerEditingStyleUniform{} /* not affected by the color either */
-            .setBackgroundColor(0xc7cf2f_rgbf)},
+        /* These two are not affected by the color, just by the opacity */
+        {TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xcd3431ff_rgbaf/data.opacity),
+         TextLayerEditingStyleUniform{}
+            .setBackgroundColor(0xc7cf2fff_rgbaf/data.opacity)},
         {-1, 1},
         {{5.0f, 0.0f, 5.0f, 0.0f}, {}});
 
@@ -1432,8 +1438,10 @@ void TextLayerGLTest::renderCustomColor() {
     ui.setLayerInstance(Containers::pointer<TextLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
-    TextDataFlags flags = data.editable ? TextDataFlag::Editable : TextDataFlags{};
-    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, flags, node);
+    if(data.opacity != 1.0f)
+        ui.setNodeOpacity(node, data.opacity);
+
+    DataHandle nodeData = ui.layer<TextLayerGL>(layer).create(0, "Maggi", {}, data.editable ? TextDataFlag::Editable : TextDataFlags{}, node);
     if(data.editable)
         ui.layer<TextLayerGL>(layer).setCursor(nodeData, 2, 5);
 
@@ -1442,7 +1450,7 @@ void TextLayerGLTest::renderCustomColor() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<TextLayerGL>(layer).setColor(nodeData, 0x336699aa_rgbaf);
+    ui.layer<TextLayerGL>(layer).setColor(nodeData, 0x336699aa_rgbaf/data.opacity);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);

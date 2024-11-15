@@ -2139,11 +2139,13 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     }
 
     /* Fill in vertex data if the data themselves, the node offset/size or node
-       enablement (and thus calculated styles) changed */
+       enablement (and thus calculated styles) or opacities (and thus
+       calculated colors) changed */
     /** @todo split this further to just position-related data update and other
         data if it shows to help with perf */
     if(states >= LayerState::NeedsNodeOffsetSizeUpdate ||
        states >= LayerState::NeedsNodeEnabledUpdate ||
+       states >= LayerState::NeedsNodeOpacityUpdate ||
        states >= LayerState::NeedsDataUpdate)
     {
         /* Calculate how many glyphs there are in total */
@@ -2214,9 +2216,10 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             }
 
             /* Translate the (aligned) glyph run, fill color and style */
+            const Float opacity = nodeOpacities[nodeId];
             for(Implementation::TextLayerVertex& vertex: vertexData) {
                 vertex.position = vertex.position*Vector2::yScale(-1.0f) + offset;
-                vertex.color = data.color;
+                vertex.color = data.color*opacity;
                 /* For dynamic styles the uniform mapping is implicit and they're
                    placed right after all non-dynamic styles */
                 vertex.styleUniform = data.calculatedStyle < sharedState.styleCount ?
@@ -2261,7 +2264,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                     return Vector2::xAxis(glyph == glyphData.size() ?
                         data.rectangle.max().x() : glyphData[glyph].position.x());
                 };
-                const auto createEditingQuad = [&state, &sharedState, &lineTop, &lineBottom, &cursorPositionForGlyph, &vertexData](const bool dynamicEditingStyle, const UnsignedInt editingStyleId, const UnsignedInt glyphBegin, const UnsignedInt glyphEnd, const UnsignedInt vertexOffset, Text::ShapeDirection direction) {
+                const auto createEditingQuad = [&state, &sharedState, &lineTop, &lineBottom, &cursorPositionForGlyph, &vertexData](const bool dynamicEditingStyle, const UnsignedInt editingStyleId, const UnsignedInt glyphBegin, const UnsignedInt glyphEnd, const UnsignedInt vertexOffset, Text::ShapeDirection direction, Float opacity) {
                     Vector4 padding{NoInit};
                     UnsignedInt uniform;
                     Int textUniform;
@@ -2307,6 +2310,7 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                         /* ✨ */
                         vertex.position = Math::lerp(min, max, BitVector2{j});
                         vertex.centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{j});
+                        vertex.opacity = opacity;
                         vertex.styleUniform = uniform;
                     }
 
@@ -2330,7 +2334,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                         selection.first(),
                         selection.second(),
                         data.textRun*2*4,
-                        data.usedDirection);
+                        data.usedDirection,
+                        nodeOpacities[nodeId]);
                 }
                 /* Create a cursor quad, if it has a style. It's drawn on top
                    of the selection, so it's later in the vertex buffer for
@@ -2342,7 +2347,8 @@ void TextLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                         glyphRangeForCursorSelection.first(),
                         glyphRangeForCursorSelection.first(),
                         data.textRun*2*4 + 4,
-                        data.usedDirection);
+                        data.usedDirection,
+                        nodeOpacities[nodeId]);
                 }
             }
         }
