@@ -268,6 +268,19 @@ const struct {
         false, false, true, 5, 0, 0, 0, 0.0f,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
         LayerState::NeedsNodeEnabledUpdate, false, true, false},
+    /* Cannot use NeedsNodeOpacityUpdate alone because then AbstractVisualLayer
+       doUpdate() doesn't fill in calculated styles, leading to OOB errors. */
+    /** @todo Which ultimately means this doesn't correctly test that the
+        implementation correctly handles the NeedsNodeOpacityUpdate flag alone
+        -- what can I do differently to test that? */
+    {"node enabled + opacity update only",
+        false, false, false, 5, 0, 0, 0, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate, false, true, false},
+    {"node enabled + opacity update only, subdivided",
+        false, false, true, 5, 0, 0, 0, 0.0f,
+        {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, 0.0f, {},
+        LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsNodeOpacityUpdate, false, true, false},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
     {"shared data update only",
@@ -2202,6 +2215,7 @@ void BaseLayerTest::updateDataOrder() {
     layer.create(0);                                                    /* 8 */
     DataHandle data9 = layer.create(3, node15);
 
+    /* These are further multiplied by the node opacities */
     layer.setColor(data3, 0xff336699_rgbaf);
     layer.setOutlineWidth(data3, {1.0f, 2.0f, 3.0f, 4.0f});
     layer.setColor(data7, 0x11223344_rgbaf);
@@ -2229,8 +2243,10 @@ void BaseLayerTest::updateDataOrder() {
     Containers::MutableBitArrayView nodesEnabled{nodesEnabledData, 0, 16};
     nodeOffsets[6] = data.node6Offset;
     nodeSizes[6] = data.node6Size;
+    nodeOpacities[6] = 0.4f;
     nodeOffsets[15] = {3.0f, 4.0f};
     nodeSizes[15] = {20.0f, 5.0f};
+    nodeOpacities[15] = 0.9f;
     nodesEnabled.set(15);
 
     /* The ratio of UI size and framebuffer size is used to perform smoothness
@@ -2317,7 +2333,7 @@ void BaseLayerTest::updateDataOrder() {
             CORRADE_ITERATION(i);
 
             /* Quad 3 */
-            CORRADE_COMPARE(vertices[3*4 + i].color, 0xff336699_rgbaf);
+            CORRADE_COMPARE(vertices[3*4 + i].color, 0xff336699_rgbaf*0.4f);
             CORRADE_COMPARE(vertices[3*4 + i].outlineWidth, (Vector4{1.0f, 2.0f, 3.0f, 4.0f}));
             /* Created with style 4, which if not dynamic is transitioned to 2
                as the node is disabled, which is mapped to uniform 0. If
@@ -2330,13 +2346,13 @@ void BaseLayerTest::updateDataOrder() {
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
             /* Quad 7 */
-            CORRADE_COMPARE(vertices[7*4 + i].color, 0x11223344_rgbaf);
+            CORRADE_COMPARE(vertices[7*4 + i].color, 0x11223344_rgbaf*0.9f);
             CORRADE_COMPARE(vertices[7*4 + i].outlineWidth, Vector4{2.0f});
             /* Created with style 1, which is mapped to uniform 2 */
             CORRADE_COMPARE(vertices[7*4 + i].styleUniform, 2);
 
             /* Quad 9 */
-            CORRADE_COMPARE(vertices[9*4 + i].color, 0x663399_rgbf);
+            CORRADE_COMPARE(vertices[9*4 + i].color, 0x663399ff_rgbaf*0.9f);
             CORRADE_COMPARE(vertices[9*4 + i].outlineWidth, (Vector4{3.0f, 2.0f, 1.0f, 4.0f}));
             /* Created with style 3, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
@@ -2486,7 +2502,7 @@ void BaseLayerTest::updateDataOrder() {
             CORRADE_ITERATION(i);
 
             /* Quad 3 */
-            CORRADE_COMPARE(vertices[3*16 + i].color, 0xff336699_rgbaf);
+            CORRADE_COMPARE(vertices[3*16 + i].color, 0xff336699_rgbaf*0.4f);
             /* Created with style 4, which if not dynamic is transitioned to 2
                as the node is disabled, which is mapped to uniform 0. If
                dynamic, it's implicitly `uniformCount + (id - styleCount)`,
@@ -2498,12 +2514,12 @@ void BaseLayerTest::updateDataOrder() {
             else CORRADE_INTERNAL_ASSERT_UNREACHABLE();
 
             /* Quad 7 */
-            CORRADE_COMPARE(vertices[7*16 + i].color, 0x11223344_rgbaf);
+            CORRADE_COMPARE(vertices[7*16 + i].color, 0x11223344_rgbaf*0.9f);
             /* Created with style 1, which is mapped to uniform 2 */
             CORRADE_COMPARE(vertices[7*16 + i].styleUniform, 2);
 
             /* Quad 9 */
-            CORRADE_COMPARE(vertices[9*16 + i].color, 0x663399_rgbf);
+            CORRADE_COMPARE(vertices[9*16 + i].color, 0x663399ff_rgbaf*0.9f);
             /* Created with style 3, which if not dynamic is mapped to uniform
                1. If dynamic, it's implicitly `uniformCount + (id - styleCount)`,
                thus 4. */

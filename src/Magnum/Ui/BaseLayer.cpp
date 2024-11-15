@@ -661,6 +661,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
     const bool updateVertices =
         states >= LayerState::NeedsNodeOffsetSizeUpdate ||
         states >= LayerState::NeedsNodeEnabledUpdate ||
+        states >= LayerState::NeedsNodeOpacityUpdate ||
         states >= LayerState::NeedsDataUpdate;
     if(updateVertices && !(sharedState.flags >= BaseLayerSharedFlag::SubdividedQuads)) {
         /* Resize the vertex array to fit all data, make a view on the common
@@ -712,6 +713,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             const Vector2 max = offset + nodeSizes[nodeId] - Math::gather<'z', 'w'>(padding);
             const Vector2 sizeHalf = (max - min)*0.5f;
             const Vector2 sizeHalfNegative = -sizeHalf;
+            const Float opacity = nodeOpacities[nodeId];
             for(UnsignedByte i = 0; i != 4; ++i) {
                 Implementation::BaseLayerVertex& vertex = vertices[dataId*4 + i];
 
@@ -719,7 +721,7 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
                 vertex.position = Math::lerp(min, max, BitVector2{i});
                 vertex.centerDistance = Math::lerp(sizeHalfNegative, sizeHalf, BitVector2{i});
                 vertex.outlineWidth = data.outlineWidth;
-                vertex.color = data.color;
+                vertex.color = data.color*opacity;
                 /* For dynamic styles the uniform mapping is implicit and
                    they're placed right after all non-dynamic styles */
                 vertex.styleUniform = data.calculatedStyle < sharedState.styleCount ?
@@ -795,10 +797,11 @@ void BaseLayer::doUpdate(const LayerStates states, const Containers::StridedArra
             const Implementation::BaseLayerData& data = state.data[dataId];
 
             /* All 16 vertices get the same color and style */
+            const Float opacity = nodeOpacities[nodeId];
             for(std::size_t i = 0; i != 16; ++i) {
                 Implementation::BaseLayerSubdividedVertex& vertex = vertices[dataId*16 + i];
 
-                vertex.color = data.color;
+                vertex.color = data.color*opacity;
                 /* For dynamic styles the uniform mapping is implicit and
                    they're placed right after all non-dynamic styles */
                 vertex.styleUniform = data.calculatedStyle < sharedState.styleCount ?

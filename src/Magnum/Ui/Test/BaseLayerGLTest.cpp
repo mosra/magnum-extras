@@ -250,9 +250,12 @@ const struct {
 const struct {
     const char* name;
     bool partialUpdate;
+    Float opacity;
 } RenderCustomColorData[]{
-    {"", false},
-    {"partial update", true},
+    {"", false, 1.0f},
+    {"partial update", true, 1.0f},
+    {"node opacity", false, 0.75f},
+    {"node opacity. partial update", true, 0.75f},
 };
 
 const struct {
@@ -1271,6 +1274,9 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
     ui.setLayerInstance(Containers::pointer<BaseLayerGL>(layer, layerShared));
 
     NodeHandle node = ui.createNode({8.0f, 8.0f}, {112.0f, 48.0f});
+    if(data.opacity != 1.0f)
+        ui.setNodeOpacity(node, data.opacity);
+
     DataHandle nodeData = ui.layer<BaseLayerGL>(layer).create(0, node);
 
     if(data.partialUpdate) {
@@ -1278,7 +1284,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
     }
 
-    ui.layer<BaseLayerGL>(layer).setColor(nodeData, 0x336699aa_rgbaf);
+    ui.layer<BaseLayerGL>(layer).setColor(nodeData, 0x336699aa_rgbaf/data.opacity);
     CORRADE_COMPARE_AS(ui.state(),
         UserInterfaceState::NeedsDataUpdate,
         TestSuite::Compare::GreaterOrEqual);
