@@ -1051,7 +1051,7 @@ const struct {
     {"node enabled update only", false, 6, 0, 0, false,
         {1.0f, 2.0f}, {10.0f, 15.0f}, {}, {}, {},
         {}, {}, {-1, -1}, {-1, -1}, {-1, -1},
-        LayerState::NeedsNodeOrderUpdate, false, true, false},
+        LayerState::NeedsNodeEnabledUpdate, false, true, false},
     /* These two shouldn't cause anything to be done in update(), and also no
        crashes */
     {"shared data update only", false, 6, 0, 0, false,
