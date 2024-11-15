@@ -286,7 +286,7 @@ void AbstractVisualLayer::doUpdate(const LayerStates states, const Containers::S
        Do this only if the data changed (i.e., possibly including style
        assignment) or if the node enablement changed. */
     if(states & (LayerState::NeedsNodeEnabledUpdate|LayerState::NeedsDataUpdate)) {
-    const Shared::State& sharedState = state.shared;
+        const Shared::State& sharedState = state.shared;
         if(UnsignedInt(*const toDisabled)(UnsignedInt) = sharedState.styleTransitionToDisabled) {
             const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
             const UnsignedInt styleCount = sharedState.styleCount;
