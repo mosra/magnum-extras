@@ -249,10 +249,18 @@ const struct {
 
 const struct {
     const char* name;
+    bool partialUpdate;
+} RenderCustomColorData[]{
+    {"", false},
+    {"partial update", true},
+};
+
+const struct {
+    const char* name;
     const char* filename;
     bool partialUpdate;
     BaseLayerSharedFlags flags;
-} RenderCustomColorOutlineWidthData[]{
+} RenderCustomOutlineWidthData[]{
     {"", "outline-same.png",
         false, {}},
     {"partial update", "outline-same.png",
@@ -883,10 +891,15 @@ BaseLayerGLTest::BaseLayerGLTest() {
 
     addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderCustomColor,
-        &BaseLayerGLTest::renderCustomColor<BaseLayerSharedFlag::SubdividedQuads>,
+        &BaseLayerGLTest::renderCustomColor<BaseLayerSharedFlag::SubdividedQuads>},
+        Containers::arraySize(RenderCustomColorData),
+        &BaseLayerGLTest::renderSetup,
+        &BaseLayerGLTest::renderTeardown);
+
+    addInstancedTests<BaseLayerGLTest>({
         &BaseLayerGLTest::renderCustomOutlineWidth,
         &BaseLayerGLTest::renderCustomOutlineWidth<BaseLayerSharedFlag::SubdividedQuads>},
-        Containers::arraySize(RenderCustomColorOutlineWidthData),
+        Containers::arraySize(RenderCustomOutlineWidthData),
         &BaseLayerGLTest::renderSetup,
         &BaseLayerGLTest::renderTeardown);
 
@@ -1235,7 +1248,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::render() {
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
-    auto&& data = RenderCustomColorOutlineWidthData[testCaseInstanceId()];
+    auto&& data = RenderCustomColorData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
     setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
@@ -1290,7 +1303,7 @@ template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomColor() {
 }
 
 template<BaseLayerSharedFlag flag> void BaseLayerGLTest::renderCustomOutlineWidth() {
-    auto&& data = RenderCustomColorOutlineWidthData[testCaseInstanceId()];
+    auto&& data = RenderCustomOutlineWidthData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
     setTestCaseTemplateName(flag == BaseLayerSharedFlag::SubdividedQuads ? "Flag::SubdividedQuads" : "");
 
