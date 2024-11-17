@@ -152,19 +152,20 @@ UnsignedInt EventLayer::usedAllocatedConnectionCount() const {
 }
 
 DataHandle EventLayer::create(const NodeHandle node, const Implementation::EventType eventType, Containers::FunctionData&& slot, void(*call)()) {
-    Containers::Array<Data>& data = _state->data;
+    State& state = static_cast<State&>(*_state);
     const DataHandle handle = AbstractLayer::create(node);
     const UnsignedInt id = dataHandleId(handle);
-    if(id >= data.size())
+    if(id >= state.data.size())
         /* Can't use arrayAppend(NoInit) because the Function has to be
            zero-initialized */
         /** @todo some arrayAppend(DefaultInit, std::size_t)? */
-        arrayResize(data, id + 1);
+        arrayResize(state.data, id + 1);
 
-    data[id].eventType = eventType;
-    data[id].slot = Utility::move(slot);
-    data[id].hasScopedConnection = false;
-    data[id].call = call;
+    Data& data = state.data[id];
+    data.eventType = eventType;
+    data.slot = Utility::move(slot);
+    data.hasScopedConnection = false;
+    data.call = call;
     return handle;
 }
 
