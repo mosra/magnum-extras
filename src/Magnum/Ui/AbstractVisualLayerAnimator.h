@@ -107,9 +107,14 @@ class MAGNUM_UI_EXPORT AbstractVisualLayerStyleAnimator: public AbstractStyleAni
         /**
          * @brief Animation dynamic style ID
          *
-         * Expects that @p handle is valid. If the dynamic style wasn't
-         * allocated yet, either due to the animation not being advanced yet or
-         * due to no free dynamic styles being available, returns
+         * Expects that @p handle is valid. If a dynamic style is allocated,
+         * the returned value is always less than
+         * @ref AbstractVisualLayer::Shared::dynamicStyleCount() of the
+         * associated layer. @ref AbstractVisualLayer::Shared::styleCount()
+         * plus the returned value is then a style index that can be passed to
+         * e.g. @ref AbstractVisualLayer::setStyle(). If the dynamic style
+         * wasn't allocated yet, either due to the animation not being advanced
+         * yet or due to no free dynamic styles being available, returns
          * @relativeref{Corrade,Containers::NullOpt}.
          * @see @ref targetStyle()
          */

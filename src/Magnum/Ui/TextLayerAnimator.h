@@ -115,6 +115,107 @@ CORRADE_ENUMSET_OPERATORS(TextLayerStyleAnimations)
 /**
 @brief Text layer style animator
 @m_since_latest
+
+Each animation is a transition between two @ref TextLayer styles, with
+individual properties interpolated with an easing function.
+@ref BaseLayerStyleAnimator is a matching animator for the @ref BaseLayer.
+
+@section Ui-TextLayerStyleAnimator-setup Setting up an animator instance
+
+The animator doesn't have any shared state or configuration, so it's just about
+constructing it from a fresh @ref AbstractUserInterface::createAnimator()
+handle and passing it to @relativeref{AbstractUserInterface,setStyleAnimatorInstance()}.
+
+@snippet Ui.cpp TextLayerStyleAnimator-setup1
+
+After that, the animator has to be registered with a concrete layer instance.
+The animations make use of dynamic styles, so the text layer is expected to
+have at least one dynamic style enabled with
+@ref TextLayer::Shared::Configuration::setDynamicStyleCount(). The more dynamic
+styles are enabled, the more style animations can be running for given layer at
+the same time, but also more data need to get uploaded to the GPU every frame.
+Finally, call @ref TextLayer::assignAnimator(TextLayerStyleAnimator&) to assign
+the animator to the layer instance. Then, assuming
+@ref AbstractUserInterface::advanceAnimations() is called in an appropriate
+place, the animator is ready to use.
+
+@snippet Ui-gl.cpp TextLayerStyleAnimator-setup2
+
+Unlike builtin layers or layouters, the default @ref UserInterface
+implementation doesn't implicitly provide a @ref TextLayerStyleAnimator
+instance.
+
+@todoc setDefaultStyleAnimator(), once it's actually used by styles; then also
+    update the sentence about UserInterface not having any animator instance
+
+@section Ui-TextLayerStyleAnimator-create Creating animations
+
+Assuming an enum is used to index the styles defined in @ref TextLayer::Shared
+of the associated layer instance, an animation is created by calling
+@ref create() with the source and target style indices, an easing function from
+@ref Animation::BasicEasing "Animation::Easing" or a custom one, time at which
+it's meant to be played, its duration, and a @ref DataHandle which the style
+animation should affect. Here, for example, to fade out a button hover style
+over half a second:
+
+@snippet Ui.cpp TextLayerStyleAnimator-create
+
+Internally, once the animation starts playing, the animator allocates a new
+dynamic style index using @ref TextLayer::allocateDynamicStyle() and switches
+the style index of given @ref DataHandle to the allocated dynamic style with
+@ref BaseLayer::setStyle(). During the animation the style data are updated to
+corresponding interpolation between the source and target styles, equivalent to
+calling @ref TextLayer::setDynamicStyle(). When the animation stops, the data
+style index is switched to the target ID specified in @ref create() and the
+dynamic style index is recycled with @ref TextLayer::recycleDynamicStyle() is
+called for the dynamic style.
+
+If the animator runs out of dynamic styles, newly played animations are left at
+the source style index until another dynamic style is recycled. If no dynamic
+style gets recycled until the animation ends, the data gets switched directly
+to the target style without animating.
+
+The animation interpolates all properties of @ref TextLayerStyleUniform as well
+as the style padding value. The font, alignment or text feature style
+properties cannot be animated and thus are set to properties of source style at
+the beginning. If the styles reference a cursor or editing style, the
+corresponding @ref TextLayerEditingStyleUniform including its padding value,
+and the selection @ref TextLayerStyleUniform override is animated as well.
+
+@m_class{m-note m-warning}
+
+@par
+    If either of the styles references a cursor or a selection style, the other
+    is expected to reference a cursor or a selection as well. The reason is
+    that there's several possible ways how to perform a fade-in / fade-out of
+    the cursor or selection, be it the quad changing size, or transparency, or
+    any other way, and the animator just picking something would be too
+    arbitrary.
+
+At the moment, only animation between predefined styles is possible.
+
+@section Ui-TextLayerStyleAnimator-lifetime Animation lifetime and data attachment
+
+As with all other animations, they're implicitly removed once they're played.
+Pass @ref AnimationFlag::KeepOncePlayed to @ref create() or @ref addFlags() to
+disable this behavior.
+
+Style animations are associated with data they animate, and thus as soon as the
+data or node the data is attached to is removed, the animation gets removed as
+well. If you want to preserve the animation when the data is removed, call
+@ref attach(AnimationHandle, DataHandle) with @ref DataHandle::Null to detach
+it from the data before removing.
+
+If you call @ref create() with @ref DataHandle::Null, the animation will still
+allocate and interpolate a dynamic style, but the style won't be used anywhere.
+You can then retrieve the dynamic style index with @ref dynamicStyle() and use
+it for example to make the same style animation on multiple different data.
+Note that in this case you're also responsible also for switching to the target
+style once the animation finishes --- once the dynamic style is recycled, the
+same index may get used for arbitrary other style either by this animator or
+any other code, causing visual bugs.
+
+@todoc update this section once there's robustness against switching styles
 */
 class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAnimator {
     public:
@@ -314,7 +415,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * Expects that @p handle is valid. The returned pointer is never
          * @cpp nullptr @ce.
          */
-        auto easing(AnimationHandle) const -> Float(*)(Float);
+        auto easing(AnimationHandle handle) const -> Float(*)(Float);
 
         /**
          * @brief Animation easing function assuming it belongs to this animator
@@ -324,7 +425,7 @@ class MAGNUM_UI_EXPORT TextLayerStyleAnimator: public AbstractVisualLayerStyleAn
          * more information.
          * @see @ref animationHandleData()
          */
-        auto easing(AnimatorDataHandle) const -> Float(*)(Float);
+        auto easing(AnimatorDataHandle handle) const -> Float(*)(Float);
 
         /**
          * @brief Animation source and target uniforms

@@ -24,8 +24,12 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Magnum/Animation/Easing.h>
+
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/AbstractVisualLayer.h"
+#include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/Event.h"
 #include "Magnum/Ui/Handle.h"
 
@@ -33,6 +37,7 @@
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
 
 using namespace Magnum;
+using namespace Magnum::Math::Literals;
 
 Ui::AbstractVisualLayer::Shared& abstractVisualLayerShared();
 namespace {
@@ -90,5 +95,52 @@ Ui::FocusEvent event{{}};
 if(!ui.focusEvent(node, event))
     ui.focusEvent(Ui::NodeHandle::Null, event);
 /* [AbstractUserInterface-focusEvent-blur-if-not-focusable] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [BaseLayerStyleAnimator-setup1] */
+Ui::BaseLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(
+    Containers::pointer<Ui::BaseLayerStyleAnimator>(ui.createAnimator()));
+/* [BaseLayerStyleAnimator-setup1] */
+
+Nanoseconds now;
+/* [BaseLayerStyleAnimator-create] */
+enum class BaseLayerStyle {
+    DOXYGEN_ELLIPSIS()
+    Button,
+    ButtonHover,
+    DOXYGEN_ELLIPSIS()
+};
+
+Ui::DataHandle buttonBackground = DOXYGEN_ELLIPSIS({});
+
+animator.create(BaseLayerStyle::ButtonHover, BaseLayerStyle::Button,
+    Animation::Easing::cubicOut, now, 0.5_sec, buttonBackground);
+/* [BaseLayerStyleAnimator-create] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [TextLayerStyleAnimator-setup1] */
+Ui::TextLayerStyleAnimator& animator = ui.setStyleAnimatorInstance(
+    Containers::pointer<Ui::TextLayerStyleAnimator>(ui.createAnimator()));
+/* [TextLayerStyleAnimator-setup1] */
+
+Nanoseconds now;
+/* [TextLayerStyleAnimator-create] */
+enum class TextLayerStyle {
+    DOXYGEN_ELLIPSIS()
+    Button,
+    ButtonHover,
+    DOXYGEN_ELLIPSIS()
+};
+
+Ui::DataHandle buttonText = DOXYGEN_ELLIPSIS({});
+
+animator.create(TextLayerStyle::ButtonHover, TextLayerStyle::Button,
+    Animation::Easing::cubicOut, now, 0.5_sec, buttonText);
+/* [TextLayerStyleAnimator-create] */
+}
 }
 }

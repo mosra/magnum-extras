@@ -28,8 +28,13 @@
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 
+#include "Magnum/Ui/BaseLayerGL.h"
+#include "Magnum/Ui/BaseLayerAnimator.h"
+#include "Magnum/Ui/Handle.h"
 #include "Magnum/Ui/RendererGL.h"
 #include "Magnum/Ui/Style.h"
+#include "Magnum/Ui/TextLayerGL.h"
+#include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/UserInterfaceGL.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
@@ -69,6 +74,42 @@ void MyApplication::drawEvent() {
    avoid -Wmisssing-prototypes */
 void mainUiGL();
 void mainUiGL() {
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::BaseLayerStyleAnimator animator{Ui::animatorHandle(0, 1)};
+/* [BaseLayerStyleAnimator-setup2] */
+Ui::BaseLayerGL::Shared baseLayerShared{
+    Ui::BaseLayer::Shared::Configuration{DOXYGEN_ELLIPSIS(0)}
+        DOXYGEN_ELLIPSIS()
+        .setDynamicStyleCount(10) /* adjust as needed */
+};
+Ui::BaseLayer& baseLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::BaseLayerGL>(ui.createLayer(), baseLayerShared));
+
+DOXYGEN_ELLIPSIS()
+
+baseLayer.assignAnimator(animator);
+/* [BaseLayerStyleAnimator-setup2] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+Ui::TextLayerStyleAnimator animator{Ui::animatorHandle(0, 1)};
+/* [TextLayerStyleAnimator-setup2] */
+Ui::TextLayerGL::Shared textLayerShared{
+    Ui::TextLayer::Shared::Configuration{DOXYGEN_ELLIPSIS(0)}
+        DOXYGEN_ELLIPSIS()
+        .setDynamicStyleCount(10) /* adjust as needed */
+};
+Ui::TextLayer& textLayer = ui.setLayerInstance(
+    Containers::pointer<Ui::TextLayerGL>(ui.createLayer(), textLayerShared));
+
+DOXYGEN_ELLIPSIS()
+
+textLayer.assignAnimator(animator);
+/* [TextLayerStyleAnimator-setup2] */
+}
+
 {
 /* [RendererGL] */
 GL::Renderer::setBlendFunction(
