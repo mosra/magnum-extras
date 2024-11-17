@@ -470,7 +470,7 @@ class MAGNUM_UI_EXPORT BaseLayer: public AbstractVisualLayer {
         /**
          * @brief Default style animator for this layer
          *
-         * If a style animator haven't been set, returns @cpp nullptr @ce. If
+         * If a style animator hasn't been set, returns @cpp nullptr @ce. If
          * not @cpp nullptr @ce, the returned animator is guaranteed to be
          * assigned to this layer, i.e. that
          * @ref BaseLayerStyleAnimator::layer() is equal to @ref handle().
