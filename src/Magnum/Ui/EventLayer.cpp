@@ -152,6 +152,12 @@ UnsignedInt EventLayer::usedAllocatedConnectionCount() const {
 }
 
 DataHandle EventLayer::create(const NodeHandle node, const Implementation::EventType eventType, Containers::FunctionData&& slot, void(*call)()) {
+    CORRADE_ASSERT(slot,
+        /* saying create() would be confusing, and passing onPress(),
+           onPressScoped() etc as a string just for the assert from all
+           variants seems excessive */
+        "Ui::EventLayer: slot is null", {});
+
     State& state = static_cast<State&>(*_state);
     const DataHandle handle = AbstractLayer::create(node);
     const UnsignedInt id = dataHandleId(handle);

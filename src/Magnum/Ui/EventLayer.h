@@ -186,7 +186,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * The @p slot, optionally receiving a node-relative position of the
          * press, is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen press happens on the
-         * @p node.
+         * @p node. Expects that the @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() for a combined press and release. The
          * returned @ref DataHandle is automatically removed once @p node or
@@ -221,7 +221,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * The @p slot, optionally receiving a node-relative position of the
          * release, is called when a @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen release happens on the
-         * @p node.
+         * @p node. Expects that the @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() for a combined press and release. The
          * returned @ref DataHandle is automatically removed once @p node or
@@ -259,7 +259,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @p node after a previous primary pointer press. If event capture is
          * disabled by any event handler on given node, the slot is called only
          * if the pointer didn't leave the node area between a press and a
-         * release.
+         * release. Expects that the @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onRightClick() and @ref onMiddleClick() to handle
          * @ref Pointer::MouseRight and @ref Pointer::MouseMiddle clicks. The
@@ -297,7 +297,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * the @p node after a previous pointer press. If event capture is
          * disabled by any event handler on given node, the slot is called only
          * if the pointer didn't leave the node area between a press and a
-         * release.
+         * release. Expects that the @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() and @ref onRightClick() to handle
          * @ref Pointer::MouseLeft / @ref Pointer::Finger / @ref Pointer::Pen
@@ -335,7 +335,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * the @p node after a previous pointer press. If event capture is
          * disabled by any event handler on given node, the slot is called only
          * if the pointer didn't leave the node area between a press and a
-         * release.
+         * release. Expects that the @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onTapOrClick() and @ref onRightClick() to handle
          * @ref Pointer::MouseLeft / @ref Pointer::Finger / @ref Pointer::Pen
@@ -374,6 +374,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @ref Pointer::Pen move happens on the @p node. To prevent the slot
          * from being triggered by drags that originated outside of @p node,
          * it's called only if the move event is captured on given node.
+         * Expects that the @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onPinch() to handle two-finger gestures. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
@@ -410,7 +411,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * centroid position between the two presses, translation of the
          * centroid relative to previous state of the two fingers, their
          * relative rotation and scaling. @ref Platform::TwoFingerGesture is
-         * used internally, see its documentation for more information.
+         * used internally, see its documentation for more information. Expects
+         * that the @p slot is not @cpp nullptr @ce.
          *
          * By default, the gesture is tracked as long as the primary finger is
          * pressed, even if the fingers are outside of the node area. If
@@ -441,7 +443,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @brief Connect to a pointer enter
          *
          * The @p slot is called when a primary pointer moves over the
-         * @p node area.
+         * @p node area. Expects that the @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onLeave() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
@@ -466,7 +468,7 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * @brief Connect to a pointer leave
          *
          * The @p slot is called when a primary pointer moves out of the
-         * @p node area.
+         * @p node area. Expects that the @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onEnter() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
@@ -490,7 +492,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Connect to a focus
          *
-         * The @p slot is called when a @p node is focused.
+         * The @p slot is called when a @p node is focused. Expects that the
+         * @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onBlur() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its
@@ -513,7 +516,8 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
         /**
          * @brief Connect to a blur
          *
-         * The @p slot is called when the @p node is blurred.
+         * The @p slot is called when the @p node is blurred. Expects that the
+         * @p slot is not @cpp nullptr @ce.
          *
          * Use @ref onFocus() to hadle the opposite case. The returned
          * @ref DataHandle is automatically removed once @p node or any of its

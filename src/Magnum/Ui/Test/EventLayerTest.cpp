@@ -57,6 +57,8 @@ struct EventLayerTest: TestSuite::Tester {
     void constructMoveScopedConnectionsActive();
     void destructScopedConnectionsActive();
 
+    void invalidSlot();
+
     void call();
 
     void connect();
@@ -260,6 +262,8 @@ EventLayerTest::EventLayerTest() {
               &EventLayerTest::constructMove,
               &EventLayerTest::constructMoveScopedConnectionsActive,
               &EventLayerTest::destructScopedConnectionsActive,
+
+              &EventLayerTest::invalidSlot,
 
               &EventLayerTest::call});
 
@@ -568,6 +572,17 @@ void EventLayerTest::call() {
 
     /* Destructed the original instance and the copy in the layer (20) */
     CORRADE_COMPARE(functorCalledConstructedDestructedCount, 1121);
+}
+
+void EventLayerTest::invalidSlot() {
+    CORRADE_SKIP_IF_NO_ASSERT();
+
+    EventLayer layer{layerHandle(0, 1)};
+
+    std::ostringstream out;
+    Error redirectError{&out};
+    layer.onBlur(nodeHandle(0, 1), nullptr);
+    CORRADE_COMPARE(out.str(), "Ui::EventLayer: slot is null\n");
 }
 
 void EventLayerTest::connect() {
