@@ -176,7 +176,9 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
          * non-trivially-destructible state or state that's too large to be
          * stored in-place. The operation is done with a @f$ \mathcal{O}(n) @f$
          * complexity where @f$ n @f$ is @ref capacity().
-         * @see @ref Corrade::Containers::Function<R(Args...)::isAllocated()
+         * @todoc fix the isAllocated link once Doxygen stops being shit -- it
+         *      works only from Containers themselves
+         * @see @ref Corrade::Containers::Function "Containers::Function<R(Args...)>::isAllocated()"
          */
         UnsignedInt usedAllocatedConnectionCount() const;
 
