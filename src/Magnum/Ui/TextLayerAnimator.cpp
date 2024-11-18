@@ -136,8 +136,8 @@ AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, co
     return handle;
 }
 
-AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt styleFrom, const UnsignedInt styleTo, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
-    return create(styleFrom, styleTo, easing, played, duration, data, 1, flags);
+AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const DataHandle data, const AnimationFlags flags) {
+    return create(sourceStyle, targetStyle, easing, played, duration, data, 1, flags);
 }
 
 AnimationHandle TextLayerStyleAnimator::create(const UnsignedInt sourceStyle, const UnsignedInt targetStyle, Float(*const easing)(Float), const Nanoseconds played, const Nanoseconds duration, const LayerDataHandle data, const UnsignedInt repeatCount, const AnimationFlags flags) {
