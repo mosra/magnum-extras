@@ -24,13 +24,16 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Corrade/Containers/Function.h>
 #include <Magnum/Animation/Easing.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
 #include "Magnum/Ui/AbstractVisualLayer.h"
+#include "Magnum/Ui/BaseLayer.h"
 #include "Magnum/Ui/BaseLayerAnimator.h"
 #include "Magnum/Ui/TextLayerAnimator.h"
 #include "Magnum/Ui/Event.h"
+#include "Magnum/Ui/GenericAnimator.h"
 #include "Magnum/Ui/Handle.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
@@ -142,5 +145,60 @@ animator.create(TextLayerStyle::ButtonHover, TextLayerStyle::Button,
     Animation::Easing::cubicOut, now, 0.5_sec, buttonText);
 /* [TextLayerStyleAnimator-create] */
 }
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [GenericAnimator-setup] */
+Ui::GenericAnimator& animator = ui.setGenericAnimatorInstance(
+    Containers::pointer<Ui::GenericAnimator>(ui.createAnimator()));
+/* [GenericAnimator-setup] */
+
+Nanoseconds now;
+/* [GenericAnimator-create] */
+animator.create([](Float factor) {
+    DOXYGEN_ELLIPSIS(static_cast<void>(factor));
+}, Animation::Easing::cubicIn, now, 1.5_sec);
+/* [GenericAnimator-create] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [GenericNodeAnimator-setup] */
+Ui::GenericNodeAnimator& animator = ui.setGenericAnimatorInstance(
+    Containers::pointer<Ui::GenericNodeAnimator>(ui.createAnimator()));
+/* [GenericNodeAnimator-setup] */
+
+Nanoseconds now;
+/* [GenericNodeAnimator-create] */
+Ui::NodeHandle dropdown = DOXYGEN_ELLIPSIS({});
+
+animator.create([&ui](Ui::NodeHandle dropdown, Float factor) {
+    ui.setNodeSize(dropdown, {ui.nodeSize(dropdown).x(), 150.0f*factor});
+    ui.setNodeOpacity(dropdown, 1.0f*factor);
+}, Animation::Easing::cubicIn, now, 0.5_sec, dropdown);
+/* [GenericNodeAnimator-create] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [GenericDataAnimator-setup] */
+Ui::AbstractLayer& layer = DOXYGEN_ELLIPSIS(ui.layer({}));
+
+Ui::GenericDataAnimator& animator = ui.setGenericAnimatorInstance(
+    Containers::pointer<Ui::GenericDataAnimator>(ui.createAnimator()));
+animator.setLayer(layer);
+/* [GenericDataAnimator-setup] */
+
+Nanoseconds now;
+/* [GenericDataAnimator-create] */
+Ui::BaseLayer& baseLayer = DOXYGEN_ELLIPSIS(ui.layer<Ui::BaseLayer>({}));
+Ui::DataHandle progressbar = DOXYGEN_ELLIPSIS({});
+
+Float from = DOXYGEN_ELLIPSIS(0.0f);
+Float to = DOXYGEN_ELLIPSIS(0.0f);
+animator.create([&baseLayer, from, to](Ui::DataHandle progressbar, Float factor) {
+    baseLayer.setPadding(progressbar, {Math::lerp(from, to, factor), 0.0f, 0.0f, 0.0f});
+}, Animation::Easing::cubicIn, now, 0.5_sec, progressbar);
+/* [GenericDataAnimator-create] */
 }
 }

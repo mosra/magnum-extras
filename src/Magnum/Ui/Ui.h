@@ -88,6 +88,10 @@ class TextLayerGL;
 class TextFeatureValue;
 class TextProperties;
 
+class GenericAnimator;
+class GenericNodeAnimator;
+class GenericDataAnimator;
+
 class RendererGL;
 
 enum class StyleFeature: UnsignedByte;
