@@ -65,6 +65,7 @@ struct EventLayerTest: TestSuite::Tester {
     void connectScoped();
     void remove();
     void removeScoped();
+    void connectRemoveHandleRecycle();
     void cleanNodes();
 
     void press();
@@ -272,6 +273,7 @@ EventLayerTest::EventLayerTest() {
 
     addTests({&EventLayerTest::remove,
               &EventLayerTest::removeScoped,
+              &EventLayerTest::connectRemoveHandleRecycle,
               &EventLayerTest::cleanNodes,
 
               &EventLayerTest::press,
@@ -744,6 +746,39 @@ void EventLayerTest::removeScoped() {
         /* The EventConnection instances should not attempt to delete the same
            data again */
     }
+}
+
+void EventLayerTest::connectRemoveHandleRecycle() {
+    Int destructedCount1 = 0,
+        destructedCount2 = 0;
+    struct NonTrivial {
+        explicit NonTrivial(int& output): destructedCount{&output} {}
+        ~NonTrivial() {
+            ++*destructedCount;
+        }
+        void operator()() const {
+            CORRADE_FAIL("This should never be called.");
+        }
+
+        Int* destructedCount;
+    };
+
+    EventLayer layer{layerHandle(0, 1)};
+    layer.onTapOrClick(nodeHandle(1, 2), []{});
+
+    /* The temporary gets destructed right away */
+    DataHandle second = layer.onTapOrClick(nodeHandle(1, 2), NonTrivial{destructedCount1});
+    CORRADE_COMPARE(destructedCount1, 1);
+
+    layer.remove(second);
+    CORRADE_COMPARE(destructedCount1, 2);
+
+    /* Data that reuses a previous slot should not call the destructor on the
+       previous function again or some such crazy stuff */
+    DataHandle second2 = layer.onTapOrClick(nodeHandle(3, 4), NonTrivial{destructedCount2});
+    CORRADE_COMPARE(dataHandleId(second2), dataHandleId(second));
+    CORRADE_COMPARE(destructedCount1, 2);
+    CORRADE_COMPARE(destructedCount2, 1);
 }
 
 void EventLayerTest::cleanNodes() {
