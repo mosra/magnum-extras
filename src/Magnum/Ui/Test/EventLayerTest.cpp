@@ -63,6 +63,9 @@ struct EventLayerTest: TestSuite::Tester {
 
     void connect();
     void connectScoped();
+    void remove();
+    void removeScoped();
+    void cleanNodes();
 
     void press();
     void release();
@@ -99,10 +102,6 @@ struct EventLayerTest: TestSuite::Tester {
     void focus();
     void blur();
     void focusBlurFromUserInterface();
-
-    void remove();
-    void removeScoped();
-    void cleanNodes();
 };
 
 using namespace Math::Literals;
@@ -271,7 +270,11 @@ EventLayerTest::EventLayerTest() {
                        &EventLayerTest::connectScoped},
         Containers::arraySize(ConnectData));
 
-    addTests({&EventLayerTest::press,
+    addTests({&EventLayerTest::remove,
+              &EventLayerTest::removeScoped,
+              &EventLayerTest::cleanNodes,
+
+              &EventLayerTest::press,
               &EventLayerTest::release,
               &EventLayerTest::releasePress,
               &EventLayerTest::pressReleaseFromUserInterface,
@@ -305,11 +308,7 @@ EventLayerTest::EventLayerTest() {
 
               &EventLayerTest::focus,
               &EventLayerTest::blur,
-              &EventLayerTest::focusBlurFromUserInterface,
-
-              &EventLayerTest::remove,
-              &EventLayerTest::removeScoped,
-              &EventLayerTest::cleanNodes});
+              &EventLayerTest::focusBlurFromUserInterface});
 }
 
 void EventLayerTest::eventConnectionConstruct() {
@@ -661,6 +660,145 @@ void EventLayerTest::connectScoped() {
 
     /* The functor copy gets destructed after */
     CORRADE_COMPARE(functorOutput, 2*3*5*7*5);
+}
+
+void EventLayerTest::remove() {
+    Int destructedCount = 0;
+    struct NonTrivial {
+        explicit NonTrivial(int& output): destructedCount{&output} {}
+        ~NonTrivial() {
+            ++*destructedCount;
+        }
+        void operator()() const {}
+
+        Int* destructedCount;
+    };
+
+    EventLayer layer{layerHandle(0, 1)};
+
+    DataHandle trivial = layer.onTapOrClick(nodeHandle(0, 1), []{});
+    CORRADE_COMPARE(layer.usedCount(), 1);
+    CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
+
+    /* The temporary gets destructed right away */
+    DataHandle nonTrivial = layer.onTapOrClick(nodeHandle(1, 2), NonTrivial{destructedCount});
+    CORRADE_COMPARE(layer.usedCount(), 2);
+    CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
+    CORRADE_COMPARE(destructedCount, 1);
+
+    layer.remove(trivial);
+    CORRADE_COMPARE(layer.usedCount(), 1);
+    CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
+    CORRADE_COMPARE(destructedCount, 1);
+
+    /* Verifying also the other handle overload. They should both delegate into
+       the same internal implementation. */
+    layer.remove(dataHandleData(nonTrivial));
+    CORRADE_COMPARE(layer.usedCount(), 0);
+    CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
+    CORRADE_COMPARE(destructedCount, 2);
+}
+
+void EventLayerTest::removeScoped() {
+    Int destructedCount = 0;
+    struct NonTrivial {
+        explicit NonTrivial(int& output): destructedCount{&output} {}
+        ~NonTrivial() {
+            ++*destructedCount;
+        }
+        void operator()() const {}
+
+        Int* destructedCount;
+    };
+
+    EventLayer layer{layerHandle(0, 1)};
+    {
+        EventConnection trivial = layer.onTapOrClickScoped(nodeHandle(0, 1), []{});
+        CORRADE_COMPARE(layer.usedCount(), 1);
+        CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);
+        CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
+
+        /* The temporary gets destructed right away */
+        EventConnection nonTrivial = layer.onTapOrClickScoped(nodeHandle(1, 2), NonTrivial{destructedCount});
+        CORRADE_COMPARE(layer.usedCount(), 2);
+        CORRADE_COMPARE(layer.usedScopedConnectionCount(), 2);
+        CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
+        CORRADE_COMPARE(destructedCount, 1);
+
+        layer.remove(trivial.data());
+        CORRADE_COMPARE(layer.usedCount(), 1);
+        CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);
+        CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
+        CORRADE_COMPARE(destructedCount, 1);
+
+        layer.remove(nonTrivial.data());
+        CORRADE_COMPARE(layer.usedCount(), 0);
+        CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
+        CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
+        CORRADE_COMPARE(destructedCount, 2);
+
+        /* The EventConnection instances should not attempt to delete the same
+           data again */
+    }
+}
+
+void EventLayerTest::cleanNodes() {
+    Int destructedCount = 0;
+    Int anotherDestructedCount = 0;
+    struct NonTrivial {
+        explicit NonTrivial(int& output): destructedCount{&output} {}
+        ~NonTrivial() {
+            ++*destructedCount;
+        }
+        void operator()() const {}
+
+        Int* destructedCount;
+    };
+
+    EventLayer layer{layerHandle(0, 1)};
+
+    DataHandle trivial = layer.onTapOrClick(nodeHandle(1, 2), []{});
+    CORRADE_COMPARE(layer.usedCount(), 1);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
+
+    /* The temporary gets destructed right away */
+    DataHandle nonTrivial = layer.onTapOrClick(nodeHandle(3, 4), NonTrivial{destructedCount});
+    CORRADE_COMPARE(layer.usedCount(), 2);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
+    CORRADE_COMPARE(destructedCount, 1);
+
+    DataHandle another = layer.onTapOrClick(nodeHandle(0, 5), []{});
+    CORRADE_COMPARE(layer.usedCount(), 3);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
+
+    /* The temporary gets destructed right away */
+    DataHandle anotherNonTrivial = layer.onTapOrClick(nodeHandle(4, 1), NonTrivial{anotherDestructedCount});
+    CORRADE_COMPARE(layer.usedCount(), 4);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 2);
+    CORRADE_COMPARE(anotherDestructedCount, 1);
+
+    UnsignedShort nodeHandleGenerations[]{
+        5,      /* node 0 with `another` stays */
+        1,      /* node 1 has generation = 2, so it gets deleted */
+        666,    /* node 2 isn't used */
+        5,      /* node 3 has generation = 4, so it gets deleted too */
+        1,      /* node 4 with `anotherNonTrivial` stays too */
+    };
+    layer.cleanNodes(nodeHandleGenerations);
+
+    /* It should remove two but call just one destructor */
+    CORRADE_COMPARE(layer.usedCount(), 2);
+    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
+    CORRADE_COMPARE(destructedCount, 2);
+    CORRADE_COMPARE(anotherDestructedCount, 1);
+    CORRADE_VERIFY(!layer.isHandleValid(trivial));
+    CORRADE_VERIFY(!layer.isHandleValid(nonTrivial));
+    CORRADE_VERIFY(layer.isHandleValid(another));
+    CORRADE_VERIFY(layer.isHandleValid(anotherNonTrivial));
 }
 
 void EventLayerTest::press() {
@@ -3034,145 +3172,6 @@ void EventLayerTest::focusBlurFromUserInterface() {
         CORRADE_COMPARE(blurCalled, 2);
         CORRADE_COMPARE(belowCalled, 0);
     }
-}
-
-void EventLayerTest::remove() {
-    Int destructedCount = 0;
-    struct NonTrivial {
-        explicit NonTrivial(int& output): destructedCount{&output} {}
-        ~NonTrivial() {
-            ++*destructedCount;
-        }
-        void operator()() const {}
-
-        Int* destructedCount;
-    };
-
-    EventLayer layer{layerHandle(0, 1)};
-
-    DataHandle trivial = layer.onTapOrClick(nodeHandle(0, 1), []{});
-    CORRADE_COMPARE(layer.usedCount(), 1);
-    CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
-
-    /* The temporary gets destructed right away */
-    DataHandle nonTrivial = layer.onTapOrClick(nodeHandle(1, 2), NonTrivial{destructedCount});
-    CORRADE_COMPARE(layer.usedCount(), 2);
-    CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
-    CORRADE_COMPARE(destructedCount, 1);
-
-    layer.remove(trivial);
-    CORRADE_COMPARE(layer.usedCount(), 1);
-    CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
-    CORRADE_COMPARE(destructedCount, 1);
-
-    /* Verifying also the other handle overload. They should both delegate into
-       the same internal implementation. */
-    layer.remove(dataHandleData(nonTrivial));
-    CORRADE_COMPARE(layer.usedCount(), 0);
-    CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
-    CORRADE_COMPARE(destructedCount, 2);
-}
-
-void EventLayerTest::removeScoped() {
-    Int destructedCount = 0;
-    struct NonTrivial {
-        explicit NonTrivial(int& output): destructedCount{&output} {}
-        ~NonTrivial() {
-            ++*destructedCount;
-        }
-        void operator()() const {}
-
-        Int* destructedCount;
-    };
-
-    EventLayer layer{layerHandle(0, 1)};
-    {
-        EventConnection trivial = layer.onTapOrClickScoped(nodeHandle(0, 1), []{});
-        CORRADE_COMPARE(layer.usedCount(), 1);
-        CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);
-        CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
-
-        /* The temporary gets destructed right away */
-        EventConnection nonTrivial = layer.onTapOrClickScoped(nodeHandle(1, 2), NonTrivial{destructedCount});
-        CORRADE_COMPARE(layer.usedCount(), 2);
-        CORRADE_COMPARE(layer.usedScopedConnectionCount(), 2);
-        CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
-        CORRADE_COMPARE(destructedCount, 1);
-
-        layer.remove(trivial.data());
-        CORRADE_COMPARE(layer.usedCount(), 1);
-        CORRADE_COMPARE(layer.usedScopedConnectionCount(), 1);
-        CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
-        CORRADE_COMPARE(destructedCount, 1);
-
-        layer.remove(nonTrivial.data());
-        CORRADE_COMPARE(layer.usedCount(), 0);
-        CORRADE_COMPARE(layer.usedScopedConnectionCount(), 0);
-        CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
-        CORRADE_COMPARE(destructedCount, 2);
-
-        /* The EventConnection instances should not attempt to delete the same
-           data again */
-    }
-}
-
-void EventLayerTest::cleanNodes() {
-    Int destructedCount = 0;
-    Int anotherDestructedCount = 0;
-    struct NonTrivial {
-        explicit NonTrivial(int& output): destructedCount{&output} {}
-        ~NonTrivial() {
-            ++*destructedCount;
-        }
-        void operator()() const {}
-
-        Int* destructedCount;
-    };
-
-    EventLayer layer{layerHandle(0, 1)};
-
-    DataHandle trivial = layer.onTapOrClick(nodeHandle(1, 2), []{});
-    CORRADE_COMPARE(layer.usedCount(), 1);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 0);
-
-    /* The temporary gets destructed right away */
-    DataHandle nonTrivial = layer.onTapOrClick(nodeHandle(3, 4), NonTrivial{destructedCount});
-    CORRADE_COMPARE(layer.usedCount(), 2);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
-    CORRADE_COMPARE(destructedCount, 1);
-
-    DataHandle another = layer.onTapOrClick(nodeHandle(0, 5), []{});
-    CORRADE_COMPARE(layer.usedCount(), 3);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
-
-    /* The temporary gets destructed right away */
-    DataHandle anotherNonTrivial = layer.onTapOrClick(nodeHandle(4, 1), NonTrivial{anotherDestructedCount});
-    CORRADE_COMPARE(layer.usedCount(), 4);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 2);
-    CORRADE_COMPARE(anotherDestructedCount, 1);
-
-    UnsignedShort nodeHandleGenerations[]{
-        5,      /* node 0 with `another` stays */
-        1,      /* node 1 has generation = 2, so it gets deleted */
-        666,    /* node 2 isn't used */
-        5,      /* node 3 has generation = 4, so it gets deleted too */
-        1,      /* node 4 with `anotherNonTrivial` stays too */
-    };
-    layer.cleanNodes(nodeHandleGenerations);
-
-    /* It should remove two but call just one destructor */
-    CORRADE_COMPARE(layer.usedCount(), 2);
-    CORRADE_COMPARE(layer.usedAllocatedConnectionCount(), 1);
-    CORRADE_COMPARE(destructedCount, 2);
-    CORRADE_COMPARE(anotherDestructedCount, 1);
-    CORRADE_VERIFY(!layer.isHandleValid(trivial));
-    CORRADE_VERIFY(!layer.isHandleValid(nonTrivial));
-    CORRADE_VERIFY(layer.isHandleValid(another));
-    CORRADE_VERIFY(layer.isHandleValid(anotherNonTrivial));
 }
 
 }}}}
