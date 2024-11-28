@@ -140,7 +140,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * immediately transitioning to a stopped state. The @p pointer is
          * expected to match @p source, @p primary is expected to be
          * @cpp true @ce for @ref PointerEventSource::Mouse and
-         * @ref PointerEventSource::Pen. The position, capture and hover
+         * @ref PointerEventSource::Pen. The position, capture and node-related
          * properties are set from @ref AbstractUserInterface event handler
          * internals.
          */
@@ -194,6 +194,19 @@ class MAGNUM_UI_EXPORT PointerEvent {
         Vector2 position() const { return _position; }
 
         /**
+         * @brief Whether the event is called on a node that's currently pressed
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentPressedNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise. In particular, is @cpp false @ce for a first press event
+         * happening on given node and is @cpp true @ce for a release event if
+         * it happens inside the pressed node. However, it's @cpp true @ce also
+         * for a release that happens outside of a pressed and captured node.
+         * @see @ref isNodeHovered(), @ref isNodeFocused(), @ref isCaptured()
+         */
+        bool isNodePressed() const { return _nodePressed; }
+
+        /**
          * @brief Whether the event is called on a node that's currently hovered
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
@@ -208,7 +221,8 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * being in an active area of the node by either accepting the event or
          * not accepting it and letting it potentially fall through to other
          * nodes.
-         * @see @ref isNodeFocused(), @ref isCaptured(), @ref setAccepted()
+         * @see @ref isNodePressed(), @ref isNodeFocused(), @ref isCaptured(),
+         *      @ref setAccepted()
          */
         bool isNodeHovered() const { return _nodeHovered; }
 
@@ -220,7 +234,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * otherwise. Unlike @ref isNodeHovered(), returns @cpp true @ce also
          * if the actual pointer position is outside of the area of the node
          * the event is called on, for example in case of an event capture.
-         * @see @ref isCaptured()
+         * @see @ref isNodePressed(), @ref isCaptured()
          */
         bool isNodeFocused() const { return _nodeFocused; }
 
@@ -229,7 +243,8 @@ class MAGNUM_UI_EXPORT PointerEvent {
          *
          * On a press event is always implicitly @cpp true @ce, on a release
          * event is @cpp true @ce only if the event happens on a captured node.
-         * @see @ref isNodeHovered(), @ref isNodeFocused()
+         * @see @ref isNodePressed(), @ref isNodeHovered(),
+         *      @ref isNodeFocused()
          */
         bool isCaptured() const { return _captured; }
 
@@ -281,6 +296,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
         PointerEventSource _source;
         Pointer _pointer;
         bool _primary;
+        bool _nodePressed = false;
         bool _nodeHovered = false;
         bool _nodeFocused = false;
         bool _accepted = false;
@@ -314,7 +330,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * expected to match @p source or be
          * @relativeref{Corrade,Containers::NullOpt}, @p primary is expected to
          * be @cpp true @ce for @ref PointerEventSource::Mouse and
-         * @ref PointerEventSource::Pen. The position, capture and hover
+         * @ref PointerEventSource::Pen. The position, capture and node-related
          * properties are set from @ref AbstractUserInterface event handler
          * internals.
          */
@@ -407,6 +423,17 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         /**
          * @brief Whether the event is called on a node that's currently hovered
          *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentPressedNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise. In particular, is @cpp true @ce also for a move that
+         * happens outside of a pressed and captured node.
+         * @see @ref isNodeHovered(), @ref isNodeFocused()
+         */
+        bool isNodePressed() const { return _nodePressed; }
+
+        /**
+         * @brief Whether the event is called on a node that's currently hovered
+         *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
          * is the same as the node the event is called on, @cpp false @ce
          * otherwise. In particular, is @cpp false @ce for the first move event
@@ -423,7 +450,8 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * then become hovered, if there are none then the hovered node becomes
          * null and subsequent move events called on this node will be called
          * with this function returning @cpp false @ce.
-         * @see @ref isNodeFocused(), @ref isCaptured(), @ref setAccepted()
+         * @see @ref isNodePressed(), @ref isNodeFocused(), @ref isCaptured(),
+         *      @ref setAccepted()
          */
         bool isNodeHovered() const { return _nodeHovered; }
 
@@ -435,7 +463,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * otherwise. Unlike @ref isNodeHovered(), returns @cpp true @ce also
          * if the actual pointer position is outside of the area of the node
          * the event is called on, for example in case of an event capture.
-         * @see @ref isCaptured()
+         * @see @ref isNodePressed(), @ref isCaptured()
          */
         bool isNodeFocused() const { return _nodeFocused; }
 
@@ -444,7 +472,8 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          *
          * Is implicitly @cpp true @ce if the event happens on a captured node,
          * @cpp false @ce otherwise.
-         * @see @ref isNodeHovered(), @ref isNodeFocused()
+         * @see @ref isNodePressed(), @ref isNodeHovered(),
+         *      @ref isNodeFocused()
          */
         bool isCaptured() const { return _captured; }
 
@@ -492,6 +521,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         Pointer _pointer; /* NullOpt encoded as Pointer{} to avoid an include */
         Pointers _pointers;
         bool _primary;
+        bool _nodePressed = false;
         bool _nodeHovered = false;
         bool _nodeFocused = false;
         bool _accepted = false;
@@ -514,7 +544,7 @@ class FocusEvent {
          *
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
-         * immediately transitioning to a stopped state. The pressed and hover
+         * immediately transitioning to a stopped state. The node-related
          * properties are set from @ref AbstractUserInterface event handler
          * internals.
          */
@@ -865,8 +895,8 @@ class MAGNUM_UI_EXPORT KeyEvent {
          * The @p time may get used for UI animations. A default-constructed
          * value causes an animation play time to be in the past, thus
          * immediately transitioning to a stopped state. The position, capture
-         * and hover properties are set from @ref AbstractUserInterface event
-         * handler internals.
+         * and node-related properties are set from @ref AbstractUserInterface
+         * event handler internals.
          */
         explicit KeyEvent(Nanoseconds time, Key key, Modifiers modifiers): _time{time}, _key{key}, _modifiers{modifiers} {}
 
@@ -893,12 +923,22 @@ class MAGNUM_UI_EXPORT KeyEvent {
         Containers::Optional<Vector2> position() const;
 
         /**
+         * @brief Whether the event is called on a node that's currently pressed
+         *
+         * Returns @cpp true @ce if @ref AbstractUserInterface::currentPressedNode()
+         * is the same as the node the event is called on, @cpp false @ce
+         * otherwise.
+         * @see @ref isNodePressed(), @ref isNodeFocused(), @ref isCaptured()
+         */
+        bool isNodePressed() const { return _nodePressed; }
+
+        /**
          * @brief Whether the event is called on a node that's currently hovered
          *
          * Returns @cpp true @ce if @ref AbstractUserInterface::currentHoveredNode()
          * is the same as the node the event is called on, @cpp false @ce
          * otherwise.
-         * @see @ref isNodeFocused(), @ref isCaptured()
+         * @see @ref isNodePressed(), @ref isNodeFocused(), @ref isCaptured()
          */
         bool isNodeHovered() const { return _nodeHovered; }
 
@@ -910,7 +950,7 @@ class MAGNUM_UI_EXPORT KeyEvent {
          * otherwise. Unlike @ref isNodeHovered(), returns @cpp true @ce also
          * if the actual pointer position is outside of the area of the node
          * the event is called on, for example in case of an event capture.
-         * @see @ref isCaptured()
+         * @see @ref isNodePressed(), @ref isCaptured()
          */
         bool isNodeFocused() const { return _nodeFocused; }
 
@@ -924,7 +964,8 @@ class MAGNUM_UI_EXPORT KeyEvent {
          * node the event is called on, @cpp false @ce otherwise. Unlike
          * @ref PointerEvent or @ref PointerMoveEvent, key events don't have a
          * possibility to modify the captured status.
-         * @see @ref isNodeHovered(), @ref isNodeFocused()
+         * @see @ref isNodePressed(), @ref isNodeHovered(),
+         *      @ref isNodeFocused()
          */
         bool isCaptured() const { return _captured; }
 
@@ -952,6 +993,7 @@ class MAGNUM_UI_EXPORT KeyEvent {
         Vector2 _position{Constants::nan()};
         Key _key;
         Modifiers _modifiers;
+        bool _nodePressed = false;
         bool _nodeHovered = false;
         bool _nodeFocused = false;
         bool _accepted = false;

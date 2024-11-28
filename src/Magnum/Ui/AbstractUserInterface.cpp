@@ -3502,10 +3502,12 @@ template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> bool Abstract
 /* Used only in keyPressOrReleaseEvent() but put here to have the loops and
    other event-related handling of all call*Event*() APIs together */
 template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUserInterface::callKeyEventOnNode(const UnsignedInt nodeId, KeyEvent& event) {
-    /* Set isNodeHovered() / isNodeFocused() if the event is called on node
-       that is hovered / focused. Unlike callEventOnNode() below, this is set
-       unconditionally as these events don't have any associated position. */
+    /* Set isNodePressed() / isNodeHovered() / isNodeFocused() if the event is
+       called on node that is pressed / hovered / focused. Unlike
+       callEventOnNode() below, this is set unconditionally for all three as
+       these events don't have any associated position. */
     State& state = *_state;
+    event._nodePressed = state.currentPressedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentPressedNode);
     event._nodeHovered = state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
     event._nodeFocused = state.currentFocusedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentFocusedNode);
 
@@ -3555,10 +3557,12 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
     if(state.currentHoveredNode == NodeHandle::Null || nodeId != nodeHandleId(state.currentHoveredNode))
         event._nodeHovered = false;
 
-    /* On the other hand, isNodeFocused() is set unconditionally -- the event
-       handler can then check if it was called on a focused node but outside of
-       it by looking at isNodeHovered(), no need to encode that information
-       twice. */
+    /* On the other hand, isNodePressed() / isNodeFocused() is set
+       unconditionally -- the event handler can then check if it was called on
+       a pressed / focused node but outside of it by looking at
+       isNodeHovered(), no need to encode that information redundantly in
+       multiple properties. */
+    event._nodePressed = state.currentPressedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentPressedNode);
     event._nodeFocused = state.currentFocusedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentFocusedNode);
 
     /* Remember the initial event capture state to reset it after each

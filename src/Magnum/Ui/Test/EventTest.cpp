@@ -132,6 +132,7 @@ void EventTest::pointer() {
     CORRADE_VERIFY(event.isPrimary());
     CORRADE_COMPARE(event.id(), 1ll << 36);
     CORRADE_COMPARE(event.position(), Vector2{});
+    CORRADE_VERIFY(!event.isNodePressed());
     CORRADE_VERIFY(!event.isNodeHovered());
     CORRADE_VERIFY(!event.isNodeFocused());
     CORRADE_VERIFY(!event.isCaptured());
@@ -202,6 +203,7 @@ void EventTest::pointerMove() {
     CORRADE_COMPARE(event.id(), 1ll << 37);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
+    CORRADE_VERIFY(!event.isNodePressed());
     CORRADE_VERIFY(!event.isNodeHovered());
     CORRADE_VERIFY(!event.isNodeFocused());
     CORRADE_VERIFY(!event.isCaptured());
@@ -278,6 +280,7 @@ void EventTest::pointerMoveRelativePosition() {
     CORRADE_COMPARE(event.id(), 1ll << 44);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
+    CORRADE_VERIFY(!event.isNodePressed());
     CORRADE_VERIFY(!event.isNodeHovered());
     CORRADE_VERIFY(!event.isNodeFocused());
     CORRADE_VERIFY(!event.isCaptured());
@@ -294,6 +297,7 @@ void EventTest::pointerMoveNoPointer() {
     CORRADE_COMPARE(event.id(), 1ll << 55);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), Vector2{});
+    CORRADE_VERIFY(!event.isNodePressed());
     CORRADE_VERIFY(!event.isNodeHovered());
     CORRADE_VERIFY(!event.isNodeFocused());
     CORRADE_VERIFY(!event.isCaptured());
@@ -310,6 +314,7 @@ void EventTest::pointerMoveNoPointerRelativePosition() {
     CORRADE_COMPARE(event.id(), 1ll << 59);
     CORRADE_COMPARE(event.position(), Vector2{});
     CORRADE_COMPARE(event.relativePosition(), (Vector2{3.0f, -6.5f}));
+    CORRADE_VERIFY(!event.isNodePressed());
     CORRADE_VERIFY(!event.isNodeHovered());
     CORRADE_VERIFY(!event.isNodeFocused());
     CORRADE_VERIFY(!event.isCaptured());
@@ -336,6 +341,7 @@ void EventTest::key() {
     CORRADE_COMPARE(event.key(), Key::Delete);
     CORRADE_COMPARE(event.modifiers(), Modifier::Ctrl|Modifier::Alt);
     CORRADE_COMPARE(event.position(), Containers::NullOpt);
+    CORRADE_VERIFY(!event.isNodePressed());
     CORRADE_VERIFY(!event.isNodeHovered());
     CORRADE_VERIFY(!event.isNodeFocused());
     CORRADE_VERIFY(!event.isCaptured());
