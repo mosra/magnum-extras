@@ -355,7 +355,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * Meant to be used for testing purposes. The @p relativePosition gets
          * overwritten in @ref AbstractUserInterface event handler internals.
          */
-        explicit PointerMoveEvent(Nanoseconds time, PointerEventSource source, Containers::Optional<Pointer> type, Pointers types, bool primary, Long id, const Vector2& relativePosition);
+        explicit PointerMoveEvent(Nanoseconds time, PointerEventSource source, Containers::Optional<Pointer> pointer, Pointers pointers, bool primary, Long id, const Vector2& relativePosition);
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
