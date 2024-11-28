@@ -15155,8 +15155,6 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
-            /* The data generation is faked here, but it matches as we don't
-               reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Press|
                 (event.isPrimary() ? 0 : Secondary)|
                 (event.isHovering() ? Hovering : 0), event.position());
@@ -15167,8 +15165,6 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
             /* The release should always happen on a captured node as that's
                the codepath that's being tested */
             CORRADE_VERIFY(event.isCaptured());
-            /* The data generation is faked here, but it matches as we don't
-               reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Release|
                 (event.isPrimary() ? 0 : Secondary)|
                 (event.isHovering() ? Hovering : 0), event.position());
@@ -15176,8 +15172,6 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
-            /* The data generation is faked here, but it matches as we don't
-               reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Move|
                 (event.isPrimary() ? 0 : Secondary)|
                 (event.isHovering() ? Hovering : 0), event.position());
@@ -15185,14 +15179,10 @@ void AbstractUserInterfaceTest::eventCaptureEdges() {
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
-            /* The data generation is faked here, but it matches as we don't
-               reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Enter|(event.isHovering() ? Hovering : 0), event.position());
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(dataId, 1);
-            /* The data generation is faked here, but it matches as we don't
-               reuse any data */
             arrayAppend(eventCalls, InPlaceInit, Leave|(event.isHovering() ? Hovering : 0), event.position());
         }
 
