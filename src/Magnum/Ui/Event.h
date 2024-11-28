@@ -189,9 +189,22 @@ class MAGNUM_UI_EXPORT PointerEvent {
         /**
          * @brief Event position
          *
-         * Relative to the containing node.
+         * Relative to top left corner of the node the event is called on. Use
+         * @ref nodeSize() to calculate a position relative to the node size or
+         * to other edges / corners. If the position has any coordinate less
+         * than @cpp 0.0f @ce or greater or equal to @ref nodeSize(), the event
+         * was called outside of the node area, for example when a pointer is
+         * released outside of a captured node.
          */
         Vector2 position() const { return _position; }
+
+        /**
+         * @brief Size of the node the event is called on
+         *
+         * Returns a size of given node after all layout calculations.
+         * @see @ref position(), @ref AbstractUserInterface::nodeSize()
+         */
+        Vector2 nodeSize() const { return _nodeSize; }
 
         /**
          * @brief Whether the event is called on a node that's currently pressed
@@ -291,7 +304,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
         friend AbstractUserInterface;
 
         Nanoseconds _time;
-        Vector2 _position;
+        Vector2 _position, _nodeSize;
         Long _id;
         PointerEventSource _source;
         Pointer _pointer;
@@ -400,7 +413,12 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         /**
          * @brief Event position
          *
-         * Relative to the containing node.
+         * Relative to top left corner of the node the event is called on. Use
+         * @ref nodeSize() to calculate a position relative to the node size or
+         * to other edges / corners. If the position has any coordinate less
+         * than @cpp 0.0f @ce or greater or equal to @ref nodeSize(), the event
+         * was called outside of the node area, for example when a pointer is
+         * dragged outside of a captured node.
          */
         Vector2 position() const { return _position; }
 
@@ -419,6 +437,14 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
          * @see @ref isPrimary()
          */
         Vector2 relativePosition() const { return _relativePosition; }
+
+        /**
+         * @brief Size of the node the event is called on
+         *
+         * Returns a size of given node after all layout calculations.
+         * @see @ref position(), @ref AbstractUserInterface::nodeSize()
+         */
+        Vector2 nodeSize() const { return _nodeSize; }
 
         /**
          * @brief Whether the event is called on a node that's currently hovered
@@ -515,7 +541,7 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
         friend AbstractUserInterface;
 
         Nanoseconds _time;
-        Vector2 _position, _relativePosition;
+        Vector2 _position, _relativePosition, _nodeSize;
         Long _id;
         PointerEventSource _source;
         Pointer _pointer; /* NullOpt encoded as Pointer{} to avoid an include */
@@ -917,10 +943,29 @@ class MAGNUM_UI_EXPORT KeyEvent {
          * @relativeref{Corrade,Containers::NullOpt}. Otherwise the node was
          * picked based on pointer position from a preceding pointer press,
          * release or move event, and the function returns a position relative
-         * to that node.
+         * to the top left corner of that node. Use @ref nodeSize() to
+         * calculate a position relative to the node size or to other edges /
+         * corners.
+         * @todoc clarify if it makes sense for the position to be outside of
+         *      the node area (technically can for example with a press outside
+         *      of the node area, but can *practically*?)
          * @see @ref isNodeFocused()
          */
         Containers::Optional<Vector2> position() const;
+
+        /**
+         * @brief Size of the node the event is called on
+         *
+         * If the event was called on a
+         * @ref AbstractUserInterface::currentFocusedNode(), returns
+         * @relativeref{Corrade,Containers::NullOpt}, consistently with
+         * @ref nodeSize(). Otherwise the node was picked based on pointer
+         * position from a preceding pointer press, release or move event, and
+         * the function returns a size of given node after all layout
+         * calculations.
+         * @see @ref isNodeFocused(), @ref AbstractUserInterface::nodeSize()
+         */
+        Containers::Optional<Vector2> nodeSize() const;
 
         /**
          * @brief Whether the event is called on a node that's currently pressed
@@ -990,7 +1035,8 @@ class MAGNUM_UI_EXPORT KeyEvent {
 
         Nanoseconds _time;
         /* NullOpt encoded as NaNs to avoid an include */
-        Vector2 _position{Constants::nan()};
+        Vector2 _position{Constants::nan()},
+            _nodeSize{Constants::nan()};
         Key _key;
         Modifiers _modifiers;
         bool _nodePressed = false;

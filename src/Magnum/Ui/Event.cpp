@@ -270,4 +270,10 @@ Containers::Optional<Vector2> KeyEvent::position() const {
         Containers::optional(_position);
 }
 
+Containers::Optional<Vector2> KeyEvent::nodeSize() const {
+    /* It should be enough to test just one component for NaN */
+    return _nodeSize.x() != _nodeSize.x() ? Containers::NullOpt :
+        Containers::optional(_nodeSize);
+}
+
 }}

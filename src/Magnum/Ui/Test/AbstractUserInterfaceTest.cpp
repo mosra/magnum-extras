@@ -12870,6 +12870,11 @@ void AbstractUserInterfaceTest::eventPointerPress() {
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(event.time(), 12345_nsec);
+            const Vector2 expectedNodeSizes[]{
+                {19.0f, 21.0f},
+                {23.0f, 27.0f}
+            };
+            CORRADE_COMPARE(event.nodeSize(), expectedNodeSizes[nodeHandleId(nodes()[dataId])]);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
             arrayAppend(eventCalls, InPlaceInit,
@@ -12922,10 +12927,10 @@ void AbstractUserInterfaceTest::eventPointerPress() {
     Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
     NodeHandle node = ui.createNode(
         baseNodeOffset + Vector2{10.0f, 20.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{19.0f, 21.0f});
     NodeHandle another = ui.createNode(
         baseNodeOffset + Vector2{30.0f, 20.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{23.0f, 27.0f});
 
     /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
        is a subset of this, and having just that one set may uncover accidental
@@ -13344,6 +13349,11 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
 
         void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override {
             CORRADE_COMPARE(event.time(), 12345_nsec);
+            const Vector2 expectedNodeSizes[]{
+                {19.0f, 21.0f},
+                {23.0f, 27.0f}
+            };
+            CORRADE_COMPARE(event.nodeSize(), expectedNodeSizes[nodeHandleId(nodes()[dataId])]);
             /* The hover state is always false as there was no preceding move
                event that would mark the node as hovered */
             CORRADE_VERIFY(!event.isNodeHovered());
@@ -13405,10 +13415,10 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
     Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
     NodeHandle node = ui.createNode(
         baseNodeOffset + Vector2{10.0f, 20.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{19.0f, 21.0f});
     NodeHandle another = ui.createNode(
         baseNodeOffset + Vector2{30.0f, 20.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{23.0f, 27.0f});
 
     /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
        is a subset of this, and having just that one set may uncover accidental
@@ -13751,6 +13761,11 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         }
         void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
             CORRADE_COMPARE(event.time(), 12345_nsec);
+            const Vector2 expectedNodeSizes[]{
+                {19.0f, 21.0f},
+                {23.0f, 27.0f}
+            };
+            CORRADE_COMPARE(event.nodeSize(), expectedNodeSizes[nodeHandleId(nodes()[dataId])]);
             /* No press happens in this test, so no events should be marked as
                pressed */
             CORRADE_VERIFY(!event.isNodePressed());
@@ -13763,8 +13778,14 @@ void AbstractUserInterfaceTest::eventPointerMove() {
             event.setAccepted();
         }
         void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
-            /* The time should be propagated to the synthesized event */
+            /* The time + node props should be propagated to the synthesized
+               event */
             CORRADE_COMPARE(event.time(), 12345_nsec);
+            const Vector2 expectedNodeSizes[]{
+                {19.0f, 21.0f},
+                {23.0f, 27.0f}
+            };
+            CORRADE_COMPARE(event.nodeSize(), expectedNodeSizes[nodeHandleId(nodes()[dataId])]);
             /* All enter events are hovering by definition; they're also never
                secondary */
             CORRADE_VERIFY(event.isPrimary());
@@ -13777,8 +13798,14 @@ void AbstractUserInterfaceTest::eventPointerMove() {
             arrayAppend(eventCalls, InPlaceInit, Enter|(event.isNodeHovered() ? Hovered : 0), dataHandle(handle(), dataId, 1), Vector4{event.position().x(), event.position().y(), event.relativePosition().x(), event.relativePosition().y()});
         }
         void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override {
-            /* The time should be propagated to the synthesized event */
+            /* The time + node props should be propagated to the synthesized
+               event */
             CORRADE_COMPARE(event.time(), 12345_nsec);
+            const Vector2 expectedNodeSizes[]{
+                {19.0f, 21.0f},
+                {23.0f, 27.0f}
+            };
+            CORRADE_COMPARE(event.nodeSize(), expectedNodeSizes[nodeHandleId(nodes()[dataId])]);
             /* All leave events are not hovering by definition, they're also
                never secondary */
             CORRADE_VERIFY(event.isPrimary());
@@ -13816,10 +13843,10 @@ void AbstractUserInterfaceTest::eventPointerMove() {
     Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
     NodeHandle left = ui.createNode(
         baseNodeOffset + Vector2{20.0f, 0.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{19.0f, 21.0f});
     NodeHandle right = ui.createNode(
         baseNodeOffset + Vector2{40.0f, 0.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{23.0f, 27.0f});
 
     /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
        is a subset of this, and having just that one set may uncover accidental
@@ -20381,6 +20408,16 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
 
         void doKeyPressEvent(UnsignedInt dataId, KeyEvent& event) override {
             CORRADE_COMPARE(event.time(), 12345_nsec);
+            /* Node size is filled only if position is */
+            if(event.position()) {
+                const Vector2 expectedNodeSizes[]{
+                    {19.0f, 21.0f},
+                    {23.0f, 27.0f}
+                };
+                CORRADE_COMPARE(event.nodeSize(), expectedNodeSizes[nodeHandleId(nodes()[dataId])]);
+            } else {
+                CORRADE_COMPARE(event.nodeSize(), Containers::NullOpt);
+            }
             CORRADE_COMPARE(event.key(), Key::C);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
@@ -20394,6 +20431,16 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         }
         void doKeyReleaseEvent(UnsignedInt dataId, KeyEvent& event) override {
             CORRADE_COMPARE(event.time(), 12345_nsec);
+            /* Node size is filled only if position is */
+            if(event.position()) {
+                const Vector2 expectedNodeSizes[]{
+                    {19.0f, 21.0f},
+                    {23.0f, 27.0f}
+                };
+                CORRADE_COMPARE(event.nodeSize(), expectedNodeSizes[nodeHandleId(nodes()[dataId])]);
+            } else {
+                CORRADE_COMPARE(event.nodeSize(), Containers::NullOpt);
+            }
             CORRADE_COMPARE(event.key(), Key::C);
             /* The data generation is faked here, but it matches as we don't
                reuse any data */
@@ -20468,10 +20515,10 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
     Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
     NodeHandle left = ui.createNode(
         baseNodeOffset + Vector2{20.0f, 0.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{19.0f, 21.0f});
     NodeHandle right = ui.createNode(
         baseNodeOffset + Vector2{40.0f, 0.0f},
-        baseNodeScale*Vector2{20.0f, 20.0f});
+        baseNodeScale*Vector2{23.0f, 27.0f});
 
     /* Update explicitly before adding the layouter as
        NeedsLayoutAssignmentUpdate is a subset of this, and having just that

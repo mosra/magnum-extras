@@ -3572,6 +3572,7 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
     for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
         const DataHandle data = state.visibleNodeEventData[j];
         event._position = globalPositionScaled - state.absoluteNodeOffsets[nodeId];
+        event._nodeSize = state.nodeSizes[nodeId];
         event._accepted = false;
         ((*state.layers[dataHandleLayerId(data)].used.instance).*function)(dataHandleId(data), event);
         if(event._accepted)
