@@ -1100,17 +1100,17 @@ AbstractUserInterfaceTest::AbstractUserInterfaceTest() {
     addTests({&AbstractUserInterfaceTest::eventEdges});
 
     addInstancedTests({&AbstractUserInterfaceTest::eventPointerPress},
-        Containers::arraySize(UpdateData));
+        Containers::arraySize(EventLayouterUpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventPointerPressNotAccepted});
 
     addInstancedTests({&AbstractUserInterfaceTest::eventPointerRelease},
-        Containers::arraySize(UpdateData));
+        Containers::arraySize(EventLayouterUpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventPointerReleaseNotAccepted});
 
     addInstancedTests({&AbstractUserInterfaceTest::eventPointerMove},
-        Containers::arraySize(UpdateData));
+        Containers::arraySize(EventLayouterUpdateData));
 
     addTests({&AbstractUserInterfaceTest::eventPointerMovePressRelease});
 
@@ -12850,7 +12850,7 @@ void AbstractUserInterfaceTest::eventEdges() {
 }
 
 void AbstractUserInterfaceTest::eventPointerPress() {
-    auto&& data = UpdateData[testCaseInstanceId()];
+    auto&& data = EventLayouterUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* framebufferSize isn't used for anything here; events should get scaled
@@ -12900,8 +12900,32 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    NodeHandle node = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f});
-    NodeHandle another = ui.createNode({30.0f, 20.0f}, {20.0f, 20.0f});
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+            for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+                if(!layoutIdsToUpdate[i])
+                    continue;
+                nodeOffsets[nodeHandleId(nodes[i])].y() -= 1000.0f;
+                nodeSizes[nodeHandleId(nodes[i])] *= 100.0f;
+            }
+        }
+    };
+
+    /* Two nodes. If the layouter is enabled, the nodes are shifted & scaled
+       which makes them completely unreachable by events, and the layouter then
+       undoes that */
+    Vector2 baseNodeOffset{0.0f, data.layouter ? 1000.0f : 0.0f};
+    Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
+    NodeHandle node = ui.createNode(
+        baseNodeOffset + Vector2{10.0f, 20.0f},
+        baseNodeScale*Vector2{20.0f, 20.0f});
+    NodeHandle another = ui.createNode(
+        baseNodeOffset + Vector2{30.0f, 20.0f},
+        baseNodeScale*Vector2{20.0f, 20.0f});
 
     /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
        is a subset of this, and having just that one set may uncover accidental
@@ -12924,6 +12948,22 @@ void AbstractUserInterfaceTest::eventPointerPress() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsDataAttachmentUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    if(data.layouter) {
+        Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+        layouter.add(node);
+        layouter.add(another);
+
+        /* Update explicitly before adding the layer as
+           NeedsDataAttachmentUpdate is a subset of this, and having just that
+           one set may uncover accidental omissions in internal state updates
+           compared to updating just once after creating both nodes and data */
+        if(data.update) {
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+            ui.update();
+            CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        }
     }
 
     /* Outside, no hit. The pointer position gets remembered though. */
@@ -13283,7 +13323,7 @@ void AbstractUserInterfaceTest::eventPointerPressNotAccepted() {
 }
 
 void AbstractUserInterfaceTest::eventPointerRelease() {
-    auto&& data = UpdateData[testCaseInstanceId()];
+    auto&& data = EventLayouterUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* framebufferSize isn't used for anything here; events should get scaled
@@ -13343,8 +13383,32 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector2>> eventCalls;
     };
 
-    NodeHandle node = ui.createNode({10.0f, 20.0f}, {20.0f, 20.0f});
-    NodeHandle another = ui.createNode({30.0f, 20.0f}, {20.0f, 20.0f});
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+            for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+                if(!layoutIdsToUpdate[i])
+                    continue;
+                nodeOffsets[nodeHandleId(nodes[i])].y() -= 1000.0f;
+                nodeSizes[nodeHandleId(nodes[i])] *= 100.0f;
+            }
+        }
+    };
+
+    /* Two nodes. If the layouter is enabled, the nodes are shifted & scaled
+       which makes them completely unreachable by events, and the layouter then
+       undoes that */
+    Vector2 baseNodeOffset{0.0f, data.layouter ? 1000.0f : 0.0f};
+    Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
+    NodeHandle node = ui.createNode(
+        baseNodeOffset + Vector2{10.0f, 20.0f},
+        baseNodeScale*Vector2{20.0f, 20.0f});
+    NodeHandle another = ui.createNode(
+        baseNodeOffset + Vector2{30.0f, 20.0f},
+        baseNodeScale*Vector2{20.0f, 20.0f});
 
     /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
        is a subset of this, and having just that one set may uncover accidental
@@ -13354,6 +13418,22 @@ void AbstractUserInterfaceTest::eventPointerRelease() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    if(data.layouter) {
+        Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+        layouter.add(node);
+        layouter.add(another);
+
+        /* Update explicitly before adding the layer as
+           NeedsDataAttachmentUpdate is a subset of this, and having just that
+           one set may uncover accidental omissions in internal state updates
+           compared to updating just once after creating both nodes and data */
+        if(data.update) {
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+            ui.update();
+            CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        }
     }
 
     LayerHandle layer = ui.createLayer();
@@ -13640,7 +13720,7 @@ void AbstractUserInterfaceTest::eventPointerReleaseNotAccepted() {
 }
 
 void AbstractUserInterfaceTest::eventPointerMove() {
-    auto&& data = UpdateData[testCaseInstanceId()];
+    auto&& data = EventLayouterUpdateData[testCaseInstanceId()];
     setTestCaseDescription(data.name);
 
     /* framebufferSize isn't used for anything here; events should get scaled
@@ -13714,9 +13794,32 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         Containers::Array<Containers::Triple<Int, DataHandle, Vector4>> eventCalls;
     };
 
-    /* Two nodes next to each other */
-    NodeHandle left = ui.createNode({20.0f, 0.0f}, {20.0f, 20.0f});
-    NodeHandle right = ui.createNode({40.0f, 0.0f}, {20.0f, 20.0f});
+    struct Layouter: AbstractLayouter {
+        using AbstractLayouter::AbstractLayouter;
+        using AbstractLayouter::add;
+
+        void doUpdate(Containers::BitArrayView layoutIdsToUpdate, const Containers::StridedArrayView1D<const UnsignedInt>&, const Containers::StridedArrayView1D<const NodeHandle>&, const Containers::StridedArrayView1D<Vector2>& nodeOffsets, const  Containers::StridedArrayView1D<Vector2>& nodeSizes) override {
+            const Containers::StridedArrayView1D<const NodeHandle> nodes = this->nodes();
+            for(std::size_t i = 0; i != layoutIdsToUpdate.size(); ++i) {
+                if(!layoutIdsToUpdate[i])
+                    continue;
+                nodeOffsets[nodeHandleId(nodes[i])].y() -= 1000.0f;
+                nodeSizes[nodeHandleId(nodes[i])] *= 100.0f;
+            }
+        }
+    };
+
+    /* Two nodes next to each other. If the layouter is enabled, the nodes are
+       shifted & scaled which makes them completely unreachable by events, and
+       the layouter then undoes that */
+    Vector2 baseNodeOffset{0.0f, data.layouter ? 1000.0f : 0.0f};
+    Vector2 baseNodeScale{data.layouter ? 0.01f : 1.0f};
+    NodeHandle left = ui.createNode(
+        baseNodeOffset + Vector2{20.0f, 0.0f},
+        baseNodeScale*Vector2{20.0f, 20.0f});
+    NodeHandle right = ui.createNode(
+        baseNodeOffset + Vector2{40.0f, 0.0f},
+        baseNodeScale*Vector2{20.0f, 20.0f});
 
     /* Update explicitly before adding the layer as NeedsDataAttachmentUpdate
        is a subset of this, and having just that one set may uncover accidental
@@ -13726,6 +13829,22 @@ void AbstractUserInterfaceTest::eventPointerMove() {
         CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsNodeUpdate);
         ui.update();
         CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+    }
+
+    if(data.layouter) {
+        Layouter& layouter = ui.setLayouterInstance(Containers::pointer<Layouter>(ui.createLayouter()));
+        layouter.add(left);
+        layouter.add(right);
+
+        /* Update explicitly before adding the layer as
+           NeedsDataAttachmentUpdate is a subset of this, and having just that
+           one set may uncover accidental omissions in internal state updates
+           compared to updating just once after creating both nodes and data */
+        if(data.update) {
+            CORRADE_COMPARE(ui.state(), UserInterfaceState::NeedsLayoutAssignmentUpdate);
+            ui.update();
+            CORRADE_COMPARE(ui.state(), UserInterfaceStates{});
+        }
     }
 
     LayerHandle layer = ui.createLayer();
