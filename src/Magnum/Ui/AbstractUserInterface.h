@@ -1268,8 +1268,11 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Node offset relative to its parent
          *
-         * The returned value is before any layout calculation is done. Expects
-         * that @p handle is valid.
+         * The returned value is before any layout calculation is done.
+         * Absolute offset after all layout calculation is passed to
+         * @ref AbstractLayer::doUpdate() and @ref AbstractLayer::doDraw().
+         *
+         * Expects that @p handle is valid.
          * @see @ref isHandleValid(NodeHandle) const, @ref nodeParent()
          */
         Vector2 nodeOffset(NodeHandle handle) const;
@@ -1293,8 +1296,13 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /**
          * @brief Node size
          *
-         * The returned value is before any layout calculation is done. Expects
-         * that @p handle is valid.
+         * The returned value is before any layout calculation is done. Size
+         * after all layout calculations is available through
+         * @ref PointerEvent::nodeSize(), @ref PointerMoveEvent::nodeSize(),
+         * @ref KeyEvent::nodeSize() and is passed to
+         * @ref AbstractLayer::doUpdate() and @ref AbstractLayer::doDraw().
+         *
+         * Expects that @p handle is valid.
          * @see @ref isHandleValid(NodeHandle) const
          */
         Vector2 nodeSize(NodeHandle handle) const;
