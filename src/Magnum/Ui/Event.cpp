@@ -94,9 +94,7 @@ PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource sour
         "Ui::PointerEvent:" << source << "events are expected to be primary", );
 }
 
-PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id): PointerMoveEvent{time, source, pointer, pointers, primary, id, {}} {}
-
-PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id, const Vector2& relativePosition): _time{time}, _relativePosition{relativePosition}, _id{id}, _source{source}, _pointer{pointer ? *pointer : Pointer{}}, _pointers{pointers}, _primary{primary} {
+PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id): _time{time}, _id{id}, _source{source}, _pointer{pointer ? *pointer : Pointer{}}, _pointers{pointers}, _primary{primary} {
     /* OTOH, pointers can be just anything -- e.g.., it's possible to move a
        mouse while a finger or a pen is pressed, and such event will have mouse
        as a source */
@@ -112,6 +110,12 @@ PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSou
         "Ui::PointerMoveEvent: invalid combination of" << source << "and" << pointer, );
     CORRADE_ASSERT(primary || source == PointerEventSource::Touch,
         "Ui::PointerMoveEvent:" << source << "events are expected to be primary", );
+}
+
+PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id, const Vector2& relativePosition): PointerMoveEvent{time, source, pointer, pointers, primary, id} {
+    /* Used for testing only, it's better done with a double initialization
+       like this than to have it delegated to from the main constructor */
+    _relativePosition = relativePosition;
 }
 
 Containers::Optional<Pointer> PointerMoveEvent::pointer() const {
