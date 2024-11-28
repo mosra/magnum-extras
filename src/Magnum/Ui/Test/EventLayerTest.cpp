@@ -1635,23 +1635,23 @@ void EventLayerTest::rightClick() {
 
     /* Shouldn't get fired for any other than tapOrClick events */
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
         layer.pointerPressEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 0};
+        PointerEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, true, 0};
         layer.pointerReleaseEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
         layer.pointerMoveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
         layer.pointerEnterEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
-        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseMiddle, Pointer::MouseMiddle, true, 0};
+        PointerMoveEvent event{{}, PointerEventSource::Mouse, Pointer::MouseRight, Pointer::MouseRight, true, 0};
         layer.pointerLeaveEvent(dataHandleId(handle), event);
         CORRADE_COMPARE(called, 1);
     } {
