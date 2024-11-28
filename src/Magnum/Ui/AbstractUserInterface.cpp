@@ -3223,7 +3223,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                time, e.g.. */
             if(valid && visibleOrVisibilityLostEventNodeMask[nodeId]) {
                 VisibilityLostEvent event;
-                /* isPressed() / isHovering() can never be true in this case */
+                /* isNodePressed() / isNodeHovered() can never be true in this
+                   case */
                 callVisibilityLostEventOnNode(nodeId, event, false);
                 visibleOrVisibilityLostEventNodeMask.reset(nodeId);
             }
@@ -3247,7 +3248,8 @@ AbstractUserInterface& AbstractUserInterface::update() {
                    for this node yet in any of the iterations above */
                 if(valid && visibleOrVisibilityLostEventNodeMask[nodeId]) {
                     VisibilityLostEvent event;
-                    /* isPressed() / isHovering() can be true in this case */
+                    /* isNodePressed() / isNodeHovered() can be true in this
+                       case */
                     callVisibilityLostEventOnNode(nodeId, event, true);
                     visibleOrVisibilityLostEventNodeMask.reset(nodeId);
                 }
@@ -3459,12 +3461,12 @@ AbstractUserInterface& AbstractUserInterface::draw() {
    handling of all call*Event*() APIs together */
 void AbstractUserInterface::callVisibilityLostEventOnNode(const UnsignedInt nodeId, VisibilityLostEvent& event, const bool canBePressedOrHovering) {
     State& state = *_state;
-    /* Set isPressed() / isHovering() if the event is called on node that is
-       pressed / hovered and it's allowed, which is only in case a focused
-       node is no longer focusable, in all other cases where it's not visible,
-       disabled or doesn't receive events it isn't allowed.  */
-    event._pressed = canBePressedOrHovering && state.currentPressedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentPressedNode);
-    event._hovering = canBePressedOrHovering && state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
+    /* Set isNodePressed() / isNodeHovered() if the event is called on node
+       that is pressed / hovered and it's allowed, which is only in case a
+       focused node is no longer focusable, in all other cases where it's not
+       visible, disabled or doesn't receive events it isn't allowed.  */
+    event._nodePressed = canBePressedOrHovering && state.currentPressedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentPressedNode);
+    event._nodeHovered = canBePressedOrHovering && state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
 
     /* Note that unlike callEvent() below, here it *does not* check the
        `state.visibleEventNodeMask` for the `nodeId` because we may actually
@@ -3477,12 +3479,12 @@ void AbstractUserInterface::callVisibilityLostEventOnNode(const UnsignedInt node
 }
 
 template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> bool AbstractUserInterface::callFocusEventOnNode(const UnsignedInt nodeId, FocusEvent& event) {
-    /* Set isPressed() / isHovering() if the event is called on node that is
-       pressed / hovered. Unlike callEventOnNode() below, this is set
+    /* Set isNodePressed() / isNodeHovered() if the event is called on node
+       that is pressed / hovered. Unlike callEventOnNode() below, this is set
        unconditionally as these events don't have any associated position. */
     State& state = *_state;
-    event._pressed = state.currentPressedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentPressedNode);
-    event._hovering = state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
+    event._nodePressed = state.currentPressedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentPressedNode);
+    event._nodeHovered = state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
 
     bool acceptedByAnyData = false;
     for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
@@ -3500,12 +3502,12 @@ template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> bool Abstract
 /* Used only in keyPressOrReleaseEvent() but put here to have the loops and
    other event-related handling of all call*Event*() APIs together */
 template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUserInterface::callKeyEventOnNode(const UnsignedInt nodeId, KeyEvent& event) {
-    /* Set isHovering() / isFocused() if the event is called on node that is
-       hovered / focused. Unlike callEventOnNode() below, this is set
+    /* Set isNodeHovered() / isNodeFocused() if the event is called on node
+       that is hovered / focused. Unlike callEventOnNode() below, this is set
        unconditionally as these events don't have any associated position. */
     State& state = *_state;
-    event._hovering = state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
-    event._focused = state.currentFocusedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentFocusedNode);
+    event._nodeHovered = state.currentHoveredNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentHoveredNode);
+    event._nodeFocused = state.currentFocusedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentFocusedNode);
 
     bool acceptedByAnyData = false;
     for(UnsignedInt j = state.visibleNodeEventDataOffsets[nodeId], jMax = state.visibleNodeEventDataOffsets[nodeId + 1]; j != jMax; ++j) {
@@ -3544,20 +3546,20 @@ bool AbstractUserInterface::callTextInputEventOnNode(const UnsignedInt nodeId, T
 template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool AbstractUserInterface::callEventOnNode(const Vector2& globalPositionScaled, const UnsignedInt nodeId, Event& event, const bool rememberCaptureOnUnaccepted) {
     State& state = *_state;
 
-    /* Set isHovering() to false if the event is called on node that actually
-       isn't hovered. The caller itself may also set it to false if it is
-       called on a hovered node but the event is outside of its area (such as a
-       move outside of the captured node), so we can't set it
+    /* Set isNodeHovered() to false if the event is called on node that
+       actually isn't hovered. The caller itself may also set it to false if it
+       is called on a hovered node but the event is outside of its area (such
+       as a move outside of the captured node), so we can't set it
        unconditionally. */
-    const bool hovering = event._hovering;
+    const bool nodeHovered = event._nodeHovered;
     if(state.currentHoveredNode == NodeHandle::Null || nodeId != nodeHandleId(state.currentHoveredNode))
-        event._hovering = false;
+        event._nodeHovered = false;
 
-    /* On the other hand, isFocused() is set unconditionally -- the event
+    /* On the other hand, isNodeFocused() is set unconditionally -- the event
        handler can then check if it was called on a focused node but outside of
-       it by looking at isHovering(), no need to encode that information
+       it by looking at isNodeHovered(), no need to encode that information
        twice. */
-    event._focused = state.currentFocusedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentFocusedNode);
+    event._nodeFocused = state.currentFocusedNode != NodeHandle::Null && nodeId == nodeHandleId(state.currentFocusedNode);
 
     /* Remember the initial event capture state to reset it after each
        non-accepted event handler call */
@@ -3584,10 +3586,10 @@ template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> bool 
             event._captured = captured;
     }
 
-    /* Reset isHovering() back to the initial state in case the event will be
-       re-called on different nodes (where it could actually be true) again
+    /* Reset isNodeHovered() back to the initial state in case the event will
+       be re-called on different nodes (where it could actually be true) again
        after */
-    event._hovering = hovering;
+    event._nodeHovered = nodeHovered;
 
     return acceptedByAnyData;
 }
@@ -3669,9 +3671,9 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
         const bool insideCapturedNode = (globalPositionScaled >= capturedNodeMin).all() && (globalPositionScaled < capturedNodeMax).all();
 
         /* Called on a captured node, so isCaptured() should be true,
-           isHovering() can be true if it's inside it */
+           isNodeHovered() can be true if it's inside it */
         event._captured = true;
-        event._hovering = insideCapturedNode;
+        event._nodeHovered = insideCapturedNode;
 
         pressAcceptedByAnyData = callEventOnNode<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, nodeHandleId(state.currentCapturedNode), event);
 
@@ -3686,9 +3688,9 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
         /* A primary press event has isCaptured() set always. Non-primary
            doesn't by default, but the implementation can enable it. */
         event._captured = event.isPrimary();
-        /* Can have isHovering() set if it ends up being called on the
+        /* Can have isNodeHovered() set if it ends up being called on the
            currently hovered node. */
-        event._hovering = true;
+        event._nodeHovered = true;
 
         const NodeHandle calledNode = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, event);
         pressAcceptedByAnyData = calledNode != NodeHandle::Null;
@@ -3784,11 +3786,11 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         const bool insideCapturedNode = (globalPositionScaled >= capturedNodeMin).all() && (globalPositionScaled < capturedNodeMax).all();
 
         /* Called on a captured node, so isCaptured() should be true,
-           isHovering() can be true if it's inside it. As the release event
+           isNodeHovered() can be true if it's inside it. As the release event
            always implicitly releases the capture, any potential capture state
            changed by the event handler is ignored. */
         event._captured = true;
-        event._hovering = insideCapturedNode;
+        event._nodeHovered = insideCapturedNode;
 
         releaseAcceptedByAnyData = callEventOnNode<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPositionScaled, nodeHandleId(state.currentCapturedNode), event);
         calledNode = releaseAcceptedByAnyData ? state.currentCapturedNode : NodeHandle::Null;
@@ -3805,9 +3807,9 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
     /* Otherwise the usual hit testing etc. */
     } else {
         /* Not called on a captured node, isCaptured() should be false and thus
-           isHovering() can be true */
+           isNodeHovered() can be true */
         event._captured = false;
-        event._hovering = true;
+        event._nodeHovered = true;
 
         calledNode = callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPositionScaled, event);
         releaseAcceptedByAnyData = calledNode != NodeHandle::Null;
@@ -3903,9 +3905,9 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         insideNodeArea = (globalPositionScaled >= capturedNodeMin).all() && (globalPositionScaled < capturedNodeMax).all();
 
         /* Called on a captured node, so isCaptured() should be true,
-           isHovering() can be true if it's inside it */
+           isNodeHovered() can be true if it's inside it */
         event._captured = true;
-        event._hovering = insideNodeArea;
+        event._nodeHovered = insideNodeArea;
 
         /* For a primary event, it should be possible to reset the capture
            independently of whether it's accepted or not (for example if
@@ -3922,9 +3924,9 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         insideNodeArea = true;
 
         /* Not called on a captured node, isCaptured() should be false and thus
-           isHovering() can be true */
+           isNodeHovered() can be true */
         event._captured = false;
-        event._hovering = true;
+        event._nodeHovered = true;
 
         calledNode = callEvent<PointerMoveEvent, &AbstractLayer::pointerMoveEvent>(globalPositionScaled, event);
         moveAcceptedByAnyData = calledNode != NodeHandle::Null;
@@ -4000,7 +4002,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
 
         /* Leave events are by definition never hovering the node they are
            called on */
-        event._hovering = false;
+        event._nodeHovered = false;
 
         /* Leave events can only change capture status if they're called on the
            actual captured node, otherwise the capture status is false and is
@@ -4032,7 +4034,7 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
         /* Enter events are by definition always hovering the node they are
            called on. As the currentHoveredNode was updated above, the
            callEventOnNode() should thus not reset this back to false. */
-        event._hovering = true;
+        event._nodeHovered = true;
 
         event._relativePosition = {};
         /* The accept status is ignored for the Enter/Leave events, which means
@@ -4163,9 +4165,9 @@ template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUs
             CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentCapturedNode));
 
             /* Called on a captured node, so isCaptured() should be true,
-               isHovering() is true if it's also currently hovered */
+               isNodeHovered() is true if it's also currently hovered */
             event._captured = true;
-            event._hovering = state.currentHoveredNode == state.currentCapturedNode;
+            event._nodeHovered = state.currentHoveredNode == state.currentCapturedNode;
 
             acceptedByAnyData = callEventOnNode<KeyEvent, function>(*state.currentGlobalPointerPosition, nodeHandleId(state.currentCapturedNode), event);
 
@@ -4176,7 +4178,7 @@ template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> bool AbstractUs
 
             /* Not called on a captured node, but on a hovered node */
             event._captured = false;
-            event._hovering = true;
+            event._nodeHovered = true;
 
             acceptedByAnyData = callEventOnNode<KeyEvent, function>(*state.currentGlobalPointerPosition, nodeHandleId(state.currentHoveredNode), event);
         }

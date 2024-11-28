@@ -381,8 +381,8 @@ void AbstractVisualLayer::doPointerPressEvent(const UnsignedInt dataId, PointerE
            event (such as for pointer types that don't support hover like
            touches, or if move events aren't propagated from the
            application). Pressed state has a priority over focused state, so
-           isFocused() is ignored in this case. */
-        UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+           isNodeFocused() is ignored in this case. */
+        UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToPressedOver :
             sharedState.styleTransitionToPressedOut;
         const UnsignedInt nextStyle = transition(currentStyle);
@@ -423,11 +423,11 @@ void AbstractVisualLayer::doPointerReleaseEvent(const UnsignedInt dataId, Pointe
            move event (such as for pointer types that don't support hover like
            touches, or if move events aren't propagated from the
            application) */
-        UnsignedInt(*const transition)(UnsignedInt) = event.isFocused() ?
-            event.isHovering() ?
+        UnsignedInt(*const transition)(UnsignedInt) = event.isNodeFocused() ?
+            event.isNodeHovered() ?
                 sharedState.styleTransitionToFocusedOver :
                 sharedState.styleTransitionToFocusedOut :
-            event.isHovering() ?
+            event.isNodeHovered() ?
                 sharedState.styleTransitionToInactiveOver :
                 sharedState.styleTransitionToInactiveOut;
         const UnsignedInt nextStyle = transition(currentStyle);
@@ -467,7 +467,7 @@ void AbstractVisualLayer::doPointerEnterEvent(const UnsignedInt dataId, PointerM
     /* Transition the style to over if it's not dynamic */
     if(currentStyle < sharedState.styleCount) {
         UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
-            sharedState.styleTransitionToPressedOver : event.isFocused() ?
+            sharedState.styleTransitionToPressedOver : event.isNodeFocused() ?
                 sharedState.styleTransitionToFocusedOver :
                 sharedState.styleTransitionToInactiveOver;
         const UnsignedInt nextStyle = transition(currentStyle);
@@ -496,7 +496,7 @@ void AbstractVisualLayer::doPointerLeaveEvent(const UnsignedInt dataId, PointerM
     /* Transition the style to out if it's not dynamic */
     if(currentStyle < sharedState.styleCount) {
         UnsignedInt(*const transition)(UnsignedInt) = event.isCaptured() ?
-            sharedState.styleTransitionToPressedOut : event.isFocused() ?
+            sharedState.styleTransitionToPressedOut : event.isNodeFocused() ?
                 sharedState.styleTransitionToFocusedOut :
                 sharedState.styleTransitionToInactiveOut;
         const UnsignedInt nextStyle = transition(currentStyle);
@@ -524,8 +524,8 @@ void AbstractVisualLayer::doFocusEvent(const UnsignedInt dataId, FocusEvent& eve
 
     /* Transition the style to focused if it's not dynamic and only if it's not
        pressed as well, as pressed style gets a priority. */
-    if(currentStyle < sharedState.styleCount && !event.isPressed()) {
-        UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+    if(currentStyle < sharedState.styleCount && !event.isNodePressed()) {
+        UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToFocusedOver :
             sharedState.styleTransitionToFocusedOut;
         const UnsignedInt nextStyle = transition(currentStyle);
@@ -555,8 +555,8 @@ void AbstractVisualLayer::doBlurEvent(const UnsignedInt dataId, FocusEvent& even
 
     /* Transition the style to blurred if it's not dynamic and only if it's not
        pressed as well, as pressed style gets a priority. */
-    if(currentStyle < sharedState.styleCount && !event.isPressed()) {
-        UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+    if(currentStyle < sharedState.styleCount && !event.isNodePressed()) {
+        UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
         const UnsignedInt nextStyle = transition(currentStyle);
@@ -587,8 +587,8 @@ void AbstractVisualLayer::doVisibilityLostEvent(const UnsignedInt dataId, Visibi
     /* Transition the style to inactive if it's not dynamic and only if it's
        not a formerly focused node that's now pressed, in which case it stays
        pressed. */
-    if(currentStyle < sharedState.styleCount && !event.isPressed()) {
-        UnsignedInt(*const transition)(UnsignedInt) = event.isHovering() ?
+    if(currentStyle < sharedState.styleCount && !event.isNodePressed()) {
+        UnsignedInt(*const transition)(UnsignedInt) = event.isNodeHovered() ?
             sharedState.styleTransitionToInactiveOver :
             sharedState.styleTransitionToInactiveOut;
         const UnsignedInt nextStyle = transition(currentStyle);

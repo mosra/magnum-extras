@@ -2372,7 +2372,7 @@ void TextLayer::doKeyPressEvent(const UnsignedInt dataId, KeyEvent& event) {
     /* Key events are implicitly passed also to nodes under cursor, restrict
        the editing and cursor movement to just when the node is focused to
        avoid strange behavior */
-    if(event.isFocused()) {
+    if(event.isNodeFocused()) {
         if(!event.modifiers()) {
             if(event.key() == Key::Backspace) {
                 editTextInternal(dataId, TextEdit::RemoveBeforeCursor, {});
