@@ -20235,6 +20235,8 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         PointerMoveEvent eventMove2{{}, PointerEventSource::Mouse, {}, {}, true, 0};
         layer.capturePointerMove = {};
         CORRADE_VERIFY(ui.pointerMoveEvent({500.0f, 1000.0f}, eventMove2));
+        /* The pointer is over the right node, but since the left node is
+           captured the current hovered node isn't set */
         CORRADE_COMPARE(ui.currentHoveredNode(), NodeHandle::Null);
         CORRADE_COMPARE(ui.currentCapturedNode(), left);
         CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
@@ -20284,10 +20286,18 @@ void AbstractUserInterfaceTest::eventKeyPressRelease() {
         KeyEvent eventPress{12345_nsec, Key::C, {}};
         layer.acceptPress = false;
         CORRADE_VERIFY(!ui.keyPressEvent(eventPress));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         KeyEvent eventRelease{12345_nsec, Key::C, {}};
         layer.acceptRelease = false;
         CORRADE_VERIFY(!ui.keyReleaseEvent(eventRelease));
+        CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
+        CORRADE_COMPARE(ui.currentCapturedNode(), right);
+        CORRADE_COMPARE(ui.currentHoveredNode(), right);
+        CORRADE_COMPARE(ui.currentFocusedNode(), NodeHandle::Null);
 
         CORRADE_COMPARE_AS(layer.eventCalls, (Containers::arrayView<Containers::Triple<Int, DataHandle, Containers::Optional<Vector2>>>({
             {PointerMove, rightData, Vector2{10.0f, 10.0f}},
