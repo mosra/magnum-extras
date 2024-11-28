@@ -94,6 +94,14 @@ PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource sour
         "Ui::PointerEvent:" << source << "events are expected to be primary", );
 }
 
+PointerEvent::PointerEvent(const Nanoseconds time, const PointerEventSource source, const Pointer pointer, const bool primary, const Long id, const Vector2& position, const bool nodePressed, const Vector2& nodeSize): PointerEvent{time, source, pointer, primary, id} {
+    /* Used for testing only, it's better done with a double initialization
+       like this than to have it delegated to from the main constructor */
+    _position = position;
+    _nodeSize = nodeSize;
+    _nodePressed = nodePressed;
+}
+
 PointerMoveEvent::PointerMoveEvent(const Nanoseconds time, const PointerEventSource source, const Containers::Optional<Pointer> pointer, const Pointers pointers, const bool primary, const Long id): _time{time}, _id{id}, _source{source}, _pointer{pointer ? *pointer : Pointer{}}, _pointers{pointers}, _primary{primary} {
     /* OTOH, pointers can be just anything -- e.g.., it's possible to move a
        mouse while a finger or a pen is pressed, and such event will have mouse

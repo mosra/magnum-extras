@@ -210,11 +210,6 @@ ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Applicat
             event.setAccepted();
         }
 
-        void doPointerTapOrClickEvent(UnsignedInt, Ui::PointerEvent& event) override {
-            Debug{} << event.pointer() << "tap or click at" << Debug::packed << event.position();
-            event.setAccepted();
-        }
-
         void doFocusEvent(UnsignedInt, FocusEvent& event) override {
             Debug{} << "Focus event";
             event.setAccepted();

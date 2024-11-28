@@ -122,8 +122,7 @@ CORRADE_ENUMSET_OPERATORS(Pointers)
 @see @ref AbstractUserInterface::pointerPressEvent(),
     @ref AbstractUserInterface::pointerReleaseEvent(),
     @ref AbstractLayer::pointerPressEvent(),
-    @ref AbstractLayer::pointerReleaseEvent(),
-    @ref AbstractLayer::pointerTapOrClickEvent(), @ref FocusEvent
+    @ref AbstractLayer::pointerReleaseEvent(), @ref FocusEvent
 */
 class MAGNUM_UI_EXPORT PointerEvent {
     public:
@@ -145,6 +144,16 @@ class MAGNUM_UI_EXPORT PointerEvent {
          * internals.
          */
         explicit PointerEvent(Nanoseconds time, PointerEventSource source, Pointer pointer, bool primary, Long id);
+
+        /**
+         * @brief Constructor
+         *
+         * Meant to be used for testing purposes. The @p position,
+         * @p nodePressed and @p nodeSize gets overwritten in
+         * @ref AbstractUserInterface event handler internals.
+         * @experimental
+         */
+        explicit PointerEvent(Nanoseconds time, PointerEventSource source, Pointer pointer, bool primary, Long id, const Vector2& position, bool nodePressed, const Vector2& nodeSize);
 
         /** @brief Time at which the event happened */
         Nanoseconds time() const { return _time; }
@@ -277,7 +286,7 @@ class MAGNUM_UI_EXPORT PointerEvent {
          *
          * Calling this function only makes sense on a pointer press event or
          * a non-primary pointer release event, it has no effect on primary
-         * pointer release event or a tap or click event.
+         * pointer release event.
          * @see @ref isPrimary()
          */
         void setCaptured(bool captured) {

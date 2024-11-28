@@ -534,33 +534,23 @@ void EventLayer::doPointerReleaseEvent(const UnsignedInt dataId, PointerEvent& e
         return;
     }
 
-    /* Accept also a release of appropriate pointers that precede a tap/click,
-       middle click or right click. Otherwise it could get propagated further,
-       causing the subsequent tap/click to not get called at all. */
-    if(
-        (data.eventType == Implementation::EventType::TapOrClick &&
+    /* Fire a tap/click, middle click or right click if the release happened
+       inside of a pressed node. The release can happen outside of a pressed
+       node (for example when it's captured) or on a completely different node
+       (when it's outside of the pressed node and not captured), in which case
+       these events shouldn't be fired. */
+    if(event.isNodePressed() && (event.position() >= Vector2{}).all() &&
+                                (event.position() < event.nodeSize()).all() &&
+        ((data.eventType == Implementation::EventType::TapOrClick &&
             event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) ||
-        (data.eventType == Implementation::EventType::MiddleClick &&
+         (data.eventType == Implementation::EventType::MiddleClick &&
             event.pointer() == Pointer::MouseMiddle) ||
-        (data.eventType == Implementation::EventType::RightClick &&
-            event.pointer() == Pointer::MouseRight)
-    )
-        event.setAccepted();
-}
-
-void EventLayer::doPointerTapOrClickEvent(const UnsignedInt dataId, PointerEvent& event) {
-    /* event is guaranteed to be primary by AbstractLayer */
-
-    Data& data = _state->data[dataId];
-    if((data.eventType == Implementation::EventType::TapOrClick &&
-            event.pointer() & (Pointer::MouseLeft|Pointer::Finger|Pointer::Pen)) ||
-       (data.eventType == Implementation::EventType::MiddleClick &&
-            event.pointer() == Pointer::MouseMiddle) ||
-       (data.eventType == Implementation::EventType::RightClick &&
+         (data.eventType == Implementation::EventType::RightClick &&
             event.pointer() == Pointer::MouseRight))
-    {
+    ) {
         reinterpret_cast<void(*)(Containers::FunctionData&, const PointerEvent&)>(data.call)(data.slot, event);
         event.setAccepted();
+        return;
     }
 }
 

@@ -47,6 +47,7 @@ struct EventTest: TestSuite::Tester {
 
     void pointer();
     void pointerInvalid();
+    void pointerPositionNodePressedSize();
     void pointerMove();
     void pointerMoveInvalid();
     void pointerMoveRelativePosition();
@@ -74,6 +75,7 @@ EventTest::EventTest() {
 
               &EventTest::pointer,
               &EventTest::pointerInvalid,
+              &EventTest::pointerPositionNodePressedSize,
               &EventTest::pointerMove,
               &EventTest::pointerMoveInvalid,
               &EventTest::pointerMoveRelativePosition,
@@ -192,6 +194,22 @@ void EventTest::pointerInvalid() {
         "Ui::PointerEvent: Ui::PointerEventSource::Mouse events are expected to be primary\n"
         "Ui::PointerEvent: Ui::PointerEventSource::Pen events are expected to be primary\n",
         TestSuite::Compare::String);
+}
+
+void EventTest::pointerPositionNodePressedSize() {
+    PointerEvent event{1234567_nsec, PointerEventSource::Mouse, Pointer::MouseMiddle, true, 1ll << 36, {1.5f, 4.5f}, true, {2.5f, 3.5f}};
+    CORRADE_COMPARE(event.time(), 1234567_nsec);
+    CORRADE_COMPARE(event.source(), PointerEventSource::Mouse);
+    CORRADE_COMPARE(event.pointer(), Pointer::MouseMiddle);
+    CORRADE_VERIFY(event.isPrimary());
+    CORRADE_COMPARE(event.id(), 1ll << 36);
+    CORRADE_COMPARE(event.position(), (Vector2{1.5f, 4.5f}));
+    CORRADE_COMPARE(event.nodeSize(), (Vector2{2.5f, 3.5f}));
+    CORRADE_VERIFY(event.isNodePressed());
+    CORRADE_VERIFY(!event.isNodeHovered());
+    CORRADE_VERIFY(!event.isNodeFocused());
+    CORRADE_VERIFY(!event.isCaptured());
+    CORRADE_VERIFY(!event.isAccepted());
 }
 
 void EventTest::pointerMove() {

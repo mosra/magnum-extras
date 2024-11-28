@@ -604,9 +604,6 @@ void ApplicationTest::pointerPressEvent() {
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -682,9 +679,6 @@ void ApplicationTest::pointerReleaseEvent() {
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -757,9 +751,6 @@ void ApplicationTest::pointerMoveEvent() {
         }
         /* Enter / leave events do get called as a consequence of the move
            event internally, we don't care */
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -951,9 +942,6 @@ void ApplicationTest::mousePressEvent() {
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -1023,9 +1011,6 @@ void ApplicationTest::mouseReleaseEvent() {
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -1092,9 +1077,6 @@ void ApplicationTest::mouseMoveEvent() {
         }
         /* Enter / leave events do get called as a consequence of the move
            event internally, we don't care */
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -1156,9 +1138,6 @@ void ApplicationTest::keyPressEvent() {
             event.setAccepted();
         }
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
@@ -1234,9 +1213,6 @@ void ApplicationTest::keyReleaseEvent() {
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
         void doFocusEvent(UnsignedInt, FocusEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
@@ -1308,9 +1284,6 @@ void ApplicationTest::textInputEvent() {
             event.setAccepted();
         }
         void doPointerLeaveEvent(UnsignedInt, PointerMoveEvent&) override {
-            CORRADE_FAIL("This shouldn't be called.");
-        }
-        void doPointerTapOrClickEvent(UnsignedInt, PointerEvent&) override {
             CORRADE_FAIL("This shouldn't be called.");
         }
         void doFocusEvent(UnsignedInt, FocusEvent& event) override {

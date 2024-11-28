@@ -1847,19 +1847,16 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * doesn't have any effect on the return value.
          *
          * If the event is primary, the node that accepted the event is
-         * remembered and is subsequently used by @ref pointerReleaseEvent() to
-         * emit a @ref AbstractLayer::pointerTapOrClickEvent(), if a primary
-         * release happens on it as well. The node that accepted the primary
-         * event also implicitly captures all further pointer events until and
-         * including a primary @ref pointerReleaseEvent() even if they happen
-         * outside of its area, unless @ref PointerEvent::setCaptured() is
-         * called by the implementation to disable this behavior. The capture
+         * remembered as pressed. The node that accepted the primary event also
+         * implicitly captures all further pointer events until and including a
+         * primary @ref pointerReleaseEvent() even if they happen outside of
+         * its area, unless @ref PointerEvent::setCaptured() is called by the
+         * implementation to disable this behavior. The capture
          * can be also removed from a later @ref pointerMoveEvent() or a
          * non-primary @ref pointerReleaseEvent(). Any node that was already
          * captured when calling this function with a primary event is ignored.
-         * If the event isn't primary, the node isn't rememebered for any
-         * subsequent tap or click event and neither it captures any further
-         * events.
+         * If the event isn't primary, the node is not rememebered as pressed
+         * and neither it captures any further events.
          *
          * If no node accepted the event or there wasn't any visible event
          * handling node at given position, the previously remembered pressed
@@ -1922,12 +1919,6 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * data, @cpp false @ce if it wasn't or there wasn't any visible event
          * handling node at given position and thus the event should be
          * propagated further.
-         *
-         * If the node that accepted the event is the same as the node on which
-         * a previous @ref pointerPressEvent() happened, the event is primary
-         * and the pointer was either captured or didn't leave the node area
-         * since, calls also @ref AbstractLayer::pointerTapOrClickEvent() on
-         * all data attached to it.
          *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isPrimary(), @ref PointerEvent::isAccepted(),
@@ -2219,9 +2210,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * Returns handle of a node that was under the pointer for the last
          * @ref pointerPressEvent(), the pointer wasn't released since and the
          * pointer is either captured on that node or didn't leave its area
-         * since. If a @ref pointerReleaseEvent() then happens on the node
-         * area, all data attached to it will receive a
-         * @ref AbstractLayer::pointerTapOrClickEvent().
+         * since.
          *
          * If no pointer press event was called yet, if the event wasn't
          * accepted by any data, if @ref pointerReleaseEvent() was called since

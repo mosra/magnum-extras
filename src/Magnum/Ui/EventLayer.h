@@ -576,7 +576,6 @@ class MAGNUM_UI_EXPORT EventLayer: public AbstractLayer {
 
         MAGNUM_UI_LOCAL void doPointerPressEvent(UnsignedInt dataId, PointerEvent& event) override;
         MAGNUM_UI_LOCAL void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event) override;
-        MAGNUM_UI_LOCAL void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event) override;
         MAGNUM_UI_LOCAL void doPointerMoveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         MAGNUM_UI_LOCAL void doPointerEnterEvent(UnsignedInt dataId, PointerMoveEvent& event) override;
         MAGNUM_UI_LOCAL void doPointerLeaveEvent(UnsignedInt dataId, PointerMoveEvent& event) override;

@@ -531,10 +531,8 @@ struct AbstractUserInterface::State {
     /* Used by advanceAnimations() */
     Nanoseconds animationTime{Math::ZeroInit};
 
-    /* Node on which a pointer press event was accepted and which will receive
-       a pointer tap or click event on a release if it happens on its area.
-       Becomes null after a release or if an uncaptured pointer move event
-       leaves the node area. */
+    /* Node on which a pointer press event was accepted. Becomes null after a
+       release or if an uncaptured pointer move event leaves the node area. */
     NodeHandle currentPressedNode = NodeHandle::Null;
     /* Node on which a pointer press event was accepted & captured and which
        will receive remaining pointer events until a pointer release. If null,
@@ -3715,9 +3713,9 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     /* If the event is primary, it affects current pressed node and current
        pointer position and focus */
     if(event.isPrimary()) {
-        /* Remember the node that accepted the event for potential future tap
-           or click event. If no node accepted it, primaryPressCalledOnNode is
-           null, and the current pressed node gets reset. */
+        /* Remember the node that accepted the event as pressed. If no node
+           accepted it, primaryPressCalledOnNode is null, and the current
+           pressed node gets reset. */
         state.currentPressedNode = primaryPressCalledOnNode;
 
         /* Update the last relative position with this one */
@@ -3781,7 +3779,6 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
        valid. */
     bool releaseAcceptedByAnyData;
     NodeHandle calledNode;
-    NodeHandle callTapOrClickOnNode = NodeHandle::Null;
     if(state.currentCapturedNode != NodeHandle::Null) {
         CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentCapturedNode));
 
@@ -3800,15 +3797,6 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
         releaseAcceptedByAnyData = callEventOnNode<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPositionScaled, nodeHandleId(state.currentCapturedNode), event);
         calledNode = releaseAcceptedByAnyData ? state.currentCapturedNode : NodeHandle::Null;
 
-        /* Call tap or click event if the release happened inside the captured
-           node area and was accepted (i.e., it wasn't outside of the *actual*
-           active area), and the node release was called on is the same as node
-           the press was called on (because, e.g., something could disable and
-           re-enable capture in the middle of a move, changing the captured
-           node to something else, or the captured node ) */
-        if(event.isPrimary() && insideCapturedNode && releaseAcceptedByAnyData && state.currentPressedNode == state.currentCapturedNode)
-            callTapOrClickOnNode = state.currentPressedNode;
-
     /* Otherwise the usual hit testing etc. */
     } else {
         /* Not called on a captured node, isCaptured() should be false and thus
@@ -3818,38 +3806,12 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
 
         calledNode = callEvent<PointerEvent, &AbstractLayer::pointerReleaseEvent>(globalPositionScaled, event);
         releaseAcceptedByAnyData = calledNode != NodeHandle::Null;
-
-        /* Call tap or click event if the release was accepted (i.e., it wasn't
-           outside of the *actual* active area), the pointer didn't leave the
-           area of the originally pressed node and the node the release was
-           called on the same node as the original press (i.e.., it didn't
-           happen on some child node inside of the originally pressed node) */
-        if(event.isPrimary() && releaseAcceptedByAnyData && state.currentPressedNode != NodeHandle::Null && state.currentPressedNode == calledNode)
-            callTapOrClickOnNode = state.currentPressedNode;
     }
 
     /* After a release that's a primary event, there should be no pressed node
-       anymore. Do it before calling the pointerTapOrClickEvent() so if
-       anything accesses the currentPressedNode() from there, it's not
-       stale. */
+       anymore */
     if(event.isPrimary())
         state.currentPressedNode = NodeHandle::Null;
-
-    /* Emit a TapOrClick event if needed. Reusing the same event instance, just
-       resetting the accept status. Both the accept and the capture status is
-       subsequently ignored. */
-    if(callTapOrClickOnNode != NodeHandle::Null) {
-        CORRADE_INTERNAL_ASSERT(isHandleValid(callTapOrClickOnNode));
-
-        /** @todo Given that the tap or click event doesn't need to be
-            accepted, setting this to false means the function may return true
-            but the original event isAccepted() is still false -- do
-            `event._accepted = releaseAcceptedByAnyData` before returning?
-            Not doing so may cause the same event class to be accidentally used
-            multiple times, is that a problem? */
-        event._accepted = false;
-        callEventOnNode<PointerEvent, &AbstractLayer::pointerTapOrClickEvent>(globalPositionScaled, nodeHandleId(callTapOrClickOnNode), event);
-    }
 
     /* Update the last relative position with this one if it's a primary
        event */
@@ -3858,9 +3820,8 @@ bool AbstractUserInterface::pointerReleaseEvent(const Vector2& globalPosition, P
     if(event.isPrimary())
         state.currentGlobalPointerPosition = globalPositionScaled;
 
-    /* After a release and a tap or click coming from a primary event, there
-       should be no captured node anymore either. Not resetting it before tap
-       or click as there it still should be set if event._captured is set. */
+    /* After a release coming from a primary event, there should be no captured
+       node anymore either */
     if(event.isPrimary()) {
         state.currentCapturedNode = NodeHandle::Null;
 
@@ -4070,8 +4031,8 @@ bool AbstractUserInterface::pointerMoveEvent(const Vector2& globalPosition, Poin
            node area or was not accepted by any data (i.e., it's outside of
            node active area). If pointer capture is active, it's not changed in
            any way in order to make it possible for the pointer to return to
-           the node area and then perform a release, resulting in a tap or
-           click. */
+           the node area and then perform a release, still causing it to be
+           interpreted as a tap or click for example. */
         if(event.isPrimary() && state.currentCapturedNode == NodeHandle::Null && (calledNode != state.currentPressedNode || !insideNodeArea || !moveAcceptedByAnyData))
             state.currentPressedNode = NodeHandle::Null;
 

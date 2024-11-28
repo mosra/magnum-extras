@@ -726,24 +726,6 @@ class MAGNUM_UI_EXPORT AbstractLayer {
         void pointerReleaseEvent(UnsignedInt dataId, PointerEvent& event);
 
         /**
-         * @brief Handle a pointer tap or click event
-         *
-         * Used internally from @ref AbstractUserInterface::pointerReleaseEvent().
-         * Exposed just for testing purposes, there should be no need to call
-         * this function directly. Expects that the layer supports
-         * @ref LayerFeature::Event and @p dataId is less than @ref capacity(),
-         * with the assumption that the ID points to a valid data and
-         * @ref PointerEvent::position() is relative to the node to which the
-         * data is attached. The event is expected to be primary and to not be
-         * accepted yet. Delegates to @ref doPointerTapOrClickEvent(), see its
-         * documentation for more information.
-         * @see @ref PointerEvent::isPrimary(),
-         *      @ref PointerEvent::isAccepted(),
-         *      @ref PointerEvent::setAccepted()
-         */
-        void pointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event);
-
-        /**
          * @brief Handle a pointer move event
          *
          * Used internally from @ref AbstractUserInterface::pointerMoveEvent().
@@ -1414,33 +1396,6 @@ class MAGNUM_UI_EXPORT AbstractLayer {
          * @see @ref PointerEvent::isPrimary()
          */
         virtual void doPointerReleaseEvent(UnsignedInt dataId, PointerEvent& event);
-
-        /**
-         * @brief Handle a pointer tap or click event
-         * @param dataId            Data ID the event happens on. Guaranteed to
-         *      be less than @ref capacity() and point to a valid data.
-         * @param event             Event data, with
-         *      @ref PointerEvent::position() relative to the node to which the
-         *      data is attached. If pointer event capture is active, the
-         *      position can be outside of the area of the node.
-         *
-         * Implementation for @ref pointerTapOrClickEvent(), which is called
-         * from @ref AbstractUserInterface::pointerReleaseEvent(). See its
-         * documentation for more information about pointer event behavior,
-         * especially event capture. It's guaranteed that @ref doUpdate() was
-         * called before this function with up-to-date data for @p dataId,
-         * the @p event is guaranteed to be always primary.
-         *
-         * Unlike @ref doPointerReleaseEvent(), the accept status is ignored
-         * for this event, as the event isn't propagated anywhere if it's not
-         * handled. Thus calling @ref PointerEvent::setAccepted() has no effect
-         * here. Pointer capture is also implicitly released after this event,
-         * thus calling @ref PointerEvent::setCaptured() has no effect either.
-         *
-         * Default implementation does nothing.
-         * @see @ref PointerEvent::isPrimary()
-         */
-        virtual void doPointerTapOrClickEvent(UnsignedInt dataId, PointerEvent& event);
 
         /**
          * @brief Handle a pointer move event

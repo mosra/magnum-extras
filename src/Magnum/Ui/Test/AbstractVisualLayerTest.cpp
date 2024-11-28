@@ -1084,11 +1084,13 @@ void AbstractVisualLayerTest::setTransitionedStyleInEvent() {
         Int called = 0;
         EventConnection connection = eventLayer.onReleaseScoped(node, [&]{
             layer.setTransitionedStyle(ui, data, FocusedOver);
-            /* At this point, currentPressedNode() is not updated yet.
-               Consistently with a press it's done only after all release
-               events are fired. In this case however, it *could* be updated
-               before calling release events, nevertheless it still results in
-               correct behavior as another transition is done right after. */
+            /* At this point, currentPressedNode() is not updated yet because
+               certain other functionality such as generation of tap/click
+               events relies on the knowledge of whether given node is pressed.
+               Consistently with a press it's updated only after all release
+               events are fired. What makes the style correct is a transition
+               that only happens after, once the currentPressedNode() is
+               updated. */
             CORRADE_COMPARE(ui.currentPressedNode(), node);
             CORRADE_COMPARE(layer.style(data), PressedOut);
             ++called;
@@ -1108,13 +1110,11 @@ void AbstractVisualLayerTest::setTransitionedStyleInEvent() {
         Int called = 0;
         EventConnection connection = eventLayer.onTapOrClickScoped(node, [&]{
             layer.setTransitionedStyle(ui, data, PressedOver);
-            /* Similarly to a leave event, currentPressedNode() is already
-               updated and thus the style is already transitioned to the final
-               one. This is because tapOrClickEvent() is called after
-               pointerReleaseEvent() and the pressed node information is
-               updated in between the two. */
-            CORRADE_COMPARE(ui.currentPressedNode(), NodeHandle::Null);
-            CORRADE_COMPARE(layer.style(data), InactiveOut);
+            /* As this is fired from a release event, currentPressedNode() is
+               not updated yet same as with onRelease() above, and it's done
+               only after all release events are fired. */
+            CORRADE_COMPARE(ui.currentPressedNode(), node);
+            CORRADE_COMPARE(layer.style(data), PressedOut);
             ++called;
         });
 
