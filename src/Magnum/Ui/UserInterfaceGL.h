@@ -295,15 +295,15 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * constructor or by calling @ref setSize(). Expects that @p features
          * are a subset of @ref AbstractStyle::features() of @p style, contain
          * at least one feature and that the user interface doesn't yet contain
-         * any layers corresponding to @p features as documented in the
-         * @ref StyleFeature enum values.
+         * any layers or layouters corresponding to @p features as documented
+         * in the @ref StyleFeature enum values.
          *
          * @m_class{m-note m-warning}
          *
          * @par
          *      Currently, if @p features contain @ref StyleFeature::TextLayer,
          *      the @ref AbstractStyle::textLayerGlyphCacheSize() depth is
-         *      expected to be @cpp 1 @ce, as @ref Text::GlyphCache doesn't
+         *      expected to be @cpp 1 @ce, as @ref Text::GlyphCacheGL doesn't
          *      support arrays yet.
          *
          * While it's not allowed to set style features more than once for one
@@ -313,7 +313,8 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          * See its documentation for more information about style compatibility
          * restrictions.
          * @see @ref setStyle(const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
-         *      @ref hasBaseLayer(), @ref hasTextLayer(), @ref hasEventLayer(),
+         *      @ref hasRenderer(), @ref hasBaseLayer(), @ref hasTextLayer(),
+         *      @ref hasEventLayer(), @ref hasSnapLayouter(),
          *      @ref UserInterfaceGL(const Vector2&, const Vector2&, const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*),
          *      @ref UserInterfaceGL(const Vector2i&, const AbstractStyle&, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*)
          */

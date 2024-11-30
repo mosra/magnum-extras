@@ -30,11 +30,16 @@
 @brief @ref Magnum::Platform::Sdl2Application "Magnum::Platform::*Application" compatibility for @ref Magnum::Ui::AbstractUserInterface
 @m_since_latest
 
-Including this header allows you to pass @ref Magnum::Platform::Sdl2Application::PointerEvent "Magnum::Platform::*Application::PointerEvent"
-and @ref Magnum::Platform::Sdl2Application::PointerMoveEvent "Magnum::Platform::*Application::PointerMoveEvent" to
+Including this header allows you to pass @ref Magnum::Platform::Sdl2Application::PointerEvent "Magnum::Platform::*Application::PointerEvent",
+@relativeref{Magnum::Platform::Sdl2Application,PointerMoveEvent},
+@relativeref{Magnum::Platform::Sdl2Application,KeyEvent} and
+@relativeref{Magnum::Platform::Sdl2Application,TextInputEvent} to
 @ref Magnum::Ui::AbstractUserInterface::pointerPressEvent(),
-@relativeref{Magnum::Ui::AbstractUserInterface,pointerReleaseEvent()} and
-@relativeref{Magnum::Ui::AbstractUserInterface,pointerMoveEvent()}. See
+@relativeref{Magnum::Ui::AbstractUserInterface,pointerReleaseEvent()},
+@relativeref{Magnum::Ui::AbstractUserInterface,pointerMoveEvent()},
+@relativeref{Magnum::Ui::AbstractUserInterface,keyPressEvent()},
+@relativeref{Magnum::Ui::AbstractUserInterface,keyReleaseEvent()} and
+@relativeref{Magnum::Ui::AbstractUserInterface,textInputEvent()}. See
 @ref Ui-AbstractUserInterface-application for more information.
 */
 

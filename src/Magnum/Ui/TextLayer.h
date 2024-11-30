@@ -2338,7 +2338,7 @@ class MAGNUM_UI_EXPORT TextLayer::Shared: public AbstractVisualLayer::Shared {
          *
          * Has to be called before any @ref addFont(), is expected to be called
          * exactly once. You'll most probably want to set it through the public
-         * @ref TextLayerGL::Shared::setGlyphCache(Text::GlyphCache&).
+         * @ref TextLayerGL::Shared::setGlyphCache(Text::GlyphCacheGL&).
          */
         Shared& setGlyphCache(Text::AbstractGlyphCache& cache);
 

@@ -57,7 +57,7 @@ enum class StyleFeature: UnsignedByte {
      * @ref UserInterface, the style implementation then calls
      * @relativeref{BaseLayer::Shared,setStyle()} and
      * @relativeref{BaseLayer::Shared,setStyleTransition()} on it.
-     * @see @ref UserInterface::baseLayer()
+     * @see @ref UserInterface::baseLayer(), @ref UserInterface::hasBaseLayer()
      */
     BaseLayer = 1 << 0,
 
@@ -68,7 +68,7 @@ enum class StyleFeature: UnsignedByte {
      * @relativeref{TextLayer::Shared,addFont()},
      * @relativeref{TextLayer::Shared,setStyle()} and
      * @relativeref{TextLayer::Shared,setStyleTransition()} on it.
-     * @see @ref UserInterface::textLayer()
+     * @see @ref UserInterface::textLayer(), @ref UserInterface::hasTextLayer()
      */
     TextLayer = 1 << 1,
 
@@ -87,7 +87,8 @@ enum class StyleFeature: UnsignedByte {
     /**
      * @ref EventLayer style. Ensures an @ref EventLayer instance is set up on
      * the @ref UserInterface.
-     * @see @ref UserInterface::eventLayer()
+     * @see @ref UserInterface::eventLayer(),
+     *      @ref UserInterface::hasEventLayer()
      */
     EventLayer = 1 << 3,
 
@@ -96,7 +97,8 @@ enum class StyleFeature: UnsignedByte {
      * on the @ref UserInterface, the style implementation then calls
      * @relativeref{SnapLayouter,setPadding()} and
      * @relativeref{SnapLayouter,setMargin()} on it.
-     * @see @ref UserInterface::snapLayouter()
+     * @see @ref UserInterface::snapLayouter(),
+     *      @ref UserInterface::hasSnapLayouter()
      */
     SnapLayouter = 1 << 4
 };
@@ -325,7 +327,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Text layer glyph cache format
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to the @ref Text::GlyphCache constructor by
+         * value is passed to the @ref Text::GlyphCacheGL constructor by
          * @ref UserInterfaceGL::setStyle().
          * @see @ref textLayerStyleUniformCount(), @ref textLayerStyleCount(),
          *      @ref textLayerEditingStyleUniformCount(),
@@ -344,7 +346,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @ref StyleFeature::TextLayer. The implementation may choose to
          * return a different value based on whether
          * @ref StyleFeature::TextLayerImages is present in @p features or not.
-         * The returned value is passed to the @ref Text::GlyphCache
+         * The returned value is passed to the @ref Text::GlyphCacheGL
          * constructor by @ref UserInterfaceGL::setStyle(). Call
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache if the
          * application needs to store more glyphs.
@@ -361,7 +363,7 @@ class MAGNUM_UI_EXPORT AbstractStyle {
          * @brief Text layer glyph cache padding
          *
          * Expects that @ref StyleFeature::TextLayer is supported. The returned
-         * value is passed to the @ref Text::GlyphCache constructor by
+         * value is passed to the @ref Text::GlyphCacheGL constructor by
          * @ref UserInterfaceGL::setStyle(). Call
          * @ref setTextLayerGlyphCacheSize() to enlarge the glyph cache size or
          * padding if needed.

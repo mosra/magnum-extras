@@ -330,13 +330,12 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
 
         /**
          * @brief Construct
-         * @param size                  Size of the user interface to which
+         * @param size              Size of the user interface to which
          *      everything is positioned
-         * @param windowSize            Size of the window to which all input
+         * @param windowSize        Size of the window to which all input
          *      events are related
-         * @param framebufferSize       Size of the window framebuffer. On
-         *      some platforms with HiDPI screens may be different from window
-         *      size.
+         * @param framebufferSize   Size of the window framebuffer. On some
+         *      platforms with HiDPI screens may be different from window size.
          *
          * Equivalent to constructing with @ref AbstractUserInterface(NoCreateT)
          * and then calling @ref setSize(const Vector2&, const Vector2&, const Vector2i&).

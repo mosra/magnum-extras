@@ -122,7 +122,8 @@ CORRADE_ENUMSET_OPERATORS(Pointers)
 @see @ref AbstractUserInterface::pointerPressEvent(),
     @ref AbstractUserInterface::pointerReleaseEvent(),
     @ref AbstractLayer::pointerPressEvent(),
-    @ref AbstractLayer::pointerReleaseEvent(), @ref FocusEvent
+    @ref AbstractLayer::pointerReleaseEvent(), @ref PointerMoveEvent,
+    @ref FocusEvent, @ref VisibilityLostEvent
 */
 class MAGNUM_UI_EXPORT PointerEvent {
     public:
@@ -332,7 +333,8 @@ class MAGNUM_UI_EXPORT PointerEvent {
 @see @ref AbstractUserInterface::pointerMoveEvent(),
     @ref AbstractLayer::pointerMoveEvent(),
     @ref AbstractLayer::pointerEnterEvent(),
-    @ref AbstractLayer::pointerLeaveEvent()
+    @ref AbstractLayer::pointerLeaveEvent(), @ref PointerEvent,
+    @ref VisibilityLostEvent
 */
 class MAGNUM_UI_EXPORT PointerMoveEvent {
     public:
@@ -570,7 +572,8 @@ class MAGNUM_UI_EXPORT PointerMoveEvent {
 
 @see @ref AbstractUserInterface::pointerPressEvent(),
     @ref AbstractUserInterface::focusEvent(), @ref AbstractLayer::focusEvent(),
-    @ref AbstractLayer::blurEvent()
+    @ref AbstractLayer::blurEvent(), @ref PointerEvent, @ref KeyEvent,
+    @ref TextInputEvent, @ref VisibilityLostEvent
 */
 class FocusEvent {
     public:
@@ -918,7 +921,7 @@ CORRADE_ENUMSET_OPERATORS(Modifiers)
 @see @ref AbstractUserInterface::keyPressEvent(),
     @ref AbstractUserInterface::keyReleaseEvent(),
     @ref AbstractLayer::keyPressEvent(),
-    @ref AbstractLayer::keyReleaseEvent()
+    @ref AbstractLayer::keyReleaseEvent(), @ref TextInputEvent, @ref FocusEvent
 */
 class MAGNUM_UI_EXPORT KeyEvent {
     public:
@@ -1061,7 +1064,7 @@ class MAGNUM_UI_EXPORT KeyEvent {
 @m_since_latest
 
 @see @ref AbstractUserInterface::textInputEvent(),
-    @ref AbstractLayer::textInputEvent()
+    @ref AbstractLayer::textInputEvent(), @ref KeyEvent, @ref FocusEvent
 */
 class TextInputEvent {
     public:

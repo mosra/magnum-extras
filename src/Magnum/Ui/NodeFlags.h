@@ -110,7 +110,7 @@ enum class NodeFlag: UnsignedByte {
     /**
      * The node can be focused, after which all key events are directed to it
      * instead of to a node currently under pointer. Focusing is done either by
-     * a tap or a click or programmatically via
+     * a primary pointer press or programmatically via
      * @ref AbstractUserInterface::focusEvent(). If @ref NodeFlag::NoEvents or
      * @ref NodeFlag::Disabled is set on the same node or any of its parents,
      * this flag is ignored.
