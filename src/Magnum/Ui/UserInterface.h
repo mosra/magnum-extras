@@ -195,6 +195,9 @@ class MAGNUM_UI_EXPORT UserInterface: public AbstractUserInterface {
         UserInterface& setSize(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize) {
             return static_cast<UserInterface&>(AbstractUserInterface::setSize(size, windowSize, framebufferSize));
         }
+        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> UserInterface& setSize(const Application& application) {
+            return static_cast<UserInterface&>(AbstractUserInterface::setSize(application));
+        }
         UserInterface& setSize(const Vector2i& size) {
             return static_cast<UserInterface&>(AbstractUserInterface::setSize(size));
         }

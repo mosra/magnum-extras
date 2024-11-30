@@ -50,24 +50,18 @@ struct UserInterfaceGL::State: UserInterface::State {
 
 UserInterfaceGL::UserInterfaceGL(NoCreateT): UserInterface{NoCreate, Containers::pointer<State>()} {}
 
-UserInterfaceGL::UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{NoCreate} {
-    create(size, windowSize, framebufferSize, style, styleFeatures, importerManager, fontManager);
-}
-
-UserInterfaceGL::UserInterfaceGL(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{size, windowSize, framebufferSize, style, style.features(), importerManager, fontManager} {}
-
 UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{Vector2{size}, Vector2{size}, size, style, styleFeatures, importerManager, fontManager} {}
 
 UserInterfaceGL::UserInterfaceGL(const Vector2i& size, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager): UserInterfaceGL{size, style, style.features(), importerManager, fontManager} {}
 
-UserInterfaceGL& UserInterfaceGL::create(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    if(!tryCreate(size, windowSize, framebufferSize, style, styleFeatures, importerManager, fontManager))
+UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    if(!tryCreateInternal(style, styleFeatures, importerManager, fontManager))
         std::exit(1); /* LCOV_EXCL_LINE */
     return *this;
 }
 
-UserInterfaceGL& UserInterfaceGL::create(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return create(size, windowSize, framebufferSize, style, style.features(), importerManager, fontManager);
+UserInterfaceGL& UserInterfaceGL::createInternal(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return createInternal(style, style.features(), importerManager, fontManager);
 }
 
 UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
@@ -78,7 +72,7 @@ UserInterfaceGL& UserInterfaceGL::create(const Vector2i& size, const AbstractSty
     return create(size, style, style.features(), importerManager, fontManager);
 }
 
-bool UserInterfaceGL::tryCreate(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
     #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
     #endif
@@ -87,12 +81,11 @@ bool UserInterfaceGL::tryCreate(const Vector2& size, const Vector2& windowSize, 
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through create() it doesn't std::exit() the whole executable */
         true);
-    setSize(size, windowSize, framebufferSize);
     return trySetStyle(style, styleFeatures, importerManager, fontManager);
 }
 
-bool UserInterfaceGL::tryCreate(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize, const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
-    return tryCreate(size, windowSize, framebufferSize, style, style.features(), importerManager, fontManager);
+bool UserInterfaceGL::tryCreateInternal(const AbstractStyle& style, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {
+    return tryCreateInternal(style, style.features(), importerManager, fontManager);
 }
 
 bool UserInterfaceGL::tryCreate(const Vector2i& size, const AbstractStyle& style, const StyleFeatures styleFeatures, PluginManager::Manager<Trade::AbstractImporter>* const importerManager, PluginManager::Manager<Text::AbstractFont>* const fontManager) {

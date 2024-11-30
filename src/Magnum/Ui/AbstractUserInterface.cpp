@@ -597,10 +597,6 @@ struct AbstractUserInterface::State {
 
 AbstractUserInterface::AbstractUserInterface(NoCreateT): _state{InPlaceInit} {}
 
-AbstractUserInterface::AbstractUserInterface(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize): AbstractUserInterface{NoCreate} {
-    setSize(size, windowSize, framebufferSize);
-}
-
 AbstractUserInterface::AbstractUserInterface(const Vector2i& size): AbstractUserInterface{Vector2{size}, Vector2{size}, size} {}
 
 AbstractUserInterface::AbstractUserInterface(AbstractUserInterface&&) noexcept = default;

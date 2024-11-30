@@ -248,6 +248,7 @@ MAGNUM_UI_EXPORT Debug& operator<<(Debug& debug, UserInterfaceStates value);
 CORRADE_ENUMSET_OPERATORS(UserInterfaceStates)
 
 namespace Implementation {
+    template<class, class = void> struct ApplicationSizeConverter;
     template<class, class = void> struct PointerEventConverter;
     template<class, class = void> struct PointerMoveEventConverter;
     template<class, class = void> struct KeyEventConverter;
@@ -341,7 +342,22 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * and then calling @ref setSize(const Vector2&, const Vector2&, const Vector2i&).
          * See its documentation for more information.
          */
-        explicit AbstractUserInterface(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize);
+        explicit AbstractUserInterface(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize): AbstractUserInterface{NoCreate} {
+            setSize(size, windowSize, framebufferSize);
+        }
+
+        /**
+         * @brief Construct with properties taken from an application instance
+         * @param application       Application instance to query properties
+         *      from
+         *
+         * Equivalent to constructing with @ref AbstractUserInterface(NoCreateT)
+         * and then calling @ref setSize(const ApplicationOrViewportEvent&).
+         * See its documentation for more information.
+         */
+        template<class Application, class = decltype(Implementation::ApplicationSizeConverter<Application>::set(std::declval<AbstractUserInterface&>(), std::declval<const Application&>()))> explicit AbstractUserInterface(const Application& application): AbstractUserInterface{NoCreate} {
+            setSize(application);
+        }
 
         /**
          * @brief Construct with an unscaled size
@@ -442,6 +458,22 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref setRendererInstance() call instead.
          */
         AbstractUserInterface& setSize(const Vector2& size, const Vector2& windowSize, const Vector2i& framebufferSize);
+
+        /**
+         * @brief Set user interface size from an application or a viewport event instance
+         * @param applicationOrViewportEvent    Application or a viewport event
+         *      instance to query properties from
+         *
+         * Delegates to @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
+         * using window size, framebuffer size and DPI scaling queried from the
+         * @p applicationOrViewportEvent instance. See its documentation,
+         * @ref Ui-AbstractUserInterface-application and
+         * @ref Ui-AbstractUserInterface-dpi for more information.
+         */
+        template<class ApplicationOrViewportEvent, class = decltype(Implementation::ApplicationSizeConverter<ApplicationOrViewportEvent>::set(std::declval<AbstractUserInterface&>(), std::declval<const ApplicationOrViewportEvent&>()))> AbstractUserInterface& setSize(const ApplicationOrViewportEvent& applicationOrViewportEvent) {
+            Implementation::ApplicationSizeConverter<ApplicationOrViewportEvent>::set(*this, applicationOrViewportEvent);
+            return *this;
+        }
 
         /**
          * @brief Set unscaled user interface size

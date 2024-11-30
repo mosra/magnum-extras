@@ -222,6 +222,10 @@ if(MAGNUM_BUILD_GL_TESTS)
     configure_file(${CMAKE_CURRENT_SOURCE_DIR}/configure.h.cmake
                    ${CMAKE_CURRENT_BINARY_DIR}/configure.h)
 
+    corrade_add_test(UiApplicationGLTest ApplicationGLTest.cpp
+        LIBRARIES
+            MagnumUi
+            Magnum::OpenGLTester)
     corrade_add_test(UiBaseLayerGLTest BaseLayerGLTest.cpp
         LIBRARIES
             MagnumUiTestLib

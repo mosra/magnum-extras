@@ -44,6 +44,10 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
 struct ApplicationTest: Platform::Application {
     explicit ApplicationTest(const Arguments& arguments);
 
+    void viewportEvent(ViewportEvent& event) override {
+        _ui.setSize(event);
+    }
+
     void drawEvent() override {
         GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
@@ -171,7 +175,7 @@ struct ApplicationTest: Platform::Application {
     AbstractUserInterface _ui;
 };
 
-ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Application{arguments}, _ui{Vector2{windowSize()}/dpiScaling(), Vector2{windowSize()}, framebufferSize()} {
+ApplicationTest::ApplicationTest(const Arguments& arguments): Platform::Application{arguments}, _ui{*this} {
     Debug{} << "UI of" << Debug::packed << _ui.size() << "in a" << Debug::packed << _ui.windowSize() << "window and a" << Debug::packed << _ui.framebufferSize() << "framebuffer";
 
     _ui.setRendererInstance(Containers::pointer<RendererGL>());

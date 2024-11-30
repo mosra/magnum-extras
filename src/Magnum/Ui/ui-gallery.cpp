@@ -136,7 +136,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
         .setTitle("Magnum::Ui Gallery"_s)
         .setWindowFlags(Configuration::WindowFlag::Resizable));
 
-    _ui.create(Vector2{windowSize()}/dpiScaling(), Vector2{windowSize()}, framebufferSize(), Ui::McssDarkStyle{});
+    _ui.create(*this, Ui::McssDarkStyle{});
 
     /* Set up the profiler, if enabled */
     if(args.isSet("profile")) {
@@ -307,7 +307,7 @@ UiGallery::UiGallery(const Arguments& arguments): Platform::Application{argument
 void UiGallery::viewportEvent(ViewportEvent& event) {
     GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
 
-    _ui.setSize(Vector2{windowSize()}/dpiScaling(), Vector2{windowSize()}, framebufferSize());
+    _ui.setSize(event);
 }
 
 void UiGallery::drawEvent() {

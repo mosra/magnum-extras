@@ -30,7 +30,10 @@
 @brief @ref Magnum::Platform::Sdl2Application "Magnum::Platform::*Application" compatibility for @ref Magnum::Ui::AbstractUserInterface
 @m_since_latest
 
-Including this header allows you to pass @ref Magnum::Platform::Sdl2Application::PointerEvent "Magnum::Platform::*Application::PointerEvent",
+Including this header allows you to pass a @ref Magnum::Platform::Sdl2Application "Magnum::Platform::*Application" to
+@ref Magnum::Ui::AbstractUserInterface constructors and
+@relativeref{Magnum::Ui::AbstractUserInterface,setSize()} to query properties
+from and to pass @ref Magnum::Platform::Sdl2Application::PointerEvent "Magnum::Platform::*Application::PointerEvent",
 @relativeref{Magnum::Platform::Sdl2Application,PointerMoveEvent},
 @relativeref{Magnum::Platform::Sdl2Application,KeyEvent} and
 @relativeref{Magnum::Platform::Sdl2Application,TextInputEvent} to
@@ -51,6 +54,32 @@ Including this header allows you to pass @ref Magnum::Platform::Sdl2Application:
 /* Listing these namespaces doesn't add anything to the docs, so don't */
 #ifndef DOXYGEN_GENERATING_OUTPUT
 namespace Magnum { namespace Ui { namespace Implementation {
+
+/* This works with both the Application itself as well as the ViewportEvent */
+template<class ApplicationOrEvent> struct ApplicationSizeConverter<ApplicationOrEvent,
+    /* Clang (16, but probably others too) is only able to match this with the
+       >=. Without it, it can only match if the size is 1, which is never the
+       case for function pointers. I suppose the boolean conversion in SFINAE
+       contexts has some funny "optimization" that doesn't take the higher bits
+       into account or some such. */
+    #ifdef CORRADE_TARGET_CLANG
+    typename std::enable_if<sizeof(&ApplicationOrEvent::framebufferSize) >= 0>::type
+    /* MSVC cannot match the above and Application doesn't have any nested type
+       related to framebuffer sizes, and matching on some unrelated typedef
+       doesn't feel any better than nothing at all even though that works on
+       older MSVC. Fortunately this seems to be fixed in MSVC 2022 17.10+. So
+       far we don't need to avoid any conflict here so just enable it always. */
+    #elif defined(CORRADE_TARGET_MSVC) && _MSC_VER < 1940
+    void
+    /* GCC is fine */
+    #else
+    typename std::enable_if<sizeof(&ApplicationOrEvent::framebufferSize)>::type
+    #endif
+> {
+    static void set(AbstractUserInterface& ui, const ApplicationOrEvent& applicationOrEvent) {
+        ui.setSize(Vector2{applicationOrEvent.windowSize()}/applicationOrEvent.dpiScaling(), Vector2{applicationOrEvent.windowSize()}, applicationOrEvent.framebufferSize());
+    }
+};
 
 /* Not all applications have Finger / Pen pointers or a Touch / Pen pointer
    event source, so employing a dirty SFINAE trick with an overload that

@@ -38,10 +38,12 @@ namespace Magnum { namespace Ui { namespace Test { namespace {
 struct ApplicationTest: TestSuite::Tester {
     explicit ApplicationTest();
 
-    /* All these are testing with fake event classes in order to verify
-       concrete behavior. Tests with actual application classes are in
+    /* All these are testing with fake application / event classes in order to
+       verify concrete behavior. Tests with actual application classes are in
        Sdl2ApplicationTest.cpp, GlfwApplicationTest.cpp etc. */
 
+    void construct();
+    void setSize();
     void pointerPressEvent();
     void pointerReleaseEvent();
     void pointerMoveEvent();
@@ -54,6 +56,19 @@ struct ApplicationTest: TestSuite::Tester {
     void keyPressEvent();
     void keyReleaseEvent();
     void textInputEvent();
+};
+
+struct CustomApplicationOrViewportEvent {
+    explicit CustomApplicationOrViewportEvent(const Vector2i& windowSize, const Vector2i& framebufferSize, const Vector2& dpiScaling): _windowSize{windowSize}, _framebufferSize{framebufferSize}, _dpiScaling{dpiScaling} {}
+
+    Vector2i windowSize() const { return _windowSize; }
+    Vector2i framebufferSize() const { return _framebufferSize; }
+    Vector2 dpiScaling() const { return _dpiScaling; }
+
+    private:
+        Vector2i _windowSize;
+        Vector2i _framebufferSize;
+        Vector2 _dpiScaling;
 };
 
 enum class CustomPointerEventSource {
@@ -534,6 +549,9 @@ const struct {
 };
 
 ApplicationTest::ApplicationTest() {
+    addTests({&ApplicationTest::construct,
+              &ApplicationTest::setSize});
+
     addInstancedTests({&ApplicationTest::pointerPressEvent},
         Containers::arraySize(PointerPressReleaseEventData));
 
@@ -564,6 +582,25 @@ ApplicationTest::ApplicationTest() {
 
     addInstancedTests({&ApplicationTest::textInputEvent},
         Containers::arraySize(TextInputEventData));
+}
+
+void ApplicationTest::construct() {
+    const CustomApplicationOrViewportEvent application{{100, 200}, {300, 400}, {1.25f, 1.33333333f}};
+
+    AbstractUserInterface ui{application};
+    CORRADE_COMPARE(ui.size(), (Vector2{80.0f, 150.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{100.0f, 200.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{300, 400}));
+}
+
+void ApplicationTest::setSize() {
+    const CustomApplicationOrViewportEvent applicationOrViewportEvent{{100, 200}, {300, 400}, {1.25f, 1.33333333f}};
+
+    AbstractUserInterface ui{NoCreate};
+    ui.setSize(applicationOrViewportEvent);
+    CORRADE_COMPARE(ui.size(), (Vector2{80.0f, 150.0f}));
+    CORRADE_COMPARE(ui.windowSize(), (Vector2{100.0f, 200.0f}));
+    CORRADE_COMPARE(ui.framebufferSize(), (Vector2i{300, 400}));
 }
 
 void ApplicationTest::pointerPressEvent() {
