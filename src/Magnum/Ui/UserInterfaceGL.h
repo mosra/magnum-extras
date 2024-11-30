@@ -176,8 +176,8 @@ class MAGNUM_UI_EXPORT UserInterfaceGL: public UserInterface {
          *
          * Expects that none of @ref create(), @ref tryCreate(),
          * @ref setBaseLayerInstance(), @ref setTextLayerInstance(),
-         * @ref setEventLayerInstance() or @ref setRendererInstance() was
-         * called yet. Equivalent to calling
+         * @ref setEventLayerInstance(), @ref setSnapLayouterInstance() or
+         * @ref setRendererInstance() was called yet. Equivalent to calling
          * @ref setSize(const Vector2&, const Vector2&, const Vector2i&)
          * followed by @ref setStyle(const AbstractStyle&, StyleFeatures, PluginManager::Manager<Trade::AbstractImporter>*, PluginManager::Manager<Text::AbstractFont>*).
          * See documentation of these functions for more information and

@@ -135,12 +135,15 @@ const struct {
         StyleFeature::TextLayer},
     {"event layer present", false, false,
         StyleFeature::EventLayer},
+    {"snap layouter present", false, false,
+        StyleFeature::SnapLayouter},
     {"renderer present", false, true,
         StyleFeatures{}},
-    {"all layers + renderer present", false, true,
+    {"all layers + layouters + renderer present", false, true,
         StyleFeature::BaseLayer|
         StyleFeature::TextLayer|
-        StyleFeature::EventLayer},
+        StyleFeature::EventLayer|
+        StyleFeature::SnapLayouter},
 };
 
 const struct {
@@ -502,7 +505,7 @@ void UserInterfaceGLTest::createAlreadyCreated() {
 
     struct: AbstractStyle {
         StyleFeatures doFeatures() const override {
-            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer;
+            return StyleFeature::BaseLayer|StyleFeature::TextLayer|StyleFeature::EventLayer|StyleFeature::SnapLayouter;
         }
         UnsignedInt doBaseLayerStyleCount() const override { return 1; }
         UnsignedInt doTextLayerStyleCount() const override { return 1; }

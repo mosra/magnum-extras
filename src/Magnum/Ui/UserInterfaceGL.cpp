@@ -82,7 +82,7 @@ bool UserInterfaceGL::tryCreate(const Vector2& size, const Vector2& windowSize, 
     #ifndef CORRADE_NO_ASSERT
     State& state = static_cast<State&>(*_state);
     #endif
-    CORRADE_ASSERT(!hasRenderer() && !state.baseLayer && !state.textLayer && !state.eventLayer,
+    CORRADE_ASSERT(!hasRenderer() && !state.baseLayer && !state.textLayer && !state.eventLayer && !state.snapLayouter,
         "Ui::UserInterfaceGL::tryCreate(): user interface already created",
         /* Has to return true with CORRADE_GRACEFUL_ASSERT so when tested
            through create() it doesn't std::exit() the whole executable */
