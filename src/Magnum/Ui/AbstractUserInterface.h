@@ -1591,21 +1591,21 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @brief Order a top-level node for draw and event processing
          *
          * The @p handle gets ordered to be drawn earlier (thus behind) and
-         * react to event later than @p before. Expects that @p handle is
-         * valid and @p before is either @ref NodeHandle::Null or a valid node
-         * that's included in the draw and event processing order.
+         * react to event later than @p behind. Expects that @p handle is valid
+         * and @p behind is either @ref NodeHandle::Null or a valid node that's
+         * included in the draw and event processing order.
          *
-         * If @p handle is a root node, expects that @p before is also a root
+         * If @p handle is a root node, expects that @p behind is also a root
          * node, if not null. If null, the @p handle is ordered as drawn last.
          * The operation is done with an @f$ \mathcal{O}(1) @f$ complexity in
          * this case.
          *
-         * If @p handle is not a root node, expects that both
-         * @p handle and @p before have a common parent that's the closest
-         * top-level or root node for both, if @p before is not null. If null,
-         * the @p handle is ordered after all other top-level nodes under its
-         * closest top-level or root parent. @ref NodeFlag::Hidden set on any
-         * parent node affects the top-level node, @ref NodeFlag::Clip,
+         * If @p handle is not a root node, expects that both @p handle and
+         * @p behind have a common parent that's the closest top-level or root
+         * node for both, if @p behind is not null. If null, the @p handle is
+         * ordered after all other top-level nodes under its closest top-level
+         * or root parent. @ref NodeFlag::Hidden set on any parent node affects
+         * the top-level node, @ref NodeFlag::Clip,
          * @relativeref{NodeFlag,NoEvents} or @relativeref{NodeFlag,Disabled}
          * doesn't. The operation is done with an @f$ \mathcal{O}(n) @f$
          * complexity in this case, where @f$ n @f$ is the depth at which
@@ -1633,7 +1633,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @see @ref isHandleValid(NodeHandle) const, @ref isNodeTopLevel(),
          *      @ref nodeOrderNext(), @ref nodeOrderLastNested(), @ref update()
          */
-        void setNodeOrder(NodeHandle handle, NodeHandle before);
+        void setNodeOrder(NodeHandle handle, NodeHandle behind);
 
         /**
          * @brief Clear a node from the draw and event processing order

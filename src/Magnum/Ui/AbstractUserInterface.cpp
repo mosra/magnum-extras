@@ -2063,24 +2063,24 @@ NodeHandle closestTopLevelParent(Containers::ArrayView<const Node> nodes, NodeHa
 
 }
 
-void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHandle before) {
+void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHandle behind) {
     CORRADE_ASSERT(isHandleValid(handle),
         "Ui::AbstractUserInterface::setNodeOrder(): invalid handle" << handle, );
     State& state = *_state;
     Node& node = state.nodes[nodeHandleId(handle)];
     #ifndef CORRADE_NO_ASSERT
-    if(before != NodeHandle::Null) {
-        CORRADE_ASSERT(isHandleValid(before),
-            "Ui::AbstractUserInterface::setNodeOrder(): invalid before handle" << before, );
-        CORRADE_ASSERT(handle != before,
-            "Ui::AbstractUserInterface::setNodeOrder(): can't order" << handle << "before itself", );
-        const Node& next = state.nodes[nodeHandleId(before)];
+    if(behind != NodeHandle::Null) {
+        CORRADE_ASSERT(isHandleValid(behind),
+            "Ui::AbstractUserInterface::setNodeOrder(): invalid behind handle" << behind, );
+        CORRADE_ASSERT(handle != behind,
+            "Ui::AbstractUserInterface::setNodeOrder(): can't order" << handle << "behind itself", );
+        const Node& next = state.nodes[nodeHandleId(behind)];
         /* Next of lastNested should also be non-null for consistency, but
            that's too expensive to check for */
         CORRADE_ASSERT(next.used.order != ~UnsignedInt{} && state.nodeOrder[next.used.order].used.previous != NodeHandle::Null,
-            "Ui::AbstractUserInterface::setNodeOrder():" << before << "is not ordered", );
-        CORRADE_ASSERT((state.nodes[nodeHandleId(before)].used.parent == NodeHandle::Null) == (node.used.parent == NodeHandle::Null),
-            "Ui::AbstractUserInterface::setNodeOrder():" << handle << (node.used.parent == NodeHandle::Null ? "is a root node but" : "is not a root node but") << before << (node.used.parent == NodeHandle::Null ? "is not" : "is"), );
+            "Ui::AbstractUserInterface::setNodeOrder():" << behind << "is not ordered", );
+        CORRADE_ASSERT((state.nodes[nodeHandleId(behind)].used.parent == NodeHandle::Null) == (node.used.parent == NodeHandle::Null),
+            "Ui::AbstractUserInterface::setNodeOrder():" << handle << (node.used.parent == NodeHandle::Null ? "is a root node but" : "is not a root node but") << behind << (node.used.parent == NodeHandle::Null ? "is not" : "is"), );
     }
     #endif
 
@@ -2134,7 +2134,7 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
         /* If last, it gets attached after the last node and before the first
            node as the list is cyclic. If this is the first ordered node so
            far, the previous and next one is the node itself. */
-        if(before == NodeHandle::Null) {
+        if(behind == NodeHandle::Null) {
             order.used.previous = state.firstNodeOrder == NodeHandle::Null ?
                 handle : state.nodeOrder[state.nodes[nodeHandleId(state.firstNodeOrder)].used.order].used.previous;
             next = state.firstNodeOrder == NodeHandle::Null ?
@@ -2143,8 +2143,8 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
         /* Otherwise it gets attached before the specified node, and after a
            node originally before the specified node */
         } else {
-            order.used.previous = state.nodeOrder[state.nodes[nodeHandleId(before)].used.order].used.previous;
-            next = before;
+            order.used.previous = state.nodeOrder[state.nodes[nodeHandleId(behind)].used.order].used.previous;
+            next = behind;
         }
 
     /* For a non-root node we have to find the closest top-level parent
@@ -2156,16 +2156,16 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
 
         /* If it's going to be put last, it's the node that's next to the last
            nested. */
-        if(before == NodeHandle::Null) {
+        if(behind == NodeHandle::Null) {
             order.used.previous = topLevelParentLastNested;
             next = topLevelParentLastNestedNext;
         /* Otherwise the node it's ordered before should be under the same
            nearest top-level parent */
         } else {
-            CORRADE_ASSERT(closestTopLevelParent(state.nodes, before) == topLevelParent,
-                "Ui::AbstractUserInterface::setNodeOrder():" << before << "doesn't share the nearest top-level parent with" << handle, );
-            order.used.previous = state.nodeOrder[state.nodes[nodeHandleId(before)].used.order].used.previous;
-            next = before;
+            CORRADE_ASSERT(closestTopLevelParent(state.nodes, behind) == topLevelParent,
+                "Ui::AbstractUserInterface::setNodeOrder():" << behind << "doesn't share the nearest top-level parent with" << handle, );
+            order.used.previous = state.nodeOrder[state.nodes[nodeHandleId(behind)].used.order].used.previous;
+            next = behind;
         }
 
         /* If this is a fresh new top-level node (marked by null above), we
@@ -2224,11 +2224,11 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
         /* This is the first ever node to be in the order */
         if(state.firstNodeOrder == NodeHandle::Null)
             state.firstNodeOrder = handle;
-        /* If the `before` node was first, the new node is now first. If
-           `before` was Null, either the above branch was picked already or
+        /* If the `behind` node was first, the new node is now first. If
+           `behind` was Null, either the above branch was picked already or
            neither of the branches is taken. */
-        else if(state.firstNodeOrder == before) {
-            CORRADE_INTERNAL_ASSERT(before != NodeHandle::Null);
+        else if(state.firstNodeOrder == behind) {
+            CORRADE_INTERNAL_ASSERT(behind != NodeHandle::Null);
             state.firstNodeOrder = handle;
         }
 
@@ -2236,7 +2236,7 @@ void AbstractUserInterface::setNodeOrder(const NodeHandle handle, const NodeHand
        adjust lastNested of parents to point to lastNested of this node. If it
        wasn't inserted at the end, the previous lastNested all stay like
        before, so nothing needs to be adjusted. */
-    } else if(before == NodeHandle::Null) {
+    } else if(behind == NodeHandle::Null) {
         updateParentLastNestedOrderTo(state.nodes, state.nodeOrder, node.used.parent, order.used.previous, order.used.lastNested);
     }
 

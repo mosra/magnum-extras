@@ -4287,12 +4287,12 @@ void AbstractUserInterfaceTest::nodeOrderGetSetInvalid() {
         "Ui::AbstractUserInterface::clearNodeOrder(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
         "Ui::AbstractUserInterface::flattenNodeOrder(): invalid handle Ui::NodeHandle::Null\n"
         "Ui::AbstractUserInterface::flattenNodeOrder(): invalid handle Ui::NodeHandle(0xabcde, 0x123)\n"
-        "Ui::AbstractUserInterface::setNodeOrder(): invalid before handle Ui::NodeHandle(0xabcde, 0x123)\n"
+        "Ui::AbstractUserInterface::setNodeOrder(): invalid behind handle Ui::NodeHandle(0xabcde, 0x123)\n"
 
         "Ui::AbstractUserInterface::setNodeOrder(): Ui::NodeHandle(0xb, 0x1) is not ordered\n"
         "Ui::AbstractUserInterface::setNodeOrder(): Ui::NodeHandle(0x5, 0x1) is not ordered\n"
 
-        "Ui::AbstractUserInterface::setNodeOrder(): can't order Ui::NodeHandle(0x0, 0x1) before itself\n"
+        "Ui::AbstractUserInterface::setNodeOrder(): can't order Ui::NodeHandle(0x0, 0x1) behind itself\n"
         "Ui::AbstractUserInterface::setNodeOrder(): Ui::NodeHandle(0x0, 0x1) is a root node but Ui::NodeHandle(0x1, 0x1) is not\n"
         "Ui::AbstractUserInterface::setNodeOrder(): Ui::NodeHandle(0x1, 0x1) is not a root node but Ui::NodeHandle(0x0, 0x1) is\n"
 
