@@ -25,6 +25,8 @@
 */
 
 #include <Corrade/Containers/Function.h>
+#include <Corrade/Containers/GrowableArray.h>
+#include <Corrade/Containers/String.h>
 #include <Magnum/Animation/Easing.h>
 
 #include "Magnum/Ui/AbstractUserInterface.h"
@@ -85,11 +87,96 @@ shared.setStyleTransition<StyleIndex,
 /* [AbstractVisualLayer-Shared-setStyleTransition] */
 }
 
+namespace A {
+
+/* Declarations to avoid -Wmisssing-prototypes */
+void setNodeName(Ui::NodeHandle node, Containers::StringView name);
+Containers::StringView nodeName(Ui::NodeHandle node);
+/* [AbstractUserInterface-handles-extract] */
+struct Name {
+    Containers::String name;
+    UnsignedInt generation = 0;
+};
+Containers::Array<Name> names;
+
+DOXYGEN_ELLIPSIS()
+
+void setNodeName(Ui::NodeHandle node, Containers::StringView name) {
+    UnsignedInt id = Ui::nodeHandleId(node);
+    if(id >= names.size())
+        arrayResize(names, id + 1);
+
+    names[id].name = name;
+    names[id].generation = Ui::nodeHandleGeneration(node);
+}
+
+Containers::StringView nodeName(Ui::NodeHandle node) {
+    UnsignedInt id = Ui::nodeHandleId(node);
+    if(id < names.size() && names[id].generation == Ui::nodeHandleGeneration(node))
+        return names[id].name;
+    return {};
+}
+/* [AbstractUserInterface-handles-extract] */
+
+}
+
 /* Make sure the name doesn't conflict with any other snippets to avoid linker
    warnings, unlike with `int main()` there now has to be a declaration to
    avoid -Wmisssing-prototypes */
 void mainUi();
 void mainUi() {
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [AbstractUserInterface-setup-events] */
+Ui::PointerEvent event{{},
+    Ui::PointerEventSource::Mouse,
+    Ui::Pointer::MouseLeft, true, 0};
+if(!ui.pointerPressEvent({123, 456}, event)) {
+    // Not handled by the UI, pass further ...
+}
+/* [AbstractUserInterface-setup-events] */
+}
+
+{
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [AbstractUserInterface-nodes] */
+Ui::NodeHandle panel = ui.createNode({50, 50}, {200, 150});
+Ui::NodeHandle title = ui.createNode(panel, {10, 10}, {180, 20});
+Ui::NodeHandle content = ui.createNode(panel, {10, 40}, {180, 100});
+/* [AbstractUserInterface-nodes] */
+static_cast<void>(content);
+
+/* [AbstractUserInterface-nodes-opacity] */
+ui.setNodeOpacity(panel, 0.8f);
+ui.setNodeOpacity(title, 0.75f);
+/* [AbstractUserInterface-nodes-opacity] */
+
+/* [AbstractUserInterface-nodes-order] */
+Ui::NodeHandle anotherPanel = ui.createNode({200, 130}, {120, 80});
+
+/* Put the new panel behind the first one, instead of being on top */
+ui.setNodeOrder(anotherPanel, panel);
+/* [AbstractUserInterface-nodes-order] */
+
+/* [AbstractUserInterface-nodes-order-clear] */
+ui.clearNodeOrder(panel);
+DOXYGEN_ELLIPSIS()
+
+/* Show the panel again, on top of everything else */
+ui.setNodeOrder(panel, Ui::NodeHandle::Null);
+/* [AbstractUserInterface-nodes-order-clear] */
+
+/* [AbstractUserInterface-nodes-order-nested] */
+/* Tooltip rectangle overlapping the title, shown on the top */
+Ui::NodeHandle titleTooltip = ui.createNode(title, {105, 25}, {100, 20});
+ui.setNodeOrder(titleTooltip, Ui::NodeHandle::Null);
+DOXYGEN_ELLIPSIS()
+
+/* Hide the tooltip when no longer meant to be visible */
+ui.clearNodeOrder(titleTooltip);
+/* [AbstractUserInterface-nodes-order-nested] */
+}
+
 {
 Ui::AbstractUserInterface ui{{100, 100}};
 Ui::NodeHandle node{};

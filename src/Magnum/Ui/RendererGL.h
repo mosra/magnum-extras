@@ -44,35 +44,45 @@ namespace Magnum { namespace Ui {
 @brief OpenGL renderer implementation
 @m_since_latest
 
-Meant to be supplied to @ref AbstractUserInterface::setRendererInstance(). If
-you're using the @ref UserInterfaceGL class, it's done automatically.
+Performs renderer state management for OpenGL layer implementations such as
+@ref BaseLayerGL or @ref TextLayerGL.
 
-The renderer expects pre-multiplied blending set up, as shown below. Internally
-it enables @ref GL::Renderer::Feature::Blending and/or
-@ref GL::Renderer::Feature::ScissorTest for layers that advertise
+@section Ui-RendererGL-setup Setting up a renderer instance
+
+If you use one of the @ref UserInterfaceGL constructors taking a style,
+@ref UserInterfaceGL::create(), @relativeref{UserInterfaceGL,tryCreate()},
+@relativeref{UserInterfaceGL,setStyle()} or
+@relativeref{UserInterfaceGL,trySetStyle()}, an implicit renderer instance is
+already set up by those. If you don't, or if you want to set up a
+custom-configured renderer before specifying a style, pass its instance to
+@ref AbstractUserInterface::setRendererInstance():
+
+@snippet Ui-gl.cpp RendererGL-setup
+
+When @ref AbstractUserInterface::draw() is executed, the renderer internally
+enables @ref GL::Renderer::Feature::Blending and/or
+@relativeref{GL::Renderer,Feature::ScissorTest} for layers that advertise
 @ref LayerFeature::DrawUsesBlending and/or @ref LayerFeature::DrawUsesScissor,
 the scissor rectangle is then reset back to the whole framebuffer size (as
 supplied to the user interface constructor or
 @ref AbstractUserInterface::setSize()) after drawing.
 
-@snippet Ui-gl.cpp RendererGL
-
 @section Ui-RendererGL-compositing-framebuffer Use with a compositing framebuffer
 
 By default, the @ref RendererGL instance assumes *some* framebuffer is bound
-for drawing and it doesn't touch it in any way. Layers that implement
+for drawing and it doesn't touch the binding in any way. Layers that implement
 compositing operations however need a framebuffer which can be both drawn into
 and read from, which is achieved by constructing the renderer with
 @link Flag::CompositingFramebuffer @endlink:
 
-@snippet Ui-gl.cpp RendererGL-compositing-framebuffer
+@snippet Ui-sdl2.cpp RendererGL-compositing-framebuffer
 
 With the flag enabled, the application is then responsible for clearing the
 @ref compositingFramebuffer() at frame start, drawing all content underneath
 the UI to it, and ultimately blitting it back to the main / default application
 framebuffer after the UI is drawn:
 
-@snippet Ui-gl.cpp RendererGL-compositing-framebuffer-draw
+@snippet Ui-sdl2.cpp RendererGL-compositing-framebuffer-draw
 
 @note This class is available only if Magnum is compiled with
     @ref MAGNUM_TARGET_GL enabled (done by default). See @ref building-features

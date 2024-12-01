@@ -24,7 +24,6 @@
     DEALINGS IN THE SOFTWARE.
 */
 
-#include <Magnum/GL/Framebuffer.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 
@@ -42,38 +41,39 @@
 
 using namespace Magnum;
 
-struct MyApplication {
-    void drawEvent();
-    void swapBuffers();
-    void redraw();
-
-    Ui::UserInterfaceGL _ui{NoCreate};
-};
-
-/* [RendererGL-compositing-framebuffer-draw] */
-void MyApplication::drawEvent() {
-    _ui.renderer().compositingFramebuffer().clear(GL::FramebufferClear::Color);
-
-    // Render content underneath the UI to the compositing framebuffer here ...
-
-    _ui.draw();
-
-    GL::AbstractFramebuffer::blit(
-        _ui.renderer().compositingFramebuffer(),
-        GL::defaultFramebuffer,
-        GL::defaultFramebuffer.viewport(),
-        GL::FramebufferBlit::Color);
-
-    swapBuffers();
-    redraw();
-}
-/* [RendererGL-compositing-framebuffer-draw] */
-
 /* Make sure the name doesn't conflict with any other snippets to avoid linker
    warnings, unlike with `int main()` there now has to be a declaration to
    avoid -Wmisssing-prototypes */
 void mainUiGL();
 void mainUiGL() {
+{
+/* [AbstractUserInterface-setup] */
+Ui::UserInterfaceGL ui{{800, 600}, Ui::McssDarkStyle{}};
+/* [AbstractUserInterface-setup] */
+
+/* [AbstractUserInterface-setup-blend] */
+GL::Renderer::setBlendFunction(
+    GL::Renderer::BlendFunction::One,
+    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+/* [AbstractUserInterface-setup-blend] */
+
+/* [AbstractUserInterface-setup-draw] */
+GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
+
+DOXYGEN_ELLIPSIS()
+
+ui.draw();
+/* [AbstractUserInterface-setup-draw] */
+
+/* [AbstractUserInterface-setup-draw-ondemand] */
+if(ui.state()) {
+    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
+
+    ui.draw();
+}
+/* [AbstractUserInterface-setup-draw-ondemand] */
+}
+
 {
 Ui::AbstractUserInterface ui{{100, 100}};
 Ui::BaseLayerStyleAnimator animator{Ui::animatorHandle(0, 1)};
@@ -111,28 +111,10 @@ textLayer.assignAnimator(animator);
 }
 
 {
-/* [RendererGL] */
-GL::Renderer::setBlendFunction(
-    GL::Renderer::BlendFunction::One,
-    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-/* [RendererGL] */
+Ui::AbstractUserInterface ui{{100, 100}};
+/* [RendererGL-setup] */
+ui.setRendererInstance(Containers::pointer<Ui::RendererGL>());
+/* [RendererGL-setup] */
 }
 
-{
-/* [RendererGL-compositing-framebuffer] */
-Ui::UserInterfaceGL _ui{NoCreate};
-
-DOXYGEN_ELLIPSIS()
-
-/* Create a renderer with a compositing framebuffer as the first thing */
-_ui.setRendererInstance(Containers::pointer<Ui::RendererGL>(
-    Ui::RendererGL::Flag::CompositingFramebuffer));
-
-/* Then add appropriate compositing layers, set a style, etc */
-_ui
-    .setSize(DOXYGEN_ELLIPSIS({}))
-    .setStyle(DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{}))
-    DOXYGEN_ELLIPSIS();
-/* [RendererGL-compositing-framebuffer] */
-}
 }

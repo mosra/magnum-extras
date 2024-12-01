@@ -256,34 +256,438 @@ namespace Implementation {
 }
 
 /**
-@brief Base for the main user interface
+@brief Base implementation of the main user interface
 @m_since_latest
 
-Doesn't contain any implicit layers, layouters or animators. You'll most likely
-want to instantiate the @ref UserInterface subclass instead.
+Owns the whole user interface, providing everything from input event handling
+to animation and drawing.
+
+@section Ui-AbstractUserInterface-setup Setting up a user interface instance
+
+Unless you're building a UI fully consisting of custom widgets, you'll want to
+instantiate the user interface through the @ref UserInterfaceGL subclass, which
+by default includes everything that's needed by builtin widgets. The
+constructor takes a UI size, in respect to which all contents as well as input
+events get positioned, and a style instance describing how the widgets will
+look like. At the moment, @ref McssDarkStyle is the only style provided by the
+library itself.
+
+@snippet Ui-gl.cpp AbstractUserInterface-setup
+
+Then, at the very least, the UI needs to be (re)drawn when needed. The renderer
+uses a [premultiplied alpha](https://developer.nvidia.com/content/alpha-blending-pre-or-not-pre)
+workflow, so it expects an appropriate @ref GL::Renderer::setBlendFunction()
+setup, shown below. If all other rendering uses a premultiplied alpha as well,
+it's enough to call it just once, otherwise you need to make sure it's set up
+every time the UI is drawn.
+
+@snippet Ui-gl.cpp AbstractUserInterface-setup-blend
+
+The @ref draw() function draws to the currently bound framebuffer, clearing is
+left upon the application so it can draw other contents underneath the UI. The
+actual enablement of blending and other state during a @ref draw() is taken
+care of by a @ref RendererGL instance internally.
+
+@snippet Ui-gl.cpp AbstractUserInterface-setup-draw
+
+<b></b>
+
+@m_class{m-block m-success}
+
+@par Power-efficient on-demand redrawing
+    The whole @ref Ui library, including animations, is designed to redraw only
+    when needed. A desire to redraw is signalled by @ref state() returning a
+    non-empty set of @ref UserInterfaceState values, so assuming there's
+    nothing else besides the UI that needs to be redrawn, the above could be
+    rewritten like this:
+@par
+    @snippet Ui-gl.cpp AbstractUserInterface-setup-draw-ondemand
+@par
+
+For actual interactivity, the user interface needs to receive input events via
+@ref pointerPressEvent(), @ref pointerReleaseEvent(), @ref pointerMoveEvent(),
+@ref keyPressEvent(), @ref keyReleaseEvent() and @ref textInputEvent(). They
+take a @ref PointerEvent, @ref PointerMoveEvent, @ref KeyEvent or
+@ref TextInputEvent instances containing the actual event data such as the
+pointer or key being pressed, and in case of pointer events also a position at
+which the event happens. For example:
+
+@snippet Ui.cpp AbstractUserInterface-setup-events
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    @ref Ui-AbstractUserInterface-events "Event handling and propagation" is
+    described in more detail later.
 
 @section Ui-AbstractUserInterface-application Integration with application libraries
 
-By including @ref Magnum/Ui/Application.h it's possible to pass event
-instances from @ref Platform::Sdl2Application "Platform::*Application" classes directly to event handlers. They get internally converted to a corresponding
-@ref PointerEvent, @ref PointerMoveEvent, @ref KeyEvent or @ref TextInputEvent
-instance with a subset of information given application provides. Then, if the
-event is accepted by the user interface, the original application event is
-marked as accepted as well, to prevent it from propagating further in certain
-circumstances (such as to the browser window when compiling for the web).
-Example usage:
+Unless you're using a custom windowing toolkit, you'll likely want to make the
+UI drawing and event handling directly tied to a
+@ref Platform::Sdl2Application "Platform::*Application" class. By including
+@ref Magnum/Ui/Application.h it's possible to pass the application and event
+instances directly to the user interface without needing to translate and pass
+through individual data. The constructor can take an application instance to
+figure out an appropriate DPI-aware size, and similarly you can pass the
+viewport event to @ref setSize() to make the UI perform a relayout. Then,
+assuming nothing else needs to be drawn besides the UI, a redraw is again
+scheduled only when needed:
+
+@snippet Ui-sdl2.cpp AbstractUserInterface-application-construct-viewport
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    If you need more control over UI size, see below for detailed explanation
+    of @ref Ui-AbstractUserInterface-dpi "DPI awareness".
+
+With the code below, events coming from the application get internally
+converted to a corresponding @ref PointerEvent, @ref PointerMoveEvent,
+@ref KeyEvent or @ref TextInputEvent instance with a subset of information
+given application provides. Then, if the event is accepted by the user
+interface, matching @ref Platform::Sdl2Application::PointerEvent::setAccepted() "Platform::*Application::PointerEvent::setAccepted()"
+etc. get called as well, to prevent it from propagating further in certain
+circumstances (such as to the browser window when compiling for the web). To
+make sure the UI is appropriately redrawn after handling an event, each of
+these again checks against @ref state():
 
 @snippet Ui-sdl2.cpp AbstractUserInterface-application-events
 
-Currently, none of the application classes expose event timestamps and thus
-@ref PointerEvent::time() and the corresponding field in all other events is
-default-constructed. If timestamps are needed, for example for animations, they
-can be supplied as a second @ref Nanoseconds argument when calling
-@ref pointerPressEvent(Event&, Args&&... args) and others.
+Note that in general the UI needing a redraw is unrelated to whether an event
+was accepted by it, so the checks are separate --- for example a
+@m_class{m-label m-default} **Home** key press may be accepted by a text input,
+but if the cursor is already at the begin of the text, it doesn't cause any
+visual change and thus there's no need to redraw anything.
+
+@section Ui-AbstractUserInterface-handles Handles and resource ownership
+
+Unlike traditional UI toolkits, which commonly use pointer-like abstractions to
+reference data, all resources in the @ref Ui library are referenced by *handles*,
+such as a @ref NodeHandle or an @ref AnimatorHandle. Much like a raw pointer, a
+handle is a trivially copyable type (an @cpp enum @ce in this case), but
+compared to a pointer it's not usable on its own. Getting the actual resource
+means passing the handle to a corresponding interface that actually owns given
+resource.
+
+The handle consists of an *index* and a *generation counter*. Internally, the
+index points into a contiguous array (or several arrays) containing data for
+resources of given type. When a new resource is created, the handle gets an
+index of the next free item in that array; when it's removed, item at given
+index gets put back into a list of free items. Additionally, the generation
+counter gets incremented on every removal, which in turn causes existing
+handles pointing to the same index but with old generation counter to be
+treated as invalid.
+
+@htmlinclude ui-handle.svg
+
+Compared to pointers that can point basically anywhere, handles have several
+advantages. The contiguous array simplifies memory management and makes batch
+processing efficient, and the handle types can be only large enough to store
+the typical amount of data (for example @ref NodeHandle is just 32 bits,
+@ref AnimatorHandle just 16). The clear ownership model together with the
+generation counter then solves the problem of dangling references and resource
+leaks.
+
+While in most cases you'll treat handles as opaque identifiers, it's possible
+to make use of the contiguous nature of their indices when storing any extra
+data associated with a particular handle type. For example, in case you'd want
+to name node handles, instead of creating a (hash)map with @ref NodeHandle as a
+key, you can extract the handle index with @ref nodeHandleId() and use a plain
+array instead:
+
+@snippet Ui.cpp AbstractUserInterface-handles-extract
+
+The above snippet also makes use of the handle generation, extracted with
+@ref nodeHandleGeneration(), to ensure stale names aren't returned for handles
+that recycle a previously used index. The generation is remembered when setting
+the name, and it's compared against the handle when retrieving. If it doesn't
+match, it's the same as if the name wouldn't be present at all. The generation
+counter is @cpp 0 @ce only for @ref NodeHandle::Null, so the
+default-constructed `Name` entries above aren't referring to valid nodes
+either.
+
+<b></b>
+
+@m_class{m-note m-info}
+
+@par
+    There are equivalently named helpers and constants for all other handle
+    types, see @ref Magnum/Ui/Handle.h for the complete list.
+
+@section Ui-AbstractUserInterface-nodes Node hierarchy
+
+At the core of the user interface, defining both the visuals and event
+propagation, is a hierarchy of *nodes*. A node is by itself just a rectangle
+defined by a size, an offset relative to its parent, opacity and a few behavior
+flags. Everything else --- visuals, interactivity, layouting behavior,
+animation, persistent state --- is handled by *data*, *layouts* and *animations*
+optionally attached to particular nodes. Those are explained further below.
+
+A node is created using @ref createNode() by passing an offset and size. You
+get a @ref NodeHandle back, which can be then used to query and modify the node
+properties such as @ref setNodeOffset() or @ref setNodeSize().
+
+@snippet Ui.cpp AbstractUserInterface-nodes
+
+@htmlinclude ui-node-hierarchy.svg
+
+The first line creates a *root node*, which is positioned relatively to the UI
+itself. The other nodes then specify it as a parent, and are positioned
+relatively to it, so e.g. `content` is at offset @cpp {60, 90} @ce. Besides
+positioning hierarchy, the parent/child relationship also has effect on
+lifetime. While a root node exists until @ref removeNode() is called on it or
+until the end of the UI instance lifetime, child nodes additionally get removed
+if their parent is removed. Continuing from the above, if you remove the
+`panel`, the `title` and `content` will get subsequently cleaned up as well.
+Currently, node parent is specified during creation and cannot be subsequently
+changed.
+
+@subsection Ui-AbstractUserInterface-nodes-opacity Node opacity
+
+Node opacity, controlled with @ref setNodeOpacity(), has similar nesting
+behavior as node offsets. By default, all nodes are fully opaque, and the
+opacity gets multiplied with the parent's. In the snippet below, the effective
+opacity of `title` will be @cpp 0.6f @ce and `content` will inherit the
+@cpp 0.8f @ce opacity from the `panel`. This feature is mainly for convenient
+fade-in / fade-out of various parts of the UI without having to laboriously
+update each and every individual UI element.
+
+@snippet Ui.cpp AbstractUserInterface-nodes-opacity
+
+@subsection Ui-AbstractUserInterface-nodes-order Top-level node hierarchies and visibility order
+
+A root node along with all its children --- in this case `panel` along with
+`title` and `contents` --- is called a *top-level node hierarchy*. Each
+top-level node hierarchy is ordered relatively to other top-level hierarchies,
+allowing stacking of various UI elements such as dialogs, tooltips and menus.
+When a root node is created, it's by default put in front of all other
+top-level node hierarchies. Its order can be then adjusted using
+@ref setNodeOrder() where the second argument is a top-level node *behind*
+which the node should be placed. Specifying @ref NodeHandle::Null puts it in
+front.
+
+@snippet Ui.cpp AbstractUserInterface-nodes-order
+
+@htmlinclude ui-node-hierarchy-another.svg
+
+It's also possible to completely remove the hierarchy from the top-level node
+order with @ref clearNodeOrder(). Doing so doesn't remove any nodes, just
+excludes then from the visible set, and calling @ref setNodeOrder() with that
+top-level node puts it back into the visibility order. This is a useful
+alternative to recreating a short-lived popup many times over, for example.
+
+@snippet Ui.cpp AbstractUserInterface-nodes-order-clear
+
+Besides the top-level node order, visibility is defined by the hierarchy.
+Parents are always behind their children (so, from the snippet above, the
+`panel` background will be visible underneath the `title` and `content`),
+however there's no order specified between siblings (i.e., one can't rely on
+`title` being drawn before `content` or vice versa). The assumption here is
+that majority of UIs are non-overlapping hierarchies for which such an ordering
+would be a costly extra step without significant benefits.
+
+@subsubsection Ui-AbstractUserInterface-nodes-order-nested Nested top-level node hierarchies
+
+Besides root nodes, nested nodes can be made top-level as well. They'll stay
+positioned relative to the parent node offset, which makes it convenient for
+placing various popups and tooltips next to UI elements they come from. As with
+root nodes, a nested node can be made top-level by calling @ref setNodeOrder(),
+@ref clearNodeOrder() then again excludes it from the visibility order.
+
+@snippet Ui.cpp AbstractUserInterface-nodes-order-nested
+
+@htmlinclude ui-node-hierarchy-tooltip.svg
+
+Compared to root nodes, nested top-level nodes are tied to the node hierarchy
+they come from --- in particular, they can be only ordered relative to other
+nested top-level nodes under the same top-level node hierarchy. Changing order
+of the enclosing top-level nodes then brings the nested top-level hierarchies
+along. In the above example, assuming the `tooltip` wouldn't get hidden,
+raising the `anotherPanel` in front of `panel` would make it ordered in front
+of the `tooltip` as well.
+
+Top-level hierarchies, nested or otherwise, can be also used to circumvent the
+visibility order limitations in cases where UI elements actually end up
+overlapping each other. One such case might be drag & drop, or various list
+reordering animations. Affected node sub-hierarchy can be made top-level for
+the time it's being moved and when it's back in place, @ref flattenNodeOrder()
+puts it back to the visibility order defined by the hierarchy.
+
+@subsection Ui-AbstractUserInterface-nodes-flags Node behavior flags
+
+Finally, nodes can have various flags set that affect their visibility and
+event handling behavior. By passing @ref NodeFlag::Clip to either
+@ref createNode() or to @ref addNodeFlags(), contents of the node and all
+nested nodes that overflow the node area will be clipped, @ref clearNodeFlags()
+then does an inverse. The assumption is again that most UI elements don't
+overflow and clipping every node would be relatively expensive, so by default
+overflowing contents are visible.
+
+Visibility of individual nodes can be toggled with @ref NodeFlag::Hidden. When
+set, all nested nodes are hidden as well. This can also be used as an
+alternative to @ref clearNodeOrder() for top-level nodes because hiding and
+un-hiding preserves the previous top-level node order.
+
+@ref NodeFlag::Disabled makes a node disabled, which effectively makes it not
+respond to events anymore and *may* also affect the visual look, depending on
+whether given UI element provides a disabled visual style.
+@ref NodeFlag::NoEvents is a subset of that, affecting only the events but not
+visuals, and can be used for example when animating a gradual transition from/to
+a disabled state, to not have the elements react to input until the animation
+finishes. Both of these again propagate to all nested nodes as well, so
+disabling a part of the UI can be done only on the enclosing node and not on
+each and every child.
+
+@section Ui-AbstractUserInterface-events Event handling
+
+Commonly, the UI is visible on top of any other content in the application
+(such as a game, or a model / image in case of an editor or viewer) and so the
+expectations is that input events should go to the UI first, as shown in the
+snippets above. The event handler then returns @cpp true @ce if the event was
+consumed by the UI (such as a button being pressed by a pointer, or a key press
+causing an action on a focused input), @cpp false @ce if not and it should fall
+through to the rest of the application or to the OS, browser etc.
+
+@snippet Ui-sdl2.cpp AbstractUserInterface-events-application-fallthrough
+
+@subsection Ui-AbstractUserInterface-events-propagation Node hierarchy event propagation
+
+Inside the UI, pointer and position-dependent key events are directed to
+concrete nodes based on their position. Top-level nodes get iterated in a
+front-to-back order, and if the (appropriately scaled) event position is within
+the rectangle of any of those, it recurses into given hierarchy, checking the
+position against a rectangle of each child. The search continues until a leaf
+node under given position is found, to which the event is directed. If given
+event is accepted on that node via @ref PointerEvent::setAccepted() etc., the
+event propagation stops there. If not, the propagation continues through
+sibling nodes that are under given position, then back up the hierarchy and
+then to other top-level node hierarchies until it's accepted. Example
+propagation of a pointer event marked @m_class{m-label m-info} **blue**:
+
+@m_class{m-row}
+
+@parblock
+
+@m_div{m-col-m-5 m-nopadt}
+@htmlinclude ui-node-hierarchy-event.svg
+@m_enddiv
+
+@m_class{m-col-m-7 m-nopadt m-nopadl}
+
+@par
+    1.  Check its position against `titleTooltip` rectangle. It's outside,
+        continue to the next top-level hierarchy.
+    2.  Check against `panel`. Inside, go through child nodes.
+        1.  Check against `title`. Outside.
+        2.  Against `content`. Inside, no children, send event.
+        3.  If accepted, return @cpp true @ce. If not, there are no other
+            children, continue to the next top-level hierarchy.
+    3.  Against `anotherPanel`. Inside, no children, send event.
+    4.  If accepted, return @cpp true @ce. If not, there are no other top-level
+        hierarchies, return @cpp false @ce.
+
+@endparblock
+
+@m_class{m-block m-danger}
+
+@par Event propagation with overflowing node contents
+    The above implies that if a node has contents or children that overflow its
+    rectangle and it doesn't have @ref NodeFlag::Clip set, the overflowing
+    contents will be visible but won't be able to react to events because they
+    won't even get considered when propagating the events. The assumption is
+    again that that most UI elements don't overflow and the additional cost and
+    complexity of propagation to each and every potentially visible node isn't
+    worth it.
+@par
+    A solution in this case is expanding the node area so it fully contains
+    everything that's inside, and adjusting positioning of the contents if
+    necessary.
+
+If the event is accepted on any node, that particular event function returns
+@cpp true @ce. If it isn't accepted on any node, or if there isn't any node at
+given position in the first place, @cpp false @ce is returned.
+
+@subsection Ui-AbstractUserInterface-events-capture Pointer capture, pressed and hovered node tracking
+
+Especially with touch input where the aiming precision is rather coarse, it
+commonly happens that the finger moves between a tap press and a release,
+sometimes even outside of the tapped element. Another similar is when a mouse
+cursor gets dragged outside of the narrow area of a scrollbar. In such cases it
+would be annoying if the UI would cancel the action or, worse, performed some
+other action entirely, and that's what *pointer capture* is designed to solve.
+
+@htmlinclude ui-event-capture.svg
+
+When a node @m_class{m-label m-info} **press** happens as a result of
+@ref pointerPressEvent(), the node gets remembered. By default that enables
+pointer capture, so if a @ref pointerMoveEvent() then drags the pointer
+outside, the events are still sent to the original node (marked as *A* in the
+above diagram), and *A* is still considered to be pressed, but not hovered. In
+comparison, with capture disabled, a drag outside would lose the pressed state,
+and the events would be sent to whatever other node is underneath (marked as
+* *B* above), and said to be hovered on that node instead. Note that *B* isn't
+considered to be pressed in that case in order to distinguish drags that
+originated on given node from drags that originated outside.
+
+When the (still pressed) pointer returns to *A*, in the captured case it's the
+same as if it would never leave. A @m_class{m-label m-danger} **release** from
+a @ref pointerReleaseEvent() could then generate a tap or click in given event
+handler, for example. With capture disabled, a tap or click would happen only
+if the pointer would never leave. Ultimately, pointer release implicitly
+removes the capture again.
+
+All this state is exposed via @ref PointerEvent::isNodePressed(), @relativeref{PointerEvent,isNodeHovered()} and
+@relativeref{PointerEvent,isCaptured()} and similar properties in other event
+classes for use by event handler implementations. For diagnostic purposes it's
+also exposed via @ref currentPressedNode(), @ref currentHoveredNode() and
+@ref currentCapturedNode(). Additionally, position of the previous pointer
+event is tracked in @ref currentGlobalPointerPosition() and is used to fill in
+the value of @ref PointerMoveEvent::relativePosition().
+
+While pointer capture is a good default, in certain use cases such as drag &
+drop it's desirable to know the node the pointer is being dragged to instead of
+the events being always sent to the originating node. For that, the press and
+move event handlers can toggle the capture using @ref PointerEvent::setCaptured()
+/ @ref PointerMoveEvent::setCaptured().
+
+@subsection Ui-AbstractUserInterface-events-focus Key and text input and node focus
+
+By default, @ref keyPressEvent() and @ref keyReleaseEvent() is directed to a
+node under pointer, based on the location at which the last pointer event
+happened. This is useful for implementing workflows common in 2D/3D editing
+software, where simply hovering a particular UI element and pressing a key
+performs an action, without having to activate the element first by a click. As
+with pointer events, if @ref KeyEvent::setAccepted() isn't called by the
+handler, the functions return @cpp false @ce, signalling that the event should
+be propagated elsewhere.
+
+Text editing however has usually a different workflow --- clicking an input
+element makes it *focused*, after which it accepts keyboard input regardless of
+pointer position. Only nodes that are marked with @ref NodeFlag::Focusable can
+be focused. Focus is then activated either by a pointer press on given node, or
+programmatically by passing given node handle to @ref focusEvent(). Then
+@ref keyPressEvent(), @ref keyReleaseEvent() as well as @ref textInputEvent()
+are all directed to that node with no propagation anywhere else. The node is
+then *blurred* by a pointer press outside of its area, or programmatically by
+passing @ref NodeHandle::Null to @ref focusEvent(), after which key events
+again go only to the node under cursor and @ref textInputEvent() is ignored
+completely, returning @cpp false @ce always.
+
+Information about whether a node the event is called on is focused is available
+via @ref KeyEvent::isNodeFocused() and similarly on other event classes. For
+diagnostic purposes it's also available through @ref currentFocusedNode().
 
 @section Ui-AbstractUserInterface-dpi DPI awareness
 
-There are three separate concepts for DPI-aware UI rendering:
+If you use the application integration shown above, in particular the
+constructor and @ref setSize() overloads taking an application instance, the UI
+is already made DPI-aware and no extra steps need to be done. Nevertheless, it
+may be useful to know what happens underneath. There are three separate
+concepts for DPI-aware UI rendering:
 
 -   UI size --- size of the user interface to which all widgets are positioned
 -   Window size --- size of the window to which all input events are related
@@ -295,28 +699,31 @@ regardless of window size. Or on Retina macOS you can have different window and
 framebuffer size and the UI size might be related to window size but
 independent on the framebuffer size.
 
-When using for example @ref Platform::Sdl2Application or other `*Application`
-implementations, you usually have three values at your disposal ---
-@ref Platform::Sdl2Application::windowSize() "windowSize()",
-@ref Platform::Sdl2Application::framebufferSize() "framebufferSize()" and
-@ref Platform::Sdl2Application::dpiScaling() "dpiScaling()". If you want the UI
-to have the same layout and just scale on bigger window sizes, pass a fixed
-value to the UI size:
-
-@snippet Ui-sdl2.cpp AbstractUserInterface-dpi-fixed
-
-If you want the UI to get more room with larger window sizes and behave
-properly with different DPI scaling values, pass a ratio of window size and DPI
-scaling to the UI size:
+With the @ref Platform::Sdl2Application "Platform::*Application" classes, you
+usually have three values at your disposal ---
+@relativeref{Platform::Sdl2Application,windowSize()},
+@relativeref{Platform::Sdl2Application,framebufferSize()} and
+@relativeref{Platform::Sdl2Application,dpiScaling()}. What the application
+integration does internally is equivalent to the following --- the UI size
+scales with window size and it's scaled based on either the framebuffer /
+window size ratio or the DPI scaling value:
 
 @snippet Ui-sdl2.cpp AbstractUserInterface-dpi-ratio
 
-Finally, to gracefully deal with extremely small or extremely large windows,
-you can apply @ref Math::clamp() on top with some defined bounds. Windows
-outside of the reasonable size range will then get a scaled version of the UI
-at boundary size:
+Or, for example, to have the UI size derived from window size while gracefully
+dealing with extremely small or extremely large windows, you can apply
+@ref Math::clamp() on top with some defined bounds. Windows outside of the
+reasonable size range will then get a scaled version of the UI instead:
 
 @snippet Ui-sdl2.cpp AbstractUserInterface-dpi-clamp
+
+Ultimately, if you want the UI to have the same size and just scale with bigger
+window sizes, pass a fixed value to the UI size:
+
+@snippet Ui-sdl2.cpp AbstractUserInterface-dpi-fixed
+
+With all variants above, the input events will still be dealt with correctly,
+being scaled from the window coordinates to the actual UI size.
 */
 class MAGNUM_UI_EXPORT AbstractUserInterface {
     public:
@@ -1842,14 +2249,14 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * area, with the event position made relative to the node.
          *
          * Otherwise, if either the event is primary or no node is captured,
-         * finds the front-most node under (scaled) @p globalPosition and
+         * propagates it to nodes under (scaled) @p globalPosition and
          * calls @ref AbstractLayer::pointerPressEvent() on all data attached
-         * to it belonging to layers that support @ref LayerFeature::Event. If
-         * no data accept the event, continues to other nodes under the
-         * position in a front-to-back order and then to parent nodes. For each
-         * such node, the event is always called on all attached data,
-         * regardless of the accept status. For each call the event position is
-         * made relative to the node to which given data is attached.
+         * to it belonging to layers that support @ref LayerFeature::Event, in
+         * a front-to-back order as described in
+         * @ref Ui-AbstractUserInterface-events-propagation. For each such
+         * node, the event is always called on all attached data, regardless of
+         * the accept status. For each call the @ref PointerEvent::position()
+         * is made relative to the node to which given data is attached.
          *
          * If the press happened with @ref Pointer::MouseLeft, primary
          * @ref Pointer::Finger or @ref Pointer::Pen, the currently focused
@@ -1871,12 +2278,6 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref AbstractLayer::blurEvent(). If the event isn't primary, the
          * current focused node isn't affected in any way.
          *
-         * Returns @cpp true @ce if the press event was accepted by at least
-         * one data, @cpp false @ce if it wasn't or there wasn't any visible
-         * event handling node at given position and thus the event should be
-         * propagated further. Accept status of the focus and blur events
-         * doesn't have any effect on the return value.
-         *
          * If the event is primary, the node that accepted the event is
          * remembered as pressed. The node that accepted the primary event also
          * implicitly captures all further pointer events until and including a
@@ -1893,6 +2294,12 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * handling node at given position, the previously remembered pressed
          * and captured nodes are reset if and only if the event is primary.
          *
+         * Returns @cpp true @ce if the press event was accepted by at least
+         * one data, @cpp false @ce if it wasn't or there wasn't any visible
+         * event handling node at given position and thus the event should be
+         * propagated further. Accept status of the focus and blur events
+         * doesn't have any effect on the return value.
+         *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isPrimary(), @ref PointerEvent::isAccepted(),
          *      @ref PointerEvent::setAccepted(), @ref currentPressedNode(),
@@ -1905,10 +2312,10 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @brief Handle an external pointer press event
          *
          * Converts the @p event to a @ref PointerEvent and delegates to
-         * @ref pointerPressEvent(), see its documentation and
-         * @ref Ui-AbstractUserInterface-application for more information.
-         * The @p args allow passing optional extra arguments to a particular
-         * event converter.
+         * @ref pointerPressEvent(const Vector2&, PointerEvent&), see its
+         * documentation and @ref Ui-AbstractUserInterface-application for more
+         * information. The @p args allow passing optional extra arguments to a
+         * particular event converter.
          */
         template<class Event, class ...Args, class = decltype(Implementation::PointerEventConverter<Event>::press(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool pointerPressEvent(Event& event, Args&&... args) {
             return Implementation::PointerEventConverter<Event>::press(*this, event, Utility::forward<Args>(args)...);
@@ -1928,15 +2335,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * to that node even if the event happens outside of its area, with the
          * event position made relative to the node.
          *
-         * Otherwise, if a node wasn't captured, finds the front-most node
+         * Otherwise, if a node wasn't captured, propagates the event to nodes
          * under (scaled) @p globalPosition and calls
          * @ref AbstractLayer::pointerReleaseEvent() on all data attached to it
-         * belonging to layers that support @ref LayerFeature::Event. If no
-         * data accept the event, continues to other nodes under the position
-         * in a front-to-back order and then to parent nodes. For each such
+         * belonging to layers that support @ref LayerFeature::Event, in
+         * a front-to-back order as described in
+         * @ref Ui-AbstractUserInterface-events-propagation. For each such
          * node, the event is always called on all attached data, regardless of
-         * the accept status. For each call the event position is made relative
-         * to the node to which given data is attached.
+         * the accept status. For each call the @ref PointerEvent::position()
+         * is made relative to the node to which given data is attached.
          *
          * If the event is primary and a node is captured, the capture is
          * implicitly released after calling this function independently of
@@ -1962,10 +2369,10 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @brief Handle an external pointer release event
          *
          * Converts the @p event to a @ref PointerEvent and delegates to
-         * @ref pointerReleaseEvent(), see its documentation and
-         * @ref Ui-AbstractUserInterface-application for more information.
-         * The @p args allow passing optional extra arguments to a particular
-         * event converter.
+         * @ref pointerReleaseEvent(const Vector2&, PointerEvent&), see its
+         * documentation and @ref Ui-AbstractUserInterface-application for more
+         * information. The @p args allow passing optional extra arguments to a
+         * particular event converter.
          */
         template<class Event, class ...Args, class = decltype(Implementation::PointerEventConverter<Event>::release(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool pointerReleaseEvent(Event& event, Args&&... args) {
             return Implementation::PointerEventConverter<Event>::release(*this, event, Utility::forward<Args>(args)...);
@@ -1994,31 +2401,27 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @ref PointerMoveEvent::relativePosition() which is reset to a zero
          * vector. No corresponding leave / enter event is called for any other
          * node in this case. If the move event isn't primary, the current
-         * hovered node isn't affected in any way. Returns @cpp true @ce if the
-         * move event was accepted by at least one data attached to the
-         * captured node, @cpp false @ce if it wasn't and thus the event should
-         * be propagated further; accept status of the enter and leave events
-         * is ignored. If the move, enter or leave event implementations called
-         * @ref PointerMoveEvent::setCaptured() resulting in it being
-         * @cpp false @ce, the capture is released after this function,
-         * otherwise it stays unchanged. For primary events the capture reset
-         * is performed regardless of the event accept status, for non-primary
-         * events only if they're accepted.
+         * hovered node isn't affected in any way. If the move, enter or leave
+         * event implementations called @ref PointerMoveEvent::setCaptured()
+         * resulting in it being @cpp false @ce, the capture is released after
+         * this function, otherwise it stays unchanged. For primary events the
+         * capture reset is performed regardless of the event accept status,
+         * for non-primary events only if they're accepted.
          *
-         * Otherwise, if a node wasn't captured, finds the front-most node
+         * Otherwise, if a node wasn't captured, propagates the event to nodes
          * under (scaled) @p globalPosition and calls
          * @ref AbstractLayer::pointerMoveEvent() on all data attached to it
-         * belonging to layers that support @ref LayerFeature::Event. If
-         * no data accept the event, continues to other nodes under the
-         * position in a front-to-back order and then to parent nodes. For each
-         * such node, the event is always called on all attached data,
-         * regardless of the accept status. If the move event is primary, the
-         * node on which the data accepted the event is then treated as
-         * hovered; if no data accepted the event, there's no hovered node. For
-         * each call the event position is made relative to the node to which
-         * given data is attached. If the currently hovered node changed, an
-         * @ref AbstractLayer::pointerLeaveEvent() is then called for all data
-         * attached to a previously hovered node if it exists, and then a
+         * belonging to layers that support @ref LayerFeature::Event, in
+         * a front-to-back order as described in
+         * @ref Ui-AbstractUserInterface-events-propagation. For each such
+         * node, the event is always called on all attached data, regardless of
+         * the accept status. If the move event is primary, the node on which
+         * the data accepted the event is then treated as hovered; if no data
+         * accepted the event, there's no hovered node. For each call the
+         * @ref PointerMoveEvent::position() is made relative to the node to
+         * which given data is attached. If the currently hovered node changed,
+         * an @ref AbstractLayer::pointerLeaveEvent() is then called for all
+         * data attached to a previously hovered node if it exists, and then a
          * corresponding @ref AbstractLayer::pointerEnterEvent() is called for
          * all data attached to the currently hovered node if it exists, in
          * both cases with the same @p event except for
@@ -2026,11 +2429,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * particular node it's called on and
          * @ref PointerMoveEvent::relativePosition() which is reset to a zero
          * vector. If the move event isn't primary, the current hovered node
-         * isn't affected in any way. Returns @cpp true @ce if the event was
-         * accepted by at least one data, @cpp false @ce if it wasn't or there
-         * wasn't any visible event handling node at given position and thus
-         * the event should be propagated further; accept status of the enter
-         * and leave events is ignored. If any accepted move event or any enter
+         * isn't affected in any way. If any accepted move event or any enter
          * event called @ref PointerMoveEvent::setCaptured() resulting in it
          * being @cpp true @ce, the containing node implicitly captures all
          * further pointer events until and including a
@@ -2038,6 +2437,12 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * or until the capture is released in a @ref pointerMoveEvent() again.
          * Calling @ref PointerMoveEvent::setCaptured() in the leave event has
          * no effect in this case.
+         *
+         * Returns @cpp true @ce if the event was accepted by at least one
+         * data, @cpp false @ce if it wasn't or there wasn't any visible event
+         * handling node at given position and thus the event should be
+         * propagated further; accept status of the enter and leave events is
+         * ignored.
          *
          * Expects that the event is not accepted yet.
          * @see @ref PointerEvent::isAccepted(),
@@ -2050,10 +2455,10 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @brief Handle an external pointer move event
          *
          * Converts the @p event to a @ref PointerMoveEvent and delegates to
-         * @ref pointerMoveEvent(), see its documentation and
-         * @ref Ui-AbstractUserInterface-application for more information.
-         * The @p args allow passing optional extra arguments to a particular
-         * event converter.
+         * @ref pointerMoveEvent(const Vector2&, PointerMoveEvent&), see its
+         * documentation and @ref Ui-AbstractUserInterface-application for more
+         * information. The @p args allow passing optional extra arguments to a
+         * particular event converter.
          */
         template<class Event, class ...Args, class = decltype(Implementation::PointerMoveEventConverter<Event>::move(std::declval<AbstractUserInterface&>(), std::declval<Event&>(), std::declval<Args>()...))> bool pointerMoveEvent(Event& event, Args&&... args) {
             return Implementation::PointerMoveEventConverter<Event>::move(*this, event, Utility::forward<Args>(args)...);
@@ -2120,15 +2525,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * belonging to layers that support @ref LayerFeature::Event.
          *
          * Otherwise, if @ref currentGlobalPointerPosition() is not
-         * @relativeref{Corrade,Containers::NullOpt}, finds the front-most node
-         * under it and calls @ref AbstractLayer::keyPressEvent() on all data
-         * attached to it belonging to layers that support
-         * @ref LayerFeature::Event. If no data accept the event, continues to
-         * other nodes under the position in a front-to-back order and then to
-         * parent nodes. For each such node, the event is always called on all
-         * attached data, regardless of the accept status. For each call the
-         * event contains the @ref currentGlobalPointerPosition() made relative
-         * to the node to which given data is attached.
+         * @relativeref{Corrade,Containers::NullOpt}, propagates the event to
+         * nodes under it and calls @ref AbstractLayer::keyPressEvent() on all
+         * data attached to it belonging to layers that support
+         * @ref LayerFeature::Event, in a front-to-back order as described in
+         * @ref Ui-AbstractUserInterface-events-propagation. For each such
+         * node, the event is always called on all attached data, regardless of
+         * the accept status. For each call the event contains the
+         * @ref currentGlobalPointerPosition() made relative to the node to
+         * which given data is attached.
          *
          * Returns @cpp true @ce if the event was accepted by at least one
          * data; @cpp false @ce if it wasn't, if @ref currentFocusedNode() is
@@ -2146,7 +2551,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @brief Handle an external key press event
          *
          * Converts the @p event to a @ref KeyEvent and delegates to
-         * @ref keyPressEvent(), see its documentation and
+         * @ref keyPressEvent(KeyEvent&), see its documentation and
          * @ref Ui-AbstractUserInterface-application for more information.
          * The @p args allow passing optional extra arguments to a particular
          * event converter.
@@ -2192,7 +2597,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @brief Handle an external key release event
          *
          * Converts the @p event to a @ref KeyEvent and delegates to
-         * @ref keyReleaseEvent(), see its documentation and
+         * @ref keyReleaseEvent(KeyEvent&), see its documentation and
          * @ref Ui-AbstractUserInterface-application for more information.
          * The @p args allow passing optional extra arguments to a particular
          * event converter.
@@ -2226,7 +2631,7 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
          * @brief Handle an external text input event
          *
          * Converts the @p event to a @ref TextInputEvent and delegates to
-         * @ref textInputEvent(), see its documentation and
+         * @ref textInputEvent(TextInputEvent&), see its documentation and
          * @ref Ui-AbstractUserInterface-application for more information.
          * The @p args allow passing optional extra arguments to a particular
          * event converter.

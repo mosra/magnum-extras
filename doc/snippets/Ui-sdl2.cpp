@@ -24,11 +24,15 @@
     DEALINGS IN THE SOFTWARE.
 */
 
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Framebuffer.h>
 #include <Magnum/Platform/Sdl2Application.h>
 
 #include "Magnum/Math/Functions.h"
 #include "Magnum/Ui/Application.h"
-#include "Magnum/Ui/AbstractUserInterface.h"
+#include "Magnum/Ui/RendererGL.h"
+#include "Magnum/Ui/Style.h"
+#include "Magnum/Ui/UserInterfaceGL.h"
 
 #define DOXYGEN_ELLIPSIS(...) __VA_ARGS__
 #define DOXYGEN_IGNORE(...) __VA_ARGS__
@@ -38,94 +42,184 @@ using namespace Magnum;
 struct Foo: Platform::Application {
 void foo() {
 {
-/* [AbstractUserInterface-dpi-fixed] */
-Ui::AbstractUserInterface ui(
-    {800, 600},
-    Vector2{windowSize()}, framebufferSize());
-/* [AbstractUserInterface-dpi-fixed] */
-}
-
-{
 /* [AbstractUserInterface-dpi-ratio] */
-Ui::AbstractUserInterface ui(
+Ui::UserInterfaceGL ui{
     Vector2{windowSize()}/dpiScaling(),
-    Vector2{windowSize()}, framebufferSize());
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{})};
 /* [AbstractUserInterface-dpi-ratio] */
 }
 
 {
 /* [AbstractUserInterface-dpi-clamp] */
-Ui::AbstractUserInterface ui(
+Ui::UserInterfaceGL ui{
     Math::clamp({640.0f, 360.0f}, {1920.0f, 1080.0f},
         Vector2{windowSize()}/dpiScaling()),
-    Vector2{windowSize()}, framebufferSize());
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{})};
 /* [AbstractUserInterface-dpi-clamp] */
 }
+
+{
+/* [AbstractUserInterface-dpi-fixed] */
+Ui::UserInterfaceGL ui(
+    {800, 600},
+    Vector2{windowSize()}, framebufferSize(), DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{}));
+/* [AbstractUserInterface-dpi-fixed] */
+}
 }
 };
 
-struct MyApplication: Platform::Application {
-    void pointerPressEvent(PointerEvent& event) override;
-    void pointerReleaseEvent(PointerEvent& event) override;
-    void pointerMoveEvent(PointerMoveEvent& event) override;
-    void keyPressEvent(KeyEvent& event) override;
-    void keyReleaseEvent(KeyEvent& event) override;
-    void textInputEvent(TextInputEvent& event) override;
-    Ui::AbstractUserInterface _ui;
-};
+namespace A {
 
 /* The include is already above, so doing it again here should be harmless */
-/* [AbstractUserInterface-application-events] */
+/* [AbstractUserInterface-application-construct-viewport] */
+DOXYGEN_ELLIPSIS()
 #include <Magnum/Ui/Application.h>
 
-DOXYGEN_ELLIPSIS()
+class MyApplication: public Platform::Application {
+    public:
+        explicit MyApplication(const Arguments& arguments):
+            Platform::Application{arguments}, _ui{*this, DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{})} { DOXYGEN_ELLIPSIS() }
 
-void MyApplication::pointerPressEvent(PointerEvent& event) {
-    if(!_ui.pointerPressEvent(event)) {
-        /* Handle an event that wasn't accepted by the UI */
-    }
+        void viewportEvent(ViewportEvent& event) override {
+            _ui.setSize(event);
+        }
 
-    DOXYGEN_ELLIPSIS()
-}
+        void drawEvent() override {
+            GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
-void MyApplication::pointerReleaseEvent(PointerEvent& event) {
-    if(!_ui.pointerReleaseEvent(event)) {
-        /* Handle an event that wasn't accepted by the UI */
-    }
+            _ui.draw();
 
-    DOXYGEN_ELLIPSIS()
-}
+            swapBuffers();
+            if(_ui.state())
+                redraw();
+        }
 
-void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
-    if(!_ui.pointerMoveEvent(event)) {
-        /* Handle an event that wasn't accepted by the UI */
-    }
+        DOXYGEN_ELLIPSIS(void pointerPressEvent(PointerEvent& event) override;
+        void pointerReleaseEvent(PointerEvent& event) override;
+        void pointerMoveEvent(PointerMoveEvent& event) override;
+        void keyPressEvent(KeyEvent& event) override;
+        void keyReleaseEvent(KeyEvent& event) override;
+        void textInputEvent(TextInputEvent& event) override;)
 
-    DOXYGEN_ELLIPSIS()
-}
-
-void MyApplication::keyPressEvent(KeyEvent& event) {
-    if(!_ui.keyPressEvent(event)) {
-        /* Handle an event that wasn't accepted by the UI */
-    }
-
-    DOXYGEN_ELLIPSIS()
-}
-
-void MyApplication::keyReleaseEvent(KeyEvent& event) {
-    if(!_ui.keyReleaseEvent(event)) {
-        /* Handle an event that wasn't accepted by the UI */
-    }
-
-    DOXYGEN_ELLIPSIS()
-}
-
-void MyApplication::textInputEvent(TextInputEvent& event) {
-    if(!_ui.textInputEvent(event)) {
-        /* Handle an event that wasn't accepted by the UI */
-    }
-
-    DOXYGEN_ELLIPSIS()
-}
+    private:
+        Ui::UserInterfaceGL _ui;
+};
+/* [AbstractUserInterface-application-construct-viewport] */
 
 /* [AbstractUserInterface-application-events] */
+void MyApplication::pointerPressEvent(PointerEvent& event) {
+    if(!_ui.pointerPressEvent(event)) {
+        DOXYGEN_ELLIPSIS()
+    }
+    if(_ui.state()) redraw();
+}
+void MyApplication::pointerReleaseEvent(PointerEvent& event) {
+    if(!_ui.pointerReleaseEvent(event)) {
+        DOXYGEN_ELLIPSIS()
+    }
+    if(_ui.state()) redraw();
+}
+void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
+    if(!_ui.pointerMoveEvent(event)) {
+        DOXYGEN_ELLIPSIS()
+    }
+    if(_ui.state()) redraw();
+}
+void MyApplication::keyPressEvent(KeyEvent& event) {
+    if(!_ui.keyPressEvent(event)) {
+        DOXYGEN_ELLIPSIS()
+    }
+    if(_ui.state()) redraw();
+}
+void MyApplication::keyReleaseEvent(KeyEvent& event) {
+    if(!_ui.keyReleaseEvent(event)) {
+        DOXYGEN_ELLIPSIS()
+    }
+    if(_ui.state()) redraw();
+}
+void MyApplication::textInputEvent(TextInputEvent& event) {
+    if(!_ui.textInputEvent(event)) {
+        DOXYGEN_ELLIPSIS()
+    }
+    if(_ui.state()) redraw();
+}
+/* [AbstractUserInterface-application-events] */
+
+}
+
+namespace B {
+
+struct MyApplication: Platform::Application {
+    void pointerMoveEvent(PointerMoveEvent& event) override;
+
+    Ui::AbstractUserInterface _ui;
+    bool _modelLoaded;
+    void rotateModel(const Vector2&);
+};
+
+/* [AbstractUserInterface-events-application-fallthrough] */
+void MyApplication::pointerMoveEvent(PointerMoveEvent& event) {
+    if(_ui.pointerMoveEvent(event))
+        return;
+
+    if(_modelLoaded && event.pointers()) {
+        rotateModel(event.relativePosition());
+        event.setAccepted();
+        return;
+    }
+
+    /* Otherwise propagating the event to the OS */
+}
+/* [AbstractUserInterface-events-application-fallthrough] */
+
+}
+
+namespace C {
+
+/* [RendererGL-compositing-framebuffer] */
+class MyApplication: public Platform::Application {
+    DOXYGEN_ELLIPSIS(explicit MyApplication(const Arguments& arguments);
+    void drawEvent();
+    void swapBuffers();
+    void redraw();)
+
+    private:
+        Ui::UserInterfaceGL _ui{NoCreate};
+};
+
+MyApplication::MyApplication(const Arguments& arguments): Platform::Application{DOXYGEN_ELLIPSIS(arguments)} {
+    /* Create a renderer with a compositing framebuffer as the first thing */
+    _ui.setRendererInstance(Containers::pointer<Ui::RendererGL>(
+        Ui::RendererGL::Flag::CompositingFramebuffer));
+
+    /* Then add appropriate compositing layers, set a style, etc */
+    _ui
+        .setSize(DOXYGEN_ELLIPSIS({}))
+        .setStyle(DOXYGEN_ELLIPSIS(Ui::McssDarkStyle{}))
+        DOXYGEN_ELLIPSIS();
+
+    DOXYGEN_ELLIPSIS()
+}
+/* [RendererGL-compositing-framebuffer] */
+
+/* [RendererGL-compositing-framebuffer-draw] */
+void MyApplication::drawEvent() {
+    _ui.renderer().compositingFramebuffer().clear(GL::FramebufferClear::Color);
+
+    // Render content underneath the UI to the compositing framebuffer here ...
+
+    _ui.draw();
+
+    GL::AbstractFramebuffer::blit(
+        _ui.renderer().compositingFramebuffer(),
+        GL::defaultFramebuffer,
+        GL::defaultFramebuffer.viewport(),
+        GL::FramebufferBlit::Color);
+
+    swapBuffers();
+    redraw();
+}
+/* [RendererGL-compositing-framebuffer-draw] */
+
+
+}
