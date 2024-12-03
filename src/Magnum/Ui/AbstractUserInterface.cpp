@@ -3660,7 +3660,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
        events, call the event on it directly. Given that update() was called,
        it should be either null or valid. */
     bool pressAcceptedByAnyData;
-    NodeHandle primaryPressCalledOnNode = NodeHandle::Null;
+    NodeHandle calledNode;
     if(!event.isPrimary() && state.currentCapturedNode != NodeHandle::Null) {
         CORRADE_INTERNAL_ASSERT(isHandleValid(state.currentCapturedNode));
 
@@ -3675,11 +3675,7 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
         event._nodeHovered = insideCapturedNode;
 
         pressAcceptedByAnyData = callEventOnNode<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, nodeHandleId(state.currentCapturedNode), event);
-
-        /* If the event was accepted and capture was removed, reset the
-           captured node. Otherwise it stays as it was. */
-        if(pressAcceptedByAnyData && !event._captured)
-            state.currentCapturedNode = NodeHandle::Null;
+        calledNode = state.currentCapturedNode;
 
     /* Otherwise, if this is either a primary event (which changes the capture)
        or there's no capture, do the usual hit testing etc. */
@@ -3691,16 +3687,19 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
            currently hovered node. */
         event._nodeHovered = true;
 
-        const NodeHandle calledNode = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, event);
+        calledNode = callEvent<PointerEvent, &AbstractLayer::pointerPressEvent>(globalPositionScaled, event);
         pressAcceptedByAnyData = calledNode != NodeHandle::Null;
-        if(event.isPrimary())
-            primaryPressCalledOnNode = calledNode;
+    }
 
-        /* If the event was accepted by any node and capture is desired,
-           remember the concrete node for it. Otherwise the event was either
-           not accepted at all (or there wasn't any node to call it on) or the
-           capture was explicitly removed, clear the capture in that case. */
-        if(calledNode != NodeHandle::Null && event._captured)
+    /* If the event was called on any node and capture is desired (or still
+       desired, or it's a secondary event which doesn't implicitly capture but
+       the capture was requested), remember the concrete node for it (or, if
+       still desired, the calledNode is the same as currentCapturedNode and
+       thus it stays). Otherwise, if the event was accepted but the capture was
+       removed, reset it. Otherwise the event was not accepted at all, in which
+       case nothing changes. */
+    if(pressAcceptedByAnyData) {
+        if(event._captured)
             state.currentCapturedNode = calledNode;
         else
             state.currentCapturedNode = NodeHandle::Null;
@@ -3709,10 +3708,8 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
     /* If the event is primary, it affects current pressed node and current
        pointer position and focus */
     if(event.isPrimary()) {
-        /* Remember the node that accepted the event as pressed. If no node
-           accepted it, primaryPressCalledOnNode is null, and the current
-           pressed node gets reset. */
-        state.currentPressedNode = primaryPressCalledOnNode;
+        /* Remember the node that accepted the event as pressed */
+        state.currentPressedNode = pressAcceptedByAnyData ? calledNode : NodeHandle::Null;
 
         /* Update the last relative position with this one */
         /** @todo update this before calling any event functions so the event
@@ -3727,10 +3724,10 @@ bool AbstractUserInterface::pointerPressEvent(const Vector2& globalPosition, Poi
         /* Call a focus event if the press was accepted and on a node that's
            focusable */
         const NodeHandle nodeToFocus =
-            primaryPressCalledOnNode != NodeHandle::Null &&
-            state.nodes[nodeHandleId(primaryPressCalledOnNode)].used.flags >= NodeFlag::Focusable &&
-            state.visibleEventNodeMask[nodeHandleId(primaryPressCalledOnNode)] ?
-                primaryPressCalledOnNode : NodeHandle::Null;
+            pressAcceptedByAnyData &&
+            state.nodes[nodeHandleId(calledNode)].used.flags >= NodeFlag::Focusable &&
+            state.visibleEventNodeMask[nodeHandleId(calledNode)] ?
+                calledNode : NodeHandle::Null;
 
         /* If the node to be focused is different from the currently focused
            one, call a blur event on the original, if there's any. */
