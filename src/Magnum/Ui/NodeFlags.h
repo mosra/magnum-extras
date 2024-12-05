@@ -108,6 +108,21 @@ enum class NodeFlag: UnsignedByte {
     Disabled = NoEvents|(1 << 3),
 
     /**
+     * Pointer events happening on nested nodes fall through to this node,
+     * which can then accept them, causing a pointer cancel event to happen on
+     * the original node.
+     *
+     * Changing this flag doesn't cause any @ref UserInterfaceState to be set,
+     * it comes to effect when the next pointer event happens.
+     * @see @ref PointerEvent::isFallthrough(),
+     *      @ref PointerMoveEvent::isFallthrough(), @ref PointerCancelEvent,
+     *      @ref AbstractUserInterface::pointerPressEvent(),
+     *      @relativeref{AbstractUserInterface,pointerReleaseEvent()},
+     *      @relativeref{AbstractUserInterface,pointerMoveEvent()}
+     */
+    FallthroughPointerEvents = 1 << 4,
+
+    /**
      * The node can be focused, after which all key events are directed to it
      * instead of to a node currently under pointer. Focusing is done either by
      * a primary pointer press or programmatically via
@@ -118,7 +133,7 @@ enum class NodeFlag: UnsignedByte {
      * Changing this flag causes
      * @ref UserInterfaceState::NeedsNodeEnabledUpdate to be set.
      */
-    Focusable = 1 << 4,
+    Focusable = 1 << 5,
 };
 
 /**

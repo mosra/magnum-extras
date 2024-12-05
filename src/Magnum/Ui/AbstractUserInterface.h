@@ -2695,11 +2695,15 @@ class MAGNUM_UI_EXPORT AbstractUserInterface {
         /* Used by *Event() functions */
         MAGNUM_UI_LOCAL void callVisibilityLostEventOnNode(NodeHandle node, VisibilityLostEvent& event, bool canBePressedOrHovering);
         template<void(AbstractLayer::*function)(UnsignedInt, FocusEvent&)> MAGNUM_UI_LOCAL bool callFocusEventOnNode(NodeHandle node, FocusEvent& event);
-        template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_UI_LOCAL bool callKeyEventOnNode(NodeHandle node, KeyEvent& even);
-        MAGNUM_UI_LOCAL bool callTextInputEventOnNode(NodeHandle node, TextInputEvent& even);
-        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, NodeHandle node, Event& event, bool rememberCaptureOnUnaccepted = false);
+        template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_UI_LOCAL bool callKeyEventOnNode(NodeHandle node, KeyEvent& event);
+        MAGNUM_UI_LOCAL bool callTextInputEventOnNode(NodeHandle node, TextInputEvent& event);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, NodeHandle node, NodeHandle targetNode, Event& event, bool rememberCaptureOnUnaccepted = false);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL bool callEventOnNode(const Vector2& globalPositionScaled, NodeHandle node, Event& event, bool rememberCaptureOnUnaccepted = false) {
+            return callEventOnNode<Event, function>(globalPositionScaled, node, node, event, rememberCaptureOnUnaccepted);
+        }
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, UnsignedInt visibleNodeIndex, Event& event);
         template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL NodeHandle callEvent(const Vector2& globalPositionScaled, Event& event);
+        template<class Event, void(AbstractLayer::*function)(UnsignedInt, Event&)> MAGNUM_UI_LOCAL void callFallthroughPointerEvents(NodeHandle node, const Vector2& globalPositionScaled, Event& event, bool allowCapture);
         template<void(AbstractLayer::*function)(UnsignedInt, KeyEvent&)> MAGNUM_UI_LOCAL bool keyPressOrReleaseEvent(KeyEvent& event);
 
         struct State;
